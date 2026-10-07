@@ -739,7 +739,12 @@ async function loginApp(){
 }
 async function finishLogin(user){
   try{
-    const rows=await sbGet(`/profiles?id=eq.${encodeURIComponent(user.id)}&select=*`);
+    const {data:rows,error:profileError}=await AUTH_SUPABASE
+  .from('profiles')
+  .select('*')
+  .eq('id',user.id);
+
+if(profileError) throw profileError;
     if(!rows.length){await AUTH_SUPABASE.auth.signOut();showAuthError('این حساب هنوز به پروفایل اپ متصل نشده است.');return;}
     authProfile=rows[0];document.body.classList.remove('locked');$('authScreen').style.display='none';$('authUserBar').style.display='block';$('authUserText').textContent=`${authProfile.full_name||user.email} | ${authProfile.role==='coach'?'مربی':'شاگرد'}`;
     if(authProfile.role==='trainee'){
