@@ -701,7 +701,31 @@ function saveAnalysis(){alert("اطلاعات آنالیز آماده ثبت ش�
 function saveNote(){alert("یادداشت مربی آماده ثبت شد.");}
 function esc(s){return String(s).replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[m]));}
 
-const AUTH_SUPABASE=window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
+const AUTH_SUPABASE=window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY);const ORIGINAL_FETCH=window.fetch;
+
+window.fetch=async function(input,init={}){
+  const url=typeof input==="string"?input:input.url;
+
+  if(url && url.startsWith(SUPABASE_URL+"/rest/v1/")){
+    const {data:{session}}=await AUTH_SUPABASE.auth.getSession();
+
+    const headers=new Headers(
+      init.headers || (typeof input!=="string"?input.headers:{}) || {}
+    );
+
+    headers.set("apikey",SUPABASE_KEY);
+
+    if(session?.access_token){
+      headers.set("Authorization","Bearer "+session.access_token);
+    }else{
+      headers.set("Authorization","Bearer "+SUPABASE_KEY);
+    }
+
+    init={...init,headers};
+  }
+
+  return ORIGINAL_FETCH(input,init);
+};
 let authProfile=null;
 function showAuthError(msg){const e=$('authError');e.textContent=msg||'ورود انجام نشد.';e.style.display='block';}
 async function loginApp(){
@@ -732,7 +756,7 @@ async function initAuth(){
 }
 
 if($("prDate"))$("prDate").value=today();if($("anDate"))$("anDate").value=today();if($("mealStart"))$("mealStart").value=today();
-loadClients();loadFoods();loadExercises();initAuth();
+initAuth();
 </script>
 </body>
 </html>
