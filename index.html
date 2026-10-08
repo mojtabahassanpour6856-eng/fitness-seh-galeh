@@ -930,7 +930,7 @@ loadExercises();
 
   window.addClient=async function(){
     const full_name=$id('cn')?.value.trim();if(!full_name){alert('نام شاگرد را وارد کنید.');return;}
-    const payload={full_name,phone:$id('cphone')?.value.trim()||null,gender:$id('cgender')?.value||null,birth_date:$id('cbirth')?.value||null,height:+$id('cheight')?.value||null,current_weight:+$id('cweight')?.value||null,goal:$id('cgoal')?.value||null,training_level:$id('clevel')?.value||null,training_history:$id('chistory')?.value.trim()||null,limitations:$id('climitations')?.value.trim()||null,training_type:$id('ctype')?.value||'gym',home_equipment:$id('cequipment')?.value.trim()||null,training_days:$id('ctrainingDays')?.value.trim()||null,training_time:$id('ctrainingTime')?.value||null};
+    const payload={full_name,phone:$id('cphone')?.value.trim()||null,phone_normalized:phoneNorm($id('cphone')?.value.trim()||'')||null,gender:$id('cgender')?.value||null,birth_date:$id('cbirth')?.value||null,height:+$id('cheight')?.value||null,current_weight:+$id('cweight')?.value||null,goal:$id('cgoal')?.value||null,training_level:$id('clevel')?.value||null,training_history:$id('chistory')?.value.trim()||null,limitations:$id('climitations')?.value.trim()||null,training_type:$id('ctype')?.value||'gym',home_equipment:$id('cequipment')?.value.trim()||null,training_days:$id('ctrainingDays')?.value.trim()||null,training_time:$id('ctrainingTime')?.value||null};
     try{let result;try{result=await sbWrite('/trainees','POST',payload);}catch(e){const msg=String(e.message||e);if(/training_days|training_time/i.test(msg)){delete payload.training_days;delete payload.training_time;result=await sbWrite('/trainees','POST',payload);}else throw e;}await loadClients();clearClientForm();if(result?.[0])selectClient(result[0].id);alert('شاگرد با موفقیت ثبت شد و در فهرست شاگردان قرار گرفت.');}
     catch(e){alert('ثبت شاگرد انجام نشد.\n'+e.message)}
   };
@@ -982,7 +982,11 @@ loadExercises();
     let rows=[];
     try{rows=await sbGet(`/trainees?auth_user_id=eq.${encodeURIComponent(user.id)}&select=*&limit=1`);}catch(e){console.warn('auth_user_id lookup failed',e);}
     if(!rows.length && authPhone){
-      try{rows=await sbGet(`/trainees?phone_normalized=eq.${encodeURIComponent(authPhone)}&select=*&limit=2`);}catch(e){console.warn('phone lookup failed',e);}
+      try{rows=await sbGet(`/trainees?phone_normalized=eq.${encodeURIComponent(authPhone)}&select=*&limit=2`);}catch(e){console.warn('phone_normalized lookup failed',e);}
+    }
+    if(!rows.length && authPhone){
+      const localPhone=authPhone.startsWith('+98')?'0'+authPhone.slice(3):authPhone;
+      try{rows=await sbGet(`/trainees?phone=eq.${encodeURIComponent(localPhone)}&select=*&limit=2`);}catch(e){console.warn('phone lookup failed',e);}
     }
     if(rows.length>1){showAuthError('این شماره موبایل برای بیش از یک شاگرد ثبت شده است. ابتدا شماره‌های تکراری را در پنل مربی اصلاح کنید.');await AUTH_SUPABASE.auth.signOut();return;}
     if(!rows.length){showAuthError('این شماره موبایل به هیچ شاگردی متصل نیست. ابتدا شماره شاگرد را در پنل مربی ثبت کنید.');await AUTH_SUPABASE.auth.signOut();return;}
@@ -1005,17 +1009,48 @@ loadExercises();
   }
   window.authMode=function(mode){$id('coachLoginBox').classList.toggle('hide',mode!=='coach');$id('traineeLoginBox').classList.toggle('hide',mode!=='trainee');$id('authCoachTab').classList.toggle('active',mode==='coach');$id('authTraineeTab').classList.toggle('active',mode==='trainee');$id('authError').style.display='none';};
   window.requestTraineeOtp=async function(){
-    const raw=$id('traineePhone').value.trim(),phone=phoneNorm(raw);
-    if(!phone)return showAuthError('شماره موبایل را وارد کنید.');
+    const raw=$id('traineePhone')?.value||'';
+    const phone=phoneNorm(raw);
+    if(!phone || !/^\+989\d{9}$/.test(phone)){showAuthError('شماره موبایل معتبر نیست. مثال: 09121234567');return;}
+    const btn=qsAll('#traineeLoginBox button')[0];
+    if(btn){btn.disabled=true;btn.textContent='⏳ در حال ارسال...';}
     try{
-      const r=await sbGet(`/trainees?phone_normalized=eq.${encodeURIComponent(phone)}&select=id&limit=1`);
-      if(!r.length)return showAuthError('این شماره در فهرست شاگردان ثبت نشده است.');
-      const {error}=await AUTH_SUPABASE.auth.signInWithOtp({phone,options:{channel:'sms'}});
-      if(error)throw error;
-      showAuthError('کد ورود ارسال شد.');$id('authError').style.display='block';
-    }catch(e){showAuthError('ارسال کد انجام نشد. '+(e.message||''));}
+      // مهم: قبل از احراز هویت، جدول trainees را نخوان. OTP مستقیماً توسط Supabase Auth ارسال می‌شود.
+      const result=await AUTH_SUPABASE.auth.signInWithOtp({
+        phone,
+        options:{shouldCreateUser:true,channel:'sms'}
+      });
+      if(result.error)throw result.error;
+      $id('traineePhone').dataset.normalized=phone;
+      showAuthError('✅ کد پیامکی ارسال شد. کد ۶ رقمی را وارد کنید.');
+    }catch(e){
+      console.error('trainee OTP send:',e);
+      let msg=e?.message||String(e);
+      if(/phone provider|provider.*disabled|sms/i.test(msg)) msg+='\nاگر پیامک ارسال نمی‌شود، Phone Auth و SMS Provider در Supabase باید فعال باشد.';
+      showAuthError('❌ ارسال کد انجام نشد.\n'+msg);
+    }finally{
+      if(btn){btn.disabled=false;btn.textContent='📩 ارسال کد پیامکی';}
+    }
   };
-  window.verifyTraineeOtp=async function(){const phone=$id('traineePhone').value.trim(),token=$id('traineeOtp').value.trim();if(!phone||!token)return showAuthError('شماره و کد را وارد کنید.');try{const {data,error}=await AUTH_SUPABASE.auth.verifyOtp({phone,token,type:'sms'});if(error)throw error;await setupTraineeAuth(data.user);}catch(e){showAuthError('کد ورود معتبر نیست. '+(e.message||''));}};
+  window.verifyTraineeOtp=async function(){
+    const input=$id('traineePhone');
+    const phone=input?.dataset.normalized||phoneNorm(input?.value||'');
+    const token=($id('traineeOtp')?.value||'').replace(/\D/g,'');
+    if(!phone||token.length<6){showAuthError('شماره موبایل و کد ۶ رقمی را وارد کنید.');return;}
+    const btn=qsAll('#traineeLoginBox button')[1];
+    if(btn){btn.disabled=true;btn.textContent='⏳ در حال ورود...';}
+    try{
+      const {data,error}=await AUTH_SUPABASE.auth.verifyOtp({phone,token,type:'sms'});
+      if(error)throw error;
+      if(!data?.user)throw new Error('حساب کاربری بعد از تأیید کد دریافت نشد.');
+      await setupTraineeAuth(data.user);
+    }catch(e){
+      console.error('trainee OTP verify:',e);
+      showAuthError('❌ ورود با کد انجام نشد.\n'+(e?.message||String(e)));
+    }finally{
+      if(btn){btn.disabled=false;btn.textContent='✅ ورود با کد';}
+    }
+  };
 
   window.finishLogin=async function(user){
     try{
@@ -1392,7 +1427,6 @@ loadExercises();
     if(!full_name){alert('نام و نام خانوادگی شاگرد را وارد کنید.');return;}
     try{
       const session=await getCoachSession();
-      alert('🔎 اطلاعات حساب واردشده\nUID: '+(session.user?.id||'—')+'\nEmail: '+(session.user?.email||'—')+'\n\nUID پروفایل مربی مورد انتظار: 839381fe-e8d7-4df4-9a82-624d76d84e3b');
       const payload={
         full_name,
         phone:el('cphone')?.value.trim()||null,
@@ -1518,40 +1552,145 @@ loadExercises();
 </script>
 
 <script>
-/* FINAL DIAGNOSTIC — CHECK REAL AUTH USER */
+
+/* FINAL HARDENING — Auth/RLS + Training Schedule */
 (function(){
-  async function diagnoseAuth(){
-    try{
-      if(typeof AUTH_SUPABASE === 'undefined' || !AUTH_SUPABASE){
-        alert('❌ AUTH_SUPABASE پیدا نشد.'); return;
-      }
-      const {data,error}=await AUTH_SUPABASE.auth.getSession();
-      if(error){ alert('❌ خطای دریافت نشست:\n'+error.message); return; }
-      const session=data?.session;
-      if(!session || !session.user){
-        alert('❌ هیچ نشست فعالی پیدا نشد.\n\nلطفاً از حساب مربی خارج شوید و دوباره وارد شوید.');
-        return;
-      }
-      const uid=session.user.id;
-      const email=session.user.email || '—';
-      let profileText='نامشخص';
-      try{
-        const {data:profiles,error:pe}=await AUTH_SUPABASE
-          .from('profiles').select('id,role,full_name').eq('id',uid).limit(1);
-        if(pe) profileText='خطا در خواندن پروفایل: '+pe.message;
-        else if(!profiles || !profiles.length) profileText='❌ برای این UID پروفایلی پیدا نشد.';
-        else profileText='نام: '+(profiles[0].full_name || '—')+'\nنقش: '+(profiles[0].role || '—');
-      }catch(e){ profileText='خطا: '+e.message; }
-      alert('🔎 تشخیص حساب اپ\n\nUID حساب واردشده:\n'+uid+'\n\nEmail:\n'+email+'\n\nUID پروفایل مربی مورد انتظار:\n839381fe-e8d7-4df4-9a82-624d76d84e3b\n\nوضعیت پروفایل:\n'+profileText);
-    }catch(e){ alert('❌ خطای غیرمنتظره:\n'+(e.message || e)); }
+  const auth = window.AUTH_SUPABASE || window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
+  window.AUTH_SUPABASE = auth;
+  const byId = id => document.getElementById(id);
+
+  async function authenticatedSession(){
+    const {data,error}=await auth.auth.getSession();
+    if(error) throw error;
+    if(!data || !data.session || !data.session.access_token || !data.session.user){
+      throw new Error('نشست ورود مربی پیدا نشد. یک‌بار از حساب خارج شوید و دوباره وارد شوید.');
+    }
+    return data.session;
   }
-  window.diagnoseAuth=diagnoseAuth;
-  const oldAddClient=window.addClient;
+
+  async function authenticatedRest(path,method,body){
+    const session=await authenticatedSession();
+    const headers={
+      apikey:SUPABASE_KEY,
+      Authorization:'Bearer '+session.access_token
+    };
+    const options={method:method||'GET',headers};
+    if(body!==undefined){
+      headers['Content-Type']='application/json';
+      headers.Prefer='return=representation';
+      options.body=JSON.stringify(body);
+    }
+    const response=await ORIGINAL_FETCH(SUPABASE_URL+'/rest/v1'+path,options);
+    const text=await response.text();
+    if(!response.ok) throw new Error(text||('HTTP '+response.status));
+    if(!text)return [];
+    try{return JSON.parse(text);}catch(e){return [];}
+  }
+
+  // From this point onward every generic REST read/write uses the real Supabase session token.
+  window.sbGet=async function(path){ return authenticatedRest(path,'GET'); };
+  window.sbWrite=async function(path,method,body){ return authenticatedRest(path,method,body); };
+
+  // Replace trainee registration with an explicit authenticated request.
   window.addClient=async function(){
-    await diagnoseAuth();
-    if(confirm('آیا بعد از بررسی UID، ثبت شاگرد را ادامه بدهم؟')){
-      if(typeof oldAddClient==='function') return oldAddClient();
+    const full_name=(byId('cn')?.value||'').trim();
+    if(!full_name){alert('نام و نام خانوادگی شاگرد را وارد کنید.');return;}
+    try{
+      const session=await authenticatedSession();
+      const profileResult=await auth.from('profiles').select('id,role,full_name').eq('id',session.user.id).maybeSingle();
+      if(profileResult.error) throw profileResult.error;
+      if(!profileResult.data) throw new Error('حساب واردشده در جدول profiles پیدا نشد.');
+      if(profileResult.data.role!=='coach') throw new Error('حساب فعلی مربی نیست.');
+
+      const payload={
+        full_name,
+        phone:(byId('cphone')?.value||'').trim()||null,
+        phone_normalized:phoneNorm((byId('cphone')?.value||'').trim())||null,
+        gender:byId('cgender')?.value||null,
+        birth_date:byId('cbirth')?.value||null,
+        height:+(byId('cheight')?.value||0)||null,
+        current_weight:+(byId('cweight')?.value||0)||null,
+        goal:byId('cgoal')?.value||null,
+        training_level:byId('clevel')?.value||null,
+        training_history:(byId('chistory')?.value||'').trim()||null,
+        limitations:(byId('climitations')?.value||'').trim()||null,
+        training_type:byId('ctype')?.value||'gym',
+        home_equipment:(byId('cequipment')?.value||'').trim()||null,
+        training_days:(byId('ctrainingDays')?.value||'').trim()||null,
+        training_time:byId('ctrainingTime')?.value||null,
+        coach_user_id:session.user.id
+      };
+
+      const rows=await authenticatedRest('/trainees','POST',payload);
+      if(typeof loadClients==='function') await loadClients();
+      if(typeof clearClientForm==='function') clearClientForm();
+      if(rows && rows[0] && typeof window.selectClient==='function') await window.selectClient(rows[0].id);
+      alert('✅ شاگرد با موفقیت ثبت شد و در دیتابیس قرار گرفت.');
+    }catch(e){
+      console.error('addClient authenticated error:',e);
+      alert('ثبت شاگرد انجام نشد.\n'+(e.message||String(e)));
     }
   };
+
+  // Explicit schedule save; no silent removal of training_days/training_time.
+  window.saveTrainingSchedule=async function(){
+    if(!window.currentClient && typeof currentClient==='undefined'){
+      alert('اول یک شاگرد را انتخاب کنید.');return;
+    }
+    const client=typeof currentClient!=='undefined'?currentClient:window.currentClient;
+    if(!client){alert('اول یک شاگرد را انتخاب کنید.');return;}
+    try{
+      const payload={
+        training_type:byId('ptype2')?.value||byId('ptype')?.value||'gym',
+        home_equipment:(byId('pequipment2')?.value||byId('pequipment')?.value||'').trim()||null,
+        limitations:(byId('plimit')?.value||'').trim()||null,
+        training_days:(byId('trainingDaysEdit')?.value||'').trim()||null,
+        training_time:byId('trainingTimeEdit')?.value||null
+      };
+      await authenticatedRest('/trainees?id=eq.'+encodeURIComponent(client.id),'PATCH',payload);
+      if(typeof loadClients==='function') await loadClients();
+      const fresh=(typeof clients!=='undefined'&&Array.isArray(clients))?clients.find(x=>String(x.id)===String(client.id)):null;
+      if(fresh) currentClient=fresh;
+      if(byId('trainingDaysEdit')) byId('trainingDaysEdit').value=currentClient?.training_days||payload.training_days||'';
+      if(byId('trainingTimeEdit')) byId('trainingTimeEdit').value=currentClient?.training_time?String(currentClient.training_time).slice(0,5):(payload.training_time||'');
+      alert('✅ روزها و ساعت تمرین با موفقیت ثبت شد.');
+    }catch(e){
+      console.error('saveTrainingSchedule authenticated error:',e);
+      alert('ذخیره روز و ساعت تمرین انجام نشد.\n'+(e.message||String(e)));
+    }
+  };
+
+  // Ensure the schedule card has a visible save button.
+  function ensureScheduleCard(){
+    const sec=byId('client');
+    if(!sec || byId('scheduleCard')) return;
+    const card=document.createElement('div');
+    card.className='card';
+    card.id='scheduleCard';
+    card.innerHTML='<h2>🗓️ برنامه حضور و ساعت تمرین</h2><div class="grid2"><div><label>روزهای تمرین</label><input id="trainingDaysEdit" placeholder="شنبه، دوشنبه، چهارشنبه"></div><div><label>ساعت تمرین</label><input id="trainingTimeEdit" type="time"></div></div><button onclick="saveTrainingSchedule()">💾 ثبت روز و ساعت تمرین</button>';
+    sec.appendChild(card);
+  }
+
+  const previousSelect=window.selectClient;
+  if(typeof previousSelect==='function'){
+    window.selectClient=async function(id){
+      const result=await previousSelect(id);
+      ensureScheduleCard();
+      const c=typeof currentClient!=='undefined'?currentClient:null;
+      if(c){
+        if(byId('trainingDaysEdit')) byId('trainingDaysEdit').value=c.training_days||'';
+        if(byId('trainingTimeEdit')) byId('trainingTimeEdit').value=c.training_time?String(c.training_time).slice(0,5):'';
+      }
+      return result;
+    };
+  }
+
+  const style=document.createElement('style');
+  style.textContent='#scheduleCard{border-color:#3a5369}#scheduleCard button{margin-top:10px}';
+  document.head.appendChild(style);
+  setTimeout(ensureScheduleCard,500);
 })();
+
 </script>
+</body>
+</html>
