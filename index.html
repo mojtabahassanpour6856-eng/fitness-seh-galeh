@@ -1348,40 +1348,15 @@ loadExercises();
         const rows=await sbGet(`/trainee_workout_exercises?workout_plan_id=eq.${encodeURIComponent(p.id)}&select=*&order=sort_order.asc`);const ids=[...new Set(rows.map(x=>x.exercise_id).filter(Boolean))];let ex=[];if(ids.length)ex=await sbGet(`/exercises?id=in.(${ids.join(',')})&select=id,name`);const names=Object.fromEntries(ex.map(x=>[String(x.id),x.name]));
         body=`<h2>${escf(p.title||title)}</h2><p>هدف: ${escf(p.goal||'—')}</p><table><tr><th>حرکت</th><th>روز</th><th>ست</th><th>تکرار/زمان</th><th>استراحت</th><th>سیستم</th><th>گروه</th></tr>${rows.map(x=>`<tr><td>${escf(names[String(x.exercise_id)]||'حرکت')}</td><td>${escf(x.training_day||'—')}</td><td>${escf(x.sets||'')}</td><td>${escf(x.reps||'')}</td><td>${escf(x.rest_seconds||0)}</td><td>${escf(sysName[x.training_system||'normal']||'')}</td><td>${escf(x.group_key||'—')}</td></tr>`).join('')}</table>`;
       }
-      const html=`<!doctype html><html lang="fa" dir="rtl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${title}</title><style>body{font-family:Tahoma,Arial;padding:24px;line-height:1.9;color:#111}table{width:100%;border-collapse:collapse;margin-top:12px}td,th{border:1px solid #aaa;padding:7px;text-align:center;font-size:12px}h1{font-size:22px}</style></head><body><h1>باشگاه فیتنس سه‌قلعه | مربی مجتبی</h1><p>شاگرد: ${escf(currentClient.name||'')} | تاریخ: ${today()}</p>${body}<p>این صفحه برای چاپ و ذخیره PDF آماده است.</p><script>window.onload=()=>setTimeout(()=>window.print(),400)<\/script></body></html>`;
+      const html=`<!doctype html><html lang="fa" dir="rtl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${title}</title><style>body{font-family:Tahoma,Arial;padding:24px;line-height:1.9;color:#111}table{width:100%;border-collapse:collapse;margin-top:12px}td,th{border:1px solid #aaa;padding:7px;text-align:center;font-size:12px}h1{font-size:22px}</style></head><body><h1>باشگاه فیتنس سه‌قلعه | مربی مجتبی</h1><p>شاگرد: ${escf(currentClient.name||'')} | تاریخ: ${today()}</p>${body}<p>این صفحه برای چاپ و ذخیره PDF آماده است.</p><script>window.onload=()=>setTimeout(()=>window.print(),400)<\/script><\/script>
+</body></html>`;
       if(navigator.share){try{await navigator.share({title,text:`${title} | ${currentClient.name||''} | باشگاه فیتنس سه‌قلعه`});}catch(e){}}
       const w=window.open('','_blank');if(w){w.document.write(html);w.document.close();}
     }catch(e){alert('ساخت برنامه برای اشتراک/چاپ انجام نشد.\n'+e.message)}
   };
 
-  function addShareButtons(){
-    const m=$f('meal')?.querySelector('.card');if(m&&!$f('shareMealBtn')){const b=document.createElement('button');b.id='shareMealBtn';b.className='secondary';b.textContent='📤 اشتراک/چاپ برنامه غذایی';b.onclick=()=>sharePlan('meal');m.appendChild(b)}
-    const w=$f('workout')?.querySelector('.card');if(w&&!$f('shareWorkoutBtn')){const b=document.createElement('button');b.id='shareWorkoutBtn';b.className='secondary';b.textContent='📤 اشتراک/چاپ برنامه تمرینی';b.onclick=()=>sharePlan('workout');w.appendChild(b)}
-  }
 
-  function addGoalHistory(){
-    if(!$f('goalBox')||$f('goalHistoryBox'))return;const box=document.createElement('div');box.className='card';box.id='goalHistoryBox';box.innerHTML='<h3>🗂️ تاریخچه اهداف</h3><div id="goalHistory"></div>'; $f('goalBox').appendChild(box);
-    loadGoalHistory();
-  }
-  async function loadGoalHistory(){if(!currentClient||!$f('goalHistory'))return;try{const rows=await sbGet(`/trainee_goals?trainee_id=eq.${encodeURIComponent(currentClient.id)}&select=*&order=created_at.desc`);$f('goalHistory').innerHTML=rows.length?rows.map(x=>`<div class="f18-note"><b>${escf(x.target_date||'بدون تاریخ')}</b> | وزن ${escf(x.target_weight||'—')} | چربی ${escf(x.target_body_fat||'—')}%<br>${escf(x.coach_note||'')}</div>`).join(''):'<p class="f18-muted">هدفی ثبت نشده است.</p>';}catch(e){}}
-
-  function addCoachStatusFilters(){
-    const list=$f('clientList');if(!list||$f('f18statusfilters'))return;const d=document.createElement('div');d.id='f18statusfilters';d.className='f18-filterrow';d.innerHTML='<button class="active" onclick="finalStatusFilter(\'all\',this)">همه</button><button onclick="finalStatusFilter(\'active\',this)">فعال</button><button onclick="finalStatusFilter(\'plan\',this)">برنامه‌دار</button><button onclick="finalStatusFilter(\'alert\',this)">نیازمند پیگیری</button>';list.parentNode.insertBefore(d,list);
-  }
-  window.finalStatusFilter=function(mode,btn){clientMode=mode;qsa('#f18statusfilters button').forEach(b=>b.classList.remove('active'));btn.classList.add('active');renderFinalClients();};
-
-  const oldFinish=window.finishLogin;
-  window.finishLogin=async function(user){await oldFinish(user);addFinalStyle();addShareButtons();addCoachStatusFilters();wireFinalBadges();addGoalHistory();if(authProfile?.role==='coach'){await loadClients();}else if(authProfile?.role==='trainee'){await selectClient(currentClient?.id);await loadDashboard();}};
-
-  // Re-run UI helpers after dynamic sections appear.
-  const oldShow=window.showSection;
-  window.showSection=function(id,btn){oldShow(id,btn);addFinalStyle();if(id==='workout')addShareButtons();if(id==='meal')addShareButtons();if(id==='challenges'&&$f('challengeList'))loadChallenges();if(id==='progress'&&currentClient){loadProgressChart();loadNoteHistory();}};
-
-  setTimeout(()=>{addFinalStyle();addShareButtons();addCoachStatusFilters();wireFinalBadges();},700);
-})();
-</script>
-
-<script>
+  // FINAL FIX — REAL SUPABASE SESSION + TRAINEE REGISTRATION + SCHEDULE
 (function(){
   const el=id=>document.getElementById(id);
 
@@ -1513,4 +1488,33 @@ loadExercises();
   // Make sure the schedule card appears even if the trainee section was already open.
   setTimeout(ensureScheduleCard,500);
 })();
+
+  function addShareButtons(){
+    const m=$f('meal')?.querySelector('.card');if(m&&!$f('shareMealBtn')){const b=document.createElement('button');b.id='shareMealBtn';b.className='secondary';b.textContent='📤 اشتراک/چاپ برنامه غذایی';b.onclick=()=>sharePlan('meal');m.appendChild(b)}
+    const w=$f('workout')?.querySelector('.card');if(w&&!$f('shareWorkoutBtn')){const b=document.createElement('button');b.id='shareWorkoutBtn';b.className='secondary';b.textContent='📤 اشتراک/چاپ برنامه تمرینی';b.onclick=()=>sharePlan('workout');w.appendChild(b)}
+  }
+
+  function addGoalHistory(){
+    if(!$f('goalBox')||$f('goalHistoryBox'))return;const box=document.createElement('div');box.className='card';box.id='goalHistoryBox';box.innerHTML='<h3>🗂️ تاریخچه اهداف</h3><div id="goalHistory"></div>'; $f('goalBox').appendChild(box);
+    loadGoalHistory();
+  }
+  async function loadGoalHistory(){if(!currentClient||!$f('goalHistory'))return;try{const rows=await sbGet(`/trainee_goals?trainee_id=eq.${encodeURIComponent(currentClient.id)}&select=*&order=created_at.desc`);$f('goalHistory').innerHTML=rows.length?rows.map(x=>`<div class="f18-note"><b>${escf(x.target_date||'بدون تاریخ')}</b> | وزن ${escf(x.target_weight||'—')} | چربی ${escf(x.target_body_fat||'—')}%<br>${escf(x.coach_note||'')}</div>`).join(''):'<p class="f18-muted">هدفی ثبت نشده است.</p>';}catch(e){}}
+
+  function addCoachStatusFilters(){
+    const list=$f('clientList');if(!list||$f('f18statusfilters'))return;const d=document.createElement('div');d.id='f18statusfilters';d.className='f18-filterrow';d.innerHTML='<button class="active" onclick="finalStatusFilter(\'all\',this)">همه</button><button onclick="finalStatusFilter(\'active\',this)">فعال</button><button onclick="finalStatusFilter(\'plan\',this)">برنامه‌دار</button><button onclick="finalStatusFilter(\'alert\',this)">نیازمند پیگیری</button>';list.parentNode.insertBefore(d,list);
+  }
+  window.finalStatusFilter=function(mode,btn){clientMode=mode;qsa('#f18statusfilters button').forEach(b=>b.classList.remove('active'));btn.classList.add('active');renderFinalClients();};
+
+  const oldFinish=window.finishLogin;
+  window.finishLogin=async function(user){await oldFinish(user);addFinalStyle();addShareButtons();addCoachStatusFilters();wireFinalBadges();addGoalHistory();if(authProfile?.role==='coach'){await loadClients();}else if(authProfile?.role==='trainee'){await selectClient(currentClient?.id);await loadDashboard();}};
+
+  // Re-run UI helpers after dynamic sections appear.
+  const oldShow=window.showSection;
+  window.showSection=function(id,btn){oldShow(id,btn);addFinalStyle();if(id==='workout')addShareButtons();if(id==='meal')addShareButtons();if(id==='challenges'&&$f('challengeList'))loadChallenges();if(id==='progress'&&currentClient){loadProgressChart();loadNoteHistory();}};
+
+  setTimeout(()=>{addFinalStyle();addShareButtons();addCoachStatusFilters();wireFinalBadges();},700);
+})();
 </script>
+
+<script>
+/* FINAL HARDENING — Auth/RLS + Training Schedule */
