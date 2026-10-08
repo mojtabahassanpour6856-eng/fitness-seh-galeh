@@ -1347,7 +1347,141 @@ loadExercises();
         const rows=await sbGet(`/trainee_workout_exercises?workout_plan_id=eq.${encodeURIComponent(p.id)}&select=*&order=sort_order.asc`);const ids=[...new Set(rows.map(x=>x.exercise_id).filter(Boolean))];let ex=[];if(ids.length)ex=await sbGet(`/exercises?id=in.(${ids.join(',')})&select=id,name`);const names=Object.fromEntries(ex.map(x=>[String(x.id),x.name]));
         body=`<h2>${escf(p.title||title)}</h2><p>هدف: ${escf(p.goal||'—')}</p><table><tr><th>حرکت</th><th>روز</th><th>ست</th><th>تکرار/زمان</th><th>استراحت</th><th>سیستم</th><th>گروه</th></tr>${rows.map(x=>`<tr><td>${escf(names[String(x.exercise_id)]||'حرکت')}</td><td>${escf(x.training_day||'—')}</td><td>${escf(x.sets||'')}</td><td>${escf(x.reps||'')}</td><td>${escf(x.rest_seconds||0)}</td><td>${escf(sysName[x.training_system||'normal']||'')}</td><td>${escf(x.group_key||'—')}</td></tr>`).join('')}</table>`;
       }
-      const html=`<!doctype html><html lang="fa" dir="rtl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${title}</title><style>body{font-family:Tahoma,Arial;padding:24px;line-height:1.9;color:#111}table{width:100%;border-collapse:collapse;margin-top:12px}td,th{border:1px solid #aaa;padding:7px;text-align:center;font-size:12px}h1{font-size:22px}</style></head><body><h1>باشگاه فیتنس سه‌قلعه | مربی مجتبی</h1><p>شاگرد: ${escf(currentClient.name||'')} | تاریخ: ${today()}</p>${body}<p>این صفحه برای چاپ و ذخیره PDF آماده است.</p><script>window.onload=()=>setTimeout(()=>window.print(),400)<\/script></body></html>`;
+      const html=`<!doctype html><html lang="fa" dir="rtl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${title}</title><style>body{font-family:Tahoma,Arial;padding:24px;line-height:1.9;color:#111}table{width:100%;border-collapse:collapse;margin-top:12px}td,th{border:1px solid #aaa;padding:7px;text-align:center;font-size:12px}h1{font-size:22px}</style></head><body><h1>باشگاه فیتنس سه‌قلعه | مربی مجتبی</h1><p>شاگرد: ${escf(currentClient.name||'')} | تاریخ: ${today()}</p>${body}<p>این صفحه برای چاپ و ذخیره PDF آماده است.</p><script>window.onload=()=>setTimeout(()=>window.print(),400)<\/script><!-- FINAL FIX — REAL SUPABASE SESSION + TRAINEE REGISTRATION + SCHEDULE -->
+<script>
+(function(){
+  const el=id=>document.getElementById(id);
+
+  async function getCoachSession(){
+    if(typeof AUTH_SUPABASE==='undefined' || !AUTH_SUPABASE){
+      throw new Error('اتصال Supabase در این نسخه بارگذاری نشده است.');
+    }
+    const {data,error}=await AUTH_SUPABASE.auth.getSession();
+    if(error) throw error;
+    const session=data&&data.session;
+    if(!session||!session.user) throw new Error('نشست مربی پیدا نشد. یک‌بار از حساب مربی خارج و دوباره وارد شوید.');
+    const {data:profiles,error:pe}=await AUTH_SUPABASE.from('profiles').select('id,role,full_name').eq('id',session.user.id).limit(1);
+    if(pe) throw pe;
+    if(!profiles.length) throw new Error('حساب واردشده هنوز به جدول profiles متصل نشده است.');
+    if(profiles[0].role!=='coach') throw new Error('این حساب در پروفایل اپ به‌عنوان مربی ثبت نشده است.');
+    return session;
+  }
+
+  async function rest(path,method,body){
+    const session=await getCoachSession();
+    const headers={apikey:SUPABASE_KEY,Authorization:'Bearer '+session.access_token};
+    if(body!==undefined){headers['Content-Type']='application/json';headers.Prefer='return=representation';}
+    const r=await fetch(SUPABASE_URL+'/rest/v1'+path,{method:method||'GET',headers,body:body===undefined?undefined:JSON.stringify(body)});
+    const txt=await r.text();
+    if(!r.ok) throw new Error(txt||('HTTP '+r.status));
+    if(!txt)return [];
+    try{return JSON.parse(txt)}catch(_){return []}
+  }
+
+  // Explicitly replace registration so it never depends on window.AUTH_SUPABASE.
+  window.addClient=async function(){
+    const full_name=el('cn')?.value.trim();
+    if(!full_name){alert('نام و نام خانوادگی شاگرد را وارد کنید.');return;}
+    try{
+      const session=await getCoachSession();
+      const payload={
+        full_name,
+        phone:el('cphone')?.value.trim()||null,
+        gender:el('cgender')?.value||null,
+        birth_date:el('cbirth')?.value||null,
+        height:+el('cheight')?.value||null,
+        current_weight:+el('cweight')?.value||null,
+        goal:el('cgoal')?.value||null,
+        training_level:el('clevel')?.value||null,
+        training_history:el('chistory')?.value.trim()||null,
+        limitations:el('climitations')?.value.trim()||null,
+        training_type:el('ctype')?.value||'gym',
+        home_equipment:el('cequipment')?.value.trim()||null,
+        training_days:el('ctrainingDays')?.value.trim()||null,
+        training_time:el('ctrainingTime')?.value||null,
+        coach_user_id:session.user.id
+      };
+      const rows=await rest('/trainees','POST',payload);
+      if(typeof loadClients==='function') await loadClients();
+      if(typeof clearClientForm==='function') clearClientForm();
+      if(rows&&rows[0]&&typeof selectClient==='function') await selectClient(rows[0].id);
+      alert('✅ شاگرد با موفقیت ثبت شد.');
+    }catch(e){
+      console.error(e);
+      alert('ثبت شاگرد انجام نشد.\n'+(e.message||e));
+    }
+  };
+
+  // Add a compact schedule card once, with a real save button.
+  function ensureScheduleCard(){
+    const sec=el('client');
+    if(!sec||el('scheduleCard'))return;
+    const card=document.createElement('div');
+    card.className='card';card.id='scheduleCard';
+    card.innerHTML=`
+      <h2>🗓️ برنامه حضور و ساعت تمرین</h2>
+      <div class="grid2">
+        <div><label>روزهای تمرین</label><input id="trainingDaysEdit" placeholder="شنبه، دوشنبه، چهارشنبه"></div>
+        <div><label>ساعت تمرین</label><input id="trainingTimeEdit" type="time"></div>
+      </div>
+      <button onclick="saveTrainingSchedule()">💾 ثبت روز و ساعت تمرین</button>`;
+    sec.appendChild(card);
+  }
+
+  window.saveTrainingSchedule=async function(){
+    if(typeof currentClient==='undefined'||!currentClient){alert('اول یک شاگرد را انتخاب کنید.');return;}
+    try{
+      const payload={
+        training_type:el('ptype2')?.value||el('ptype')?.value||'gym',
+        home_equipment:el('pequipment2')?.value.trim()||el('pequipment')?.value.trim()||null,
+        limitations:el('plimit')?.value.trim()||null,
+        training_days:el('trainingDaysEdit')?.value.trim()||null,
+        training_time:el('trainingTimeEdit')?.value||null
+      };
+      await rest('/trainees?id=eq.'+encodeURIComponent(currentClient.id),'PATCH',payload);
+      if(typeof loadClients==='function') await loadClients();
+      if(typeof clients!=='undefined') currentClient=clients.find(x=>String(x.id)===String(currentClient.id))||currentClient;
+      el('trainingDaysEdit').value=currentClient.training_days||'';
+      el('trainingTimeEdit').value=currentClient.training_time?String(currentClient.training_time).slice(0,5):'';
+      alert('✅ روزها و ساعت تمرین با موفقیت ثبت شد.');
+    }catch(e){
+      console.error(e);
+      alert('ذخیره روز و ساعت تمرین انجام نشد.\n'+(e.message||e));
+    }
+  };
+
+  // Keep schedule fields synced whenever a trainee is selected.
+  const oldSelect=window.selectClient;
+  if(typeof oldSelect==='function'){
+    window.selectClient=async function(id){
+      const result=await oldSelect(id);
+      ensureScheduleCard();
+      if(typeof currentClient!=='undefined'&&currentClient){
+        el('trainingDaysEdit').value=currentClient.training_days||'';
+        el('trainingTimeEdit').value=currentClient.training_time?String(currentClient.training_time).slice(0,5):'';
+      }
+      return result;
+    };
+  }
+
+  // Compact registration layout: group fields into small visual cards.
+  const compactStyle=document.createElement('style');
+  compactStyle.textContent=`
+    #coach .card h2{margin-bottom:10px}
+    #coach .card:nth-of-type(3){padding:12px}
+    #coach .card:nth-of-type(3) .grid2{gap:7px}
+    #coach .card:nth-of-type(3) label{margin:4px 0;font-size:11px}
+    #coach .card:nth-of-type(3) input,#coach .card:nth-of-type(3) select{padding:9px;font-size:12px}
+    #coach .card:nth-of-type(3)>button{margin-top:10px}
+    #scheduleCard{border-color:#3a5369}
+  `;
+  document.head.appendChild(compactStyle);
+
+  // Make sure the schedule card appears even if the trainee section was already open.
+  setTimeout(ensureScheduleCard,500);
+})();
+</script>
+</body></html>`;
       if(navigator.share){try{await navigator.share({title,text:`${title} | ${currentClient.name||''} | باشگاه فیتنس سه‌قلعه`});}catch(e){}}
       const w=window.open('','_blank');if(w){w.document.write(html);w.document.close();}
     }catch(e){alert('ساخت برنامه برای اشتراک/چاپ انجام نشد.\n'+e.message)}
@@ -1382,99 +1516,3 @@ loadExercises();
 
 <script>
 /* FINAL HARDENING — Auth/RLS + Training Schedule */
-(function(){
-  async function requireCoachSession(){
-    if(!window.AUTH_SUPABASE) throw new Error('سیستم ورود به Supabase آماده نیست.');
-    const {data,error}=await AUTH_SUPABASE.auth.getSession();
-    if(error) throw error;
-    const session=data&&data.session;
-    if(!session||!session.user) throw new Error('نشست مربی منقضی شده است. دوباره وارد حساب مربی شوید.');
-    const {data:rows,error:pe}=await AUTH_SUPABASE.from('profiles').select('id,role,full_name').eq('id',session.user.id).limit(1);
-    if(pe) throw pe;
-    if(!rows.length||rows[0].role!=='coach') throw new Error('حساب واردشده به‌عنوان مربی در پروفایل اپ شناخته نشد.');
-    return session;
-  }
-
-  window.addClient=async function(){
-    const full_name=document.getElementById('cn')?.value.trim();
-    if(!full_name){alert('نام شاگرد را وارد کنید.');return;}
-    try{
-      const session=await requireCoachSession();
-      const el=id=>document.getElementById(id);
-      const phone=(el('cphone')?.value||'').trim();
-      const payload={
-        full_name,
-        phone:phone||null,
-        gender:el('cgender')?.value||null,
-        birth_date:el('cbirth')?.value||null,
-        height:+el('cheight')?.value||null,
-        current_weight:+el('cweight')?.value||null,
-        goal:el('cgoal')?.value||null,
-        training_level:el('clevel')?.value||null,
-        training_history:el('chistory')?.value.trim()||null,
-        limitations:el('climitations')?.value.trim()||null,
-        training_type:el('ctype')?.value||'gym',
-        home_equipment:el('cequipment')?.value.trim()||null,
-        training_days:el('ctrainingDays')?.value.trim()||null,
-        training_time:el('ctrainingTime')?.value||null,
-        coach_user_id:session.user.id
-      };
-      let result;
-      try{ result=await sbWrite('/trainees','POST',payload); }
-      catch(e){
-        const msg=String(e.message||e);
-        if(/training_days|training_time/i.test(msg)){
-          delete payload.training_days; delete payload.training_time;
-          result=await sbWrite('/trainees','POST',payload);
-        }else throw e;
-      }
-      if(typeof loadClients==='function') await loadClients();
-      if(typeof clearClientForm==='function') clearClientForm();
-      if(result&&result[0]&&typeof selectClient==='function') await selectClient(result[0].id);
-      alert('شاگرد با موفقیت ثبت شد و به حساب مربی متصل شد.');
-    }catch(e){
-      console.error(e);
-      alert('ثبت شاگرد انجام نشد.\n'+(e.message||e));
-    }
-  };
-
-  const originalSelect=window.selectClient;
-  window.selectClient=async function(id){
-    const result=await originalSelect(id);
-    const c=window.currentClient;
-    const days=document.getElementById('trainingDaysEdit');
-    const time=document.getElementById('trainingTimeEdit');
-    if(c){
-      if(days) days.value=c.training_days||'';
-      if(time) time.value=c.training_time ? String(c.training_time).slice(0,5) : '';
-    }
-    return result;
-  };
-
-  window.saveTrainingSchedule=async function(){
-    if(!window.currentClient){alert('اول شاگرد را انتخاب کنید.');return;}
-    try{
-      await requireCoachSession();
-      const el=id=>document.getElementById(id);
-      const payload={
-        training_type:el('ptype2')?.value||el('ptype')?.value||'gym',
-        home_equipment:el('pequipment2')?.value.trim()||el('pequipment')?.value.trim()||null,
-        limitations:el('plimit')?.value.trim()||null,
-        training_days:el('trainingDaysEdit')?.value.trim()||null,
-        training_time:el('trainingTimeEdit')?.value||null
-      };
-      await sbWrite('/trainees?id=eq.'+encodeURIComponent(currentClient.id),'PATCH',payload);
-      if(typeof loadClients==='function') await loadClients();
-      currentClient=clients.find(x=>String(x.id)===String(currentClient.id))||currentClient;
-      if(el('trainingDaysEdit'))el('trainingDaysEdit').value=currentClient.training_days||'';
-      if(el('trainingTimeEdit'))el('trainingTimeEdit').value=currentClient.training_time?String(currentClient.training_time).slice(0,5):'';
-      alert('روزها و ساعت تمرین با موفقیت ذخیره شد.');
-    }catch(e){
-      console.error(e);
-      alert('ذخیره روز و ساعت تمرین انجام نشد.\n'+(e.message||e));
-    }
-  };
-})();
-</script>
-</body>
-</html>
