@@ -1392,6 +1392,7 @@ loadExercises();
     if(!full_name){alert('نام و نام خانوادگی شاگرد را وارد کنید.');return;}
     try{
       const session=await getCoachSession();
+      alert('🔎 اطلاعات حساب واردشده\nUID: '+(session.user?.id||'—')+'\nEmail: '+(session.user?.email||'—')+'\n\nUID پروفایل مربی مورد انتظار: 839381fe-e8d7-4df4-9a82-624d76d84e3b');
       const payload={
         full_name,
         phone:el('cphone')?.value.trim()||null,
@@ -1517,146 +1518,40 @@ loadExercises();
 </script>
 
 <script>
-
-<script>
-
-/* FINAL HARDENING — Auth/RLS + Training Schedule */
+/* FINAL DIAGNOSTIC — CHECK REAL AUTH USER */
 (function(){
-  const auth = window.AUTH_SUPABASE || window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
-  window.AUTH_SUPABASE = auth;
-  const byId = id => document.getElementById(id);
-
-  async function authenticatedSession(){
-    const {data,error}=await auth.auth.getSession();
-    if(error) throw error;
-    if(!data || !data.session || !data.session.access_token || !data.session.user){
-      throw new Error('نشست ورود مربی پیدا نشد. یک‌بار از حساب خارج شوید و دوباره وارد شوید.');
-    }
-    return data.session;
-  }
-
-  async function authenticatedRest(path,method,body){
-    const session=await authenticatedSession();
-    const headers={
-      apikey:SUPABASE_KEY,
-      Authorization:'Bearer '+session.access_token
-    };
-    const options={method:method||'GET',headers};
-    if(body!==undefined){
-      headers['Content-Type']='application/json';
-      headers.Prefer='return=representation';
-      options.body=JSON.stringify(body);
-    }
-    const response=await ORIGINAL_FETCH(SUPABASE_URL+'/rest/v1'+path,options);
-    const text=await response.text();
-    if(!response.ok) throw new Error(text||('HTTP '+response.status));
-    if(!text)return [];
-    try{return JSON.parse(text);}catch(e){return [];}
-  }
-
-  // From this point onward every generic REST read/write uses the real Supabase session token.
-  window.sbGet=async function(path){ return authenticatedRest(path,'GET'); };
-  window.sbWrite=async function(path,method,body){ return authenticatedRest(path,method,body); };
-
-  // Replace trainee registration with an explicit authenticated request.
-  window.addClient=async function(){
-    const full_name=(byId('cn')?.value||'').trim();
-    if(!full_name){alert('نام و نام خانوادگی شاگرد را وارد کنید.');return;}
+  async function diagnoseAuth(){
     try{
-      const session=await authenticatedSession();
-      const profileResult=await auth.from('profiles').select('id,role,full_name').eq('id',session.user.id).maybeSingle();
-      if(profileResult.error) throw profileResult.error;
-      if(!profileResult.data) throw new Error('حساب واردشده در جدول profiles پیدا نشد.');
-      if(profileResult.data.role!=='coach') throw new Error('حساب فعلی مربی نیست.');
-
-      const payload={
-        full_name,
-        phone:(byId('cphone')?.value||'').trim()||null,
-        gender:byId('cgender')?.value||null,
-        birth_date:byId('cbirth')?.value||null,
-        height:+(byId('cheight')?.value||0)||null,
-        current_weight:+(byId('cweight')?.value||0)||null,
-        goal:byId('cgoal')?.value||null,
-        training_level:byId('clevel')?.value||null,
-        training_history:(byId('chistory')?.value||'').trim()||null,
-        limitations:(byId('climitations')?.value||'').trim()||null,
-        training_type:byId('ctype')?.value||'gym',
-        home_equipment:(byId('cequipment')?.value||'').trim()||null,
-        training_days:(byId('ctrainingDays')?.value||'').trim()||null,
-        training_time:byId('ctrainingTime')?.value||null,
-        coach_user_id:session.user.id
-      };
-
-      const rows=await authenticatedRest('/trainees','POST',payload);
-      if(typeof loadClients==='function') await loadClients();
-      if(typeof clearClientForm==='function') clearClientForm();
-      if(rows && rows[0] && typeof window.selectClient==='function') await window.selectClient(rows[0].id);
-      alert('✅ شاگرد با موفقیت ثبت شد و در دیتابیس قرار گرفت.');
-    }catch(e){
-      console.error('addClient authenticated error:',e);
-      alert('ثبت شاگرد انجام نشد.\n'+(e.message||String(e)));
-    }
-  };
-
-  // Explicit schedule save; no silent removal of training_days/training_time.
-  window.saveTrainingSchedule=async function(){
-    if(!window.currentClient && typeof currentClient==='undefined'){
-      alert('اول یک شاگرد را انتخاب کنید.');return;
-    }
-    const client=typeof currentClient!=='undefined'?currentClient:window.currentClient;
-    if(!client){alert('اول یک شاگرد را انتخاب کنید.');return;}
-    try{
-      const payload={
-        training_type:byId('ptype2')?.value||byId('ptype')?.value||'gym',
-        home_equipment:(byId('pequipment2')?.value||byId('pequipment')?.value||'').trim()||null,
-        limitations:(byId('plimit')?.value||'').trim()||null,
-        training_days:(byId('trainingDaysEdit')?.value||'').trim()||null,
-        training_time:byId('trainingTimeEdit')?.value||null
-      };
-      await authenticatedRest('/trainees?id=eq.'+encodeURIComponent(client.id),'PATCH',payload);
-      if(typeof loadClients==='function') await loadClients();
-      const fresh=(typeof clients!=='undefined'&&Array.isArray(clients))?clients.find(x=>String(x.id)===String(client.id)):null;
-      if(fresh) currentClient=fresh;
-      if(byId('trainingDaysEdit')) byId('trainingDaysEdit').value=currentClient?.training_days||payload.training_days||'';
-      if(byId('trainingTimeEdit')) byId('trainingTimeEdit').value=currentClient?.training_time?String(currentClient.training_time).slice(0,5):(payload.training_time||'');
-      alert('✅ روزها و ساعت تمرین با موفقیت ثبت شد.');
-    }catch(e){
-      console.error('saveTrainingSchedule authenticated error:',e);
-      alert('ذخیره روز و ساعت تمرین انجام نشد.\n'+(e.message||String(e)));
-    }
-  };
-
-  // Ensure the schedule card has a visible save button.
-  function ensureScheduleCard(){
-    const sec=byId('client');
-    if(!sec || byId('scheduleCard')) return;
-    const card=document.createElement('div');
-    card.className='card';
-    card.id='scheduleCard';
-    card.innerHTML='<h2>🗓️ برنامه حضور و ساعت تمرین</h2><div class="grid2"><div><label>روزهای تمرین</label><input id="trainingDaysEdit" placeholder="شنبه، دوشنبه، چهارشنبه"></div><div><label>ساعت تمرین</label><input id="trainingTimeEdit" type="time"></div></div><button onclick="saveTrainingSchedule()">💾 ثبت روز و ساعت تمرین</button>';
-    sec.appendChild(card);
-  }
-
-  const previousSelect=window.selectClient;
-  if(typeof previousSelect==='function'){
-    window.selectClient=async function(id){
-      const result=await previousSelect(id);
-      ensureScheduleCard();
-      const c=typeof currentClient!=='undefined'?currentClient:null;
-      if(c){
-        if(byId('trainingDaysEdit')) byId('trainingDaysEdit').value=c.training_days||'';
-        if(byId('trainingTimeEdit')) byId('trainingTimeEdit').value=c.training_time?String(c.training_time).slice(0,5):'';
+      if(typeof AUTH_SUPABASE === 'undefined' || !AUTH_SUPABASE){
+        alert('❌ AUTH_SUPABASE پیدا نشد.'); return;
       }
-      return result;
-    };
+      const {data,error}=await AUTH_SUPABASE.auth.getSession();
+      if(error){ alert('❌ خطای دریافت نشست:\n'+error.message); return; }
+      const session=data?.session;
+      if(!session || !session.user){
+        alert('❌ هیچ نشست فعالی پیدا نشد.\n\nلطفاً از حساب مربی خارج شوید و دوباره وارد شوید.');
+        return;
+      }
+      const uid=session.user.id;
+      const email=session.user.email || '—';
+      let profileText='نامشخص';
+      try{
+        const {data:profiles,error:pe}=await AUTH_SUPABASE
+          .from('profiles').select('id,role,full_name').eq('id',uid).limit(1);
+        if(pe) profileText='خطا در خواندن پروفایل: '+pe.message;
+        else if(!profiles || !profiles.length) profileText='❌ برای این UID پروفایلی پیدا نشد.';
+        else profileText='نام: '+(profiles[0].full_name || '—')+'\nنقش: '+(profiles[0].role || '—');
+      }catch(e){ profileText='خطا: '+e.message; }
+      alert('🔎 تشخیص حساب اپ\n\nUID حساب واردشده:\n'+uid+'\n\nEmail:\n'+email+'\n\nUID پروفایل مربی مورد انتظار:\n839381fe-e8d7-4df4-9a82-624d76d84e3b\n\nوضعیت پروفایل:\n'+profileText);
+    }catch(e){ alert('❌ خطای غیرمنتظره:\n'+(e.message || e)); }
   }
-
-  const style=document.createElement('style');
-  style.textContent='#scheduleCard{border-color:#3a5369}#scheduleCard button{margin-top:10px}';
-  document.head.appendChild(style);
-  setTimeout(ensureScheduleCard,500);
+  window.diagnoseAuth=diagnoseAuth;
+  const oldAddClient=window.addClient;
+  window.addClient=async function(){
+    await diagnoseAuth();
+    if(confirm('آیا بعد از بررسی UID، ثبت شاگرد را ادامه بدهم؟')){
+      if(typeof oldAddClient==='function') return oldAddClient();
+    }
+  };
 })();
-
 </script>
-</body>
-</html>
