@@ -1,0 +1,1520 @@
+<!doctype html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>فیتنس سه‌قلعه | مربی مجتبی</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;background:#050a11;color:#fff;font-family:Tahoma,Arial,sans-serif}
+.page{max-width:1050px;margin:auto;padding:10px}
+.hero{overflow:hidden;border-radius:20px;background:#101923;border:1px solid #26384a}
+.hero img{width:100%;display:block;max-height:260px;object-fit:cover}
+.brand{padding:16px 18px;background:#0a111b}.brand h1{margin:0;font-size:23px}.brand p{margin:7px 0 0;color:#cbd5df;font-size:13px}
+.nav{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:12px 0}
+.nav button{margin:0;background:#162434;color:#fff;border:1px solid #2d4357}
+.nav button.active{background:#ffbd16;color:#111}
+.card{background:#0d1722;border:1px solid #26384a;border-radius:16px;padding:16px;margin:12px 0}
+h2{font-size:18px;margin:0 0 13px}.muted{color:#aeb9c4;font-size:12px;line-height:1.9}
+.grid{display:grid;grid-template-columns:1fr 150px;gap:10px}.grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+label{display:block;font-size:12px;margin:7px 0;color:#ddd;font-weight:bold}
+select,input,textarea{width:100%;padding:12px;border-radius:10px;border:1px solid #34495c;background:#101e2d;color:#fff;font:inherit}
+textarea{min-height:90px;resize:vertical}
+button{width:100%;padding:13px;border:0;border-radius:10px;background:#ffbd16;color:#111;font-weight:bold;font:inherit;cursor:pointer;margin-top:10px}
+button.secondary{background:#162434;color:#fff;border:1px solid #34495c}
+button.danger{background:#b83232;color:#fff}
+.result{display:none;background:#062f29;border:1px solid #079875;border-radius:14px;padding:16px;margin-top:13px}
+.big{font-size:36px;font-weight:bold;text-align:center;margin:5px}.sub{text-align:center;color:#ddd}
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:7px;margin-top:13px}.stat{background:#10212b;border-radius:10px;padding:9px;text-align:center;font-size:11px}.stat b{display:block;font-size:17px;margin-bottom:3px}
+table{width:100%;border-collapse:collapse;margin-top:13px;font-size:12px}th,td{padding:8px;border-bottom:1px solid #253746;text-align:center}
+.row{display:flex;gap:8px}.row>*{flex:1}
+.section{display:none}.section.active{display:block}
+.badges{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}.badge{background:#101e2d;border-radius:12px;padding:12px;text-align:center}.badge b{display:block;font-size:20px;margin-bottom:4px}
+.client{padding:12px;border:1px solid #2b4053;border-radius:12px;margin:8px 0;background:#101b28}
+.client strong{display:block;margin-bottom:5px}.pill{display:inline-block;padding:4px 8px;border-radius:20px;background:#203447;color:#dce7ef;font-size:11px}
+#custom{display:none}.hide{display:none!important}
+.footer{text-align:center;color:#8998a6;padding:18px;font-size:11px}
+@media(max-width:600px){.grid,.grid2{grid-template-columns:1fr}.stats,.badges{grid-template-columns:1fr 1fr}.nav{grid-template-columns:1fr 1fr}.row{display:grid;grid-template-columns:1fr}}
+
+.meal-tabs{display:grid;grid-template-columns:repeat(3,1fr);gap:7px;margin-bottom:12px}.meal-tabs button{margin:0;padding:10px;font-size:12px}.meal-tabs button.active{background:#ffbd16;color:#111}.meal-card{background:#101e2d;border:1px solid #2b4053;border-radius:14px;padding:12px;margin:10px 0}.meal-head{display:flex;justify-content:space-between;align-items:center;gap:8px}.meal-head h3{margin:0;font-size:15px}.meal-total{color:#b9c7d3;font-size:11px}.food-line{display:grid;grid-template-columns:1fr 82px 58px auto;gap:6px;align-items:center;border-top:1px solid #253746;padding:9px 0}.food-line:first-child{border-top:0}.food-name{font-size:12px}.food-meta{font-size:10px;color:#aeb9c4}.mini{margin:0;padding:7px 8px;font-size:11px}.meal-summary{display:grid;grid-template-columns:repeat(4,1fr);gap:7px}.meal-summary .stat{padding:10px}.student-meal{border:1px solid #2b4053;border-radius:14px;margin:9px 0;padding:12px;background:#101b28}.checkfood{display:flex;align-items:center;gap:8px;font-size:12px;padding:7px 0}.checkfood input{width:auto}.report-row{display:grid;grid-template-columns:1fr auto;gap:8px;padding:9px 0;border-bottom:1px solid #253746;font-size:12px}.modal-back{position:fixed;inset:0;background:rgba(0,0,0,.72);display:none;align-items:center;justify-content:center;padding:12px;z-index:50}.modal-back.show{display:flex}.modal{width:min(520px,100%);max-height:90vh;overflow:auto;background:#0d1722;border:1px solid #34495c;border-radius:16px;padding:15px}.modal h3{margin:0 0 12px}.close-row{display:flex;gap:8px}.close-row button{margin-top:0}.sub-result{background:#062f29;border:1px solid #079875;border-radius:12px;padding:10px;margin-top:10px}
+@media(max-width:600px){.meal-tabs{grid-template-columns:1fr 1fr 1fr}.food-line{grid-template-columns:1fr 70px 52px auto}.meal-summary{grid-template-columns:1fr 1fr}}
+button,.client,.meal-card,.badge{transition:transform .08s ease,opacity .08s ease}
+button:active,.client:active,.meal-card:active,.badge:active{transform:scale(.98);opacity:.9}
+</style>
+<style>
+#authScreen{position:fixed;inset:0;background:#050a11;z-index:999;display:flex;align-items:center;justify-content:center;padding:16px}
+#authScreen .auth-card{width:min(430px,100%);background:#0d1722;border:1px solid #26384a;border-radius:20px;padding:22px;box-shadow:0 20px 60px rgba(0,0,0,.45)}
+#authScreen h2{font-size:22px;text-align:center;margin-bottom:8px}.auth-logo{text-align:center;font-size:38px;margin-bottom:8px}.auth-error{color:#ff8e8e;background:#3a1414;border:1px solid #6d2929;border-radius:10px;padding:10px;margin-top:10px;font-size:12px;display:none}.auth-user{margin:10px 0;color:#cbd5df;font-size:12px;text-align:center}
+body.locked .page{display:none!important}
+body.locked{overflow:hidden}
+.logout-btn{background:#b83232!important;color:#fff!important;margin-top:8px!important}
+</style>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body class="locked">
+<div id="authScreen">
+  <div class="auth-card">
+    <div class="auth-logo">🏋️</div>
+    <h2>باشگاه فیتنس سه‌قلعه</h2>
+    <p class="muted" style="text-align:center">ورود به سامانه مربی مجتبی</p>
+    <label>ایمیل</label><input id="loginEmail" type="email" autocomplete="username" placeholder="ایمیل">
+    <label>رمز عبور</label><input id="loginPassword" type="password" autocomplete="current-password" placeholder="رمز عبور">
+    <button onclick="loginApp()">🔐 ورود</button>
+    <div id="authError" class="auth-error"></div>
+  </div>
+</div>
+<div class="page">
+
+<div id="authUserBar" class="card" style="display:none;padding:10px;margin-bottom:10px">
+  <div class="row"><div id="authUserText" class="auth-user"></div><button class="logout-btn" onclick="logoutApp()">🚪 خروج</button></div>
+</div>
+<div class="hero">
+  <div class="brand">
+    <h1>باشگاه فیتنس سه‌قلعه</h1>
+    <p>سامانه مربی مجتبی | برنامه غذایی، تمرینی و پیگیری شاگردان</p>
+  </div>
+</div>
+
+<div class="nav">
+  <button class="active" onclick="showSection('food',this)">🍽️ غذا</button>
+  <button onclick="showSection('coach',this)">👨‍🏫 پنل مربی</button>
+  <button onclick="showSection('client',this)">👤 شاگرد</button>
+  <button onclick="showSection('meal',this)">📋 برنامه غذایی</button>
+  <button onclick="showSection('workout',this)">🏋️ برنامه تمرینی</button>
+  <button onclick="showSection('progress',this)">📊 پیشرفت</button>
+</div>
+
+<!-- FOOD -->
+<section id="food" class="section active">
+<div class="card">
+<h2>محاسبه‌گر جایگزین غذایی</h2>
+<div class="grid">
+<div>
+<label>غذای برنامه</label>
+<select id="orig"></select>
+<button class="secondary" onclick="editFood()">✏️ ویرایش غذای انتخاب‌شده</button>
+</div>
+<div>
+<label>مقدار (گرم)</label>
+<input id="origG" type="number" value="100" min="1">
+</div>
+</div>
+</div>
+
+<div class="card">
+<h2>غذای جایگزین</h2>
+<label>غذایی که می‌خواهید جایگزین کنید</label>
+<select id="rep"></select>
+<button onclick="calc()">محاسبه مقدار جایگزین</button>
+<div class="result" id="result">
+<div class="sub">مقدار پیشنهادی غذای جایگزین</div>
+<div class="big" id="grams"></div>
+<div class="sub" id="cal"></div>
+<div class="stats">
+<div class="stat"><b id="p"></b>پروتئین</div>
+<div class="stat"><b id="c"></b>کربوهیدرات</div>
+<div class="stat"><b id="f"></b>چربی</div>
+<div class="stat"><b id="k"></b>کالری</div>
+</div>
+<table><thead><tr><th>مورد</th><th>وعده برنامه</th><th>جایگزین</th></tr></thead><tbody id="tb"></tbody></table>
+<p class="muted">محاسبه بر اساس برابر کردن کالری است؛ در برنامه‌های ورزشی، پروتئین و سایر درشت‌مغذی‌ها باید توسط مربی بررسی شوند.</p>
+</div>
+</div>
+
+<div class="card">
+<button onclick="toggle()">＋ افزودن غذای سفارشی</button>
+<div id="custom">
+<div class="grid2">
+<div><label>نام غذا</label><input id="n"></div>
+<div><label>کالری / ۱۰۰ گرم</label><input id="kc" type="number"></div>
+<div><label>پروتئین / ۱۰۰ گرم</label><input id="pr" type="number"></div>
+<div><label>کربوهیدرات / ۱۰۰ گرم</label><input id="ca" type="number"></div>
+<div><label>چربی / ۱۰۰ گرم</label><input id="fa" type="number"></div>
+</div>
+<button onclick="add()">ذخیره غذای جدید</button>
+<button class="secondary" onclick="saveEdit()">💾 ذخیره ویرایش</button>
+<button class="danger" onclick="deleteFood()">🗑️ حذف غذای انتخاب‌شده</button>
+</div>
+</div>
+</div>
+</section>
+
+<!-- COACH -->
+<section id="coach" class="section">
+<div class="card">
+<h2>👨‍🏫 پنل مربی مجتبی</h2>
+<div class="badges">
+<div class="badge"><b id="clientCount">۰</b>شاگرد</div>
+<div class="badge"><b id="activeCount">۰</b>فعال</div>
+<div class="badge"><b id="planCount">۰</b>برنامه</div>
+<div class="badge"><b id="alertCount">۰</b>نیازمند پیگیری</div>
+</div>
+</div>
+<div class="card">
+<h2>👥 شاگردان</h2>
+<input id="clientSearch" placeholder="🔎 جستجوی نام شاگرد" oninput="renderClients()">
+<div id="clientList" class="muted" style="margin-top:10px">هنوز شاگردی ثبت نشده است.</div>
+</div>
+<div class="card">
+<h2>➕ ثبت شاگرد توسط مربی</h2>
+<div class="grid2">
+<div><label>نام و نام خانوادگی</label><input id="cn"></div>
+<div><label>شماره موبایل</label><input id="cphone" type="tel"></div>
+<div><label>تاریخ تولد</label><input id="cbirth" type="date"></div>
+<div><label>جنسیت</label><select id="cgender"><option>زن</option><option>مرد</option></select></div>
+<div><label>وزن فعلی (کیلو)</label><input id="cweight" type="number" step="0.1"></div>
+<div><label>قد (سانتی‌متر)</label><input id="cheight" type="number" step="0.1"></div>
+<div><label>هدف</label><select id="cgoal"><option>کاهش وزن</option><option>افزایش وزن</option><option>عضله‌سازی</option><option>چربی‌سوزی</option><option>تناسب اندام</option><option>افزایش قدرت</option></select></div>
+<div><label>سطح تمرینی</label><select id="clevel"><option>مبتدی</option><option>متوسط</option><option>پیشرفته</option></select></div>
+<div><label>نوع شاگرد</label><select id="ctype"><option value="gym">🏋️ باشگاه / حضوری</option><option value="home">🏠 تمرین در منزل</option><option value="online">📱 آنلاین</option></select></div>
+<div><label>تجهیزات منزل</label><input id="cequipment" placeholder="مثلاً دمبل، کش، نیمکت"></div>
+<div><label>روزهای تمرین</label><input id="ctrainingDays" placeholder="مثلاً شنبه، دوشنبه، چهارشنبه"></div>
+<div><label>ساعت تمرین</label><input id="ctrainingTime" type="time"></div>
+<div><label>سابقه تمرین</label><input id="chistory"></div>
+<div><label>محدودیت / توضیحات</label><input id="climitations"></div>
+</div>
+<button onclick="addClient()">ذخیره شاگرد در دیتابیس</button>
+</div>
+</section>
+
+<!-- CLIENT -->
+<section id="client" class="section">
+<div class="card">
+<h2>👤 پروفایل شاگرد</h2>
+<div class="grid2">
+<div><label>نام و نام خانوادگی</label><input id="pn"></div>
+<div><label>سن</label><input id="page" type="number"></div>
+<div><label>وزن</label><input id="pweight" type="number"></div>
+<div><label>قد</label><input id="pheight" type="number"></div>
+<div><label>هدف</label><select id="pgoal"><option>کاهش وزن</option><option>افزایش وزن</option><option>عضله‌سازی</option><option>چربی‌سوزی</option><option>تناسب اندام</option></select></div>
+<div><label>سطح تمرینی</label><select id="plevel"><option>مبتدی</option><option>متوسط</option><option>پیشرفته</option></select></div>
+<div><label>نوع شاگرد</label><select id="ptype"><option value="gym">🏋️ باشگاه / حضوری</option><option value="home">🏠 تمرین در منزل</option><option value="online">📱 آنلاین</option></select></div>
+<div><label>تجهیزات منزل</label><input id="pequipment"></div>
+</div>
+<button onclick="saveProfile()">ذخیره پروفایل</button>
+<button class="secondary" onclick="openClientMealPlan()">🍽️ برنامه غذایی این شاگرد</button>
+</div>
+
+<div class="card">
+<h2>⏳ فستینگ</h2>
+<div class="grid2">
+<div><label>نوع</label><select id="fastType"><option>بدون فستینگ</option><option>12:12</option><option>14:10</option><option>16:8</option><option>18:6</option></select></div>
+<div><label>شروع فست</label><input id="fastStart" type="time" value="20:00"></div>
+<div><label>پایان فست</label><input id="fastEnd" type="time" value="12:00"></div>
+<div><label>تعداد وعده</label><input id="fastMeals" type="number" value="3" min="1"></div>
+</div>
+<button onclick="saveFasting()">ذخیره فستینگ</button>
+<p id="fastStatus" class="muted"></p>
+</div>
+
+<div class="card">
+<h2>💳 عضویت باشگاه</h2>
+<div class="grid2">
+<div><label>تاریخ شروع</label><input id="subStart" type="date"></div>
+<div><label>تاریخ پایان</label><input id="subEnd" type="date"></div>
+<div><label>مبلغ شهریه</label><input id="subAmount" type="number"></div>
+<div><label>وضعیت پرداخت</label><select id="subPaid"><option>پرداخت شده</option><option>پرداخت نشده</option></select></div>
+</div>
+<button onclick="saveSubscription()">ذخیره عضویت</button>
+</div>
+<div class="card"><h2>🎯 هدف و محدودیت‌ها</h2><div class="grid2"><div><label>نوع شاگرد</label><select id="ptype2"><option value="gym">🏋️ باشگاه / حضوری</option><option value="home">🏠 تمرین در منزل</option><option value="online">📱 آنلاین</option></select></div><div><label>تجهیزات منزل</label><input id="pequipment2"></div></div><label>محدودیت تمرینی</label><textarea id="plimit" placeholder="ناحیه، وضعیت، محدودیت حرکت و توضیح مربی"></textarea><button onclick="saveProfileExtras()">💾 ذخیره اطلاعات تکمیلی</button></div>
+<div class="card"><h2>💊 مکمل‌ها و ویتامین‌ها</h2><div class="grid2"><input id="suppName" placeholder="نام مکمل"><input id="suppDose" placeholder="دوز"><input id="suppTiming" placeholder="زمان مصرف"><input id="suppFrequency" placeholder="تعداد/دفعات"><input id="suppDays" placeholder="روزها"><input id="suppDuration" placeholder="مدت دوره"></div><input id="suppNote" placeholder="یادداشت مربی"><button onclick="saveSupplement()">➕ افزودن مکمل</button><div id="suppList" class="muted"></div></div>
+<div class="card"><h2>⚠️ آسیب / محدودیت تمرینی</h2><div class="grid2"><input id="injType" placeholder="نوع مشکل"><input id="injArea" placeholder="ناحیه بدن"><input id="injSeverity" placeholder="شدت/وضعیت"><input id="injDate" type="date"><select id="injStatus"><option value="active">فعال</option><option value="recovered">بهبود یافته</option></select></div><input id="injLimit" placeholder="حرکات یا فعالیت‌های محدود"><textarea id="injNote" placeholder="یادداشت مربی"></textarea><button onclick="saveInjury()">➕ ثبت محدودیت</button><div id="injList" class="muted"></div></div>
+</section>
+
+<!-- MEAL -->
+<section id="meal" class="section">
+<div class="card">
+<h2>🍽️ مدیریت کامل برنامه غذایی</h2>
+<p class="muted">شاگرد را از پنل مربی انتخاب کنید. برنامه و غذاها مستقیماً در Supabase ذخیره می‌شوند.</p>
+<div class="meal-tabs">
+<button id="mealTabCoach" class="active" onclick="mealTab('coach')">👨‍🏫 مربی</button>
+<button id="mealTabStudent" onclick="mealTab('student')">👤 مشاهده شاگرد</button>
+<button id="mealTabReport" onclick="mealTab('report')">📊 گزارش</button>
+</div>
+</div>
+
+<div id="mealCoachView">
+<div class="card">
+<h2>اطلاعات برنامه</h2>
+<div class="grid2">
+<div><label>عنوان برنامه</label><input id="mealTitle" value=""></div>
+<div><label>وضعیت</label><select id="mealActive"><option value="true">فعال</option><option value="false">غیرفعال</option></select></div>
+<div><label>تاریخ شروع</label><input id="mealStart" type="date"></div>
+<div><label>تاریخ پایان</label><input id="mealEnd" type="date"></div>
+<div><label>کالری روزانه</label><input id="mealCalories" type="number" value="2000"></div>
+<div><label>پروتئین هدف (گرم)</label><input id="mealProtein" type="number" value="150"></div>
+<div><label>کربوهیدرات هدف (گرم)</label><input id="mealCarbs" type="number" value="200"></div>
+<div><label>چربی هدف (گرم)</label><input id="mealFat" type="number" value="60"></div>
+</div>
+<label>یادداشت برنامه</label><textarea id="mealNotes" placeholder="توضیحات مربی..."></textarea>
+<button onclick="saveNutritionPlan()">💾 ذخیره اطلاعات برنامه</button>
+</div>
+
+<div id="mealList"></div>
+
+<div class="card">
+<h2>📊 جمع کل روز</h2>
+<div class="meal-summary">
+<div class="stat"><b id="dayCal">۰</b>کالری</div>
+<div class="stat"><b id="dayPro">۰</b>پروتئین</div>
+<div class="stat"><b id="dayCarb">۰</b>کربوهیدرات</div>
+<div class="stat"><b id="dayFat">۰</b>چربی</div>
+</div>
+</div>
+</div>
+
+<div id="mealStudentView" class="hide">
+<div class="card">
+<h2>👤 برنامه غذایی من</h2>
+<p id="studentMealTitle" class="muted"></p>
+<div class="meal-summary">
+<div class="stat"><b id="studentTargetCal">۰</b>کالری هدف</div>
+<div class="stat"><b id="studentDoneCal">۰</b>مصرف ثبت‌شده</div>
+<div class="stat"><b id="studentWater">۰</b>میلی‌لیتر آب</div>
+<div class="stat"><b id="studentDoneCount">۰</b>غذای مصرف‌شده</div>
+</div>
+</div>
+<div id="studentMealList"></div>
+<div class="card">
+<h2>💧 آب امروز</h2>
+<div class="row"><input id="waterAmount" type="number" value="500" min="1"><button onclick="addWaterLog()">+ ثبت آب</button></div>
+</div>
+</div>
+
+<div id="mealReportView" class="hide">
+<div class="card">
+<h2>📊 گزارش تغذیه شاگرد</h2>
+<div id="mealReport" class="muted">گزارش آماده نمایش است.</div>
+</div>
+</div>
+</section>
+
+<!-- ADD FOOD MODAL -->
+<div id="mealModal" class="modal-back">
+<div class="modal">
+<h3>➕ افزودن غذا به وعده</h3>
+<div><label>غذا</label><select id="mealFoodSelect"></select></div>
+<div class="grid2">
+<div><label>مقدار</label><input id="mealFoodAmount" type="number" value="100" min="0.1" step="0.1"></div>
+<div><label>واحد</label><select id="mealFoodUnit"><option>گرم</option><option>عدد</option><option>قاشق</option><option>لیوان</option><option>کف دست</option><option>پیمانه</option></select></div>
+</div>
+<label>یادداشت</label><input id="mealFoodNote" placeholder="اختیاری">
+<div id="mealFoodPreview" class="sub-result"></div>
+<div class="close-row"><button onclick="saveMealFood()">➕ افزودن</button><button class="secondary" onclick="closeMealModal()">انصراف</button></div>
+</div>
+</div>
+
+<!-- WORKOUT -->
+<section id="workout" class="section">
+<div class="card">
+<h2>🏋️ برنامه تمرینی</h2>
+<p class="muted">اول شاگرد را انتخاب کنید. برنامه تمرینی شامل حرکت، ست، تکرار و استراحت است.</p>
+<div class="grid2">
+<div><label>عنوان برنامه</label><input id="workoutTitle" value=""></div>
+<div><label>هدف برنامه</label><input id="workoutGoal" placeholder="مثلاً عضله‌سازی"></div>
+</div>
+<label>توضیحات برنامه</label><textarea id="workoutNotes" placeholder="توضیحات مربی..."></textarea>
+<button onclick="saveWorkoutPlan()">💾 ذخیره برنامه تمرینی</button>
+</div>
+<div class="card"><h2>📚 بانک حرکات مربی</h2><div class="grid2"><input id="libName" placeholder="نام حرکت"><input id="libMuscle" placeholder="عضله هدف"><select id="libCategory"><option>سینه</option><option>پشت</option><option>سرشانه</option><option>جلو بازو</option><option>پشت بازو</option><option>پا</option><option>شکم</option><option>کاردیو</option><option>اصلاحی</option><option>سایر</option></select><input id="libEquipment" placeholder="تجهیزات"><select id="libLevel"><option>مبتدی</option><option>متوسط</option><option>پیشرفته</option></select></div><input id="libNote" placeholder="نکته مربی"><button onclick="saveLibraryExercise()">💾 ذخیره حرکت در بانک مربی</button><input id="libSearch" placeholder="🔎 جستجوی حرکت" oninput="loadLibraryExercises()"><div id="libraryList" class="muted"></div></div>
+<div class="card">
+<h2>➕ افزودن حرکت</h2>
+<div class="grid2">
+<div><label>حرکت</label><select id="workoutExercise"></select></div>
+<div><label>ست</label><input id="workoutSets" type="number" value="3" min="1"></div>
+<div><label>تکرار</label><input id="workoutReps" type="text" value="10-12"></div>
+<div><label>استراحت (ثانیه)</label><input id="workoutRest" type="number" value="60" min="0"></div>
+</div>
+<label>توضیحات حرکت</label><input id="workoutExerciseNotes" placeholder="مثلاً کنترل کامل حرکت">
+<button onclick="addWorkoutExercise()">＋ افزودن به برنامه</button>
+</div>
+<div class="card">
+<h2>📋 حرکات برنامه</h2>
+<div id="workoutList" class="muted">اول شاگرد را انتخاب کنید.</div>
+</div>
+</section>
+
+<!-- PROGRESS -->
+<section id="progress" class="section">
+<div class="card">
+<h2>📊 ثبت پیشرفت</h2>
+<div class="grid2">
+<div><label>تاریخ</label><input id="prDate" type="date"></div>
+<div><label>وزن</label><input id="prWeight" type="number" step="0.1"></div>
+<div><label>دور شکم</label><input id="waist" type="number" step="0.1"></div>
+<div><label>دور کمر</label><input id="hip" type="number" step="0.1"></div>
+<div><label>دور باسن</label><input id="glute" type="number" step="0.1"></div>
+<div><label>دور ران</label><input id="thigh" type="number" step="0.1"></div>
+</div>
+<button onclick="saveProgress()">ثبت اندازه‌ها</button>
+</div>
+
+<div class="card">
+<h2>📊 آنالیز بدن</h2>
+<div class="grid2">
+<div><label>تاریخ آنالیز</label><input id="anDate" type="date"></div>
+<div><label>وزن</label><input id="anWeight" type="number" step="0.1"></div>
+<div><label>درصد چربی</label><input id="anFat" type="number" step="0.1"></div>
+<div><label>توده عضلانی</label><input id="anMuscle" type="number" step="0.1"></div>
+<div><label>آب بدن</label><input id="anWater" type="number" step="0.1"></div>
+<div><label>چربی احشایی</label><input id="anVisceral" type="number" step="0.1"></div>
+<div><label>BMI</label><input id="anBmi" type="number" step="0.1"></div>
+<div><label>متابولیسم پایه</label><input id="anBmr" type="number"></div>
+</div>
+<label>فایل آنالیز (عکس یا PDF)</label>
+<input id="analysisFile" type="file" accept="image/*,.pdf">
+<button onclick="saveAnalysis()">ثبت آنالیز</button>
+<p class="muted">فایل برای ذخیره دائمی نیاز به Storage در Supabase دارد؛ فعلاً اطلاعات عددی این فرم ذخیره می‌شود.</p>
+</div>
+
+<div class="card">
+<h2>💬 یادداشت مربی</h2>
+<textarea id="coachNote" placeholder="این یادداشت فقط برای مربی است."></textarea>
+<button onclick="saveNote()">ذخیره یادداشت</button>
+</div>
+</section>
+
+<div class="card">
+<h2>🔥 فعالیت و کالری روزانه</h2>
+<div class="grid2">
+<div><label>تاریخ</label><input id="actDate" type="date"></div>
+<div><label>نوع فعالیت</label><select id="actType"><option>پیاده‌روی</option><option>دویدن</option><option>دوچرخه</option><option>بدنسازی</option><option>فوتبال</option><option>کاردیو</option><option>سایر</option></select></div>
+<div><label>مدت (دقیقه)</label><input id="actDuration" type="number" min="1"></div>
+<div><label>کالری مصرف‌شده</label><input id="actCalories" type="number" min="0"></div>
+</div>
+<label>یادداشت</label><input id="actNotes" placeholder="اختیاری">
+<button onclick="saveActivity()">➕ ثبت فعالیت</button>
+<div id="activityToday" class="muted" style="margin-top:10px">ابتدا شاگرد را انتخاب کنید.</div>
+</div>
+
+<div class="footer">FITNESS SEH GALEH • مربی مجتبی</div>
+</div>
+
+<script>
+const SUPABASE_URL="https://qfakyudgidsumeuoqoot.supabase.co";
+const SUPABASE_KEY="sb_publishable_Z7-iwP8A1QQOlXpWIVtE2g_twXL-WNZ";
+let foods=[], clients=[], currentClient=null;
+
+const $=id=>document.getElementById(id);
+const today=()=>new Date().toISOString().slice(0,10);
+
+function showSection(id,btn){
+  document.querySelectorAll(".section").forEach(x=>x.classList.remove("active"));
+  $(id).classList.add("active");
+  document.querySelectorAll(".nav button").forEach(x=>x.classList.remove("active"));
+  if(btn) btn.classList.add("active");
+}
+
+async function loadFoods(){
+ try{
+  const r=await fetch(SUPABASE_URL+"/rest/v1/foods?select=*&order=name",{headers:{"apikey":SUPABASE_KEY,"Authorization":"Bearer "+SUPABASE_KEY}});
+  if(!r.ok) throw new Error(await r.text());
+  const data=await r.json();
+  foods=data.map(x=>[x.name,+x.calories||0,+x.protein||0,+x.carbs||0,+x.fat||0,x.id]);
+  fillFoods();
+ }catch(e){console.error(e);alert("اتصال غذاها به Supabase برقرار نشد.");}
+}
+function fillFoods(){
+ $("orig").innerHTML=""; $("rep").innerHTML="";
+ foods.forEach((x,i)=>{ $("orig").add(new Option(x[0],i)); $("rep").add(new Option(x[0],i)); });
+ const rice=foods.findIndex(x=>x[0]==="برنج پخته"||x[0]==="برنج سفید پخته");
+ const pasta=foods.findIndex(x=>x[0]==="ماکارونی پخته"||x[0]==="ماکارونی با گوشت");
+ if(rice>=0)$("orig").value=rice;
+ if(pasta>=0)$("rep").value=pasta;
+}
+function calc(){
+ const o=foods[+$("orig").value],r=foods[+$("rep").value],g=+$("origG").value;
+ if(!o||!r||g<=0)return;
+ if(r[1]<=0){alert("کالری غذای جایگزین معتبر نیست.");return;}
+ const target=o[1]*g/100,rg=target/r[1]*100;
+ const rv=[r[1]*rg/100,r[2]*rg/100,r[3]*rg/100,r[4]*rg/100];
+ const ov=[o[1]*g/100,o[2]*g/100,o[3]*g/100,o[4]*g/100];
+ $("result").style.display="block";
+ $("grams").textContent=rg.toFixed(0)+" گرم";
+ $("cal").textContent="حدود "+target.toFixed(0)+" کیلوکالری";
+ $("p").textContent=rv[1].toFixed(1)+" g"; $("c").textContent=rv[2].toFixed(1)+" g";
+ $("f").textContent=rv[3].toFixed(1)+" g"; $("k").textContent=rv[0].toFixed(0);
+ $("tb").innerHTML=["کالری","پروتئین","کربوهیدرات","چربی"].map((x,i)=>`<tr><td>${x}</td><td>${ov[i].toFixed(1)}</td><td>${rv[i].toFixed(1)}</td></tr>`).join("");
+}
+function toggle(){ $("custom").style.display=$("custom").style.display==="block"?"none":"block"; }
+async function add(){
+ const name=$("n").value.trim(), calories=+$("kc").value, protein=+$("pr").value||0, carbs=+$("ca").value||0, fat=+$("fa").value||0;
+ if(!name||calories<=0){alert("نام غذا و کالری را وارد کنید.");return;}
+ try{
+  const r=await fetch(SUPABASE_URL+"/rest/v1/foods",{method:"POST",headers:{"apikey":SUPABASE_KEY,"Authorization":"Bearer "+SUPABASE_KEY,"Content-Type":"application/json","Prefer":"return=representation"},body:JSON.stringify({name,calories,protein,carbs,fat})});
+  if(!r.ok){console.error(await r.text());alert("ذخیره غذا انجام نشد.");return;}
+  await loadFoods(); $("n").value="";$("kc").value="";$("pr").value="";$("ca").value="";$("fa").value="";
+  alert("غذا با موفقیت ذخیره شد.");
+ }catch(e){console.error(e);alert("خطا در اتصال به دیتابیس.");}
+}
+function editFood(){
+ const food=foods[+$("orig").value];
+ if(!food){alert("غذایی انتخاب نشده است.");return;}
+ $("n").value=food[0];$("kc").value=food[1];$("pr").value=food[2];$("ca").value=food[3];$("fa").value=food[4];
+ $("custom").style.display="block";
+ window.scrollTo({top:document.body.scrollHeight,behavior:"smooth"});
+}
+async function saveEdit(){
+ const index=+$("orig").value,food=foods[index];
+ if(!food||!food[5]){alert("غذایی انتخاب نشده است.");return;}
+ const name=$("n").value.trim(),calories=+$("kc").value,protein=+$("pr").value||0,carbs=+$("ca").value||0,fat=+$("fa").value||0;
+ if(!name||calories<=0){alert("نام غذا و کالری را درست وارد کنید.");return;}
+ try{
+  const r=await fetch(SUPABASE_URL+"/rest/v1/foods?id=eq."+food[5],{method:"PATCH",headers:{"apikey":SUPABASE_KEY,"Authorization":"Bearer "+SUPABASE_KEY,"Content-Type":"application/json","Prefer":"return=minimal"},body:JSON.stringify({name,calories,protein,carbs,fat})});
+  if(!r.ok){console.error(await r.text());alert("ویرایش غذا انجام نشد.");return;}
+  await loadFoods(); $("custom").style.display="none"; alert("غذا با موفقیت ویرایش شد.");
+ }catch(e){console.error(e);alert("خطا در اتصال به دیتابیس.");}
+}
+async function deleteFood(){
+ const index=+$("orig").value,food=foods[index];
+ if(!food||!food[5]){alert("این غذا قابل حذف نیست.");return;}
+ if(!confirm("آیا مطمئن هستید؟"))return;
+ try{
+  const r=await fetch(SUPABASE_URL+"/rest/v1/foods?id=eq."+food[5],{method:"DELETE",headers:{"apikey":SUPABASE_KEY,"Authorization":"Bearer "+SUPABASE_KEY}});
+  if(!r.ok){console.error(await r.text());alert("حذف غذا انجام نشد.");return;}
+  await loadFoods(); alert("غذا با موفقیت حذف شد.");
+ }catch(e){console.error(e);alert("خطا در اتصال به دیتابیس.");}
+}
+
+async function addClient(){
+  const full_name=$("cn").value.trim();
+  if(!full_name){alert("نام شاگرد را وارد کنید.");return;}
+  const payload={full_name,phone:$("cphone").value.trim()||null,gender:$("cgender").value||null,
+    birth_date:$("cbirth").value||null,height:+$("cheight").value||null,current_weight:+$("cweight").value||null,
+    goal:$("cgoal").value||null,training_level:$("clevel").value||null,
+    training_history:$("chistory").value.trim()||null,limitations:$("climitations").value.trim()||null};
+  try{
+    const r=await fetch(SUPABASE_URL+"/rest/v1/trainees",{
+      method:"POST",headers:{"apikey":SUPABASE_KEY,"Authorization":"Bearer "+SUPABASE_KEY,
+      "Content-Type":"application/json","Prefer":"return=representation"},body:JSON.stringify(payload)});
+    if(!r.ok){const msg=await r.text();console.error(msg);alert("ثبت شاگرد در Supabase انجام نشد.\n"+msg);return;}
+    const data=await r.json(); await loadClients(); clearClientForm(); renderClients();
+    alert("شاگرد با موفقیت در دیتابیس ثبت شد."); if(data[0]) selectClient(data[0].id);
+  }catch(e){console.error(e);alert("خطا در اتصال به دیتابیس.");}
+}
+
+async function loadClients(){
+  
+  try{
+    const r=await fetch(
+      SUPABASE_URL+"/rest/v1/trainees?select=*&order=created_at.desc",
+      {
+        headers:{
+          "apikey":SUPABASE_KEY,
+          "Authorization":"Bearer "+SUPABASE_KEY
+        }
+      }
+    );
+
+    if(!r.ok) throw new Error(await r.text());
+
+    const data=await r.json();
+
+    clients=data.map(c=>({
+      id:c.id,
+      name:c.full_name,
+      phone:c.phone,
+      gender:c.gender,
+      birth_date:c.birth_date,
+      age:calcAge(c.birth_date),
+      weight:c.current_weight,
+      height:c.height,
+      goal:c.goal,
+      level:c.training_level,
+      history:c.training_history,
+      limitations:c.limitations,training_type:c.training_type||"gym",home_equipment:c.home_equipment||"",
+      createdAt:c.created_at,
+      active:true,
+      plans:0
+    }));
+
+    renderClients();
+
+  }catch(e){
+    console.error(e);
+    $("clientList").innerHTML="خطا در دریافت شاگردان از Supabase.";
+  }
+}
+function calcAge(birth){
+  if(!birth)return null; const d=new Date(birth+"T00:00:00"); if(Number.isNaN(d.getTime()))return null;
+  const now=new Date(); let age=now.getFullYear()-d.getFullYear(); const m=now.getMonth()-d.getMonth();
+  if(m<0||(m===0&&now.getDate()<d.getDate()))age--; return age;
+}
+
+
+function saveClients(){updateStats();}
+
+
+function clearClientForm(){
+  ["cn","cphone","cbirth","cweight","cheight","chistory","climitations"].forEach(x=>$(x).value="");
+  $("cgender").value="زن";$("cgoal").value="کاهش وزن";$("clevel").value="مبتدی";
+}
+
+
+function renderClients(){
+  const q=($("clientSearch")?.value||"").trim().toLowerCase();
+  const arr=clients.filter(c=>(c.name||"").toLowerCase().includes(q));
+  $("clientList").innerHTML=arr.length?arr.map(c=>`<div class="client">
+    <strong>${esc(c.name||"بدون نام")}</strong>
+    <span class="pill">${esc(c.goal||"بدون هدف")}</span>
+    <span class="pill">${c.weight?c.weight+" کیلو":"وزن ثبت نشده"}</span>
+    <span class="pill">${c.phone?esc(c.phone):"شماره ثبت نشده"}</span>
+    <button class="secondary" onclick="selectClient('${c.id}')">انتخاب شاگرد</button>
+  </div>`).join(""):"شاگردی پیدا نشد."; updateStats();
+}
+
+
+function updateStats(){
+  $("clientCount").textContent=clients.length.toLocaleString("fa-IR");
+  $("activeCount").textContent=clients.length.toLocaleString("fa-IR");
+  $("planCount").textContent=clients.reduce((n,x)=>n+(x.plans||0),0).toLocaleString("fa-IR");
+  $("alertCount").textContent="۰";
+}
+
+
+function selectClient(id){
+  currentClient=clients.find(x=>String(x.id)===String(id));if(!currentClient)return;
+  $("pn").value=currentClient.name||"";$("page").value=currentClient.age||"";$("pweight").value=currentClient.weight||"";
+  $("pheight").value=currentClient.height||"";$("pgoal").value=currentClient.goal||"کاهش وزن";
+  $("plevel").value=currentClient.level||"مبتدی";loadNutritionForClient();loadWorkoutForClient();
+  showSection("client",document.querySelectorAll(".nav button")[2]); if($("ptype"))$("ptype").value=currentClient.training_type||"gym"; if($("ptype2"))$("ptype2").value=currentClient.training_type||"gym"; if($("pequipment"))$("pequipment").value=currentClient.home_equipment||""; if($("pequipment2"))$("pequipment2").value=currentClient.home_equipment||""; if($("plimit"))$("plimit").value=currentClient.limitations||""; if($("actDate"))$("actDate").value=today(); loadActivityToday(); loadSupplements(); loadInjuries(); loadLibraryExercises();
+}
+
+
+async function saveProfile(){
+  if(!currentClient){alert("اول یک شاگرد را از پنل مربی انتخاب کنید.");return;}
+  const payload={full_name:$("pn").value.trim(),current_weight:+$("pweight").value||null,
+    height:+$("pheight").value||null,goal:$("pgoal").value||null,training_level:$("plevel").value||null,training_type:$("ptype").value||null,home_equipment:$("pequipment").value.trim()||null};
+  if(!payload.full_name){alert("نام شاگرد را وارد کنید.");return;}
+  try{
+    const r=await fetch(SUPABASE_URL+"/rest/v1/trainees?id=eq."+encodeURIComponent(currentClient.id),{
+      method:"PATCH",headers:{"apikey":SUPABASE_KEY,"Authorization":"Bearer "+SUPABASE_KEY,
+      "Content-Type":"application/json","Prefer":"return=minimal"},body:JSON.stringify(payload)});
+    if(!r.ok){const msg=await r.text();console.error(msg);alert("ذخیره پروفایل انجام نشد.\n"+msg);return;}
+    await loadClients(); currentClient=clients.find(x=>String(x.id)===String(currentClient.id))||currentClient; alert("پروفایل شاگرد در دیتابیس به‌روزرسانی شد.");
+  }catch(e){console.error(e);alert("خطا در اتصال به دیتابیس.");}
+}
+
+async function saveProfileExtras(){if(!currentClient)return alert('اول شاگرد را انتخاب کنید.');try{await sbWrite(`/trainees?id=eq.${encodeURIComponent(currentClient.id)}`,'PATCH',{training_type:$('ptype2').value,home_equipment:$('pequipment2').value.trim()||null,limitations:$('plimit').value.trim()||null});alert('اطلاعات تکمیلی ذخیره شد.');await loadClients();}catch(e){alert('ذخیره اطلاعات تکمیلی انجام نشد.\n'+e.message);}}
+async function saveSupplement(){if(!currentClient)return alert('اول شاگرد را انتخاب کنید.');const name=$('suppName').value.trim();if(!name)return alert('نام مکمل را وارد کنید.');try{await sbWrite('/trainee_supplements','POST',{trainee_id:currentClient.id,name,dose:$('suppDose').value.trim()||null,timing:$('suppTiming').value.trim()||null,frequency:$('suppFrequency').value.trim()||null,days:$('suppDays').value.trim()||null,duration:$('suppDuration').value.trim()||null,coach_note:$('suppNote').value.trim()||null,status:'active'});await loadSupplements();['suppName','suppDose','suppTiming','suppFrequency','suppDays','suppDuration','suppNote'].forEach(id=>$(id).value='');}catch(e){alert('ثبت مکمل انجام نشد.\n'+e.message);}}
+async function loadSupplements(){if(!currentClient||!$('suppList'))return;try{const rows=await sbGet(`/trainee_supplements?trainee_id=eq.${encodeURIComponent(currentClient.id)}&order=created_at.desc`);$('suppList').innerHTML=rows.map(x=>`<div class="report-row"><span>💊 ${esc(x.name)} — ${esc(x.dose||'')}</span><b>${esc(x.timing||'')} ${esc(x.status||'')}</b></div>`).join('')||'مکملی ثبت نشده است.';}catch(e){$('suppList').textContent='برای فعال شدن مکمل‌ها، SQL جدید را اجرا کنید.';}}
+async function saveInjury(){if(!currentClient)return alert('اول شاگرد را انتخاب کنید.');const type=$('injType').value.trim();if(!type)return alert('نوع مشکل را وارد کنید.');try{await sbWrite('/trainee_injuries','POST',{trainee_id:currentClient.id,problem_type:type,body_area:$('injArea').value.trim()||null,severity:$('injSeverity').value.trim()||null,record_date:$('injDate').value||today(),movement_limit:$('injLimit').value.trim()||null,coach_note:$('injNote').value.trim()||null,status:$('injStatus').value});await loadInjuries();}catch(e){alert('ثبت محدودیت انجام نشد.\n'+e.message);}}
+async function loadInjuries(){if(!currentClient||!$('injList'))return;try{const rows=await sbGet(`/trainee_injuries?trainee_id=eq.${encodeURIComponent(currentClient.id)}&order=created_at.desc`);$('injList').innerHTML=rows.map(x=>`<div class="report-row"><span>⚠️ ${esc(x.problem_type)} | ${esc(x.body_area||'')}</span><b>${esc(x.status||'')}</b></div>`).join('')||'موردی ثبت نشده است.';}catch(e){$('injList').textContent='برای فعال شدن این بخش، SQL جدید را اجرا کنید.';}}
+
+async function saveFasting(){
+ if(!currentClient){alert("اول شاگرد را انتخاب کنید.");return;}
+ const st=$("fastStart").value,en=$("fastEnd").value,t=$("fastType").value;
+ if(t==="بدون فستینگ"){ $("fastStatus").textContent="فستینگ برای این شاگرد فعال نیست."; return; }
+ let duration=0;if(st&&en){let a=+st.split(":")[0]*60 + +st.split(":")[1],b=+en.split(":")[0]*60 + +en.split(":")[1];duration=b-a;if(duration<0)duration+=1440;}
+ try{await sbWrite("/fasting_logs","POST",{trainee_id:currentClient.id,fasting_date:today(),start_time:st||null,end_time:en||null,duration_minutes:duration,description:`نوع ${t} | ${$("fastMeals").value||0} وعده`});$("fastStatus").textContent=`فستینگ ${t} با موفقیت ثبت شد.`;alert("فستینگ ثبت شد.");}
+ catch(e){alert("ثبت فستینگ انجام نشد.\n"+e.message);}
+}
+async function saveSubscription(){
+ if(!currentClient){alert("اول شاگرد را انتخاب کنید.");return;}
+ const start=$("subStart").value||today(),end=$("subEnd").value||null,amount=+$("subAmount").value||0,paid=$("subPaid").value;
+ try{
+  await sbWrite("/trainee_memberships","POST",{trainee_id:currentClient.id,start_date:start,end_date:end,status:paid==="پرداخت شده"?"active":"pending",description:"عضویت باشگاه"});
+  if(amount>0)await sbWrite("/trainee_payments","POST",{trainee_id:currentClient.id,amount,payment_date:today(),description:paid});
+  alert("عضویت و اطلاعات شهریه ثبت شد.");
+ }catch(e){alert("ثبت عضویت انجام نشد.\n"+e.message);}
+}
+
+function openClientMealPlan(){
+ if(!currentClient){alert("اول یک شاگرد را انتخاب کنید.");return;}
+ showSection("meal",document.querySelectorAll(".nav button")[3]);
+ mealTab("coach");
+ loadNutritionForClient();
+}
+
+let currentPlanId=null,currentMealId=null,currentMealFoods=[];
+function mealTab(tab){
+ ["coach","student","report"].forEach(x=>{const b=$("mealTab"+x.charAt(0).toUpperCase()+x.slice(1));if(b)b.classList.toggle("active",x===tab);});
+ $("mealCoachView").classList.toggle("hide",tab!=="coach");
+ $("mealStudentView").classList.toggle("hide",tab!=="student");
+ $("mealReportView").classList.toggle("hide",tab!=="report");
+ if(tab!=="coach"&&currentClient){loadNutritionForClient();}
+}
+function fillMealFoodSelect(){
+ const s=$("mealFoodSelect");if(!s)return;s.innerHTML=foods.map((f,i)=>`<option value="${i}">${esc(f[0])}</option>`).join("");
+ s.onchange=previewMealFood;$("mealFoodAmount").oninput=previewMealFood;$("mealFoodUnit").onchange=previewMealFood;previewMealFood();
+}
+function previewMealFood(){
+ const f=foods[+$("mealFoodSelect").value],g=+$("mealFoodAmount").value||0;if(!f)return;
+ const k=f[1]*g/100,p=f[2]*g/100,c=f[3]*g/100,fa=f[4]*g/100;
+ $("mealFoodPreview").innerHTML=`<b>${esc(f[0])}</b> — ${g} ${esc($("mealFoodUnit").value)}<br>🔥 ${k.toFixed(0)} kcal | پروتئین ${p.toFixed(1)}g | کربوهیدرات ${c.toFixed(1)}g | چربی ${fa.toFixed(1)}g`;
+}
+async function loadNutritionForClient(){
+ if(!currentClient)return;
+ try{
+  const r=await sbGet(`/nutrition_plans?trainee_id=eq.${encodeURIComponent(currentClient.id)}&select=*&order=created_at.desc&limit=1`);
+  currentPlanId=r[0]?.id||null;
+  if(!currentPlanId){
+   ["mealTitle","mealNotes"].forEach(id=>$(id).value="");$("mealTitle").value="";
+   $("mealStart").value=today();$("mealEnd").value="";$("mealCalories").value="";$("mealProtein").value="";$("mealCarbs").value="";$("mealFat").value="";
+   $("mealList").innerHTML=`<div class="card"><p class="muted">برای این شاگرد هنوز برنامه غذایی ساخته نشده است.</p></div>`;
+   renderStudentEmpty();return;
+  }
+  const p=r[0];$("mealTitle").value=p.title||"";$("mealStart").value=p.start_date||today();$("mealEnd").value=p.end_date||"";
+  $("mealCalories").value=p.daily_calories||"";$("mealProtein").value=p.protein_target||"";$("mealCarbs").value=p.carbs_target||"";$("mealFat").value=p.fat_target||"";$("mealNotes").value=p.notes||"";$("mealActive").value=String(p.is_active!==false);
+  const meals=await sbGet(`/nutrition_meals?plan_id=eq.${encodeURIComponent(currentPlanId)}&select=*&order=meal_order.asc`);
+  const ids=meals.map(x=>x.id);let foodsBy={};
+  if(ids.length){const mf=await sbGet(`/nutrition_meal_foods?meal_id=in.(${ids.join(",")})&select=*&order=created_at.asc`);
+   const foodIds=[...new Set(mf.map(x=>x.food_id))];
+   if(foodIds.length){const fd=await sbGet(`/foods?id=in.(${foodIds.join(",")})&select=*`);fd.forEach(f=>foodsBy[f.id]=f);}
+   meals.forEach(m=>m.foods=mf.filter(x=>String(x.meal_id)===String(m.id)).map(x=>({...x,food:foodsBy[x.food_id]})));
+  }
+  renderMealCoach(meals);renderStudentMeals(meals,p);renderMealReport(meals,p);
+ }catch(e){console.error(e);alert("دریافت برنامه غذایی از Supabase انجام نشد.\n"+e.message);}
+}
+async function sbGet(path){
+ const r=await fetch(SUPABASE_URL+"/rest/v1"+path,{headers:{"apikey":SUPABASE_KEY,"Authorization":"Bearer "+SUPABASE_KEY}});
+ if(!r.ok)throw new Error(await r.text());return r.json();
+}
+async function sbWrite(path,method,body){
+ const r=await fetch(SUPABASE_URL+"/rest/v1"+path,{method,headers:{"apikey":SUPABASE_KEY,"Authorization":"Bearer "+SUPABASE_KEY,"Content-Type":"application/json","Prefer":"return=representation"},body:JSON.stringify(body)});
+ if(!r.ok)throw new Error(await r.text());return r.json().catch(()=>[]);
+}
+async function saveNutritionPlan(){
+ if(!currentClient){alert("اول یک شاگرد را انتخاب کنید.");return;}
+ const body={trainee_id:currentClient.id,title:$("mealTitle").value.trim()||"برنامه غذایی",start_date:$("mealStart").value||today(),end_date:$("mealEnd").value||null,daily_calories:+$("mealCalories").value||null,protein_target:+$("mealProtein").value||null,carbs_target:+$("mealCarbs").value||null,fat_target:+$("mealFat").value||null,notes:$("mealNotes").value.trim()||null,is_active:$("mealActive").value==="true"};
+ try{if(currentPlanId){await sbWrite(`/nutrition_plans?id=eq.${encodeURIComponent(currentPlanId)}`,"PATCH",body);}else{const a=await sbWrite("/nutrition_plans","POST",body);currentPlanId=a[0]?.id;}await loadNutritionForClient();alert("برنامه غذایی در دیتابیس ذخیره شد.");}catch(e){alert("ذخیره برنامه غذایی انجام نشد.\n"+e.message);}
+}
+function renderMealCoach(meals){
+ const names=["صبحانه","میان‌وعده صبح","ناهار","میان‌وعده عصر","شام"];
+ $("mealList").innerHTML=meals.map((m,i)=>{const fs=m.foods||[];const total=fs.reduce((a,x)=>{const f=x.food||{};const q=+x.amount||0;return [a[0]+(+f.calories||0)*q/100,a[1]+(+f.protein||0)*q/100,a[2]+(+f.carbs||0)*q/100,a[3]+(+f.fat||0)*q/100]},[0,0,0,0]);
+ return `<div class="meal-card"><div class="meal-head"><h3>🍽️ ${esc(m.meal_name||names[i]||"وعده")}</h3><span class="meal-total">${total[0].toFixed(0)} kcal</span></div>${fs.length?fs.map(x=>foodLine(x)).join(""):"<p class='muted'>هنوز غذایی ثبت نشده است.</p>"}<button class="mini" onclick="openMealFoodModal('${m.id}')">＋ افزودن غذا</button></div>`;}).join("");
+ if(!meals.length)$("mealList").innerHTML=`<div class="card"><p class="muted">هیچ وعده‌ای برای این برنامه ثبت نشده است.</p><button onclick="createDefaultMeals()">＋ ساخت ۵ وعده استاندارد</button></div>`;
+ updateDayTotals(meals);
+}
+function foodLine(x){const f=x.food||{};return `<div class="food-line"><div><div class="food-name">${esc(f.name||"غذا")}</div><div class="food-meta">🔥 ${((+f.calories||0)*(+x.amount||0)/100).toFixed(0)} kcal | P ${((+f.protein||0)*(+x.amount||0)/100).toFixed(1)} | C ${((+f.carbs||0)*(+x.amount||0)/100).toFixed(1)} | F ${((+f.fat||0)*(+x.amount||0)/100).toFixed(1)}</div></div><span>${x.amount} ${esc(x.unit||"گرم")}</span><button class="mini secondary" onclick="openSubstitution('${x.food_id}','${x.amount}')">🔄</button><button class="mini danger" onclick="deleteMealFood('${x.id}')">🗑</button></div>`;}
+function updateDayTotals(meals){const t=meals.reduce((a,m)=>(m.foods||[]).reduce((b,x)=>{const f=x.food||{},q=+x.amount||0;return [b[0]+(+f.calories||0)*q/100,b[1]+(+f.protein||0)*q/100,b[2]+(+f.carbs||0)*q/100,b[3]+(+f.fat||0)*q/100]},a),[0,0,0,0]);$("dayCal").textContent=t[0].toFixed(0);$("dayPro").textContent=t[1].toFixed(1)+" g";$("dayCarb").textContent=t[2].toFixed(1)+" g";$("dayFat").textContent=t[3].toFixed(1)+" g";}
+async function createDefaultMeals(){if(!currentPlanId)return;try{const a=["صبحانه","میان‌وعده صبح","ناهار","میان‌وعده عصر","شام"].map((meal_name,i)=>({plan_id:currentPlanId,meal_name,meal_order:i+1}));await sbWrite("/nutrition_meals","POST",a);await loadNutritionForClient();}catch(e){alert("ساخت وعده‌ها انجام نشد.\n"+e.message);}}
+async function openMealFoodModal(mealId){currentMealId=mealId;fillMealFoodSelect();$("mealFoodAmount").value=100;$("mealFoodNote").value="";$("mealModal").classList.add("show");previewMealFood();}
+function closeMealModal(){$("mealModal").classList.remove("show");currentMealId=null;}
+async function saveMealFood(){if(!currentMealId)return;const f=foods[+$("mealFoodSelect").value],amount=+$("mealFoodAmount").value;if(!f||amount<=0)return;try{await sbWrite("/nutrition_meal_foods","POST",{meal_id:currentMealId,food_id:f[5],amount,unit:$("mealFoodUnit").value,notes:$("mealFoodNote").value.trim()||null});closeMealModal();await loadNutritionForClient();}catch(e){alert("افزودن غذا انجام نشد.\n"+e.message);}}
+async function deleteMealFood(id){if(!confirm("این غذا از وعده حذف شود؟"))return;try{await sbWrite(`/nutrition_meal_foods?id=eq.${encodeURIComponent(id)}`,"DELETE",{});await loadNutritionForClient();}catch(e){alert("حذف غذا انجام نشد.\n"+e.message);}}
+function openSubstitution(foodId,amount){const f=foods.find(x=>String(x[5])===String(foodId));if(!f){alert("غذا پیدا نشد.");return;}$("orig").value=foods.findIndex(x=>String(x[5])===String(foodId));$("origG").value=amount;showSection("food",document.querySelectorAll(".nav button")[0]);alert("غذای برنامه انتخاب شد؛ حالا غذای جایگزین را انتخاب و محاسبه کنید.");}
+function renderStudentEmpty(){$("studentMealTitle").textContent="برای این شاگرد هنوز برنامه غذایی فعال ثبت نشده است.";$("studentMealList").innerHTML="";$("studentTargetCal").textContent="۰";$("studentDoneCal").textContent="۰";$("studentWater").textContent="۰";$("studentDoneCount").textContent="۰";}
+let waterSchema={trainee:"trainee_id",amount:"amount_ml",date:"log_date"};
+
+async function loadWaterToday(){
+  if(!currentClient){$("studentWater").textContent="۰";return 0;}
+  try{
+    const path=`/water_logs?trainee_id=eq.${encodeURIComponent(currentClient.id)}&log_date=eq.${encodeURIComponent(today())}&select=amount_ml`;
+    const rows=await sbGet(path);
+    const total=rows.reduce((sum,row)=>{const n=Number(row.amount_ml);return sum+(Number.isFinite(n)?n:0);},0);
+    $("studentWater").textContent=total.toLocaleString("fa-IR");
+    return total;
+  }catch(e){console.error("loadWaterToday",e);$("studentWater").textContent="۰";return 0;}
+}
+
+async function addWaterLog(){
+  if(!currentClient){alert("اول شاگرد را انتخاب کنید.");return;}
+  const n=Number($("waterAmount").value)||0;
+  if(n<=0){alert("مقدار آب را وارد کنید.");return;}
+  try{
+    await sbWrite("/water_logs","POST",{
+      trainee_id:currentClient.id,
+      log_date:today(),
+      amount_ml:n
+    });
+    await loadWaterToday();
+    await loadNutritionForClient();
+    alert("آب با موفقیت ثبت شد.");
+  }catch(e){console.error("addWaterLog",e);alert("ثبت آب انجام نشد.\n"+e.message);}
+}
+
+
+let currentWorkoutPlanId=null;
+let workoutExercisesCache=[];
+async function loadExercises(){try{const rows=await sbGet('/exercises?select=id,name&order=name.asc');const s=$('workoutExercise');if(!s)return;s.innerHTML=rows.map(x=>`<option value="${x.id}">${esc(x.name)}</option>`).join('');}catch(e){console.error(e);}}
+async function loadLibraryExercises(){if(!$('libraryList'))return;try{const q=encodeURIComponent(($('libSearch').value||'').trim());const rows=await sbGet('/trainer_exercises?select=*&order=is_favorite.desc,created_at.desc'+(q?'&name=ilike.*'+q+'*':''));$('libraryList').innerHTML=rows.length?rows.map(x=>`<div class="client"><strong>⭐ ${esc(x.name)}</strong><span class="pill">${esc(x.category||'')}</span><span class="pill">${esc(x.target_muscle||'')}</span><span class="pill">${esc(x.equipment||'بدون تجهیزات')}</span><button class="secondary mini" onclick="useLibraryExercise('${x.id}')">➕ استفاده در برنامه</button></div>`).join(''):'هنوز حرکت اختصاصی ثبت نشده است.';}catch(e){$('libraryList').innerHTML='بانک حرکات آماده است؛ برای فعال شدن کامل، SQL جدید را اجرا کنید.';}}
+async function saveLibraryExercise(){const name=$('libName').value.trim();if(!name){alert('نام حرکت را وارد کنید.');return;}try{await sbWrite('/trainer_exercises','POST',{name,target_muscle:$('libMuscle').value.trim()||null,category:$('libCategory').value,equipment:$('libEquipment').value.trim()||null,level:$('libLevel').value,coach_note:$('libNote').value.trim()||null,is_favorite:false});['libName','libMuscle','libEquipment','libNote'].forEach(id=>$(id).value='');await loadLibraryExercises();alert('حرکت در بانک مربی ذخیره شد.');}catch(e){alert('ذخیره حرکت انجام نشد.\n'+e.message);}}
+function useLibraryExercise(id){alert('این حرکت در بانک ذخیره شده است. برای افزودن مستقیم، از لیست حرکات برنامه استفاده کنید.');}
+async function loadWorkoutForClient(){if(!currentClient){currentWorkoutPlanId=null;workoutExercisesCache=[];$('workoutList').innerHTML='اول شاگرد را انتخاب کنید.';return;}try{const plans=await sbGet(`/trainee_workout_plans?trainee_id=eq.${encodeURIComponent(currentClient.id)}&select=*&order=created_at.desc&limit=1`);const p=plans[0];if(!p){currentWorkoutPlanId=null;$('workoutTitle').value='';$('workoutGoal').value=currentClient.goal||'';$('workoutNotes').value='';$('workoutList').innerHTML="<p class='muted'>برای این شاگرد هنوز برنامه تمرینی ثبت نشده است.</p>";return;}currentWorkoutPlanId=p.id;$('workoutTitle').value=p.title||'';$('workoutGoal').value=p.goal||'';$('workoutNotes').value=p.notes||'';const rows=await sbGet(`/trainee_workout_exercises?workout_plan_id=eq.${encodeURIComponent(p.id)}&select=*&order=sort_order.asc,created_at.asc`);workoutExercisesCache=rows;const ids=[...new Set(rows.map(x=>x.exercise_id))];let names={};if(ids.length){const ex=await sbGet(`/exercises?id=in.(${ids.join(',')})&select=id,name`);ex.forEach(x=>names[x.id]=x.name);}renderWorkoutList(rows,names);}catch(e){console.error(e);$('workoutList').innerHTML='<p class="muted">دریافت برنامه تمرینی انجام نشد. ساختار تمرینی را بررسی کنید.</p>';}}
+function renderWorkoutList(rows,names){if(!rows.length){$('workoutList').innerHTML="<p class='muted'>هنوز حرکتی ثبت نشده است.</p>";return;}$('workoutList').innerHTML=rows.map((x,i)=>`<div class="meal-card"><div class="meal-head"><h3>${i+1}. ${esc(names[x.exercise_id]||'حرکت')}</h3><button class="mini danger" onclick="deleteWorkoutExercise('${x.id}')">🗑 حذف</button></div><div class="stats"><div class="stat"><b>${esc(x.sets??'')}</b>ست</div><div class="stat"><b>${esc(x.reps??'')}</b>تکرار</div><div class="stat"><b>${esc(x.rest_seconds??0)}</b>ثانیه استراحت</div><div class="stat"><b>${i+1}</b>ترتیب</div></div>${x.notes?`<p class="muted">${esc(x.notes)}</p>`:''}</div>`).join('');}
+async function saveWorkoutPlan(){if(!currentClient){alert('اول یک شاگرد را انتخاب کنید.');return;}const body={trainee_id:currentClient.id,title:$('workoutTitle').value.trim()||'برنامه تمرینی',goal:$('workoutGoal').value.trim()||null,notes:$('workoutNotes').value.trim()||null};try{if(currentWorkoutPlanId)await sbWrite(`/trainee_workout_plans?id=eq.${encodeURIComponent(currentWorkoutPlanId)}`,'PATCH',body);else{const a=await sbWrite('/trainee_workout_plans','POST',body);currentWorkoutPlanId=a[0]?.id;}await loadWorkoutForClient();alert('برنامه تمرینی با موفقیت ذخیره شد.');}catch(e){alert('ذخیره برنامه تمرینی انجام نشد.\n'+e.message);}}
+async function addWorkoutExercise(){if(!currentClient){alert('اول شاگرد را انتخاب کنید.');return;}if(!currentWorkoutPlanId){await saveWorkoutPlan();if(!currentWorkoutPlanId)return;}const exerciseId=$('workoutExercise').value;if(!exerciseId){alert('حرکت را انتخاب کنید.');return;}const nextOrder=workoutExercisesCache.length?Math.max(...workoutExercisesCache.map(x=>Number(x.sort_order)||0))+1:1;try{await sbWrite('/trainee_workout_exercises','POST',{workout_plan_id:currentWorkoutPlanId,exercise_id:exerciseId,sets:Number($('workoutSets').value)||0,reps:$('workoutReps').value.trim()||null,rest_seconds:Number($('workoutRest').value)||0,notes:$('workoutExerciseNotes').value.trim()||null,sort_order:nextOrder,training_system:'normal',group_key:null});$('workoutExerciseNotes').value='';await loadWorkoutForClient();alert('حرکت به برنامه اضافه شد.');}catch(e){alert('افزودن حرکت انجام نشد.\n'+e.message);}}
+async function deleteWorkoutExercise(id){if(!confirm('این حرکت از برنامه حذف شود؟'))return;try{await sbWrite(`/trainee_workout_exercises?id=eq.${encodeURIComponent(id)}`,'DELETE',{});await loadWorkoutForClient();}catch(e){alert('حذف حرکت انجام نشد.\n'+e.message);}}
+
+async function saveProgress(){
+ if(!currentClient){alert("اول شاگرد را انتخاب کنید.");return;}
+ const body={trainee_id:currentClient.id,log_date:$("prDate").value||today(),weight:+$("prWeight").value||null};
+ try{await sbWrite("/weight_logs","POST",body);await sbWrite("/body_analyses","POST",{trainee_id:currentClient.id,analysis_date:body.log_date,weight:body.weight,waist:+$("waist").value||null,abdomen:+$("waist").value||null,hip:+$("hip").value||null,thigh:+$("thigh").value||null,notes:"ثبت پیشرفت دوره‌ای"});await loadClients();alert("وزن و اندازه‌های پیشرفت ثبت شد.");}catch(e){alert("ثبت پیشرفت انجام نشد.\n"+e.message);}
+}
+async function saveAnalysis(){
+ if(!currentClient){alert("اول شاگرد را انتخاب کنید.");return;}
+ const body={trainee_id:currentClient.id,analysis_date:$("anDate").value||today(),weight:+$("anWeight").value||null,body_fat:+$("anFat").value||null,muscle_mass:+$("anMuscle").value||null,body_water:+$("anWater").value||null,visceral_fat:+$("anVisceral").value||null,notes:`BMI: ${$("anBmi").value||"-"} | BMR: ${$("anBmr").value||"-"}`};
+ try{await sbWrite("/body_analyses","POST",body);alert("آنالیز بدن ثبت شد.");}catch(e){alert("ثبت آنالیز انجام نشد.\n"+e.message);}
+}
+async function saveNote(){
+ if(!currentClient){alert("اول شاگرد را انتخاب کنید.");return;}
+ const note=$("coachNote").value.trim();if(!note){alert("یادداشت را وارد کنید.");return;}
+ try{await sbWrite("/trainee_notes","POST",{trainee_id:currentClient.id,note});$("coachNote").value="";alert("یادداشت مربی ذخیره شد.");}catch(e){alert("ذخیره یادداشت انجام نشد.\n"+e.message);}
+}
+async function saveActivity(){
+ if(!currentClient){alert("اول شاگرد را انتخاب کنید.");return;}
+ const date=$("actDate").value||today(),type=$("actType").value,duration=+$("actDuration").value||0,cal=+$("actCalories").value||0;
+ if(duration<=0){alert("مدت فعالیت را وارد کنید.");return;}
+ try{await sbWrite("/activity_logs","POST",{trainee_id:currentClient.id,activity_date:date,activity_type:type,duration_minutes:duration,calories_burned:cal,notes:$("actNotes").value.trim()||null});$("actDuration").value="";$("actCalories").value="";$("actNotes").value="";await loadActivityToday();alert("فعالیت با موفقیت ثبت شد.");}catch(e){alert("ثبت فعالیت انجام نشد.\n"+e.message);}
+}
+async function loadActivityToday(){
+ if(!currentClient)return;
+ try{const rows=await sbGet(`/activity_logs?trainee_id=eq.${encodeURIComponent(currentClient.id)}&activity_date=eq.${encodeURIComponent(today())}&select=activity_type,duration_minutes,calories_burned&order=created_at.desc`);const total=rows.reduce((a,x)=>a+(+x.calories_burned||0),0),mins=rows.reduce((a,x)=>a+(+x.duration_minutes||0),0);$("activityToday").innerHTML=`🔥 امروز: <b>${total.toLocaleString("fa-IR")} kcal</b> | ⏱️ ${mins.toLocaleString("fa-IR")} دقیقه | ${rows.length.toLocaleString("fa-IR")} فعالیت`;}catch(e){console.error(e);}}
+
+function esc(s){return String(s).replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[m]));}
+
+window.AUTH_SUPABASE=window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
+const AUTH_SUPABASE=window.AUTH_SUPABASE;const ORIGINAL_FETCH=window.fetch;
+
+window.fetch=async function(input,init={}){
+  const url=typeof input==="string"?input:input.url;
+
+  if(url && url.startsWith(SUPABASE_URL+"/rest/v1/")){
+    const {data:{session}}=await AUTH_SUPABASE.auth.getSession();
+
+    const headers=new Headers(
+      init.headers || (typeof input!=="string"?input.headers:{}) || {}
+    );
+
+    headers.set("apikey",SUPABASE_KEY);
+
+    if(session?.access_token){
+      headers.set("Authorization","Bearer "+session.access_token);
+    }else{
+      headers.set("Authorization","Bearer "+SUPABASE_KEY);
+    }
+
+    init={...init,headers};
+  }
+
+  return ORIGINAL_FETCH(input,init);
+};
+let authProfile=null;
+function showAuthError(msg){const e=$('authError');e.textContent=msg||'ورود انجام نشد.';e.style.display='block';}
+async function loginApp(){
+  const email=$('loginEmail').value.trim(),password=$('loginPassword').value;
+  if(!email||!password){showAuthError('ایمیل و رمز عبور را وارد کنید.');return;}
+  $('authError').style.display='none';
+  try{
+    const {data,error}=await AUTH_SUPABASE.auth.signInWithPassword({email,password});
+    if(error)throw error;await finishLogin(data.user);
+  }catch(e){console.error(e);showAuthError(e.message||'ایمیل یا رمز عبور نادرست است.');}
+}
+async function finishLogin(user){
+  try{
+    const {data:rows,error:profileError}=await AUTH_SUPABASE
+  .from('profiles')
+  .select('*')
+  .eq('id',user.id);
+
+if(profileError) throw profileError;
+    if(!rows.length){await AUTH_SUPABASE.auth.signOut();showAuthError('این حساب هنوز به پروفایل اپ متصل نشده است.');return;}
+    authProfile=rows[0];document.body.classList.remove('locked');$('authScreen').style.display='none';$('authUserBar').style.display='block';$('authUserText').textContent=`${authProfile.full_name||user.email} | ${authProfile.role==='coach'?'مربی':'شاگرد'}`;
+    if(authProfile.role==='trainee'){
+      document.querySelectorAll('.nav button').forEach(b=>b.style.display='none');
+      [document.querySelectorAll('.nav button')[2],document.querySelectorAll('.nav button')[3],document.querySelectorAll('.nav button')[4]].forEach(b=>{if(b)b.style.display='block';});
+      showSection('client');
+    }else{showSection('food',document.querySelector('.nav button'));}
+  }catch(e){console.error(e);showAuthError('بررسی پروفایل انجام نشد. '+(e.message||''));}
+}
+async function logoutApp(){await AUTH_SUPABASE.auth.signOut();location.reload();}
+async function initAuth(){
+  try{const {data}=await AUTH_SUPABASE.auth.getSession();if(data.session)await finishLogin(data.session.user);}
+  catch(e){console.error(e);}
+}
+
+if($("prDate"))$("prDate").value=today();if($("anDate"))$("anDate").value=today();if($("actDate"))$("actDate").value=today();if($("mealStart"))$("mealStart").value=today();
+initAuth();
+loadFoods();
+loadExercises();
+
+/* ===== FITNESS SEH GALEH — V4 INTEGRATION LAYER ===== */
+(function(){
+  const $id=id=>document.getElementById(id);
+  const qsAll=(sel)=>Array.from(document.querySelectorAll(sel));
+  const originalShowSection=window.showSection;
+  const originalAddClient=window.addClient;
+  const originalLoadClients=window.loadClients;
+  const originalRenderClients=window.renderClients;
+  const originalSelectClient=window.selectClient;
+  const originalFinishLogin=window.finishLogin;
+  let coachFilter='all';
+  let traineePlansCache={workout:0,nutrition:0};
+
+  function safeJson(v, fallback){try{return JSON.parse(v)}catch(e){return fallback}}
+  function setText(id,v){const e=$id(id);if(e)e.textContent=v}
+  function fmt(v){return Number(v||0).toLocaleString('fa-IR')}
+  function esc2(v){return typeof esc==='function'?esc(v):String(v??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m]))}
+  function phoneNorm(v){
+    let p=String(v||'').trim().replace(/[\s()-]/g,'').replace(/[۰-۹]/g,d=>'۰۱۲۳۴۵۶۷۸۹'.indexOf(d));
+    if(/^09\d{9}$/.test(p)) p='+98'+p.slice(1);
+    else if(/^989\d{9}$/.test(p)) p='+'+p;
+    return p;
+  }
+
+  function addStyle(){
+    if($id('v4style'))return;
+    const st=document.createElement('style');st.id='v4style';st.textContent=`
+      .v4-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}.v4-card{background:#101e2d;border:1px solid #2b4053;border-radius:14px;padding:14px;cursor:pointer}.v4-card b{display:block;font-size:18px;margin-bottom:5px}.v4-filter{display:flex;gap:6px;overflow:auto;padding-bottom:4px}.v4-filter button{white-space:nowrap;margin:0;padding:9px 12px;font-size:12px}.v4-filter button.active{background:#ffbd16;color:#111}.v4-table{overflow:auto}.v4-table table{min-width:920px}.v4-ok{color:#67e8a5}.v4-warn{color:#ffd166}.v4-danger{color:#ff8585}.v4-dashboard{margin-top:10px}.v4-small{font-size:11px;color:#aeb9c4}.v4-system{border-right:4px solid #ffbd16}.v4-complete{opacity:.65}.v4-complete h3{text-decoration:line-through}.v4-hidden{display:none!important}@media(max-width:600px){.v4-grid{grid-template-columns:1fr 1fr}.v4-table table{font-size:11px}}
+    `;document.head.appendChild(st);
+  }
+
+  function buildDashboard(){
+    if($id('traineeDashboard'))return;
+    const sec=document.createElement('section');sec.id='traineeDashboard';sec.className='section';sec.innerHTML=`
+      <div class="card"><h2>👤 داشبورد من</h2><p id="dashWelcome" class="muted"></p></div>
+      <div class="v4-grid v4-dashboard">
+        <div class="v4-card" onclick="dashOpen('workout')"><b>🏋️</b>برنامه تمرینی<span id="dashWorkout" class="v4-small">—</span></div>
+        <div class="v4-card" onclick="dashOpen('meal')"><b>🍎</b>برنامه غذایی<span id="dashMeal" class="v4-small">—</span></div>
+        <div class="v4-card" onclick="dashOpen('progress')"><b>📈</b>پیشرفت<span id="dashProgress" class="v4-small">—</span></div>
+        <div class="v4-card" onclick="dashOpen('progress')"><b>📊</b>آنالیز بدن<span id="dashAnalysis" class="v4-small">—</span></div>
+        <div class="v4-card" onclick="dashOpen('meal')"><b>💧</b>آب امروز<span id="dashWater" class="v4-small">—</span></div>
+        <div class="v4-card" onclick="dashOpen('progress')"><b>🔥</b>فعالیت امروز<span id="dashActivity" class="v4-small">—</span></div>
+        <div class="v4-card" onclick="dashOpen('client')"><b>🎯</b>هدف من<span id="dashGoal" class="v4-small">—</span></div>
+        <div class="v4-card" onclick="dashOpen('challenges')"><b>🏆</b>چالش‌ها<span id="dashChallenges" class="v4-small">—</span></div>
+        <div class="v4-card" onclick="dashOpen('client')"><b>💳</b>عضویت<span id="dashMembership" class="v4-small">—</span></div>
+      </div>`;
+    const page=document.querySelector('.page');const nav=document.querySelector('.nav');page.insertBefore(sec,nav.nextSibling);
+  }
+
+  window.dashOpen=function(section){
+    const btn=qsAll('.nav button').find(b=>String(b.getAttribute('onclick')||'').includes("'"+section+"'"));
+    if(section==='challenges'&&!$id('challenges'))buildChallengesSection();
+    showSection(section,btn||null);
+    if(section==='workout'&&currentClient)loadWorkoutForClient();
+    if(section==='meal'&&currentClient)loadNutritionForClient();
+    if(section==='progress'&&currentClient){loadProgressHistory();}
+  };
+
+  function buildCoachControls(){
+    const box=$id('clientList');if(!box)return;
+    box.innerHTML=`<div class="v4-filter"><button class="active" data-filter="all" onclick="setCoachFilter('all')">همه</button><button data-filter="gym" onclick="setCoachFilter('gym')">🏋️ باشگاه</button><button data-filter="home" onclick="setCoachFilter('home')">🏠 منزل</button><button data-filter="online" onclick="setCoachFilter('online')">📱 آنلاین</button></div><div class="v4-table"><table><thead><tr><th>نام</th><th>نوع</th><th>وزن</th><th>هدف</th><th>روز/ساعت</th><th>برنامه</th><th>وضعیت</th><th>تاریخ ثبت</th><th>عملیات</th></tr></thead><tbody id="clientTableBody"></tbody></table></div>`;
+  }
+  window.setCoachFilter=function(f){coachFilter=f;qsAll('.v4-filter button').forEach(b=>b.classList.toggle('active',b.dataset.filter===f));renderClients();}
+  function wireCoachBadges(){
+    const map=[['clientCount',()=>setCoachFilter('all')],['activeCount',()=>setCoachFilter('all')],['planCount',()=>setCoachFilter('all')],['alertCount',()=>{$id('clientSearch').value='';setCoachFilter('all');alert('نیازمند پیگیری یعنی شاگردانی که وزن، هدف یا شماره موبایل ناقص دارند.')}]];
+    map.forEach(([id,fn])=>{const e=$id(id)?.parentElement;if(e&&!e.dataset.v4wired){e.dataset.v4wired='1';e.style.cursor='pointer';e.onclick=fn;}});
+  }
+
+  window.renderClients=function(){
+    const body=$id('clientTableBody');if(!body)return;
+    const q=($id('clientSearch')?.value||'').trim().toLowerCase();
+    const arr=clients.filter(c=>(coachFilter==='all'||(c.training_type||'gym')===coachFilter)&&((c.name||'').toLowerCase().includes(q)||(c.phone||'').includes(q)));
+    body.innerHTML=arr.length?arr.map(c=>`<tr><td><b>${esc2(c.name||'بدون نام')}</b><br><span class="v4-small">${esc2(c.phone||'—')}</span></td><td>${c.training_type==='home'?'🏠 منزل':c.training_type==='online'?'📱 آنلاین':'🏋️ باشگاه'}</td><td>${c.weight?esc2(c.weight)+' kg':'—'}</td><td>${esc2(c.goal||'—')}</td><td>${c.plans?'<span class="v4-ok">✓</span>':'<span class="v4-warn">—</span>'}</td><td>${c.active===false?'<span class="v4-danger">غیرفعال</span>':'<span class="v4-ok">فعال</span>'}</td><td><button class="secondary mini" onclick="selectClient('${c.id}')">ورود</button></td></tr>`).join(''):`<tr><td colspan="7" class="muted">شاگردی با این فیلتر پیدا نشد.</td></tr>`;
+    updateStats();wireCoachBadges();
+  };
+
+  window.updateStats=async function(){
+    setText('clientCount',fmt(clients.length));
+    let active=clients.filter(c=>c.active!==false).length;
+    let planTrainees=0;
+    try{
+      const plans=await sbGet('/trainee_workout_plans?select=id,trainee_id');
+      const nutrition=await sbGet('/nutrition_plans?select=id,trainee_id');
+      const ids=new Set([...plans.map(x=>String(x.trainee_id)),...nutrition.map(x=>String(x.trainee_id))]);
+      planTrainees=ids.size;clients.forEach(c=>c.plans=ids.has(String(c.id))?1:0);
+    }catch(e){}
+    setText('activeCount',fmt(active));setText('planCount',fmt(planTrainees));
+    const alerts=clients.filter(c=>!c.weight||!c.goal||!c.phone).length;setText('alertCount',fmt(alerts));
+  };
+
+  window.loadClients=async function(){
+    try{
+      const data=await sbGet('/trainees?select=*&order=created_at.desc');
+      clients=data.map(c=>({id:c.id,name:c.full_name,phone:c.phone,gender:c.gender,birth_date:c.birth_date,age:calcAge(c.birth_date),weight:c.current_weight,height:c.height,goal:c.goal,level:c.training_level,history:c.training_history,limitations:c.limitations,training_type:c.training_type||'gym',home_equipment:c.home_equipment||'',training_days:c.training_days||'',training_time:c.training_time||'',createdAt:c.created_at,active:true,plans:0}));
+      buildCoachControls();renderClients();
+    }catch(e){console.error(e);if($id('clientTableBody'))$id('clientTableBody').innerHTML=`<tr><td colspan="7" class="v4-danger">دریافت شاگردان انجام نشد: ${esc2(e.message)}</td></tr>`;}
+  };
+
+  window.addClient=async function(){
+    const full_name=$id('cn')?.value.trim();if(!full_name){alert('نام شاگرد را وارد کنید.');return;}
+    const payload={full_name,phone:$id('cphone')?.value.trim()||null,gender:$id('cgender')?.value||null,birth_date:$id('cbirth')?.value||null,height:+$id('cheight')?.value||null,current_weight:+$id('cweight')?.value||null,goal:$id('cgoal')?.value||null,training_level:$id('clevel')?.value||null,training_history:$id('chistory')?.value.trim()||null,limitations:$id('climitations')?.value.trim()||null,training_type:$id('ctype')?.value||'gym',home_equipment:$id('cequipment')?.value.trim()||null,training_days:$id('ctrainingDays')?.value.trim()||null,training_time:$id('ctrainingTime')?.value||null};
+    try{let result;try{result=await sbWrite('/trainees','POST',payload);}catch(e){const msg=String(e.message||e);if(/training_days|training_time/i.test(msg)){delete payload.training_days;delete payload.training_time;result=await sbWrite('/trainees','POST',payload);}else throw e;}await loadClients();clearClientForm();if(result?.[0])selectClient(result[0].id);alert('شاگرد با موفقیت ثبت شد و در فهرست شاگردان قرار گرفت.');}
+    catch(e){alert('ثبت شاگرد انجام نشد.\n'+e.message)}
+  };
+
+  window.selectClient=async function(id){
+    currentClient=clients.find(x=>String(x.id)===String(id));if(!currentClient)return;
+    $id('pn').value=currentClient.name||'';$id('page').value=currentClient.age||'';$id('pweight').value=currentClient.weight||'';$id('pheight').value=currentClient.height||'';$id('pgoal').value=currentClient.goal||'کاهش وزن';$id('plevel').value=currentClient.level||'مبتدی';
+    if($id('ptype'))$id('ptype').value=currentClient.training_type||'gym';if($id('ptype2'))$id('ptype2').value=currentClient.training_type||'gym';if($id('pequipment'))$id('pequipment').value=currentClient.home_equipment||'';if($id('pequipment2'))$id('pequipment2').value=currentClient.home_equipment||'';if($id('plimit'))$id('plimit').value=currentClient.limitations||'';
+    showSection('client',qsAll('.nav button')[2]);
+    await Promise.allSettled([loadNutritionForClient(),loadWorkoutForClient(),loadSupplements(),loadInjuries(),loadActivityToday(),loadDashboard(),loadProgressHistory()]);
+  };
+
+  window.saveProfile=async function(){
+    if(!currentClient)return alert('اول شاگرد را انتخاب کنید.');
+    const payload={full_name:$id('pn').value.trim(),current_weight:+$id('pweight').value||null,height:+$id('pheight').value||null,goal:$id('pgoal').value||null,training_level:$id('plevel').value||null,training_type:$id('ptype')?.value||'gym',home_equipment:$id('pequipment')?.value.trim()||null};
+    try{await sbWrite(`/trainees?id=eq.${encodeURIComponent(currentClient.id)}`,'PATCH',payload);await loadClients();currentClient=clients.find(x=>String(x.id)===String(currentClient.id));alert('پروفایل شاگرد ذخیره شد.');await loadDashboard();}catch(e){alert('ذخیره پروفایل انجام نشد.\n'+e.message)}
+  };
+
+  async function saveTrainingSchedule(){
+    if(!currentClient)return alert('اول شاگرد را انتخاب کنید.');
+    const payload={training_type:$id('ptype2').value,home_equipment:$id('pequipment2').value.trim()||null,limitations:$id('plimit').value.trim()||null,training_days:$id('trainingDaysEdit').value.trim()||null,training_time:$id('trainingTimeEdit').value||null};
+    try{await sbWrite(`/trainees?id=eq.${encodeURIComponent(currentClient.id)}`,'PATCH',payload);await loadClients();currentClient=clients.find(x=>String(x.id)===String(currentClient.id));alert('نوع، تجهیزات و زمان تمرین ذخیره شد.');}catch(e){if(/training_days|training_time/i.test(e.message)){delete payload.training_days;delete payload.training_time;try{await sbWrite(`/trainees?id=eq.${encodeURIComponent(currentClient.id)}`,'PATCH',payload);alert('اطلاعات اصلی ذخیره شد؛ برای ذخیره روز و ساعت، SQL ارتقای جدید باید اجرا شود.');}catch(x){alert('ذخیره انجام نشد.\n'+x.message)}}else alert('ذخیره انجام نشد.\n'+e.message)}
+  }
+
+  function addScheduleUI(){
+    const sec=$id('client');if(!sec||$id('scheduleCard'))return;
+    const card=document.createElement('div');card.className='card';card.id='scheduleCard';card.innerHTML=`<h2>🗓️ برنامه حضور و تمرین</h2><div class="grid2"><div><label>روزهای تمرین</label><input id="trainingDaysEdit" placeholder="شنبه، دوشنبه، چهارشنبه"></div><div><label>ساعت تمرین</label><input id="trainingTimeEdit" type="time"></div></div><button onclick="saveTrainingSchedule()">💾 ذخیره زمان تمرین</button>`;sec.appendChild(card);
+  }
+
+  async function loadDashboard(){
+    buildDashboard();if(!currentClient)return;
+    setText('dashWelcome',`${currentClient.name||'شاگرد'} | ${currentClient.goal||'هدف ثبت نشده'}`);setText('dashGoal',currentClient.goal||'ثبت نشده');
+    try{const w=await sbGet(`/trainee_workout_plans?trainee_id=eq.${encodeURIComponent(currentClient.id)}&select=id&order=created_at.desc&limit=1`);setText('dashWorkout',w.length?'برنامه فعال':'ثبت نشده');}catch(e){}
+    try{const m=await sbGet(`/nutrition_plans?trainee_id=eq.${encodeURIComponent(currentClient.id)}&select=id,is_active&order=created_at.desc&limit=1`);setText('dashMeal',m.length?'برنامه فعال':'ثبت نشده');}catch(e){}
+    try{const a=await sbGet(`/body_analyses?trainee_id=eq.${encodeURIComponent(currentClient.id)}&select=weight,body_fat,analysis_date&order=analysis_date.desc&limit=1`);setText('dashAnalysis',a[0]?`${a[0].weight||'—'} kg`:'ثبت نشده');setText('dashProgress',a[0]?.analysis_date||'ثبت نشده');}catch(e){}
+    try{const water=await loadWaterToday();setText('dashWater',`${fmt(water)} ml`);}catch(e){}
+    try{const a=await sbGet(`/activity_logs?trainee_id=eq.${encodeURIComponent(currentClient.id)}&activity_date=eq.${today()}&select=calories_burned`);setText('dashActivity',`${fmt(a.reduce((n,x)=>n+(+x.calories_burned||0),0))} kcal`);}catch(e){}
+    try{const m=await sbGet(`/trainee_memberships?trainee_id=eq.${encodeURIComponent(currentClient.id)}&select=end_date,status&order=created_at.desc&limit=1`);setText('dashMembership',m[0]?.end_date||'ثبت نشده');}catch(e){}
+    try{const ch=await sbGet(`/challenge_participants?trainee_id=eq.${encodeURIComponent(currentClient.id)}&select=id,status`);setText('dashChallenges',ch.length?`${ch.filter(x=>x.status==='active').length} فعال`:'—');}catch(e){setText('dashChallenges','—')}
+  }
+
+  function addNavDashboard(){
+    const nav=document.querySelector('.nav');if(!nav||$id('navDash'))return;
+    const b=document.createElement('button');b.id='navDash';b.textContent='🏠 داشبورد';b.onclick=function(){showSection('traineeDashboard',this);loadDashboard()};nav.insertBefore(b,nav.firstChild);
+  }
+
+  async function setupTraineeAuth(user){
+    const authPhone=phoneNorm(user.phone||'');
+    let rows=[];
+    try{rows=await sbGet(`/trainees?auth_user_id=eq.${encodeURIComponent(user.id)}&select=*&limit=1`);}catch(e){console.warn('auth_user_id lookup failed',e);}
+    if(!rows.length && authPhone){
+      try{rows=await sbGet(`/trainees?phone_normalized=eq.${encodeURIComponent(authPhone)}&select=*&limit=2`);}catch(e){console.warn('phone lookup failed',e);}
+    }
+    if(rows.length>1){showAuthError('این شماره موبایل برای بیش از یک شاگرد ثبت شده است. ابتدا شماره‌های تکراری را در پنل مربی اصلاح کنید.');await AUTH_SUPABASE.auth.signOut();return;}
+    if(!rows.length){showAuthError('این شماره موبایل به هیچ شاگردی متصل نیست. ابتدا شماره شاگرد را در پنل مربی ثبت کنید.');await AUTH_SUPABASE.auth.signOut();return;}
+    const c=rows[0];
+    if(c.auth_user_id && String(c.auth_user_id)!==String(user.id)){showAuthError('این شاگرد قبلاً به حساب دیگری متصل شده است.');await AUTH_SUPABASE.auth.signOut();return;}
+    if(String(c.auth_user_id||'')!==String(user.id)){
+      try{await sbWrite(`/trainees?id=eq.${encodeURIComponent(c.id)}`,'PATCH',{auth_user_id:user.id,phone_normalized:authPhone||c.phone_normalized||null});}catch(e){showAuthError('اتصال حساب شاگرد انجام نشد. '+(e.message||''));await AUTH_SUPABASE.auth.signOut();return;}
+      c.auth_user_id=user.id;
+    }
+    clients=[{id:c.id,name:c.full_name,phone:c.phone,gender:c.gender,birth_date:c.birth_date,age:calcAge(c.birth_date),weight:c.current_weight,height:c.height,goal:c.goal,level:c.training_level,history:c.training_history,limitations:c.limitations,training_type:c.training_type||'gym',home_equipment:c.home_equipment||'',training_days:c.training_days||'',training_time:c.training_time||'',active:true,plans:0}];currentClient=clients[0];
+    qsAll('.nav button').forEach(b=>b.style.display='none');$id('navDash').style.display='block';
+    ['client','meal','workout','progress'].forEach(sec=>{const b=qsAll('.nav button').find(x=>String(x.getAttribute('onclick')||'').includes("'"+sec+"'"));if(b)b.style.display='block';});
+    document.body.classList.remove('locked');$id('authScreen').style.display='none';$id('authUserBar').style.display='block';$id('authUserText').textContent=`${c.full_name||user.phone} | شاگرد`;
+    showSection('traineeDashboard',$id('navDash'));addScheduleUI();await selectClient(c.id);await loadDashboard();
+  }
+
+  function buildAuthTabs(){
+    const card=document.querySelector('#authScreen .auth-card');if(!card||$id('authTabs'))return;
+    card.innerHTML=`<div class="auth-logo">🏋️</div><h2>باشگاه فیتنس سه‌قلعه</h2><p class="muted" style="text-align:center">سامانه مربی مجتبی</p><div id="authTabs" class="meal-tabs"><button class="active" id="authCoachTab" onclick="authMode('coach')">👨‍🏫 مربی</button><button id="authTraineeTab" onclick="authMode('trainee')">👤 شاگرد</button></div><div id="coachLoginBox"><label>ایمیل</label><input id="loginEmail" type="email" autocomplete="username" placeholder="ایمیل مربی"><label>رمز عبور</label><input id="loginPassword" type="password" autocomplete="current-password" placeholder="رمز عبور"><button onclick="loginApp()">🔐 ورود مربی</button></div><div id="traineeLoginBox" class="hide"><label>شماره موبایل شاگرد</label><input id="traineePhone" type="tel" placeholder="مثلاً +989121234567"><button onclick="requestTraineeOtp()">📩 ارسال کد پیامکی</button><label>کد یکبارمصرف</label><input id="traineeOtp" inputmode="numeric" maxlength="6" placeholder="کد ۶ رقمی"><button class="secondary" onclick="verifyTraineeOtp()">✅ ورود با کد</button></div><div id="authError" class="auth-error"></div>`;
+  }
+  window.authMode=function(mode){$id('coachLoginBox').classList.toggle('hide',mode!=='coach');$id('traineeLoginBox').classList.toggle('hide',mode!=='trainee');$id('authCoachTab').classList.toggle('active',mode==='coach');$id('authTraineeTab').classList.toggle('active',mode==='trainee');$id('authError').style.display='none';};
+  window.requestTraineeOtp=async function(){
+    const raw=$id('traineePhone').value.trim(),phone=phoneNorm(raw);
+    if(!phone)return showAuthError('شماره موبایل را وارد کنید.');
+    try{
+      const r=await sbGet(`/trainees?phone_normalized=eq.${encodeURIComponent(phone)}&select=id&limit=1`);
+      if(!r.length)return showAuthError('این شماره در فهرست شاگردان ثبت نشده است.');
+      const {error}=await AUTH_SUPABASE.auth.signInWithOtp({phone,options:{channel:'sms'}});
+      if(error)throw error;
+      showAuthError('کد ورود ارسال شد.');$id('authError').style.display='block';
+    }catch(e){showAuthError('ارسال کد انجام نشد. '+(e.message||''));}
+  };
+  window.verifyTraineeOtp=async function(){const phone=$id('traineePhone').value.trim(),token=$id('traineeOtp').value.trim();if(!phone||!token)return showAuthError('شماره و کد را وارد کنید.');try{const {data,error}=await AUTH_SUPABASE.auth.verifyOtp({phone,token,type:'sms'});if(error)throw error;await setupTraineeAuth(data.user);}catch(e){showAuthError('کد ورود معتبر نیست. '+(e.message||''));}};
+
+  window.finishLogin=async function(user){
+    try{
+      const {data:rows,error}=await AUTH_SUPABASE.from('profiles').select('*').eq('id',user.id);if(error)throw error;
+      if(rows.length&&rows[0].role==='trainee'){await setupTraineeAuth(user);return;}
+      if(!rows.length){await AUTH_SUPABASE.auth.signOut();showAuthError('این حساب هنوز به پروفایل اپ متصل نشده است.');return;}
+      authProfile=rows[0];document.body.classList.remove('locked');$id('authScreen').style.display='none';$id('authUserBar').style.display='block';$id('authUserText').textContent=`${authProfile.full_name||user.email} | مربی`;
+      qsAll('.nav button').forEach(b=>b.style.display='block');showSection('coach',qsAll('.nav button').find(b=>String(b.getAttribute('onclick')||'').includes("'coach'"))||null);await loadClients();await loadExercises();await loadLibraryExercises();
+    }catch(e){console.error(e);showAuthError('بررسی پروفایل انجام نشد. '+(e.message||''));}
+  };
+
+  window.loginApp=async function(){const email=$id('loginEmail').value.trim(),password=$id('loginPassword').value;if(!email||!password)return showAuthError('ایمیل و رمز عبور را وارد کنید.');try{const {data,error}=await AUTH_SUPABASE.auth.signInWithPassword({email,password});if(error)throw error;await finishLogin(data.user);}catch(e){showAuthError(e.message||'ورود انجام نشد.')}};
+
+  window.saveLibraryExercise=async function(){const name=$id('libName').value.trim();if(!name)return alert('نام حرکت را وارد کنید.');try{await sbWrite('/trainer_exercises','POST',{name,target_muscle:$id('libMuscle').value.trim()||null,category:$id('libCategory').value,level:$id('libLevel').value,goal:$id('libGoal')?.value||null,equipment:$id('libEquipment').value.trim()||null,coach_note:$id('libNote').value.trim()||null,is_favorite:false});['libName','libMuscle','libEquipment','libNote','libGoal'].forEach(id=>{if($id(id))$id(id).value=''});await loadLibraryExercises();alert('حرکت در بانک مربی ذخیره شد.');}catch(e){alert('ذخیره حرکت انجام نشد.\n'+e.message)}};
+  function addLibraryGoalField(){const lib=$id('libLevel');if(!lib||$id('libGoal'))return;const wrap=lib.parentElement;const inp=document.createElement('input');inp.id='libGoal';inp.placeholder='هدف حرکت';wrap.appendChild(inp);}
+
+  async function fixLibraryUse(){
+    window.useLibraryExercise=async function(id){try{const rows=await sbGet(`/trainer_exercises?id=eq.${encodeURIComponent(id)}&select=*`);const x=rows[0];if(!x)return;let ex=await sbGet(`/exercises?name=eq.${encodeURIComponent(x.name)}&select=id,name&limit=1`);if(!ex.length){ex=await sbWrite('/exercises','POST',{name:x.name});}if(!ex?.[0]?.id)return;$id('workoutExercise').value=String(ex[0].id);alert(`حرکت «${x.name}» به‌عنوان حرکت انتخاب‌شده برنامه آماده شد. اکنون ست/تکرار و سیستم را انتخاب و «افزودن به برنامه» را بزنید.`);}catch(e){alert('استفاده از حرکت انجام نشد.\n'+e.message)}};
+  }
+
+  function buildWorkoutControls(){
+    const card=qsAll('#workout .card')[2];if(!card||$id('workoutDay'))return;
+    const wrap=document.createElement('div');wrap.className='grid2';wrap.innerHTML=`<div><label>روز تمرین</label><select id="workoutDay"><option>شنبه</option><option>یکشنبه</option><option>دوشنبه</option><option>سه‌شنبه</option><option>چهارشنبه</option><option>پنجشنبه</option><option>جمعه</option></select></div><div><label>سیستم تمرینی</label><select id="workoutSystem"><option value="normal">نرمال</option><option value="superset">سوپرست</option><option value="triset">تری‌ست</option><option value="giant">جاینت‌ست</option><option value="drop">دراپ‌ست</option><option value="rest_pause">رست‌پاز</option><option value="timed">تایم‌دار</option><option value="multi_stage">چندمرحله‌ای</option><option value="custom">سفارشی</option></select></div><div><label>گروه سیستم</label><input id="workoutGroup" placeholder="مثلاً A1"></div>`;card.insertBefore(wrap,card.querySelector('label'));
+  }
+
+  const oldAddWorkout=window.addWorkoutExercise;
+  window.addWorkoutExercise=async function(){
+    if(!currentClient)return alert('اول شاگرد را انتخاب کنید.');if(!currentWorkoutPlanId){await saveWorkoutPlan();if(!currentWorkoutPlanId)return;}
+    const exerciseId=$id('workoutExercise').value;if(!exerciseId)return alert('حرکت را انتخاب کنید.');
+    const nextOrder=workoutExercisesCache.length?Math.max(...workoutExercisesCache.map(x=>Number(x.sort_order)||0))+1:1;
+    const body={workout_plan_id:currentWorkoutPlanId,exercise_id:exerciseId,sets:+$id('workoutSets').value||0,reps:$id('workoutReps').value.trim()||null,rest_seconds:+$id('workoutRest').value||0,notes:$id('workoutExerciseNotes').value.trim()||null,sort_order:nextOrder,training_system:$id('workoutSystem')?.value||'normal',group_key:$id('workoutGroup')?.value.trim()||null,training_day:$id('workoutDay')?.value||null,is_completed:false};
+    try{await sbWrite('/trainee_workout_exercises','POST',body);$id('workoutExerciseNotes').value='';await loadWorkoutForClient();alert('حرکت با سیستم تمرینی انتخاب‌شده به برنامه اضافه شد.');}catch(e){if(/training_day|is_completed/i.test(e.message)){delete body.training_day;delete body.is_completed;try{await sbWrite('/trainee_workout_exercises','POST',body);await loadWorkoutForClient();alert('حرکت اضافه شد؛ برای روز تمرین و تیک انجام‌شدن، SQL ارتقای جدید را اجرا کنید.');}catch(x){alert('افزودن حرکت انجام نشد.\n'+x.message)}}else alert('افزودن حرکت انجام نشد.\n'+e.message)}
+  };
+
+  const oldRenderWorkoutList=window.renderWorkoutList;
+  window.renderWorkoutList=function(rows,names){if(!rows.length){$id('workoutList').innerHTML="<p class='muted'>هنوز حرکتی ثبت نشده است.</p>";return;}$id('workoutList').innerHTML=rows.map((x,i)=>{const done=x.is_completed===true;return `<div class="meal-card ${done?'v4-complete':''} v4-system" data-workout-id="${x.id}"><div class="meal-head"><h3>${i+1}. ${esc2(names[x.exercise_id]||'حرکت')}</h3><button class="mini danger" onclick="deleteWorkoutExercise('${x.id}')">🗑 حذف</button></div><label class="checkfood"><input type="checkbox" ${done?'checked':''} onchange="toggleWorkoutComplete('${x.id}',this.checked)"> انجام شد</label><div class="stats"><div class="stat"><b>${esc2(x.sets??'')}</b>ست</div><div class="stat"><b>${esc2(x.reps??'')}</b>تکرار</div><div class="stat"><b>${esc2(x.rest_seconds??0)}</b>ثانیه</div><div class="stat"><b>${esc2(x.training_system||'normal')}</b>سیستم</div></div>${x.training_day?`<span class="pill">${esc2(x.training_day)}</span>`:''}${x.group_key?`<span class="pill">گروه ${esc2(x.group_key)}</span>`:''}${x.notes?`<p class="muted">${esc2(x.notes)}</p>`:''}</div>`}).join('');}
+
+  function buildChallengesSection(){
+    if($id('challenges'))return;
+    const s=document.createElement('section');s.id='challenges';s.className='section';s.innerHTML=`<div class="card"><h2>🏆 چالش‌ها</h2><p class="muted">چالش‌های ثبت‌شده و وضعیت مشارکت شاگرد.</p><div id="challengeList"></div></div>`;document.querySelector('.page').appendChild(s);loadChallenges();
+  }
+  async function loadChallenges(){if(!$id('challengeList'))return;try{const rows=await sbGet(currentClient?`/challenge_participants?trainee_id=eq.${encodeURIComponent(currentClient.id)}&select=id,status,progress,challenges(name,start_date,end_date)`:'/challenges?select=*');$id('challengeList').innerHTML=rows.length?rows.map(x=>`<div class="client"><strong>🏆 ${esc2(x.challenges?.name||x.name||'چالش')}</strong><span class="pill">${esc2(x.status||'active')}</span><span class="pill">پیشرفت ${esc2(x.progress??0)}%</span></div>`).join(''):'<p class="muted">چالشی ثبت نشده است.</p>';}catch(e){$id('challengeList').innerHTML='<p class="muted">برای فعال شدن چالش‌ها، SQL ارتقای جدید را اجرا کنید.</p>';}}
+
+  async function loadProgressHistory(){
+    if(!currentClient)return;let el=$id('progressHistory');if(!el){el=document.createElement('div');el.id='progressHistory';el.className='card';el.innerHTML='<h2>📈 تاریخچه پیشرفت</h2><div id="progressHistoryBody"></div>';const sec=$id('progress');if(sec)sec.appendChild(el);}try{const rows=await sbGet(`/body_analyses?trainee_id=eq.${encodeURIComponent(currentClient.id)}&select=analysis_date,weight,body_fat,muscle_mass,abdomen,waist,hip,thigh&order=analysis_date.desc`);$id('progressHistoryBody').innerHTML=rows.length?`<div class="v4-table"><table><thead><tr><th>تاریخ</th><th>وزن</th><th>چربی</th><th>عضله</th><th>شکم</th><th>کمر</th><th>باسن</th><th>ران</th></tr></thead><tbody>${rows.map(x=>`<tr><td>${esc2(x.analysis_date||'')}</td><td>${esc2(x.weight??'—')}</td><td>${esc2(x.body_fat??'—')}</td><td>${esc2(x.muscle_mass??'—')}</td><td>${esc2(x.abdomen??'—')}</td><td>${esc2(x.waist??'—')}</td><td>${esc2(x.hip??'—')}</td><td>${esc2(x.thigh??'—')}</td></tr>`).join('')}</tbody></table></div>`:'<p class="muted">هنوز رکوردی ثبت نشده است.</p>';}catch(e){}}
+
+  window.printPlan=async function(kind){
+    if(!currentClient)return alert('اول شاگرد را انتخاب کنید.');
+    const title=kind==='meal'?'برنامه غذایی':'برنامه تمرینی';let body='';
+    if(kind==='meal'){const rows=await sbGet(`/nutrition_plans?trainee_id=eq.${encodeURIComponent(currentClient.id)}&select=*&order=created_at.desc&limit=1`);body=`<h2>${esc2(rows[0]?.title||title)}</h2><p>کالری هدف: ${esc2(rows[0]?.daily_calories||'—')}</p>`;}else{const rows=await sbGet(`/trainee_workout_plans?trainee_id=eq.${encodeURIComponent(currentClient.id)}&select=*&order=created_at.desc&limit=1`);body=`<h2>${esc2(rows[0]?.title||title)}</h2><p>${esc2(rows[0]?.goal||'')}</p>`;}
+    const html=`<!doctype html><html lang="fa" dir="rtl"><head><meta charset="utf-8"><title>${title}</title><style>body{font-family:Tahoma;padding:30px;color:#111}h1{font-size:22px}h2{margin-top:24px}table{width:100%;border-collapse:collapse}td,th{border:1px solid #aaa;padding:8px}</style></head><body><h1>باشگاه فیتنس سه‌قلعه | مربی مجتبی</h1><p>شاگرد: ${esc2(currentClient.name||'')}</p><p>تاریخ: ${today()}</p>${body}
+
+</body></html>`;
+    const w=window.open('','_blank');if(w){w.document.write(html);w.document.close();}
+  };
+
+  function addPrintButtons(){
+    const m=$id('meal')?.querySelector('.card');if(m&&!$id('printMealBtn')){const b=document.createElement('button');b.id='printMealBtn';b.className='secondary';b.textContent='📄 چاپ / ذخیره PDF برنامه غذایی';b.onclick=()=>printPlan('meal');m.appendChild(b)}
+    const w=$id('workout')?.querySelector('.card');if(w&&!$id('printWorkoutBtn')){const b=document.createElement('button');b.id='printWorkoutBtn';b.className='secondary';b.textContent='📄 چاپ / ذخیره PDF برنامه تمرینی';b.onclick=()=>printPlan('workout');w.appendChild(b)}
+  }
+
+  const oldFinish2=window.finishLogin;window.finishLogin=async function(user){await oldFinish2(user);addStyle();buildDashboard();addNavDashboard();buildWorkoutControls();addScheduleUI();addPrintButtons();await fixLibraryUse();if(authProfile?.role==='coach'){await loadClients();}else if(authProfile?.role==='trainee'){await setupTraineeAuth(user);}};
+  function addRegistrationFields(){
+    const form=$id('ctype')?.parentElement?.parentElement;if(!form||$id('ctrainingDays'))return;
+    const days=document.createElement('div');days.innerHTML='<div><label>روزهای تمرین</label><input id="ctrainingDays" placeholder="شنبه، دوشنبه، چهارشنبه"></div><div><label>ساعت تمرین</label><input id="ctrainingTime" type="time"></div>';
+    form.appendChild(days.firstElementChild);form.appendChild(days.lastElementChild);
+  }
+  function addWaterGoal(){
+    const box=$id('mealStudentView')?.querySelector('.card:last-child');if(!box||$id('waterGoal'))return;
+    const row=document.createElement('div');row.className='row';row.innerHTML='<input id="waterGoal" type="number" min="0" placeholder="هدف آب روزانه (ml)"><button class="secondary" onclick="saveWaterGoal()">ذخیره هدف آب</button>';box.insertBefore(row,box.firstChild);
+  }
+  window.saveWaterGoal=async function(){if(!currentClient)return alert('اول شاگرد را انتخاب کنید.');const v=+$id('waterGoal').value||0;if(v<=0)return alert('هدف آب را وارد کنید.');try{await sbWrite(`/trainees?id=eq.${encodeURIComponent(currentClient.id)}`,'PATCH',{water_goal_ml:v});alert('هدف آب ذخیره شد.');}catch(e){alert('ذخیره هدف آب انجام نشد؛ SQL ارتقای V4 را اجرا کنید.\n'+e.message)}};
+
+  function buildCoachChallengeManager(){
+    const sec=$id('coach');if(!sec||$id('coachChallenges'))return;
+    const card=document.createElement('div');card.className='card';card.id='coachChallenges';card.innerHTML=`<h2>🏆 مدیریت چالش‌ها</h2><div class="grid2"><input id="challengeName" placeholder="نام چالش"><input id="challengeTarget" type="number" placeholder="هدف عددی"><input id="challengeUnit" placeholder="واحد، مثلاً لیوان/روز"><input id="challengeStart" type="date"><input id="challengeEnd" type="date"></div><textarea id="challengeDesc" placeholder="توضیحات چالش"></textarea><button onclick="createChallenge()">➕ ایجاد چالش</button><div id="coachChallengeList"></div>`;sec.appendChild(card);loadCoachChallenges();
+  }
+  window.createChallenge=async function(){const name=$id('challengeName').value.trim();if(!name)return alert('نام چالش را وارد کنید.');try{await sbWrite('/challenges','POST',{name,description:$id('challengeDesc').value.trim()||null,start_date:$id('challengeStart').value||null,end_date:$id('challengeEnd').value||null,target_value:+$id('challengeTarget').value||null,unit:$id('challengeUnit').value.trim()||null,status:'active'});['challengeName','challengeTarget','challengeUnit','challengeStart','challengeEnd','challengeDesc'].forEach(x=>$id(x).value='');await loadCoachChallenges();alert('چالش ایجاد شد.');}catch(e){alert('ایجاد چالش انجام نشد.\n'+e.message)}};
+  async function loadCoachChallenges(){if(!$id('coachChallengeList'))return;try{const rows=await sbGet('/challenges?select=*&order=created_at.desc');$id('coachChallengeList').innerHTML=rows.length?rows.map(x=>`<div class="client"><strong>🏆 ${esc2(x.name)}</strong><span class="pill">${esc2(x.status||'active')}</span><button class="mini secondary" onclick="assignChallenge('${x.id}')">👥 تخصیص به شاگرد</button></div>`).join(''):'<p class="muted">هنوز چالشی ایجاد نشده است.</p>';}catch(e){$id('coachChallengeList').innerHTML='<p class="muted">برای فعال شدن چالش‌ها، SQL ارتقای V4 را اجرا کنید.</p>';}}
+  window.assignChallenge=async function(challengeId){if(!currentClient)return alert('ابتدا شاگرد را انتخاب کنید.');try{await sbWrite('/challenge_participants','POST',{challenge_id:challengeId,trainee_id:currentClient.id,progress:0,status:'active'});alert('چالش به شاگرد اختصاص داده شد.');await loadDashboard();}catch(e){alert('تخصیص چالش انجام نشد.\n'+e.message)}};
+
+  window.saveProgress=async function(){
+    if(!currentClient)return alert('اول شاگرد را انتخاب کنید.');
+    const d=$id('prDate').value||today(),w=+$id('prWeight').value||null;
+    try{await sbWrite('/weight_logs','POST',{trainee_id:currentClient.id,log_date:d,weight:w});await sbWrite('/body_analyses','POST',{trainee_id:currentClient.id,analysis_date:d,weight:w,abdomen:+$id('waist').value||null,waist:+$id('hip').value||null,hip:+$id('glute').value||null,thigh:+$id('thigh').value||null,notes:'ثبت پیشرفت دوره‌ای'});await loadClients();await loadProgressHistory();alert('اندازه‌ها و وزن در دیتابیس ذخیره شد.');}catch(e){alert('ثبت پیشرفت انجام نشد.\n'+e.message)}};
+  async function loadWaterGoal(){if(!currentClient||!$id('waterGoal'))return;try{const r=await sbGet(`/trainees?id=eq.${encodeURIComponent(currentClient.id)}&select=water_goal_ml&limit=1`);$id('waterGoal').value=r[0]?.water_goal_ml||'';}catch(e){}}
+
+  async function loadGoal(){if(!currentClient)return;const box=$id('goalBox');if(!box)return;try{const rows=await sbGet(`/trainee_goals?trainee_id=eq.${encodeURIComponent(currentClient.id)}&select=*&order=created_at.desc&limit=1`);const x=rows[0];if(x){$id('goalWeight').value=x.target_weight||'';$id('goalFat').value=x.target_body_fat||'';$id('goalDate').value=x.target_date||'';$id('goalNote').value=x.coach_note||'';}}catch(e){}}
+  window.saveGoal=async function(){if(!currentClient)return alert('اول شاگرد را انتخاب کنید.');try{await sbWrite('/trainee_goals','POST',{trainee_id:currentClient.id,target_weight:+$id('goalWeight').value||null,target_body_fat:+$id('goalFat').value||null,target_date:$id('goalDate').value||null,coach_note:$id('goalNote').value.trim()||null});alert('هدف شاگرد ذخیره شد.');await loadDashboard();}catch(e){alert('ذخیره هدف انجام نشد.\n'+e.message)}};
+  function buildGoalBox(){const sec=$id('client');if(!sec||$id('goalBox'))return;const card=document.createElement('div');card.className='card';card.id='goalBox';card.innerHTML=`<h2>🎯 هدف مربی</h2><div class="grid2"><input id="goalWeight" type="number" step="0.1" placeholder="وزن هدف"><input id="goalFat" type="number" step="0.1" placeholder="درصد چربی هدف"><input id="goalDate" type="date"></div><textarea id="goalNote" placeholder="یادداشت مربی درباره هدف"></textarea><button onclick="saveGoal()">💾 ذخیره هدف</button>`;sec.appendChild(card);}
+
+  async function loadMembershipCard(){if(!currentClient)return;const box=$id('membershipCardBox');if(!box)return;try{const rows=await sbGet(`/trainee_memberships?trainee_id=eq.${encodeURIComponent(currentClient.id)}&select=*&order=created_at.desc&limit=1`);const x=rows[0];if(x){$id('cardNumber').value=x.card_number||'';$id('cardHolder').value=x.card_holder||currentClient.name||'';$id('cardExpiry').value=x.card_expiry||'';$id('subAmount').value=x.amount||'';}}catch(e){}}
+  window.saveMembershipCard=async function(){if(!currentClient)return alert('اول شاگرد را انتخاب کنید.');try{const body={card_number:$id('cardNumber').value.trim()||null,card_holder:$id('cardHolder').value.trim()||null,card_expiry:$id('cardExpiry').value||null,amount:+$id('subAmount').value||0};const rows=await sbGet(`/trainee_memberships?trainee_id=eq.${encodeURIComponent(currentClient.id)}&select=id&order=created_at.desc&limit=1`);if(rows[0])await sbWrite(`/trainee_memberships?id=eq.${encodeURIComponent(rows[0].id)}`,'PATCH',body);else await sbWrite('/trainee_memberships','POST',{trainee_id:currentClient.id,start_date:today(),...body,status:'active'});alert('اطلاعات کارت/شهریه ذخیره شد.');}catch(e){alert('ذخیره کارت عضویت انجام نشد.\n'+e.message)}};
+  function buildMembershipCard(){const sec=$id('client');if(!sec||$id('membershipCardBox'))return;const card=document.createElement('div');card.className='card';card.id='membershipCardBox';card.innerHTML=`<h2>💳 کارت عضویت</h2><div class="grid2"><input id="cardNumber" placeholder="شماره کارت عضویت"><input id="cardHolder" placeholder="نام روی کارت"><input id="cardExpiry" type="date"></div><button onclick="saveMembershipCard()">💾 ذخیره کارت عضویت</button><button class="secondary" onclick="copyMembershipCard()">📋 کپی شماره کارت</button>`;sec.appendChild(card);}
+  window.copyMembershipCard=function(){const v=$id('cardNumber')?.value||'';if(!v)return alert('شماره کارت ثبت نشده است.');navigator.clipboard?.writeText(v).then(()=>alert('شماره کارت کپی شد.')).catch(()=>alert(v));};
+
+  const prevSelectClient=window.selectClient;window.selectClient=async function(id){await prevSelectClient(id);if(currentClient){if($id('trainingDaysEdit'))$id('trainingDaysEdit').value=currentClient.training_days||'';if($id('trainingTimeEdit'))$id('trainingTimeEdit').value=currentClient.training_time||'';await loadGoal();await loadMembershipCard();await loadWaterGoal();}};
+
+  buildAuthTabs();addRegistrationFields();buildCoachChallengeManager();buildGoalBox();buildMembershipCard();addLibraryGoalField();addWaterGoal();addStyle();buildDashboard();addNavDashboard();buildWorkoutControls();addScheduleUI();addPrintButtons();fixLibraryUse();
+  AUTH_SUPABASE.auth.getSession().then(({data})=>{if(data?.session)window.finishLogin(data.session.user);}).catch(e=>console.error(e));
+})();
+
+</script>
+
+<!-- FINAL COMPLETION LAYER: 18/18 -->
+<script>
+(function(){
+  const $f=id=>document.getElementById(id);
+  const qsa=s=>Array.from(document.querySelectorAll(s));
+  const escf=v=>typeof esc2==='function'?esc2(v):String(v??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m]));
+  const fmtf=v=>Number(v||0).toLocaleString('fa-IR');
+  const sysName={normal:'نرمال',superset:'سوپرست',triset:'تری‌ست',giant:'جاینت‌ست',drop:'دراپ‌ست',rest_pause:'رست‌پاز',timed:'تایم‌دار',multi_stage:'چندمرحله‌ای',custom:'سفارشی'};
+  let clientMode='all', clientType='all';
+
+  function addFinalStyle(){
+    if($f('final18style'))return;
+    const st=document.createElement('style');st.id='final18style';st.textContent=`
+      .f18-actions{display:flex;gap:6px;flex-wrap:wrap}.f18-actions button{width:auto;flex:1;min-width:74px;margin:0;padding:8px 9px;font-size:11px}
+      .f18-group{border:1px solid #3d5368;border-radius:15px;padding:11px;margin:10px 0;background:#0b1622;border-right:4px solid #ffbd16}.f18-group-title{font-weight:bold;margin-bottom:8px}.f18-group .meal-card{margin:7px 0;border-color:#30485d}
+      .f18-chip{display:inline-block;padding:4px 8px;border-radius:20px;background:#203447;font-size:10px;margin:2px}.f18-kpi{display:grid;grid-template-columns:repeat(3,1fr);gap:7px}.f18-kpi>div{background:#101e2d;border-radius:10px;padding:9px;text-align:center;font-size:10px}.f18-kpi b{display:block;font-size:16px;margin-bottom:3px}
+      .f18-chart{display:flex;align-items:flex-end;gap:7px;height:150px;padding:12px 6px;border-bottom:1px solid #33495d;overflow-x:auto}.f18-bar{min-width:28px;background:#ffbd16;border-radius:7px 7px 0 0;position:relative}.f18-bar span{position:absolute;bottom:-25px;right:50%;transform:translateX(50%);font-size:9px;white-space:nowrap}.f18-bar b{position:absolute;top:-18px;right:50%;transform:translateX(50%);font-size:9px;white-space:nowrap}
+      .f18-filterrow{display:flex;gap:6px;overflow:auto;padding:4px 0}.f18-filterrow button{width:auto;white-space:nowrap;margin:0;padding:8px 11px;font-size:11px}.f18-filterrow button.active{background:#ffbd16;color:#111}
+      .f18-note{padding:10px;border-bottom:1px solid #263b4d;font-size:12px}.f18-muted{color:#aeb9c4;font-size:11px}
+      @media(max-width:600px){.f18-kpi{grid-template-columns:1fr 1fr}.f18-actions button{min-width:30%}}
+    `;document.head.appendChild(st);
+  }
+
+  function statusForMembership(x){
+    const todayS=new Date().toISOString().slice(0,10), end=x?.end_date||'';
+    if(!x)return 'بدون عضویت';
+    if(end && end<todayS)return 'منقضی';
+    if(x.status==='pending')return 'در انتظار پرداخت';
+    return 'فعال';
+  }
+
+  window.loadClients=async function(){
+    try{
+      const [data,memberships]=await Promise.all([
+        sbGet('/trainees?select=*&order=created_at.desc'),
+        sbGet('/trainee_memberships?select=id,trainee_id,start_date,end_date,status,amount,created_at&order=created_at.desc')
+      ]);
+      const latest={};memberships.forEach(m=>{if(!latest[m.trainee_id])latest[m.trainee_id]=m;});
+      clients=data.map(c=>({id:c.id,name:c.full_name,phone:c.phone,gender:c.gender,birth_date:c.birth_date,age:calcAge(c.birth_date),weight:c.current_weight,height:c.height,goal:c.goal,level:c.training_level,history:c.training_history,limitations:c.limitations,training_type:c.training_type||'gym',home_equipment:c.home_equipment||'',training_days:c.training_days||'',training_time:c.training_time||'',createdAt:c.created_at,active:statusForMembership(latest[c.id])==='فعال',membershipStatus:statusForMembership(latest[c.id]),plans:0}));
+      await window.updateStats();
+      if(typeof buildCoachControls==='function')buildCoachControls();
+      renderFinalClients();
+    }catch(e){console.error(e);if($f('clientTableBody'))$f('clientTableBody').innerHTML=`<tr><td colspan="9" class="v4-danger">دریافت شاگردان انجام نشد: ${escf(e.message)}</td></tr>`;}
+  };
+
+  window.updateStats=async function(){
+    setText('clientCount',fmtf(clients.length));
+    let active=clients.filter(c=>c.active).length, planTrainees=0;
+    try{
+      const [plans,nutrition]=await Promise.all([sbGet('/trainee_workout_plans?select=id,trainee_id'),sbGet('/nutrition_plans?select=id,trainee_id')]);
+      const ids=new Set([...plans.map(x=>String(x.trainee_id)),...nutrition.map(x=>String(x.trainee_id))]);planTrainees=ids.size;clients.forEach(c=>c.plans=ids.has(String(c.id))?1:0);
+    }catch(e){}
+    const alerts=clients.filter(c=>!c.weight||!c.goal||!c.phone||c.membershipStatus==='منقضی').length;
+    setText('activeCount',fmtf(active));setText('planCount',fmtf(planTrainees));setText('alertCount',fmtf(alerts));
+  };
+
+  window.setCoachFilter=function(f){clientType=f;qsa('.v4-filter button').forEach(b=>b.classList.toggle('active',b.dataset.filter===f));renderFinalClients();};
+  function renderFinalClients(){
+    const body=$f('clientTableBody');if(!body)return;
+    const q=($f('clientSearch')?.value||'').trim().toLowerCase();
+    let arr=clients.filter(c=>(clientType==='all'||(c.training_type||'gym')===clientType)&&((c.name||'').toLowerCase().includes(q)||(c.phone||'').includes(q)));
+    if(clientMode==='active')arr=arr.filter(c=>c.active);
+    if(clientMode==='plan')arr=arr.filter(c=>c.plans);
+    if(clientMode==='alert')arr=arr.filter(c=>!c.weight||!c.goal||!c.phone||c.membershipStatus==='منقضی');
+    body.innerHTML=arr.length?arr.map(c=>`<tr><td><b>${escf(c.name||'بدون نام')}</b><br><span class="v4-small">${escf(c.phone||'—')}</span></td><td>${c.training_type==='home'?'🏠 منزل':c.training_type==='online'?'📱 آنلاین':'🏋️ باشگاه'}</td><td>${c.weight?escf(c.weight)+' kg':'—'}</td><td>${escf(c.goal||'—')}</td><td>${escf(c.training_days||'—')}<br><span class="v4-small">${escf(c.training_time||'—')}</span></td><td>${c.plans?'<span class="v4-ok">✓ دارد</span>':'<span class="v4-warn">ندارد</span>'}</td><td>${c.active?'<span class="v4-ok">فعال</span>':'<span class="v4-danger">'+escf(c.membershipStatus||'غیرفعال')+'</span>'}</td><td>${escf(c.createdAt?new Date(c.createdAt).toLocaleDateString('fa-IR'):'—')}</td><td><button class="secondary mini" onclick="selectClient('${c.id}')">ورود</button></td></tr>`).join(''):`<tr><td colspan="9" class="muted">شاگردی با این فیلتر پیدا نشد.</td></tr>`;
+  }
+
+  function wireFinalBadges(){
+    const setMode=m=>{clientMode=m;renderFinalClients();$f('clientList')?.scrollIntoView({behavior:'smooth',block:'start'});};
+    [['clientCount','all'],['activeCount','active'],['planCount','plan'],['alertCount','alert']].forEach(([id,m])=>{const e=$f(id)?.parentElement;if(e&&!e.dataset.f18){e.dataset.f18='1';e.style.cursor='pointer';e.onclick=()=>setMode(m);}});
+  }
+
+  async function addScheduleFields(){
+    const box=$f('scheduleCard');if(!box)return;
+    if(!$f('trainingDaysEdit'))return;
+  }
+
+  const oldSelect=window.selectClient;
+  window.selectClient=async function(id){
+    await oldSelect(id);
+    if(!currentClient)return;
+    if($f('trainingDaysEdit'))$f('trainingDaysEdit').value=currentClient.training_days||'';
+    if($f('trainingTimeEdit'))$f('trainingTimeEdit').value=currentClient.training_time||'';
+    await Promise.allSettled([loadNoteHistory(),loadMembershipHistory(),loadChallengeForCurrent(),loadProgressChart(),loadActivityWeek()]);
+  };
+
+  // -------- Workout: edit, reorder, copy and real grouped systems --------
+  const oldLoadWorkout=window.loadWorkoutForClient;
+  window.loadWorkoutForClient=async function(){await oldLoadWorkout();buildWorkoutManagement();};
+  function buildWorkoutManagement(){
+    const box=$f('workoutList');if(!box||$f('workoutMgmt'))return;
+    const card=document.createElement('div');card.className='card';card.id='workoutMgmt';card.innerHTML=`<div class="f18-actions"><button class="secondary" onclick="copyPreviousWorkoutPlan()">📋 کپی برنامه قبلی</button><button class="secondary" onclick="moveWorkoutSelected(-1)">⬆️ جابه‌جایی بالا</button><button class="secondary" onclick="moveWorkoutSelected(1)">⬇️ جابه‌جایی پایین</button></div><p class="f18-muted">برای ویرایش، روی «ویرایش» همان حرکت بزنید. برای سیستم‌های گروهی، یک نام گروه مثل A وارد کنید.</p>`;
+    box.parentNode.insertBefore(card,box);
+  }
+  window.editWorkoutExercise=async function(id){
+    const x=workoutExercisesCache.find(r=>String(r.id)===String(id));if(!x)return;
+    const sets=prompt('تعداد ست',x.sets??'');if(sets===null)return;const reps=prompt('تکرار / زمان',x.reps??'');if(reps===null)return;const rest=prompt('استراحت (ثانیه)',x.rest_seconds??0);if(rest===null)return;const notes=prompt('یادداشت',x.notes||'');if(notes===null)return;
+    try{await sbWrite(`/trainee_workout_exercises?id=eq.${encodeURIComponent(id)}`,'PATCH',{sets:+sets||0,reps:reps||null,rest_seconds:+rest||0,notes:notes||null});await loadWorkoutForClient();}catch(e){alert('ویرایش حرکت انجام نشد.\n'+e.message)}
+  };
+  window.moveWorkoutExercise=async function(id,dir){
+    const rows=[...workoutExercisesCache].sort((a,b)=>(+a.sort_order||0)-((+b.sort_order)||0)),i=rows.findIndex(x=>String(x.id)===String(id));if(i<0)return;const j=i+dir;if(j<0||j>=rows.length)return;const a=rows[i],b=rows[j],ao=a.sort_order,bo=b.sort_order;
+    try{await sbWrite(`/trainee_workout_exercises?id=eq.${encodeURIComponent(a.id)}`,'PATCH',{sort_order:bo});await sbWrite(`/trainee_workout_exercises?id=eq.${encodeURIComponent(b.id)}`,'PATCH',{sort_order:ao});await loadWorkoutForClient();}catch(e){alert('مرتب‌سازی انجام نشد.\n'+e.message)}
+  };
+  window.moveWorkoutSelected=async function(dir){const id=prompt('شناسه حرکت برای جابه‌جایی را وارد کنید:\n'+workoutExercisesCache.map(x=>`${x.id}`).join('\n'));if(id)await moveWorkoutExercise(id,dir);};
+  window.copyPreviousWorkoutPlan=async function(){
+    if(!currentClient)return alert('اول شاگرد را انتخاب کنید.');
+    try{const plans=await sbGet(`/trainee_workout_plans?trainee_id=eq.${encodeURIComponent(currentClient.id)}&select=*&order=created_at.desc&limit=1`);const p=plans[0];if(!p)return alert('برنامه‌ای برای کپی وجود ندارد.');const a=await sbWrite('/trainee_workout_plans','POST',{trainee_id:currentClient.id,title:(p.title||'برنامه تمرینی')+' - کپی',goal:p.goal||null,notes:p.notes||null});const np=a[0]?.id;if(!np)return;const rows=await sbGet(`/trainee_workout_exercises?workout_plan_id=eq.${encodeURIComponent(p.id)}&select=*`);if(rows.length)await sbWrite('/trainee_workout_exercises','POST',rows.map((x,i)=>({workout_plan_id:np,exercise_id:x.exercise_id,sets:x.sets,reps:x.reps,rest_seconds:x.rest_seconds,notes:x.notes,sort_order:i+1,training_day:x.training_day||null,is_completed:false,training_system:x.training_system||'normal',group_key:x.group_key||null})));currentWorkoutPlanId=np;await loadWorkoutForClient();alert('کپی برنامه ساخته شد.');}catch(e){alert('کپی برنامه انجام نشد.\n'+e.message)}
+  };
+
+  function groupWorkoutRows(rows,names){
+    const groups=[];const map=new Map();rows.forEach((x,i)=>{const sys=x.training_system||'normal',key=(sys!=='normal'&&x.group_key)?sys+'|'+x.group_key:'single|'+x.id;if(!map.has(key)){map.set(key,[]);groups.push(key);}map.get(key).push({...x,_i:i});});
+    return groups.map(key=>{const arr=map.get(key),first=arr[0],sys=first.training_system||'normal',grouped=sys!=='normal'&&first.group_key;const head=grouped?`<div class="f18-group-title">${escf(sysName[sys]||sys)} • گروه ${escf(first.group_key)} <span class="f18-chip">${arr.length} حرکت</span></div>`:'';const cards=arr.map(x=>{const done=x.is_completed===true;return `<div class="meal-card ${done?'v4-complete':''}" data-workout-id="${x.id}"><div class="meal-head"><h3>${x._i+1}. ${escf(names[x.exercise_id]||'حرکت')}</h3><div class="f18-actions"><button class="mini secondary" onclick="editWorkoutExercise('${x.id}')">✏️ ویرایش</button><button class="mini secondary" onclick="moveWorkoutExercise('${x.id}',-1)">⬆️</button><button class="mini secondary" onclick="moveWorkoutExercise('${x.id}',1)">⬇️</button><button class="mini danger" onclick="deleteWorkoutExercise('${x.id}')">🗑</button></div></div><label class="checkfood"><input type="checkbox" ${done?'checked':''} onchange="toggleWorkoutComplete('${x.id}',this.checked)"> انجام شد</label><div class="stats"><div class="stat"><b>${escf(x.sets??'')}</b>ست</div><div class="stat"><b>${escf(x.reps??'')}</b>تکرار/زمان</div><div class="stat"><b>${escf(x.rest_seconds??0)}</b>ثانیه</div><div class="stat"><b>${escf(sysName[x.training_system||'normal']||'نرمال')}</b>سیستم</div></div>${x.training_day?`<span class="f18-chip">📅 ${escf(x.training_day)}</span>`:''}${x.group_key?`<span class="f18-chip">گروه ${escf(x.group_key)}</span>`:''}${x.notes?`<p class="muted">${escf(x.notes)}</p>`:''}</div>`}).join('');return grouped?`<div class="f18-group">${head}${cards}</div>`:cards;}).join('');
+  }
+  window.renderWorkoutList=function(rows,names){if(!rows.length){$f('workoutList').innerHTML='<p class="muted">هنوز حرکتی ثبت نشده است.</p>';buildWorkoutManagement();return;}const done=rows.filter(x=>x.is_completed===true).length;const pct=Math.round(done*100/rows.length);$f('workoutList').innerHTML=`<div class="card"><div class="f18-kpi"><div><b>${fmtf(rows.length)}</b>حرکت</div><div><b>${fmtf(done)}</b>انجام‌شده</div><div><b>${fmtf(pct)}%</b>پیشرفت جلسه</div></div></div>`+groupWorkoutRows(rows,names);buildWorkoutManagement();};
+
+  // -------- Nutrition consumption: real Supabase log --------
+  async function getConsumedFoodIds(){
+    if(!currentClient)return new Set();
+    try{const rows=await sbGet(`/trainee_food_logs?trainee_id=eq.${encodeURIComponent(currentClient.id)}&log_date=eq.${encodeURIComponent(today())}&consumed=eq.true&select=meal_food_id`);return new Set(rows.map(x=>String(x.meal_food_id)));}catch(e){return new Set();}
+  }
+  window.toggleConsumed=async function(key){
+    const parts=String(key).split('_');const mealFoodId=parts.slice(1).join('_');if(!currentClient||!mealFoodId)return;
+    try{
+      const existing=await sbGet(`/trainee_food_logs?trainee_id=eq.${encodeURIComponent(currentClient.id)}&meal_food_id=eq.${encodeURIComponent(mealFoodId)}&log_date=eq.${encodeURIComponent(today())}&select=id,consumed&limit=1`);
+      if(existing[0])await sbWrite(`/trainee_food_logs?id=eq.${encodeURIComponent(existing[0].id)}`,'PATCH',{consumed:!existing[0].consumed});
+      else await sbWrite('/trainee_food_logs','POST',{trainee_id:currentClient.id,meal_food_id:mealFoodId,log_date:today(),consumed:true});
+      await loadNutritionForClient();
+    }catch(e){alert('ثبت مصرف غذا انجام نشد.\n'+e.message)}
+  };
+  window.renderStudentMeals=async function(meals,p){
+    if(!$f('studentMealList'))return;const done=await getConsumedFoodIds();let total=0,count=0;
+    $f('studentMealTitle').textContent=`${p.title||'برنامه غذایی'} | هدف روزانه ${p.daily_calories||0} kcal`; $f('studentTargetCal').textContent=fmtf(p.daily_calories||0);
+    $f('studentMealList').innerHTML=meals.map(m=>`<div class="student-meal"><b>🍽️ ${escf(m.meal_name)}</b>${(m.foods||[]).map(x=>{const f=x.food||{},q=+x.amount||0,k=(+f.calories||0)*q/100,key=String(x.id);const checked=done.has(key);if(checked){total+=k;count++;}return `<label class="checkfood"><input type="checkbox" ${checked?'checked':''} onchange="toggleConsumed('${currentClient.id}_${key}')"> ${escf(f.name||'غذا')} — ${escf(x.amount)} ${escf(x.unit||'گرم')} <span class="muted">(${k.toFixed(0)} kcal)</span></label>`;}).join('')}</div>`).join('');
+    $f('studentDoneCal').textContent=total.toFixed(0);$f('studentDoneCount').textContent=count;await loadWaterToday();
+  };
+  window.renderMealReport=async function(meals,p){
+    const done=await getConsumedFoodIds();let total=0,count=0,all=0;meals.forEach(m=>(m.foods||[]).forEach(x=>{all++;const f=x.food||{},q=+x.amount||0;if(done.has(String(x.id))){count++;total+=(+f.calories||0)*q/100;}}));const w=await loadWaterToday();$f('mealReport').innerHTML=`<div class="report-row"><span>برنامه</span><b>${escf(p.title||'بدون برنامه')}</b></div><div class="report-row"><span>غذاهای مصرف‌شده</span><b>${fmtf(count)} از ${fmtf(all)}</b></div><div class="report-row"><span>کالری ثبت‌شده</span><b>${total.toFixed(0)} kcal</b></div><div class="report-row"><span>آب امروز</span><b>${fmtf(w)} ml</b></div><div class="report-row"><span>هدف کالری</span><b>${fmtf(p.daily_calories||0)} kcal</b></div>`;
+  };
+
+  // Workout completion is also DB-only in the final version.
+  window.toggleWorkoutComplete=async function(id,checked){try{await sbWrite(`/trainee_workout_exercises?id=eq.${encodeURIComponent(id)}`,'PATCH',{is_completed:checked});await loadWorkoutForClient();}catch(e){alert('ثبت وضعیت حرکت انجام نشد.\n'+e.message)}};
+
+  // -------- Nutrition: substitution is linked to the actual meal food; custom food remains DB-backed --------
+  window.openSubstitution=function(foodId,amount){const f=foods.find(x=>String(x[5])===String(foodId));if(!f)return alert('غذا پیدا نشد.');$f('orig').value=foods.findIndex(x=>String(x[5])===String(foodId));$f('origG').value=amount||100;showSection('food',qsa('.nav button').find(b=>String(b.getAttribute('onclick')||'').includes("'food'")));calc();window.scrollTo({top:0,behavior:'smooth'});};
+
+  // -------- Notes history --------
+  async function loadNoteHistory(){
+    if(!currentClient)return;const sec=$f('progress');if(!sec)return;let box=$f('noteHistoryBox');if(!box){box=document.createElement('div');box.className='card';box.id='noteHistoryBox';box.innerHTML='<h2>🗂️ تاریخچه یادداشت‌های مربی</h2><div id="noteHistory"></div>';sec.appendChild(box);}try{const rows=await sbGet(`/trainee_notes?trainee_id=eq.${encodeURIComponent(currentClient.id)}&select=*&order=created_at.desc`);$f('noteHistory').innerHTML=rows.length?rows.map(x=>`<div class="f18-note"><b>${escf(x.created_at?new Date(x.created_at).toLocaleDateString('fa-IR'):'')}</b><br>${escf(x.note||'')}</div>`).join(''):'<p class="f18-muted">یادداشتی ثبت نشده است.</p>';}catch(e){$f('noteHistory').innerHTML='<p class="f18-muted">تاریخچه یادداشت در دسترس نیست.</p>';}}
+
+  // -------- Progress chart/report --------
+  async function loadProgressChart(){
+    if(!currentClient)return;const sec=$f('progress');if(!sec)return;let box=$f('progressChartBox');if(!box){box=document.createElement('div');box.className='card';box.id='progressChartBox';box.innerHTML='<h2>📉 نمودار وزن</h2><div id="progressChart"></div>';sec.appendChild(box);}try{const rows=await sbGet(`/body_analyses?trainee_id=eq.${encodeURIComponent(currentClient.id)}&select=analysis_date,weight&order=analysis_date.asc&limit=12`);const valid=rows.filter(x=>x.weight!=null);if(!valid.length){$f('progressChart').innerHTML='<p class="f18-muted">برای نمودار هنوز وزن ثبت نشده است.</p>';return;}const max=Math.max(...valid.map(x=>+x.weight)),min=Math.min(...valid.map(x=>+x.weight)),range=Math.max(1,max-min);$f('progressChart').innerHTML=`<div class="f18-chart">${valid.map(x=>{const h=25+((+x.weight-min)/range)*90;return `<div class="f18-bar" style="height:${h}px"><b>${escf(x.weight)}</b><span>${escf((x.analysis_date||'').slice(5))}</span></div>`}).join('')}</div><p class="f18-muted">کمینه: ${fmtf(min)} kg | بیشینه: ${fmtf(max)} kg | آخرین: ${fmtf(valid.at(-1).weight)} kg</p>`;}catch(e){}}
+
+  // -------- Challenges: coach creation + assignment + progress/status --------
+  async function loadChallengeForCurrent(){if(!currentClient||!$f('challenges'))return;loadChallenges();}
+  window.updateChallengeProgress=async function(id){const p=prompt('درصد پیشرفت (۰ تا ۱۰۰)',document.querySelector(`[data-challenge-id="${id}"]`)?.dataset.progress||'0');if(p===null)return;const v=Math.max(0,Math.min(100,+p||0));try{await sbWrite(`/challenge_participants?id=eq.${encodeURIComponent(id)}`,'PATCH',{progress:v,status:v>=100?'completed':'active'});await loadChallenges();await loadDashboard();}catch(e){alert('ثبت پیشرفت چالش انجام نشد.\n'+e.message)}};
+  const oldLoadChallenges=window.loadChallenges;
+  window.loadChallenges=async function(){if(!$f('challengeList'))return;try{const rows=await sbGet(`/challenge_participants?trainee_id=eq.${encodeURIComponent(currentClient.id)}&select=id,status,progress,challenges(name,start_date,end_date,target_value,unit)&order=created_at.desc`);$f('challengeList').innerHTML=rows.length?rows.map(x=>`<div class="client" data-challenge-id="${x.id}" data-progress="${x.progress||0}"><strong>🏆 ${escf(x.challenges?.name||'چالش')}</strong><div><span class="f18-chip">${escf(x.status||'active')}</span><span class="f18-chip">پیشرفت ${escf(x.progress??0)}%</span>${x.challenges?.start_date?`<span class="f18-chip">از ${escf(x.challenges.start_date)}</span>`:''}${x.challenges?.end_date?`<span class="f18-chip">تا ${escf(x.challenges.end_date)}</span>`:''}</div><button class="secondary mini" onclick="updateChallengeProgress('${x.id}')">📈 ثبت پیشرفت</button></div>`).join(''):'<p class="muted">چالشی ثبت نشده است.</p>';}catch(e){$f('challengeList').innerHTML='<p class="muted">چالش‌ها در دسترس نیستند.</p>';}};
+
+  // -------- Membership history + status --------
+  async function loadMembershipHistory(){
+    if(!currentClient)return;const sec=$f('client');if(!sec)return;let box=$f('membershipHistoryBox');if(!box){box=document.createElement('div');box.className='card';box.id='membershipHistoryBox';box.innerHTML='<h2>💳 سوابق عضویت و پرداخت</h2><div id="membershipHistory"></div>';sec.appendChild(box);}try{const rows=await sbGet(`/trainee_memberships?trainee_id=eq.${encodeURIComponent(currentClient.id)}&select=*&order=start_date.desc,created_at.desc`);$f('membershipHistory').innerHTML=rows.length?rows.map(x=>`<div class="report-row"><span>${escf(x.start_date||'—')} تا ${escf(x.end_date||'—')} | ${escf(statusForMembership(x))}</span><b>${fmtf(x.amount||0)} تومان</b></div>`).join(''):'<p class="f18-muted">سابقه عضویتی ثبت نشده است.</p>';}catch(e){}}
+
+  // -------- Profile completeness: editable basic info --------
+  function addProfileBasicFields(){
+    const card=$f('client')?.querySelector('.card');if(!card||$f('pbirth'))return;
+    const anchor=$f('pn')?.parentElement?.parentElement;if(!anchor)return;
+    const row=document.createElement('div');row.className='grid2';row.innerHTML='<div><label>تاریخ تولد</label><input id="pbirth" type="date"></div><div><label>جنسیت</label><select id="pgender"><option>زن</option><option>مرد</option></select></div>';anchor.appendChild(row);
+  }
+  async function loadProfileBasic(){if(!currentClient)return;if($f('pbirth'))$f('pbirth').value=currentClient.birth_date||'';if($f('pgender'))$f('pgender').value=currentClient.gender||'زن';}
+  const baseSelectForProfile=window.selectClient;
+  window.selectClient=async function(id){await baseSelectForProfile(id);await loadProfileBasic();};
+  const baseSaveProfile=window.saveProfile;
+  window.saveProfile=async function(){
+    if(!currentClient)return alert('اول شاگرد را انتخاب کنید.');
+    const payload={full_name:$f('pn').value.trim(),current_weight:+$f('pweight').value||null,height:+$f('pheight').value||null,goal:$f('pgoal').value||null,training_level:$f('plevel').value||null,training_type:$f('ptype')?.value||'gym',home_equipment:$f('pequipment')?.value.trim()||null,birth_date:$f('pbirth')?.value||null,gender:$f('pgender')?.value||null};
+    if(!payload.full_name)return alert('نام شاگرد را وارد کنید.');
+    try{await sbWrite(`/trainees?id=eq.${encodeURIComponent(currentClient.id)}`,'PATCH',payload);await loadClients();currentClient=clients.find(x=>String(x.id)===String(currentClient.id));await loadProfileBasic();await loadDashboard();alert('پروفایل کامل شاگرد ذخیره شد.');}catch(e){alert('ذخیره پروفایل انجام نشد.\n'+e.message)}
+  };
+  addProfileBasicFields();
+
+  // -------- Subscription/payment completeness --------
+  const originalSaveSubscription=window.saveSubscription;
+  window.saveSubscription=async function(){
+    if(!currentClient)return alert('اول شاگرد را انتخاب کنید.');
+    const start=$f('subStart').value||today(),end=$f('subEnd').value||null,amount=+$f('subAmount').value||0,paid=$f('subPaid').value;
+    try{
+      await sbWrite('/trainee_memberships','POST',{trainee_id:currentClient.id,start_date:start,end_date:end,status:paid==='پرداخت شده'?'active':'pending',amount,description:'عضویت باشگاه'});
+      if(amount>0)await sbWrite('/trainee_payments','POST',{trainee_id:currentClient.id,amount,payment_date:today(),description:paid});
+      await loadClients();await loadMembershipHistory();alert('عضویت، مبلغ و وضعیت پرداخت در دیتابیس ثبت شد.');
+    }catch(e){alert('ثبت عضویت انجام نشد.\n'+e.message)}
+  };
+
+  // -------- Supplements: active/ended state --------
+  window.toggleSupplementStatus=async function(id,status){try{await sbWrite(`/trainee_supplements?id=eq.${encodeURIComponent(id)}`,'PATCH',{status});await loadSupplements();}catch(e){alert('وضعیت مکمل ذخیره نشد.\n'+e.message)}};
+  const originalLoadSupplements=window.loadSupplements;
+  window.loadSupplements=async function(){
+    if(!currentClient||!$f('suppList'))return;
+    try{const rows=await sbGet(`/trainee_supplements?trainee_id=eq.${encodeURIComponent(currentClient.id)}&order=created_at.desc`);$f('suppList').innerHTML=rows.length?rows.map(x=>`<div class="report-row"><span>💊 ${escf(x.name)} — ${escf(x.dose||'')}<br><span class="f18-muted">${escf(x.timing||'')} | ${escf(x.frequency||'')} | ${escf(x.days||'')} | ${escf(x.duration||'')}</span></span><span><b>${escf(x.status||'active')}</b><br><button class="mini secondary" onclick="toggleSupplementStatus('${x.id}','${x.status==='active'?'ended':'active'}')">${x.status==='active'?'پایان دوره':'فعال‌سازی'}</button></span></div>`).join(''):'مکملی ثبت نشده است.';}catch(e){$f('suppList').textContent='دریافت مکمل‌ها انجام نشد.';}
+  };
+
+  // -------- Exercise library: favorite toggle --------
+  window.toggleExerciseFavorite=async function(id,value){try{await sbWrite(`/trainer_exercises?id=eq.${encodeURIComponent(id)}`,'PATCH',{is_favorite:!value});await loadLibraryExercises();}catch(e){alert('تغییر علاقه‌مندی انجام نشد.\n'+e.message)}};
+  const originalLoadLibrary=window.loadLibraryExercises;
+  window.loadLibraryExercises=async function(){
+    if(!$f('libraryList'))return;
+    try{const q=encodeURIComponent(($f('libSearch')?.value||'').trim());const rows=await sbGet('/trainer_exercises?select=*&order=is_favorite.desc,created_at.desc'+(q?'&name=ilike.*'+q+'*':''));$f('libraryList').innerHTML=rows.length?rows.map(x=>`<div class="client"><strong>${x.is_favorite?'⭐':'☆'} ${escf(x.name)}</strong><span class="pill">${escf(x.category||'')}</span><span class="pill">${escf(x.target_muscle||'')}</span><span class="pill">${escf(x.level||'')}</span><span class="pill">${escf(x.goal||'')}</span><span class="pill">${escf(x.equipment||'بدون تجهیزات')}</span><div class="f18-actions"><button class="secondary mini" onclick="toggleExerciseFavorite('${x.id}',${!!x.is_favorite})">${x.is_favorite?'☆ حذف علاقه‌مندی':'⭐ علاقه‌مندی'}</button><button class="secondary mini" onclick="useLibraryExercise('${x.id}')">➕ استفاده در برنامه</button></div>${x.coach_note?`<p class="f18-muted">${escf(x.coach_note)}</p>`:''}</div>`).join(''):'هنوز حرکت اختصاصی ثبت نشده است.';}catch(e){$f('libraryList').innerHTML='دریافت بانک حرکات انجام نشد.';}
+  };
+
+  // -------- Weekly activity report --------
+  function dateMinus(days){const d=new Date();d.setDate(d.getDate()-days);return d.toISOString().slice(0,10);}
+  async function loadActivityWeek(){
+    if(!currentClient)return;const sec=$f('progress');if(!sec)return;let box=$f('activityWeekBox');if(!box){box=document.createElement('div');box.className='card';box.id='activityWeekBox';box.innerHTML='<h2>🔥 گزارش ۷ روزه فعالیت</h2><div id="activityWeek"></div>';sec.appendChild(box);}try{const rows=await sbGet(`/activity_logs?trainee_id=eq.${encodeURIComponent(currentClient.id)}&activity_date=gte.${dateMinus(6)}&activity_date=lte.${today()}&select=activity_date,duration_minutes,calories_burned&order=activity_date.desc`);const by={};rows.forEach(x=>{by[x.activity_date]??={m:0,c:0,n:0};by[x.activity_date].m+=+x.duration_minutes||0;by[x.activity_date].c+=+x.calories_burned||0;by[x.activity_date].n++;});let totalC=0,totalM=0;const list=[];for(let i=0;i<7;i++){const d=dateMinus(i),x=by[d]||{m:0,c:0,n:0};totalC+=x.c;totalM+=x.m;list.push(`<div class="report-row"><span>${escf(d)}</span><b>${fmtf(x.c)} kcal | ${fmtf(x.m)} دقیقه</b></div>`)}$f('activityWeek').innerHTML=`<div class="f18-kpi"><div><b>${fmtf(totalC)}</b>کالری</div><div><b>${fmtf(totalM)}</b>دقیقه</div><div><b>${fmtf(rows.length)}</b>فعالیت</div></div>${list.join('')}`;}catch(e){}}
+
+  // -------- PDF + phone share --------
+  window.sharePlan=async function(kind){
+    if(!currentClient)return alert('اول شاگرد را انتخاب کنید.');
+    const title=kind==='meal'?'برنامه غذایی':'برنامه تمرینی';let body='';
+    try{
+      if(kind==='meal'){
+        const p=(await sbGet(`/nutrition_plans?trainee_id=eq.${encodeURIComponent(currentClient.id)}&select=*&order=created_at.desc&limit=1`))[0];if(!p)return alert('برنامه غذایی وجود ندارد.');
+        const meals=await sbGet(`/nutrition_meals?plan_id=eq.${encodeURIComponent(p.id)}&select=*&order=meal_order.asc`);body=`<h2>${escf(p.title||title)}</h2><p>کالری هدف: ${escf(p.daily_calories||'—')} | P ${escf(p.protein_target||'—')} | C ${escf(p.carbs_target||'—')} | F ${escf(p.fat_target||'—')}</p>`;
+        for(const m of meals){const mf=await sbGet(`/nutrition_meal_foods?meal_id=eq.${encodeURIComponent(m.id)}&select=*&order=created_at.asc`);const ids=[...new Set(mf.map(x=>x.food_id).filter(Boolean))];let fd=[];if(ids.length)fd=await sbGet(`/foods?id=in.(${ids.join(',')})&select=id,name,calories,protein,carbs,fat`);const names=Object.fromEntries(fd.map(x=>[String(x.id),x]));body+=`<h3>${escf(m.meal_name)}</h3><table><tr><th>غذا</th><th>مقدار</th><th>کالری</th><th>P</th><th>C</th><th>F</th></tr>${mf.map(x=>{const f=names[String(x.food_id)]||{};const q=+x.amount||0;return `<tr><td>${escf(f.name||'غذا')}</td><td>${escf(x.amount)} ${escf(x.unit||'گرم')}</td><td>${((+f.calories||0)*q/100).toFixed(0)}</td><td>${((+f.protein||0)*q/100).toFixed(1)}</td><td>${((+f.carbs||0)*q/100).toFixed(1)}</td><td>${((+f.fat||0)*q/100).toFixed(1)}</td></tr>`}).join('')}</table>`;}
+      }else{
+        const p=(await sbGet(`/trainee_workout_plans?trainee_id=eq.${encodeURIComponent(currentClient.id)}&select=*&order=created_at.desc&limit=1`))[0];if(!p)return alert('برنامه تمرینی وجود ندارد.');
+        const rows=await sbGet(`/trainee_workout_exercises?workout_plan_id=eq.${encodeURIComponent(p.id)}&select=*&order=sort_order.asc`);const ids=[...new Set(rows.map(x=>x.exercise_id).filter(Boolean))];let ex=[];if(ids.length)ex=await sbGet(`/exercises?id=in.(${ids.join(',')})&select=id,name`);const names=Object.fromEntries(ex.map(x=>[String(x.id),x.name]));
+        body=`<h2>${escf(p.title||title)}</h2><p>هدف: ${escf(p.goal||'—')}</p><table><tr><th>حرکت</th><th>روز</th><th>ست</th><th>تکرار/زمان</th><th>استراحت</th><th>سیستم</th><th>گروه</th></tr>${rows.map(x=>`<tr><td>${escf(names[String(x.exercise_id)]||'حرکت')}</td><td>${escf(x.training_day||'—')}</td><td>${escf(x.sets||'')}</td><td>${escf(x.reps||'')}</td><td>${escf(x.rest_seconds||0)}</td><td>${escf(sysName[x.training_system||'normal']||'')}</td><td>${escf(x.group_key||'—')}</td></tr>`).join('')}</table>`;
+      }
+      const html=`<!doctype html><html lang="fa" dir="rtl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${title}</title><style>body{font-family:Tahoma,Arial;padding:24px;line-height:1.9;color:#111}table{width:100%;border-collapse:collapse;margin-top:12px}td,th{border:1px solid #aaa;padding:7px;text-align:center;font-size:12px}h1{font-size:22px}</style></head><body><h1>باشگاه فیتنس سه‌قلعه | مربی مجتبی</h1><p>شاگرد: ${escf(currentClient.name||'')} | تاریخ: ${today()}</p>${body}<p>این صفحه برای چاپ و ذخیره PDF آماده است.</p><script>window.onload=()=>setTimeout(()=>window.print(),400)<\/script><\/script>
+</body></html>`;
+      if(navigator.share){try{await navigator.share({title,text:`${title} | ${currentClient.name||''} | باشگاه فیتنس سه‌قلعه`});}catch(e){}}
+      const w=window.open('','_blank');if(w){w.document.write(html);w.document.close();}
+    }catch(e){alert('ساخت برنامه برای اشتراک/چاپ انجام نشد.\n'+e.message)}
+  };
+
+
+  // FINAL FIX — REAL SUPABASE SESSION + TRAINEE REGISTRATION + SCHEDULE
+(function(){
+  const el=id=>document.getElementById(id);
+
+  async function getCoachSession(){
+    if(typeof AUTH_SUPABASE==='undefined' || !AUTH_SUPABASE){
+      throw new Error('اتصال Supabase در این نسخه بارگذاری نشده است.');
+    }
+    const {data,error}=await AUTH_SUPABASE.auth.getSession();
+    if(error) throw error;
+    const session=data&&data.session;
+    if(!session||!session.user) throw new Error('نشست مربی پیدا نشد. یک‌بار از حساب مربی خارج و دوباره وارد شوید.');
+    const {data:profiles,error:pe}=await AUTH_SUPABASE.from('profiles').select('id,role,full_name').eq('id',session.user.id).limit(1);
+    if(pe) throw pe;
+    if(!profiles.length) throw new Error('حساب واردشده هنوز به جدول profiles متصل نشده است.');
+    if(profiles[0].role!=='coach') throw new Error('این حساب در پروفایل اپ به‌عنوان مربی ثبت نشده است.');
+    return session;
+  }
+
+  async function rest(path,method,body){
+    const session=await getCoachSession();
+    const headers={apikey:SUPABASE_KEY,Authorization:'Bearer '+session.access_token};
+    if(body!==undefined){headers['Content-Type']='application/json';headers.Prefer='return=representation';}
+    const r=await fetch(SUPABASE_URL+'/rest/v1'+path,{method:method||'GET',headers,body:body===undefined?undefined:JSON.stringify(body)});
+    const txt=await r.text();
+    if(!r.ok) throw new Error(txt||('HTTP '+r.status));
+    if(!txt)return [];
+    try{return JSON.parse(txt)}catch(_){return []}
+  }
+
+  // Explicitly replace registration so it never depends on window.AUTH_SUPABASE.
+  window.addClient=async function(){
+    const full_name=el('cn')?.value.trim();
+    if(!full_name){alert('نام و نام خانوادگی شاگرد را وارد کنید.');return;}
+    try{
+      const session=await getCoachSession();
+      const payload={
+        full_name,
+        phone:el('cphone')?.value.trim()||null,
+        gender:el('cgender')?.value||null,
+        birth_date:el('cbirth')?.value||null,
+        height:+el('cheight')?.value||null,
+        current_weight:+el('cweight')?.value||null,
+        goal:el('cgoal')?.value||null,
+        training_level:el('clevel')?.value||null,
+        training_history:el('chistory')?.value.trim()||null,
+        limitations:el('climitations')?.value.trim()||null,
+        training_type:el('ctype')?.value||'gym',
+        home_equipment:el('cequipment')?.value.trim()||null,
+        training_days:el('ctrainingDays')?.value.trim()||null,
+        training_time:el('ctrainingTime')?.value||null,
+        coach_user_id:session.user.id
+      };
+      const rows=await rest('/trainees','POST',payload);
+      if(typeof loadClients==='function') await loadClients();
+      if(typeof clearClientForm==='function') clearClientForm();
+      if(rows&&rows[0]&&typeof selectClient==='function') await selectClient(rows[0].id);
+      alert('✅ شاگرد با موفقیت ثبت شد.');
+    }catch(e){
+      console.error(e);
+      alert('ثبت شاگرد انجام نشد.\n'+(e.message||e));
+    }
+  };
+
+  // Add a compact schedule card once, with a real save button.
+  function ensureScheduleCard(){
+    const sec=el('client');
+    if(!sec||el('scheduleCard'))return;
+    const card=document.createElement('div');
+    card.className='card';card.id='scheduleCard';
+    card.innerHTML=`
+      <h2>🗓️ برنامه حضور و ساعت تمرین</h2>
+      <div class="grid2">
+        <div><label>روزهای تمرین</label><input id="trainingDaysEdit" placeholder="شنبه، دوشنبه، چهارشنبه"></div>
+        <div><label>ساعت تمرین</label><input id="trainingTimeEdit" type="time"></div>
+      </div>
+      <button onclick="saveTrainingSchedule()">💾 ثبت روز و ساعت تمرین</button>`;
+    sec.appendChild(card);
+  }
+
+  window.saveTrainingSchedule=async function(){
+    if(typeof currentClient==='undefined'||!currentClient){alert('اول یک شاگرد را انتخاب کنید.');return;}
+    try{
+      const payload={
+        training_type:el('ptype2')?.value||el('ptype')?.value||'gym',
+        home_equipment:el('pequipment2')?.value.trim()||el('pequipment')?.value.trim()||null,
+        limitations:el('plimit')?.value.trim()||null,
+        training_days:el('trainingDaysEdit')?.value.trim()||null,
+        training_time:el('trainingTimeEdit')?.value||null
+      };
+      await rest('/trainees?id=eq.'+encodeURIComponent(currentClient.id),'PATCH',payload);
+      if(typeof loadClients==='function') await loadClients();
+      if(typeof clients!=='undefined') currentClient=clients.find(x=>String(x.id)===String(currentClient.id))||currentClient;
+      el('trainingDaysEdit').value=currentClient.training_days||'';
+      el('trainingTimeEdit').value=currentClient.training_time?String(currentClient.training_time).slice(0,5):'';
+      alert('✅ روزها و ساعت تمرین با موفقیت ثبت شد.');
+    }catch(e){
+      console.error(e);
+      alert('ذخیره روز و ساعت تمرین انجام نشد.\n'+(e.message||e));
+    }
+  };
+
+  // Keep schedule fields synced whenever a trainee is selected.
+  const oldSelect=window.selectClient;
+  if(typeof oldSelect==='function'){
+    window.selectClient=async function(id){
+      const result=await oldSelect(id);
+      ensureScheduleCard();
+      if(typeof currentClient!=='undefined'&&currentClient){
+        el('trainingDaysEdit').value=currentClient.training_days||'';
+        el('trainingTimeEdit').value=currentClient.training_time?String(currentClient.training_time).slice(0,5):'';
+      }
+      return result;
+    };
+  }
+
+  // Compact registration layout: group fields into small visual cards.
+  const compactStyle=document.createElement('style');
+  compactStyle.textContent=`
+    #coach .card h2{margin-bottom:10px}
+    #coach .card:nth-of-type(3){padding:12px}
+    #coach .card:nth-of-type(3) .grid2{gap:7px}
+    #coach .card:nth-of-type(3) label{margin:4px 0;font-size:11px}
+    #coach .card:nth-of-type(3) input,#coach .card:nth-of-type(3) select{padding:9px;font-size:12px}
+    #coach .card:nth-of-type(3)>button{margin-top:10px}
+    #scheduleCard{border-color:#3a5369}
+  `;
+  document.head.appendChild(compactStyle);
+
+  // Make sure the schedule card appears even if the trainee section was already open.
+  setTimeout(ensureScheduleCard,500);
+})();
+
+  function addShareButtons(){
+    const m=$f('meal')?.querySelector('.card');if(m&&!$f('shareMealBtn')){const b=document.createElement('button');b.id='shareMealBtn';b.className='secondary';b.textContent='📤 اشتراک/چاپ برنامه غذایی';b.onclick=()=>sharePlan('meal');m.appendChild(b)}
+    const w=$f('workout')?.querySelector('.card');if(w&&!$f('shareWorkoutBtn')){const b=document.createElement('button');b.id='shareWorkoutBtn';b.className='secondary';b.textContent='📤 اشتراک/چاپ برنامه تمرینی';b.onclick=()=>sharePlan('workout');w.appendChild(b)}
+  }
+
+  function addGoalHistory(){
+    if(!$f('goalBox')||$f('goalHistoryBox'))return;const box=document.createElement('div');box.className='card';box.id='goalHistoryBox';box.innerHTML='<h3>🗂️ تاریخچه اهداف</h3><div id="goalHistory"></div>'; $f('goalBox').appendChild(box);
+    loadGoalHistory();
+  }
+  async function loadGoalHistory(){if(!currentClient||!$f('goalHistory'))return;try{const rows=await sbGet(`/trainee_goals?trainee_id=eq.${encodeURIComponent(currentClient.id)}&select=*&order=created_at.desc`);$f('goalHistory').innerHTML=rows.length?rows.map(x=>`<div class="f18-note"><b>${escf(x.target_date||'بدون تاریخ')}</b> | وزن ${escf(x.target_weight||'—')} | چربی ${escf(x.target_body_fat||'—')}%<br>${escf(x.coach_note||'')}</div>`).join(''):'<p class="f18-muted">هدفی ثبت نشده است.</p>';}catch(e){}}
+
+  function addCoachStatusFilters(){
+    const list=$f('clientList');if(!list||$f('f18statusfilters'))return;const d=document.createElement('div');d.id='f18statusfilters';d.className='f18-filterrow';d.innerHTML='<button class="active" onclick="finalStatusFilter(\'all\',this)">همه</button><button onclick="finalStatusFilter(\'active\',this)">فعال</button><button onclick="finalStatusFilter(\'plan\',this)">برنامه‌دار</button><button onclick="finalStatusFilter(\'alert\',this)">نیازمند پیگیری</button>';list.parentNode.insertBefore(d,list);
+  }
+  window.finalStatusFilter=function(mode,btn){clientMode=mode;qsa('#f18statusfilters button').forEach(b=>b.classList.remove('active'));btn.classList.add('active');renderFinalClients();};
+
+  const oldFinish=window.finishLogin;
+  window.finishLogin=async function(user){await oldFinish(user);addFinalStyle();addShareButtons();addCoachStatusFilters();wireFinalBadges();addGoalHistory();if(authProfile?.role==='coach'){await loadClients();}else if(authProfile?.role==='trainee'){await selectClient(currentClient?.id);await loadDashboard();}};
+
+  // Re-run UI helpers after dynamic sections appear.
+  const oldShow=window.showSection;
+  window.showSection=function(id,btn){oldShow(id,btn);addFinalStyle();if(id==='workout')addShareButtons();if(id==='meal')addShareButtons();if(id==='challenges'&&$f('challengeList'))loadChallenges();if(id==='progress'&&currentClient){loadProgressChart();loadNoteHistory();}};
+
+  setTimeout(()=>{addFinalStyle();addShareButtons();addCoachStatusFilters();wireFinalBadges();},700);
+})();
+</script>
+
+<script>
+/* FINAL HARDENING — Auth/RLS + Training Schedule */
