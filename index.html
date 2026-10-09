@@ -1280,7 +1280,9 @@ memberships=membershipRows||[];
       }catch(pluralError){
         // سازگاری خواندن با نام مفرد جدول در نسخه‌های قدیمی دیتابیس
         try{
-          memberships=await sbGet('/trainee_membership?select=id,trainee_id,start_date,end_date,status,amount,created_at&order=created_at.desc');
+          const {data:membershipRows,error:membershipQueryError}=await window.AUTH_SUPABASE.from('trainee_membership').select('id,trainee_id,start_date,end_date,status,amount,created_at').order('created_at',{ascending:false});
+if(membershipQueryError) throw membershipQueryError;
+memberships=membershipRows||[];
         }catch(singularError){
           membershipAvailable=false;
           membershipError=String(singularError?.message||pluralError?.message||'');
