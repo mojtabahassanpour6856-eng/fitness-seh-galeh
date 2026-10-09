@@ -1036,7 +1036,7 @@ loadExercises();
     try{const m=await sbGet(`/trainee_memberships?trainee_id=eq.${encodeURIComponent(currentClient.id)}&select=end_date,status&order=created_at.desc&limit=1`);setText('dashMembership',m[0]?.end_date||'ثبت نشده');}catch(e){}
     try{const ch=await sbGet(`/challenge_participants?trainee_id=eq.${encodeURIComponent(currentClient.id)}&select=id,status`);setText('dashChallenges',ch.length?`${ch.filter(x=>x.status==='active').length} فعال`:'—');}catch(e){setText('dashChallenges','—')}
   }
-
+window.loadDashboard = loadDashboard;
   function addNavDashboard(){
     const nav=document.querySelector('.nav');if(!nav||$id('navDash'))return;
     const b=document.createElement('button');b.id='navDash';b.textContent='🏠 داشبورد';b.onclick=function(){showSection('traineeDashboard',this);loadDashboard()};nav.insertBefore(b,nav.firstChild);
