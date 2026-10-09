@@ -408,12 +408,11 @@ function showSection(id,btn){
 
 async function loadFoods(){
  try{
-  const r=await fetch(SUPABASE_URL+"/rest/v1/foods?select=*&order=name",{headers:{"apikey":SUPABASE_KEY,"Authorization":"Bearer "+SUPABASE_KEY}});
-  if(!r.ok) throw new Error(await r.text());
-  const data=await r.json();
+  // از لایه REST احراز هویت‌شده استفاده می‌کنیم تا RLS با توکن واقعی نشست اعمال شود.
+  const data=await sbGet('/foods?select=*&order=name');
   foods=data.map(x=>[x.name,+x.calories||0,+x.protein||0,+x.carbs||0,+x.fat||0,x.id]);
   fillFoods();
- }catch(e){console.error(e);alert("اتصال غذاها به Supabase برقرار نشد.");}
+ }catch(e){console.error(e);alert("دریافت غذاها از Supabase انجام نشد.\n"+(e?.message||e));}
 }
 function fillFoods(){
  $("orig").innerHTML=""; $("rep").innerHTML="";
@@ -440,13 +439,13 @@ function calc(){
 function toggle(){ $("custom").style.display=$("custom").style.display==="block"?"none":"block"; }
 async function add(){
  const name=$("n").value.trim(), calories=+$("kc").value, protein=+$("pr").value||0, carbs=+$("ca").value||0, fat=+$("fa").value||0;
- if(!name||calories<=0){alert("نام غذا و کالری را وارد کنید.");return;}
+ if(!name||!Number.isFinite(calories)||calories<=0){alert("نام غذا و کالری معتبر را وارد کنید.");return;}
+ if([protein,carbs,fat].some(v=>!Number.isFinite(v)||v<0)){alert("مقادیر پروتئین، کربوهیدرات و چربی باید صفر یا بیشتر باشند.");return;}
  try{
-  const r=await fetch(SUPABASE_URL+"/rest/v1/foods",{method:"POST",headers:{"apikey":SUPABASE_KEY,"Authorization":"Bearer "+SUPABASE_KEY,"Content-Type":"application/json","Prefer":"return=representation"},body:JSON.stringify({name,calories,protein,carbs,fat})});
-  if(!r.ok){console.error(await r.text());alert("ذخیره غذا انجام نشد.");return;}
+  await sbWrite('/foods','POST',{name,calories,protein,carbs,fat});
   await loadFoods(); $("n").value="";$("kc").value="";$("pr").value="";$("ca").value="";$("fa").value="";
   alert("غذا با موفقیت ذخیره شد.");
- }catch(e){console.error(e);alert("خطا در اتصال به دیتابیس.");}
+ }catch(e){console.error(e);alert("ذخیره غذا انجام نشد.\n"+(e?.message||e));}
 }
 function editFood(){
  const food=foods[+$("orig").value];
@@ -459,22 +458,21 @@ async function saveEdit(){
  const index=+$("orig").value,food=foods[index];
  if(!food||!food[5]){alert("غذایی انتخاب نشده است.");return;}
  const name=$("n").value.trim(),calories=+$("kc").value,protein=+$("pr").value||0,carbs=+$("ca").value||0,fat=+$("fa").value||0;
- if(!name||calories<=0){alert("نام غذا و کالری را درست وارد کنید.");return;}
+ if(!name||!Number.isFinite(calories)||calories<=0){alert("نام غذا و کالری معتبر را وارد کنید.");return;}
+ if([protein,carbs,fat].some(v=>!Number.isFinite(v)||v<0)){alert("مقادیر پروتئین، کربوهیدرات و چربی باید صفر یا بیشتر باشند.");return;}
  try{
-  const r=await fetch(SUPABASE_URL+"/rest/v1/foods?id=eq."+food[5],{method:"PATCH",headers:{"apikey":SUPABASE_KEY,"Authorization":"Bearer "+SUPABASE_KEY,"Content-Type":"application/json","Prefer":"return=minimal"},body:JSON.stringify({name,calories,protein,carbs,fat})});
-  if(!r.ok){console.error(await r.text());alert("ویرایش غذا انجام نشد.");return;}
+  await sbWrite(`/foods?id=eq.${encodeURIComponent(food[5])}`,'PATCH',{name,calories,protein,carbs,fat});
   await loadFoods(); $("custom").style.display="none"; alert("غذا با موفقیت ویرایش شد.");
- }catch(e){console.error(e);alert("خطا در اتصال به دیتابیس.");}
+ }catch(e){console.error(e);alert("ویرایش غذا انجام نشد.\n"+(e?.message||e));}
 }
 async function deleteFood(){
  const index=+$("orig").value,food=foods[index];
  if(!food||!food[5]){alert("این غذا قابل حذف نیست.");return;}
  if(!confirm("آیا مطمئن هستید؟"))return;
  try{
-  const r=await fetch(SUPABASE_URL+"/rest/v1/foods?id=eq."+food[5],{method:"DELETE",headers:{"apikey":SUPABASE_KEY,"Authorization":"Bearer "+SUPABASE_KEY}});
-  if(!r.ok){console.error(await r.text());alert("حذف غذا انجام نشد.");return;}
+  await sbWrite(`/foods?id=eq.${encodeURIComponent(food[5])}`,'DELETE',{});
   await loadFoods(); alert("غذا با موفقیت حذف شد.");
- }catch(e){console.error(e);alert("خطا در اتصال به دیتابیس.");}
+ }catch(e){console.error(e);alert("حذف غذا انجام نشد.\n"+(e?.message||e));}
 }
 
 async function addClient(){
@@ -588,12 +586,13 @@ async function saveProfile(){
     height:+$("pheight").value||null,goal:$("pgoal").value||null,training_level:$("plevel").value||null,training_type:$("ptype").value||null,home_equipment:$("pequipment").value.trim()||null};
   if(!payload.full_name){alert("نام شاگرد را وارد کنید.");return;}
   try{
-    const r=await fetch(SUPABASE_URL+"/rest/v1/trainees?id=eq."+encodeURIComponent(currentClient.id),{
-      method:"PATCH",headers:{"apikey":SUPABASE_KEY,"Authorization":"Bearer "+SUPABASE_KEY,
-      "Content-Type":"application/json","Prefer":"return=minimal"},body:JSON.stringify(payload)});
-    if(!r.ok){const msg=await r.text();console.error(msg);alert("ذخیره پروفایل انجام نشد.\n"+msg);return;}
-    await loadClients(); currentClient=clients.find(x=>String(x.id)===String(currentClient.id))||currentClient; alert("پروفایل شاگرد در دیتابیس به‌روزرسانی شد.");
-  }catch(e){console.error(e);alert("خطا در اتصال به دیتابیس.");}
+    // Use the authenticated REST wrapper so RLS sees the real signed-in user.
+    const traineeId=currentClient.id;
+    await sbWrite("/trainees?id=eq."+encodeURIComponent(traineeId),"PATCH",payload);
+    await loadClients();
+    currentClient=clients.find(x=>String(x.id)===String(traineeId))||currentClient;
+    alert("پروفایل شاگرد در دیتابیس به‌روزرسانی شد.");
+  }catch(e){console.error(e);alert("ذخیره پروفایل انجام نشد.\n"+(e.message||String(e)));}
 }
 
 async function saveProfileExtras(){if(!currentClient)return alert('اول شاگرد را انتخاب کنید.');try{await sbWrite(`/trainees?id=eq.${encodeURIComponent(currentClient.id)}`,'PATCH',{training_type:$('ptype2').value,home_equipment:$('pequipment2').value.trim()||null,limitations:$('plimit').value.trim()||null});alert('اطلاعات تکمیلی ذخیره شد.');await loadClients();}catch(e){alert('ذخیره اطلاعات تکمیلی انجام نشد.\n'+e.message);}}
@@ -628,6 +627,12 @@ function openClientMealPlan(){
 }
 
 let currentPlanId=null,currentMealId=null,currentMealFoods=[];
+// Nutrition values in foods are per 100 g. Never treat pieces/spoons/cups as grams.
+function foodMetrics(foodRow, amount, unit){
+ const f=foodRow||{}, q=Number(amount)||0, u=String(unit||"گرم").trim();
+ if(u!=="گرم") return {valid:false,cal:0,pro:0,carb:0,fat:0};
+ return {valid:true,cal:(+f.calories||0)*q/100,pro:(+f.protein||0)*q/100,carb:(+f.carbs||0)*q/100,fat:(+f.fat||0)*q/100};
+}
 function mealTab(tab){
  ["coach","student","report"].forEach(x=>{const b=$("mealTab"+x.charAt(0).toUpperCase()+x.slice(1));if(b)b.classList.toggle("active",x===tab);});
  $("mealCoachView").classList.toggle("hide",tab!=="coach");
@@ -641,31 +646,38 @@ function fillMealFoodSelect(){
 }
 function previewMealFood(){
  const f=foods[+$("mealFoodSelect").value],g=+$("mealFoodAmount").value||0;if(!f)return;
- const k=f[1]*g/100,p=f[2]*g/100,c=f[3]*g/100,fa=f[4]*g/100;
- $("mealFoodPreview").innerHTML=`<b>${esc(f[0])}</b> — ${g} ${esc($("mealFoodUnit").value)}<br>🔥 ${k.toFixed(0)} kcal | پروتئین ${p.toFixed(1)}g | کربوهیدرات ${c.toFixed(1)}g | چربی ${fa.toFixed(1)}g`;
+ const unit=$("mealFoodUnit").value, m=foodMetrics({calories:f[1],protein:f[2],carbs:f[3],fat:f[4]},g,unit);
+ $("mealFoodPreview").innerHTML=m.valid?`<b>${esc(f[0])}</b> — ${g} ${esc(unit)}<br>🔥 ${m.cal.toFixed(0)} kcal | پروتئین ${m.pro.toFixed(1)}g | کربوهیدرات ${m.carb.toFixed(1)}g | چربی ${m.fat.toFixed(1)}g`:`<b>${esc(f[0])}</b> — ${g} ${esc(unit)}<br><span class="warning-text">برای محاسبه کالری و درشت‌مغذی‌ها، وزن معادل گرم این واحد لازم است. فعلاً مقدار به‌صورت ${esc(unit)} ذخیره می‌شود، اما محاسبه نمی‌شود.</span>`;
 }
 async function loadNutritionForClient(){
- if(!currentClient)return;
+ const requestedTraineeId=currentClient?.id;
+ if(!requestedTraineeId)return;
+ const sameTrainee=()=>!!currentClient&&String(currentClient.id)===String(requestedTraineeId);
  try{
-  const r=await sbGet(`/nutrition_plans?trainee_id=eq.${encodeURIComponent(currentClient.id)}&select=*&order=created_at.desc&limit=1`);
-  currentPlanId=r[0]?.id||null;
-  if(!currentPlanId){
+  const r=await sbGet(`/nutrition_plans?trainee_id=eq.${encodeURIComponent(requestedTraineeId)}&select=*&order=created_at.desc&limit=1`);
+  if(!sameTrainee())return; // Discard stale response; another trainee was selected.
+  const p=r[0]||null, requestedPlanId=p?.id||null;
+  currentPlanId=requestedPlanId;
+  if(!requestedPlanId){
    ["mealTitle","mealNotes"].forEach(id=>$(id).value="");$("mealTitle").value="";
    $("mealStart").value=today();$("mealEnd").value="";$("mealCalories").value="";$("mealProtein").value="";$("mealCarbs").value="";$("mealFat").value="";
    $("mealList").innerHTML=`<div class="card"><p class="muted">برای این شاگرد هنوز برنامه غذایی ساخته نشده است.</p></div>`;
    renderStudentEmpty();return;
   }
-  const p=r[0];$("mealTitle").value=p.title||"";$("mealStart").value=p.start_date||today();$("mealEnd").value=p.end_date||"";
+  $("mealTitle").value=p.title||"";$("mealStart").value=p.start_date||today();$("mealEnd").value=p.end_date||"";
   $("mealCalories").value=p.daily_calories||"";$("mealProtein").value=p.protein_target||"";$("mealCarbs").value=p.carbs_target||"";$("mealFat").value=p.fat_target||"";$("mealNotes").value=p.notes||"";$("mealActive").value=String(p.is_active!==false);
-  const meals=await sbGet(`/nutrition_meals?plan_id=eq.${encodeURIComponent(currentPlanId)}&select=*&order=meal_order.asc`);
+  const meals=await sbGet(`/nutrition_meals?plan_id=eq.${encodeURIComponent(requestedPlanId)}&select=*&order=meal_order.asc`);
+  if(!sameTrainee()||String(currentPlanId)!==String(requestedPlanId))return;
   const ids=meals.map(x=>x.id);let foodsBy={};
-  if(ids.length){const mf=await sbGet(`/nutrition_meal_foods?meal_id=in.(${ids.join(",")})&select=*&order=created_at.asc`);
-   const foodIds=[...new Set(mf.map(x=>x.food_id))];
-   if(foodIds.length){const fd=await sbGet(`/foods?id=in.(${foodIds.join(",")})&select=*`);fd.forEach(f=>foodsBy[f.id]=f);}
+  if(ids.length){const mf=await sbGet(`/nutrition_meal_foods?meal_id=in.(${ids.map(encodeURIComponent).join(",")})&select=*&order=created_at.asc`);
+   if(!sameTrainee()||String(currentPlanId)!==String(requestedPlanId))return;
+   const foodIds=[...new Set(mf.map(x=>x.food_id).filter(Boolean))];
+   if(foodIds.length){const fd=await sbGet(`/foods?id=in.(${foodIds.map(encodeURIComponent).join(",")})&select=*`);if(!sameTrainee()||String(currentPlanId)!==String(requestedPlanId))return;fd.forEach(f=>foodsBy[f.id]=f);}
    meals.forEach(m=>m.foods=mf.filter(x=>String(x.meal_id)===String(m.id)).map(x=>({...x,food:foodsBy[x.food_id]})));
   }
+  if(!sameTrainee()||String(currentPlanId)!==String(requestedPlanId))return;
   renderMealCoach(meals);renderStudentMeals(meals,p);renderMealReport(meals,p);
- }catch(e){console.error(e);alert("دریافت برنامه غذایی از Supabase انجام نشد.\n"+e.message);}
+ }catch(e){console.error(e);if(sameTrainee())alert("دریافت برنامه غذایی از Supabase انجام نشد.\n"+e.message);}
 }
 async function sbGet(path){
  const r=await fetch(SUPABASE_URL+"/rest/v1"+path,{headers:{"apikey":SUPABASE_KEY,"Authorization":"Bearer "+SUPABASE_KEY}});
@@ -675,21 +687,56 @@ async function sbWrite(path,method,body){
  const r=await fetch(SUPABASE_URL+"/rest/v1"+path,{method,headers:{"apikey":SUPABASE_KEY,"Authorization":"Bearer "+SUPABASE_KEY,"Content-Type":"application/json","Prefer":"return=representation"},body:JSON.stringify(body)});
  if(!r.ok)throw new Error(await r.text());return r.json().catch(()=>[]);
 }
+let nutritionPlanSaveBusy=false;
 async function saveNutritionPlan(){
+ if(nutritionPlanSaveBusy)return;
  if(!currentClient){alert("اول یک شاگرد را انتخاب کنید.");return;}
- const body={trainee_id:currentClient.id,title:$("mealTitle").value.trim()||"برنامه غذایی",start_date:$("mealStart").value||today(),end_date:$("mealEnd").value||null,daily_calories:+$("mealCalories").value||null,protein_target:+$("mealProtein").value||null,carbs_target:+$("mealCarbs").value||null,fat_target:+$("mealFat").value||null,notes:$("mealNotes").value.trim()||null,is_active:$("mealActive").value==="true"};
- try{if(currentPlanId){await sbWrite(`/nutrition_plans?id=eq.${encodeURIComponent(currentPlanId)}`,"PATCH",body);}else{const a=await sbWrite("/nutrition_plans","POST",body);currentPlanId=a[0]?.id;}await loadNutritionForClient();alert("برنامه غذایی در دیتابیس ذخیره شد.");}catch(e){alert("ذخیره برنامه غذایی انجام نشد.\n"+e.message);}
+ const traineeId=currentClient.id, planId=currentPlanId;
+ const body={trainee_id:traineeId,title:$("mealTitle").value.trim()||"برنامه غذایی",start_date:$("mealStart").value||today(),end_date:$("mealEnd").value||null,daily_calories:+$("mealCalories").value||null,protein_target:+$("mealProtein").value||null,carbs_target:+$("mealCarbs").value||null,fat_target:+$("mealFat").value||null,notes:$("mealNotes").value.trim()||null,is_active:$("mealActive").value==="true"};
+ nutritionPlanSaveBusy=true;
+ try{
+  if(planId){
+   const owned=await sbGet(`/nutrition_plans?id=eq.${encodeURIComponent(planId)}&trainee_id=eq.${encodeURIComponent(traineeId)}&select=id&limit=1`);
+   if(!owned.length)throw new Error("برنامه انتخاب‌شده متعلق به این شاگرد نیست؛ ابتدا برنامه را دوباره بارگذاری کنید.");
+   if(!currentClient||String(currentClient.id)!==String(traineeId)||String(currentPlanId)!==String(planId))throw new Error("شاگرد یا برنامه هنگام ذخیره تغییر کرده است؛ ذخیره لغو شد.");
+   await sbWrite(`/nutrition_plans?id=eq.${encodeURIComponent(planId)}&trainee_id=eq.${encodeURIComponent(traineeId)}`,"PATCH",body);
+  }else{
+   if(!currentClient||String(currentClient.id)!==String(traineeId)||currentPlanId)throw new Error("وضعیت شاگرد تغییر کرده است؛ دوباره برنامه را بارگذاری کنید.");
+   const a=await sbWrite("/nutrition_plans","POST",body);
+   if(!currentClient||String(currentClient.id)!==String(traineeId)){alert("برنامه ذخیره شد، اما شاگرد عوض شده است؛ برای مشاهده دوباره شاگرد قبلی را انتخاب کنید.");return;}
+   currentPlanId=a[0]?.id||null;
+  }
+  if(currentClient&&String(currentClient.id)===String(traineeId)){await loadNutritionForClient();alert("برنامه غذایی در دیتابیس ذخیره شد.");}
+ }catch(e){alert("ذخیره برنامه غذایی انجام نشد.\n"+e.message);}
+ finally{nutritionPlanSaveBusy=false;}
 }
 function renderMealCoach(meals){
  const names=["صبحانه","میان‌وعده صبح","ناهار","میان‌وعده عصر","شام"];
- $("mealList").innerHTML=meals.map((m,i)=>{const fs=m.foods||[];const total=fs.reduce((a,x)=>{const f=x.food||{};const q=+x.amount||0;return [a[0]+(+f.calories||0)*q/100,a[1]+(+f.protein||0)*q/100,a[2]+(+f.carbs||0)*q/100,a[3]+(+f.fat||0)*q/100]},[0,0,0,0]);
+ $("mealList").innerHTML=meals.map((m,i)=>{const fs=m.foods||[];const total=fs.reduce((a,x)=>{const v=foodMetrics(x.food||{},x.amount,x.unit);return v.valid?[a[0]+v.cal,a[1]+v.pro,a[2]+v.carb,a[3]+v.fat]:a},[0,0,0,0]);
  return `<div class="meal-card"><div class="meal-head"><h3>🍽️ ${esc(m.meal_name||names[i]||"وعده")}</h3><span class="meal-total">${total[0].toFixed(0)} kcal</span></div>${fs.length?fs.map(x=>foodLine(x)).join(""):"<p class='muted'>هنوز غذایی ثبت نشده است.</p>"}<button class="mini" onclick="openMealFoodModal('${m.id}')">＋ افزودن غذا</button></div>`;}).join("");
  if(!meals.length)$("mealList").innerHTML=`<div class="card"><p class="muted">هیچ وعده‌ای برای این برنامه ثبت نشده است.</p><button onclick="createDefaultMeals()">＋ ساخت ۵ وعده استاندارد</button></div>`;
  updateDayTotals(meals);
 }
-function foodLine(x){const f=x.food||{};return `<div class="food-line"><div><div class="food-name">${esc(f.name||"غذا")}</div><div class="food-meta">🔥 ${((+f.calories||0)*(+x.amount||0)/100).toFixed(0)} kcal | P ${((+f.protein||0)*(+x.amount||0)/100).toFixed(1)} | C ${((+f.carbs||0)*(+x.amount||0)/100).toFixed(1)} | F ${((+f.fat||0)*(+x.amount||0)/100).toFixed(1)}</div></div><span>${x.amount} ${esc(x.unit||"گرم")}</span><button class="mini secondary" onclick="openSubstitution('${x.food_id}','${x.amount}')">🔄</button><button class="mini danger" onclick="deleteMealFood('${x.id}')">🗑</button></div>`;}
-function updateDayTotals(meals){const t=meals.reduce((a,m)=>(m.foods||[]).reduce((b,x)=>{const f=x.food||{},q=+x.amount||0;return [b[0]+(+f.calories||0)*q/100,b[1]+(+f.protein||0)*q/100,b[2]+(+f.carbs||0)*q/100,b[3]+(+f.fat||0)*q/100]},a),[0,0,0,0]);$("dayCal").textContent=t[0].toFixed(0);$("dayPro").textContent=t[1].toFixed(1)+" g";$("dayCarb").textContent=t[2].toFixed(1)+" g";$("dayFat").textContent=t[3].toFixed(1)+" g";}
-async function createDefaultMeals(){if(!currentPlanId)return;try{const a=["صبحانه","میان‌وعده صبح","ناهار","میان‌وعده عصر","شام"].map((meal_name,i)=>({plan_id:currentPlanId,meal_name,meal_order:i+1}));await sbWrite("/nutrition_meals","POST",a);await loadNutritionForClient();}catch(e){alert("ساخت وعده‌ها انجام نشد.\n"+e.message);}}
+function foodLine(x){const f=x.food||{},m=foodMetrics(f,x.amount,x.unit);return `<div class="food-line"><div><div class="food-name">${esc(f.name||"غذا")}</div><div class="food-meta">${m.valid?`🔥 ${m.cal.toFixed(0)} kcal | P ${m.pro.toFixed(1)} | C ${m.carb.toFixed(1)} | F ${m.fat.toFixed(1)}`:'⚠️ برای محاسبه تغذیه‌ای، وزن معادل گرم لازم است.'}</div></div><span>${x.amount} ${esc(x.unit||"گرم")}</span><button class="mini secondary" onclick="openSubstitution('${x.food_id}','${x.amount}')">🔄</button><button class="mini danger" onclick="deleteMealFood('${x.id}')">🗑</button></div>`;}
+function updateDayTotals(meals){const t=meals.reduce((a,m)=>(m.foods||[]).reduce((b,x)=>{const v=foodMetrics(x.food||{},x.amount,x.unit);return v.valid?[b[0]+v.cal,b[1]+v.pro,b[2]+v.carb,b[3]+v.fat]:b},a),[0,0,0,0]);$("dayCal").textContent=t[0].toFixed(0);$("dayPro").textContent=t[1].toFixed(1)+" g";$("dayCarb").textContent=t[2].toFixed(1)+" g";$("dayFat").textContent=t[3].toFixed(1)+" g";}
+let defaultMealsBusy=false;
+async function createDefaultMeals(){
+ if(defaultMealsBusy)return;
+ if(!currentClient||!currentPlanId){alert("ابتدا برنامه غذایی شاگرد را ذخیره کنید.");return;}
+ const traineeId=currentClient.id,planId=currentPlanId;defaultMealsBusy=true;
+ try{
+  const plans=await sbGet(`/nutrition_plans?id=eq.${encodeURIComponent(planId)}&trainee_id=eq.${encodeURIComponent(traineeId)}&select=id&limit=1`);
+  if(!plans.length)throw new Error("برنامه غذایی متعلق به شاگرد انتخاب‌شده نیست.");
+  if(!currentClient||String(currentClient.id)!==String(traineeId)||String(currentPlanId)!==String(planId))throw new Error("شاگرد یا برنامه تغییر کرده است؛ ساخت وعده‌ها لغو شد.");
+  const existing=await sbGet(`/nutrition_meals?plan_id=eq.${encodeURIComponent(planId)}&select=id,meal_name,meal_order&order=meal_order.asc`);
+  if(!currentClient||String(currentClient.id)!==String(traineeId)||String(currentPlanId)!==String(planId))throw new Error("شاگرد یا برنامه تغییر کرده است؛ دوباره تلاش کنید.");
+  if(existing.length){alert("برای این برنامه از قبل وعده ثبت شده است؛ برای جلوگیری از تکرار، وعده جدید ساخته نشد.");return;}
+  const a=["صبحانه","میان‌وعده صبح","ناهار","میان‌وعده عصر","شام"].map((meal_name,i)=>({plan_id:planId,meal_name,meal_order:i+1}));
+  await sbWrite("/nutrition_meals","POST",a);
+  if(currentClient&&String(currentClient.id)===String(traineeId)&&String(currentPlanId)===String(planId))await loadNutritionForClient();
+ }catch(e){alert("ساخت وعده‌ها انجام نشد.\n"+e.message);}
+ finally{defaultMealsBusy=false;}
+}
 async function openMealFoodModal(mealId){currentMealId=mealId;fillMealFoodSelect();$("mealFoodAmount").value=100;$("mealFoodNote").value="";$("mealModal").classList.add("show");previewMealFood();}
 function closeMealModal(){$("mealModal").classList.remove("show");currentMealId=null;}
 async function saveMealFood(){if(!currentMealId)return;const f=foods[+$("mealFoodSelect").value],amount=+$("mealFoodAmount").value;if(!f||amount<=0)return;try{await sbWrite("/nutrition_meal_foods","POST",{meal_id:currentMealId,food_id:f[5],amount,unit:$("mealFoodUnit").value,notes:$("mealFoodNote").value.trim()||null});closeMealModal();await loadNutritionForClient();}catch(e){alert("افزودن غذا انجام نشد.\n"+e.message);}}
@@ -699,27 +746,30 @@ function renderStudentEmpty(){$("studentMealTitle").textContent="برای این
 let waterSchema={trainee:"trainee_id",amount:"amount_ml",date:"log_date"};
 
 async function loadWaterToday(){
-  if(!currentClient){$("studentWater").textContent="۰";return 0;}
+  const traineeId=currentClient?.id;if(traineeId==null){if($("studentWater"))$("studentWater").textContent="۰";return 0;}
   try{
-    const path=`/water_logs?trainee_id=eq.${encodeURIComponent(currentClient.id)}&log_date=eq.${encodeURIComponent(today())}&select=amount_ml`;
+    const path=`/water_logs?trainee_id=eq.${encodeURIComponent(traineeId)}&log_date=eq.${encodeURIComponent(today())}&select=amount_ml`;
     const rows=await sbGet(path);
+    if(!currentClient||String(currentClient.id)!==String(traineeId))return null;
     const total=rows.reduce((sum,row)=>{const n=Number(row.amount_ml);return sum+(Number.isFinite(n)?n:0);},0);
-    $("studentWater").textContent=total.toLocaleString("fa-IR");
-    return total;
-  }catch(e){console.error("loadWaterToday",e);$("studentWater").textContent="۰";return 0;}
+    $("studentWater").textContent=total.toLocaleString("fa-IR");return total;
+  }catch(e){console.error("loadWaterToday",e);if(currentClient&&String(currentClient.id)===String(traineeId))$("studentWater").textContent="دریافت ناموفق";return null;}
 }
 
 async function addWaterLog(){
-  if(!currentClient){alert("اول شاگرد را انتخاب کنید.");return;}
+  const traineeId=currentClient?.id;if(traineeId==null){alert("اول شاگرد را انتخاب کنید.");return;}
   const n=Number($("waterAmount").value)||0;
   if(n<=0){alert("مقدار آب را وارد کنید.");return;}
   try{
+    if(!currentClient||String(currentClient.id)!==String(traineeId))throw new Error("شاگرد انتخاب‌شده تغییر کرده است؛ ثبت آب لغو شد.");
     await sbWrite("/water_logs","POST",{
-      trainee_id:currentClient.id,
+      trainee_id:traineeId,
       log_date:today(),
       amount_ml:n
     });
+    if(!currentClient||String(currentClient.id)!==String(traineeId))return;
     await loadWaterToday();
+    if(!currentClient||String(currentClient.id)!==String(traineeId))return;
     await loadNutritionForClient();
     alert("آب با موفقیت ثبت شد.");
   }catch(e){console.error("addWaterLog",e);alert("ثبت آب انجام نشد.\n"+e.message);}
@@ -804,13 +854,26 @@ async function loginApp(){
 }
 async function finishLogin(user){
   try{
-    const {data:rows,error:profileError}=await AUTH_SUPABASE
+    let {data:rows,error:profileError}=await AUTH_SUPABASE
   .from('profiles')
   .select('*')
   .eq('id',user.id);
 
 if(profileError) throw profileError;
-    if(!rows.length){await AUTH_SUPABASE.auth.signOut();showAuthError('این حساب هنوز به پروفایل اپ متصل نشده است.');return;}
+    if(!rows?.length){
+      // Refresh once before declaring a profile missing; keep the session for diagnosis.
+      const refreshed=await AUTH_SUPABASE.auth.refreshSession();
+      if(!refreshed.error && refreshed.data?.session?.user?.id===user.id){
+        const retry=await AUTH_SUPABASE.from('profiles').select('*').eq('id',user.id);
+        if(retry.error) throw retry.error;
+        rows=retry.data||[];
+      }
+      if(!rows?.length){
+        const projectRef=String(SUPABASE_URL).match(/^https:\/\/([^.]+)/)?.[1]||'نامشخص';
+        showAuthError('پروفایل این حساب از پروژهٔ متصل خوانده نشد؛ نشست را خارج نکردیم. شناسه حساب: '+String(user.id||'نامشخص')+' | پروژه: '+projectRef+' | اگر شناسه با پروفایل مربی برابر است، نسخهٔ منتشرشده یا دسترسی خواندن را بررسی می‌کنیم.');
+        return;
+      }
+    }
     authProfile=rows[0];document.body.classList.remove('locked');$('authScreen').style.display='none';$('authUserBar').style.display='block';$('authUserText').textContent=`${authProfile.full_name||user.email} | ${authProfile.role==='coach'?'مربی':'شاگرد'}`;
     if(authProfile.role==='trainee'){
       document.querySelectorAll('.nav button').forEach(b=>b.style.display='none');
@@ -853,6 +916,8 @@ loadExercises();
     else if(/^989\d{9}$/.test(p)) p='+'+p;
     return p;
   }
+  // Make phone normalization available to the later classic-script integration layer.
+  window.phoneNorm = phoneNorm;
 
   function addStyle(){
     if($id('v4style'))return;
@@ -1054,9 +1119,21 @@ loadExercises();
 
   window.finishLogin=async function(user){
     try{
-      const {data:rows,error}=await AUTH_SUPABASE.from('profiles').select('*').eq('id',user.id);if(error)throw error;
+      let {data:rows,error}=await AUTH_SUPABASE.from('profiles').select('*').eq('id',user.id);if(error)throw error;
+      if(!rows?.length){
+        const refreshed=await AUTH_SUPABASE.auth.refreshSession();
+        if(!refreshed.error && refreshed.data?.session?.user?.id===user.id){
+          const retry=await AUTH_SUPABASE.from('profiles').select('*').eq('id',user.id);
+          if(retry.error)throw retry.error;
+          rows=retry.data||[];
+        }
+        if(!rows?.length){
+          const projectRef=String(SUPABASE_URL).match(/^https:\/\/([^.]+)/)?.[1]||'نامشخص';
+          showAuthError('پروفایل این حساب از پروژهٔ متصل خوانده نشد؛ نشست را خارج نکردیم. شناسه حساب: '+String(user.id||'نامشخص')+' | پروژه: '+projectRef+' | اگر شناسه با پروفایل مربی برابر است، نسخهٔ منتشرشده یا دسترسی خواندن را بررسی می‌کنیم.');
+          return;
+        }
+      }
       if(rows.length&&rows[0].role==='trainee'){await setupTraineeAuth(user);return;}
-      if(!rows.length){await AUTH_SUPABASE.auth.signOut();showAuthError('این حساب هنوز به پروفایل اپ متصل نشده است.');return;}
       authProfile=rows[0];document.body.classList.remove('locked');$id('authScreen').style.display='none';$id('authUserBar').style.display='block';$id('authUserText').textContent=`${authProfile.full_name||user.email} | مربی`;
       qsAll('.nav button').forEach(b=>b.style.display='block');showSection('coach',qsAll('.nav button').find(b=>String(b.getAttribute('onclick')||'').includes("'coach'"))||null);await loadClients();await loadExercises();await loadLibraryExercises();
     }catch(e){console.error(e);showAuthError('بررسی پروفایل انجام نشد. '+(e.message||''));}
@@ -1102,6 +1179,9 @@ loadExercises();
     const title=kind==='meal'?'برنامه غذایی':'برنامه تمرینی';let body='';
     if(kind==='meal'){const rows=await sbGet(`/nutrition_plans?trainee_id=eq.${encodeURIComponent(currentClient.id)}&select=*&order=created_at.desc&limit=1`);body=`<h2>${esc2(rows[0]?.title||title)}</h2><p>کالری هدف: ${esc2(rows[0]?.daily_calories||'—')}</p>`;}else{const rows=await sbGet(`/trainee_workout_plans?trainee_id=eq.${encodeURIComponent(currentClient.id)}&select=*&order=created_at.desc&limit=1`);body=`<h2>${esc2(rows[0]?.title||title)}</h2><p>${esc2(rows[0]?.goal||'')}</p>`;}
     const html=`<!doctype html><html lang="fa" dir="rtl"><head><meta charset="utf-8"><title>${title}</title><style>body{font-family:Tahoma;padding:30px;color:#111}h1{font-size:22px}h2{margin-top:24px}table{width:100%;border-collapse:collapse}td,th{border:1px solid #aaa;padding:8px}</style></head><body><h1>باشگاه فیتنس سه‌قلعه | مربی مجتبی</h1><p>شاگرد: ${esc2(currentClient.name||'')}</p><p>تاریخ: ${today()}</p>${body}
+
+
+
 
 </body></html>`;
     const w=window.open('','_blank');if(w){w.document.write(html);w.document.close();}
@@ -1187,17 +1267,36 @@ loadExercises();
   }
 
   window.loadClients=async function(){
+    // مهم: دریافت شاگردها مستقل از جدول عضویت است؛ خطای عضویت نباید فهرست را پنهان کند.
     try{
-      const [data,memberships]=await Promise.all([
-        sbGet('/trainees?select=*&order=created_at.desc'),
-        sbGet('/trainee_memberships?select=id,trainee_id,start_date,end_date,status,amount,created_at&order=created_at.desc')
-      ]);
-      const latest={};memberships.forEach(m=>{if(!latest[m.trainee_id])latest[m.trainee_id]=m;});
-      clients=data.map(c=>({id:c.id,name:c.full_name,phone:c.phone,gender:c.gender,birth_date:c.birth_date,age:calcAge(c.birth_date),weight:c.current_weight,height:c.height,goal:c.goal,level:c.training_level,history:c.training_history,limitations:c.limitations,training_type:c.training_type||'gym',home_equipment:c.home_equipment||'',training_days:c.training_days||'',training_time:c.training_time||'',createdAt:c.created_at,active:statusForMembership(latest[c.id])==='فعال',membershipStatus:statusForMembership(latest[c.id]),plans:0}));
+      const data=await sbGet('/trainees?select=*&order=created_at.desc');
+      let memberships=[], membershipAvailable=true, membershipError='';
+      try{
+        memberships=await sbGet('/trainee_memberships?select=id,trainee_id,start_date,end_date,status,amount,created_at&order=created_at.desc');
+      }catch(pluralError){
+        // سازگاری خواندن با نام مفرد جدول در نسخه‌های قدیمی دیتابیس
+        try{
+          memberships=await sbGet('/trainee_membership?select=id,trainee_id,start_date,end_date,status,amount,created_at&order=created_at.desc');
+        }catch(singularError){
+          membershipAvailable=false;
+          membershipError=String(singularError?.message||pluralError?.message||'');
+          console.warn('فهرست شاگردان بارگذاری شد، اما وضعیت عضویت قابل دریافت نیست.', pluralError, singularError);
+        }
+      }
+      const latest={};
+      memberships.forEach(m=>{if(!latest[m.trainee_id])latest[m.trainee_id]=m;});
+      clients=data.map(c=>{
+        const membershipStatus=membershipAvailable?statusForMembership(latest[c.id]):'وضعیت نامشخص';
+        return {id:c.id,name:c.full_name,phone:c.phone,gender:c.gender,birth_date:c.birth_date,age:calcAge(c.birth_date),weight:c.current_weight,height:c.height,goal:c.goal,level:c.training_level,history:c.training_history,limitations:c.limitations,training_type:c.training_type||'gym',home_equipment:c.home_equipment||'',training_days:c.training_days||'',training_time:c.training_time||'',createdAt:c.created_at,active:membershipAvailable&&membershipStatus==='فعال',membershipStatus, membershipError:membershipAvailable?'':membershipError, plans:0};
+      });
       await window.updateStats();
       if(typeof buildCoachControls==='function')buildCoachControls();
       renderFinalClients();
-    }catch(e){console.error(e);if($f('clientTableBody'))$f('clientTableBody').innerHTML=`<tr><td colspan="9" class="v4-danger">دریافت شاگردان انجام نشد: ${escf(e.message)}</td></tr>`;}
+    }catch(e){
+      console.error(e);
+      if($f('clientTableBody'))$f('clientTableBody').innerHTML=`<tr><td colspan="9" class="v4-danger">دریافت شاگردان انجام نشد: ${escf(e.message)}</td></tr>`;
+      else if($f('clientList'))$f('clientList').textContent='دریافت شاگردان انجام نشد. اتصال و دسترسی دیتابیس را بررسی کنید.';
+    }
   };
 
   window.updateStats=async function(){
@@ -1219,7 +1318,7 @@ loadExercises();
     if(clientMode==='active')arr=arr.filter(c=>c.active);
     if(clientMode==='plan')arr=arr.filter(c=>c.plans);
     if(clientMode==='alert')arr=arr.filter(c=>!c.weight||!c.goal||!c.phone||c.membershipStatus==='منقضی');
-    body.innerHTML=arr.length?arr.map(c=>`<tr><td><b>${escf(c.name||'بدون نام')}</b><br><span class="v4-small">${escf(c.phone||'—')}</span></td><td>${c.training_type==='home'?'🏠 منزل':c.training_type==='online'?'📱 آنلاین':'🏋️ باشگاه'}</td><td>${c.weight?escf(c.weight)+' kg':'—'}</td><td>${escf(c.goal||'—')}</td><td>${escf(c.training_days||'—')}<br><span class="v4-small">${escf(c.training_time||'—')}</span></td><td>${c.plans?'<span class="v4-ok">✓ دارد</span>':'<span class="v4-warn">ندارد</span>'}</td><td>${c.active?'<span class="v4-ok">فعال</span>':'<span class="v4-danger">'+escf(c.membershipStatus||'غیرفعال')+'</span>'}</td><td>${escf(c.createdAt?new Date(c.createdAt).toLocaleDateString('fa-IR'):'—')}</td><td><button class="secondary mini" onclick="selectClient('${c.id}')">ورود</button></td></tr>`).join(''):`<tr><td colspan="9" class="muted">شاگردی با این فیلتر پیدا نشد.</td></tr>`;
+    body.innerHTML=arr.length?arr.map(c=>`<tr><td><b>${escf(c.name||'بدون نام')}</b><br><span class="v4-small">${escf(c.phone||'—')}</span></td><td>${c.training_type==='home'?'🏠 منزل':c.training_type==='online'?'📱 آنلاین':'🏋️ باشگاه'}</td><td>${c.weight?escf(c.weight)+' kg':'—'}</td><td>${escf(c.goal||'—')}</td><td>${escf(c.training_days||'—')}<br><span class="v4-small">${escf(c.training_time||'—')}</span></td><td>${c.plans?'<span class="v4-ok">✓ دارد</span>':'<span class="v4-warn">ندارد</span>'}</td><td>${c.membershipStatus==='وضعیت نامشخص'?'<span class="v4-warn" title="جدول عضویت در دسترس نیست؛ وضعیت قطعی نیست">وضعیت نامشخص</span>':c.active?'<span class="v4-ok">فعال</span>':'<span class="v4-danger">'+escf(c.membershipStatus||'غیرفعال')+'</span>'}</td><td>${escf(c.createdAt?new Date(c.createdAt).toLocaleDateString('fa-IR'):'—')}</td><td><button class="secondary mini" onclick="selectClient('${c.id}')">ورود</button></td></tr>`).join(''):`<tr><td colspan="9" class="muted">شاگردی با این فیلتر پیدا نشد.</td></tr>`;
   }
 
   function wireFinalBadges(){
@@ -1271,27 +1370,62 @@ loadExercises();
   window.renderWorkoutList=function(rows,names){if(!rows.length){$f('workoutList').innerHTML='<p class="muted">هنوز حرکتی ثبت نشده است.</p>';buildWorkoutManagement();return;}const done=rows.filter(x=>x.is_completed===true).length;const pct=Math.round(done*100/rows.length);$f('workoutList').innerHTML=`<div class="card"><div class="f18-kpi"><div><b>${fmtf(rows.length)}</b>حرکت</div><div><b>${fmtf(done)}</b>انجام‌شده</div><div><b>${fmtf(pct)}%</b>پیشرفت جلسه</div></div></div>`+groupWorkoutRows(rows,names);buildWorkoutManagement();};
 
   // -------- Nutrition consumption: real Supabase log --------
-  async function getConsumedFoodIds(){
-    if(!currentClient)return new Set();
-    try{const rows=await sbGet(`/trainee_food_logs?trainee_id=eq.${encodeURIComponent(currentClient.id)}&log_date=eq.${encodeURIComponent(today())}&consumed=eq.true&select=meal_food_id`);return new Set(rows.map(x=>String(x.meal_food_id)));}catch(e){return new Set();}
+  // Capture the trainee ID before every asynchronous request; never let a late response
+  // write or repaint data for a different trainee selected while the request was in flight.
+  const consumedToggleLocks = new Set();
+  async function getConsumedFoodIds(traineeId){
+    const id=traineeId==null?(currentClient&&currentClient.id):traineeId;
+    if(id==null) return new Set();
+    const logDate=today();
+    const rows=await sbGet(`/trainee_food_logs?trainee_id=eq.${encodeURIComponent(id)}&log_date=eq.${encodeURIComponent(logDate)}&consumed=eq.true&select=meal_food_id`);
+    return new Set(rows.map(x=>String(x.meal_food_id)));
   }
-  window.toggleConsumed=async function(key){
-    const parts=String(key).split('_');const mealFoodId=parts.slice(1).join('_');if(!currentClient||!mealFoodId)return;
+  window.toggleConsumed=async function(traineeId,mealFoodId){
+    if(mealFoodId===undefined){alert('اطلاعات شاگرد یا غذا معتبر نیست؛ صفحه را تازه‌سازی کنید.');return;}
+    const id=String(traineeId||''),foodId=String(mealFoodId||'');
+    if(!id||!foodId)return;
+    // The UI may be stale or a call may be forged. Require the selected trainee to match,
+    // then prove this meal-food row belongs to a nutrition plan assigned to that trainee.
+    if(!currentClient||String(currentClient.id)!==id){alert('شاگرد انتخاب‌شده تغییر کرده است؛ دوباره وارد برنامه غذایی شوید.');return;}
+    const logDate=today();
+    const lockKey=`${id}|${foodId}|${logDate}`;
+    if(consumedToggleLocks.has(lockKey))return;
+    consumedToggleLocks.add(lockKey);
     try{
-      const existing=await sbGet(`/trainee_food_logs?trainee_id=eq.${encodeURIComponent(currentClient.id)}&meal_food_id=eq.${encodeURIComponent(mealFoodId)}&log_date=eq.${encodeURIComponent(today())}&select=id,consumed&limit=1`);
-      if(existing[0])await sbWrite(`/trainee_food_logs?id=eq.${encodeURIComponent(existing[0].id)}`,'PATCH',{consumed:!existing[0].consumed});
-      else await sbWrite('/trainee_food_logs','POST',{trainee_id:currentClient.id,meal_food_id:mealFoodId,log_date:today(),consumed:true});
-      await loadNutritionForClient();
-    }catch(e){alert('ثبت مصرف غذا انجام نشد.\n'+e.message)}
+      const mealFoods=await sbGet(`/nutrition_meal_foods?id=eq.${encodeURIComponent(foodId)}&select=id,meal_id&limit=1`);
+      const mealFood=mealFoods&&mealFoods[0];
+      if(!mealFood)throw new Error('غذای برنامه در دیتابیس پیدا نشد.');
+      const meals=await sbGet(`/nutrition_meals?id=eq.${encodeURIComponent(mealFood.meal_id)}&select=id,plan_id&limit=1`);
+      const meal=meals&&meals[0];
+      if(!meal)throw new Error('وعده این غذا در دیتابیس پیدا نشد.');
+      const plans=await sbGet(`/nutrition_plans?id=eq.${encodeURIComponent(meal.plan_id)}&trainee_id=eq.${encodeURIComponent(id)}&select=id&limit=1`);
+      if(!plans||!plans.length)throw new Error('این غذا به برنامه غذایی شاگرد انتخاب‌شده تعلق ندارد.');
+      if(!currentClient||String(currentClient.id)!==id)throw new Error('شاگرد هنگام بررسی تغییر کرد؛ ثبت مصرف لغو شد.');
+      const existing=await sbGet(`/trainee_food_logs?trainee_id=eq.${encodeURIComponent(id)}&meal_food_id=eq.${encodeURIComponent(foodId)}&log_date=eq.${encodeURIComponent(logDate)}&select=id,consumed&limit=1`);
+      if(!currentClient||String(currentClient.id)!==id)throw new Error('شاگرد هنگام ثبت تغییر کرد؛ دوباره تلاش کنید.');
+      if(existing[0]) await sbWrite(`/trainee_food_logs?id=eq.${encodeURIComponent(existing[0].id)}&trainee_id=eq.${encodeURIComponent(id)}`,'PATCH',{consumed:!existing[0].consumed});
+      else await sbWrite('/trainee_food_logs','POST',{trainee_id:id,meal_food_id:foodId,log_date:logDate,consumed:true});
+      if(currentClient&&String(currentClient.id)===id&&typeof loadNutritionForClient==='function') await loadNutritionForClient();
+    }catch(e){alert('ثبت مصرف غذا انجام نشد. اطلاعات قبلی تغییر داده نشد مگر اینکه سرور ثبت را تأیید کرده باشد.\n'+(e.message||String(e)));}
+    finally{consumedToggleLocks.delete(lockKey);}
   };
   window.renderStudentMeals=async function(meals,p){
-    if(!$f('studentMealList'))return;const done=await getConsumedFoodIds();let total=0,count=0;
+    if(!$f('studentMealList'))return;
+    const traineeId=currentClient&&currentClient.id;if(traineeId==null)return;
+    let done;
+    try{done=await getConsumedFoodIds(traineeId);}catch(e){$f('studentMealList').innerHTML='<p class="muted">وضعیت مصرف غذا از دیتابیس دریافت نشد؛ برای جلوگیری از نمایش وضعیت اشتباه، دوباره تلاش کنید.</p>';console.error('Could not load food consumption:',e);return;}
+    if(!currentClient||String(currentClient.id)!==String(traineeId))return;
+    let total=0,count=0;
     $f('studentMealTitle').textContent=`${p.title||'برنامه غذایی'} | هدف روزانه ${p.daily_calories||0} kcal`; $f('studentTargetCal').textContent=fmtf(p.daily_calories||0);
-    $f('studentMealList').innerHTML=meals.map(m=>`<div class="student-meal"><b>🍽️ ${escf(m.meal_name)}</b>${(m.foods||[]).map(x=>{const f=x.food||{},q=+x.amount||0,k=(+f.calories||0)*q/100,key=String(x.id);const checked=done.has(key);if(checked){total+=k;count++;}return `<label class="checkfood"><input type="checkbox" ${checked?'checked':''} onchange="toggleConsumed('${currentClient.id}_${key}')"> ${escf(f.name||'غذا')} — ${escf(x.amount)} ${escf(x.unit||'گرم')} <span class="muted">(${k.toFixed(0)} kcal)</span></label>`;}).join('')}</div>`).join('');
-    $f('studentDoneCal').textContent=total.toFixed(0);$f('studentDoneCount').textContent=count;await loadWaterToday();
+    $f('studentMealList').innerHTML=meals.map(m=>`<div class="student-meal"><b>🍽️ ${escf(m.meal_name)}</b>${(m.foods||[]).map(x=>{const f=x.food||{},metric=foodMetrics(f,x.amount,x.unit),key=String(x.id);const checked=done.has(key);if(checked){if(metric.valid)total+=metric.cal;count++;}return `<label class="checkfood"><input type="checkbox" ${checked?'checked':''} onchange="toggleConsumed('${String(traineeId)}','${key}')"> ${escf(f.name||'غذا')} — ${escf(x.amount)} ${escf(x.unit||'گرم')} <span class="muted">(${metric.valid?metric.cal.toFixed(0)+' kcal':'نیازمند وزن معادل گرم'})</span></label>`;}).join('')}</div>`).join('');
+    $f('studentDoneCal').textContent=total.toFixed(0);$f('studentDoneCount').textContent=count;
+    if(currentClient&&String(currentClient.id)===String(traineeId))await loadWaterToday();
   };
   window.renderMealReport=async function(meals,p){
-    const done=await getConsumedFoodIds();let total=0,count=0,all=0;meals.forEach(m=>(m.foods||[]).forEach(x=>{all++;const f=x.food||{},q=+x.amount||0;if(done.has(String(x.id))){count++;total+=(+f.calories||0)*q/100;}}));const w=await loadWaterToday();$f('mealReport').innerHTML=`<div class="report-row"><span>برنامه</span><b>${escf(p.title||'بدون برنامه')}</b></div><div class="report-row"><span>غذاهای مصرف‌شده</span><b>${fmtf(count)} از ${fmtf(all)}</b></div><div class="report-row"><span>کالری ثبت‌شده</span><b>${total.toFixed(0)} kcal</b></div><div class="report-row"><span>آب امروز</span><b>${fmtf(w)} ml</b></div><div class="report-row"><span>هدف کالری</span><b>${fmtf(p.daily_calories||0)} kcal</b></div>`;
+    const traineeId=currentClient&&currentClient.id;if(traineeId==null)return;
+    let done;try{done=await getConsumedFoodIds(traineeId);}catch(e){$f('mealReport').innerHTML='<p class="muted">گزارش مصرف غذا از دیتابیس دریافت نشد. اطلاعات را مصرف‌نشده فرض نکردیم.</p>';console.error('Could not load meal report:',e);return;}
+    if(!currentClient||String(currentClient.id)!==String(traineeId))return;
+    let total=0,count=0,all=0,unknownUnits=0;meals.forEach(m=>(m.foods||[]).forEach(x=>{all++;const metric=foodMetrics(x.food||{},x.amount,x.unit);if(!metric.valid)unknownUnits++;if(done.has(String(x.id))){count++;if(metric.valid)total+=metric.cal;}}));const w=await loadWaterToday();if(!currentClient||String(currentClient.id)!==String(traineeId))return;$f('mealReport').innerHTML=`<div class="report-row"><span>برنامه</span><b>${escf(p.title||'بدون برنامه')}</b></div><div class="report-row"><span>غذاهای مصرف‌شده</span><b>${fmtf(count)} از ${fmtf(all)}</b></div><div class="report-row"><span>کالری ثبت‌شده (فقط واحد گرم)</span><b>${total.toFixed(0)} kcal</b></div>${unknownUnits?`<div class="report-row"><span>اقلام نیازمند وزن معادل گرم</span><b>${unknownUnits}</b></div>`:''}<div class="report-row"><span>آب امروز</span><b>${fmtf(w)} ml</b></div><div class="report-row"><span>هدف کالری</span><b>${fmtf(p.daily_calories||0)} kcal</b></div>`;
   };
 
   // Workout completion is also DB-only in the final version.
@@ -1300,13 +1434,33 @@ loadExercises();
   // -------- Nutrition: substitution is linked to the actual meal food; custom food remains DB-backed --------
   window.openSubstitution=function(foodId,amount){const f=foods.find(x=>String(x[5])===String(foodId));if(!f)return alert('غذا پیدا نشد.');$f('orig').value=foods.findIndex(x=>String(x[5])===String(foodId));$f('origG').value=amount||100;showSection('food',qsa('.nav button').find(b=>String(b.getAttribute('onclick')||'').includes("'food'")));calc();window.scrollTo({top:0,behavior:'smooth'});};
 
-  // -------- Notes history --------
+  // -------- Notes history: isolate async responses by selected trainee --------
   async function loadNoteHistory(){
-    if(!currentClient)return;const sec=$f('progress');if(!sec)return;let box=$f('noteHistoryBox');if(!box){box=document.createElement('div');box.className='card';box.id='noteHistoryBox';box.innerHTML='<h2>🗂️ تاریخچه یادداشت‌های مربی</h2><div id="noteHistory"></div>';sec.appendChild(box);}try{const rows=await sbGet(`/trainee_notes?trainee_id=eq.${encodeURIComponent(currentClient.id)}&select=*&order=created_at.desc`);$f('noteHistory').innerHTML=rows.length?rows.map(x=>`<div class="f18-note"><b>${escf(x.created_at?new Date(x.created_at).toLocaleDateString('fa-IR'):'')}</b><br>${escf(x.note||'')}</div>`).join(''):'<p class="f18-muted">یادداشتی ثبت نشده است.</p>';}catch(e){$f('noteHistory').innerHTML='<p class="f18-muted">تاریخچه یادداشت در دسترس نیست.</p>';}}
+    const traineeId=currentClient?.id;if(traineeId==null)return;
+    const sec=$f('progress');if(!sec)return;
+    let box=$f('noteHistoryBox');if(!box){box=document.createElement('div');box.className='card';box.id='noteHistoryBox';box.innerHTML='<h2>🗂️ تاریخچه یادداشت‌های مربی</h2><div id="noteHistory"></div>';sec.appendChild(box);}
+    const target=$f('noteHistory');if(!target)return;target.innerHTML='<p class="f18-muted">در حال دریافت یادداشت‌ها…</p>';
+    try{
+      const rows=await sbGet(`/trainee_notes?trainee_id=eq.${encodeURIComponent(traineeId)}&select=*&order=created_at.desc`);
+      if(!currentClient||String(currentClient.id)!==String(traineeId))return;
+      target.innerHTML=rows.length?rows.map(x=>`<div class="f18-note"><b>${escf(x.created_at?new Date(x.created_at).toLocaleDateString('fa-IR'):'')}</b><br>${escf(x.note||'')}</div>`).join(''):'<p class="f18-muted">یادداشتی ثبت نشده است.</p>';
+    }catch(e){if(currentClient&&String(currentClient.id)===String(traineeId))target.innerHTML='<p class="f18-muted">تاریخچه یادداشت دریافت نشد؛ اتصال و دسترسی را بررسی کنید.</p>';console.error('loadNoteHistory',e);}
+  }
 
   // -------- Progress chart/report --------
   async function loadProgressChart(){
-    if(!currentClient)return;const sec=$f('progress');if(!sec)return;let box=$f('progressChartBox');if(!box){box=document.createElement('div');box.className='card';box.id='progressChartBox';box.innerHTML='<h2>📉 نمودار وزن</h2><div id="progressChart"></div>';sec.appendChild(box);}try{const rows=await sbGet(`/body_analyses?trainee_id=eq.${encodeURIComponent(currentClient.id)}&select=analysis_date,weight&order=analysis_date.asc&limit=12`);const valid=rows.filter(x=>x.weight!=null);if(!valid.length){$f('progressChart').innerHTML='<p class="f18-muted">برای نمودار هنوز وزن ثبت نشده است.</p>';return;}const max=Math.max(...valid.map(x=>+x.weight)),min=Math.min(...valid.map(x=>+x.weight)),range=Math.max(1,max-min);$f('progressChart').innerHTML=`<div class="f18-chart">${valid.map(x=>{const h=25+((+x.weight-min)/range)*90;return `<div class="f18-bar" style="height:${h}px"><b>${escf(x.weight)}</b><span>${escf((x.analysis_date||'').slice(5))}</span></div>`}).join('')}</div><p class="f18-muted">کمینه: ${fmtf(min)} kg | بیشینه: ${fmtf(max)} kg | آخرین: ${fmtf(valid.at(-1).weight)} kg</p>`;}catch(e){}}
+    const traineeId=currentClient?.id;if(traineeId==null)return;const sec=$f('progress');if(!sec)return;
+    let box=$f('progressChartBox');if(!box){box=document.createElement('div');box.className='card';box.id='progressChartBox';box.innerHTML='<h2>📉 نمودار وزن</h2><div id="progressChart"></div>';sec.appendChild(box);}
+    const target=$f('progressChart');if(!target)return;target.innerHTML='<p class="f18-muted">در حال دریافت سوابق وزن…</p>';
+    try{
+      const rows=await sbGet(`/body_analyses?trainee_id=eq.${encodeURIComponent(traineeId)}&select=analysis_date,weight&order=analysis_date.asc&limit=12`);
+      if(!currentClient||String(currentClient.id)!==String(traineeId))return;
+      const valid=rows.filter(x=>x.weight!=null&&Number.isFinite(Number(x.weight)));
+      if(!valid.length){target.innerHTML='<p class="f18-muted">برای نمودار هنوز وزن ثبت نشده است.</p>';return;}
+      const max=Math.max(...valid.map(x=>Number(x.weight))),min=Math.min(...valid.map(x=>Number(x.weight))),range=Math.max(1,max-min);
+      target.innerHTML=`<div class="f18-chart">${valid.map(x=>{const h=25+((Number(x.weight)-min)/range)*90;return `<div class="f18-bar" style="height:${h}px"><b>${escf(x.weight)}</b><span>${escf((x.analysis_date||'').slice(5))}</span></div>`}).join('')}</div><p class="f18-muted">کمینه: ${fmtf(min)} kg | بیشینه: ${fmtf(max)} kg | آخرین: ${fmtf(valid[valid.length-1].weight)} kg</p>`;
+    }catch(e){if(currentClient&&String(currentClient.id)===String(traineeId))target.innerHTML='<p class="f18-muted">نمودار وزن دریافت نشد؛ سوابق را مصرف‌نشده یا خالی فرض نکردیم.</p>';console.error('loadProgressChart',e);}
+  }
 
   // -------- Challenges: coach creation + assignment + progress/status --------
   async function loadChallengeForCurrent(){if(!currentClient||!$f('challenges'))return;loadChallenges();}
@@ -1367,7 +1521,17 @@ loadExercises();
   // -------- Weekly activity report --------
   function dateMinus(days){const d=new Date();d.setDate(d.getDate()-days);return d.toISOString().slice(0,10);}
   async function loadActivityWeek(){
-    if(!currentClient)return;const sec=$f('progress');if(!sec)return;let box=$f('activityWeekBox');if(!box){box=document.createElement('div');box.className='card';box.id='activityWeekBox';box.innerHTML='<h2>🔥 گزارش ۷ روزه فعالیت</h2><div id="activityWeek"></div>';sec.appendChild(box);}try{const rows=await sbGet(`/activity_logs?trainee_id=eq.${encodeURIComponent(currentClient.id)}&activity_date=gte.${dateMinus(6)}&activity_date=lte.${today()}&select=activity_date,duration_minutes,calories_burned&order=activity_date.desc`);const by={};rows.forEach(x=>{by[x.activity_date]??={m:0,c:0,n:0};by[x.activity_date].m+=+x.duration_minutes||0;by[x.activity_date].c+=+x.calories_burned||0;by[x.activity_date].n++;});let totalC=0,totalM=0;const list=[];for(let i=0;i<7;i++){const d=dateMinus(i),x=by[d]||{m:0,c:0,n:0};totalC+=x.c;totalM+=x.m;list.push(`<div class="report-row"><span>${escf(d)}</span><b>${fmtf(x.c)} kcal | ${fmtf(x.m)} دقیقه</b></div>`)}$f('activityWeek').innerHTML=`<div class="f18-kpi"><div><b>${fmtf(totalC)}</b>کالری</div><div><b>${fmtf(totalM)}</b>دقیقه</div><div><b>${fmtf(rows.length)}</b>فعالیت</div></div>${list.join('')}`;}catch(e){}}
+    const traineeId=currentClient?.id;if(traineeId==null)return;const sec=$f('progress');if(!sec)return;
+    let box=$f('activityWeekBox');if(!box){box=document.createElement('div');box.className='card';box.id='activityWeekBox';box.innerHTML='<h2>🔥 گزارش ۷ روزه فعالیت</h2><div id="activityWeek"></div>';sec.appendChild(box);}
+    const target=$f('activityWeek');if(!target)return;target.innerHTML='<p class="f18-muted">در حال دریافت گزارش فعالیت…</p>';
+    try{
+      const rows=await sbGet(`/activity_logs?trainee_id=eq.${encodeURIComponent(traineeId)}&activity_date=gte.${dateMinus(6)}&activity_date=lte.${today()}&select=activity_date,duration_minutes,calories_burned&order=activity_date.desc`);
+      if(!currentClient||String(currentClient.id)!==String(traineeId))return;
+      const by={};rows.forEach(x=>{by[x.activity_date]??={m:0,c:0,n:0};by[x.activity_date].m+=Number(x.duration_minutes)||0;by[x.activity_date].c+=Number(x.calories_burned)||0;by[x.activity_date].n++;});
+      let totalC=0,totalM=0;const list=[];for(let i=0;i<7;i++){const d=dateMinus(i),x=by[d]||{m:0,c:0,n:0};totalC+=x.c;totalM+=x.m;list.push(`<div class="report-row"><span>${escf(d)}</span><b>${fmtf(x.c)} kcal | ${fmtf(x.m)} دقیقه</b></div>`);}
+      target.innerHTML=`<div class="f18-kpi"><div><b>${fmtf(totalC)}</b>کالری</div><div><b>${fmtf(totalM)}</b>دقیقه</div><div><b>${fmtf(rows.length)}</b>فعالیت</div></div>${list.join('')}`;
+    }catch(e){if(currentClient&&String(currentClient.id)===String(traineeId))target.innerHTML='<p class="f18-muted">گزارش فعالیت دریافت نشد؛ اتصال و مجوزهای دسترسی را بررسی کنید.</p>';console.error('loadActivityWeek',e);}
+  }
 
   // -------- PDF + phone share --------
   window.sharePlan=async function(kind){
@@ -1377,13 +1541,15 @@ loadExercises();
       if(kind==='meal'){
         const p=(await sbGet(`/nutrition_plans?trainee_id=eq.${encodeURIComponent(currentClient.id)}&select=*&order=created_at.desc&limit=1`))[0];if(!p)return alert('برنامه غذایی وجود ندارد.');
         const meals=await sbGet(`/nutrition_meals?plan_id=eq.${encodeURIComponent(p.id)}&select=*&order=meal_order.asc`);body=`<h2>${escf(p.title||title)}</h2><p>کالری هدف: ${escf(p.daily_calories||'—')} | P ${escf(p.protein_target||'—')} | C ${escf(p.carbs_target||'—')} | F ${escf(p.fat_target||'—')}</p>`;
-        for(const m of meals){const mf=await sbGet(`/nutrition_meal_foods?meal_id=eq.${encodeURIComponent(m.id)}&select=*&order=created_at.asc`);const ids=[...new Set(mf.map(x=>x.food_id).filter(Boolean))];let fd=[];if(ids.length)fd=await sbGet(`/foods?id=in.(${ids.join(',')})&select=id,name,calories,protein,carbs,fat`);const names=Object.fromEntries(fd.map(x=>[String(x.id),x]));body+=`<h3>${escf(m.meal_name)}</h3><table><tr><th>غذا</th><th>مقدار</th><th>کالری</th><th>P</th><th>C</th><th>F</th></tr>${mf.map(x=>{const f=names[String(x.food_id)]||{};const q=+x.amount||0;return `<tr><td>${escf(f.name||'غذا')}</td><td>${escf(x.amount)} ${escf(x.unit||'گرم')}</td><td>${((+f.calories||0)*q/100).toFixed(0)}</td><td>${((+f.protein||0)*q/100).toFixed(1)}</td><td>${((+f.carbs||0)*q/100).toFixed(1)}</td><td>${((+f.fat||0)*q/100).toFixed(1)}</td></tr>`}).join('')}</table>`;}
+        for(const m of meals){const mf=await sbGet(`/nutrition_meal_foods?meal_id=eq.${encodeURIComponent(m.id)}&select=*&order=created_at.asc`);const ids=[...new Set(mf.map(x=>x.food_id).filter(Boolean))];let fd=[];if(ids.length)fd=await sbGet(`/foods?id=in.(${ids.join(',')})&select=id,name,calories,protein,carbs,fat`);const names=Object.fromEntries(fd.map(x=>[String(x.id),x]));body+=`<h3>${escf(m.meal_name)}</h3><table><tr><th>غذا</th><th>مقدار</th><th>کالری</th><th>P</th><th>C</th><th>F</th></tr>${mf.map(x=>{const f=names[String(x.food_id)]||{},v=foodMetrics(f,x.amount,x.unit);return `<tr><td>${escf(f.name||'غذا')}</td><td>${escf(x.amount)} ${escf(x.unit||'گرم')}</td><td>${v.valid?v.cal.toFixed(0):'نیازمند وزن گرم'}</td><td>${v.valid?v.pro.toFixed(1):'—'}</td><td>${v.valid?v.carb.toFixed(1):'—'}</td><td>${v.valid?v.fat.toFixed(1):'—'}</td></tr>`}).join('')}</table>`;}
       }else{
         const p=(await sbGet(`/trainee_workout_plans?trainee_id=eq.${encodeURIComponent(currentClient.id)}&select=*&order=created_at.desc&limit=1`))[0];if(!p)return alert('برنامه تمرینی وجود ندارد.');
         const rows=await sbGet(`/trainee_workout_exercises?workout_plan_id=eq.${encodeURIComponent(p.id)}&select=*&order=sort_order.asc`);const ids=[...new Set(rows.map(x=>x.exercise_id).filter(Boolean))];let ex=[];if(ids.length)ex=await sbGet(`/exercises?id=in.(${ids.join(',')})&select=id,name`);const names=Object.fromEntries(ex.map(x=>[String(x.id),x.name]));
         body=`<h2>${escf(p.title||title)}</h2><p>هدف: ${escf(p.goal||'—')}</p><table><tr><th>حرکت</th><th>روز</th><th>ست</th><th>تکرار/زمان</th><th>استراحت</th><th>سیستم</th><th>گروه</th></tr>${rows.map(x=>`<tr><td>${escf(names[String(x.exercise_id)]||'حرکت')}</td><td>${escf(x.training_day||'—')}</td><td>${escf(x.sets||'')}</td><td>${escf(x.reps||'')}</td><td>${escf(x.rest_seconds||0)}</td><td>${escf(sysName[x.training_system||'normal']||'')}</td><td>${escf(x.group_key||'—')}</td></tr>`).join('')}</table>`;
       }
       const html=`<!doctype html><html lang="fa" dir="rtl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${title}</title><style>body{font-family:Tahoma,Arial;padding:24px;line-height:1.9;color:#111}table{width:100%;border-collapse:collapse;margin-top:12px}td,th{border:1px solid #aaa;padding:7px;text-align:center;font-size:12px}h1{font-size:22px}</style></head><body><h1>باشگاه فیتنس سه‌قلعه | مربی مجتبی</h1><p>شاگرد: ${escf(currentClient.name||'')} | تاریخ: ${today()}</p>${body}<p>این صفحه برای چاپ و ذخیره PDF آماده است.</p><script>window.onload=()=>setTimeout(()=>window.print(),400)<\/script><\/script>
+
+
 </body></html>`;
       if(navigator.share){try{await navigator.share({title,text:`${title} | ${currentClient.name||''} | باشگاه فیتنس سه‌قلعه`});}catch(e){}}
       const w=window.open('','_blank');if(w){w.document.write(html);w.document.close();}
@@ -1559,6 +1725,14 @@ loadExercises();
   window.AUTH_SUPABASE = auth;
   const byId = id => document.getElementById(id);
 
+  // Fix: the original phoneNorm lived inside another IIFE and was not visible here.
+  function phoneNormForRegistration(v){
+    let p=String(v||'').trim().replace(/[\s()-]/g,'').replace(/[۰-۹]/g,d=>'۰۱۲۳۴۵۶۷۸۹'.indexOf(d));
+    if(/^09\d{9}$/.test(p)) p='+98'+p.slice(1);
+    else if(/^989\d{9}$/.test(p)) p='+'+p;
+    return p;
+  }
+
   async function authenticatedSession(){
     const {data,error}=await auth.auth.getSession();
     if(error) throw error;
@@ -1574,14 +1748,30 @@ loadExercises();
       apikey:SUPABASE_KEY,
       Authorization:'Bearer '+session.access_token
     };
-    const options={method:method||'GET',headers};
-    if(body!==undefined){
+    const verb=String(method||'GET').toUpperCase();
+    const options={method:verb,headers};
+    // PostgREST DELETE requests must not carry a JSON body. Older callers
+    // pass {} for DELETE; ignore that legacy argument safely.
+    if(body!==undefined && !['GET','HEAD','DELETE'].includes(verb)){
       headers['Content-Type']='application/json';
       headers.Prefer='return=representation';
       options.body=JSON.stringify(body);
     }
-    const response=await ORIGINAL_FETCH(SUPABASE_URL+'/rest/v1'+path,options);
-    const text=await response.text();
+    let response=await ORIGINAL_FETCH(SUPABASE_URL+'/rest/v1'+path,options);
+    let text=await response.text();
+
+    // Compatibility for deployments whose migration created the singular
+    // membership table while older UI layers still reference the plural name.
+    // Retry only when PostgREST explicitly reports that the relation is missing;
+    // never retry authorization, validation, or ordinary data errors.
+    const missingRelation = !response.ok &&
+      (response.status===404 || response.status===400) &&
+      /(?:relation|table|could not find the table|schema cache).*(?:trainee_memberships|does not exist|not found)|(?:trainee_memberships).*(?:does not exist|not found)/i.test(text);
+    if(missingRelation && /^(\/trainee_memberships)(?=[?]|$)/.test(path)){
+      const singularPath=path.replace(/^\/trainee_memberships(?=[?]|$)/,'/trainee_membership');
+      response=await ORIGINAL_FETCH(SUPABASE_URL+'/rest/v1'+singularPath,options);
+      text=await response.text();
+    }
     if(!response.ok) throw new Error(text||('HTTP '+response.status));
     if(!text)return [];
     try{return JSON.parse(text);}catch(e){return [];}
@@ -1605,7 +1795,7 @@ loadExercises();
       const payload={
         full_name,
         phone:(byId('cphone')?.value||'').trim()||null,
-        phone_normalized:phoneNorm((byId('cphone')?.value||'').trim())||null,
+        phone_normalized:phoneNormForRegistration((byId('cphone')?.value||'').trim())||null,
         gender:byId('cgender')?.value||null,
         birth_date:byId('cbirth')?.value||null,
         height:+(byId('cheight')?.value||0)||null,
@@ -1692,5 +1882,411 @@ loadExercises();
 })();
 
 </script>
+
+<script>
+/* Safe UI enhancements: Hijri date hints (stored dates remain Gregorian ISO) and activity placement. */
+(function(){
+  function hijriLabel(value){
+    if(!value)return '';
+    const d=new Date(value+'T12:00:00');
+    if(Number.isNaN(d.getTime()))return '';
+    try{return new Intl.DateTimeFormat('fa-IR-u-ca-islamic-umalqura',{year:'numeric',month:'long',day:'numeric'}).format(d)+' قمری';}
+    catch(e){try{return new Intl.DateTimeFormat('fa-IR-u-ca-islamic',{year:'numeric',month:'long',day:'numeric'}).format(d)+' قمری';}catch(_){return '';}}
+  }
+  function wireHijriDates(){
+    document.querySelectorAll('input[type="date"]').forEach(input=>{
+      if(input.dataset.hijriWired)return;
+      input.dataset.hijriWired='1';
+      const hint=document.createElement('small');
+      hint.className='hijri-date-hint';
+      hint.style.cssText='display:block;color:#aeb9c4;font-size:10px;margin-top:4px;line-height:1.6';
+      hint.setAttribute('aria-live','polite');
+      input.insertAdjacentElement('afterend',hint);
+      const update=()=>{hint.textContent=input.value?(hijriLabel(input.value)||'نمایش تاریخ قمری در این مرورگر پشتیبانی نمی‌شود'):'معادل قمری پس از انتخاب تاریخ نمایش داده می‌شود';};
+      input.addEventListener('input',update);input.addEventListener('change',update);update();
+    });
+  }
+  function placeActivityCard(){
+    const date=document.getElementById('actDate');
+    const progress=document.getElementById('progress');
+    if(!date||!progress)return;
+    const card=date.closest('.card');
+    if(card&&!progress.contains(card))progress.insertBefore(card,progress.children[1]||null);
+  }
+  function init(){wireHijriDates();placeActivityCard();}
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init,{once:true});else init();
+})();
+</script>
+<script>
+/* SUBSCRIPTION PAYMENT SAFETY PATCH 2026-10-09
+   Prevents recording unpaid amounts as payments and safely handles a partial save.
+   This is client-side recovery, not a database transaction. */
+(function(){
+  let saving=false;
+  const pendingPaymentKey='fitness_seh_galeh_pending_membership_payment_v1';
+  function readPendingPayment(){
+    try{const raw=sessionStorage.getItem(pendingPaymentKey);return raw?JSON.parse(raw):null;}catch(e){return null;}
+  }
+  function writePendingPayment(value){
+    try{if(value)sessionStorage.setItem(pendingPaymentKey,JSON.stringify(value));else sessionStorage.removeItem(pendingPaymentKey);}catch(e){console.warn('Pending payment could not be persisted in this tab:',e);}
+  }
+  let pendingPayment=readPendingPayment();
+  const el=id=>document.getElementById(id);
+  const value=id=>(el(id)?.value||'').trim();
+  function samePayment(p, traineeId, amount, paid, start, end){
+    return p && String(p.traineeId)===String(traineeId) && Number(p.amount)===Number(amount) &&
+      p.paid===paid && p.start===start && p.end===end;
+  }
+  window.saveSubscription=async function(){
+    if(saving)return;
+    if(typeof currentClient==='undefined'||!currentClient){alert('اول شاگرد را انتخاب کنید.');return;}
+    const traineeId=currentClient.id;
+    const start=value('subStart')||((typeof today==='function')?today():new Date().toISOString().slice(0,10));
+    const end=value('subEnd')||null;
+    const amountRaw=value('subAmount');
+    const amount=amountRaw===''?0:Number(amountRaw);
+    const paid=value('subPaid');
+    if(!Number.isFinite(amount)||amount<0){alert('مبلغ شهریه باید عددی معتبر و صفر یا بیشتر باشد.');return;}
+    const isPaid=paid==='پرداخت شده';
+    if(pendingPayment){
+      if(!samePayment(pendingPayment,traineeId,amount,paid,start,end)){
+        alert('یک عضویت ذخیره شده اما ثبت پرداخت آن ناموفق بوده است. برای جلوگیری از ثبت تکراری، ابتدا همان شاگرد، مبلغ و وضعیت قبلی را برگردانید و دوباره ذخیره کنید.');
+        return;
+      }
+      saving=true;
+      try{
+        await window.sbWrite('/trainee_payments','POST',{trainee_id:traineeId,amount,payment_date:(typeof today==='function'?today():new Date().toISOString().slice(0,10)),description:'پرداخت عضویت'});
+        pendingPayment=null;writePendingPayment(null);
+        if(typeof loadClients==='function')await loadClients();
+        if(typeof loadMembershipHistory==='function')await loadMembershipHistory();
+        alert('پرداخت با موفقیت ثبت شد. عضویت قبلی دوباره ساخته نشد.');
+      }catch(e){
+        console.error('Payment retry failed:',e);
+        alert('عضویت قبلاً ذخیره شده، اما ثبت پرداخت هنوز ناموفق است. فعلاً فرم را تغییر ندهید و دوباره تلاش کنید.\n'+(e.message||String(e)));
+      }finally{saving=false;}
+      return;
+    }
+    saving=true;
+    try{
+      const membershipBody={trainee_id:traineeId,start_date:start,end_date:end,
+        status:isPaid?'active':'pending',amount,
+        payment_date:isPaid?(typeof today==='function'?today():new Date().toISOString().slice(0,10)):null,
+        description:'عضویت باشگاه'};
+      await window.sbWrite('/trainee_memberships','POST',membershipBody);
+      if(isPaid && amount>0){
+        // If this second write fails, remember the exact operation and retry only payment.
+        pendingPayment={traineeId,amount,paid,start,end};writePendingPayment(pendingPayment);
+        try{
+          await window.sbWrite('/trainee_payments','POST',{trainee_id:traineeId,amount,
+            payment_date:(typeof today==='function'?today():new Date().toISOString().slice(0,10)),description:'پرداخت عضویت'});
+          pendingPayment=null;writePendingPayment(null);
+        }catch(paymentError){
+          console.error('Membership saved but payment write failed:',paymentError);
+          alert('عضویت ذخیره شد، اما ثبت سابقه پرداخت ناموفق بود. برای جلوگیری از عضویت تکراری، فرم را تغییر ندهید؛ همان اطلاعات را نگه دارید و دوباره روی «ذخیره عضویت» بزنید تا فقط پرداخت تکرار شود.\n'+(paymentError.message||String(paymentError)));
+          return;
+        }
+      }
+      if(typeof loadClients==='function')await loadClients();
+      if(typeof loadMembershipHistory==='function')await loadMembershipHistory();
+      alert(isPaid?(amount>0?'عضویت و پرداخت با موفقیت ثبت شدند.':'عضویت با وضعیت پرداخت‌شده ثبت شد؛ مبلغ وارد نشده است.'):'عضویت ثبت شد و چون وضعیت پرداخت «پرداخت نشده» است، سابقه پرداختی ساخته نشد.');
+    }catch(e){
+      console.error('Subscription save failed:',e);
+      alert('ثبت عضویت انجام نشد.\n'+(e.message||String(e)));
+    }finally{saving=false;}
+  };
+})();
+</script>
+<script>
+/* WORKOUT DATA-ISOLATION PATCH 2026-10-09
+   Prevents late workout responses and mutations from repainting another trainee's screen.
+   Uses existing Supabase tables and preserves the current UI/features. */
+(function(){
+  let workoutRequestSeq=0;
+  let workoutPlanOwnerId=null;
+  const byId=id=>document.getElementById(id);
+  const same=(a,b)=>String(a??'')===String(b??'');
+  const currentTraineeId=()=>currentClient&&currentClient.id!=null?String(currentClient.id):null;
+  const stillCurrent=(traineeId,planId)=>same(currentTraineeId(),traineeId)&&same(currentWorkoutPlanId,planId)&&same(workoutPlanOwnerId,traineeId);
+  function setWorkoutMessage(message){const box=byId('workoutList');if(box)box.innerHTML=`<p class="muted">${message}</p>`;}
+  function workoutEsc(v){return typeof escf==='function'?escf(v):String(v??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));}
+
+  window.loadWorkoutForClient=async function(){
+    const traineeId=currentTraineeId();
+    const requestId=++workoutRequestSeq;
+    if(!traineeId){currentWorkoutPlanId=null;workoutPlanOwnerId=null;workoutExercisesCache=[];setWorkoutMessage('ابتدا شاگرد را انتخاب کنید.');return;}
+    // Clear cross-trainee cache immediately, before any asynchronous request.
+    currentWorkoutPlanId=null;workoutPlanOwnerId=null;workoutExercisesCache=[];
+    try{
+      const plans=await sbGet(`/trainee_workout_plans?trainee_id=eq.${encodeURIComponent(traineeId)}&select=*&order=created_at.desc&limit=1`);
+      if(requestId!==workoutRequestSeq||!same(currentTraineeId(),traineeId))return;
+      const plan=plans[0]||null;
+      if(!plan){
+        currentWorkoutPlanId=null;workoutPlanOwnerId=traineeId;workoutExercisesCache=[];
+        if(byId('workoutTitle'))byId('workoutTitle').value='';
+        if(byId('workoutGoal'))byId('workoutGoal').value=currentClient?.goal||'';
+        if(byId('workoutNotes'))byId('workoutNotes').value='';
+        if(typeof window.renderWorkoutList==='function')window.renderWorkoutList([],{});else setWorkoutMessage('برای این شاگرد هنوز برنامه تمرینی ثبت نشده است.');
+        return;
+      }
+      const rows=await sbGet(`/trainee_workout_exercises?workout_plan_id=eq.${encodeURIComponent(plan.id)}&select=*&order=sort_order.asc,created_at.asc`);
+      if(requestId!==workoutRequestSeq||!same(currentTraineeId(),traineeId))return;
+      const ids=[...new Set(rows.map(x=>x.exercise_id).filter(x=>x!=null))];
+      let exercises=[];
+      if(ids.length)exercises=await sbGet(`/exercises?id=in.(${ids.map(encodeURIComponent).join(',')})&select=id,name`);
+      if(requestId!==workoutRequestSeq||!same(currentTraineeId(),traineeId))return;
+      const names=Object.fromEntries(exercises.map(x=>[String(x.id),x.name]));
+      currentWorkoutPlanId=plan.id;workoutPlanOwnerId=traineeId;workoutExercisesCache=rows;
+      if(byId('workoutTitle'))byId('workoutTitle').value=plan.title||'';
+      if(byId('workoutGoal'))byId('workoutGoal').value=plan.goal||'';
+      if(byId('workoutNotes'))byId('workoutNotes').value=plan.notes||'';
+      if(typeof window.renderWorkoutList==='function')window.renderWorkoutList(rows,names);
+    }catch(e){
+      if(requestId===workoutRequestSeq&&same(currentTraineeId(),traineeId)){
+        console.error('Load workout failed:',e);
+        setWorkoutMessage('دریافت برنامه تمرینی انجام نشد. اطلاعات قبلی حفظ نشدند؛ اتصال و مجوزهای دیتابیس را بررسی کنید.');
+      }
+    }
+  };
+
+  window.saveWorkoutPlan=async function(){
+    const traineeId=currentTraineeId();
+    if(!traineeId){alert('اول یک شاگرد را انتخاب کنید.');return;}
+    const ownedPlanId=same(workoutPlanOwnerId,traineeId)?currentWorkoutPlanId:null;
+    const body={trainee_id:traineeId,title:(byId('workoutTitle')?.value||'').trim()||'برنامه تمرینی',goal:(byId('workoutGoal')?.value||'').trim()||null,notes:(byId('workoutNotes')?.value||'').trim()||null};
+    try{
+      let savedId=ownedPlanId;
+      if(ownedPlanId){
+        const check=await sbGet(`/trainee_workout_plans?id=eq.${encodeURIComponent(ownedPlanId)}&select=id,trainee_id&limit=1`);
+        if(!check[0]||!same(check[0].trainee_id,traineeId))throw new Error('مالکیت برنامه با شاگرد انتخاب‌شده تطبیق ندارد؛ ذخیره متوقف شد.');
+        await sbWrite(`/trainee_workout_plans?id=eq.${encodeURIComponent(ownedPlanId)}`,'PATCH',body);
+      }else{
+        const inserted=await sbWrite('/trainee_workout_plans','POST',body);
+        savedId=inserted?.[0]?.id;
+        if(!savedId)throw new Error('برنامه ذخیره شد اما شناسه آن از دیتابیس دریافت نشد.');
+      }
+      if(same(currentTraineeId(),traineeId)){
+        currentWorkoutPlanId=savedId;workoutPlanOwnerId=traineeId;
+        await window.loadWorkoutForClient();
+        if(same(currentTraineeId(),traineeId))alert('برنامه تمرینی با موفقیت ذخیره شد.');
+      }
+    }catch(e){alert('ذخیره برنامه تمرینی انجام نشد.\n'+(e.message||String(e)));}
+  };
+
+  window.addWorkoutExercise=async function(){
+    const traineeId=currentTraineeId();
+    if(!traineeId){alert('اول شاگرد را انتخاب کنید.');return;}
+    if(!same(workoutPlanOwnerId,traineeId)||!currentWorkoutPlanId){await window.saveWorkoutPlan();if(!same(currentTraineeId(),traineeId)||!same(workoutPlanOwnerId,traineeId)||!currentWorkoutPlanId)return;}
+    const planId=currentWorkoutPlanId;
+    if(!same(workoutPlanOwnerId,traineeId)){alert('برنامه متعلق به شاگرد انتخاب‌شده نیست. دوباره برنامه را بارگذاری کنید.');return;}
+    const exerciseId=byId('workoutExercise')?.value;
+    if(!exerciseId){alert('حرکت را انتخاب کنید.');return;}
+    const rows=Array.isArray(workoutExercisesCache)?workoutExercisesCache:[];
+    const body={workout_plan_id:planId,exercise_id:exerciseId,sets:+(byId('workoutSets')?.value)||0,reps:(byId('workoutReps')?.value||'').trim()||null,rest_seconds:+(byId('workoutRest')?.value)||0,notes:(byId('workoutExerciseNotes')?.value||'').trim()||null,sort_order:rows.length?Math.max(...rows.map(x=>Number(x.sort_order)||0))+1:1,training_system:byId('workoutSystem')?.value||'normal',group_key:(byId('workoutGroup')?.value||'').trim()||null,training_day:byId('workoutDay')?.value||null,is_completed:false};
+    try{
+      try{await sbWrite('/trainee_workout_exercises','POST',body);}
+      catch(e){if(!/training_day|is_completed/i.test(e.message||''))throw e;const fallback={...body};delete fallback.training_day;delete fallback.is_completed;await sbWrite('/trainee_workout_exercises','POST',fallback);if(same(currentTraineeId(),traineeId))alert('حرکت ثبت شد؛ برای ذخیره روز تمرین و وضعیت انجام‌شدن، ارتقای دیتابیس لازم است.');}
+      if(same(currentTraineeId(),traineeId)&&same(currentWorkoutPlanId,planId)){if(byId('workoutExerciseNotes'))byId('workoutExerciseNotes').value='';await window.loadWorkoutForClient();}
+    }catch(e){alert('افزودن حرکت انجام نشد.\n'+(e.message||String(e)));}
+  };
+
+  window.deleteWorkoutExercise=async function(id){
+    const traineeId=currentTraineeId(),planId=currentWorkoutPlanId;
+    const row=(workoutExercisesCache||[]).find(x=>same(x.id,id));
+    if(!traineeId||!row||!same(workoutPlanOwnerId,traineeId)||!same(row.workout_plan_id,planId)){alert('حرکت متعلق به برنامه فعلی نیست؛ فهرست را دوباره بارگذاری کنید.');return;}
+    if(!confirm('این حرکت از برنامه حذف شود؟'))return;
+    try{await sbWrite(`/trainee_workout_exercises?id=eq.${encodeURIComponent(id)}&workout_plan_id=eq.${encodeURIComponent(planId)}`,'DELETE');if(same(currentTraineeId(),traineeId)&&same(currentWorkoutPlanId,planId))await window.loadWorkoutForClient();}
+    catch(e){alert('حذف حرکت انجام نشد.\n'+(e.message||String(e)));}
+  };
+
+  window.editWorkoutExercise=async function(id){
+    const traineeId=currentTraineeId(),planId=currentWorkoutPlanId;
+    const row=(workoutExercisesCache||[]).find(x=>same(x.id,id));
+    if(!traineeId||!row||!same(workoutPlanOwnerId,traineeId)||!same(row.workout_plan_id,planId)){alert('حرکت متعلق به برنامه فعلی نیست؛ فهرست را دوباره بارگذاری کنید.');return;}
+    const sets=prompt('تعداد ست',row.sets??'');if(sets===null)return;
+    const reps=prompt('تکرار / زمان',row.reps??'');if(reps===null)return;
+    const rest=prompt('استراحت (ثانیه)',row.rest_seconds??0);if(rest===null)return;
+    const notes=prompt('یادداشت',row.notes||'');if(notes===null)return;
+    try{await sbWrite(`/trainee_workout_exercises?id=eq.${encodeURIComponent(id)}&workout_plan_id=eq.${encodeURIComponent(planId)}`,'PATCH',{sets:+sets||0,reps:reps||null,rest_seconds:+rest||0,notes:notes||null});if(same(currentTraineeId(),traineeId)&&same(currentWorkoutPlanId,planId))await window.loadWorkoutForClient();}
+    catch(e){alert('ویرایش حرکت انجام نشد.\n'+(e.message||String(e)));}
+  };
+
+  window.moveWorkoutExercise=async function(id,dir){
+    const traineeId=currentTraineeId(),planId=currentWorkoutPlanId;
+    if(!traineeId||!same(workoutPlanOwnerId,traineeId)){alert('ابتدا برنامه تمرینی شاگرد را بارگذاری کنید.');return;}
+    const rows=[...(workoutExercisesCache||[])].filter(x=>same(x.workout_plan_id,planId)).sort((a,b)=>(+a.sort_order||0)-(+b.sort_order||0));
+    const i=rows.findIndex(x=>same(x.id,id)),j=i+Number(dir);if(i<0||j<0||j>=rows.length)return;
+    const a=rows[i],b=rows[j],ao=a.sort_order,bo=b.sort_order;
+    try{
+      await sbWrite(`/trainee_workout_exercises?id=eq.${encodeURIComponent(a.id)}&workout_plan_id=eq.${encodeURIComponent(planId)}`,'PATCH',{sort_order:bo});
+      try{await sbWrite(`/trainee_workout_exercises?id=eq.${encodeURIComponent(b.id)}&workout_plan_id=eq.${encodeURIComponent(planId)}`,'PATCH',{sort_order:ao});}
+      catch(e){try{await sbWrite(`/trainee_workout_exercises?id=eq.${encodeURIComponent(a.id)}&workout_plan_id=eq.${encodeURIComponent(planId)}`,'PATCH',{sort_order:ao});}catch(rollback){console.error('Workout reorder rollback failed:',rollback);}throw e;}
+      if(same(currentTraineeId(),traineeId)&&same(currentWorkoutPlanId,planId))await window.loadWorkoutForClient();
+    }catch(e){alert('مرتب‌سازی انجام نشد. اگر خطا پس از تغییر اول رخ داد، ترتیب قبلی بازیابی شد یا باید بررسی شود.\n'+(e.message||String(e)));}
+  };
+
+  window.moveWorkoutSelected=async function(dir){
+    const ids=(workoutExercisesCache||[]).filter(x=>same(x.workout_plan_id,currentWorkoutPlanId)).map(x=>`${x.id} — ${x.exercise_id}`);
+    const id=prompt('شناسه حرکت برای جابه‌جایی را وارد کنید:\n'+ids.join('\n'));
+    if(id)await window.moveWorkoutExercise(id.trim().split(' ')[0],dir);
+  };
+
+  let copyingWorkout=false;
+  window.copyPreviousWorkoutPlan=async function(){
+    if(copyingWorkout)return;
+    const traineeId=currentTraineeId();
+    if(!traineeId){alert('اول شاگرد را انتخاب کنید.');return;}
+    copyingWorkout=true;
+    try{
+      const plans=await sbGet(`/trainee_workout_plans?trainee_id=eq.${encodeURIComponent(traineeId)}&select=*&order=created_at.desc&limit=1`);
+      if(!same(currentTraineeId(),traineeId))return;
+      const source=plans[0];if(!source){alert('برنامه‌ای برای کپی وجود ندارد.');return;}
+      const created=await sbWrite('/trainee_workout_plans','POST',{trainee_id:traineeId,title:(source.title||'برنامه تمرینی')+' - کپی',goal:source.goal||null,notes:source.notes||null});
+      const newPlanId=created?.[0]?.id;if(!newPlanId)throw new Error('شناسه برنامه کپی‌شده از دیتابیس دریافت نشد.');
+      const sourceRows=await sbGet(`/trainee_workout_exercises?workout_plan_id=eq.${encodeURIComponent(source.id)}&select=*&order=sort_order.asc,created_at.asc`);
+      if(sourceRows.length){
+        const copied=sourceRows.map((x,i)=>({workout_plan_id:newPlanId,exercise_id:x.exercise_id,sets:x.sets,reps:x.reps,rest_seconds:x.rest_seconds,notes:x.notes||null,sort_order:i+1,training_system:x.training_system||'normal',group_key:x.group_key||null,training_day:x.training_day||null,is_completed:false}));
+        try{await sbWrite('/trainee_workout_exercises','POST',copied);}
+        catch(e){if(!/training_day|is_completed/i.test(e.message||''))throw e;await sbWrite('/trainee_workout_exercises','POST',copied.map(x=>{const y={...x};delete y.training_day;delete y.is_completed;return y;}));}
+      }
+      if(same(currentTraineeId(),traineeId)){
+        currentWorkoutPlanId=newPlanId;workoutPlanOwnerId=traineeId;
+        await window.loadWorkoutForClient();
+        if(same(currentTraineeId(),traineeId))alert('کپی برنامه ساخته شد.');
+      }
+    }catch(e){alert('کپی برنامه انجام نشد.\n'+(e.message||String(e)));}
+    finally{copyingWorkout=false;}
+  };
+
+  window.toggleWorkoutComplete=async function(id,checked){
+    const traineeId=currentTraineeId(),planId=currentWorkoutPlanId;
+    const row=(workoutExercisesCache||[]).find(x=>same(x.id,id));
+    if(!traineeId||!row||!same(workoutPlanOwnerId,traineeId)||!same(row.workout_plan_id,planId)){alert('حرکت متعلق به برنامه فعلی نیست؛ دوباره بارگذاری کنید.');return;}
+    try{await sbWrite(`/trainee_workout_exercises?id=eq.${encodeURIComponent(id)}&workout_plan_id=eq.${encodeURIComponent(planId)}`,'PATCH',{is_completed:!!checked});if(same(currentTraineeId(),traineeId)&&same(currentWorkoutPlanId,planId))await window.loadWorkoutForClient();}
+    catch(e){alert('ثبت وضعیت حرکت انجام نشد.\n'+(e.message||String(e)));if(same(currentTraineeId(),traineeId)&&same(currentWorkoutPlanId,planId))await window.loadWorkoutForClient();}
+  };
+})();
+</script>
+<script>
+// FINAL NUTRITION OWNERSHIP GUARDS — prevent stale UI state from writing to another trainee.
+(function(){
+  let nutritionMutationBusy = false;
+  const idEq = (a,b) => String(a ?? '') === String(b ?? '');
+  async function verifyMealBelongsToSelectedTrainee(mealId, traineeId, expectedPlanId){
+    if(!mealId || !traineeId) throw new Error('شاگرد یا وعده معتبر نیست؛ دوباره انتخاب کنید.');
+    const meals = await sbGet(`/nutrition_meals?id=eq.${encodeURIComponent(mealId)}&select=id,plan_id&limit=1`);
+    const meal = meals && meals[0];
+    if(!meal) throw new Error('وعده در دیتابیس پیدا نشد.');
+    if(expectedPlanId && !idEq(meal.plan_id, expectedPlanId)) throw new Error('این وعده متعلق به برنامه غذایی فعلی نیست.');
+    const plans = await sbGet(`/nutrition_plans?id=eq.${encodeURIComponent(meal.plan_id)}&select=id,trainee_id&limit=1`);
+    const plan = plans && plans[0];
+    if(!plan || !idEq(plan.trainee_id, traineeId)) throw new Error('اجازه تغییر وعده شاگرد دیگری را ندارید.');
+    if(!currentClient || !idEq(currentClient.id, traineeId)) throw new Error('شاگرد انتخاب‌شده تغییر کرده است؛ دوباره تلاش کنید.');
+    return {meal, plan};
+  }
+  window.openMealFoodModal = async function(mealId){
+    const traineeId = currentClient && currentClient.id;
+    const planId = currentPlanId;
+    try{
+      await verifyMealBelongsToSelectedTrainee(mealId, traineeId, planId);
+      if(!currentClient || !idEq(currentClient.id, traineeId) || !idEq(currentPlanId, planId)) throw new Error('شاگرد یا برنامه در حین بررسی تغییر کرد.');
+      currentMealId = mealId;
+      fillMealFoodSelect();
+      $('mealFoodAmount').value = 100;
+      $('mealFoodNote').value = '';
+      $('mealModal').classList.add('show');
+      previewMealFood();
+    }catch(e){alert('بازکردن وعده انجام نشد.\n'+(e.message||String(e)));}
+  };
+  window.saveMealFood = async function(){
+    if(nutritionMutationBusy) return;
+    const traineeId = currentClient && currentClient.id, planId = currentPlanId, mealId = currentMealId;
+    const f = foods[+($('mealFoodSelect')?.value)], amount = +$('mealFoodAmount')?.value;
+    if(!f || !Number.isFinite(amount) || amount <= 0){alert('غذا و مقدار معتبر انتخاب کنید.');return;}
+    nutritionMutationBusy = true;
+    try{
+      await verifyMealBelongsToSelectedTrainee(mealId, traineeId, planId);
+      if(!currentClient || !idEq(currentClient.id, traineeId) || !idEq(currentPlanId, planId) || !idEq(currentMealId, mealId)) throw new Error('شاگرد یا وعده تغییر کرده است؛ افزودن غذا لغو شد.');
+      await sbWrite('/nutrition_meal_foods','POST',{meal_id:mealId,food_id:f[5],amount,unit:$('mealFoodUnit').value,notes:$('mealFoodNote').value.trim()||null});
+      if(!currentClient || !idEq(currentClient.id, traineeId)) throw new Error('غذا ثبت شد، اما شاگرد انتخاب‌شده تغییر کرده است؛ برای مشاهده دوباره برنامه را باز کنید.');
+      closeMealModal();
+      await loadNutritionForClient();
+    }catch(e){alert('افزودن غذا انجام نشد یا نیاز به بررسی دارد.\n'+(e.message||String(e)));}
+    finally{nutritionMutationBusy=false;}
+  };
+  window.deleteMealFood = async function(foodRowId){
+    if(nutritionMutationBusy) return;
+    if(!confirm('این غذا از وعده حذف شود؟')) return;
+    const traineeId = currentClient && currentClient.id, planId = currentPlanId;
+    nutritionMutationBusy = true;
+    try{
+      const rows = await sbGet(`/nutrition_meal_foods?id=eq.${encodeURIComponent(foodRowId)}&select=id,meal_id&limit=1`);
+      const row = rows && rows[0];
+      if(!row) throw new Error('غذای موردنظر در دیتابیس پیدا نشد.');
+      await verifyMealBelongsToSelectedTrainee(row.meal_id, traineeId, planId);
+      if(!currentClient || !idEq(currentClient.id, traineeId) || !idEq(currentPlanId, planId)) throw new Error('شاگرد یا برنامه تغییر کرده است؛ حذف لغو شد.');
+      await sbWrite(`/nutrition_meal_foods?id=eq.${encodeURIComponent(foodRowId)}&meal_id=eq.${encodeURIComponent(row.meal_id)}`,'DELETE');
+      if(currentClient && idEq(currentClient.id, traineeId) && idEq(currentPlanId, planId)) await loadNutritionForClient();
+    }catch(e){alert('حذف غذا انجام نشد.\n'+(e.message||String(e)));}
+    finally{nutritionMutationBusy=false;}
+  };
+})();
+</script>
+
+
+<script>
+// BODY ANALYSIS GUARD — validate measurements and bind save to the trainee selected at submit time.
+(function(){
+  let analysisSaveBusy = false;
+  const getEl = id => document.getElementById(id);
+  const sameId = (a,b) => String(a ?? '') === String(b ?? '');
+  function readOptionalNumber(id, label, min, max){
+    const el=getEl(id), raw=(el?.value ?? '').trim();
+    if(!raw) return null;
+    const n=Number(raw);
+    if(!Number.isFinite(n) || n<min || n>max) throw new Error(`${label} باید عددی بین ${min} و ${max} باشد.`);
+    return n;
+  }
+  window.saveAnalysis = async function(){
+    if(analysisSaveBusy) return;
+    const selected=typeof currentClient!=='undefined' ? currentClient : null;
+    const traineeId=selected?.id;
+    if(!traineeId){ alert('اول یک شاگرد را انتخاب کنید.'); return; }
+    let body, file=null;
+    try{
+      const weight=readOptionalNumber('anWeight','وزن',1,500);
+      const bodyFat=readOptionalNumber('anFat','درصد چربی',0,100);
+      const muscle=readOptionalNumber('anMuscle','توده عضلانی',0,300);
+      const water=readOptionalNumber('anWater','آب بدن',0,100);
+      const visceral=readOptionalNumber('anVisceral','چربی احشایی',0,100);
+      const bmi=readOptionalNumber('anBmi','BMI',0,150);
+      const bmr=readOptionalNumber('anBmr','متابولیسم پایه',0,10000);
+      if([weight,bodyFat,muscle,water,visceral,bmi,bmr].every(v=>v===null)) throw new Error('حداقل یکی از مقادیر آنالیز را وارد کنید.');
+      file=getEl('analysisFile')?.files?.[0] || null;
+      if(file){
+        if(file.size>10*1024*1024) throw new Error('حجم فایل بیشتر از ۱۰ مگابایت است.');
+        if(!(file.type.startsWith('image/')||file.type==='application/pdf')) throw new Error('فقط عکس یا فایل PDF مجاز است.');
+      }
+      const noteParts=[];
+      if(bmi!==null) noteParts.push(`BMI: ${bmi}`);
+      if(bmr!==null) noteParts.push(`BMR: ${bmr}`);
+      body={trainee_id:traineeId,analysis_date:getEl('anDate')?.value||today(),weight,body_fat:bodyFat,muscle_mass:muscle,body_water:water,visceral_fat:visceral,notes:noteParts.join(' | ')||null};
+    }catch(e){ alert(e.message||String(e)); return; }
+    analysisSaveBusy=true;
+    try{
+      if(!currentClient || !sameId(currentClient.id,traineeId)) throw new Error('شاگرد انتخاب‌شده تغییر کرده است؛ دوباره تلاش کنید.');
+      await sbWrite('/body_analyses','POST',body);
+      if(file) alert('اطلاعات عددی آنالیز ثبت شد؛ اما فایل انتخاب‌شده ذخیره نشده است، چون اتصال Supabase Storage هنوز پیاده‌سازی نشده.');
+      else alert('اطلاعات عددی آنالیز بدن ثبت شد.');
+      if(currentClient && sameId(currentClient.id,traineeId)){
+        ['anWeight','anFat','anMuscle','anWater','anVisceral','anBmi','anBmr'].forEach(id=>{const el=getEl(id);if(el)el.value='';});
+        const fileInput=getEl('analysisFile'); if(fileInput) fileInput.value='';
+        if(typeof window.loadProgressHistory==='function') await window.loadProgressHistory();
+        if(typeof window.loadDashboard==='function') await window.loadDashboard();
+      }
+    }catch(e){ alert('ثبت آنالیز انجام نشد.\n'+(e.message||String(e))); }
+    finally{ analysisSaveBusy=false; }
+  };
+})();
+</script>
+
 </body>
-</html>
