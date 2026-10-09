@@ -1192,7 +1192,7 @@ window.loadDashboard = loadDashboard;
     const w=$id('workout')?.querySelector('.card');if(w&&!$id('printWorkoutBtn')){const b=document.createElement('button');b.id='printWorkoutBtn';b.className='secondary';b.textContent='📄 چاپ / ذخیره PDF برنامه تمرینی';b.onclick=()=>printPlan('workout');w.appendChild(b)}
   }
 
-  const oldFinish2=window.finishLogin;window.finishLogin=async function(user){await oldFinish2(user);addStyle();buildDashboard();addNavDashboard();buildWorkoutControls();addScheduleUI();addPrintButtons();await fixLibraryUse();if(authProfile?.role==='coach'){await loadClients();}else if(authProfile?.role==='trainee'){await setupTraineeAuth(user);}};
+  const oldFinish2=window.finishLogin;window.finishLogin=async function(user){await oldFinish2(user);addStyle();buildDashboard();addNavDashboard();buildWorkoutControls();addScheduleUI();addPrintButtons();await fixLibraryUse();if(authProfile?.role==='coach'){await window.loadClients();}else if(authProfile?.role==='trainee'){await setupTraineeAuth(user);}};
   function addRegistrationFields(){
     const form=$id('ctype')?.parentElement?.parentElement;if(!form||$id('ctrainingDays'))return;
     const days=document.createElement('div');days.innerHTML='<div><label>روزهای تمرین</label><input id="ctrainingDays" placeholder="شنبه، دوشنبه، چهارشنبه"></div><div><label>ساعت تمرین</label><input id="ctrainingTime" type="time"></div>';
@@ -1719,7 +1719,7 @@ const plans=workoutResult.data||[], nutrition=nutritionResult.data||[];
   window.finalStatusFilter=function(mode,btn){clientMode=mode;qsa('#f18statusfilters button').forEach(b=>b.classList.remove('active'));btn.classList.add('active');renderFinalClients();};
 
   const oldFinish=window.finishLogin;
-  window.finishLogin=async function(user){await oldFinish(user);addFinalStyle();addShareButtons();addCoachStatusFilters();wireFinalBadges();addGoalHistory();if(authProfile?.role==='coach'){await loadClients();}else if(authProfile?.role==='trainee'){await selectClient(currentClient?.id);await loadDashboard();}};
+  window.finishLogin=async function(user){await oldFinish(user);addFinalStyle();addShareButtons();addCoachStatusFilters();wireFinalBadges();addGoalHistory();if(authProfile?.role==='coach'){await window.loadClients();}else if(authProfile?.role==='trainee'){await selectClient(currentClient?.id);await loadDashboard();}};
 
   // Re-run UI helpers after dynamic sections appear.
   const oldShow=window.showSection;
