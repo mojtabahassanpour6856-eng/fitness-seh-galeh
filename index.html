@@ -1317,7 +1317,7 @@ if(workoutResult.error) throw workoutResult.error;
 if(nutritionResult.error) throw nutritionResult.error;
 const plans=workoutResult.data||[], nutrition=nutritionResult.data||[];
       const ids=new Set([...plans.map(x=>String(x.trainee_id)),...nutrition.map(x=>String(x.trainee_id))]);planTrainees=ids.size;clients.forEach(c=>c.plans=ids.has(String(c.id))?1:0);
-    }catch(e){}
+    }catch(e){console.error('خطای آمار برنامه‌ها:',e);} 
     const alerts=clients.filter(c=>!c.weight||!c.goal||!c.phone||c.membershipStatus==='منقضی').length;
     setText('activeCount',fmtf(active));setText('planCount',fmtf(planTrainees));setText('alertCount',fmtf(alerts));
   };
