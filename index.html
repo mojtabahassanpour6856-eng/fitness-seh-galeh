@@ -1135,7 +1135,7 @@ window.loadDashboard = loadDashboard;
       }
       if(rows.length&&rows[0].role==='trainee'){await setupTraineeAuth(user);return;}
       authProfile=rows[0];document.body.classList.remove('locked');$id('authScreen').style.display='none';$id('authUserBar').style.display='block';$id('authUserText').textContent=`${authProfile.full_name||user.email} | مربی`;
-      qsAll('.nav button').forEach(b=>b.style.display='block');showSection('coach',qsAll('.nav button').find(b=>String(b.getAttribute('onclick')||'').includes("'coach'"))||null);await loadClients();await loadExercises();await loadLibraryExercises();
+      qsAll('.nav button').forEach(b=>b.style.display='block');showSection('coach',qsAll('.nav button').find(b=>String(b.getAttribute('onclick')||'').includes("'coach'"))||null);await window.loadClients();await loadExercises();await loadLibraryExercises();
     }catch(e){console.error(e);showAuthError('بررسی پروفایل انجام نشد. '+(e.message||''));}
   };
 
