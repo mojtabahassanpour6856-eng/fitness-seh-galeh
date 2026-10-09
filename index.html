@@ -1269,7 +1269,9 @@ window.loadDashboard = loadDashboard;
   window.loadClients=async function(){
     // مهم: دریافت شاگردها مستقل از جدول عضویت است؛ خطای عضویت نباید فهرست را پنهان کند.
     try{
-      const data=await sbGet('/trainees?select=*&order=created_at.desc');
+      const {data:traineeRows,error:traineeError}=await window.AUTH_SUPABASE.from('trainees').select('*').order('created_at',{ascending:false});
+if(traineeError) throw traineeError;
+const data=traineeRows||[];
       let memberships=[], membershipAvailable=true, membershipError='';
       try{
         memberships=await sbGet('/trainee_memberships?select=id,trainee_id,start_date,end_date,status,amount,created_at&order=created_at.desc');
