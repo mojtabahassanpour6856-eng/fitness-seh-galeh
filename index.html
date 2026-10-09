@@ -1274,7 +1274,9 @@ if(traineeError) throw traineeError;
 const data=traineeRows||[];
       let memberships=[], membershipAvailable=true, membershipError='';
       try{
-        memberships=await sbGet('/trainee_memberships?select=id,trainee_id,start_date,end_date,status,amount,created_at&order=created_at.desc');
+       const {data:membershipRows,error:membershipQueryError}=await window.AUTH_SUPABASE.from('trainee_memberships').select('id,trainee_id,start_date,end_date,status,amount,created_at').order('created_at',{ascending:false});
+if(membershipQueryError) throw membershipQueryError;
+memberships=membershipRows||[];
       }catch(pluralError){
         // سازگاری خواندن با نام مفرد جدول در نسخه‌های قدیمی دیتابیس
         try{
