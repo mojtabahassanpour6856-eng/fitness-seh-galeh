@@ -1309,7 +1309,13 @@ memberships=membershipRows||[];
     setText('clientCount',fmtf(clients.length));
     let active=clients.filter(c=>c.active).length, planTrainees=0;
     try{
-      const [plans,nutrition]=await Promise.all([sbGet('/trainee_workout_plans?select=id,trainee_id'),sbGet('/nutrition_plans?select=id,trainee_id')]);
+      const [workoutResult,nutritionResult]=await Promise.all([
+  window.AUTH_SUPABASE.from('trainee_workout_plans').select('id,trainee_id'),
+  window.AUTH_SUPABASE.from('nutrition_plans').select('id,trainee_id')
+]);
+if(workoutResult.error) throw workoutResult.error;
+if(nutritionResult.error) throw nutritionResult.error;
+const plans=workoutResult.data||[], nutrition=nutritionResult.data||[];
       const ids=new Set([...plans.map(x=>String(x.trainee_id)),...nutrition.map(x=>String(x.trainee_id))]);planTrainees=ids.size;clients.forEach(c=>c.plans=ids.has(String(c.id))?1:0);
     }catch(e){}
     const alerts=clients.filter(c=>!c.weight||!c.goal||!c.phone||c.membershipStatus==='منقضی').length;
