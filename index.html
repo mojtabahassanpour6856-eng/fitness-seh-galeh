@@ -1360,7 +1360,7 @@ window.loadDashboard = loadDashboard;
     const phone=phoneNorm($id('traineeRegPhone')?.value||'');
     const initialPassword=$id('traineeInitialPassword')?.value||'';
     if(name.length<2){showAuthError('نام و نام خانوادگی را وارد کنید.');return;}
-    if(!/^\\+989\\d{9}$/.test(phone)){showAuthError('شماره موبایل معتبر نیست؛ مانند 09121234567 وارد کنید.');return;}
+    if(!/^\+989\d{9}$/.test(phone)){showAuthError('شماره موبایل معتبر نیست؛ مانند 09121234567 وارد کنید.');return;}
     if(initialPassword!=='12345'){showAuthError('رمز همگانی نادرست است.');return;}
     const btn=$id('traineeLoginBox')?.querySelector('.trainee-auth-block button');
     if(btn){btn.disabled=true;btn.textContent='⏳ در حال ارسال درخواست…';}
@@ -1376,7 +1376,7 @@ window.loadDashboard = loadDashboard;
   window.loginTraineePhone=async function(){
     const phone=phoneNorm($id('traineePhoneLogin')?.value||'');
     const password=$id('traineeLoginPassword')?.value||'';
-    if(!/^\\+989\\d{9}$/.test(phone)||!password){showAuthError('شماره موبایل معتبر و رمز عبور را وارد کنید.');return;}
+    if(!/^\+989\d{9}$/.test(phone)||!password){showAuthError('شماره موبایل معتبر و رمز عبور را وارد کنید.');return;}
     const btn=$id('traineeLoginBox')?.querySelectorAll('.trainee-auth-block button')[1];
     if(btn){btn.disabled=true;btn.textContent='⏳ در حال ورود…';}
     try{
