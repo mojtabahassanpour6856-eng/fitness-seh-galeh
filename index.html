@@ -2024,9 +2024,12 @@ const plans=workoutResult.data||[], nutrition=nutritionResult.data||[];
   function addProfileBasicFields(){
     const card=$f('client')?.querySelector('.card');if(!card||$f('pbirth'))return;
     const anchor=$f('pn')?.parentElement?.parentElement;if(!anchor)return;
-    const row=document.createElement('div');row.className='grid2';row.innerHTML='<div><label>تاریخ تولد</label><input id="pbirth" type="text" inputmode="numeric" placeholder="۱۴۰۵/۰۷/۱۸"></div><div><label>جنسیت</label><select id="pgender"><option>زن</option><option>مرد</option></select></div>';anchor.appendChild(row);
+    anchor.classList.add('profile-compact-grid');
+    const row=document.createElement('div');row.className='profile-compact-grid profile-extra-fields';row.innerHTML='<div><label>تاریخ تولد</label><input id="pbirth" type="text" inputmode="numeric" placeholder="۱۴۰۵/۰۷/۱۸"></div><div><label>جنسیت</label><select id="pgender"><option>زن</option><option>مرد</option></select></div><div><label>تاریخ ثبت‌نام</label><input id="profileRegistrationDate" type="text" readonly aria-readonly="true" placeholder="ثبت نشده"></div>';anchor.appendChild(row);
+    const style=document.createElement('style');style.id='profile-compact-style';style.textContent='#client > .card:first-child{padding:11px!important;margin:8px 0!important}#client > .card:first-child h2{font-size:16px!important;margin-bottom:8px!important}#client > .card:first-child .grid2,#client > .card:first-child .profile-compact-grid{display:grid!important;grid-template-columns:repeat(3,minmax(0,1fr))!important;gap:6px!important}#client > .card:first-child label{font-size:11px!important;margin:4px 0!important}#client > .card:first-child input,#client > .card:first-child select{min-width:0!important;padding:8px!important;font-size:12px!important;min-height:35px!important}#client > .card:first-child button{padding:9px!important;margin-top:7px!important;font-size:12px!important}@media(max-width:600px){#client > .card:first-child .grid2,#client > .card:first-child .profile-compact-grid{grid-template-columns:repeat(2,minmax(0,1fr))!important}}';
+    if(!document.getElementById(style.id))document.head.appendChild(style);
   }
-  async function loadProfileBasic(){if(!currentClient)return;if($f('pbirth'))$f('pbirth').value=window.isoToJalaliDate(currentClient.birth_date)||'';if($f('pgender'))$f('pgender').value=currentClient.gender||'زن';}
+  async function loadProfileBasic(){if(!currentClient)return;if($f('pbirth'))$f('pbirth').value=window.isoToJalaliDate(currentClient.birth_date)||'';if($f('pgender'))$f('pgender').value=currentClient.gender||'زن';if($f('profileRegistrationDate'))$f('profileRegistrationDate').value=window.isoToJalaliDate(currentClient.club_registration_date)||'';}
   const baseSelectForProfile=window.selectClient;
   window.selectClient=async function(id){await baseSelectForProfile(id);await loadProfileBasic();};
   const baseSaveProfile=window.saveProfile;
