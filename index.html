@@ -603,8 +603,8 @@ body.library-room #workout .library-room-card .library-detail-view{width:100%!im
 </div>
 
 <div class="card">
-<h2>📣 پیام و توصیه مربی برای شاگرد</h2>
-<textarea id="coachNote" placeholder="پیام یا توصیه‌ای بنویسید که شاگرد در پنل خودش ببیند."></textarea>
+<h2>💬 یادداشت مربی</h2>
+<textarea id="coachNote" placeholder="این یادداشت فقط برای مربی است."></textarea>
 <button onclick="saveNote()">ذخیره یادداشت</button>
 </div>
 </section>
@@ -1070,7 +1070,7 @@ async function saveAnalysis(){
 async function saveNote(){
  if(!currentClient){alert("اول شاگرد را انتخاب کنید.");return;}
  const note=$("coachNote").value.trim();if(!note){alert("یادداشت را وارد کنید.");return;}
- try{await sbWrite("/trainee_notes","POST",{trainee_id:currentClient.id,note});$("coachNote").value="";alert("پیام مربی ذخیره شد و در پنل شاگرد نمایش داده می‌شود.");}catch(e){alert("ذخیره یادداشت انجام نشد.\n"+e.message);}
+ try{await sbWrite("/trainee_notes","POST",{trainee_id:currentClient.id,note});$("coachNote").value="";alert("یادداشت مربی ذخیره شد.");}catch(e){alert("ذخیره یادداشت انجام نشد.\n"+e.message);}
 }
 async function saveActivity(){
  if(!currentClient){alert("اول شاگرد را انتخاب کنید.");return;}
@@ -1683,7 +1683,7 @@ window.loadDashboard = loadDashboard;
 
   async function loadGoal(){if(!currentClient)return;const box=$id('goalBox');if(!box)return;try{const rows=await sbGet(`/trainee_goals?trainee_id=eq.${encodeURIComponent(currentClient.id)}&select=*&order=created_at.desc&limit=1`);const x=rows[0];if(x){$id('goalWeight').value=x.target_weight||'';$id('goalFat').value=x.target_body_fat||'';$id('goalDate').value=window.isoToJalaliDate(x.target_date)||x.target_date||'';$id('goalNote').value=x.coach_note||'';}}catch(e){}}
   window.saveGoal=async function(){if(!currentClient)return alert('اول شاگرد را انتخاب کنید.');try{await sbWrite('/trainee_goals','POST',{trainee_id:currentClient.id,target_weight:+$id('goalWeight').value||null,target_body_fat:+$id('goalFat').value||null,target_date:(()=>{const v=$id('goalDate').value.trim();if(!v)return null;const iso=window.jalaliToISODate(v);if(!iso)throw new Error('تاریخ هدف را به‌شکل شمسی مانند ۱۴۰۵/۰۸/۱۸ وارد کنید.');return iso;})(),coach_note:$id('goalNote').value.trim()||null});alert('هدف شاگرد ذخیره شد.');await loadDashboard();}catch(e){alert('ذخیره هدف انجام نشد.\n'+e.message)}};
-  function buildGoalBox(){const sec=$id('client');if(!sec||$id('goalBox'))return;const card=document.createElement('div');card.className='card';card.id='goalBox';card.innerHTML=`<h2>🎯 هدف مربی</h2><div class="grid2"><input id="goalWeight" type="number" step="0.1" placeholder="وزن هدف"><input id="goalFat" type="number" step="0.1" placeholder="درصد چربی هدف"><input id="goalDate" type="text" inputmode="numeric" placeholder="تاریخ هدف شمسی؛ ۱۴۰۵/۰۸/۱۸" autocomplete="off"></div><textarea id="goalNote" placeholder="یادداشت مربی درباره هدف"></textarea><button onclick="saveGoal()">💾 ذخیره هدف</button>`;sec.appendChild(card);}
+  function buildGoalBox(){const sec=$id('client');if(!sec||$id('goalBox'))return;const card=document.createElement('div');card.className='card';card.id='goalBox';card.innerHTML=`<h2>🎯 هدف شاگرد و پیام مربی</h2><div class="grid2"><input id="goalWeight" type="number" step="0.1" placeholder="وزن هدف"><input id="goalFat" type="number" step="0.1" placeholder="درصد چربی هدف"><input id="goalDate" type="text" inputmode="numeric" placeholder="تاریخ هدف شمسی؛ ۱۴۰۵/۰۸/۱۸" autocomplete="off"></div><textarea id="goalNote" placeholder="پیام یا توصیه مربی که شاگرد در پنل خود مشاهده می‌کند"></textarea><button onclick="saveGoal()">💾 ذخیره هدف</button>`;sec.appendChild(card);}
 
   async function loadMembershipCard(){if(!currentClient)return;const box=$id('membershipCardBox');if(!box)return;try{const rows=await sbGet(`/trainee_memberships?trainee_id=eq.${encodeURIComponent(currentClient.id)}&select=*&order=created_at.desc&limit=1`);const x=rows[0];if(x){$id('cardNumber').value=x.card_number||'';$id('cardHolder').value=x.card_holder||currentClient.name||'';$id('cardExpiry').value=x.card_expiry||'';$id('subAmount').value=x.amount||'';}}catch(e){}}
   window.saveMembershipCard=async function(){if(!currentClient)return alert('اول شاگرد را انتخاب کنید.');try{const body={card_number:$id('cardNumber').value.trim()||null,card_holder:$id('cardHolder').value.trim()||null,card_expiry:$id('cardExpiry').value||null,amount:+$id('subAmount').value||0};const rows=await sbGet(`/trainee_memberships?trainee_id=eq.${encodeURIComponent(currentClient.id)}&select=id&order=created_at.desc&limit=1`);if(rows[0])await sbWrite(`/trainee_memberships?id=eq.${encodeURIComponent(rows[0].id)}`,'PATCH',body);else await sbWrite('/trainee_memberships','POST',{trainee_id:currentClient.id,start_date:today(),...body,status:'active'});alert('اطلاعات کارت/شهریه ذخیره شد.');}catch(e){alert('ذخیره کارت عضویت انجام نشد.\n'+e.message)}};
@@ -1978,7 +1978,7 @@ const plans=workoutResult.data||[], nutrition=nutritionResult.data||[];
   async function loadNoteHistory(){
     const traineeId=currentClient?.id;if(traineeId==null)return;
     const sec=$f('progress');if(!sec)return;
-    let box=$f('noteHistoryBox');if(!box){box=document.createElement('div');box.className='card';box.id='noteHistoryBox';box.innerHTML='<h2>🗂️ تاریخچه پیام‌های مربی</h2><div id="noteHistory"></div>';sec.appendChild(box);}
+    let box=$f('noteHistoryBox');if(!box){box=document.createElement('div');box.className='card';box.id='noteHistoryBox';box.innerHTML='<h2>🗂️ تاریخچه یادداشت‌های مربی</h2><div id="noteHistory"></div>';sec.appendChild(box);}
     const target=$f('noteHistory');if(!target)return;target.innerHTML='<p class="f18-muted">در حال دریافت یادداشت‌ها…</p>';
     try{
       const rows=await sbGet(`/trainee_notes?trainee_id=eq.${encodeURIComponent(traineeId)}&select=*&order=created_at.desc`);
@@ -3851,11 +3851,11 @@ active('workoutMuscleFilters',wm);active('libraryMuscleFilters',lm);if(document.
    card.style.display="";
    body.textContent="در حال دریافت پیام مربی…";
    try{
-    const rows=await sbGet('/trainee_notes?trainee_id=eq.'+encodeURIComponent(traineeId)+'&select=note,created_at&order=created_at.desc&limit=1');
+    const rows=await sbGet('/trainee_goals?trainee_id=eq.'+encodeURIComponent(traineeId)+'&select=coach_note,target_date,created_at&order=created_at.desc&limit=1');
     if(!isTrainee()||String(currentClient?.id||authProfile?.trainee_id)!==String(traineeId))return;
-    if(!rows.length||!String(rows[0].note||"").trim()){card.style.display="none";return;}
+    if(!rows.length||!String(rows[0].coach_note||"").trim()){card.style.display="none";return;}
     const d=rows[0].created_at?new Date(rows[0].created_at).toLocaleDateString("fa-IR"):"";
-    body.innerHTML='<div style="padding:12px;border-radius:10px;background:var(--card-bg,#f3f6f8);line-height:1.9;white-space:pre-wrap;overflow-wrap:anywhere">'+String(rows[0].note).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]))+'</div>'+(d?'<p class="muted" style="font-size:12px;margin-bottom:0">📅 تاریخ پیام: '+d+'</p>':"");
+    body.innerHTML='<div style="padding:12px;border-radius:10px;background:var(--card-bg,#f3f6f8);line-height:1.9;white-space:pre-wrap;overflow-wrap:anywhere">'+String(rows[0].coach_note).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]))+'</div>'+(d?'<p class="muted" style="font-size:12px;margin-bottom:0">📅 تاریخ پیام: '+d+'</p>':"");
    }catch(e){card.style.display="none";console.error("coach message notice",e);}
   }
   function applyRoleAccess(){
