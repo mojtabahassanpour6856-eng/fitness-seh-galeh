@@ -1282,7 +1282,7 @@ window.loadDashboard = loadDashboard;
     qsAll('.nav button').forEach(b=>b.style.display='none');$id('navDash').style.display='block';
     ['client','meal','workout','progress'].forEach(sec=>{const b=qsAll('.nav button').find(x=>String(x.getAttribute('onclick')||'').includes("'"+sec+"'"));if(b)b.style.display='block';});
     document.body.classList.remove('locked');$id('authScreen').style.display='none';$id('authUserBar').style.display='block';$id('authUserText').textContent=`${c.full_name||user.phone} | شاگرد`;
-    showSection('traineeDashboard',$id('navDash'));addScheduleUI();await selectClient(c.id);await loadDashboard();
+    addScheduleUI();await selectClient(c.id);await loadDashboard();showSection('traineeDashboard',$id('navDash'));
   }
 
   function buildAuthTabs(){
