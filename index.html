@@ -1384,7 +1384,7 @@ window.loadDashboard = loadDashboard;
       if(error)throw error;
       if(!data?.user)throw new Error('حساب شاگرد دریافت نشد.');
       await window.finishLogin(data.user);
-    }catch(e){console.error('trainee phone login failed',e);showAuthError('ورود انجام نشد. اگر درخواست شما هنوز تأیید نشده، ابتدا منتظر تأیید مربی بمانید؛ در غیر این صورت شماره یا رمز را بررسی کنید.');}
+    }catch(e){console.error('trainee phone login failed',e);showAuthError('ورود انجام نشد. اگر درخواست هنوز تأیید نشده، منتظر تأیید مربی بمانید؛ در غیر این صورت شماره یا رمز را بررسی کنید. جزئیات: '+(e?.message||String(e)));}
     finally{if(btn){btn.disabled=false;btn.textContent='ورود شاگرد';}}
   };
   window.authMode=function(mode){$id('coachLoginBox').classList.toggle('hide',mode!=='coach');$id('traineeLoginBox').classList.toggle('hide',mode!=='trainee');$id('authCoachTab').classList.toggle('active',mode==='coach');$id('authTraineeTab').classList.toggle('active',mode==='trainee');$id('authError').style.display='none';};
