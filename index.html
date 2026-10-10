@@ -2833,6 +2833,24 @@ window.useLibraryExercise=async function(id){
       }
       const documentTitle = kind === 'meal' ? 'برنامه_غذایی' : 'برنامه_تمرینی';
       const printable = '<!doctype html><html lang="fa" dir="rtl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>'+escShare(title)+'</title><style>body{font-family:Tahoma,Arial,sans-serif;padding:22px;line-height:1.9;color:#111}h1{font-size:21px;text-align:center}h2{font-size:18px}table{width:100%;border-collapse:collapse;margin-top:12px}td,th{border:1px solid #888;padding:6px;text-align:center;font-size:11px;overflow-wrap:anywhere}th{background:#eee}.actions{display:flex;gap:10px;flex-wrap:wrap;margin:0 0 18px}.actions button,.actions a{font-family:Tahoma;padding:10px 14px;border:1px solid #555;border-radius:8px;background:#f3f3f3;color:#111;text-decoration:none;font-size:14px}@media print{body{padding:0}.actions{display:none}thead{display:table-header-group}tr{break-inside:avoid}}@page{size:auto;margin:12mm}</style></head><body><div class="actions"><button onclick="shareFullFile()">📤 اشتراک فایل کامل برنامه</button><button onclick="window.print()">🖨️ چاپ / ذخیره PDF</button><a id="downloadPlan" download="'+documentTitle+'.html">⬇️ ذخیره فایل برنامه</a></div><h1>باشگاه فیتنس سه‌قلعه | مربی مجتبی</h1><p>شاگرد: '+escShare(traineeName)+' | تاریخ: '+escShare(today())+'</p>'+body+'<p>باشگاه فیتنس سه‌قلعه | مربی مجتبی</p><script>function shareFullFile(){try{var html='<!doctype html>'+document.documentElement.outerHTML;var file=new File([html],'+JSON.stringify(documentTitle+'.html')+',{type:'text/html'});if(navigator.share&&navigator.canShare&&navigator.canShare({files:[file]})){navigator.share({title:'+JSON.stringify(title)+',text:'+JSON.stringify('فایل کامل '+title+' | باشگاه فیتنس سه‌قلعه')+',files:[file]}).catch(function(e){if(e&&e.name!=='AbortError')alert('ارسال فایل انجام نشد؛ از دکمه ذخیره فایل یا چاپ / ذخیره PDF استفاده کنید.')})}else{alert('اشتراک فایل در این مرورگر پشتیبانی نمی‌شود. از دکمه «ذخیره فایل برنامه» یا «چاپ / ذخیره PDF» استفاده کنید.')}}catch(e){alert('ساخت فایل اشتراک انجام نشد: '+e.message)}}var blob=new Blob(['<!doctype html>'+document.documentElement.outerHTML],{type:'text/html;charset=utf-8'});document.getElementById('downloadPlan').href=URL.createObjectURL(blob);<\/script></body></html>';
+      /* First try sharing the actual complete program file from the original share-button action.
+         The old implementation sent only title/text; this passes the HTML attachment in files[]. */
+      const file = new File([printable], documentTitle + '.html', {type:'text/html'});
+      if (navigator.share && navigator.canShare && navigator.canShare({files:[file]})) {
+        try {
+          await navigator.share({
+            title: title + ' | ' + traineeName,
+            text: 'فایل کامل ' + title + ' | باشگاه فیتنس سه‌قلعه',
+            files: [file]
+          });
+          try { popup.close(); } catch (_) {}
+          return;
+        } catch (shareError) {
+          if (shareError && shareError.name === 'AbortError') { try { popup.close(); } catch (_) {} return; }
+          console.warn('Direct file share failed; opening the full plan page instead.', shareError);
+        }
+      }
+      /* If file sharing is unsupported or denied, keep the complete page with print and save controls. */
       popup.document.open();
       popup.document.write(printable);
       popup.document.close();
