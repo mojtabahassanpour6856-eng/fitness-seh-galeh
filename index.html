@@ -160,7 +160,7 @@ body.locked{overflow:hidden}
 <div class="grid2">
 <div><label>نام و نام خانوادگی</label><input id="cn"></div>
 <div><label>شماره موبایل</label><input id="cphone" type="tel"></div>
-<div><label>تاریخ تولد</label><input id="cbirth" type="date"></div>
+<div><label>تاریخ تولد</label><input id="cbirth" type="text" inputmode="numeric" placeholder="۱۴۰۵/۰۷/۱۸"></div>
 <div><label>جنسیت</label><select id="cgender"><option>زن</option><option>مرد</option></select></div>
 <div><label>وزن فعلی (کیلو)</label><input id="cweight" type="number" step="0.1"></div>
 <div><label>قد (سانتی‌متر)</label><input id="cheight" type="number" step="0.1"></div>
@@ -210,8 +210,8 @@ body.locked{overflow:hidden}
 <div class="card">
 <h2>💳 عضویت باشگاه</h2>
 <div class="grid2">
-<div><label>تاریخ شروع</label><input id="subStart" type="date"></div>
-<div><label>تاریخ پایان</label><input id="subEnd" type="date"></div>
+<div><label>تاریخ شروع</label><input id="subStart" type="text" inputmode="numeric" placeholder="۱۴۰۵/۰۷/۱۸"></div>
+<div><label>تاریخ پایان</label><input id="subEnd" type="text" inputmode="numeric" placeholder="۱۴۰۵/۰۸/۱۸"></div>
 <div><label>مبلغ شهریه</label><input id="subAmount" type="number"></div>
 <div><label>وضعیت پرداخت</label><select id="subPaid"><option>پرداخت شده</option><option>پرداخت نشده</option></select></div>
 </div>
@@ -1272,13 +1272,13 @@ window.loadDashboard = loadDashboard;
       const data=await sbGet('/trainees?select=*&order=created_at.desc');
       let memberships=[], membershipAvailable=true, membershipError='';
       try{
-       const {data:membershipRows,error:membershipQueryError}=await window.AUTH_SUPABASE.from('trainee_memberships').select('id,trainee_id,start_date,end_date,status,amount,created_at').order('created_at',{ascending:false});
+       const {data:membershipRows,error:membershipQueryError}=await window.AUTH_SUPABASE.from('trainee_memberships').select('id,trainee_id,start_date,end_date,status,created_at').order('created_at',{ascending:false});
 if(membershipQueryError) throw membershipQueryError;
 memberships=membershipRows||[];
       }catch(pluralError){
         // سازگاری خواندن با نام مفرد جدول در نسخه‌های قدیمی دیتابیس
         try{
-          const {data:membershipRows,error:membershipQueryError}=await window.AUTH_SUPABASE.from('trainee_membership').select('id,trainee_id,start_date,end_date,status,amount,created_at').order('created_at',{ascending:false});
+          const {data:membershipRows,error:membershipQueryError}=await window.AUTH_SUPABASE.from('trainee_membership').select('id,trainee_id,start_date,end_date,status,created_at').order('created_at',{ascending:false});
 if(membershipQueryError) throw membershipQueryError;
 memberships=membershipRows||[];
         }catch(singularError){
@@ -1480,21 +1480,21 @@ const plans=workoutResult.data||[], nutrition=nutritionResult.data||[];
 
   // -------- Membership history + status --------
   async function loadMembershipHistory(){
-    if(!currentClient)return;const sec=$f('client');if(!sec)return;let box=$f('membershipHistoryBox');if(!box){box=document.createElement('div');box.className='card';box.id='membershipHistoryBox';box.innerHTML='<h2>💳 سوابق عضویت و پرداخت</h2><div id="membershipHistory"></div>';sec.appendChild(box);}try{const rows=await sbGet(`/trainee_memberships?trainee_id=eq.${encodeURIComponent(currentClient.id)}&select=*&order=start_date.desc,created_at.desc`);$f('membershipHistory').innerHTML=rows.length?rows.map(x=>`<div class="report-row"><span>${escf(x.start_date||'—')} تا ${escf(x.end_date||'—')} | ${escf(statusForMembership(x))}</span><b>${fmtf(x.amount||0)} تومان</b></div>`).join(''):'<p class="f18-muted">سابقه عضویتی ثبت نشده است.</p>';}catch(e){}}
+    if(!currentClient)return;const sec=$f('client');if(!sec)return;let box=$f('membershipHistoryBox');if(!box){box=document.createElement('div');box.className='card';box.id='membershipHistoryBox';box.innerHTML='<h2>💳 سوابق عضویت و پرداخت</h2><div id="membershipHistory"></div>';sec.appendChild(box);}try{const rows=await sbGet(`/trainee_memberships?trainee_id=eq.${encodeURIComponent(currentClient.id)}&select=*&order=start_date.desc,created_at.desc`);$f('membershipHistory').innerHTML=rows.length?rows.map(x=>`<div class="report-row"><span>${escf(window.isoToJalaliDate(x.start_date)||'—')} تا ${escf(window.isoToJalaliDate(x.end_date)||'—')} | ${escf(statusForMembership(x))}</span><b>${fmtf(x.amount||0)} تومان</b></div>`).join(''):'<p class="f18-muted">سابقه عضویتی ثبت نشده است.</p>';}catch(e){}}
 
   // -------- Profile completeness: editable basic info --------
   function addProfileBasicFields(){
     const card=$f('client')?.querySelector('.card');if(!card||$f('pbirth'))return;
     const anchor=$f('pn')?.parentElement?.parentElement;if(!anchor)return;
-    const row=document.createElement('div');row.className='grid2';row.innerHTML='<div><label>تاریخ تولد</label><input id="pbirth" type="date"></div><div><label>جنسیت</label><select id="pgender"><option>زن</option><option>مرد</option></select></div>';anchor.appendChild(row);
+    const row=document.createElement('div');row.className='grid2';row.innerHTML='<div><label>تاریخ تولد</label><input id="pbirth" type="text" inputmode="numeric" placeholder="۱۴۰۵/۰۷/۱۸"></div><div><label>جنسیت</label><select id="pgender"><option>زن</option><option>مرد</option></select></div>';anchor.appendChild(row);
   }
-  async function loadProfileBasic(){if(!currentClient)return;if($f('pbirth'))$f('pbirth').value=currentClient.birth_date||'';if($f('pgender'))$f('pgender').value=currentClient.gender||'زن';}
+  async function loadProfileBasic(){if(!currentClient)return;if($f('pbirth'))$f('pbirth').value=window.isoToJalaliDate(currentClient.birth_date)||'';if($f('pgender'))$f('pgender').value=currentClient.gender||'زن';}
   const baseSelectForProfile=window.selectClient;
   window.selectClient=async function(id){await baseSelectForProfile(id);await loadProfileBasic();};
   const baseSaveProfile=window.saveProfile;
   window.saveProfile=async function(){
     if(!currentClient)return alert('اول شاگرد را انتخاب کنید.');
-    const payload={full_name:$f('pn').value.trim(),current_weight:+$f('pweight').value||null,height:+$f('pheight').value||null,goal:$f('pgoal').value||null,training_level:$f('plevel').value||null,training_type:$f('ptype')?.value||'gym',home_equipment:$f('pequipment')?.value.trim()||null,birth_date:$f('pbirth')?.value||null,gender:$f('pgender')?.value||null};
+    const payload={full_name:$f('pn').value.trim(),current_weight:+$f('pweight').value||null,height:+$f('pheight').value||null,goal:$f('pgoal').value||null,training_level:$f('plevel').value||null,training_type:$f('ptype')?.value||'gym',home_equipment:$f('pequipment')?.value.trim()||null,birth_date:window.jalaliToISODate($f('pbirth')?.value)||null,gender:$f('pgender')?.value||null};
     if(!payload.full_name)return alert('نام شاگرد را وارد کنید.');
     try{await sbWrite(`/trainees?id=eq.${encodeURIComponent(currentClient.id)}`,'PATCH',payload);await loadClients();currentClient=clients.find(x=>String(x.id)===String(currentClient.id));await loadProfileBasic();await loadDashboard();alert('پروفایل کامل شاگرد ذخیره شد.');}catch(e){alert('ذخیره پروفایل انجام نشد.\n'+e.message)}
   };
@@ -1807,7 +1807,7 @@ const plans=workoutResult.data||[], nutrition=nutritionResult.data||[];
         phone:(byId('cphone')?.value||'').trim()||null,
         phone_normalized:phoneNormForRegistration((byId('cphone')?.value||'').trim())||null,
         gender:byId('cgender')?.value||null,
-        birth_date:byId('cbirth')?.value||null,
+        birth_date:window.jalaliToISODate(byId('cbirth')?.value)||null,
         height:+(byId('cheight')?.value||0)||null,
         current_weight:+(byId('cweight')?.value||0)||null,
         goal:byId('cgoal')?.value||null,
@@ -1951,8 +1951,8 @@ const plans=workoutResult.data||[], nutrition=nutritionResult.data||[];
     if(saving)return;
     if(typeof currentClient==='undefined'||!currentClient){alert('اول شاگرد را انتخاب کنید.');return;}
     const traineeId=currentClient.id;
-    const start=value('subStart')||((typeof today==='function')?today():new Date().toISOString().slice(0,10));
-    const end=value('subEnd')||null;
+    const start=window.jalaliToISODate(value('subStart'))||((typeof today==='function')?today():new Date().toISOString().slice(0,10));
+    const end=window.jalaliToISODate(value('subEnd'))||null;
     const amountRaw=value('subAmount');
     const amount=amountRaw===''?0:Number(amountRaw);
     const paid=value('subPaid');
@@ -1979,8 +1979,7 @@ const plans=workoutResult.data||[], nutrition=nutritionResult.data||[];
     saving=true;
     try{
       const membershipBody={trainee_id:traineeId,start_date:start,end_date:end,
-        status:isPaid?'active':'pending',amount,
-        payment_date:isPaid?(typeof today==='function'?today():new Date().toISOString().slice(0,10)):null,
+        status:isPaid?'active':'pending',
         description:'عضویت باشگاه'};
       await window.sbWrite('/trainee_memberships','POST',membershipBody);
       if(isPaid && amount>0){
@@ -2424,5 +2423,18 @@ const plans=workoutResult.data||[], nutrition=nutritionResult.data||[];
     };
   }
   document.addEventListener('DOMContentLoaded',()=>{if(document.body.classList.contains('locked')===false&&typeof authProfile!=='undefined'&&authProfile?.role==='coach')window.loadClients();});
+})();
+</script>
+
+<script>
+/* Persian Jalali date entry for birth and membership dates; database values remain ISO Gregorian. */
+(function(){
+ const norm=v=>String(v||'').replace(/[۰-۹]/g,d=>'۰۱۲۳۴۵۶۷۸۹'.indexOf(d)).replace(/[٠-٩]/g,d=>'٠١٢٣٤٥٦٧٨٩'.indexOf(d)).trim();
+ function g2j(gy,gm,gd){const gdm=[0,31,59,90,120,151,181,212,243,273,304,334];let jy=gy>1600?979:0;gy-=gy>1600?1600:621;const gy2=gm>2?gy+1:gy;let days=365*gy+Math.floor((gy2+3)/4)-Math.floor((gy2+99)/100)+Math.floor((gy2+399)/400)-80+gd+gdm[gm-1];jy+=33*Math.floor(days/12053);days%=12053;jy+=4*Math.floor(days/1461);days%=1461;if(days>365){jy+=Math.floor((days-1)/365);days=(days-1)%365;}const jm=days<186?1+Math.floor(days/31):7+Math.floor((days-186)/30);const jd=1+(days<186?days%31:(days-186)%30);return [jy,jm,jd];}
+ function j2g(jy,jm,jd){jy+=1595;let days=-355668+365*jy+Math.floor(jy/33)*8+Math.floor(((jy%33)+3)/4)+jd+(jm<7?(jm-1)*31:(jm-7)*30+186);let gy=400*Math.floor(days/146097);days%=146097;if(days>36524){gy+=100*Math.floor(--days/36524);days%=36524;if(days>=365)days++;}gy+=4*Math.floor(days/1461);days%=1461;if(days>365){gy+=Math.floor((days-1)/365);days=(days-1)%365;}let gd=days+1;const leap=(gy%4===0&&gy%100!==0)||gy%400===0;const md=[0,31,leap?29:28,31,30,31,30,31,31,30,31,30,31];let gm=1;while(gm<=12&&gd>md[gm]){gd-=md[gm];gm++;}return [gy,gm,gd];}
+ window.jalaliToISODate=function(v){const x=norm(v);if(!x)return '';if(/^\d{4}-\d{2}-\d{2}$/.test(x))return x;const m=x.match(/^(\d{4})[\/.-](\d{1,2})[\/.-](\d{1,2})$/);if(!m)return '';let y=+m[1],mo=+m[2],d=+m[3];if(y<1200||y>1600||mo<1||mo>12||d<1||d>(mo<=6?31:mo<=11?30:30))return '';const [gy,gm,gd]=j2g(y,mo,d);const back=g2j(gy,gm,gd);if(back[0]!==y||back[1]!==mo||back[2]!==d)return '';const out=String(gy).padStart(4,'0')+'-'+String(gm).padStart(2,'0')+'-'+String(gd).padStart(2,'0');const check=new Date(out+'T12:00:00Z');if(Number.isNaN(check.getTime())||check.toISOString().slice(0,10)!==out)return '';return out;};
+ window.isoToJalaliDate=function(v){const x=String(v||'').slice(0,10);if(!/^\d{4}-\d{2}-\d{2}$/.test(x))return '';const [y,m,d]=x.split('-').map(Number);const [jy,jm,jd]=g2j(y,m,d);return String(jy)+'/'+String(jm).padStart(2,'0')+'/'+String(jd).padStart(2,'0');};
+ function setup(){['cbirth','pbirth','subStart','subEnd'].forEach(id=>{const e=document.getElementById(id);if(e){e.type='text';e.inputMode='numeric';e.placeholder=id==='subEnd'?'۱۴۰۵/۰۸/۱۸':'۱۴۰۵/۰۷/۱۸';e.autocomplete='off';}});}
+ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',setup,{once:true});else setup();
 })();
 </script>
