@@ -50,7 +50,16 @@ body.locked{overflow:hidden}
 .logout-btn{background:#b83232!important;color:#fff!important;margin-top:8px!important}
 </style>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-</head>
+<style id="FITNESS_LIBRARY_DETAIL_VIEW_STYLE">
+#libraryList{display:grid;grid-template-columns:repeat(auto-fit,minmax(145px,1fr));gap:10px}
+.library-muscle-entry{display:flex;align-items:center;gap:9px;width:100%;min-height:78px;padding:13px;text-align:right;border:1px solid #455467;border-radius:14px;background:linear-gradient(145deg,#202a36,#151b24);color:inherit;cursor:pointer}
+.library-entry-icon{font-size:25px}.library-entry-name{font-weight:800;flex:1}.library-entry-arrow{font-size:25px;color:#e4b44f}
+.library-detail-view{grid-column:1/-1;display:flex;flex-direction:column;gap:12px}
+.library-detail-exercises{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px}
+.library-inline-add{border:1px dashed #b18a3c;border-radius:14px;padding:13px;background:#171d25}
+.library-inline-add input,.library-inline-add select{width:100%;min-width:0}.library-inline-add label{font-size:12px}
+.library-detail-view h3{color:#f1c66b}
+</style></head>
 <body class="locked">
 <div id="authScreen">
   <div class="auth-card">
@@ -3314,7 +3323,10 @@ window.filterLibraryMuscle=m=>{lm=cats.includes(m)?m:'همه حرکات';active(
 window.renderWorkoutExerciseOptions=function(){let sel=document.getElementById('workoutExercise');if(!sel)return;let q=n(document.getElementById('workoutExerciseSearch')?.value),rows=all.filter(r=>(activeWorkoutTemplate?activeWorkoutTemplate.groups.some(g=>match(r,g)):match(r,wm))&&(!q||n([r.name,r.category,r.muscle_group,r.equipment].join(' ')).includes(q))),prev=sel.value;sel.innerHTML=rows.length?rows.map(r=>'<option value="'+e(r.id)+'">'+e(r.name)+(r.category?' · '+e(r.category):'')+'</option>').join(''):'<option value="">حرکتی در این دسته پیدا نشد</option>';if(prev&&rows.some(r=>String(r.id)===String(prev)))sel.value=prev;let c=document.getElementById('workoutExerciseCount');if(c)c.textContent=rows.length+' حرکت در «'+wm+'»'+(q?' · جستجو فعال':'');};
 window.loadExercises=async function(){try{let rows;try{rows=await sbGet('/exercises?select=id,name,category,muscle_group,equipment,instructions&order=name.asc');}catch(x){rows=await sbGet('/exercises?select=id,name&order=name.asc');}rows=Array.isArray(rows)?rows:[];try{let b=await sbGet('/trainer_exercises?select=name,category,target_muscle,equipment,coach_note,is_favorite'),map=new Map((b||[]).map(x=>[n(x.name),x]));rows=rows.map(r=>{let x=map.get(n(r.name));return x?{...x,...r,category:r.category||x.category,muscle_group:r.muscle_group||x.target_muscle,equipment:r.equipment||x.equipment,coach_note:x.coach_note,is_favorite:x.is_favorite}:r;});favs=new Set((b||[]).filter(x=>x.is_favorite).map(x=>n(x.name)));}catch(x){console.warn('بانک تکمیلی در دسترس نیست',x);}all=rows;window.renderWorkoutExerciseOptions();}catch(x){console.error(x);let c=document.getElementById('workoutExerciseCount');if(c)c.textContent='دریافت حرکات انجام نشد؛ اتصال را بررسی کنید.';}};
 window.__fitnessOpenLibraryGroups=window.__fitnessOpenLibraryGroups||new Set();
-window.toggleLibraryGroup=function(key){const opened=window.__fitnessOpenLibraryGroups;if(opened.has(key))opened.delete(key);else opened.add(key);document.querySelectorAll('[data-library-group]').forEach(card=>{if(card.dataset.libraryGroup===key){const body=card.querySelector('.library-group-body'),arrow=card.querySelector('.library-group-arrow');if(body)body.style.display=opened.has(key)?'grid':'none';if(arrow)arrow.textContent=opened.has(key)?'▴':'▾';}});};
+window.__fitnessSelectedLibraryMuscle=window.__fitnessSelectedLibraryMuscle||'';
+window.toggleLibraryGroup=function(key){window.openLibraryMuscle(key.replace(/^lib-/,''));};
+window.openLibraryMuscle=function(cat){window.__fitnessSelectedLibraryMuscle=cat;window.loadLibraryExercises();};
+window.backToLibraryGroups=function(){window.__fitnessSelectedLibraryMuscle='';window.loadLibraryExercises();};
 window.loadLibraryExercises=async function(){
  let box=document.getElementById('libraryList');if(!box)return;
  try{
@@ -3323,23 +3335,32 @@ window.loadLibraryExercises=async function(){
   const source=Array.isArray(rows)?rows:[];
   favs=new Set(source.filter(x=>x.is_favorite).map(x=>n(x.name)));
   const cats=['سینه','پشت','سرشانه','جلو بازو','پشت بازو','پا','شکم','کاردیو','اصلاحی','سایر'];
+  const icons={'سینه':'🏋️','پشت':'💪','سرشانه':'🔱','جلو بازو':'💪','پشت بازو':'⚡','پا':'🦵','شکم':'🎯','کاردیو':'🏃','اصلاحی':'🧘','سایر':'📚'};
   function categoryOf(x){
    const fields=[x.category,x.target_muscle,x.name,x.equipment,x.coach_note].map(n);
    for(const c of cats){if(c==='سایر')continue;const keys=kw[c]||[c];if(fields.some(v=>v===n(c)||keys.some(k=>v.includes(n(k)))))return c;}
    const direct=String(x.category||'').trim();return cats.includes(direct)?direct:'سایر';
   }
-  const filtered=source.filter(x=>(lm==='همه حرکات'||(lm==='علاقه‌مندی'?!!x.is_favorite:match(x,lm)))&&(!q||n([x.name,x.category,x.target_muscle,x.equipment,x.level,x.goal,x.coach_note].join(' ')).includes(q)));
+  const selected=window.__fitnessSelectedLibraryMuscle||'';
+  const filtered=source.filter(x=>(!selected||categoryOf(x)===selected)&&(lm==='همه حرکات'||selected||(lm==='علاقه‌مندی'?!!x.is_favorite:match(x,lm)))&&(!q||n([x.name,x.category,x.target_muscle,x.equipment,x.level,x.goal,x.coach_note].join(' ')).includes(q)));
   const groups=new Map();cats.forEach(c=>groups.set(c,[]));
   filtered.forEach(x=>groups.get(categoryOf(x)).push(x));
+  const search=document.getElementById('libSearch'),filters=document.getElementById('libraryMuscleFilters');
+  if(search)search.style.display=selected?'none':'';
+  if(filters)filters.style.display=selected?'none':'';
+  const formGrid=document.getElementById('libName')?.closest('.grid2');
+  if(formGrid)formGrid.style.display='none';
+  ['libNote'].forEach(id=>{const el=document.getElementById(id);if(el)el.style.display='none';});
+  document.querySelectorAll('button[onclick="saveLibraryExercise()"]').forEach(b=>b.style.display='none');
+  if(selected){
+   const items=groups.get(selected)||[];
+   const cards=items.map(x=>'<div class="library-exercise-card"><div class="library-exercise-title">'+(x.is_favorite?'⭐':'🏋️')+' '+e(x.name)+'</div><div class="library-exercise-meta"><span class="pill">'+e(x.target_muscle||x.category||selected)+'</span><span class="pill">'+e(x.level||'سطح نامشخص')+'</span><span class="pill">'+e(x.equipment||'بدون تجهیزات')+'</span></div>'+(x.coach_note?'<p class="muted">'+e(x.coach_note)+'</p>':'')+'<div class="f18-actions"><button class="secondary mini" onclick="toggleExerciseFavorite(\''+e(x.id)+'\','+!!x.is_favorite+')">'+(x.is_favorite?'☆ حذف علاقه‌مندی':'⭐ علاقه‌مندی')+'</button><button class="secondary mini" onclick="useLibraryExercise(\''+e(x.id)+'\')">➕ استفاده در برنامه</button></div></div>').join('');
+   box.innerHTML='<div class="library-detail-view"><button type="button" class="secondary" onclick="backToLibraryGroups()">← بازگشت به همه عضلات</button><h3 style="margin:12px 0">'+(icons[selected]||'🏋️')+' بانک حرکات '+e(selected)+'</h3><p class="muted">حرکت‌های این عضله را ببین، حرکت تازه اضافه کن یا هر حرکت را به برنامه شاگرد بفرست.</p><div class="library-detail-exercises">'+(cards||'<p class="muted">هنوز حرکتی برای این بخش ثبت نشده است.</p>')+'</div><div class="library-inline-add"><strong>➕ افزودن حرکت جدید به '+e(selected)+'</strong><div class="grid2"><div><label>نام حرکت</label><input data-new-ex-name placeholder="مثلاً پرس سینه دمبل"></div><div><label>تجهیزات</label><input data-new-ex-equipment placeholder="مثلاً دمبل یا دستگاه"></div><div><label>سطح</label><select data-new-ex-level><option>مبتدی</option><option>متوسط</option><option>پیشرفته</option></select></div><div><label>نکته مربی (اختیاری)</label><input data-new-ex-note placeholder="نکته کوتاه درباره اجرا"></div></div><button type="button" data-category="'+e(selected)+'" onclick="saveLibraryExerciseInGroup(this.dataset.category,this)">💾 ذخیره حرکت در '+e(selected)+'</button><p class="muted" data-new-ex-status>حرکت در بانک همین عضله ذخیره می‌شود و برای افزودن به برنامه شاگرد آماده خواهد شد.</p></div></div>';
+   return;
+  }
   const ordered=lm!=='همه حرکات'&&lm!=='علاقه‌مندی'?[lm,...cats.filter(c=>c!==lm)]:cats;
-  const nonempty=ordered.filter(c=>(groups.get(c)||[]).length);
-  box.innerHTML=nonempty.length?nonempty.map(cat=>{
-   const key='lib-'+cat,items=groups.get(cat)||[],autoOpen=!!q||(lm!=='همه حرکات'&&lm!=='علاقه‌مندی');
-   if(autoOpen)window.__fitnessOpenLibraryGroups.add(key);
-   const isOpen=window.__fitnessOpenLibraryGroups.has(key);
-   const cards=items.map(x=>'<div class="library-exercise-card"><div class="library-exercise-title">'+(x.is_favorite?'⭐':'🏋️')+' '+e(x.name)+'</div><div class="library-exercise-meta"><span class="pill">'+e(x.target_muscle||x.category||cat)+'</span><span class="pill">'+e(x.level||'سطح نامشخص')+'</span><span class="pill">'+e(x.equipment||'بدون تجهیزات')+'</span></div>'+(x.coach_note?'<p class="muted">'+e(x.coach_note)+'</p>':'')+'<div class="f18-actions"><button class="secondary mini" onclick="toggleExerciseFavorite(\''+e(x.id)+'\','+!!x.is_favorite+')">'+(x.is_favorite?'☆ حذف علاقه‌مندی':'⭐ علاقه‌مندی')+'</button><button class="secondary mini" onclick="useLibraryExercise(\''+e(x.id)+'\')">➕ استفاده در برنامه</button></div></div>').join('');
-   return '<div class="library-muscle-card" data-library-group="'+e(key)+'"><button type="button" class="library-group-toggle" onclick="toggleLibraryGroup(\''+e(key)+'\')"><span>'+({'سینه':'🏋️','پشت':'💪','سرشانه':'🔱','جلو بازو':'💪','پشت بازو':'⚡','پا':'🦵','شکم':'🎯','کاردیو':'🏃','اصلاحی':'🧘','سایر':'📚'}[cat]||'🏋️')+' '+e(cat)+'</span><span class="library-group-count">'+items.length+' حرکت <span class="library-group-arrow">'+(isOpen?'▴':'▾')+'</span></span></button><div class="library-group-body" style="display:'+(isOpen?'grid':'none')+'">'+cards+'<div class="library-inline-add" style="grid-column:1/-1;border:1px dashed #8f6b22;border-radius:12px;padding:11px;background:#171d25"><strong>➕ افزودن حرکت به بخش '+e(cat)+'</strong><div class="grid2"><div><label>نام حرکت</label><input data-new-ex-name placeholder="مثلاً پرس سینه دمبل"></div><div><label>تجهیزات</label><input data-new-ex-equipment placeholder="مثلاً دمبل، دستگاه یا وزن بدن"></div><div><label>سطح</label><select data-new-ex-level><option>مبتدی</option><option>متوسط</option><option>پیشرفته</option></select></div><div><label>نکته مربی (اختیاری)</label><input data-new-ex-note placeholder="نکته کوتاه درباره اجرا"></div></div><button type="button" data-category="'+e(cat)+'" onclick="saveLibraryExerciseInGroup(this.dataset.category,this)">💾 ذخیره حرکت در '+e(cat)+'</button><p class="muted" data-new-ex-status style="margin-bottom:0">پس از ذخیره، حرکت در بانک همین عضله ثبت و برای انتخاب در برنامه تمرینی آماده می‌شود.</p></div></div></div>';
-  }).join(''):'<div class="muted">در این گروه هنوز حرکتی ثبت نشده است.</div>';
+  const shown=ordered.filter(c=>(groups.get(c)||[]).length||(!q&&lm==='همه حرکات'));
+  box.innerHTML=shown.length?shown.map(cat=>'<button type="button" class="library-muscle-card library-muscle-entry" onclick="openLibraryMuscle(\''+e(cat)+'\')"><span class="library-entry-icon">'+(icons[cat]||'🏋️')+'</span><span class="library-entry-name">'+e(cat)+'</span><span class="library-group-count">'+((groups.get(cat)||[]).length)+' حرکت</span><span class="library-entry-arrow">‹</span></button>').join(''):'<div class="muted">حرکتی مطابق جستجو پیدا نشد.</div>';
  }catch(x){console.error(x);box.textContent='دریافت بانک حرکات انجام نشد؛ اتصال یا مجوز بانک را بررسی کنید.';}
 }
 window.toggleExerciseFavorite=async function(id,value){try{await sbWrite('/trainer_exercises?id=eq.'+encodeURIComponent(id),'PATCH',{is_favorite:!value});await window.loadLibraryExercises();await window.loadExercises();}catch(x){alert('تغییر علاقه‌مندی انجام نشد.\n'+(x.message||String(x)));}};
