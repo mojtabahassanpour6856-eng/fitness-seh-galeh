@@ -1033,7 +1033,7 @@ loadExercises();
     try{const a=await sbGet(`/body_analyses?trainee_id=eq.${encodeURIComponent(currentClient.id)}&select=weight,body_fat,analysis_date&order=analysis_date.desc&limit=1`);setText('dashAnalysis',a[0]?`${a[0].weight||'—'} kg`:'ثبت نشده');setText('dashProgress',a[0]?.analysis_date||'ثبت نشده');}catch(e){}
     try{const water=await loadWaterToday();setText('dashWater',`${fmt(water)} ml`);}catch(e){}
     try{const a=await sbGet(`/activity_logs?trainee_id=eq.${encodeURIComponent(currentClient.id)}&activity_date=eq.${today()}&select=calories_burned`);setText('dashActivity',`${fmt(a.reduce((n,x)=>n+(+x.calories_burned||0),0))} kcal`);}catch(e){}
-    try{const m=await sbGet(`/trainee_memberships?trainee_id=eq.${encodeURIComponent(currentClient.id)}&select=end_date,status&order=created_at.desc&limit=1`);setText('dashMembership',m[0]?.end_date||'ثبت نشده');}catch(e){}
+    try{const m=await sbGet(`/trainee_memberships?trainee_id=eq.${encodeURIComponent(currentClient.id)}&select=end_date,status&order=created_at.desc&limit=1`);setText('dashMembership',window.isoToJalaliDate(m[0]?.end_date)||'ثبت نشده');}catch(e){}
     try{const ch=await sbGet(`/challenge_participants?trainee_id=eq.${encodeURIComponent(currentClient.id)}&select=id,status`);setText('dashChallenges',ch.length?`${ch.filter(x=>x.status==='active').length} فعال`:'—');}catch(e){setText('dashChallenges','—')}
   }
 window.loadDashboard = loadDashboard;
@@ -1957,8 +1957,9 @@ const plans=workoutResult.data||[], nutrition=nutritionResult.data||[];
     if(typeof currentClient==='undefined'||!currentClient){alert('اول شاگرد را انتخاب کنید.');return;}
     const traineeId=currentClient.id;
     const startRaw=value('subStart'),endRaw=value('subEnd');
-    const start=startRaw?window.jalaliToISODate(startRaw):((typeof today==='function')?today():new Date().toISOString().slice(0,10));
-    const end=endRaw?window.jalaliToISODate(endRaw):null;
+    if(!startRaw||!endRaw){alert('لطفاً تاریخ شروع و پایان عضویت را هر دو به صورت شمسی وارد کنید.');return;}
+    const start=window.jalaliToISODate(startRaw);
+    const end=window.jalaliToISODate(endRaw);
     if(startRaw&&!start){alert('تاریخ شروع عضویت معتبر نیست؛ نمونه: ۱۴۰۵/۰۷/۱۸');return;}
     if(endRaw&&!end){alert('تاریخ پایان عضویت معتبر نیست؛ نمونه: ۱۴۰۵/۰۸/۱۸');return;}
     if(start&&end&&end<start){alert('تاریخ پایان عضویت نمی‌تواند قبل از تاریخ شروع باشد.');return;}
