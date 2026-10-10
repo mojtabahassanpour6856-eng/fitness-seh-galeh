@@ -1046,8 +1046,20 @@ async function deleteWorkoutExercise(id){if(!confirm('این حرکت از بر�
 
 async function saveProgress(){
  if(!currentClient){alert("اول شاگرد را انتخاب کنید.");return;}
- const body={trainee_id:currentClient.id,log_date:$("prDate").value||today(),weight:+$("prWeight").value||null};
- try{await sbWrite("/weight_logs","POST",body);await sbWrite("/body_analyses","POST",{trainee_id:currentClient.id,analysis_date:body.log_date,weight:body.weight,waist:+$("waist").value||null,abdomen:+$("waist").value||null,hip:+$("hip").value||null,thigh:+$("thigh").value||null,notes:"ثبت پیشرفت دوره‌ای"});await loadClients();alert("وزن و اندازه‌های پیشرفت ثبت شد.");}catch(e){alert("ثبت پیشرفت انجام نشد.\n"+e.message);}
+ const traineeId=currentClient.id;
+ const body={trainee_id:traineeId,log_date:$("prDate").value||today(),weight:+$("prWeight").value||null};
+ try{
+  if(authProfile?.role==="trainee"){
+   await sbWrite("/weight_logs","POST",body);
+   if(!currentClient||String(currentClient.id)!==String(traineeId))throw new Error("شاگرد هنگام ثبت تغییر کرده است؛ لطفاً دوباره تلاش کنید.");
+   alert("وزن و پیشرفت شخصی ثبت شد.");
+  }else if(authProfile?.role==="coach"){
+   await sbWrite("/weight_logs","POST",body);
+   if(!currentClient||String(currentClient.id)!==String(traineeId))throw new Error("شاگرد هنگام ثبت تغییر کرده است؛ ثبت ادامه پیدا نکرد.");
+   await sbWrite("/body_analyses","POST",{trainee_id:traineeId,analysis_date:body.log_date,weight:body.weight,waist:+$("waist").value||null,abdomen:+$("waist").value||null,hip:+$("hip").value||null,thigh:+$("thigh").value||null,notes:"ثبت پیشرفت دوره‌ای"});
+   await loadClients();alert("وزن و اندازه‌های پیشرفت ثبت شد.");
+  }else{alert("برای ثبت اطلاعات ابتدا وارد حساب شوید.");return;}
+ }catch(e){alert("ثبت پیشرفت انجام نشد.\n"+e.message);}
 }
 async function saveAnalysis(){
  if(!currentClient){alert("اول شاگرد را انتخاب کنید.");return;}
@@ -3743,4 +3755,120 @@ active('workoutMuscleFilters',wm);active('libraryMuscleFilters',lm);if(document.
     box.innerHTML=summary+html;
   };
 })();
+
+/* ROLE ACCESS — separate coach-managed records from trainee self-reporting. */
+(function(){
+ const isCoach=()=>typeof authProfile!=="undefined"&&authProfile?.role==="coach";
+ const isTrainee=()=>typeof authProfile!=="undefined"&&authProfile?.role==="trainee";
+ const deny=()=>{alert("این بخش فقط در دسترس مربی است.");return false;};
+ function lockInputs(root,ids,hideButtons=true){
+  if(!root)return;
+  root.querySelectorAll("input,select,textarea").forEach(el=>{el.disabled=true;el.setAttribute("aria-disabled","true");});
+  if(hideButtons)root.querySelectorAll("button").forEach(b=>b.style.display="none");
+ }
+ function applyRoleAccess(){
+  if(!isTrainee())return;
+  const nav=document.querySelector(".nav");
+  if(nav)nav.querySelectorAll("button").forEach(b=>{
+   const action=String(b.getAttribute("onclick")||"");
+   if(/showSection\(['"]coach['"]/.test(action))b.style.display="none";
+  });
+  const coachSection=document.getElementById("coach");
+  if(coachSection)coachSection.style.display="none";
+  const requests=document.getElementById("registrationRequestsPanel");
+  if(requests)requests.style.display="none";
+
+  const client=document.getElementById("client");
+  if(client){
+   const cards=client.querySelectorAll(":scope > .card");
+   if(cards[0]){
+    cards[0].querySelectorAll("input,select,textarea").forEach(el=>{el.disabled=true;el.setAttribute("aria-disabled","true");});
+    cards[0].querySelectorAll('button[onclick="saveProfile()"]').forEach(b=>b.style.display="none");
+   }
+   if(cards[2]){
+    const grid=cards[2].querySelector(".grid2");
+    if(grid)grid.style.display="none";
+    cards[2].querySelectorAll("button").forEach(b=>b.style.display="none");
+    let msg=cards[2].querySelector(".role-readonly-message");
+    if(!msg){msg=document.createElement("p");msg.className="muted role-readonly-message";msg.textContent="اطلاعات عضویت و شهریه توسط مربی مدیریت می‌شود.";cards[2].appendChild(msg);}
+   }
+   if(cards[3])cards[3].style.display="none"; // goals/limitations are coach-managed
+   [cards[4],cards[5]].forEach(card=>{
+    if(!card)return;
+    card.querySelectorAll("input,select,textarea,button").forEach(el=>el.style.display="none");
+    const h=card.querySelector("h2");if(h)h.textContent=h.textContent.replace("ثبت","مشاهده");
+   });
+   const schedule=document.getElementById("scheduleCard");
+   if(schedule){schedule.querySelectorAll("input,select,textarea,button").forEach(el=>el.style.display="none");}
+  }
+
+  const mealCoach=document.getElementById("mealCoachView");
+  const mealStudent=document.getElementById("mealStudentView");
+  const mealReport=document.getElementById("mealReportView");
+  if(mealCoach)mealCoach.style.display="none";
+  if(mealStudent){mealStudent.classList.remove("hide");mealStudent.style.display="block";}
+  if(mealReport)mealReport.style.display="none";
+  ["mealTabCoach","mealTabReport"].forEach(id=>{const el=document.getElementById(id);if(el)el.style.display="none";});
+  const mealTabStudent=document.getElementById("mealTabStudent");
+  if(mealTabStudent){mealTabStudent.style.display="inline-block";mealTabStudent.classList.add("active");}
+  if(typeof window.mealTab==="function"&&!window.__roleMealTabWrapped){
+   const original=window.mealTab;
+   window.mealTab=function(mode){return original(isTrainee()?"student":mode);};
+   window.__roleMealTabWrapped=true;
+  }
+
+  const workout=document.getElementById("workout");
+  if(workout){
+   const cards=workout.querySelectorAll(":scope > .card");
+   if(cards[0]){
+    cards[0].querySelectorAll("input,select,textarea").forEach(el=>{el.disabled=true;el.setAttribute("aria-disabled","true");});
+    cards[0].querySelectorAll("button").forEach(b=>b.style.display="none");
+   }
+   if(cards[1])cards[1].style.display="none";
+   if(cards[2])cards[2].style.display="none";
+   const list=document.getElementById("workoutList");
+   if(list)list.querySelectorAll('button[onclick*="deleteWorkoutExercise"],button[onclick*="editWorkoutExercise"],button[onclick*="moveWorkoutExercise"]').forEach(b=>b.style.display="none");
+  }
+  const progress=document.getElementById("progress");
+  if(progress){
+   const cards=progress.querySelectorAll(":scope > .card");
+   if(cards[1])cards[1].style.display="none"; // body analysis entry is coach-only
+   if(cards[2])cards[2].style.display="none"; // private coach notes
+  }
+  const food=document.getElementById("food");
+  if(food){
+   food.querySelectorAll('button[onclick="add()"],button[onclick="editFood()"],button[onclick="deleteFood()"],button[onclick="saveEdit()"]').forEach(b=>b.style.display="none");
+  }
+ }
+ const coachOnly=[
+  "saveProfile","saveProfileExtras","saveSubscription","saveSupplement","saveInjury",
+  "saveNutritionPlan","saveMealFood","deleteMealFood","saveLibraryExercise",
+  "saveWorkoutPlan","addWorkoutExercise","deleteWorkoutExercise","editWorkoutExercise",
+  "moveWorkoutExercise","saveAnalysis","saveNote","saveTrainingSchedule","addClient",
+  "add","editFood","deleteFood","saveEdit"
+ ];
+ coachOnly.forEach(name=>{
+  const original=window[name];
+  if(typeof original!=="function"||window["__roleGuard_"+name])return;
+  window[name]=function(...args){if(isTrainee())return deny();return original.apply(this,args);};
+  window["__roleGuard_"+name]=true;
+ });
+ const oldFinish=window.finishLogin;
+ if(typeof oldFinish==="function"&&!window.__roleFinishWrapped){
+  window.finishLogin=async function(user){await oldFinish(user);applyRoleAccess();};
+  window.__roleFinishWrapped=true;
+ }
+ const oldShow=window.showSection;
+ if(typeof oldShow==="function"&&!window.__roleShowWrapped){
+  window.showSection=function(id,btn){const out=oldShow(id,btn);applyRoleAccess();return out;};
+  window.__roleShowWrapped=true;
+ }
+ const list=document.getElementById("workoutList");
+ if(list&&typeof MutationObserver!=="undefined"){
+  new MutationObserver(()=>{if(isTrainee())list.querySelectorAll('button[onclick*="deleteWorkoutExercise"],button[onclick*="editWorkoutExercise"],button[onclick*="moveWorkoutExercise"]').forEach(b=>b.style.display="none");}).observe(list,{childList:true,subtree:true});
+ }
+ document.addEventListener("DOMContentLoaded",applyRoleAccess);
+ setTimeout(applyRoleAccess,800);
+})();
+
 </script>
