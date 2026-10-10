@@ -1165,7 +1165,7 @@ window.loadDashboard = loadDashboard;
     if(!chosen.length)return alert(groupMode?'حرکت‌های گروه را انتخاب کنید.':'حرکت را انتخاب کنید.');
     if(system==='superset'&&chosen.length!==2)return alert('برای سوپرست دقیقاً دو حرکت انتخاب کنید.');
     if(system==='triset'&&chosen.length!==3)return alert('برای تری‌ست دقیقاً سه حرکت انتخاب کنید.');
-    if(system==='giant'&&chosen.length<3)return alert('برای جاینت‌ست حداقل سه حرکت انتخاب کنید.');
+    if(system==='giant'&&chosen.length!==3)return alert('برای جاینت‌ست دقیقاً سه حرکت انتخاب کنید.');
     const baseOrder=workoutExercisesCache.length?Math.max(...workoutExercisesCache.map(x=>Number(x.sort_order)||0))+1:1;
     let groupKey=$id('workoutGroup')?.value.trim()||null;
     if(groupMode&&!groupKey)groupKey=(system==='superset'?'SS':system==='triset'?'TS':'GS')+'-'+Date.now().toString(36).toUpperCase();
@@ -3011,7 +3011,7 @@ window.useLibraryExercise=async function(id){
       const hint=document.getElementById('workoutGroupPickerHint');
       if(system.value==='superset'){title.textContent='انتخاب دو حرکت برای سوپرست';hint.textContent='دقیقاً دو حرکت تیک بزنید؛ هر دو در یک گروه ذخیره می‌شوند.';}
       else if(system.value==='triset'){title.textContent='انتخاب سه حرکت برای تری‌ست';hint.textContent='دقیقاً سه حرکت تیک بزنید؛ هر سه در یک گروه ذخیره می‌شوند.';}
-      else if(system.value==='giant'){title.textContent='انتخاب حرکت‌ها برای جاینت‌ست';hint.textContent='حداقل سه حرکت تیک بزنید؛ همه با یک شناسه گروه ذخیره می‌شوند.';}
+      else if(system.value==='giant'){title.textContent='انتخاب سه حرکت برای جاینت‌ست';hint.textContent='دقیقاً سه حرکت تیک بزنید؛ هر سه با یک شناسه گروه ذخیره می‌شوند.';}
       renderOptions();
     };
     if(!system.dataset.multiGroupBound){system.addEventListener('change',update);system.dataset.multiGroupBound='1';}
@@ -3022,7 +3022,20 @@ window.useLibraryExercise=async function(id){
     }
     update();
   }
-  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',setupGroupPicker,{once:true});
-  else setupGroupPicker();
+  function bootGroupPicker(){
+    setupGroupPicker();
+    if(document.getElementById('workoutGroupPicker'))return;
+    if(window.__fitnessGroupPickerBootObserver)return;
+    window.__fitnessGroupPickerBootObserver=new MutationObserver(function(){
+      setupGroupPicker();
+      if(document.getElementById('workoutGroupPicker')){
+        window.__fitnessGroupPickerBootObserver.disconnect();
+        window.__fitnessGroupPickerBootObserver=null;
+      }
+    });
+    window.__fitnessGroupPickerBootObserver.observe(document.documentElement,{childList:true,subtree:true});
+  }
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',bootGroupPicker,{once:true});
+  else bootGroupPicker();
 })();
 </script>
