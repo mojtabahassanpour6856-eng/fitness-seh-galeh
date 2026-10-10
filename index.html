@@ -1373,6 +1373,7 @@ window.loadDashboard = loadDashboard;
       try{await sbWrite(`/trainees?id=eq.${encodeURIComponent(c.id)}`,'PATCH',{auth_user_id:user.id,phone_normalized:authPhone||c.phone_normalized||null});}catch(e){showAuthError('اتصال حساب شاگرد انجام نشد. '+(e.message||''));await AUTH_SUPABASE.auth.signOut();return;}
       c.auth_user_id=user.id;
     }
+    authProfile={id:user.id,role:'trainee',full_name:c.full_name||user.phone||'شاگرد',trainee_id:c.id};
     clients=[{id:c.id,name:c.full_name,phone:c.phone,gender:c.gender,birth_date:c.birth_date,age:calcAge(c.birth_date),weight:c.current_weight,height:c.height,goal:c.goal,level:c.training_level,history:c.training_history,limitations:c.limitations,training_type:c.training_type||'gym',home_equipment:c.home_equipment||'',training_days:c.training_days||'',training_time:c.training_time||'',active:true,plans:0}];currentClient=clients[0];
     qsAll('.nav button').forEach(b=>b.style.display='none');$id('navDash').style.display='block';
     ['client','meal','workout','progress'].forEach(sec=>{const b=qsAll('.nav button').find(x=>String(x.getAttribute('onclick')||'').includes("'"+sec+"'"));if(b)b.style.display='block';});
