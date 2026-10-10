@@ -4247,11 +4247,21 @@ active('workoutMuscleFilters',wm);active('libraryMuscleFilters',lm);if(document.
   if(!isTrainee())return;
   const workout=$("workout");
   if(workout){
-   const cards=workout.querySelectorAll(":scope > .card");
-   if(cards[0])cards[0].style.display="none";
-   cards.forEach(c=>c.querySelectorAll('button[onclick*="saveWorkoutPlan"]').forEach(b=>b.style.display="none"));
+   const list=$("workoutList"),listCard=list?.closest(".card");
+   workout.querySelectorAll(":scope > .card").forEach(c=>{c.style.display=c===listCard?"block":"none";});
+   if(listCard)listCard.style.display="block";
+   cards=workout.querySelectorAll(":scope > .card");
+   cards.forEach(c=>c.querySelectorAll('button[onclick*="saveWorkoutPlan"],button[onclick*="addWorkoutExercise"]').forEach(b=>b.style.display="none"));
    const p=workout.querySelector("p.muted");if(p&&p.textContent.includes("اول شاگرد را انتخاب کنید"))p.style.display="none";
-   $("workoutList")?.querySelectorAll(".workout-exercise-actions .checkfood").forEach(el=>el.style.display="none");
+   list?.querySelectorAll(".workout-exercise-actions .checkfood").forEach(el=>el.style.display="none");
+   list?.querySelectorAll('button[onclick*="deleteWorkoutExercise"],button[onclick*="editWorkoutExercise"],button[onclick*="moveWorkoutExercise"]').forEach(b=>b.style.display="none");
+  }
+  const mealSection=$("meal");
+  if(mealSection){
+   const heading=mealSection.querySelector(":scope > .card h2");
+   if(heading)heading.textContent="🍽️ برنامه غذایی من";
+   const intro=mealSection.querySelector(":scope > .card p.muted");
+   if(intro)intro.textContent="وعده‌ها را پس از مصرف تیک بزنید؛ گزارش انجام وعده‌ها برای مربی قابل مشاهده است.";
   }
   const client=$("client");
   if(client){
