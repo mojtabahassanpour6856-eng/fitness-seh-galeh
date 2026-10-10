@@ -3841,7 +3841,7 @@ active('workoutMuscleFilters',wm);active('libraryMuscleFilters',lm);if(document.
    if(!isTrainee())return;
    const section=document.getElementById("client");
    const goal=document.getElementById("goalBox");
-   if(goal)goal.style.display="none";
+   if(goal){goal.style.setProperty("display","none","important");goal.setAttribute("aria-hidden","true");}
    if(!section)return;
    let card=document.getElementById("coachMessageNotice");
    if(!card){card=document.createElement("div");card.className="card";card.id="coachMessageNotice";card.innerHTML='<h2>📣 پیام و توصیه مربی</h2><div id="coachMessageNoticeBody" class="muted">در حال بررسی پیام‌ها…</div>';section.appendChild(card);}
@@ -3860,6 +3860,9 @@ active('workoutMuscleFilters',wm);active('libraryMuscleFilters',lm);if(document.
   }
   function applyRoleAccess(){
   if(!isTrainee())return;
+  // هدف عددی فقط در پنل مربی نمایش داده می‌شود؛ شاگرد فقط پیام جداگانه را می‌بیند.
+  const traineeGoalBox=document.getElementById("goalBox");
+  if(traineeGoalBox){traineeGoalBox.style.setProperty("display","none","important");traineeGoalBox.setAttribute("aria-hidden","true");}
   const nav=document.querySelector(".nav");
   if(nav)nav.querySelectorAll("button").forEach(b=>{
    const action=String(b.getAttribute("onclick")||"");
