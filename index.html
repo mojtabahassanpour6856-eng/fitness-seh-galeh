@@ -87,6 +87,29 @@ body.library-room #workout .library-room-card .library-detail-view{width:100%!im
 #workoutList .meal-card p{margin:4px 0!important}
 #workoutList .f18-actions{display:flex;flex-wrap:wrap;gap:6px}
 @media(max-width:520px){#workoutList .meal-card{padding:8px 9px!important}#workoutList .meal-head h3{font-size:13px!important}#workoutList .meal-card .mini{min-height:27px!important;padding:3px 6px!important}}
+.workout-total-summary{grid-column:1/-1!important}
+#workoutList>.workout-session-group{
+  grid-column:1/-1!important;min-width:0!important;width:100%!important;
+  display:block!important;margin:0!important;padding:8px!important;
+  border:1px solid #3b4d60!important;border-radius:11px!important;
+  background:#111b26!important;box-sizing:border-box!important;
+}
+#workoutList .workout-session-heading{
+  display:flex!important;align-items:center!important;justify-content:space-between!important;
+  gap:8px!important;flex-wrap:wrap!important;margin:0 0 7px!important;padding:0 0 7px!important;
+  border-bottom:1px solid #35465a!important;color:#f4f7fb!important;
+}
+#workoutList .workout-session-heading strong{font-size:13px!important;line-height:1.5!important}
+#workoutList .workout-session-heading span{font-size:10px!important;color:#b7c5d5!important}
+#workoutList .workout-session-exercises{
+  display:grid!important;grid-template-columns:repeat(auto-fit,minmax(135px,1fr))!important;
+  gap:6px!important;align-items:start!important;min-width:0!important;
+}
+#workoutList .workout-session-exercises>.meal-card{min-width:0!important;width:auto!important;margin:0!important}
+@media(max-width:380px){
+ #workoutList .workout-session-exercises{grid-template-columns:repeat(2,minmax(0,1fr))!important}
+ #workoutList .workout-session-heading strong{font-size:12px!important}
+}
 </style>
 <style id="FITNESS_WORKOUT_FRAME_V2">
 /* فهرست حرکات در یک قاب محدود؛ کارت‌های کوچک به‌جای ردیف‌های بلند */
@@ -1604,7 +1627,28 @@ const plans=workoutResult.data||[], nutrition=nutritionResult.data||[];
       </div>`;
     }).join('');
   }
-  window.renderWorkoutList=function(rows,names){if(!rows.length){$f('workoutList').innerHTML='<p class="muted">هنوز حرکتی ثبت نشده است.</p>';buildWorkoutManagement();return;}const done=rows.filter(x=>x.is_completed===true).length;const pct=Math.round(done*100/rows.length);$f('workoutList').innerHTML=`<div class="card"><div class="f18-kpi"><div><b>${fmtf(rows.length)}</b>حرکت</div><div><b>${fmtf(done)}</b>انجام‌شده</div><div><b>${fmtf(pct)}%</b>پیشرفت جلسه</div></div></div>`+groupWorkoutRows(rows,names);buildWorkoutManagement();};
+  window.renderWorkoutList=function(rows,names){
+    if(!rows.length){$f('workoutList').innerHTML='<p class="muted">هنوز حرکتی ثبت نشده است.</p>';buildWorkoutManagement();return;}
+    const done=rows.filter(x=>x.is_completed===true).length;
+    const pct=Math.round(done*100/rows.length);
+    const sessions=new Map();
+    rows.forEach((x,i)=>{
+      const raw=(x.training_day||'').toString().trim();
+      const key=raw||'__unscheduled__';
+      if(!sessions.has(key))sessions.set(key,[]);
+      sessions.get(key).push({...x,_sessionIndex:i});
+    });
+    const sessionHtml=[...sessions.entries()].map(([day,items],sessionIndex)=>{
+      const sessionDone=items.filter(x=>x.is_completed===true).length;
+      const title=day==='__unscheduled__'?'جلسه بدون نام':day;
+      return `<section class="workout-session-group">
+        <header class="workout-session-heading"><strong>🏋️ جلسه ${sessionIndex+1}: ${escf(title)}</strong><span>${fmtf(items.length)} حرکت · ${fmtf(sessionDone)} انجام‌شده</span></header>
+        <div class="workout-session-exercises">${groupWorkoutRows(items,names)}</div>
+      </section>`;
+    }).join('');
+    $f('workoutList').innerHTML=`<div class="card workout-total-summary"><div class="f18-kpi"><div><b>${fmtf(rows.length)}</b>حرکت کل</div><div><b>${fmtf(done)}</b>انجام‌شده</div><div><b>${fmtf(pct)}%</b>پیشرفت کل</div></div></div>`+sessionHtml;
+    buildWorkoutManagement();
+  };
 
   // -------- Nutrition consumption: real Supabase log --------
   // Capture the trainee ID before every asynchronous request; never let a late response
