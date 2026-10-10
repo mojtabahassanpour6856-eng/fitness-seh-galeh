@@ -4231,7 +4231,7 @@ active('workoutMuscleFilters',wm);active('libraryMuscleFilters',lm);if(document.
    if(decision==="approved"){
     const {error:payErr}=await AUTH_SUPABASE.from("trainee_payments").insert({trainee_id:traineeId,amount:x.amount,payment_date:x.payment_date||dayNow(),description:"تأیید فیش واریزی"});
     if(payErr)throw payErr;
-    const {error:memErr}=await AUTH_SUPABASE.from("trainee_memberships").update({status:"active"}).eq("trainee_id",traineeId);
+    const {error:memErr}=await AUTH_SUPABASE.from("trainee_memberships").update({status:"active",payment_status:"paid"}).eq("trainee_id",traineeId);
     if(memErr)console.warn("membership status update",memErr);
    }
    const {error}=await AUTH_SUPABASE.from("trainee_payment_receipts").update({review_status:decision,reviewed_by:user?.id||null,reviewed_at:new Date().toISOString()}).eq("id",id).eq("trainee_id",traineeId);
