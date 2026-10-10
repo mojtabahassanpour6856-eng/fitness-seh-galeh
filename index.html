@@ -4145,8 +4145,8 @@ active('workoutMuscleFilters',wm);active('libraryMuscleFilters',lm);if(document.
     sbGet("/trainees?id=eq."+encodeURIComponent(id)+"&select=club_registration_date,weekly_sessions,training_days,training_time&limit=1")
    ]);
    if(!currentClient||String(currentClient.id)!==String(id))return;
-   const m=members[0];
-   $("traineeMembershipStatus").innerHTML=m?'<div class="receipt-item"><b>تاریخ شروع عضویت:</b> '+safe(fmtDate(m.start_date)||"ثبت نشده")+'<br><b>تاریخ پایان عضویت:</b> '+safe(fmtDate(m.end_date)||"ثبت نشده")+'<br><b>وضعیت شهریه:</b> '+(m.status==="active"?"<span class=\"done\">پرداخت‌شده / فعال</span>":"<span>پرداخت‌نشده یا در انتظار تأیید</span>")+'</div>':'هنوز اطلاعات عضویت توسط مربی ثبت نشده است.';
+   const m=members[0],profile=profileRows[0]||{};
+   $("traineeMembershipStatus").innerHTML='<div class="receipt-item"><b>تاریخ ثبت‌نام باشگاه:</b> '+safe(fmtDate(profile.club_registration_date)||"ثبت نشده")+'<br><b>تعداد جلسات:</b> '+safe(profile.weekly_sessions||"—")+' جلسه در هفته<br><b>روزها و ساعت تمرین:</b> '+safe(profile.training_days||"—")+' · '+safe(String(profile.training_time||"").slice(0,5)||"—")+'<br><b>تاریخ شروع عضویت:</b> '+safe(fmtDate(m?.start_date)||"ثبت نشده")+'<br><b>تاریخ پایان عضویت:</b> '+safe(fmtDate(m?.end_date)||"ثبت نشده")+'<br><b>وضعیت شهریه:</b> '+(m?(m.status==="active"?"<span class=\"done\">پرداخت‌شده / فعال</span>":"<span>پرداخت‌نشده یا در انتظار تأیید</span>"):'<span>هنوز عضویت توسط مربی ثبت نشده است</span>')+'</div>';
    const box=$("traineeReceiptHistory");
    if(box){
     const status={pending:"در انتظار بررسی مربی",approved:"تأیید شده",rejected:"رد شده"};
