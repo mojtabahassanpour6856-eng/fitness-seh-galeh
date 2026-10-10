@@ -2934,7 +2934,7 @@ window.useLibraryExercise=async function(id){
           }
         } catch(e) { if(!e || e.name!=='AbortError') alert('ارسال فایل انجام نشد. از ذخیره فایل یا چاپ / ذخیره PDF استفاده کنید.'); }
       });
-      if(autoPrint) setTimeout(function(){ try { popup.focus(); popup.print(); } catch(_) {} }, 300);
+      if(typeof autoPrint !== 'undefined' && autoPrint) setTimeout(function(){ try { popup.focus(); popup.print(); } catch(_) {} }, 300);
     } catch(e) {
       console.error('Full plan export failed',e);
       try { popup.document.body.innerHTML = '<p>ساخت خروجی برنامه ناموفق بود: '+esc(e.message||e)+'</p>'; } catch(_) {}
