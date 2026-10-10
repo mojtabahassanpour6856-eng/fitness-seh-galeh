@@ -1149,8 +1149,48 @@ window.loadDashboard = loadDashboard;
   }
 
   function buildWorkoutControls(){
-    const card=qsAll('#workout .card')[2];if(!card||$id('workoutDay'))return;
-    const wrap=document.createElement('div');wrap.className='grid2';wrap.innerHTML=`<div><label>جلسه تمرینی</label><select id="workoutDay"><option value="جلسه اول">جلسه اول</option><option value="جلسه دوم">جلسه دوم</option><option value="جلسه سوم">جلسه سوم</option><option value="جلسه چهارم">جلسه چهارم</option><option value="جلسه پنجم">جلسه پنجم</option><option value="جلسه ششم">جلسه ششم</option></select></div><div><label>سیستم تمرینی</label><select id="workoutSystem"><option value="normal">نرمال</option><option value="superset">سوپرست</option><option value="triset">تری‌ست</option><option value="giant">جاینت‌ست</option><option value="drop">دراپ‌ست</option><option value="rest_pause">رست‌پاز</option><option value="timed">تایم‌دار</option><option value="multi_stage">چندمرحله‌ای</option><option value="custom">سفارشی</option></select></div><div><label>گروه سیستم</label><input id="workoutGroup" placeholder="مثلاً A1"></div>`;const notesLabel=$id('workoutExerciseNotes')?.previousElementSibling;if(notesLabel&&notesLabel.parentElement===card)card.insertBefore(wrap,notesLabel);else card.appendChild(wrap);
+    const card=qsAll('#workout .card')[2];
+    if(!card)return;
+    if(!$id('workoutDay')){
+      const wrap=document.createElement('div');
+      wrap.className='grid2';
+      wrap.innerHTML=`<div><label>جلسه تمرینی</label><select id="workoutDay"><option value="جلسه اول">جلسه اول</option><option value="جلسه دوم">جلسه دوم</option><option value="جلسه سوم">جلسه سوم</option><option value="جلسه چهارم">جلسه چهارم</option><option value="جلسه پنجم">جلسه پنجم</option><option value="جلسه ششم">جلسه ششم</option></select></div><div><label>سیستم تمرینی</label><select id="workoutSystem"><option value="normal">نرمال</option><option value="superset">سوپرست</option><option value="triset">تری‌ست</option><option value="giant">جاینت‌ست</option><option value="drop">دراپ‌ست</option><option value="rest_pause">رست‌پاز</option><option value="timed">تایم‌دار</option><option value="multi_stage">چندمرحله‌ای</option><option value="custom">سفارشی</option></select></div><div><label>گروه سیستم</label><input id="workoutGroup" placeholder="مثلاً A1"></div>`;
+      const notesLabel=$id('workoutExerciseNotes')?.previousElementSibling;
+      if(notesLabel&&notesLabel.parentElement===card)card.insertBefore(wrap,notesLabel);else card.appendChild(wrap);
+    }
+    const exercise=$id('workoutExercise'), system=$id('workoutSystem');
+    if(!exercise||!system)return;
+    let picker=$id('workoutGroupPicker');
+    if(!picker){
+      picker=document.createElement('div');picker.id='workoutGroupPicker';
+      picker.style.cssText='display:none;margin:10px 0;padding:12px;border:1px solid #78909c;border-radius:12px;';
+      picker.innerHTML='<strong id="workoutGroupPickerTitle">انتخاب حرکت‌های گروه</strong><p id="workoutGroupPickerHint" class="muted" style="margin:6px 0 10px"></p><div id="workoutGroupPickerOptions" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:7px"></div>';
+      const exerciseWrap=exercise.closest('div')||exercise.parentElement;
+      if(exerciseWrap)exerciseWrap.insertAdjacentElement('afterend',picker);else card.appendChild(picker);
+    }
+    const render=()=>{
+      const list=$id('workoutGroupPickerOptions');if(!list)return;
+      const previous=new Set(Array.from(list.querySelectorAll('input:checked')).map(x=>x.value));
+      const opts=Array.from(exercise.options).filter(o=>o.value&&o.value.trim());
+      list.innerHTML=opts.map(o=>'<label style="display:flex;align-items:center;gap:8px;padding:8px;border:1px solid #d0d7de;border-radius:9px"><input type="checkbox" name="groupExercise" value="'+String(o.value).replace(/&/g,'&amp;').replace(/"/g,'&quot;')+'"><span>'+String(o.textContent||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')+'</span></label>').join('');
+      list.querySelectorAll('input').forEach(x=>x.checked=previous.has(x.value));
+    };
+    const update=()=>{
+      const mode=['superset','triset','giant'].includes(system.value);
+      picker.style.display=mode?'block':'none';
+      const exerciseWrap=exercise.closest('div')||exercise.parentElement;
+      if(exerciseWrap)exerciseWrap.style.display=mode?'none':'';
+      const title=$id('workoutGroupPickerTitle'),hint=$id('workoutGroupPickerHint');
+      if(system.value==='superset'){title.textContent='انتخاب دو حرکت برای سوپرست';hint.textContent='دقیقاً دو حرکت را تیک بزنید.';}
+      else if(system.value==='triset'){title.textContent='انتخاب سه حرکت برای تری‌ست';hint.textContent='دقیقاً سه حرکت را تیک بزنید.';}
+      else if(system.value==='giant'){title.textContent='انتخاب سه حرکت برای جاینت‌ست';hint.textContent='دقیقاً سه حرکت را تیک بزنید.';}
+      render();
+    };
+    if(!system.dataset.multiGroupBound){system.addEventListener('change',update);system.dataset.multiGroupBound='1';}
+    if(!exercise.dataset.multiGroupObserver){
+      const observer=new MutationObserver(render);observer.observe(exercise,{childList:true,subtree:true});exercise.dataset.multiGroupObserver='1';
+    }
+    update();
   }
 
   const oldAddWorkout=window.addWorkoutExercise;
