@@ -1655,6 +1655,99 @@ window.loadDashboard = loadDashboard;
 
 
 
+
+<style id="seh-galeh-membership-polish">
+/* Membership & tuition: visual-only refinement; preserve existing field IDs and save handlers */
+#client > .card:has(#subStart),
+#client > .card:has(#traineeMembershipStatus){
+ position:relative;isolation:isolate;overflow:hidden;
+ border:1px solid rgba(83,190,177,.42)!important;
+ border-radius:18px!important;
+ background:linear-gradient(145deg,rgba(18,48,58,.98),rgba(15,27,42,.99) 62%,rgba(31,39,57,.98))!important;
+ box-shadow:0 10px 28px rgba(0,0,0,.17),inset 0 1px rgba(255,255,255,.035);
+ padding:clamp(13px,3.5vw,21px)!important;
+}
+#client > .card:has(#subStart)::before,
+#client > .card:has(#traineeMembershipStatus)::before{
+ content:"";position:absolute;z-index:-1;top:0;right:0;left:0;height:4px;
+ background:linear-gradient(90deg,#3cc9b0,#e4bd70,#3cc9b0);
+}
+#client > .card:has(#subStart)>h2,
+#client > .card:has(#traineeMembershipStatus)>h2{
+ display:flex;align-items:center;gap:9px;flex-wrap:wrap;
+ margin:4px 0 16px!important;padding:0 0 12px;
+ border-bottom:1px solid rgba(112,190,185,.2);
+ color:#e8fff9!important;font-size:clamp(17px,4.5vw,21px)!important;
+ line-height:1.65;
+}
+#client > .card:has(#subStart) .grid2{
+ display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px!important;
+ margin:8px 0 14px;
+}
+#client > .card:has(#subStart) .grid2>div,
+#client > .card:has(#traineeMembershipStatus) #traineeReceiptUpload{
+ min-width:0;padding:10px;border:1px solid rgba(132,174,190,.19);
+ border-radius:12px;background:rgba(5,17,29,.27);
+}
+#client > .card:has(#subStart) label,
+#client > .card:has(#traineeMembershipStatus) label{
+ display:block;margin:0 0 7px;color:#b8d7d7;font-size:12px;font-weight:700;line-height:1.8;
+}
+#client > .card:has(#subStart) input,
+#client > .card:has(#subStart) select,
+#client > .card:has(#traineeMembershipStatus) input{
+ display:block;box-sizing:border-box;width:100%;max-width:100%;min-width:0;
+ min-height:42px;padding:9px 10px;border:1px solid #426575;border-radius:10px;
+ background:#0b1b29;color:#f4fbff;font:inherit;font-size:14px;outline:none;
+}
+#client > .card:has(#subStart) input:focus,
+#client > .card:has(#subStart) select:focus,
+#client > .card:has(#traineeMembershipStatus) input:focus{
+ border-color:#4ed1b5;box-shadow:0 0 0 3px rgba(78,209,181,.12);
+}
+#client > .card:has(#subStart) #subAmount{font-weight:800;font-variant-numeric:tabular-nums}
+#client > .card:has(#subStart)>button,
+#client > .card:has(#traineeMembershipStatus) button{
+ min-height:42px;border-radius:11px;font-weight:750;letter-spacing:0;
+}
+#client > .card:has(#subStart)>button:not(.secondary),
+#client > .card:has(#traineeMembershipStatus) #traineeReceiptUpload>button{
+ width:100%;margin:5px 0 8px;
+ background:linear-gradient(105deg,#159b8b,#28b99e)!important;
+ color:#fff!important;border:1px solid rgba(127,255,224,.28)!important;
+ box-shadow:0 5px 14px rgba(17,158,139,.16);
+}
+#client > .card:has(#subStart)>button.secondary{width:100%;margin-top:7px}
+#client > .card:has(#traineeMembershipStatus) #traineeMembershipStatus{
+ display:block;margin:0 0 14px;padding:0;color:#d8e8f1;line-height:2;
+}
+#client > .card:has(#traineeMembershipStatus) #traineeMembershipStatus .receipt-item{
+ border-color:rgba(73,190,171,.28);background:rgba(7,24,37,.62);
+ border-radius:13px;padding:13px;margin:0;
+}
+#client > .card:has(#traineeMembershipStatus) #traineeReceiptUpload h3,
+#client > .card:has(#traineeMembershipStatus) #traineeReceiptHistory h3,
+#client > .card:has(#subStart) #coachReceiptReview h3{
+ margin:2px 0 10px;color:#dffff7;font-size:15px;line-height:1.8;
+}
+#client > .card:has(#traineeMembershipStatus) #traineeReceiptUpload>p{font-size:12px;line-height:1.9}
+#client > .card:has(#traineeMembershipStatus) #traineeReceiptUpload input[type=file]{
+ padding:8px;font-size:12px;background:#0b1b29;
+}
+#client > .card:has(#traineeMembershipStatus) #traineeReceiptHistory{margin-top:15px}
+#client > .card:has(#traineeMembershipStatus) #traineeReceiptHistory .receipt-item,
+#client > .card:has(#subStart) #coachReceiptReview .receipt-item{
+ border-color:rgba(116,164,186,.24);background:rgba(7,20,32,.56);border-radius:12px;
+}
+#client > .card:has(#subStart) #coachReceiptReview{margin-top:14px}
+#client > .card:has(#subStart) #coachReceiptReview a{color:#77e5d1;font-weight:700}
+@media(max-width:420px){
+ #client > .card:has(#subStart) .grid2{grid-template-columns:1fr;gap:8px!important}
+ #client > .card:has(#subStart) .grid2>div{padding:9px}
+ #client > .card:has(#traineeMembershipStatus) #traineeReceiptUpload{padding:10px}
+}
+</style>
+
 </body></html>`;
     const w=window.open('','_blank');if(w){w.document.write(html);w.document.close();}
   };
