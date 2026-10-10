@@ -3959,40 +3959,31 @@ active('workoutMuscleFilters',wm);active('libraryMuscleFilters',lm);if(document.
  let mealCompletionBusy=new Set(),dayCompletionBusy=new Set();
 
  function addRegistrationFields(){
-  const block=document.querySelector("#traineeLoginBox .trainee-auth-block");
-  if(!block||$("traineeWeeklySessions"))return;
-  const btn=block.querySelector('button[onclick="registerTraineePhone()"]');
-  const box=document.createElement("div");
-  box.id="traineeTrainingDetails";
-  box.innerHTML='<label>تعداد جلسات تمرین در هفته</label><select id="traineeWeeklySessions"><option value="">انتخاب تعداد جلسات</option><option value="1">۱ جلسه</option><option value="2">۲ جلسه</option><option value="3">۳ جلسه</option><option value="4">۴ جلسه</option><option value="5">۵ جلسه</option><option value="6">۶ جلسه</option><option value="7">۷ جلسه</option></select><label>روزهای تمرین</label><input id="traineeTrainingDays" placeholder="مثلاً شنبه، دوشنبه، چهارشنبه"><label>ساعت تمرین معمول</label><input id="traineeTrainingTime" type="time">';
-  block.insertBefore(box,btn||null);
+  // Registration already contains the canonical fields; do not add a second,
+  // disconnected set whose values are not the ones visible to the trainee.
+  return;
  }
- addRegistrationFields();
- const authObserver=new MutationObserver(addRegistrationFields);
- authObserver.observe($("authScreen")||document.body,{childList:true,subtree:true});
  window.registerTraineePhone=async function(){
   const name=($("traineeRegName")?.value||"").trim();
   const phone=typeof phoneNorm==="function"?phoneNorm($("traineeRegPhone")?.value||""):($("traineeRegPhone")?.value||"").trim();
   const initialPassword=$("traineeInitialPassword")?.value||"";
-  const sessions=Number($("traineeWeeklySessions")?.value||0);
-  const days=($("traineeTrainingDays")?.value||"").trim();
-  const time=$("traineeTrainingTime")?.value||"";
+  const sessions=Number($("traineeRegSessions")?.value||0);
+  const days=($("traineeRegDays")?.value||"").trim();
+  const time=$("traineeRegTime")?.value||"";
   if(name.length<2){showAuthError("نام و نام خانوادگی را وارد کنید.");return;}
-  if(!/^\+989\d{9}$/.test(phone)){showAuthError("شماره موبایل معتبر نیست؛ مانند 09121234567 وارد کنید.");return;}
+  if(!/^\\+989\\d{9}$/.test(phone)){showAuthError("شماره موبایل معتبر نیست؛ مانند 09121234567 وارد کنید.");return;}
   if(initialPassword!=="12345"){showAuthError("رمز درخواست نادرست است.");return;}
-  if(!sessions||sessions<1||sessions>7){showAuthError("تعداد جلسات تمرین در هفته را انتخاب کنید.");return;}
+  if(!Number.isInteger(sessions)||sessions<1||sessions>7){showAuthError("تعداد جلسات تمرین در هفته را انتخاب کنید.");return;}
   if(!days){showAuthError("روزهای تمرین را وارد کنید.");return;}
   if(!time){showAuthError("ساعت تمرین را انتخاب کنید.");return;}
-  const btn=$("traineeLoginBox")?.querySelector('.trainee-auth-block button');
+  const btn=$("traineeLoginBox")?.querySelector('button[onclick="registerTraineePhone()"]');
   if(btn){btn.disabled=true;btn.textContent="⏳ در حال ارسال درخواست…";}
   try{
-   const {data,error}=await AUTH_SUPABASE.rpc("submit_trainee_registration_request",{
-    p_full_name:name,p_phone:phone,p_initial_password:initialPassword,p_weekly_sessions:sessions,p_training_days:days,p_training_time:time
-   });
+   const {data,error}=await AUTH_SUPABASE.functions.invoke("trainee-registration-request",{body:{full_name:name,phone,initial_password:initialPassword,weekly_sessions:sessions,training_days:days,training_time:time}});
    if(error)throw error;
    if(data?.error)throw new Error(data.error);
    showAuthError("✅ درخواست ثبت‌نام همراه با روزها و ساعت تمرین ارسال شد. پس از بررسی و تأیید مربی می‌توانید وارد شوید.");
-   ["traineeRegName","traineeRegPhone","traineeInitialPassword","traineeWeeklySessions","traineeTrainingDays","traineeTrainingTime"].forEach(id=>{if($(id))$(id).value="";});
+   ["traineeRegName","traineeRegPhone","traineeInitialPassword","traineeRegSessions","traineeRegDays","traineeRegTime"].forEach(id=>{if($(id))$(id).value="";});
   }catch(e){console.error("registration request",e);showAuthError("❌ ارسال درخواست انجام نشد. "+(e?.message||String(e)));}
   finally{if(btn){btn.disabled=false;btn.textContent="📨 ارسال درخواست ثبت‌نام";}}
  };
@@ -4354,7 +4345,9 @@ active('workoutMuscleFilters',wm);active('libraryMuscleFilters',lm);if(document.
 <!-- AUTH INPUT INTERACTION FIX: mobile touch/focus and scroll -->
 <style id="seh-auth-input-interaction-fix">
 #authScreen{z-index:2147483000!important;align-items:flex-start!important;overflow-y:auto!important;overscroll-behavior:contain;-webkit-overflow-scrolling:touch}
-#authScreen .auth-card{position:relative!important;z-index:1!important;max-height:calc(100dvh - 24px);overflow-y:auto!important;touch-action:pan-y}
+#authScreen .auth-card{position:relative!important;z-index:1!important;max-height:calc(100dvh - 24px);overflow-y:auto!important;touch-action:manipulation;pointer-events:auto!important}
+#authScreen .trainee-auth-block{position:relative!important;z-index:1!important;pointer-events:auto!important}
+#authScreen input,#authScreen select,#authScreen textarea{pointer-events:auto!important;touch-action:manipulation!important;position:relative!important;z-index:3!important;opacity:1!important}
 #authScreen .trainee-auth-block input,
 #authScreen .trainee-auth-block select,
 #authScreen .trainee-auth-block textarea,
@@ -4381,6 +4374,12 @@ active('workoutMuscleFilters',wm);active('libraryMuscleFilters',lm);if(document.
    });
  }
  document.addEventListener('DOMContentLoaded',repairAuthInputs);
+ document.addEventListener('pointerdown',function(ev){
+   const el=ev.target&&ev.target.closest&&ev.target.closest('#authScreen input,#authScreen textarea,#authScreen select');
+   if(!el)return;
+   if(el.disabled){el.disabled=false;el.removeAttribute('disabled');}
+   if((el.tagName==='INPUT'||el.tagName==='TEXTAREA')&&el.readOnly){el.readOnly=false;el.removeAttribute('readonly');}
+ },true);
  document.addEventListener('click',function(ev){
    const el=ev.target&&ev.target.closest&&ev.target.closest('#authScreen input,#authScreen textarea,#authScreen select');
    if(!el)return;
