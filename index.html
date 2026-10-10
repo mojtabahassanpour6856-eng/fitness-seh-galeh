@@ -2541,21 +2541,44 @@ const plans=workoutResult.data||[], nutrition=nutritionResult.data||[];
 })();
 </script>
 
-<script id="FITNESS_EXERCISE_BRIDGE_V1">
-async function useLibraryExercise(id){
+<script id="FITNESS_EXERCISE_BRIDGE_V2">
+/* Reliable bridge: coach library -> workout exercise selector. Keep a visible option even if the list refresh is delayed. */
+window.useLibraryExercise=async function(id){
  try{
   const a=await sbGet('/trainer_exercises?id=eq.'+encodeURIComponent(id)+'&select=id,name&limit=1');
-  const item=a&&a[0]; if(!item)throw new Error('حرکت در بانک مربی پیدا نشد.');
-  let rows=await sbGet('/exercises?name=eq.'+encodeURIComponent(item.name)+'&select=id,name&limit=1');
+  const item=a&&a[0]; if(!item||!item.name)throw new Error('حرکت در بانک مربی پیدا نشد.');
+  const name=String(item.name).trim();
+  let rows=await sbGet('/exercises?name=eq.'+encodeURIComponent(name)+'&select=id,name&limit=1');
   let x=rows&&rows[0];
-  if(!x){const out=await sbWrite('/exercises','POST',{name:item.name});x=Array.isArray(out)?out[0]:out;}
-  if(!x||!x.id){rows=await sbGet('/exercises?name=eq.'+encodeURIComponent(item.name)+'&select=id,name&limit=1');x=rows&&rows[0];}
-  if(!x||!x.id)throw new Error('انتقال انجام نشد؛ جدول حرکات برنامه پاسخ قابل استفاده نداد.');
-  await loadExercises();
-  const sel=document.getElementById('workoutExercise');if(sel)sel.value=String(x.id);
-  alert('حرکت به فهرست برنامه اضافه و انتخاب شد. حالا «افزودن به برنامه» را بزن.');
- }catch(e){alert('انتقال حرکت ناموفق بود: '+(e.message||String(e)));}
-}
+  if(!x){
+   try{const out=await sbWrite('/exercises','POST',{name});x=Array.isArray(out)?out[0]:out;}
+   catch(writeError){
+    rows=await sbGet('/exercises?name=eq.'+encodeURIComponent(name)+'&select=id,name&limit=1');
+    x=rows&&rows[0];
+    if(!x)throw writeError;
+   }
+  }
+  if(!x||!x.id){
+   rows=await sbGet('/exercises?name=eq.'+encodeURIComponent(name)+'&select=id,name&limit=1');
+   x=rows&&rows[0];
+  }
+  if(!x||!x.id)throw new Error('حرکت در بانک ذخیره است، اما شناسه آن در فهرست حرکات برنامه پیدا نشد.');
+  const sel=document.getElementById('workoutExercise');
+  if(!sel)throw new Error('فهرست انتخاب حرکت در صفحه پیدا نشد.');
+  try{await loadExercises();}catch(refreshError){console.warn('تازه‌سازی فهرست حرکت انجام نشد؛ گزینه را مستقیم اضافه می‌کنیم.',refreshError);}
+  let opt=Array.from(sel.options).find(o=>String(o.value)===String(x.id));
+  if(!opt){opt=new Option(name,String(x.id));sel.add(opt);}
+  opt.textContent=name;
+  sel.value=String(x.id);
+  if(String(sel.value)!==String(x.id)){
+   opt.selected=true;
+   sel.selectedIndex=Array.from(sel.options).indexOf(opt);
+  }
+  if(String(sel.value)!==String(x.id))throw new Error('حرکت ساخته شد اما انتخاب آن در فهرست انجام نشد.');
+  sel.dispatchEvent(new Event('change',{bubbles:true}));
+  alert('حرکت «'+name+'» اکنون در فهرست «حرکت» انتخاب شده است. ست، تکرار و سیستم تمرینی را تنظیم کن و «افزودن به برنامه» را بزن.');
+ }catch(e){console.error('useLibraryExercise failed',e);alert('انتقال حرکت ناموفق بود: '+(e.message||String(e)));}
+};
 </script>
 
 
