@@ -603,8 +603,8 @@ body.library-room #workout .library-room-card .library-detail-view{width:100%!im
 </div>
 
 <div class="card">
-<h2>💬 یادداشت مربی</h2>
-<textarea id="coachNote" placeholder="این یادداشت فقط برای مربی است."></textarea>
+<h2>📣 پیام و توصیه مربی برای شاگرد</h2>
+<textarea id="coachNote" placeholder="پیام یا توصیه‌ای بنویسید که شاگرد در پنل خودش ببیند."></textarea>
 <button onclick="saveNote()">ذخیره یادداشت</button>
 </div>
 </section>
@@ -1070,7 +1070,7 @@ async function saveAnalysis(){
 async function saveNote(){
  if(!currentClient){alert("اول شاگرد را انتخاب کنید.");return;}
  const note=$("coachNote").value.trim();if(!note){alert("یادداشت را وارد کنید.");return;}
- try{await sbWrite("/trainee_notes","POST",{trainee_id:currentClient.id,note});$("coachNote").value="";alert("یادداشت مربی ذخیره شد.");}catch(e){alert("ذخیره یادداشت انجام نشد.\n"+e.message);}
+ try{await sbWrite("/trainee_notes","POST",{trainee_id:currentClient.id,note});$("coachNote").value="";alert("پیام مربی ذخیره شد و در پنل شاگرد نمایش داده می‌شود.");}catch(e){alert("ذخیره یادداشت انجام نشد.\n"+e.message);}
 }
 async function saveActivity(){
  if(!currentClient){alert("اول شاگرد را انتخاب کنید.");return;}
@@ -1978,7 +1978,7 @@ const plans=workoutResult.data||[], nutrition=nutritionResult.data||[];
   async function loadNoteHistory(){
     const traineeId=currentClient?.id;if(traineeId==null)return;
     const sec=$f('progress');if(!sec)return;
-    let box=$f('noteHistoryBox');if(!box){box=document.createElement('div');box.className='card';box.id='noteHistoryBox';box.innerHTML='<h2>🗂️ تاریخچه یادداشت‌های مربی</h2><div id="noteHistory"></div>';sec.appendChild(box);}
+    let box=$f('noteHistoryBox');if(!box){box=document.createElement('div');box.className='card';box.id='noteHistoryBox';box.innerHTML='<h2>🗂️ تاریخچه پیام‌های مربی</h2><div id="noteHistory"></div>';sec.appendChild(box);}
     const target=$f('noteHistory');if(!target)return;target.innerHTML='<p class="f18-muted">در حال دریافت یادداشت‌ها…</p>';
     try{
       const rows=await sbGet(`/trainee_notes?trainee_id=eq.${encodeURIComponent(traineeId)}&select=*&order=created_at.desc`);
@@ -2286,6 +2286,16 @@ window.toggleExerciseFavorite=async function(id,value){try{await sbWrite(`/train
   }
   window.finalStatusFilter=function(mode,btn){clientMode=mode;qsa('#f18statusfilters button').forEach(b=>b.classList.remove('active'));btn.classList.add('active');renderFinalClients();};
 
+  const priorFinishForCoachMessage=window.finishLogin;
+  if(typeof priorFinishForCoachMessage==="function"&&!window.__coachMessageFinishWrapped){
+   window.finishLogin=async function(user){await priorFinishForCoachMessage(user);await applyStudentCoachMessage();};
+   window.__coachMessageFinishWrapped=true;
+  }
+  const priorSelectForCoachMessage=window.selectClient;
+  if(typeof priorSelectForCoachMessage==="function"&&!window.__coachMessageSelectWrapped){
+   window.selectClient=async function(id){const result=await priorSelectForCoachMessage(id);await applyStudentCoachMessage();return result;};
+   window.__coachMessageSelectWrapped=true;
+  }
   const oldFinish=window.finishLogin;
   window.finishLogin=async function(user){await oldFinish(user);addFinalStyle();addShareButtons();addCoachStatusFilters();wireFinalBadges();addGoalHistory();if(authProfile?.role==='coach'){await window.loadClients();}else if(authProfile?.role==='trainee'){await selectClient(currentClient?.id);await loadDashboard();}await applyFastingRole();};
 
@@ -3827,7 +3837,28 @@ active('workoutMuscleFilters',wm);active('libraryMuscleFilters',lm);if(document.
   root.querySelectorAll("input,select,textarea").forEach(el=>{el.disabled=true;el.setAttribute("aria-disabled","true");});
   if(hideButtons)root.querySelectorAll("button").forEach(b=>b.style.display="none");
  }
- function applyRoleAccess(){
+ async function applyStudentCoachMessage(){
+   if(!isTrainee())return;
+   const section=document.getElementById("client");
+   const goal=document.getElementById("goalBox");
+   if(goal)goal.style.display="none";
+   if(!section)return;
+   let card=document.getElementById("coachMessageNotice");
+   if(!card){card=document.createElement("div");card.className="card";card.id="coachMessageNotice";card.innerHTML='<h2>📣 پیام و توصیه مربی</h2><div id="coachMessageNoticeBody" class="muted">در حال بررسی پیام‌ها…</div>';section.appendChild(card);}
+   const body=document.getElementById("coachMessageNoticeBody");
+   const traineeId=currentClient?.id||authProfile?.trainee_id;
+   if(!traineeId){card.style.display="none";return;}
+   card.style.display="";
+   body.textContent="در حال دریافت پیام مربی…";
+   try{
+    const rows=await sbGet('/trainee_notes?trainee_id=eq.'+encodeURIComponent(traineeId)+'&select=note,created_at&order=created_at.desc&limit=1');
+    if(!isTrainee()||String(currentClient?.id||authProfile?.trainee_id)!==String(traineeId))return;
+    if(!rows.length||!String(rows[0].note||"").trim()){card.style.display="none";return;}
+    const d=rows[0].created_at?new Date(rows[0].created_at).toLocaleDateString("fa-IR"):"";
+    body.innerHTML='<div style="padding:12px;border-radius:10px;background:var(--card-bg,#f3f6f8);line-height:1.9;white-space:pre-wrap;overflow-wrap:anywhere">'+String(rows[0].note).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]))+'</div>'+(d?'<p class="muted" style="font-size:12px;margin-bottom:0">📅 تاریخ پیام: '+d+'</p>':"");
+   }catch(e){card.style.display="none";console.error("coach message notice",e);}
+  }
+  function applyRoleAccess(){
   if(!isTrainee())return;
   const nav=document.querySelector(".nav");
   if(nav)nav.querySelectorAll("button").forEach(b=>{
