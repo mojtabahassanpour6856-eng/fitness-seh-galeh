@@ -4313,3 +4313,46 @@ active('workoutMuscleFilters',wm);active('libraryMuscleFilters',lm);if(document.
 })();
 </script>
 
+
+<!-- AUTH INPUT INTERACTION FIX: mobile touch/focus and scroll -->
+<style id="seh-auth-input-interaction-fix">
+#authScreen{z-index:2147483000!important;align-items:flex-start!important;overflow-y:auto!important;overscroll-behavior:contain;-webkit-overflow-scrolling:touch}
+#authScreen .auth-card{position:relative!important;z-index:1!important;max-height:calc(100dvh - 24px);overflow-y:auto!important;touch-action:pan-y}
+#authScreen .trainee-auth-block input,
+#authScreen .trainee-auth-block select,
+#authScreen .trainee-auth-block textarea,
+#authScreen .trainee-auth-block button{pointer-events:auto!important;position:relative;z-index:2;box-sizing:border-box;max-width:100%}
+#authScreen .trainee-auth-block input,
+#authScreen .trainee-auth-block textarea{-webkit-user-select:text!important;user-select:text!important;-webkit-touch-callout:default}
+</style>
+<script id="seh-auth-input-interaction-fix-js">
+(function(){
+ const ids=['traineeRegName','traineeRegPhone','traineeRegSessions','traineeRegDays','traineeRegTime','traineeInitialPassword','traineePhoneLogin','traineeLoginPassword'];
+ function repairAuthInputs(){
+   ids.forEach(id=>{
+     const el=document.getElementById(id);
+     if(!el)return;
+     el.disabled=false;
+     el.removeAttribute('disabled');
+     if(el.tagName==='INPUT'||el.tagName==='TEXTAREA'){
+       el.readOnly=false;
+       el.removeAttribute('readonly');
+     }
+     el.style.pointerEvents='auto';
+     el.style.userSelect='text';
+     el.style.webkitUserSelect='text';
+   });
+ }
+ document.addEventListener('DOMContentLoaded',repairAuthInputs);
+ document.addEventListener('click',function(ev){
+   const el=ev.target&&ev.target.closest&&ev.target.closest('#authScreen input,#authScreen textarea,#authScreen select');
+   if(!el)return;
+   if(el.disabled){el.disabled=false;el.removeAttribute('disabled');}
+   if((el.tagName==='INPUT'||el.tagName==='TEXTAREA')&&el.readOnly){el.readOnly=false;el.removeAttribute('readonly');}
+   if(el.tagName!=='SELECT')setTimeout(()=>{try{el.focus({preventScroll:false});}catch(_){el.focus();}},0);
+ },true);
+ repairAuthInputs();
+ const root=document.getElementById('authScreen');
+ if(root&&window.MutationObserver)new MutationObserver(repairAuthInputs).observe(root,{childList:true,subtree:true});
+})();
+</script>
