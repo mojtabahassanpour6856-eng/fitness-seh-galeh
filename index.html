@@ -3843,8 +3843,12 @@ active('workoutMuscleFilters',wm);active('libraryMuscleFilters',lm);if(document.
   if(client){
    const cards=client.querySelectorAll(":scope > .card");
    if(cards[0]){
-    cards[0].querySelectorAll("input,select,textarea").forEach(el=>{el.disabled=true;el.setAttribute("aria-disabled","true");});
-    cards[0].querySelectorAll('button[onclick="saveProfile()"]').forEach(b=>b.style.display="none");
+    // شاگرد می‌تواند اطلاعات شخصی خودش را ویرایش کند؛ هدف و سطح تمرینی مربی‌محور و فقط‌خواندنی می‌ماند.
+    ["pgoal","plevel"].forEach(id=>{const el=document.getElementById(id);if(el){el.disabled=true;el.setAttribute("aria-disabled","true");}});
+    const saveBtn=cards[0].querySelector('button[onclick="saveProfile()"]');
+    if(saveBtn){saveBtn.style.display="";saveBtn.disabled=false;saveBtn.textContent="💾 ذخیره اطلاعات شخصی من";}
+    const mealBtn=cards[0].querySelector('button[onclick="openClientMealPlan()"]');
+    if(mealBtn)mealBtn.style.display="none";
    }
    if(cards[2]){
     const grid=cards[2].querySelector(".grid2");
@@ -3906,8 +3910,53 @@ active('workoutMuscleFilters',wm);active('libraryMuscleFilters',lm);if(document.
    food.querySelectorAll('button[onclick="add()"],button[onclick="editFood()"],button[onclick="deleteFood()"],button[onclick="saveEdit()"]').forEach(b=>b.style.display="none");
   }
  }
+ // پروفایل شخصی شاگرد فقط برای رکورد متصل به حساب خودش ذخیره می‌شود.
+ const previousSaveProfile=window.saveProfile;
+ if(typeof previousSaveProfile==="function"&&!window.__traineeOwnProfileSave){
+  window.saveProfile=async function(){
+   if(!isTrainee())return previousSaveProfile.apply(this,arguments);
+   const traineeId=authProfile?.trainee_id;
+   if(!traineeId||!currentClient||String(currentClient.id)!==String(traineeId)){
+    alert("پروفایل به حساب شاگرد فعلی متصل نیست؛ برای امنیت، ذخیره انجام نشد.");return;
+   }
+   const birthRaw=(document.getElementById("pbirth")?.value||"").trim();
+   const birthISO=birthRaw&&typeof window.jalaliToISODate==="function"?window.jalaliToISODate(birthRaw):null;
+   if(birthRaw&&!birthISO){alert("تاریخ تولد را به صورت شمسی مانند ۱۴۰۵/۰۷/۱۸ وارد کنید.");return;}
+   const name=(document.getElementById("pn")?.value||"").trim();
+   if(name.length<2){alert("نام و نام خانوادگی را وارد کنید.");return;}
+   const payload={
+    full_name:name,
+    current_weight:Number(document.getElementById("pweight")?.value)||null,
+    height:Number(document.getElementById("pheight")?.value)||null,
+    training_type:document.getElementById("ptype")?.value||"gym",
+    home_equipment:(document.getElementById("pequipment")?.value||"").trim()||null,
+    birth_date:birthRaw?birthISO:null,
+    gender:document.getElementById("pgender")?.value||null
+   };
+   const btn=document.querySelector('#client button[onclick="saveProfile()"]');
+   if(btn){btn.disabled=true;btn.textContent="⏳ در حال ذخیره…";}
+   try{
+    await sbWrite("/trainees?id=eq."+encodeURIComponent(traineeId),"PATCH",payload);
+    const updated=await sbGet("/trainees?id=eq."+encodeURIComponent(traineeId)+"&select=*&limit=1");
+    if(!updated.length)throw new Error("ذخیره ارسال شد اما رکورد شاگرد از دیتابیس دوباره خوانده نشد.");
+    const c=updated[0];
+    currentClient={...currentClient,id:c.id,name:c.full_name,phone:c.phone,gender:c.gender,birth_date:c.birth_date,age:typeof calcAge==="function"?calcAge(c.birth_date):currentClient.age,weight:c.current_weight,height:c.height,goal:c.goal,level:c.training_level,training_type:c.training_type||"gym",home_equipment:c.home_equipment||"",training_days:c.training_days||"",training_time:c.training_time||"",weekly_sessions:c.weekly_sessions||null};
+    clients=clients.map(x=>String(x.id)===String(traineeId)?currentClient:x);
+    if(document.getElementById("pn"))document.getElementById("pn").value=c.full_name||"";
+    if(document.getElementById("pweight"))document.getElementById("pweight").value=c.current_weight||"";
+    if(document.getElementById("pheight"))document.getElementById("pheight").value=c.height||"";
+    if(document.getElementById("pbirth"))document.getElementById("pbirth").value=window.isoToJalaliDate(c.birth_date)||"";
+    if(document.getElementById("pgender"))document.getElementById("pgender").value=c.gender||"زن";
+    if(document.getElementById("authUserText"))document.getElementById("authUserText").textContent=(c.full_name||"شاگرد")+" | شاگرد";
+    alert("اطلاعات شخصی شما با موفقیت ذخیره و از دیتابیس دوباره بررسی شد.");
+    if(typeof loadDashboard==="function")await loadDashboard();
+   }catch(e){console.error("trainee own profile save",e);alert("ذخیره پروفایل انجام نشد. "+(e?.message||String(e)));}
+   finally{if(btn){btn.disabled=false;btn.textContent="💾 ذخیره اطلاعات شخصی من";}}
+  };
+  window.__traineeOwnProfileSave=true;
+ }
  const coachOnly=[
-  "saveProfile","saveProfileExtras","saveSubscription","saveSupplement",
+  "saveProfileExtras","saveSubscription","saveSupplement",
   "saveNutritionPlan","saveMealFood","deleteMealFood","saveLibraryExercise",
   "saveWorkoutPlan","addWorkoutExercise","deleteWorkoutExercise","editWorkoutExercise",
   "moveWorkoutExercise","saveAnalysis","saveNote","saveTrainingSchedule","addClient",
