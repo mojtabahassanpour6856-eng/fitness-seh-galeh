@@ -3837,31 +3837,16 @@ active('workoutMuscleFilters',wm);active('libraryMuscleFilters',lm);if(document.
   root.querySelectorAll("input,select,textarea").forEach(el=>{el.disabled=true;el.setAttribute("aria-disabled","true");});
   if(hideButtons)root.querySelectorAll("button").forEach(b=>b.style.display="none");
  }
- async function applyStudentCoachMessage(){
-   if(!isTrainee())return;
-   const section=document.getElementById("client");
+ function applyStudentCoachMessage(){
+   // پیام جداگانه کنار گذاشته شد؛ هدف عددی فقط در پنل مربی بماند.
    const goal=document.getElementById("goalBox");
-   if(goal){goal.style.setProperty("display","none","important");goal.setAttribute("aria-hidden","true");}
-   // Make the read-only message refresher callable after profile/dashboard loading.
-   window.refreshTraineeCoachMessage=applyStudentCoachMessage;
-   if(!section)return;
-   let card=document.getElementById("coachMessageNotice");
-   if(!card){card=document.createElement("div");card.className="card";card.id="coachMessageNotice";card.innerHTML='<h2>📣 پیام و توصیه مربی</h2><div id="coachMessageNoticeBody" class="muted">در حال بررسی پیام‌ها…</div>';section.appendChild(card);}
-   const body=document.getElementById("coachMessageNoticeBody");
-   const traineeId=currentClient?.id||authProfile?.trainee_id;
-   if(!traineeId){card.style.display="none";return;}
-   card.style.display="";
-   body.textContent="در حال دریافت پیام مربی…";
-   try{
-    const rows=await sbGet('/trainee_goals?trainee_id=eq.'+encodeURIComponent(traineeId)+'&notes=not.is.null&select=notes,target_date,created_at&order=created_at.desc&limit=20');
-    if(!isTrainee()||String(currentClient?.id||authProfile?.trainee_id)!==String(traineeId))return;
-    const messageRow=rows.find(x=>String(x.notes||"").trim());
-    if(!messageRow){card.style.display="none";return;}
-    const d=messageRow.created_at?new Date(messageRow.created_at).toLocaleDateString("fa-IR"):"";
-    body.innerHTML='<div style="padding:12px;border-radius:10px;background:var(--card-bg,#f3f6f8);line-height:1.9;white-space:pre-wrap;overflow-wrap:anywhere">'+String(messageRow.notes).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]))+'</div>'+(d?'<p class="muted" style="font-size:12px;margin-bottom:0">📅 تاریخ پیام: '+d+'</p>':"");
-   }catch(e){card.style.display="none";console.error("coach message notice",e);}
+   if(goal&&typeof authProfile!=="undefined"&&authProfile?.role==="trainee"){
+    goal.style.setProperty("display","none","important");
+    goal.setAttribute("aria-hidden","true");
+   }
+   const oldCard=document.getElementById("coachMessageNotice");
+   if(oldCard)oldCard.remove();
   }
-  // Publish the function immediately: login/select wrappers live in other script scopes.
   window.applyStudentCoachMessage=applyStudentCoachMessage;
   window.refreshTraineeCoachMessage=applyStudentCoachMessage;
   function applyRoleAccess(){
