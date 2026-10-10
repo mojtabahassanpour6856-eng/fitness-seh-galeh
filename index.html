@@ -1287,8 +1287,75 @@ window.loadDashboard = loadDashboard;
 
   function buildAuthTabs(){
     const card=document.querySelector('#authScreen .auth-card');if(!card||$id('authTabs'))return;
-    card.innerHTML=`<div class="auth-logo">🏋️</div><h2>باشگاه فیتنس سه‌قلعه</h2><p class="muted" style="text-align:center">سامانه مربی مجتبی</p><div id="authTabs" class="meal-tabs"><button class="active" id="authCoachTab" onclick="authMode('coach')">👨‍🏫 مربی</button><button id="authTraineeTab" onclick="authMode('trainee')">👤 شاگرد</button></div><div id="coachLoginBox"><label>ایمیل</label><input id="loginEmail" type="email" autocomplete="username" placeholder="ایمیل مربی"><label>رمز عبور</label><input id="loginPassword" type="password" autocomplete="current-password" placeholder="رمز عبور"><button onclick="loginApp()">🔐 ورود مربی</button></div><div id="traineeLoginBox" class="hide"><label>شماره موبایل شاگرد</label><input id="traineePhone" type="tel" placeholder="مثلاً +989121234567"><button onclick="requestTraineeOtp()">📩 ارسال کد پیامکی</button><label>کد یکبارمصرف</label><input id="traineeOtp" inputmode="numeric" maxlength="6" placeholder="کد ۶ رقمی"><button class="secondary" onclick="verifyTraineeOtp()">✅ ورود با کد</button></div><div id="authError" class="auth-error"></div>`;
+    card.innerHTML=`<div class="auth-logo">🏋️</div><h2>باشگاه فیتنس سه‌قلعه</h2><p class="muted" style="text-align:center">سامانه مربی مجتبی</p>
+      <div id="authTabs" class="meal-tabs"><button class="active" id="authCoachTab" onclick="authMode('coach')">👨‍🏫 مربی</button><button id="authTraineeTab" onclick="authMode('trainee')">👤 شاگرد</button></div>
+      <div id="coachLoginBox"><label>ایمیل</label><input id="loginEmail" type="email" autocomplete="username" placeholder="ایمیل مربی"><label>رمز عبور</label><input id="loginPassword" type="password" autocomplete="current-password" placeholder="رمز عبور"><button onclick="loginApp()">🔐 ورود مربی</button></div>
+      <div id="traineeLoginBox" class="hide">
+        <div class="trainee-auth-block"><h3>🆕 ساخت حساب شاگرد</h3><p class="muted">با ثبت‌نام، پروفایل شما ساخته می‌شود و در فهرست شاگردان مربی قرار می‌گیرید.</p>
+          <label>نام و نام خانوادگی</label><input id="traineeRegName" autocomplete="name" placeholder="نام کامل">
+          <label>شماره موبایل (اختیاری)</label><input id="traineeRegPhone" type="tel" inputmode="tel" placeholder="09121234567">
+          <label>ایمیل</label><input id="traineeRegEmail" type="email" autocomplete="email" placeholder="ایمیل معتبر">
+          <label>رمز عبور (حداقل ۸ کاراکتر)</label><input id="traineeRegPassword" type="password" autocomplete="new-password" placeholder="رمز عبور دلخواه">
+          <button type="button" onclick="registerTraineeEmail()">✅ ثبت‌نام شاگرد</button>
+        </div>
+        <div class="trainee-auth-block"><h3>🔐 ورود شاگرد</h3><label>ایمیل</label><input id="traineeEmail" type="email" autocomplete="username" placeholder="ایمیل ثبت‌نام‌شده"><label>رمز عبور</label><input id="traineePassword" type="password" autocomplete="current-password" placeholder="رمز عبور"><button type="button" onclick="loginTraineeEmail()">ورود با ایمیل</button></div>
+        <details class="trainee-sms-login"><summary>ورود با پیامک (در صورت فعال بودن سرویس پیامک)</summary><label>شماره موبایل شاگرد</label><input id="traineePhone" type="tel" placeholder="مثلاً +989121234567"><button type="button" onclick="requestTraineeOtp()">📩 ارسال کد پیامکی</button><label>کد یکبارمصرف</label><input id="traineeOtp" inputmode="numeric" maxlength="6" placeholder="کد ۶ رقمی"><button class="secondary" onclick="verifyTraineeOtp()">ورود با کد</button></details>
+      </div><div id="authError" class="auth-error"></div>`;
+    if(!$id('traineeAuthStyle')){
+      const st=document.createElement('style');st.id='traineeAuthStyle';st.textContent=`
+        #authScreen .auth-card{max-width:440px!important}
+        #authScreen .trainee-auth-block{margin:12px 0;padding:12px;border:1px solid #344b60;border-radius:12px;background:#101c29;text-align:right}
+        #authScreen .trainee-auth-block h3{font-size:14px;margin:0 0 6px}
+        #authScreen .trainee-auth-block p{font-size:11px;line-height:1.7;margin:0 0 8px}
+        #authScreen .trainee-auth-block label,#authScreen .trainee-sms-login label{display:block;font-size:12px;margin:7px 0 4px}
+        #authScreen .trainee-auth-block input,#authScreen .trainee-sms-login input{box-sizing:border-box;width:100%;min-height:39px;margin:0 0 5px;padding:9px 10px;border-radius:9px}
+        #authScreen .trainee-auth-block button,#authScreen .trainee-sms-login button{width:100%;min-height:40px;margin:6px 0 0}
+        #authScreen .trainee-sms-login{margin-top:10px;padding:10px;border:1px dashed #40566a;border-radius:10px;text-align:right}
+        #authScreen .trainee-sms-login summary{font-size:12px;cursor:pointer;padding:4px}
+      `;document.head.appendChild(st);
+    }
   }
+  window.registerTraineeEmail=async function(){
+    const name=($id('traineeRegName')?.value||'').trim();
+    const phone=phoneNorm($id('traineeRegPhone')?.value||'');
+    const email=($id('traineeRegEmail')?.value||'').trim().toLowerCase();
+    const password=$id('traineeRegPassword')?.value||'';
+    if(name.length<2){showAuthError('نام و نام خانوادگی را وارد کنید.');return;}
+    if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){showAuthError('ایمیل معتبر وارد کنید.');return;}
+    if(password.length<8){showAuthError('رمز عبور باید حداقل ۸ کاراکتر باشد.');return;}
+    if(phone&&!/^\+989\d{9}$/.test(phone)){showAuthError('شماره موبایل معتبر نیست؛ مانند 09121234567 وارد کنید.');return;}
+    const btn=$id('traineeLoginBox')?.querySelector('.trainee-auth-block button');
+    if(btn){btn.disabled=true;btn.textContent='⏳ در حال ساخت حساب…';}
+    try{
+      const {data,error}=await AUTH_SUPABASE.auth.signUp({email,password,options:{data:{full_name:name,phone:phone||null,role:'trainee'}}});
+      if(error)throw error;
+      if(data?.session&&data?.user){
+        await window.finishLogin(data.user);
+        showAuthError('✅ حساب ساخته شد. اطلاعات تکمیلی را در پروفایل شاگرد ثبت کنید.');
+      }else{
+        showAuthError('✅ درخواست ثبت‌نام ثبت شد. اگر تأیید ایمیل در Supabase فعال است، ایمیل را تأیید کنید؛ سپس از بخش «ورود شاگرد» با همین ایمیل و رمز عبور وارد شوید. پروفایل در زمان ساخت حساب ایجاد می‌شود.');
+      }
+    }catch(e){
+      console.error('trainee registration failed',e);
+      let msg=e?.message||String(e);
+      if(/already registered|already been registered/i.test(msg))msg='این ایمیل قبلاً حساب دارد؛ از بخش ورود شاگرد استفاده کنید.';
+      showAuthError('❌ ثبت‌نام انجام نشد. '+msg);
+    }finally{if(btn){btn.disabled=false;btn.textContent='✅ ثبت‌نام شاگرد';}}
+  };
+  window.loginTraineeEmail=async function(){
+    const email=($id('traineeEmail')?.value||'').trim().toLowerCase();
+    const password=$id('traineePassword')?.value||'';
+    if(!email||!password){showAuthError('ایمیل و رمز عبور شاگرد را وارد کنید.');return;}
+    const btn=$id('traineeLoginBox')?.querySelectorAll('.trainee-auth-block button')[1];
+    if(btn){btn.disabled=true;btn.textContent='⏳ در حال ورود…';}
+    try{
+      const {data,error}=await AUTH_SUPABASE.auth.signInWithPassword({email,password});
+      if(error)throw error;
+      if(!data?.user)throw new Error('حساب شاگرد دریافت نشد.');
+      await window.finishLogin(data.user);
+    }catch(e){console.error('trainee email login failed',e);showAuthError('ورود شاگرد انجام نشد. '+(e?.message||String(e)));}
+    finally{if(btn){btn.disabled=false;btn.textContent='ورود با ایمیل';}}
+  };
   window.authMode=function(mode){$id('coachLoginBox').classList.toggle('hide',mode!=='coach');$id('traineeLoginBox').classList.toggle('hide',mode!=='trainee');$id('authCoachTab').classList.toggle('active',mode==='coach');$id('authTraineeTab').classList.toggle('active',mode==='trainee');$id('authError').style.display='none';};
   window.requestTraineeOtp=async function(){
     const raw=$id('traineePhone')?.value||'';
