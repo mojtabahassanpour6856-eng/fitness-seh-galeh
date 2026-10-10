@@ -1230,19 +1230,19 @@ loadExercises();
   window.loadRegistrationRequests=async function(){
     const box=$id('registrationRequests');if(!box)return;
     try{
-      const {data,error}=await AUTH_SUPABASE.from('trainee_registration_requests').select('id,full_name,phone,created_at,status').eq('status','pending').order('created_at',{ascending:true});
+      const {data,error}=await AUTH_SUPABASE.from('trainee_registration_requests').select('id,full_name,phone,created_at,status,weekly_sessions,training_days,training_time').eq('status','pending').order('created_at',{ascending:true});
       if(error)throw error;
       if(!data?.length){box.innerHTML='<p class="muted">در حال حاضر درخواست جدیدی وجود ندارد.</p>';return;}
-      box.innerHTML='<div class="v4-table"><table><thead><tr><th>نام</th><th>شماره موبایل</th><th>تاریخ درخواست</th><th>تصمیم مربی</th></tr></thead><tbody>'+data.map(r=>'<tr><td>'+esc2(r.full_name)+'</td><td>'+esc2(r.phone)+'</td><td>'+esc2(new Date(r.created_at).toLocaleDateString('fa-IR'))+'</td><td><button class="mini" onclick="reviewTraineeRequest(\''+r.id+'\',\'approve\')">✅ تأیید</button> <button class="mini danger" onclick="reviewTraineeRequest(\''+r.id+'\',\'reject\')">رد</button></td></tr>').join('')+'</tbody></table></div>';
+      box.innerHTML='<div class="v4-table"><table><thead><tr><th>نام</th><th>شماره موبایل</th><th>جلسات / روز و ساعت</th><th>تاریخ درخواست</th><th>تصمیم مربی</th></tr></thead><tbody>'+data.map(r=>'<tr><td>'+esc2(r.full_name)+'</td><td>'+esc2(r.phone)+'</td><td>'+esc2(r.weekly_sessions||'—')+' جلسه<br>'+esc2(r.training_days||'—')+'<br>'+esc2(String(r.training_time||'').slice(0,5)||'—')+'</td><td>'+esc2(new Date(r.created_at).toLocaleDateString('fa-IR'))+'</td><td><button class="mini" onclick="reviewTraineeRequest(\''+r.id+'\',\'approve\')">✅ تأیید</button> <button class="mini danger" onclick="reviewTraineeRequest(\''+r.id+'\',\'reject\')">رد</button></td></tr>').join('')+'</tbody></table></div>';
     }catch(e){console.error(e);box.innerHTML='<p class="v4-danger">دریافت درخواست‌ها انجام نشد: '+esc2(e.message||e)+'</p>';}
   };
   window.reviewTraineeRequest=async function(id,decision){
-    const message=decision==='approve'?'درخواست را تأیید می‌کنی؟ پس از تأیید، حساب شاگرد ساخته می‌شود و رمز اولیه 12345 خواهد بود.':'درخواست این فرد رد شود؟';
+    const message=decision==='approve'?'درخواست را تأیید می‌کنی؟ پس از تأیید، حساب شاگرد ساخته می‌شود و رمز ورود اولیه 123456 خواهد بود.':'درخواست این فرد رد شود؟';
     if(!confirm(message))return;
     try{
       const {data,error}=await AUTH_SUPABASE.functions.invoke('review-trainee-registration',{body:{request_id:id,decision}});
       if(error)throw error;if(data?.error)throw new Error(data.error);
-      alert(decision==='approve'?'شاگرد تأیید شد. ورود اولیه با شماره موبایل و رمز 12345 است؛ در اولین ورود باید رمز شخصی بسازد.':'درخواست رد شد.');
+      alert(decision==='approve'?'شاگرد تأیید شد. ورود اولیه با شماره موبایل و رمز 123456 است؛ در اولین ورود باید رمز شخصی بسازد.':'درخواست رد شد.');
       await window.loadRegistrationRequests();await window.loadClients();
     }catch(e){console.error(e);alert('بررسی درخواست انجام نشد: '+(e?.message||String(e)));}
   };
@@ -1277,7 +1277,7 @@ loadExercises();
   window.loadClients=async function(){
     try{
       const data=await sbGet('/trainees?select=*&order=created_at.desc');
-      clients=data.map(c=>({id:c.id,name:c.full_name,phone:c.phone,gender:c.gender,birth_date:c.birth_date,age:calcAge(c.birth_date),weight:c.current_weight,height:c.height,goal:c.goal,level:c.training_level,history:c.training_history,limitations:c.limitations,training_type:c.training_type||'gym',home_equipment:c.home_equipment||'',training_days:c.training_days||'',training_time:c.training_time||'',createdAt:c.created_at,active:c.approval_status==='active',approval_status:c.approval_status||'active',plans:0}));
+      clients=data.map(c=>({id:c.id,name:c.full_name,phone:c.phone,gender:c.gender,birth_date:c.birth_date,age:calcAge(c.birth_date),weight:c.current_weight,height:c.height,goal:c.goal,level:c.training_level,history:c.training_history,limitations:c.limitations,training_type:c.training_type||'gym',home_equipment:c.home_equipment||'',training_days:c.training_days||'',training_time:c.training_time||'',weekly_sessions:c.weekly_sessions||null,club_registration_date:c.club_registration_date||null,createdAt:c.created_at,active:c.approval_status==='active',approval_status:c.approval_status||'active',plans:0}));
       buildCoachControls();renderClients();
     }catch(e){console.error(e);if($id('clientTableBody'))$id('clientTableBody').innerHTML=`<tr><td colspan="7" class="v4-danger">دریافت شاگردان انجام نشد: ${esc2(e.message)}</td></tr>`;}
   };
@@ -1359,14 +1359,14 @@ window.loadDashboard = loadDashboard;
       }
       const confirmPass=prompt('رمز شخصی را دوباره وارد کنید:');
       if(nextPass!==confirmPass){
-        showAuthError('دو رمز یکسان نیستند. دوباره با رمز اولیه 12345 وارد شوید.');
+        showAuthError('دو رمز یکسان نیستند. دوباره با رمز اولیه 123456 وارد شوید.');
         $id('authScreen').style.display='block';$id('authUserBar').style.display='none';document.body.classList.add('locked');
         await AUTH_SUPABASE.auth.signOut();return;
       }
       const {data:updated,error:passwordError}=await AUTH_SUPABASE.auth.updateUser({password:nextPass,data:{...(user.user_metadata||{}),must_change_password:false}});
       if(passwordError)throw passwordError;
       user=updated?.user||user;
-      alert('رمز شخصی شما ذخیره شد. از این پس با همین رمز وارد شوید.');
+      alert('رمز شخصی شما ذخیره شد. از این پس با همین رمز شخصی وارد شوید.');
     }
     if(c.auth_user_id && String(c.auth_user_id)!==String(user.id)){showAuthError('این شاگرد قبلاً به حساب دیگری متصل شده است.');await AUTH_SUPABASE.auth.signOut();return;}
     if(String(c.auth_user_id||'')!==String(user.id)){
@@ -3965,7 +3965,7 @@ active('workoutMuscleFilters',wm);active('libraryMuscleFilters',lm);if(document.
   panel.innerHTML='<h2>🔄 جایگزین غذایی با محاسبه دقیق</h2><p class="muted">مقدار جایگزین بر اساس کالری غذای برنامه محاسبه می‌شود و اختلاف پروتئین، کربوهیدرات و چربی نیز نمایش داده می‌شود. مبنا: اطلاعات غذایی هر ۱۰۰ گرم.</p><div class="grid2"><div><label>غذای برنامه</label><select id="nutritionSubOriginal"></select></div><div><label>مقدار غذای برنامه (گرم)</label><input id="nutritionSubOriginalGrams" type="number" min="1" step="1" value="100"></div><div><label>غذای جایگزین</label><select id="nutritionSubReplacement"></select></div></div><button type="button" onclick="calculateNutritionSubstitution()">🧮 محاسبه مقدار معادل</button><div id="nutritionSubResult" class="muted">غذاها را انتخاب کنید تا مقدار معادل و اختلاف درشت‌مغذی‌ها محاسبه شود.</div>';
   const anchor=$("mealCoachView")||$("mealStudentView");section.insertBefore(panel,anchor||null);
   const fill=()=>{if(typeof foods==="undefined"||!Array.isArray(foods))return;["nutritionSubOriginal","nutritionSubReplacement"].forEach(id=>{const sel=$(id);if(!sel)return;const old=sel.value;sel.innerHTML=foods.map((f,i)=>'<option value="'+i+'">'+safe(f[0])+'</option>').join("");if(old&&Number(old)<foods.length)sel.value=old;});};
-  fill();setTimeout(fill,500);setTimeout(fill,1600);
+  window.fillNutritionSubstitutionOptions=fill;fill();setTimeout(fill,500);setTimeout(fill,1600);
  }
  window.calculateNutritionSubstitution=function(){
   const a=typeof foods!=="undefined"?foods[Number($("nutritionSubOriginal")?.value)]:null;
@@ -4228,9 +4228,11 @@ active('workoutMuscleFilters',wm);active('libraryMuscleFilters',lm);if(document.
  }
  const oldSelect=window.selectClient;
  if(typeof oldSelect==="function"&&!window.__sehSelectWrapped){
-  window.selectClient=async function(id){const result=await oldSelect.apply(this,arguments);applyFeatureUI();if(isTrainee())await loadTraineeMembership();else await loadCoachReceipts();return result;};
+  window.selectClient=async function(id){const result=await oldSelect.apply(this,arguments);applyFeatureUI();if(isTrainee())await loadTraineeMembership();else{if($("subRegistrationDate")){try{const d=await sbGet("/trainees?id=eq."+encodeURIComponent(currentClient.id)+"&select=club_registration_date&limit=1");$("subRegistrationDate").value=fmtDate(d[0]?.club_registration_date)||"";}catch(e){}}await loadCoachReceipts();}return result;};
   window.__sehSelectWrapped=true;
  }
+ const oldLoadFoods=window.loadFoods;
+ if(typeof oldLoadFoods==="function"&&!window.__sehFoodsWrapped){window.loadFoods=async function(){const r=await oldLoadFoods.apply(this,arguments);window.fillNutritionSubstitutionOptions?.();return r;};window.__sehFoodsWrapped=true;}
  const oldShow=window.showSection;
  if(typeof oldShow==="function"&&!window.__sehShowWrapped){
   window.showSection=function(id,btn){const r=oldShow.apply(this,arguments);setTimeout(applyFeatureUI,0);return r;};
