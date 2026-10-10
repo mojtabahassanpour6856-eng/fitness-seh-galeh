@@ -2873,7 +2873,7 @@ window.useLibraryExercise=async function(id){
 /* Reliable full-plan export: no nested inline script inside an HTML string. */
 (function(){
   const esc = v => String(v == null ? '' : v).replace(/[&<>"']/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
-  window.sharePlan = async function(kind){
+  window.sharePlan = async function(kind, autoPrint){
     if(!currentClient) { alert('اول شاگرد را انتخاب کنید.'); return; }
     const trainee = currentClient;
     const title = kind === 'meal' ? 'برنامه غذایی' : 'برنامه تمرینی';
