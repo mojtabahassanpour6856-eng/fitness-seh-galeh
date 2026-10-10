@@ -3844,6 +3844,7 @@ active('workoutMuscleFilters',wm);active('libraryMuscleFilters',lm);if(document.
    const cards=client.querySelectorAll(":scope > .card");
    if(cards[0]){
     // شاگرد می‌تواند اطلاعات شخصی خودش را ویرایش کند؛ هدف و سطح تمرینی مربی‌محور و فقط‌خواندنی می‌ماند.
+    ["pn","pweight","pheight","ptype","pequipment","pbirth","pgender"].forEach(id=>{const el=document.getElementById(id);if(el){el.disabled=false;el.removeAttribute("disabled");el.removeAttribute("aria-disabled");el.style.pointerEvents="auto";}});
     ["pgoal","plevel"].forEach(id=>{const el=document.getElementById(id);if(el){el.disabled=true;el.setAttribute("aria-disabled","true");}});
     const saveBtn=cards[0].querySelector('button[onclick="saveProfile()"]');
     if(saveBtn){saveBtn.style.display="";saveBtn.disabled=false;saveBtn.textContent="💾 ذخیره اطلاعات شخصی من";}
