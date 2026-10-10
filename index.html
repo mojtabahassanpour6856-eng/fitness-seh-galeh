@@ -3093,45 +3093,67 @@ window.useLibraryExercise=async function(id){
       const blob = new Blob([html], {type:'text/html;charset=utf-8'});
       popup.document.getElementById('downloadFullFile').href = URL.createObjectURL(blob);
       popup.document.getElementById('printFullFile').addEventListener('click', function(){ popup.print(); });
-      popup.document.getElementById('shareFullFile').textContent='🖼️ ارسال برنامه به‌صورت عکس';
-      popup.document.getElementById('shareFullFile').addEventListener('click', async function(){
-        const button=this; button.disabled=true; button.textContent='در حال ساخت عکس…';
+      const shareButton=popup.document.getElementById('shareFullFile');
+      shareButton.textContent='🖼️ ساخت و ارسال عکس برنامه';
+      shareButton.addEventListener('click', async function(){
+        const button=this;
+        const oldText=button.textContent;
+        button.disabled=true; button.textContent='در حال آماده‌سازی عکس…';
+        let actions=null, actionsDisplay='';
         try {
-          const sourceDoc=popup.document;
-          const styleText=Array.from(sourceDoc.querySelectorAll('style')).map(x=>x.textContent).join('\n');
-          const clone=sourceDoc.body.cloneNode(true);
-          const actions=clone.querySelector('.actions'); if(actions)actions.remove();
-          clone.querySelectorAll('script').forEach(x=>x.remove());
-          clone.style.cssText='margin:0 auto;padding:18px;width:1100px;max-width:none;background:#fff;color:#17130b;font-family:Tahoma,Arial,sans-serif;box-sizing:border-box';
-          const grid=clone.querySelector('.session-grid');
-          if(grid){grid.style.height='auto';grid.style.minHeight='900px';grid.style.gridAutoRows='minmax(280px,auto)';grid.style.overflow='visible';}
-          clone.querySelectorAll('.session-exercises').forEach(x=>{x.style.overflow='visible';});
-          const content=clone.innerHTML;
-          const width=1200;
-          const roughRows=grid?Math.max(2,Number((grid.style.getPropertyValue('--session-rows')||'2'))):2;
-          const height=Math.max(1500,Math.min(6000,Math.ceil((grid?grid.scrollHeight:900)+260)));
-          const svg='<svg xmlns="http://www.w3.org/2000/svg" width="'+width+'" height="'+height+'" viewBox="0 0 '+width+' '+height+'"><foreignObject width="100%" height="100%"><div xmlns="http://www.w3.org/1999/xhtml"><style>'+styleText+'\n*{box-sizing:border-box}body{margin:0;padding:0;background:#fff} .session-grid{height:auto!important;min-height:900px!important;grid-auto-rows:minmax(280px,auto)!important}.session-exercises{overflow:visible!important}.actions{display:none!important}</style>'+content+'</div></foreignObject></svg>';
-          const svgBlob=new Blob([svg],{type:'image/svg+xml;charset=utf-8'});
-          const objectUrl=URL.createObjectURL(svgBlob);
-          try {
-            const img=new Image();
-            img.src=objectUrl;
-            await new Promise((resolve,reject)=>{img.onload=resolve;img.onerror=()=>reject(new Error('تبدیل صفحه به عکس انجام نشد.'));});
-            const canvas=sourceDoc.createElement('canvas');canvas.width=width;canvas.height=height;
-            const ctx=canvas.getContext('2d');ctx.fillStyle='#fff';ctx.fillRect(0,0,width,height);ctx.drawImage(img,0,0,width,height);
-            const png=await new Promise((resolve,reject)=>canvas.toBlob(blob=>blob?resolve(blob):reject(new Error('ساخت تصویر PNG ناموفق بود.')),'image/png'));
-            const imageFile=new File([png],(kind==='meal'?'برنامه_غذایی_':'برنامه_تمرینی_')+(trainee.name||'شاگرد')+'.png',{type:'image/png'});
-            if(popup.navigator.share&&popup.navigator.canShare&&popup.navigator.canShare({files:[imageFile]})){
-              await popup.navigator.share({title:title+' | '+(trainee.name||''),text:'تصویر برنامه از باشگاه فیتنس سه‌قلعه',files:[imageFile]});
-            }else{
-              const link=sourceDoc.createElement('a');link.href=URL.createObjectURL(png);link.download=imageFile.name;link.click();
-              alert('اشتراک مستقیم عکس در این مرورگر پشتیبانی نشد؛ تصویر PNG برای ذخیره آماده شد.');
+          const doc=popup.document;
+          if(!popup.html2canvas){
+            button.textContent='در حال بارگذاری ابزار تصویر…';
+            await new Promise((resolve,reject)=>{
+              const script=doc.createElement('script');
+              script.src='https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js';
+              script.onload=resolve;
+              script.onerror=()=>reject(new Error('ابزار ساخت عکس بارگذاری نشد؛ اینترنت گوشی را بررسی و دوباره امتحان کنید.'));
+              doc.head.appendChild(script);
+            });
+          }
+          actions=doc.querySelector('.actions');
+          if(actions){actionsDisplay=actions.style.display;actions.style.display='none';}
+          button.textContent='در حال ساخت تصویر PNG…';
+          const target=doc.body;
+          const canvas=await popup.html2canvas(target,{
+            scale:2, backgroundColor:'#ffffff', useCORS:true, logging:false,
+            width:Math.max(target.scrollWidth,900),
+            windowWidth:Math.max(target.scrollWidth,900),
+            height:target.scrollHeight,
+            windowHeight:target.scrollHeight,
+            scrollX:0,scrollY:0
+          });
+          const png=await new Promise((resolve,reject)=>{
+            canvas.toBlob(blob=>blob?resolve(blob):reject(new Error('مرورگر نتوانست تصویر PNG بسازد.')),'image/png');
+          });
+          const safeName=String(trainee.name||'شاگرد').replace(/[\\/:*?"<>|]/g,'_');
+          const imageFile=new File([png],(kind==='meal'?'برنامه_غذایی_':'برنامه_تمرینی_')+safeName+'.png',{type:'image/png'});
+          button.textContent='در حال آماده‌سازی اشتراک…';
+          if(popup.navigator.share && popup.navigator.canShare && popup.navigator.canShare({files:[imageFile]})){
+            try{
+              await popup.navigator.share({title:title+' | '+(trainee.name||''),text:'برنامه '+title+' از باشگاه فیتنس سه‌قلعه',files:[imageFile]});
+            }catch(shareError){
+              if(shareError && shareError.name==='AbortError') return;
+              const url=URL.createObjectURL(png);
+              const link=doc.createElement('a');link.href=url;link.download=imageFile.name;doc.body.appendChild(link);link.click();link.remove();
+              setTimeout(()=>URL.revokeObjectURL(url),60000);
+              alert('ارسال مستقیم انجام نشد؛ عکس PNG ذخیره می‌شود. سپس آن را از پوشه دانلودها در واتساپ یا پیام‌رسان بفرستید.');
             }
-          } finally {URL.revokeObjectURL(objectUrl);}
-        } catch(e) {
-          if(!e||e.name!=='AbortError') alert('ساخت یا ارسال عکس انجام نشد.\n'+(e.message||String(e)));
-        } finally {button.disabled=false;button.textContent='🖼️ ارسال برنامه به‌صورت عکس';}
-      });
+          }else{
+            const url=URL.createObjectURL(png);
+            const link=doc.createElement('a');link.href=url;link.download=imageFile.name;doc.body.appendChild(link);link.click();link.remove();
+            setTimeout(()=>URL.revokeObjectURL(url),60000);
+            alert('عکس برنامه ساخته شد و برای ذخیره آماده است. از پوشه دانلودها می‌توانید آن را به‌صورت عکس ارسال کنید.');
+          }
+        }catch(e){
+          console.error('PNG sharing failed',e);
+          alert('ساخت عکس انجام نشد. '+(e&&e.message?e.message:String(e)));
+        }finally{
+          if(actions){actions.style.display=actionsDisplay;}
+          button.disabled=false;button.textContent='🖼️ ارسال برنامه به‌صورت عکس';
+        }
+      });;
     } catch(e) {
       console.error('Full plan export failed',e);
       try { popup.document.body.innerHTML = '<p>ساخت خروجی برنامه ناموفق بود: '+esc(e.message||e)+'</p>'; } catch(_) {}
