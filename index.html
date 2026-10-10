@@ -1494,7 +1494,9 @@ const plans=workoutResult.data||[], nutrition=nutritionResult.data||[];
   const baseSaveProfile=window.saveProfile;
   window.saveProfile=async function(){
     if(!currentClient)return alert('اول شاگرد را انتخاب کنید.');
-    const payload={full_name:$f('pn').value.trim(),current_weight:+$f('pweight').value||null,height:+$f('pheight').value||null,goal:$f('pgoal').value||null,training_level:$f('plevel').value||null,training_type:$f('ptype')?.value||'gym',home_equipment:$f('pequipment')?.value.trim()||null,birth_date:window.jalaliToISODate($f('pbirth')?.value)||null,gender:$f('pgender')?.value||null};
+    const birthRaw=($f('pbirth')?.value||'').trim(),birthISO=window.jalaliToISODate(birthRaw);
+    if(birthRaw&&!birthISO)return alert('تاریخ تولد معتبر نیست؛ آن را به صورت شمسی مانند ۱۴۰۵/۰۷/۱۸ وارد کنید.');
+    const payload={full_name:$f('pn').value.trim(),current_weight:+$f('pweight').value||null,height:+$f('pheight').value||null,goal:$f('pgoal').value||null,training_level:$f('plevel').value||null,training_type:$f('ptype')?.value||'gym',home_equipment:$f('pequipment')?.value.trim()||null,birth_date:birthISO||null,gender:$f('pgender')?.value||null};
     if(!payload.full_name)return alert('نام شاگرد را وارد کنید.');
     try{await sbWrite(`/trainees?id=eq.${encodeURIComponent(currentClient.id)}`,'PATCH',payload);await loadClients();currentClient=clients.find(x=>String(x.id)===String(currentClient.id));await loadProfileBasic();await loadDashboard();alert('پروفایل کامل شاگرد ذخیره شد.');}catch(e){alert('ذخیره پروفایل انجام نشد.\n'+e.message)}
   };
@@ -1802,12 +1804,15 @@ const plans=workoutResult.data||[], nutrition=nutritionResult.data||[];
       if(!profileResult.data) throw new Error('حساب واردشده در جدول profiles پیدا نشد.');
       if(profileResult.data.role!=='coach') throw new Error('حساب فعلی مربی نیست.');
 
+      const birthRaw=(byId('cbirth')?.value||'').trim();
+      const birthISO=window.jalaliToISODate(birthRaw);
+      if(birthRaw&&!birthISO)throw new Error('تاریخ تولد معتبر نیست؛ آن را به صورت شمسی مانند ۱۴۰۵/۰۷/۱۸ وارد کنید.');
       const payload={
         full_name,
         phone:(byId('cphone')?.value||'').trim()||null,
         phone_normalized:phoneNormForRegistration((byId('cphone')?.value||'').trim())||null,
         gender:byId('cgender')?.value||null,
-        birth_date:window.jalaliToISODate(byId('cbirth')?.value)||null,
+        birth_date:birthISO||null,
         height:+(byId('cheight')?.value||0)||null,
         current_weight:+(byId('cweight')?.value||0)||null,
         goal:byId('cgoal')?.value||null,
@@ -1951,8 +1956,12 @@ const plans=workoutResult.data||[], nutrition=nutritionResult.data||[];
     if(saving)return;
     if(typeof currentClient==='undefined'||!currentClient){alert('اول شاگرد را انتخاب کنید.');return;}
     const traineeId=currentClient.id;
-    const start=window.jalaliToISODate(value('subStart'))||((typeof today==='function')?today():new Date().toISOString().slice(0,10));
-    const end=window.jalaliToISODate(value('subEnd'))||null;
+    const startRaw=value('subStart'),endRaw=value('subEnd');
+    const start=startRaw?window.jalaliToISODate(startRaw):((typeof today==='function')?today():new Date().toISOString().slice(0,10));
+    const end=endRaw?window.jalaliToISODate(endRaw):null;
+    if(startRaw&&!start){alert('تاریخ شروع عضویت معتبر نیست؛ نمونه: ۱۴۰۵/۰۷/۱۸');return;}
+    if(endRaw&&!end){alert('تاریخ پایان عضویت معتبر نیست؛ نمونه: ۱۴۰۵/۰۸/۱۸');return;}
+    if(start&&end&&end<start){alert('تاریخ پایان عضویت نمی‌تواند قبل از تاریخ شروع باشد.');return;}
     const amountRaw=value('subAmount');
     const amount=amountRaw===''?0:Number(amountRaw);
     const paid=value('subPaid');
