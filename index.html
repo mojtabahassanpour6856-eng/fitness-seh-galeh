@@ -2288,12 +2288,12 @@ window.toggleExerciseFavorite=async function(id,value){try{await sbWrite(`/train
 
   const priorFinishForCoachMessage=window.finishLogin;
   if(typeof priorFinishForCoachMessage==="function"&&!window.__coachMessageFinishWrapped){
-   window.finishLogin=async function(user){await priorFinishForCoachMessage(user);await applyStudentCoachMessage();};
+   window.finishLogin=async function(user){await priorFinishForCoachMessage(user);if(typeof window.refreshTraineeCoachMessage==="function")await window.refreshTraineeCoachMessage();};
    window.__coachMessageFinishWrapped=true;
   }
   const priorSelectForCoachMessage=window.selectClient;
   if(typeof priorSelectForCoachMessage==="function"&&!window.__coachMessageSelectWrapped){
-   window.selectClient=async function(id){const result=await priorSelectForCoachMessage(id);await applyStudentCoachMessage();return result;};
+   window.selectClient=async function(id){const result=await priorSelectForCoachMessage(id);if(typeof window.refreshTraineeCoachMessage==="function")await window.refreshTraineeCoachMessage();return result;};
    window.__coachMessageSelectWrapped=true;
   }
   const oldFinish=window.finishLogin;
@@ -3861,6 +3861,9 @@ active('workoutMuscleFilters',wm);active('libraryMuscleFilters',lm);if(document.
     body.innerHTML='<div style="padding:12px;border-radius:10px;background:var(--card-bg,#f3f6f8);line-height:1.9;white-space:pre-wrap;overflow-wrap:anywhere">'+String(messageRow.notes).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]))+'</div>'+(d?'<p class="muted" style="font-size:12px;margin-bottom:0">📅 تاریخ پیام: '+d+'</p>':"");
    }catch(e){card.style.display="none";console.error("coach message notice",e);}
   }
+  // Publish the function immediately: login/select wrappers live in other script scopes.
+  window.applyStudentCoachMessage=applyStudentCoachMessage;
+  window.refreshTraineeCoachMessage=applyStudentCoachMessage;
   function applyRoleAccess(){
   if(!isTrainee())return;
   // هدف عددی فقط در پنل مربی نمایش داده می‌شود؛ شاگرد فقط پیام جداگانه را می‌بیند.
