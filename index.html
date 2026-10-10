@@ -100,6 +100,41 @@ body.locked{overflow:hidden}
  #workout .card:has(#workoutExercise) .grid2:has(#workoutExercise) select{min-height:36px!important}
 }
 </style>
+
+<style id="FITNESS_COMPACT_ADD_WORKOUT_FORM_V2">
+/* V2: explicit classes instead of :has(), for Android/mobile browser compatibility */
+#workout .workout-add-exercise-card{box-sizing:border-box!important;padding:12px!important;margin:9px 0!important;border:1px solid #354b60!important;border-radius:15px!important;background:linear-gradient(145deg,#152536,#0d1722)!important;overflow:hidden!important}
+#workout .workout-add-exercise-card>h2{font-size:16px!important;line-height:1.4!important;margin:0 0 7px!important;display:flex!important;align-items:center!important;gap:6px!important}
+#workout .workout-add-exercise-card>p.muted{font-size:11px!important;line-height:1.6!important;margin:0 0 8px!important}
+#workout .workout-add-exercise-card #workoutExerciseSearch{display:block!important;box-sizing:border-box!important;width:100%!important;min-width:0!important;min-height:37px!important;padding:8px 10px!important;font-size:12px!important;margin:3px 0 8px!important;border-radius:9px!important}
+#workout .workout-add-exercise-card #workoutMuscleFilters{display:grid!important;grid-template-columns:repeat(5,minmax(0,1fr))!important;gap:5px!important;margin:5px 0 9px!important}
+#workout .workout-add-exercise-card #workoutMuscleFilters .muscle-filter{box-sizing:border-box!important;min-width:0!important;width:100%!important;min-height:31px!important;padding:5px 2px!important;margin:0!important;border-radius:8px!important;font-size:10px!important;line-height:1.35!important;white-space:normal!important}
+#workout .workout-add-exercise-card .workout-template-box{box-sizing:border-box!important;padding:8px!important;margin:6px 0!important;border:1px solid #30475c!important;border-radius:10px!important;background:#101b27!important}
+#workout .workout-add-exercise-card .workout-template-box>label{font-size:11px!important;margin:0 0 5px!important}
+#workout .workout-add-exercise-card .workout-template-box .row{display:grid!important;grid-template-columns:minmax(0,1fr) auto!important;gap:6px!important;align-items:center!important}
+#workout .workout-add-exercise-card .workout-template-box select{box-sizing:border-box!important;width:100%!important;min-width:0!important;padding:7px!important;min-height:35px!important;font-size:11px!important}
+#workout .workout-add-exercise-card .workout-template-box button{width:auto!important;min-height:35px!important;margin:0!important;padding:7px 9px!important;font-size:11px!important;white-space:nowrap!important}
+#workout .workout-add-exercise-card #workoutTemplateStatus{font-size:10px!important;line-height:1.55!important}
+#workout .workout-add-exercise-card #workoutExerciseCount{font-size:10px!important;line-height:1.5!important;margin:5px 0 8px!important;padding:5px 7px!important;border-radius:7px!important;background:#172636!important}
+#workout .workout-add-exercise-card .workout-add-fields{display:grid!important;grid-template-columns:minmax(0,1.7fr) minmax(55px,.65fr) minmax(68px,.8fr) minmax(75px,.85fr)!important;gap:7px!important;align-items:end!important;margin:0!important}
+#workout .workout-add-exercise-card .workout-add-fields>div{display:block!important;min-width:0!important;width:auto!important;margin:0!important;padding:0!important}
+#workout .workout-add-exercise-card .workout-add-fields label{display:block!important;font-size:10px!important;line-height:1.4!important;margin:0 0 4px!important;color:#d4dfeb!important}
+#workout .workout-add-exercise-card .workout-add-fields input,#workout .workout-add-exercise-card .workout-add-fields select{box-sizing:border-box!important;display:block!important;width:100%!important;min-width:0!important;min-height:37px!important;height:37px!important;padding:6px 7px!important;font-size:12px!important;border-radius:8px!important}
+#workout .workout-add-exercise-card>label{display:block!important;font-size:10px!important;margin:7px 0 3px!important}
+#workout .workout-add-exercise-card #workoutExerciseNotes{box-sizing:border-box!important;display:block!important;width:100%!important;min-width:0!important;min-height:35px!important;height:35px!important;padding:7px 9px!important;font-size:11px!important;margin:0 0 7px!important;border-radius:8px!important}
+#workout .workout-add-exercise-card>button[onclick*="addWorkoutExercise"]{box-sizing:border-box!important;display:block!important;width:100%!important;min-height:41px!important;padding:9px 12px!important;margin:4px 0 0!important;border:0!important;border-radius:10px!important;background:linear-gradient(90deg,#ffbd16,#ffda68)!important;color:#171717!important;font-weight:800!important;font-size:13px!important;box-shadow:0 3px 0 #9b7010!important}
+@media(max-width:520px){
+ #workout .workout-add-exercise-card{padding:9px!important}
+ #workout .workout-add-exercise-card #workoutMuscleFilters{grid-template-columns:repeat(4,minmax(0,1fr))!important;gap:4px!important}
+ #workout .workout-add-exercise-card .workout-add-fields{grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:7px!important}
+ #workout .workout-add-exercise-card .workout-add-fields>div:first-child{grid-column:1/-1!important}
+ #workout .workout-add-exercise-card .workout-add-fields input,#workout .workout-add-exercise-card .workout-add-fields select{height:36px!important;min-height:36px!important}
+}
+@media(max-width:360px){
+ #workout .workout-add-exercise-card #workoutMuscleFilters{grid-template-columns:repeat(3,minmax(0,1fr))!important}
+}
+</style>
+
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style id="FITNESS_LIBRARY_DETAIL_VIEW_STYLE">
 #libraryList{display:grid;grid-template-columns:repeat(auto-fit,minmax(145px,1fr));gap:10px}
@@ -491,7 +526,7 @@ body.library-room #workout .library-room-card .library-detail-view{width:100%!im
 <button onclick="saveWorkoutPlan()">💾 ذخیره برنامه تمرینی</button>
 </div>
 <div class="card"><h2>📚 بانک حرکات مربی</h2><div class="grid2"><input id="libName" placeholder="نام حرکت"><input id="libMuscle" placeholder="عضله هدف"><select id="libCategory"><option>سینه</option><option>پشت</option><option>سرشانه</option><option>جلو بازو</option><option>پشت بازو</option><option>پا</option><option>شکم</option><option>کاردیو</option><option>اصلاحی</option><option>سایر</option></select><input id="libEquipment" placeholder="تجهیزات"><select id="libLevel"><option>مبتدی</option><option>متوسط</option><option>پیشرفته</option></select></div><input id="libNote" placeholder="نکته مربی"><button onclick="saveLibraryExercise()">💾 ذخیره حرکت در بانک مربی</button><input id="libSearch" placeholder="🔎 جستجو با نام، عضله یا وسیله" oninput="loadLibraryExercises()"><div class="muscle-filter-grid" id="libraryMuscleFilters"><button type="button" class="muscle-filter active" data-muscle="همه حرکات" onclick="filterLibraryMuscle('همه حرکات')">📚 همه</button><button type="button" class="muscle-filter" data-muscle="سینه" onclick="filterLibraryMuscle('سینه')">🏋️ سینه</button><button type="button" class="muscle-filter" data-muscle="پشت" onclick="filterLibraryMuscle('پشت')">💪 پشت</button><button type="button" class="muscle-filter" data-muscle="سرشانه" onclick="filterLibraryMuscle('سرشانه')">🔱 سرشانه</button><button type="button" class="muscle-filter" data-muscle="جلو بازو" onclick="filterLibraryMuscle('جلو بازو')">💪 جلو بازو</button><button type="button" class="muscle-filter" data-muscle="پشت بازو" onclick="filterLibraryMuscle('پشت بازو')">⚡ پشت بازو</button><button type="button" class="muscle-filter" data-muscle="پا" onclick="filterLibraryMuscle('پا')">🦵 پا</button><button type="button" class="muscle-filter" data-muscle="شکم" onclick="filterLibraryMuscle('شکم')">🎯 شکم</button><button type="button" class="muscle-filter" data-muscle="کاردیو" onclick="filterLibraryMuscle('کاردیو')">🏃 کاردیو</button><button type="button" class="muscle-filter" data-muscle="اصلاحی" onclick="filterLibraryMuscle('اصلاحی')">🧘 اصلاحی</button><button type="button" class="muscle-filter" data-muscle="علاقه‌مندی" onclick="filterLibraryMuscle('علاقه‌مندی')">⭐ علاقه‌مندی</button></div><div id="libraryList" class="muted"></div></div>
-<div class="card">
+<div class="card workout-add-exercise-card">
 <h2>➕ افزودن حرکت</h2>
 <p class="muted">اول عضلهٔ جلسه را انتخاب کن تا فقط حرکات همان بخش نمایش داده شوند.</p>
 <input id="workoutExerciseSearch" placeholder="🔎 جستجو در حرکات همین گروه" oninput="renderWorkoutExerciseOptions()">
@@ -502,7 +537,7 @@ body.library-room #workout .library-room-card .library-detail-view{width:100%!im
 <p id="workoutTemplateStatus" class="muted" style="margin:5px 0 0">با انتخاب الگو، حرکات گروه‌های مربوط به همان جلسه در فهرست نمایش داده می‌شوند؛ سپس حرکت‌ها را به برنامه اضافه کنید.</p>
 </div>
 <div id="workoutExerciseCount" class="muted" style="margin:6px 0 10px">در حال دریافت حرکات…</div>
-<div class="grid2">
+<div class="grid2 workout-add-fields">
 <div><label>حرکت</label><select id="workoutExercise"></select></div>
 <div><label>ست</label><input id="workoutSets" type="number" value="3" min="1"></div>
 <div><label>تکرار</label><input id="workoutReps" type="text" value="10-12"></div>
