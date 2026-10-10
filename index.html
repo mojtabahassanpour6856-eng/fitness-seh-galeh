@@ -2862,3 +2862,23 @@ window.useLibraryExercise=async function(id){
   };
 })();
 </script>
+
+<script id="FITNESS_SHARE_BUTTON_ROUTE_FIX_V2">
+/* Route the visible share buttons directly to the latest complete-program exporter.
+   Capture phase prevents any older click handler from opening a text-only share sheet. */
+(function(){
+  document.addEventListener('click', function(event){
+    const button = event.target && event.target.closest ? event.target.closest('#shareWorkoutBtn, #shareMealBtn') : null;
+    if(!button) return;
+    event.preventDefault();
+    event.stopPropagation();
+    if(typeof event.stopImmediatePropagation === 'function') event.stopImmediatePropagation();
+    const kind = button.id === 'shareMealBtn' ? 'meal' : 'workout';
+    if(typeof window.sharePlan !== 'function'){
+      alert('بخش خروجی کامل برنامه بارگذاری نشده است. صفحه را تازه‌سازی کنید و دوباره تلاش کنید.');
+      return;
+    }
+    window.sharePlan(kind);
+  }, true);
+})();
+</script>
