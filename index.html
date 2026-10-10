@@ -2361,8 +2361,19 @@ const plans=workoutResult.data||[], nutrition=nutritionResult.data||[];
       <div><small>هدف</small>${esc(c.goal||'ثبت نشده')}</div><div><small>روز / ساعت تمرین</small>${esc(c.training_days||'—')} ${esc(c.training_time||'')}</div>
       <div><small>برنامه</small>${c.plans?'برنامه دارد':'برنامه ثبت نشده'}</div><div><small>عضویت</small>${active}</div></div>
       <div class="coach-card-actions"><button type="button" class="secondary" onclick="selectClient('${String(c.id).replace(/'/g,'')}')">ورود به پروفایل</button></div></article>`;
-    }).join(''):(clients.length===0?'<div style="padding:12px;border:1px solid #8b6b2b;border-radius:10px;margin-top:10px"><strong>هنوز شاگردی برای این حساب نمایش داده نمی‌شود.</strong><p>ورود مربی انجام شده، اما درخواست فهرست شاگردان ردیفی برنگردانده است. این حالت معمولاً به پیوند رکورد در جدول trainees با شناسه مربی یا سیاست‌های RLS مربوط است؛ از این پیام به‌تنهایی نمی‌توان علت قطعی را تعیین کرد.</p><p>برای بررسی دقیق، شناسه حساب ورود و مقدار coach_user_id رکوردهای جدول trainees باید در همان پروژه Supabase مقایسه شوند.</p><button type="button" onclick="loadClients()">تلاش دوباره</button></div>':'<div class="muted" style="padding:12px">شاگردی با این جستجو یا فیلتر پیدا نشد.</div>');
+    }).join(''):(clients.length===0?'<div style="padding:12px;border:1px solid #8b6b2b;border-radius:10px;margin-top:10px"><strong>هنوز شاگردی برای این حساب نمایش داده نمی‌شود.</strong><p>ورود مربی انجام شده، اما درخواست فهرست شاگردان ردیفی برنگردانده است. این حالت معمولاً به پیوند رکورد در جدول trainees با شناسه مربی یا سیاست‌های RLS مربوط است؛ از این پیام به‌تنهایی نمی‌توان علت قطعی را تعیین کرد.</p><p>برای بررسی دقیق، شناسه حساب ورود و مقدار coach_user_id رکوردهای جدول trainees باید در همان پروژه Supabase مقایسه شوند.</p><button type="button" onclick="showTraineeDiagnostic()">نمایش شناسه حساب و وضعیت اتصال</button> <button type="button" onclick="loadClients()">تلاش دوباره</button></div>':'<div class="muted" style="padding:12px">شاگردی با این جستجو یا فیلتر پیدا نشد.</div>');
     if(typeof window.updateStats==='function')window.updateStats();
+  };
+  window.showTraineeDiagnostic=async function(){
+    try{
+      const result=await window.AUTH_SUPABASE.auth.getSession();
+      const session=result?.data?.session;
+      if(!session?.user?.id)throw new Error('نشست ورود پیدا نشد؛ یک‌بار خارج و دوباره وارد شوید.');
+      const profile=await window.AUTH_SUPABASE.from('profiles').select('id,role').eq('id',session.user.id).maybeSingle();
+      if(profile.error)throw profile.error;
+      const traineeCount=Array.isArray(clients)?clients.length:0;
+      alert('گزارش تشخیص اتصال\\nشناسه حساب: '+session.user.id+'\\nنقش پروفایل: '+(profile.data?.role||'پیدا نشد')+'\\nشاگردهای قابل مشاهده: '+traineeCount+'\\nپروژه اپ: '+SUPABASE_URL+'\\n\\nاگر تعداد شاگردها صفر است، باید coach_user_id رکوردها و سیاست‌های RLS در همین پروژه بررسی شوند.');
+    }catch(e){alert('گرفتن گزارش اتصال ناموفق بود.\\n'+(e.message||String(e)));}
   };
   window.updateStats=async function(){
     const total=Array.isArray(clients)?clients.length:0;
