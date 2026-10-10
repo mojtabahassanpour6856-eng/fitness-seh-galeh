@@ -2866,3 +2866,73 @@ window.useLibraryExercise=async function(id){
   }, true);
 })();
 </script>
+
+
+<script id="FITNESS_SHARE_PROGRAM_FILE_V2">
+/* Reliable full-plan export: no nested inline script inside an HTML string. */
+(function(){
+  const esc = v => String(v == null ? '' : v).replace(/[&<>"']/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
+  window.sharePlan = async function(kind){
+    if(!currentClient) { alert('اول شاگرد را انتخاب کنید.'); return; }
+    const trainee = currentClient;
+    const title = kind === 'meal' ? 'برنامه غذایی' : 'برنامه تمرینی';
+    const filename = kind === 'meal' ? 'برنامه_غذایی.html' : 'برنامه_تمرینی.html';
+    const popup = window.open('', '_blank');
+    if(!popup) { alert('پنجره خروجی باز نشد. اجازه بازشدن پنجره جدید را فعال کنید.'); return; }
+    popup.document.open();
+    popup.document.write('<!doctype html><html lang="fa" dir="rtl"><meta charset="utf-8"><body style="font-family:Tahoma;padding:20px">در حال آماده‌سازی برنامه کامل…</body></html>');
+    popup.document.close();
+    try {
+      let body = '';
+      if(kind === 'meal') {
+        const p = (await sbGet('/nutrition_plans?trainee_id=eq.'+encodeURIComponent(trainee.id)+'&select=*&order=created_at.desc&limit=1'))[0];
+        if(!p) throw new Error('برنامه غذایی ذخیره‌شده‌ای برای این شاگرد پیدا نشد.');
+        const meals = await sbGet('/nutrition_meals?plan_id=eq.'+encodeURIComponent(p.id)+'&select=*&order=meal_order.asc');
+        body = '<h2>'+esc(p.title||title)+'</h2><p>هدف روزانه: کالری '+esc(p.daily_calories||'—')+' | پروتئین '+esc(p.protein_target||'—')+' | کربوهیدرات '+esc(p.carbs_target||'—')+' | چربی '+esc(p.fat_target||'—')+'</p>';
+        for(const meal of meals) {
+          const foods = await sbGet('/nutrition_meal_foods?meal_id=eq.'+encodeURIComponent(meal.id)+'&select=*&order=created_at.asc');
+          const ids = [...new Set(foods.map(x=>x.food_id).filter(Boolean))];
+          const list = ids.length ? await sbGet('/foods?id=in.('+ids.join(',')+')&select=id,name,calories,protein,carbs,fat') : [];
+          const byId = Object.fromEntries(list.map(x=>[String(x.id),x]));
+          body += '<h3>'+esc(meal.meal_name||'وعده غذایی')+'</h3><table><thead><tr><th>غذا</th><th>مقدار</th><th>کالری</th><th>پروتئین</th><th>کربوهیدرات</th><th>چربی</th></tr></thead><tbody>'+foods.map(item=>{const f=byId[String(item.food_id)]||{};let m={valid:false};try{m=foodMetrics(f,item.amount,item.unit)}catch(e){}return '<tr><td>'+esc(f.name||'غذا')+'</td><td>'+esc(item.amount)+' '+esc(item.unit||'گرم')+'</td><td>'+(m.valid?m.cal.toFixed(0):'—')+'</td><td>'+(m.valid?m.pro.toFixed(1):'—')+'</td><td>'+(m.valid?m.carb.toFixed(1):'—')+'</td><td>'+(m.valid?m.fat.toFixed(1):'—')+'</td></tr>'}).join('')+'</tbody></table>';
+        }
+      } else {
+        const p = (await sbGet('/trainee_workout_plans?trainee_id=eq.'+encodeURIComponent(trainee.id)+'&select=*&order=created_at.desc&limit=1'))[0];
+        if(!p) throw new Error('برنامه تمرینی ذخیره‌شده‌ای برای این شاگرد پیدا نشد.');
+        const rows = await sbGet('/trainee_workout_exercises?workout_plan_id=eq.'+encodeURIComponent(p.id)+'&select=*&order=sort_order.asc,created_at.asc');
+        const ids = [...new Set(rows.map(x=>x.exercise_id).filter(x=>x!==null&&x!==undefined&&x!==''))];
+        const ex = ids.length ? await sbGet('/exercises?id=in.('+ids.join(',')+')&select=id,name') : [];
+        const names = Object.fromEntries(ex.map(x=>[String(x.id),x.name]));
+        const systems = {normal:'معمولی',superset:'سوپرست',drop_set:'دراپ‌ست','drop-set':'دراپ‌ست',rest_pause:'استراحت-مکث','rest-pause':'استراحت-مکث',giant_set:'جاینت‌ست','giant-set':'جاینت‌ست',pyramid:'هرمی',reverse_pyramid:'هرمی معکوس',circuit:'دایره‌ای',triset:'تری‌ست'};
+        body = '<h2>'+esc(p.title||title)+'</h2><p>هدف: '+esc(p.goal||'—')+'</p>'+(p.notes?'<p>یادداشت: '+esc(p.notes)+'</p>':'')+'<p>تعداد حرکات: '+rows.length+'</p><table><thead><tr><th>ردیف</th><th>جلسه</th><th>حرکت</th><th>ست</th><th>تکرار/زمان</th><th>استراحت (ثانیه)</th><th>سیستم</th><th>گروه</th><th>توضیحات</th></tr></thead><tbody>'+rows.map((x,i)=>'<tr><td>'+(i+1)+'</td><td>'+esc(x.training_day||'—')+'</td><td>'+esc(names[String(x.exercise_id)]||'حرکت ثبت‌شده')+'</td><td>'+esc(x.sets??'—')+'</td><td>'+esc(x.reps||'—')+'</td><td>'+esc(x.rest_seconds??0)+'</td><td>'+esc(systems[x.training_system||'normal']||x.training_system||'معمولی')+'</td><td>'+esc(x.group_key||'—')+'</td><td>'+esc(x.notes||'—')+'</td></tr>').join('')+'</tbody></table>';
+      }
+      const html = '<!doctype html><html lang="fa" dir="rtl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>'+esc(title)+'</title><style>body{font-family:Tahoma,Arial,sans-serif;padding:18px;line-height:1.9;color:#111}h1{text-align:center;font-size:20px}table{width:100%;border-collapse:collapse;margin-top:12px}td,th{border:1px solid #888;padding:6px;text-align:center;font-size:11px;overflow-wrap:anywhere}th{background:#eee}.actions{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px}.actions button,.actions a{font-family:Tahoma;padding:10px;border:1px solid #555;border-radius:8px;background:#f3f3f3;color:#111;text-decoration:none}@media print{.actions{display:none}body{padding:0}tr{break-inside:avoid}}@page{margin:12mm}</style></head><body><div class="actions"><button id="shareFullFile">📤 اشتراک فایل کامل برنامه</button><button id="printFullFile">🖨️ چاپ / ذخیره PDF</button><a id="downloadFullFile" download="'+filename+'">⬇️ ذخیره فایل برنامه</a></div><h1>باشگاه فیتنس سه‌قلعه | مربی مجتبی</h1><p>شاگرد: '+esc(trainee.name||'—')+' | تاریخ: '+esc(typeof today==='function'?today():'')+'</p>'+body+'<p>باشگاه فیتنس سه‌قلعه | مربی مجتبی</p></body></html>';
+      popup.document.open(); popup.document.write(html); popup.document.close();
+      const blob = new Blob([html], {type:'text/html;charset=utf-8'});
+      popup.document.getElementById('downloadFullFile').href = URL.createObjectURL(blob);
+      popup.document.getElementById('printFullFile').addEventListener('click', function(){ popup.print(); });
+      popup.document.getElementById('shareFullFile').addEventListener('click', async function(){
+        try {
+          const file = new File([html], filename, {type:'text/html'});
+          if(popup.navigator.share && popup.navigator.canShare && popup.navigator.canShare({files:[file]})) {
+            await popup.navigator.share({title:title+' | '+(trainee.name||''), text:'فایل کامل برنامه تمرینی باشگاه فیتنس سه‌قلعه', files:[file]});
+          } else {
+            alert('اشتراک فایل در این مرورگر پشتیبانی نمی‌شود. «ذخیره فایل برنامه» یا «چاپ / ذخیره PDF» را انتخاب کنید.');
+          }
+        } catch(e) { if(!e || e.name!=='AbortError') alert('ارسال فایل انجام نشد. از ذخیره فایل یا چاپ / ذخیره PDF استفاده کنید.'); }
+      });
+    } catch(e) {
+      console.error('Full plan export failed',e);
+      try { popup.document.body.innerHTML = '<p>ساخت خروجی برنامه ناموفق بود: '+esc(e.message||e)+'</p>'; } catch(_) {}
+      alert('ساخت خروجی کامل برنامه انجام نشد: '+(e.message||e));
+    }
+  };
+  document.addEventListener('click', function(event){
+    const button = event.target && event.target.closest ? event.target.closest('#shareWorkoutBtn, #shareMealBtn') : null;
+    if(!button) return;
+    event.preventDefault(); event.stopPropagation();
+    if(event.stopImmediatePropagation) event.stopImmediatePropagation();
+    window.sharePlan(button.id === 'shareMealBtn' ? 'meal' : 'workout');
+  }, true);
+})();
+</script>
