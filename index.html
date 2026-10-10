@@ -2540,3 +2540,20 @@ const plans=workoutResult.data||[], nutrition=nutritionResult.data||[];
  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start,{once:true});else start();
 })();
 </script>
+
+<script id="FITNESS_EXERCISE_BRIDGE_V1">
+async function useLibraryExercise(id){
+ try{
+  const a=await sbGet('/trainer_exercises?id=eq.'+encodeURIComponent(id)+'&select=id,name&limit=1');
+  const item=a&&a[0]; if(!item)throw new Error('حرکت در بانک مربی پیدا نشد.');
+  let rows=await sbGet('/exercises?name=eq.'+encodeURIComponent(item.name)+'&select=id,name&limit=1');
+  let x=rows&&rows[0];
+  if(!x){const out=await sbWrite('/exercises','POST',{name:item.name});x=Array.isArray(out)?out[0]:out;}
+  if(!x||!x.id){rows=await sbGet('/exercises?name=eq.'+encodeURIComponent(item.name)+'&select=id,name&limit=1');x=rows&&rows[0];}
+  if(!x||!x.id)throw new Error('انتقال انجام نشد؛ جدول حرکات برنامه پاسخ قابل استفاده نداد.');
+  await loadExercises();
+  const sel=document.getElementById('workoutExercise');if(sel)sel.value=String(x.id);
+  alert('حرکت به فهرست برنامه اضافه و انتخاب شد. حالا «افزودن به برنامه» را بزن.');
+ }catch(e){alert('انتقال حرکت ناموفق بود: '+(e.message||String(e)));}
+}
+</script>
