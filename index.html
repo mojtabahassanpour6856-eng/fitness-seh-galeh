@@ -1459,35 +1459,40 @@ const plans=workoutResult.data||[], nutrition=nutritionResult.data||[];
       const arr=map.get(key),first=arr[0],sys=first.training_system||'normal';
       const grouped=sys!=='normal'&&!!first.group_key;
       const title=sysName[sys]||sys;
-      const movementRows=arr.map((x,idx)=>{
-        const done=x.is_completed===true;
-        return `<div class="f18-movement-row" style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;padding:10px 0;${idx?'border-top:1px dashed #526579;':''}">
-          <div style="display:flex;align-items:center;gap:8px;flex:1;min-width:150px">
-            <span class="f18-chip">${idx+1}</span>
-            <div><strong>${escf(names[String(x.exercise_id)]||names[x.exercise_id]||'حرکت')}</strong>
-            <div class="muted" style="font-size:12px;margin-top:4px">${escf(x.sets??'—')} ست · ${escf(x.reps||'—')} تکرار/زمان · استراحت ${escf(x.rest_seconds??0)} ثانیه</div>
-            ${x.notes?`<div class="muted" style="font-size:12px">${escf(x.notes)}</div>`:''}
-            </div>
+      const exerciseName=x=>escf(names[String(x.exercise_id)]||names[x.exercise_id]||'حرکت');
+      const controls=x=>`<span style="display:inline-flex;align-items:center;gap:4px;flex-wrap:wrap;margin:2px 3px">
+        <label class="checkfood" style="margin:0;font-size:11px"><input type="checkbox" ${x.is_completed===true?'checked':''} onchange="toggleWorkoutComplete('${x.id}',this.checked)"> انجام</label>
+        <button class="mini secondary" onclick="editWorkoutExercise('${x.id}')" title="ویرایش حرکت">✏️</button>
+        <button class="mini secondary" onclick="moveWorkoutExercise('${x.id}',-1)" title="انتقال به بالا">⬆️</button>
+        <button class="mini secondary" onclick="moveWorkoutExercise('${x.id}',1)" title="انتقال به پایین">⬇️</button>
+        <button class="mini danger" onclick="deleteWorkoutExercise('${x.id}')" title="حذف حرکت">🗑</button>
+      </span>`;
+      if(!grouped){
+        return `<div class="meal-card ${first.is_completed===true?'v4-complete':''} v4-system" data-workout-id="${first.id}" style="padding:10px 12px">
+          <div class="meal-head"><h3>${first._i+1}. ${exerciseName(first)}</h3></div>
+          <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:6px 0">
+            <strong>${escf(first.sets??'—')}×${escf(first.reps||'—')}</strong>
+            <span class="muted">S${escf(first.rest_seconds??0)}</span>
+            <span class="muted">${escf(title)}${first.training_day?' · '+escf(first.training_day):''}</span>
           </div>
-          <div class="f18-actions" style="display:flex;gap:4px;flex-wrap:wrap">
-            <label class="checkfood" style="margin:0"><input type="checkbox" ${done?'checked':''} onchange="toggleWorkoutComplete('${x.id}',this.checked)"> انجام شد</label>
-            <button class="mini secondary" onclick="editWorkoutExercise('${x.id}')">✏️</button>
-            <button class="mini secondary" onclick="moveWorkoutExercise('${x.id}',-1)" aria-label="بالا">⬆️</button>
-            <button class="mini secondary" onclick="moveWorkoutExercise('${x.id}',1)" aria-label="پایین">⬇️</button>
-            <button class="mini danger" onclick="deleteWorkoutExercise('${x.id}')">🗑</button>
-          </div>
+          ${first.notes?`<div class="muted" style="font-size:12px;margin:4px 0">${escf(first.notes)}</div>`:''}
+          ${controls(first)}
         </div>`;
-      }).join(grouped?'<div style="text-align:center;font-size:22px;font-weight:bold;color:#ffbd16;line-height:1">＋</div>':'');
-      if(!grouped)return `<div class="meal-card ${first.is_completed===true?'v4-complete':''} v4-system" data-workout-id="${first.id}">
-        <div class="meal-head"><h3>${first._i+1}. ${escf(names[String(first.exercise_id)]||names[first.exercise_id]||'حرکت')}</h3></div>
-        ${movementRows}
-        <div class="muted" style="font-size:12px;margin-top:4px">سیستم: ${escf(title)}${first.training_day?' · '+escf(first.training_day):''}</div>
-      </div>`;
-      return `<div class="meal-card v4-system" style="border:1px solid #3d5368;border-right:4px solid #ffbd16;border-radius:15px;padding:12px;margin:10px 0;background:#0b1622">
-        <div class="meal-head"><h3>＋ ${escf(title)} <span class="f18-chip">${arr.length} حرکت</span></h3><span class="f18-chip">${escf(first.training_day||'جلسه تمرینی')}</span></div>
-        <div class="muted" style="font-size:12px;margin-bottom:4px">حرکت‌ها به‌ترتیب و پشت‌سرهم اجرا شوند</div>
-        ${movementRows}
-        <div class="muted" style="font-size:12px;margin-top:6px">شناسه گروه: ${escf(first.group_key)}</div>
+      }
+      const namesLine=arr.map((x,idx)=>`${idx?'<span style="color:#ffbd16;font-weight:900;font-size:20px;margin:0 7px">＋</span>':''}<strong style="display:inline-block">${exerciseName(x)}</strong>`).join('');
+      const allDone=arr.every(x=>x.is_completed===true);
+      return `<div class="meal-card v4-system ${allDone?'v4-complete':''}" style="border:1px solid #3d5368;border-right:4px solid #ffbd16;border-radius:12px;padding:10px 12px;margin:8px 0;background:#0b1622">
+        <div style="display:flex;align-items:center;gap:7px;flex-wrap:wrap;line-height:1.9">
+          <div style="flex:1;min-width:150px;font-size:15px">${namesLine}</div>
+          <strong style="white-space:nowrap;color:#ffbd16">${escf(title)}</strong>
+          <strong style="white-space:nowrap;direction:ltr">${escf(first.reps||'—')}×${escf(first.sets??'—')}</strong>
+          <strong style="white-space:nowrap;direction:ltr">S${escf(first.rest_seconds??0)}</strong>
+        </div>
+        ${first.training_day?`<div class="muted" style="font-size:11px;margin-top:2px">${escf(first.training_day)}</div>`:''}
+        <div style="display:flex;align-items:center;gap:4px;flex-wrap:wrap;margin-top:5px;border-top:1px dashed #526579;padding-top:5px">
+          ${arr.map(x=>`<span style="font-size:11px;color:#b8c6d4">${exerciseName(x)}:</span>${controls(x)}`).join('')}
+        </div>
+        ${arr.some(x=>x.notes)?`<div class="muted" style="font-size:11px;margin-top:4px">${arr.filter(x=>x.notes).map(x=>exerciseName(x)+': '+escf(x.notes)).join(' · ')}</div>`:''}
       </div>`;
     }).join('');
   }
