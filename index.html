@@ -1447,8 +1447,49 @@ const plans=workoutResult.data||[], nutrition=nutritionResult.data||[];
   };
 
   function groupWorkoutRows(rows,names){
-    const groups=[];const map=new Map();rows.forEach((x,i)=>{const sys=x.training_system||'normal',key=(sys!=='normal'&&x.group_key)?sys+'|'+x.group_key:'single|'+x.id;if(!map.has(key)){map.set(key,[]);groups.push(key);}map.get(key).push({...x,_i:i});});
-    return groups.map(key=>{const arr=map.get(key),first=arr[0],sys=first.training_system||'normal',grouped=sys!=='normal'&&first.group_key;const head=grouped?`<div class="f18-group-title">${escf(sysName[sys]||sys)} • گروه ${escf(first.group_key)} <span class="f18-chip">${arr.length} حرکت</span></div>`:'';const cards=arr.map(x=>{const done=x.is_completed===true;return `<div class="meal-card ${done?'v4-complete':''}" data-workout-id="${x.id}"><div class="meal-head"><h3>${x._i+1}. ${escf(names[x.exercise_id]||'حرکت')}</h3><div class="f18-actions"><button class="mini secondary" onclick="editWorkoutExercise('${x.id}')">✏️ ویرایش</button><button class="mini secondary" onclick="moveWorkoutExercise('${x.id}',-1)">⬆️</button><button class="mini secondary" onclick="moveWorkoutExercise('${x.id}',1)">⬇️</button><button class="mini danger" onclick="deleteWorkoutExercise('${x.id}')">🗑</button></div></div><label class="checkfood"><input type="checkbox" ${done?'checked':''} onchange="toggleWorkoutComplete('${x.id}',this.checked)"> انجام شد</label><div class="stats"><div class="stat"><b>${escf(x.sets??'')}</b>ست</div><div class="stat"><b>${escf(x.reps??'')}</b>تکرار/زمان</div><div class="stat"><b>${escf(x.rest_seconds??0)}</b>ثانیه</div><div class="stat"><b>${escf(sysName[x.training_system||'normal']||'نرمال')}</b>سیستم</div></div>${x.training_day?`<span class="f18-chip">📅 ${escf(x.training_day)}</span>`:''}${x.group_key?`<span class="f18-chip">گروه ${escf(x.group_key)}</span>`:''}${x.notes?`<p class="muted">${escf(x.notes)}</p>`:''}</div>`}).join('');return grouped?`<div class="f18-group">${head}${cards}</div>`:cards;}).join('');
+    const groups=[],map=new Map();
+    rows.forEach((x,i)=>{
+      const sys=x.training_system||'normal';
+      const grouped=sys!=='normal'&&!!x.group_key;
+      const key=grouped?sys+'|'+String(x.group_key):'single|'+String(x.id);
+      if(!map.has(key)){map.set(key,[]);groups.push(key);}
+      map.get(key).push({...x,_i:i});
+    });
+    return groups.map(key=>{
+      const arr=map.get(key),first=arr[0],sys=first.training_system||'normal';
+      const grouped=sys!=='normal'&&!!first.group_key;
+      const title=sysName[sys]||sys;
+      const movementRows=arr.map((x,idx)=>{
+        const done=x.is_completed===true;
+        return `<div class="f18-movement-row" style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;padding:10px 0;${idx?'border-top:1px dashed #526579;':''}">
+          <div style="display:flex;align-items:center;gap:8px;flex:1;min-width:150px">
+            <span class="f18-chip">${idx+1}</span>
+            <div><strong>${escf(names[String(x.exercise_id)]||names[x.exercise_id]||'حرکت')}</strong>
+            <div class="muted" style="font-size:12px;margin-top:4px">${escf(x.sets??'—')} ست · ${escf(x.reps||'—')} تکرار/زمان · استراحت ${escf(x.rest_seconds??0)} ثانیه</div>
+            ${x.notes?`<div class="muted" style="font-size:12px">${escf(x.notes)}</div>`:''}
+            </div>
+          </div>
+          <div class="f18-actions" style="display:flex;gap:4px;flex-wrap:wrap">
+            <label class="checkfood" style="margin:0"><input type="checkbox" ${done?'checked':''} onchange="toggleWorkoutComplete('${x.id}',this.checked)"> انجام شد</label>
+            <button class="mini secondary" onclick="editWorkoutExercise('${x.id}')">✏️</button>
+            <button class="mini secondary" onclick="moveWorkoutExercise('${x.id}',-1)" aria-label="بالا">⬆️</button>
+            <button class="mini secondary" onclick="moveWorkoutExercise('${x.id}',1)" aria-label="پایین">⬇️</button>
+            <button class="mini danger" onclick="deleteWorkoutExercise('${x.id}')">🗑</button>
+          </div>
+        </div>`;
+      }).join(grouped?'<div style="text-align:center;font-size:22px;font-weight:bold;color:#ffbd16;line-height:1">＋</div>':'');
+      if(!grouped)return `<div class="meal-card ${first.is_completed===true?'v4-complete':''} v4-system" data-workout-id="${first.id}">
+        <div class="meal-head"><h3>${first._i+1}. ${escf(names[String(first.exercise_id)]||names[first.exercise_id]||'حرکت')}</h3></div>
+        ${movementRows}
+        <div class="muted" style="font-size:12px;margin-top:4px">سیستم: ${escf(title)}${first.training_day?' · '+escf(first.training_day):''}</div>
+      </div>`;
+      return `<div class="meal-card v4-system" style="border:1px solid #3d5368;border-right:4px solid #ffbd16;border-radius:15px;padding:12px;margin:10px 0;background:#0b1622">
+        <div class="meal-head"><h3>＋ ${escf(title)} <span class="f18-chip">${arr.length} حرکت</span></h3><span class="f18-chip">${escf(first.training_day||'جلسه تمرینی')}</span></div>
+        <div class="muted" style="font-size:12px;margin-bottom:4px">حرکت‌ها به‌ترتیب و پشت‌سرهم اجرا شوند</div>
+        ${movementRows}
+        <div class="muted" style="font-size:12px;margin-top:6px">شناسه گروه: ${escf(first.group_key)}</div>
+      </div>`;
+    }).join('');
   }
   window.renderWorkoutList=function(rows,names){if(!rows.length){$f('workoutList').innerHTML='<p class="muted">هنوز حرکتی ثبت نشده است.</p>';buildWorkoutManagement();return;}const done=rows.filter(x=>x.is_completed===true).length;const pct=Math.round(done*100/rows.length);$f('workoutList').innerHTML=`<div class="card"><div class="f18-kpi"><div><b>${fmtf(rows.length)}</b>حرکت</div><div><b>${fmtf(done)}</b>انجام‌شده</div><div><b>${fmtf(pct)}%</b>پیشرفت جلسه</div></div></div>`+groupWorkoutRows(rows,names);buildWorkoutManagement();};
 
