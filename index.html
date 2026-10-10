@@ -4400,8 +4400,19 @@ active('workoutMuscleFilters',wm);active('libraryMuscleFilters',lm);if(document.
   if(client){
    const cards=client.querySelectorAll(":scope > .card");
    if(cards[0]){
-    cards[0].querySelectorAll("input,select,textarea").forEach(el=>{el.disabled=true;el.setAttribute("aria-readonly","true");});
-    cards[0].querySelectorAll("button").forEach(b=>b.style.display="none");
+    // پروفایل شاگرد قابل ویرایش است؛ فقط هدف و سطح تمرینی زیر نظر مربی می‌ماند.
+    cards[0].querySelectorAll("input,select,textarea").forEach(el=>{
+     if(el.id==="profileRegistrationDate"){el.disabled=false;el.readOnly=true;el.setAttribute("readonly","readonly");return;}
+     if(el.id==="pgoal"||el.id==="plevel"){el.disabled=true;el.setAttribute("aria-disabled","true");return;}
+     el.disabled=false;el.removeAttribute("disabled");el.removeAttribute("aria-disabled");
+     if(el.tagName==="INPUT"||el.tagName==="TEXTAREA"){el.readOnly=false;el.removeAttribute("readonly");}
+     el.style.pointerEvents="auto";el.style.userSelect="text";el.style.webkitUserSelect="text";
+    });
+    cards[0].querySelectorAll("button").forEach(b=>{b.style.display="";b.disabled=false;});
+    const saveBtn=cards[0].querySelector('button[onclick="saveProfile()"]');
+    if(saveBtn)saveBtn.textContent=isTrainee()?"💾 ذخیره اطلاعات شخصی من":"ذخیره پروفایل";
+    const mealBtn=cards[0].querySelector('button[onclick="openClientMealPlan()"]');
+    if(mealBtn&&isTrainee())mealBtn.style.display="none";
    }
    replaceTraineeMembershipCard();
    const schedule=$("scheduleCard");if(schedule&&schedule.dataset.traineeReadonly!=="1"){schedule.style.display="block";schedule.innerHTML='<h2>🗓️ برنامه حضور و ساعت تمرین من</h2><p class="muted">'+safe(currentClient?.weekly_sessions||"—")+' جلسه در هفته</p><div class="receipt-item"><b>روزها:</b> '+safe(currentClient?.training_days||"ثبت نشده")+'<br><b>ساعت:</b> '+safe(String(currentClient?.training_time||"").slice(0,5)||"ثبت نشده")+'</div>';schedule.dataset.traineeReadonly="1";}
