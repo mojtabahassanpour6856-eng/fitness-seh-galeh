@@ -1165,8 +1165,8 @@ window.loadDashboard = loadDashboard;
       picker=document.createElement('div');picker.id='workoutGroupPicker';
       picker.style.cssText='display:none;margin:10px 0;padding:12px;border:1px solid #78909c;border-radius:12px;';
       picker.innerHTML='<strong id="workoutGroupPickerTitle">انتخاب حرکت‌های گروه</strong><p id="workoutGroupPickerHint" class="muted" style="margin:6px 0 10px"></p><div id="workoutGroupPickerOptions" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:7px"></div>';
-      const exerciseWrap=exercise.closest('div')||exercise.parentElement;
-      if(exerciseWrap)exerciseWrap.insertAdjacentElement('afterend',picker);else card.appendChild(picker);
+      const exerciseGrid=exercise.closest('.grid2');
+      if(exerciseGrid)exerciseGrid.insertAdjacentElement('afterend',picker);else card.appendChild(picker);
     }
     const render=()=>{
       const list=$id('workoutGroupPickerOptions');if(!list)return;
@@ -1180,6 +1180,9 @@ window.loadDashboard = loadDashboard;
       picker.style.display=mode?'block':'none';
       const exerciseWrap=exercise.closest('div')||exercise.parentElement;
       if(exerciseWrap)exerciseWrap.style.display=mode?'none':'';
+      const addButton=card.querySelector('button[onclick*="addWorkoutExercise"]');
+      if(addButton){addButton.style.display='inline-flex';addButton.style.visibility='visible';addButton.disabled=false;}
+      const notes=$id('workoutExerciseNotes');if(notes){notes.style.display='';notes.style.visibility='visible';}
       const title=$id('workoutGroupPickerTitle'),hint=$id('workoutGroupPickerHint');
       if(system.value==='superset'){title.textContent='انتخاب دو حرکت برای سوپرست';hint.textContent='دقیقاً دو حرکت را تیک بزنید.';}
       else if(system.value==='triset'){title.textContent='انتخاب سه حرکت برای تری‌ست';hint.textContent='دقیقاً سه حرکت را تیک بزنید.';}
