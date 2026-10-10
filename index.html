@@ -2266,6 +2266,33 @@ window.toggleExerciseFavorite=async function(id,value){try{await sbWrite(`/train
   };
 
   // Keep schedule fields synced whenever a trainee is selected.
+  window.saveTraineeTrainingSchedule=async function(){
+   if(!isTrainee())return alert("این گزینه فقط برای حساب شاگرد است.");
+   const traineeId=currentClient?.id;
+   if(!traineeId)return alert("پروفایل شاگرد پیدا نشد؛ لطفاً دوباره وارد شوید.");
+   const days=($("traineeOwnTrainingDays")?.value||"").trim();
+   const time=$("traineeOwnTrainingTime")?.value||"";
+   if(!days)return alert("لطفاً روزهای تمرین خود را وارد کنید.");
+   if(!time)return alert("لطفاً ساعت تمرین را انتخاب کنید.");
+   const btn=$("scheduleCard")?.querySelector('button[onclick="saveTraineeTrainingSchedule()"]');
+   if(btn){btn.disabled=true;btn.textContent="در حال ذخیره…";}
+   const status=$("traineeScheduleSaveStatus");
+   if(status)status.textContent="در حال ذخیره اطلاعات…";
+   try{
+    await sbWrite("/trainees?id=eq."+encodeURIComponent(traineeId),"PATCH",{training_days:days,training_time:time});
+    if(!currentClient||String(currentClient.id)!==String(traineeId))return;
+    currentClient.training_days=days;currentClient.training_time=time;
+    if(Array.isArray(clients)){const c=clients.find(x=>String(x.id)===String(traineeId));if(c){c.training_days=days;c.training_time=time;}}
+    if(status)status.textContent="✅ روزها و ساعت تمرین ذخیره شد و برای مربی قابل مشاهده است.";
+    if(typeof loadClients==="function"){try{await loadClients();const fresh=Array.isArray(clients)?clients.find(x=>String(x.id)===String(traineeId)):null;if(fresh&&currentClient&&String(currentClient.id)===String(traineeId)){currentClient.training_days=fresh.training_days||days;currentClient.training_time=fresh.training_time||time;}}catch(refreshError){console.warn("refresh trainee schedule",refreshError);}}
+    if($("traineeOwnTrainingDays"))$("traineeOwnTrainingDays").value=currentClient?.training_days||days;
+    if($("traineeOwnTrainingTime"))$("traineeOwnTrainingTime").value=String(currentClient?.training_time||time).slice(0,5);
+   }catch(e){
+    console.error("save trainee training schedule",e);
+    if(status)status.textContent="ذخیره انجام نشد؛ اتصال و دسترسی حساب را بررسی کنید.";
+    alert("ذخیره روزها و ساعت تمرین ناموفق بود. "+(e?.message||String(e)));
+   }finally{if(btn){btn.disabled=false;btn.textContent="💾 ذخیره روزها و ساعت تمرین";}}
+  };
   const oldSelect=window.selectClient;
   if(typeof oldSelect==='function'){
     window.selectClient=async function(id){
@@ -4418,7 +4445,17 @@ active('workoutMuscleFilters',wm);active('libraryMuscleFilters',lm);if(document.
     if(mealBtn&&isTrainee())mealBtn.style.display="none";
    }
    replaceTraineeMembershipCard();
-   const schedule=$("scheduleCard");if(schedule&&schedule.dataset.traineeReadonly!=="1"){schedule.style.display="block";schedule.innerHTML='<h2>🗓️ برنامه حضور و ساعت تمرین من</h2><p class="muted">'+safe(currentClient?.weekly_sessions||"—")+' جلسه در هفته</p><div class="receipt-item"><b>روزها:</b> '+safe(currentClient?.training_days||"ثبت نشده")+'<br><b>ساعت:</b> '+safe(String(currentClient?.training_time||"").slice(0,5)||"ثبت نشده")+'</div>';schedule.dataset.traineeReadonly="1";}
+   const schedule=$("scheduleCard");
+   if(schedule&&schedule.dataset.traineeScheduleEditable!=="1"){
+    schedule.style.display="block";
+    schedule.innerHTML='<h2>🗓️ روزها و ساعت تمرین من</h2><p class="muted">روزها و ساعت مناسب تمرین را خودتان ثبت کنید تا مربی هنگام نوشتن برنامه شما آن را ببیند.</p><p class="receipt-item"><b>تعداد جلسات هفتگی ثبت‌شده:</b> '+safe(currentClient?.weekly_sessions||"—")+' جلسه</p><div class="grid2"><div><label for="traineeOwnTrainingDays">روزهای تمرین</label><input id="traineeOwnTrainingDays" type="text" placeholder="مثلاً شنبه، دوشنبه، چهارشنبه" autocomplete="off"></div><div><label for="traineeOwnTrainingTime">ساعت تمرین</label><input id="traineeOwnTrainingTime" type="time"></div></div><button type="button" onclick="saveTraineeTrainingSchedule()">💾 ذخیره روزها و ساعت تمرین</button><p id="traineeScheduleSaveStatus" class="muted" aria-live="polite"></p>';
+    schedule.dataset.traineeScheduleEditable="1";
+   }
+   if(schedule&&isTrainee()){
+    const dayInput=$("traineeOwnTrainingDays"),timeInput=$("traineeOwnTrainingTime");
+    if(dayInput&&document.activeElement!==dayInput)dayInput.value=currentClient?.training_days||"";
+    if(timeInput&&document.activeElement!==timeInput)timeInput.value=String(currentClient?.training_time||"").slice(0,5);
+   }
   }
   const mealCoach=$("mealCoachView");if(mealCoach)mealCoach.style.display="none";
   const mealStudent=$("mealStudentView");if(mealStudent){mealStudent.classList.remove("hide");mealStudent.style.display="block";}
