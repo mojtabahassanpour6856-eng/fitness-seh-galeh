@@ -2733,3 +2733,57 @@ window.useLibraryExercise=async function(id){
   };
 })();
 </script>
+
+
+<script id="FITNESS_WORKOUT_PDF_EXERCISES_V1">
+/* Workout PDF export: include saved workout movements and their prescription details. */
+(function(){
+  const escPdf = value => String(value == null ? '' : value).replace(/[&<>"']/g, ch => ({
+    '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
+  })[ch]);
+  const previousPrintPlan = window.printPlan;
+  window.printPlan = async function(kind){
+    if(kind !== 'workout'){
+      if(typeof previousPrintPlan === 'function') return previousPrintPlan(kind);
+      return alert('خروجی این نوع برنامه در دسترس نیست.');
+    }
+    if(!currentClient) return alert('اول شاگرد را انتخاب کنید.');
+    const popup = window.open('', '_blank');
+    if(!popup) return alert('پنجره چاپ باز نشد. اجازه بازشدن پنجره جدید را در مرورگر فعال کنید و دوباره بزنید.');
+    popup.document.write('<!doctype html><html lang="fa" dir="rtl"><head><meta charset="utf-8"><title>در حال آماده‌سازی برنامه تمرینی</title></head><body style="font-family:Tahoma;padding:24px">در حال دریافت حرکات برنامه تمرینی…</body></html>');
+    popup.document.close();
+    try{
+      const plans = await sbGet('/trainee_workout_plans?trainee_id=eq.'+encodeURIComponent(currentClient.id)+'&select=*&order=created_at.desc&limit=1');
+      const plan = plans && plans[0];
+      if(!plan) throw new Error('برای این شاگرد برنامه تمرینی ذخیره‌شده‌ای پیدا نشد.');
+      const rows = await sbGet('/trainee_workout_exercises?workout_plan_id=eq.'+encodeURIComponent(plan.id)+'&select=*&order=sort_order.asc,created_at.asc');
+      const ids = [...new Set(rows.map(row=>row.exercise_id).filter(id=>id!==null && id!==undefined && id!==''))];
+      let exerciseRows = [];
+      if(ids.length){
+        exerciseRows = await sbGet('/exercises?id=in.('+ids.map(id=>String(id)).join(',')+')&select=id,name');
+      }
+      const names = Object.fromEntries(exerciseRows.map(row=>[String(row.id),row.name]));
+      const systemNames = {
+        normal:'معمولی',superset:'سوپرست',drop_set:'دراپ‌ست','drop-set':'دراپ‌ست',
+        rest_pause:'استراحت-مکث','rest-pause':'استراحت-مکث',
+        giant_set:'جاینت‌ست','giant-set':'جاینت‌ست',
+        pyramid:'هرمی',reverse_pyramid:'هرمی معکوس',
+        circuit:'دایره‌ای',triset:'تری‌ست'
+      };
+      const exerciseTable = rows.length
+        ? '<table><thead><tr><th>ردیف</th><th>جلسه</th><th>حرکت</th><th>ست</th><th>تکرار / زمان</th><th>استراحت (ثانیه)</th><th>سیستم تمرینی</th><th>گروه</th><th>توضیحات</th></tr></thead><tbody>'+
+          rows.map((row,index)=>'<tr><td>'+(index+1)+'</td><td>'+escPdf(row.training_day||'—')+'</td><td>'+escPdf(names[String(row.exercise_id)]||'حرکت ثبت‌شده (نام پیدا نشد)')+'</td><td>'+escPdf(row.sets??'—')+'</td><td>'+escPdf(row.reps||'—')+'</td><td>'+escPdf(row.rest_seconds??0)+'</td><td>'+escPdf(systemNames[row.training_system||'normal']||row.training_system||'معمولی')+'</td><td>'+escPdf(row.group_key||'—')+'</td><td>'+escPdf(row.notes||'—')+'</td></tr>').join('')+
+          '</tbody></table>'
+        : '<p class="empty">در این برنامه هنوز حرکتی ثبت نشده است.</p>';
+      const html = '<!doctype html><html lang="fa" dir="rtl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>'+escPdf(plan.title||'برنامه تمرینی')+'</title><style>body{font-family:Tahoma,Arial,sans-serif;padding:22px;line-height:1.9;color:#111}h1{font-size:21px;text-align:center}h2{font-size:18px;margin-bottom:4px}.meta{margin:4px 0 14px}table{width:100%;border-collapse:collapse;margin-top:14px}td,th{border:1px solid #888;padding:6px;text-align:center;font-size:11px;overflow-wrap:anywhere}th{background:#eee}.empty{padding:12px;border:1px solid #aaa}@media print{body{padding:0}thead{display:table-header-group}tr{break-inside:avoid}}@page{size:auto;margin:12mm}</style></head><body><h1>باشگاه فیتنس سه‌قلعه | مربی مجتبی</h1><p class="meta">شاگرد: '+escPdf(currentClient.name||'')+' | تاریخ: '+escPdf(today())+'</p><h2>'+escPdf(plan.title||'برنامه تمرینی')+'</h2><p class="meta">هدف: '+escPdf(plan.goal||'—')+'</p>'+(plan.notes?'<p class="meta">یادداشت برنامه: '+escPdf(plan.notes)+'</p>':'')+'<p class="meta">تعداد حرکات: '+rows.length+'</p>'+exerciseTable+'<p>این برنامه از اطلاعات ذخیره‌شده در سامانه تهیه شده است.</p><script>window.onload=function(){setTimeout(function(){window.print()},500)};<\/script></body></html>';
+      popup.document.open();
+      popup.document.write(html);
+      popup.document.close();
+    }catch(error){
+      try{popup.close();}catch(_){}
+      console.error('Workout PDF export failed',error);
+      alert('ساخت PDF برنامه تمرینی انجام نشد.\n'+(error && error.message ? error.message : String(error)));
+    }
+  };
+})();
+</script>
