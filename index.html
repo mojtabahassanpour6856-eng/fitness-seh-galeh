@@ -4041,6 +4041,11 @@ active('workoutMuscleFilters',wm);active('libraryMuscleFilters',lm);if(document.
    const logs=await sbGet("/nutrition_meal_completions?trainee_id=eq."+encodeURIComponent(traineeId)+"&log_date=eq."+encodeURIComponent(day)+"&select=meal_id,is_completed");
    if(!currentClient||String(currentClient.id)!==String(traineeId))return;
    const done=new Set(logs.filter(x=>x.is_completed).map(x=>String(x.meal_id)));
+   const meals=window.__sehMealData||[];
+   let completedCalories=0,completedMeals=0;
+   meals.forEach(m=>{if(done.has(String(m.id))){completedMeals++;(m.foods||[]).forEach(x=>{const metric=foodMetrics(x.food||{},x.amount,x.unit);if(metric.valid)completedCalories+=metric.cal;});}});
+   if($("studentDoneCal"))$("studentDoneCal").textContent=completedCalories.toFixed(0);
+   if($("studentDoneCount"))$("studentDoneCount").textContent=String(completedMeals);
    const cards=[...list.querySelectorAll(".student-meal")];
    cards.forEach((card,i)=>{
     const mealId=window.__sehMealIds?.[i];if(!mealId||card.querySelector(".meal-done-control"))return;
@@ -4056,6 +4061,7 @@ active('workoutMuscleFilters',wm);active('libraryMuscleFilters',lm);if(document.
  if(typeof oldStudentMeals==="function"&&!window.__sehMealRendererWrapped){
   window.renderStudentMeals=async function(meals,p){
    window.__sehMealIds=(meals||[]).map(m=>m.id);
+   window.__sehMealData=meals||[];
    const result=await oldStudentMeals.apply(this,arguments);
    await attachMealCompletion();return result;
   };window.__sehMealRendererWrapped=true;
