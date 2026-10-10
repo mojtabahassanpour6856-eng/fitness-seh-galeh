@@ -2796,7 +2796,7 @@ window.useLibraryExercise=async function(id){
   const escShare = value => String(value == null ? '' : value).replace(/[&<>"']/g, ch => ({
     '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
   })[ch]);
-  window.sharePlan = async function(kind, autoPrint){
+  window.sharePlan = async function(kind){
     if(!currentClient) return alert('اول شاگرد را انتخاب کنید.');
     const title = kind === 'meal' ? 'برنامه غذایی' : 'برنامه تمرینی';
     const traineeName = String(currentClient.name || '');
@@ -2934,7 +2934,6 @@ window.useLibraryExercise=async function(id){
           }
         } catch(e) { if(!e || e.name!=='AbortError') alert('ارسال فایل انجام نشد. از ذخیره فایل یا چاپ / ذخیره PDF استفاده کنید.'); }
       });
-      if(typeof autoPrint !== 'undefined' && autoPrint) setTimeout(function(){ try { popup.focus(); popup.print(); } catch(_) {} }, 300);
     } catch(e) {
       console.error('Full plan export failed',e);
       try { popup.document.body.innerHTML = '<p>ساخت خروجی برنامه ناموفق بود: '+esc(e.message||e)+'</p>'; } catch(_) {}
