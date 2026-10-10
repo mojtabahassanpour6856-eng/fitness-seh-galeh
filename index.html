@@ -59,6 +59,15 @@ body.locked{overflow:hidden}
 .library-inline-add{border:1px dashed #b18a3c;border-radius:14px;padding:13px;background:#171d25}
 .library-inline-add input,.library-inline-add select{width:100%;min-width:0}.library-inline-add label{font-size:12px}
 .library-detail-view h3{color:#f1c66b}
+
+/* نمای اتاق مستقل برای هر عضله؛ در این حالت فقط بانک حرکات دیده می‌شود */
+body.library-room{overflow:hidden!important;background:#0c1118!important}
+body.library-room .page> :not(#workout){display:none!important}
+body.library-room .page #workout{display:block!important;position:fixed!important;inset:0!important;z-index:99999!important;overflow-y:auto!important;overflow-x:hidden!important;margin:0!important;padding:12px!important;background:#0c1118!important;box-sizing:border-box!important}
+body.library-room #workout> :not(.library-room-card){display:none!important}
+body.library-room #workout .library-room-card{display:block!important;position:relative!important;width:100%!important;max-width:900px!important;min-height:calc(100dvh - 24px)!important;margin:0 auto!important;box-sizing:border-box!important;border:1px solid #3d4a5a!important;border-radius:16px!important;background:#151c25!important;padding:14px!important}
+body.library-room #workout .library-room-card #libraryList{display:block!important}
+body.library-room #workout .library-room-card .library-detail-view{width:100%!important}
 </style></head>
 <body class="locked">
 <div id="authScreen">
@@ -3325,10 +3334,11 @@ window.loadExercises=async function(){try{let rows;try{rows=await sbGet('/exerci
 window.__fitnessOpenLibraryGroups=window.__fitnessOpenLibraryGroups||new Set();
 window.__fitnessSelectedLibraryMuscle=window.__fitnessSelectedLibraryMuscle||'';
 window.toggleLibraryGroup=function(key){window.openLibraryMuscle(key.replace(/^lib-/,''));};
-window.openLibraryMuscle=function(cat){window.__fitnessSelectedLibraryMuscle=cat;window.loadLibraryExercises();};
-window.backToLibraryGroups=function(){window.__fitnessSelectedLibraryMuscle='';window.loadLibraryExercises();};
+window.openLibraryMuscle=function(cat){window.__fitnessSelectedLibraryMuscle=cat;document.body.classList.add('library-room');window.loadLibraryExercises();};
+window.backToLibraryGroups=function(){window.__fitnessSelectedLibraryMuscle='';document.body.classList.remove('library-room');window.loadLibraryExercises();};
 window.loadLibraryExercises=async function(){
  let box=document.getElementById('libraryList');if(!box)return;
+ box.closest('.card')?.classList.add('library-room-card');
  try{
   const q=n(document.getElementById('libSearch')?.value);
   const rows=await sbGet('/trainer_exercises?select=*&order=is_favorite.desc,created_at.desc');
