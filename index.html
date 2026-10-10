@@ -1651,7 +1651,38 @@ const plans=workoutResult.data||[], nutrition=nutritionResult.data||[];
   };
 
   // -------- Exercise library: favorite toggle --------
-  window.toggleExerciseFavorite=async function(id,value){try{await sbWrite(`/trainer_exercises?id=eq.${encodeURIComponent(id)}`,'PATCH',{is_favorite:!value});await loadLibraryExercises();}catch(e){alert('تغییر علاقه‌مندی انجام نشد.\n'+e.message)}};
+  window.saveLibraryExerciseInGroup=async function(cat,button){
+ try{
+  const body=button&&button.closest('.library-inline-add');
+  if(!body)throw new Error('فرم افزودن حرکت پیدا نشد.');
+  const name=body.querySelector('[data-new-ex-name]')?.value.trim();
+  const equipment=body.querySelector('[data-new-ex-equipment]')?.value.trim();
+  const level=body.querySelector('[data-new-ex-level]')?.value||'مبتدی';
+  const note=body.querySelector('[data-new-ex-note]')?.value.trim();
+  const status=body.querySelector('[data-new-ex-status]');
+  if(!name){alert('نام حرکت را وارد کنید.');return;}
+  button.disabled=true;button.textContent='در حال ذخیره…';
+  if(status)status.textContent='در حال ذخیره حرکت در بانک…';
+  await sbWrite('/trainer_exercises','POST',{name:name,target_muscle:cat,category:cat,equipment:equipment||null,level:level,coach_note:note||null,is_favorite:false});
+  const found=await sbGet('/trainer_exercises?name=eq.'+encodeURIComponent(name)+'&select=id,name&order=created_at.desc&limit=1');
+  const saved=found&&found[0];
+  if(!saved||!saved.id)throw new Error('ذخیره انجام شد، اما شناسه حرکت دریافت نشد. فهرست را تازه کنید.');
+  if(typeof window.syncLibraryExerciseByName==='function')await window.syncLibraryExerciseByName(name);
+  await window.loadLibraryExercises();
+  if(typeof window.loadExercises==='function')await window.loadExercises();
+  body.querySelector('[data-new-ex-name]').value='';
+  body.querySelector('[data-new-ex-equipment]').value='';
+  body.querySelector('[data-new-ex-note]').value='';
+  if(status)status.textContent='حرکت «'+name+'» در بخش '+cat+' ذخیره شد و به فهرست حرکات برنامه همگام شد. برای افزودنش به برنامه شاگرد، از کارت حرکت «استفاده در برنامه» را بزنید و سپس «افزودن به برنامه» را انتخاب کنید.';
+  button.textContent='✅ ذخیره شد';
+  setTimeout(()=>{if(button.isConnected){button.disabled=false;button.textContent='💾 ذخیره حرکت در '+cat;}},1800);
+ }catch(x){
+  console.error('saveLibraryExerciseInGroup failed',x);
+  alert('ذخیره حرکت انجام نشد یا همگام‌سازی کامل نشد. '+(x&&x.message?x.message:String(x)));
+  if(button){button.disabled=false;button.textContent='💾 ذخیره حرکت در '+cat;}
+ }
+};
+window.toggleExerciseFavorite=async function(id,value){try{await sbWrite(`/trainer_exercises?id=eq.${encodeURIComponent(id)}`,'PATCH',{is_favorite:!value});await loadLibraryExercises();}catch(e){alert('تغییر علاقه‌مندی انجام نشد.\n'+e.message)}};
   const originalLoadLibrary=window.loadLibraryExercises;
   window.loadLibraryExercises=async function(){
     if(!$f('libraryList'))return;
@@ -3265,7 +3296,7 @@ window.useLibraryExercise=async function(id){
 </script>
 
 <style id="FITNESS_MUSCLE_FILTERS_STYLE_V1">
-.library-muscle-card{border:1px solid #34495c;border-radius:14px;background:#101b28;margin:9px 0;overflow:hidden}.library-group-toggle{display:flex;align-items:center;justify-content:space-between;gap:8px;width:100%;margin:0;padding:14px;background:linear-gradient(110deg,#182838,#222b34);color:#f7d98a;text-align:right}.library-group-count{font-size:12px;color:#cbd5df;white-space:nowrap}.library-group-arrow{display:inline-block;margin-right:8px}.library-group-body{grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:8px;padding:10px}.library-exercise-card{border:1px solid #35495b;border-radius:12px;background:#0c1520;padding:11px;min-width:0}.library-exercise-title{font-weight:bold;font-size:14px;line-height:1.8;margin-bottom:7px}.library-exercise-meta{display:flex;gap:5px;flex-wrap:wrap}.library-exercise-card .f18-actions{display:flex;gap:6px;flex-wrap:wrap}.library-exercise-card .f18-actions button{flex:1;min-width:100px}.library-exercise-card .muted{margin:7px 0}.workout-template-box{margin:10px 0 12px;padding:12px;border:1px solid #6f5a2a;border-radius:13px;background:linear-gradient(135deg,#171d25,#292317)}.workout-template-box .row{align-items:end}.workout-template-box .row button{margin-top:0;white-space:nowrap}.workout-template-box select{min-width:0}.muscle-filter-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(92px,1fr));gap:7px;margin:10px 0}.muscle-filter{min-height:42px;padding:9px 8px;border:1px solid #35495b;border-radius:12px;background:#111d29;color:#dce8f4;font:inherit;font-size:13px;cursor:pointer}.muscle-filter.active{background:#3b3019;border-color:#d2a43c;color:#ffe5a0;box-shadow:inset 0 0 0 1px #8f6b22}#workoutExerciseSearch{margin:6px 0 2px}#workoutExercise{min-height:44px}@media(max-width:520px){.muscle-filter-grid{grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}.muscle-filter{font-size:12px;padding:8px 4px}}
+.library-muscle-card{border:1px solid #34495c;border-radius:14px;background:#101b28;margin:9px 0;overflow:hidden}.library-group-toggle{display:flex;align-items:center;justify-content:space-between;gap:8px;width:100%;margin:0;padding:14px;background:linear-gradient(110deg,#182838,#222b34);color:#f7d98a;text-align:right}.library-group-count{font-size:12px;color:#cbd5df;white-space:nowrap}.library-group-arrow{display:inline-block;margin-right:8px}.library-group-body{grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:8px;padding:10px}.library-inline-add input,.library-inline-add select{width:100%;min-width:0}.library-inline-add label{font-size:11px}.library-exercise-card{border:1px solid #35495b;border-radius:12px;background:#0c1520;padding:11px;min-width:0}.library-exercise-title{font-weight:bold;font-size:14px;line-height:1.8;margin-bottom:7px}.library-exercise-meta{display:flex;gap:5px;flex-wrap:wrap}.library-exercise-card .f18-actions{display:flex;gap:6px;flex-wrap:wrap}.library-exercise-card .f18-actions button{flex:1;min-width:100px}.library-exercise-card .muted{margin:7px 0}.workout-template-box{margin:10px 0 12px;padding:12px;border:1px solid #6f5a2a;border-radius:13px;background:linear-gradient(135deg,#171d25,#292317)}.workout-template-box .row{align-items:end}.workout-template-box .row button{margin-top:0;white-space:nowrap}.workout-template-box select{min-width:0}.muscle-filter-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(92px,1fr));gap:7px;margin:10px 0}.muscle-filter{min-height:42px;padding:9px 8px;border:1px solid #35495b;border-radius:12px;background:#111d29;color:#dce8f4;font:inherit;font-size:13px;cursor:pointer}.muscle-filter.active{background:#3b3019;border-color:#d2a43c;color:#ffe5a0;box-shadow:inset 0 0 0 1px #8f6b22}#workoutExerciseSearch{margin:6px 0 2px}#workoutExercise{min-height:44px}@media(max-width:520px){.muscle-filter-grid{grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}.muscle-filter{font-size:12px;padding:8px 4px}}
 </style>
 <script id="FITNESS_MUSCLE_FILTERS_LOGIC_V1">
 (function(){
@@ -3307,7 +3338,7 @@ window.loadLibraryExercises=async function(){
    if(autoOpen)window.__fitnessOpenLibraryGroups.add(key);
    const isOpen=window.__fitnessOpenLibraryGroups.has(key);
    const cards=items.map(x=>'<div class="library-exercise-card"><div class="library-exercise-title">'+(x.is_favorite?'⭐':'🏋️')+' '+e(x.name)+'</div><div class="library-exercise-meta"><span class="pill">'+e(x.target_muscle||x.category||cat)+'</span><span class="pill">'+e(x.level||'سطح نامشخص')+'</span><span class="pill">'+e(x.equipment||'بدون تجهیزات')+'</span></div>'+(x.coach_note?'<p class="muted">'+e(x.coach_note)+'</p>':'')+'<div class="f18-actions"><button class="secondary mini" onclick="toggleExerciseFavorite(\''+e(x.id)+'\','+!!x.is_favorite+')">'+(x.is_favorite?'☆ حذف علاقه‌مندی':'⭐ علاقه‌مندی')+'</button><button class="secondary mini" onclick="useLibraryExercise(\''+e(x.id)+'\')">➕ استفاده در برنامه</button></div></div>').join('');
-   return '<div class="library-muscle-card" data-library-group="'+e(key)+'"><button type="button" class="library-group-toggle" onclick="toggleLibraryGroup(\''+e(key)+'\')"><span>'+({'سینه':'🏋️','پشت':'💪','سرشانه':'🔱','جلو بازو':'💪','پشت بازو':'⚡','پا':'🦵','شکم':'🎯','کاردیو':'🏃','اصلاحی':'🧘','سایر':'📚'}[cat]||'🏋️')+' '+e(cat)+'</span><span class="library-group-count">'+items.length+' حرکت <span class="library-group-arrow">'+(isOpen?'▴':'▾')+'</span></span></button><div class="library-group-body" style="display:'+(isOpen?'grid':'none')+'">'+cards+'</div></div>';
+   return '<div class="library-muscle-card" data-library-group="'+e(key)+'"><button type="button" class="library-group-toggle" onclick="toggleLibraryGroup(\''+e(key)+'\')"><span>'+({'سینه':'🏋️','پشت':'💪','سرشانه':'🔱','جلو بازو':'💪','پشت بازو':'⚡','پا':'🦵','شکم':'🎯','کاردیو':'🏃','اصلاحی':'🧘','سایر':'📚'}[cat]||'🏋️')+' '+e(cat)+'</span><span class="library-group-count">'+items.length+' حرکت <span class="library-group-arrow">'+(isOpen?'▴':'▾')+'</span></span></button><div class="library-group-body" style="display:'+(isOpen?'grid':'none')+'">'+cards+'<div class="library-inline-add" style="grid-column:1/-1;border:1px dashed #8f6b22;border-radius:12px;padding:11px;background:#171d25"><strong>➕ افزودن حرکت به بخش '+e(cat)+'</strong><div class="grid2"><div><label>نام حرکت</label><input data-new-ex-name placeholder="مثلاً پرس سینه دمبل"></div><div><label>تجهیزات</label><input data-new-ex-equipment placeholder="مثلاً دمبل، دستگاه یا وزن بدن"></div><div><label>سطح</label><select data-new-ex-level><option>مبتدی</option><option>متوسط</option><option>پیشرفته</option></select></div><div><label>نکته مربی (اختیاری)</label><input data-new-ex-note placeholder="نکته کوتاه درباره اجرا"></div></div><button type="button" data-category="'+e(cat)+'" onclick="saveLibraryExerciseInGroup(this.dataset.category,this)">💾 ذخیره حرکت در '+e(cat)+'</button><p class="muted" data-new-ex-status style="margin-bottom:0">پس از ذخیره، حرکت در بانک همین عضله ثبت و برای انتخاب در برنامه تمرینی آماده می‌شود.</p></div></div></div>';
   }).join(''):'<div class="muted">در این گروه هنوز حرکتی ثبت نشده است.</div>';
  }catch(x){console.error(x);box.textContent='دریافت بانک حرکات انجام نشد؛ اتصال یا مجوز بانک را بررسی کنید.';}
 }
