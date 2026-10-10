@@ -4306,8 +4306,14 @@ active('workoutMuscleFilters',wm);active('libraryMuscleFilters',lm);if(document.
   window.loadWorkoutForClient=async function(){const r=await oldLoadWorkout.apply(this,arguments);if(isTrainee())setTimeout(attachWorkoutMissions,0);return r;};
   window.__sehWorkoutLoadWrapped=true;
  }
- const mo=new MutationObserver(()=>{if(isTrainee())applyFeatureUI();});
- mo.observe(document.body,{childList:true,subtree:true});
+ // Observe only workout-list rendering. Observing the entire body caused
+ // applyFeatureUI() to replace text nodes, retrigger itself continuously,
+ // freezing the page for trainee role.
+ const workoutObserverRoot=$("workoutList");
+ if(workoutObserverRoot){
+  const mo=new MutationObserver(()=>{if(isTrainee())applyFeatureUI();});
+  mo.observe(workoutObserverRoot,{childList:true,subtree:true});
+ }
  document.addEventListener("DOMContentLoaded",applyFeatureUI);
  setTimeout(applyFeatureUI,100);setTimeout(applyFeatureUI,900);setTimeout(applyFeatureUI,2200);
 })();
