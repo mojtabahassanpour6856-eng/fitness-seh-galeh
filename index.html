@@ -2300,3 +2300,129 @@ const plans=workoutResult.data||[], nutrition=nutritionResult.data||[];
 </script>
 
 </body>
+
+
+<style id="coach-mobile-fix">
+#clientList .v4-table{display:none!important}
+#clientList .coach-card-grid{display:grid;grid-template-columns:1fr;gap:9px;margin-top:10px}
+#clientList .coach-trainee-card{background:#101e2d;border:1px solid #34495c;border-radius:13px;padding:12px;min-width:0}
+#clientList .coach-trainee-head{display:flex;justify-content:space-between;align-items:flex-start;gap:8px}
+#clientList .coach-trainee-name{font-size:14px;font-weight:bold;overflow-wrap:anywhere}
+#clientList .coach-trainee-meta{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-top:10px}
+#clientList .coach-trainee-meta div{background:#0a1420;border-radius:8px;padding:7px;font-size:11px;overflow-wrap:anywhere}
+#clientList .coach-trainee-meta small{display:block;color:#aeb9c4;margin-bottom:3px}
+#clientList .coach-card-actions{display:flex;gap:7px;margin-top:9px}
+#clientList .coach-card-actions button{margin:0;padding:9px;font-size:12px}
+#clientList .coach-filter-row{display:flex;gap:6px;overflow-x:auto;padding:4px 0}
+#clientList .coach-filter-row button{white-space:nowrap;min-width:max-content;width:auto;margin:0;padding:8px 12px;font-size:12px}
+#clientList .coach-filter-row button.active{background:#ffbd16;color:#111}
+@media(min-width:650px){#clientList .coach-card-grid{grid-template-columns:1fr 1fr}}
+</style>
+<script>
+/* FINAL COACH LIST FIX: load trainees independently of optional membership/plan tables,
+   and render compact cards rather than a wide horizontal table. */
+(function(){
+  const el=id=>document.getElementById(id);
+  const esc=v=>typeof esc2==='function'?esc2(v):String(v??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m]));
+  const fa=v=>Number(v||0).toLocaleString('fa-IR');
+  let filter='all';
+  function ensureList(){
+    const list=el('clientList'); if(!list)return null;
+    let filters=el('coachMobileFilters');
+    if(!filters){
+      list.innerHTML='';
+      filters=document.createElement('div');filters.id='coachMobileFilters';filters.className='coach-filter-row';
+      filters.innerHTML='<button type="button" class="active" data-f="all">همه شاگردان</button><button type="button" data-f="gym">باشگاه</button><button type="button" data-f="home">منزل</button><button type="button" data-f="online">آنلاین</button>';
+      filters.querySelectorAll('button').forEach(b=>b.addEventListener('click',()=>{filter=b.dataset.f;filters.querySelectorAll('button').forEach(x=>x.classList.toggle('active',x===b));window.renderClients();}));
+      list.appendChild(filters);
+      const grid=document.createElement('div');grid.id='coachMobileCards';grid.className='coach-card-grid';list.appendChild(grid);
+    }
+    return el('coachMobileCards');
+  }
+  window.renderClients=function(){
+    const grid=ensureList(); if(!grid)return;
+    const q=(el('clientSearch')?.value||'').trim().toLocaleLowerCase();
+    const arr=(Array.isArray(clients)?clients:[]).filter(c=>(filter==='all'||(c.training_type||'gym')===filter)&&((c.name||'').toLocaleLowerCase().includes(q)||(c.phone||'').includes(q)));
+    grid.innerHTML=arr.length?arr.map(c=>{
+      const type=c.training_type==='home'?'🏠 تمرین منزل':c.training_type==='online'?'📱 آنلاین':'🏋️ باشگاه';
+      const active=c.membershipStatus==='منقضی'?'منقضی':c.membershipStatus==='در انتظار پرداخت'?'در انتظار پرداخت':c.membershipStatus==='وضعیت نامشخص'?'وضعیت عضویت نامشخص':'فعال';
+      return `<article class="coach-trainee-card"><div class="coach-trainee-head"><div class="coach-trainee-name">${esc(c.name||'بدون نام')}</div><span class="pill">${type}</span></div>
+      <div class="coach-trainee-meta">
+      <div><small>موبایل</small>${esc(c.phone||'ثبت نشده')}</div><div><small>وزن</small>${c.weight?esc(c.weight)+' کیلو':'ثبت نشده'}</div>
+      <div><small>هدف</small>${esc(c.goal||'ثبت نشده')}</div><div><small>روز / ساعت تمرین</small>${esc(c.training_days||'—')} ${esc(c.training_time||'')}</div>
+      <div><small>برنامه</small>${c.plans?'برنامه دارد':'برنامه ثبت نشده'}</div><div><small>عضویت</small>${active}</div></div>
+      <div class="coach-card-actions"><button type="button" class="secondary" onclick="selectClient('${String(c.id).replace(/'/g,'')}')">ورود به پروفایل</button></div></article>`;
+    }).join(''):'<div class="muted" style="padding:12px">شاگردی با این جستجو یا فیلتر پیدا نشد.</div>';
+    if(typeof window.updateStats==='function')window.updateStats();
+  };
+  window.updateStats=async function(){
+    const total=Array.isArray(clients)?clients.length:0;
+    const active=clients.filter(c=>c.active!==false).length;
+    let planCount=0;
+    try{
+      const [w,n]=await Promise.all([
+        window.sbGet('/trainee_workout_plans?select=id,trainee_id'),
+        window.sbGet('/nutrition_plans?select=id,trainee_id')
+      ]);
+      const ids=new Set([...(w||[]),...(n||[])].map(x=>String(x.trainee_id)));
+      planCount=ids.size;
+      clients.forEach(c=>c.plans=ids.has(String(c.id))?1:0);
+    }catch(e){console.warn('آمار برنامه‌ها بارگذاری نشد:',e);}
+    const alerts=clients.filter(c=>!c.weight||!c.goal||!c.phone||c.membershipStatus==='منقضی').length;
+    if(el('clientCount'))el('clientCount').textContent=fa(total);
+    if(el('activeCount'))el('activeCount').textContent=fa(active);
+    if(el('planCount'))el('planCount').textContent=fa(planCount);
+    if(el('alertCount'))el('alertCount').textContent=fa(alerts);
+  };
+  window.loadClients=async function(){
+    const list=el('clientList');
+    if(list)list.innerHTML='<div class="muted" style="padding:12px">در حال دریافت شاگردان از دیتابیس…</div>';
+    try{
+      const sessionResult=await window.AUTH_SUPABASE.auth.getSession();
+      const session=sessionResult?.data?.session;
+      if(!session?.user?.id)throw new Error('نشست ورود معتبر نیست؛ خارج شوید و دوباره وارد شوید.');
+      const profileResult=await window.AUTH_SUPABASE.from('profiles').select('id,role').eq('id',session.user.id).maybeSingle();
+      if(profileResult.error)throw profileResult.error;
+      if(!profileResult.data)throw new Error('پروفایل حساب واردشده در جدول profiles پیدا نشد.');
+      if(profileResult.data.role!=='coach')throw new Error('این بخش فقط برای حساب مربی است.');
+      // Use authenticated REST. Do not let an optional membership table hide the trainees.
+      const data=await window.sbGet('/trainees?select=*&order=created_at.desc');
+      clients=(data||[]).map(c=>({
+        id:c.id,name:c.full_name||c.name||'بدون نام',phone:c.phone||'',gender:c.gender||'',
+        birth_date:c.birth_date||null,age:typeof calcAge==='function'?calcAge(c.birth_date):null,
+        weight:c.current_weight??c.weight??null,height:c.height??null,goal:c.goal||'',level:c.training_level||'',
+        history:c.training_history||'',limitations:c.limitations||'',training_type:c.training_type||'gym',
+        home_equipment:c.home_equipment||'',training_days:c.training_days||'',training_time:c.training_time||'',
+        createdAt:c.created_at||null,active:true,membershipStatus:'وضعیت نامشخص',plans:0
+      }));
+      // Membership information is supplementary; failure must not erase the trainee list.
+      try{
+        let memberships=await window.sbGet('/trainee_memberships?select=id,trainee_id,start_date,end_date,status,created_at&order=created_at.desc');
+        const latest={};(memberships||[]).forEach(m=>{if(!latest[m.trainee_id])latest[m.trainee_id]=m;});
+        clients.forEach(c=>{
+          const m=latest[c.id];if(!m){c.membershipStatus='بدون عضویت';c.active=true;return;}
+          const expired=m.end_date&&m.end_date<new Date().toISOString().slice(0,10);
+          c.membershipStatus=expired?'منقضی':m.status==='pending'?'در انتظار پرداخت':'فعال';
+          c.active=!expired&&m.status!=='pending';
+        });
+      }catch(e){console.warn('جدول عضویت در دسترس نیست؛ فهرست شاگردان بدون آن نمایش داده می‌شود.',e);}
+      ensureList();
+      await window.updateStats();
+      window.renderClients();
+    }catch(e){
+      console.error('بارگذاری شاگردان ناموفق بود:',e);
+      if(list)list.innerHTML='<div style="padding:12px;border:1px solid #8b3535;border-radius:10px;color:#ffaaaa">دریافت شاگردان ناموفق بود:<br>'+esc(e.message||String(e))+'<br><button type="button" onclick="loadClients()">تلاش دوباره</button></div>';
+      ['clientCount','activeCount','planCount','alertCount'].forEach(id=>{if(el(id))el(id).textContent='—';});
+    }
+  };
+  // Ensure coach login always refreshes the visible list using the final loader.
+  const oldFinish=window.finishLogin;
+  if(typeof oldFinish==='function'){
+    window.finishLogin=async function(user){
+      await oldFinish(user);
+      if(typeof authProfile!=='undefined'&&authProfile?.role==='coach')await window.loadClients();
+    };
+  }
+  document.addEventListener('DOMContentLoaded',()=>{if(document.body.classList.contains('locked')===false&&typeof authProfile!=='undefined'&&authProfile?.role==='coach')window.loadClients();});
+})();
+</script>
