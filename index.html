@@ -2629,3 +2629,39 @@ window.useLibraryExercise=async function(id){
   else fixWorkoutSystemLayout();
 })();
 </script>
+
+<script id="FITNESS_LIBRARY_SAVE_AUTOSELECT_V1">
+/* After saving a new coach-library exercise, immediately transfer/select it in the workout builder. */
+(function(){
+  window.saveLibraryExercise=async function(){
+    const name=String(document.getElementById('libName')?.value||'').trim();
+    if(!name){alert('نام حرکت را وارد کنید.');return;}
+    const payload={
+      name,
+      target_muscle:document.getElementById('libMuscle')?.value.trim()||null,
+      category:document.getElementById('libCategory')?.value||'سایر',
+      level:document.getElementById('libLevel')?.value||'مبتدی',
+      goal:document.getElementById('libGoal')?.value||null,
+      equipment:document.getElementById('libEquipment')?.value.trim()||null,
+      coach_note:document.getElementById('libNote')?.value.trim()||null,
+      is_favorite:false
+    };
+    try{
+      const inserted=await sbWrite('/trainer_exercises','POST',payload);
+      let saved=Array.isArray(inserted)?inserted[0]:inserted;
+      if(!saved||!saved.id){
+        const matches=await sbGet('/trainer_exercises?name=eq.'+encodeURIComponent(name)+'&select=id,name,created_at&order=created_at.desc&limit=1');
+        saved=matches&&matches[0];
+      }
+      if(!saved||!saved.id)throw new Error('حرکت ذخیره شد، اما شناسه آن برای انتقال به برنامه دریافت نشد. از بانک روی «استفاده در برنامه» بزنید.');
+      ['libName','libMuscle','libEquipment','libNote','libGoal'].forEach(id=>{const e=document.getElementById(id);if(e)e.value='';});
+      await loadLibraryExercises();
+      await window.useLibraryExercise(saved.id);
+    }catch(e){
+      console.error('saveLibraryExercise auto-select failed',e);
+      alert('ذخیره یا انتخاب حرکت انجام نشد.\n'+(e.message||String(e)));
+    }
+  };
+})();
+</script>
+
