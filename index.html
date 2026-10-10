@@ -1398,7 +1398,7 @@ window.loadDashboard = loadDashboard;
       <div id="authTabs" class="meal-tabs"><button class="active" id="authCoachTab" onclick="authMode('coach')">👨‍🏫 مربی</button><button id="authTraineeTab" onclick="authMode('trainee')">👤 شاگرد</button></div>
       <div id="coachLoginBox"><label>ایمیل</label><input id="loginEmail" type="email" autocomplete="username" placeholder="ایمیل مربی"><label>رمز عبور</label><input id="loginPassword" type="password" autocomplete="current-password" placeholder="رمز عبور"><button onclick="loginApp()">🔐 ورود مربی</button></div>
       <div id="traineeLoginBox" class="hide">
-        <div class="trainee-auth-block"><h3>🆕 درخواست ثبت‌نام شاگرد</h3><p class="muted">درخواست پس از بررسی و تأیید مربی فعال می‌شود. رمز اولیه همگانی: <b>12345</b></p>
+        <div class="trainee-auth-block"><h3>🆕 درخواست ثبت‌نام شاگرد</h3><p class="muted">درخواست پس از تأیید مربی فعال می‌شود. رمز درخواست ثبت‌نام: <b>12345</b>؛ رمز ورود اولیه پس از تأیید: <b>123456</b>.</p>
           <label>نام و نام خانوادگی</label><input id="traineeRegName" autocomplete="name" placeholder="نام کامل">
           <label>شماره موبایل</label><input id="traineeRegPhone" type="tel" inputmode="tel" autocomplete="tel" placeholder="09121234567">
           <label>تعداد جلسات تمرین در هفته</label><select id="traineeRegSessions"><option value="">انتخاب کنید</option><option value="1">۱ جلسه</option><option value="2">۲ جلسه</option><option value="3">۳ جلسه</option><option value="4">۴ جلسه</option><option value="5">۵ جلسه</option><option value="6">۶ جلسه</option><option value="7">۷ جلسه</option></select>
@@ -2042,6 +2042,7 @@ const plans=workoutResult.data||[], nutrition=nutritionResult.data||[];
     if(!start)return alert('تاریخ شروع عضویت را به شمسی وارد کنید؛ نمونه ۱۴۰۵/۰۷/۱۸.');
     if(endRaw&&!end)return alert('تاریخ پایان عضویت معتبر نیست؛ نمونه ۱۴۰۵/۰۸/۱۸.');
     if(end&&end<start)return alert('تاریخ پایان عضویت نباید قبل از تاریخ شروع باشد.');
+    if(paid==='پرداخت شده'&&amount<=0)return alert('برای ثبت شهریه پرداخت‌شده، مبلغ را وارد کنید.');
     const traineeId=currentClient.id;
     try{
       await sbWrite('/trainee_memberships','POST',{trainee_id:traineeId,start_date:start,end_date:end,status:'active',amount,payment_status:paid==='پرداخت شده'?'paid':'unpaid',description:'عضویت باشگاه'});
@@ -4172,7 +4173,7 @@ active('workoutMuscleFilters',wm);active('libraryMuscleFilters',lm);if(document.
    ]);
    if(!currentClient||String(currentClient.id)!==String(id))return;
    const m=members[0],profile=profileRows[0]||{};
-   $("traineeMembershipStatus").innerHTML='<div class="receipt-item"><b>تاریخ ثبت‌نام باشگاه:</b> '+safe(fmtDate(profile.club_registration_date)||"ثبت نشده")+'<br><b>تعداد جلسات:</b> '+safe(profile.weekly_sessions||"—")+' جلسه در هفته<br><b>روزها و ساعت تمرین:</b> '+safe(profile.training_days||"—")+' · '+safe(String(profile.training_time||"").slice(0,5)||"—")+'<br><b>تاریخ شروع عضویت:</b> '+safe(fmtDate(m?.start_date)||"ثبت نشده")+'<br><b>تاریخ پایان عضویت:</b> '+safe(fmtDate(m?.end_date)||"ثبت نشده")+'<br><b>وضعیت شهریه:</b> '+(m?(m.payment_status==="paid"?"<span class=\"done\">پرداخت‌شده</span>":m.payment_status==="pending"?"<span>فیش در انتظار بررسی</span>":"<span>پرداخت‌نشده</span>"):'<span>هنوز عضویت توسط مربی ثبت نشده است</span>')+'</div>';
+   $("traineeMembershipStatus").innerHTML='<div class="receipt-item"><b>تاریخ ثبت‌نام باشگاه:</b> '+safe(fmtDate(profile.club_registration_date)||"ثبت نشده")+'<br><b>تعداد جلسات:</b> '+safe(profile.weekly_sessions||"—")+' جلسه در هفته<br><b>روزها و ساعت تمرین:</b> '+safe(profile.training_days||"—")+' · '+safe(String(profile.training_time||"").slice(0,5)||"—")+'<br><b>تاریخ شروع عضویت:</b> '+safe(fmtDate(m?.start_date)||"ثبت نشده")+'<br><b>تاریخ پایان عضویت:</b> '+safe(fmtDate(m?.end_date)||"ثبت نشده")+'<br><b>وضعیت شهریه:</b> '+(m?(receipts.some(r=>r.review_status==="pending")||m.payment_status==="pending"?"<span>فیش در انتظار بررسی</span>":m.payment_status==="paid"?"<span class=\"done\">پرداخت‌شده</span>":"<span>پرداخت‌نشده</span>"):'<span>هنوز عضویت توسط مربی ثبت نشده است</span>')+'</div>';
    const box=$("traineeReceiptHistory");
    if(box){
     const status={pending:"در انتظار بررسی مربی",approved:"تأیید شده",rejected:"رد شده"};
