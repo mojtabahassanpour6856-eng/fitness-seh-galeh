@@ -1240,9 +1240,20 @@ loadExercises();
     const message=decision==='approve'?'درخواست را تأیید می‌کنی؟ پس از تأیید، حساب شاگرد ساخته می‌شود و رمز ورود اولیه 123456 خواهد بود.':'درخواست این فرد رد شود؟';
     if(!confirm(message))return;
     try{
+      let requestRow=null;
+      if(decision==='approve'){
+        const q=await AUTH_SUPABASE.from('trainee_registration_requests').select('weekly_sessions,training_days,training_time').eq('id',id).maybeSingle();
+        if(q.error)throw q.error;requestRow=q.data;
+        if(!requestRow?.weekly_sessions||!requestRow?.training_days||!requestRow?.training_time)throw new Error('اطلاعات تعداد جلسات، روزها یا ساعت تمرین در درخواست کامل نیست؛ درخواست را بررسی کنید.');
+      }
       const {data,error}=await AUTH_SUPABASE.functions.invoke('review-trainee-registration',{body:{request_id:id,decision}});
       if(error)throw error;if(data?.error)throw new Error(data.error);
-      alert(decision==='approve'?'شاگرد تأیید شد. ورود اولیه با شماره موبایل و رمز 123456 است؛ در اولین ورود باید رمز شخصی بسازد.':'درخواست رد شد.');
+      let scheduleWarning='';
+      if(decision==='approve'&&data?.trainee_id&&requestRow){
+        const upd=await AUTH_SUPABASE.functions.invoke('apply-trainee-schedule',{body:{trainee_id:data.trainee_id,weekly_sessions:requestRow.weekly_sessions,training_days:requestRow.training_days,training_time:String(requestRow.training_time).slice(0,5)}});
+        if(upd.error||upd.data?.error)scheduleWarning='\nهشدار: حساب ساخته شد، اما برنامه حضور به‌صورت خودکار ذخیره نشد. اطلاعات را از پنل مربی تکمیل کنید.';
+      }
+      alert((decision==='approve'?'شاگرد تأیید شد. ورود اولیه با شماره موبایل و رمز 123456 است؛ در اولین ورود باید رمز شخصی بسازد.':'درخواست رد شد.')+scheduleWarning);
       await window.loadRegistrationRequests();await window.loadClients();
     }catch(e){console.error(e);alert('بررسی درخواست انجام نشد: '+(e?.message||String(e)));}
   };
