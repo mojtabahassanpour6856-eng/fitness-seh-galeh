@@ -3851,13 +3851,19 @@ active('workoutMuscleFilters',wm);active('libraryMuscleFilters',lm);if(document.
   window.refreshTraineeCoachMessage=applyStudentCoachMessage;
   function applyRoleAccess(){
   if(!isTrainee())return;
-  // هدف عددی فقط در پنل مربی نمایش داده می‌شود؛ شاگرد فقط پیام جداگانه را می‌بیند.
+  // هدف عددی فقط در پنل مربی نمایش داده می‌شود؛ شاگرد داشبورد ۹ بخشی را می‌بیند.
   const traineeGoalBox=document.getElementById("goalBox");
   if(traineeGoalBox){traineeGoalBox.style.setProperty("display","none","important");traineeGoalBox.setAttribute("aria-hidden","true");}
   const nav=document.querySelector(".nav");
   if(nav)nav.querySelectorAll("button").forEach(b=>{
-   const action=String(b.getAttribute("onclick")||"");
-   if(/showSection\(['"]coach['"]/.test(action))b.style.display="none";
+   // شاگرد پس از ورود فقط داشبورد ۹ بخشی را در نوار اصلی می‌بیند.
+   if(b.id==="navDash"){
+    b.style.display="";
+    b.classList.add("active");
+   }else{
+    b.style.display="none";
+    b.classList.remove("active");
+   }
   });
   const coachSection=document.getElementById("coach");
   if(coachSection)coachSection.style.display="none";
