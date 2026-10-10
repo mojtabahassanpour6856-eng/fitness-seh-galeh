@@ -836,6 +836,7 @@ async function saveInjury(){if(!currentClient)return alert('اول شاگرد ر
 async function loadInjuries(){if(!currentClient||!$('injList'))return;try{const rows=await sbGet(`/trainee_injuries?trainee_id=eq.${encodeURIComponent(currentClient.id)}&order=created_at.desc`);$('injList').innerHTML=rows.map(x=>`<div class="report-row"><span>⚠️ ${esc(x.problem_type)} | ${esc(x.body_area||'')}</span><b>${esc(x.status||'')}</b></div>`).join('')||'موردی ثبت نشده است.';}catch(e){$('injList').textContent='برای فعال شدن این بخش، SQL جدید را اجرا کنید.';}}
 
 async function saveFasting(){
+ if(authProfile?.role!=="coach"){alert("تعیین و تغییر برنامه فستینگ فقط در دسترس مربی است.");return;}
  if(!currentClient){alert("اول شاگرد را انتخاب کنید.");return;}
  const st=$("fastStart").value,en=$("fastEnd").value,t=$("fastType").value;
  if(t==="بدون فستینگ"){ $("fastStatus").textContent="فستینگ برای این شاگرد فعال نیست."; return; }
