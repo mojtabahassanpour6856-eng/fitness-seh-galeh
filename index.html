@@ -1052,7 +1052,8 @@ async function saveProgress(){
   if(authProfile?.role==="trainee"){
    await sbWrite("/weight_logs","POST",body);
    if(!currentClient||String(currentClient.id)!==String(traineeId))throw new Error("شاگرد هنگام ثبت تغییر کرده است؛ لطفاً دوباره تلاش کنید.");
-   alert("وزن و پیشرفت شخصی ثبت شد.");
+   await sbWrite("/body_analyses","POST",{trainee_id:traineeId,analysis_date:body.log_date,weight:body.weight,waist:+$("waist").value||null,abdomen:+$("waist").value||null,hip:+$("hip").value||null,thigh:+$("thigh").value||null,notes:"ثبت پیشرفت دوره‌ای"});
+   alert("وزن و اندازه‌های شخصی ثبت شد.");
   }else if(authProfile?.role==="coach"){
    await sbWrite("/weight_logs","POST",body);
    if(!currentClient||String(currentClient.id)!==String(traineeId))throw new Error("شاگرد هنگام ثبت تغییر کرده است؛ ثبت ادامه پیدا نکرد.");
