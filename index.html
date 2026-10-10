@@ -1257,7 +1257,7 @@ loadExercises();
       }
       const {data,error}=await AUTH_SUPABASE.functions.invoke('review-trainee-registration',{body:{request_id:id,decision}});
       if(error)throw error;if(data?.error)throw new Error(data.error);
-      let scheduleWarning=decision==='approve'&&requestRow&&!requestRow.birth_date?'\\nهشدار: این درخواست قدیمی است و اطلاعات بدنی، هدف و آسیب‌ها را ندارد؛ پیش از نوشتن برنامه، پروفایل شاگرد را کامل کنید.':'';
+      let scheduleWarning=decision==='approve'&&requestRow&&!requestRow.birth_date?'\nهشدار: این درخواست قدیمی است و اطلاعات بدنی، هدف و آسیب‌ها را ندارد؛ پیش از نوشتن برنامه، پروفایل شاگرد را کامل کنید.':'';
       if(decision==='approve'&&data?.trainee_id&&requestRow){
         const upd=await AUTH_SUPABASE.functions.invoke('apply-trainee-schedule',{body:{trainee_id:data.trainee_id,weekly_sessions:requestRow.weekly_sessions,training_days:requestRow.training_days,training_time:String(requestRow.training_time).slice(0,5),birth_date:requestRow.birth_date,current_weight:requestRow.current_weight,height:requestRow.height,goal:requestRow.goal,training_history:requestRow.training_history,injuries:requestRow.injuries,training_type:requestRow.training_type,home_equipment:requestRow.home_equipment}});
         if(upd.error||upd.data?.error)scheduleWarning='\nهشدار: حساب ساخته شد، اما ذخیره اطلاعات اولیه یا برنامه حضور کامل نشد. لطفاً رکورد شاگرد را بررسی و اطلاعات را از پنل مربی تکمیل کنید.';
