@@ -30,6 +30,13 @@ table{width:100%;border-collapse:collapse;margin-top:13px;font-size:12px}th,td{p
 .row{display:flex;gap:8px}.row>*{flex:1}
 .section{display:none}.section.active{display:block}
 .badges{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}.badge{background:#101e2d;border-radius:12px;padding:12px;text-align:center}.badge b{display:block;font-size:20px;margin-bottom:4px}
+.registration-requests-card{border-color:#725b20;background:linear-gradient(145deg,#121d28,#0d1722);box-shadow:0 8px 24px rgba(0,0,0,.18)}
+.registration-requests-heading{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
+.registration-requests-heading h2{margin-bottom:6px;color:#ffd166}
+.registration-refresh{width:auto;min-width:132px;margin:0;white-space:nowrap}
+#registrationRequests{min-width:0;overflow-x:auto}
+#registrationRequests .v4-table{min-width:0}
+@media(max-width:600px){.registration-requests-heading{display:block}.registration-refresh{width:100%;margin-top:8px}.registration-requests-card{padding:12px}}
 .client{padding:12px;border:1px solid #2b4053;border-radius:12px;margin:8px 0;background:#101b28}
 .client strong{display:block;margin-bottom:5px}.pill{display:inline-block;padding:4px 8px;border-radius:20px;background:#203447;color:#dce7ef;font-size:11px}
 #custom{display:none}.hide{display:none!important}
@@ -357,6 +364,16 @@ body.library-room #workout .library-room-card .library-detail-view{width:100%!im
 <div class="badge"><b id="planCount">۰</b>برنامه</div>
 <div class="badge"><b id="alertCount">۰</b>نیازمند پیگیری</div>
 </div>
+</div>
+<div id="registrationRequestsPanel" class="card registration-requests-card">
+  <div class="registration-requests-heading">
+    <div>
+      <h2>📨 درخواست‌های ثبت‌نام شاگردان</h2>
+      <p class="muted">درخواست‌های ثبت‌نام را بررسی کن؛ پس از اطمینان از اطلاعات، تأیید یا رد را بزن.</p>
+    </div>
+    <button type="button" class="secondary registration-refresh" onclick="loadRegistrationRequests()">🔄 به‌روزرسانی</button>
+  </div>
+  <div id="registrationRequests" aria-live="polite"><p class="muted">برای مشاهده درخواست‌ها، دکمه «به‌روزرسانی» را بزن.</p></div>
 </div>
 <div class="card">
 <h2>👥 شاگردان</h2>
