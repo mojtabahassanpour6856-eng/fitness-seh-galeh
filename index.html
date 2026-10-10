@@ -1196,7 +1196,14 @@ loadExercises();
   }
 
   function buildDashboard(){
-    if($id('traineeDashboard'))return;
+    const existing=$id('traineeDashboard');
+    if(existing){
+      const grid=existing.querySelector('.v4-dashboard');
+      if(grid&&!grid.querySelector('[data-profile-card="1"]')){
+        grid.insertAdjacentHTML('beforeend',`<div class="v4-card" data-profile-card="1" onclick="dashOpen('client')"><b>👤</b>پروفایل من<span class="v4-small">مشاهده و ثبت اطلاعات شخصی</span></div>`);
+      }
+      return;
+    }
     const sec=document.createElement('section');sec.id='traineeDashboard';sec.className='section';sec.innerHTML=`
       <div class="card"><h2>👤 داشبورد من</h2><p id="dashWelcome" class="muted"></p></div>
       <div class="v4-grid v4-dashboard">
