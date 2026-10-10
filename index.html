@@ -68,7 +68,27 @@ body.library-room #workout> :not(.library-room-card){display:none!important}
 body.library-room #workout .library-room-card{display:block!important;position:relative!important;width:100%!important;max-width:900px!important;min-height:calc(100dvh - 24px)!important;margin:0 auto!important;box-sizing:border-box!important;border:1px solid #3d4a5a!important;border-radius:16px!important;background:#151c25!important;padding:14px!important}
 body.library-room #workout .library-room-card #libraryList{display:block!important}
 body.library-room #workout .library-room-card .library-detail-view{width:100%!important}
-</style></head>
+</style>
+<style id="FITNESS_COMPACT_WORKOUT_LIST">
+/* کارت‌های حرکات برنامه: فشرده، هم‌اندازه و خوانا */
+#workoutList{display:flex;flex-direction:column;gap:7px;margin-top:8px}
+#workoutList>.card{padding:9px 11px!important;margin:0 0 7px!important;border-radius:12px!important}
+#workoutList .meal-card{display:block!important;position:relative!important;box-sizing:border-box!important;width:100%!important;min-width:0!important;margin:0!important;padding:9px 11px!important;border:1px solid #344354!important;border-radius:12px!important;background:#151d27!important;box-shadow:none!important}
+#workoutList .meal-head{display:flex!important;align-items:center!important;justify-content:space-between!important;gap:8px!important;margin:0 0 4px!important}
+#workoutList .meal-head h3{font-size:14px!important;line-height:1.5!important;margin:0!important;flex:1!important;min-width:0!important;overflow-wrap:anywhere!important}
+#workoutList .meal-card>div[style*="display:flex"]{gap:7px!important;margin:3px 0!important;align-items:center!important;flex-wrap:wrap!important}
+#workoutList .meal-card strong{font-size:13px!important;color:#f1c66b!important}
+#workoutList .meal-card .muted{font-size:11px!important;line-height:1.6!important}
+#workoutList .meal-card .mini{min-height:28px!important;padding:4px 7px!important;font-size:11px!important;border-radius:8px!important}
+#workoutList .meal-card .checkfood{font-size:11px!important;margin:2px 0!important}
+#workoutList .meal-card input[type=checkbox]{width:15px!important;height:15px!important}
+#workoutList .meal-card .workout-group-exercises{font-size:12px!important;line-height:1.7!important}
+#workoutList .meal-card.v4-complete{border-color:#36765b!important;background:#14251f!important}
+#workoutList .meal-card p{margin:4px 0!important}
+#workoutList .f18-actions{display:flex;flex-wrap:wrap;gap:6px}
+@media(max-width:520px){#workoutList .meal-card{padding:8px 9px!important}#workoutList .meal-head h3{font-size:13px!important}#workoutList .meal-card .mini{min-height:27px!important;padding:3px 6px!important}}
+</style>
+</head>
 <body class="locked">
 <div id="authScreen">
   <div class="auth-card">
