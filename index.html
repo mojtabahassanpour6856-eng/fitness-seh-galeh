@@ -2167,18 +2167,45 @@ const plans=workoutResult.data||[], nutrition=nutritionResult.data||[];
   window.addWorkoutExercise=async function(){
     const traineeId=currentTraineeId();
     if(!traineeId){alert('اول شاگرد را انتخاب کنید.');return;}
-    if(!same(workoutPlanOwnerId,traineeId)||!currentWorkoutPlanId){await window.saveWorkoutPlan();if(!same(currentTraineeId(),traineeId)||!same(workoutPlanOwnerId,traineeId)||!currentWorkoutPlanId)return;}
+    if(!same(workoutPlanOwnerId,traineeId)||!currentWorkoutPlanId){
+      await window.saveWorkoutPlan();
+      if(!same(currentTraineeId(),traineeId)||!same(workoutPlanOwnerId,traineeId)||!currentWorkoutPlanId)return;
+    }
     const planId=currentWorkoutPlanId;
     if(!same(workoutPlanOwnerId,traineeId)){alert('برنامه متعلق به شاگرد انتخاب‌شده نیست. دوباره برنامه را بارگذاری کنید.');return;}
-    const exerciseId=byId('workoutExercise')?.value;
-    if(!exerciseId){alert('حرکت را انتخاب کنید.');return;}
+    const system=byId('workoutSystem')?.value||'normal';
+    const groupMode=['superset','triset','giant'].includes(system);
+    const chosen=groupMode
+      ? Array.from(document.querySelectorAll('#workoutGroupPicker input[name="groupExercise"]:checked')).map(el=>el.value).filter(Boolean)
+      : [byId('workoutExercise')?.value].filter(Boolean);
+    if(!chosen.length){alert(groupMode?'حرکت‌های گروه را انتخاب کنید.':'حرکت را انتخاب کنید.');return;}
+    if(system==='superset'&&chosen.length!==2){alert('برای سوپرست دقیقاً دو حرکت انتخاب کنید.');return;}
+    if((system==='triset'||system==='giant')&&chosen.length!==3){alert('برای تری‌ست و جاینت‌ست دقیقاً سه حرکت انتخاب کنید.');return;}
     const rows=Array.isArray(workoutExercisesCache)?workoutExercisesCache:[];
-    const body={workout_plan_id:planId,exercise_id:exerciseId,sets:+(byId('workoutSets')?.value)||0,reps:(byId('workoutReps')?.value||'').trim()||null,rest_seconds:+(byId('workoutRest')?.value)||0,notes:(byId('workoutExerciseNotes')?.value||'').trim()||null,sort_order:rows.length?Math.max(...rows.map(x=>Number(x.sort_order)||0))+1:1,training_system:byId('workoutSystem')?.value||'normal',group_key:(byId('workoutGroup')?.value||'').trim()||null,training_day:byId('workoutDay')?.value||null,is_completed:false};
+    const baseOrder=rows.length?Math.max(...rows.map(x=>Number(x.sort_order)||0))+1:1;
+    let groupKey=(byId('workoutGroup')?.value||'').trim()||null;
+    if(groupMode&&!groupKey)groupKey=(system==='superset'?'SS':system==='triset'?'TS':'GS')+'-'+Date.now().toString(36).toUpperCase();
+    const base={workout_plan_id:planId,sets:+(byId('workoutSets')?.value)||0,reps:(byId('workoutReps')?.value||'').trim()||null,rest_seconds:+(byId('workoutRest')?.value)||0,notes:(byId('workoutExerciseNotes')?.value||'').trim()||null,training_system:system,group_key:groupKey,training_day:byId('workoutDay')?.value||null,is_completed:false};
+    let added=0;
     try{
-      try{await sbWrite('/trainee_workout_exercises','POST',body);}
-      catch(e){if(!/training_day|is_completed/i.test(e.message||''))throw e;const fallback={...body};delete fallback.training_day;delete fallback.is_completed;await sbWrite('/trainee_workout_exercises','POST',fallback);if(same(currentTraineeId(),traineeId))alert('حرکت ثبت شد؛ برای ذخیره روز تمرین و وضعیت انجام‌شدن، ارتقای دیتابیس لازم است.');}
-      if(same(currentTraineeId(),traineeId)&&same(currentWorkoutPlanId,planId)){if(byId('workoutExerciseNotes'))byId('workoutExerciseNotes').value='';await window.loadWorkoutForClient();}
-    }catch(e){alert('افزودن حرکت انجام نشد.\n'+(e.message||String(e)));}
+      for(let i=0;i<chosen.length;i++){
+        if(!same(currentTraineeId(),traineeId)||!same(currentWorkoutPlanId,planId)){throw new Error('شاگرد یا برنامه هنگام ثبت تغییر کرده است؛ برای جلوگیری از ثبت در برنامه اشتباه، عملیات متوقف شد.');}
+        const body={...base,exercise_id:chosen[i],sort_order:baseOrder+i};
+        try{await sbWrite('/trainee_workout_exercises','POST',body);}
+        catch(e){
+          if(/training_day|is_completed/i.test(e.message||'')){const fallback={...body};delete fallback.training_day;delete fallback.is_completed;await sbWrite('/trainee_workout_exercises','POST',fallback);}
+          else throw e;
+        }
+        added++;
+      }
+      if(byId('workoutExerciseNotes'))byId('workoutExerciseNotes').value='';
+      if(groupMode)document.querySelectorAll('#workoutGroupPicker input[name="groupExercise"]').forEach(el=>el.checked=false);
+      if(same(currentTraineeId(),traineeId)&&same(currentWorkoutPlanId,planId))await window.loadWorkoutForClient();
+      alert(groupMode?('گروه '+(system==='superset'?'سوپرست':system==='triset'?'تری‌ست':'جاینت‌ست')+' با '+added+' حرکت انتخاب‌شده ثبت شد.'):'حرکت به برنامه اضافه شد.');
+    }catch(e){
+      try{if(same(currentTraineeId(),traineeId)&&same(currentWorkoutPlanId,planId))await window.loadWorkoutForClient();}catch(_){}
+      alert('ثبت حرکت کامل نشد؛ '+added+' حرکت از '+chosen.length+' حرکت ثبت شد.\\n'+(e.message||String(e)));
+    }
   };
 
   window.deleteWorkoutExercise=async function(id){
