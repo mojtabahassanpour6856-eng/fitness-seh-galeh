@@ -4260,7 +4260,7 @@ active('workoutMuscleFilters',wm);active('libraryMuscleFilters',lm);if(document.
     cards[0].querySelectorAll('button[onclick="saveProfile()"],button[onclick="saveProfileExtras()"],button[onclick="saveTrainingSchedule()"]').forEach(b=>b.style.display="none");
    }
    replaceTraineeMembershipCard();
-   const schedule=$("scheduleCard");if(schedule){schedule.style.display="block";schedule.innerHTML='<h2>🗓️ برنامه حضور و ساعت تمرین من</h2><p class="muted">'+safe(currentClient?.weekly_sessions||"—")+' جلسه در هفته</p><div class="receipt-item"><b>روزها:</b> '+safe(currentClient?.training_days||"ثبت نشده")+'<br><b>ساعت:</b> '+safe(String(currentClient?.training_time||"").slice(0,5)||"ثبت نشده")+'</div>';}
+   const schedule=$("scheduleCard");if(schedule&&schedule.dataset.traineeReadonly!=="1"){schedule.style.display="block";schedule.innerHTML='<h2>🗓️ برنامه حضور و ساعت تمرین من</h2><p class="muted">'+safe(currentClient?.weekly_sessions||"—")+' جلسه در هفته</p><div class="receipt-item"><b>روزها:</b> '+safe(currentClient?.training_days||"ثبت نشده")+'<br><b>ساعت:</b> '+safe(String(currentClient?.training_time||"").slice(0,5)||"ثبت نشده")+'</div>';schedule.dataset.traineeReadonly="1";}
   }
   const mealCoach=$("mealCoachView");if(mealCoach)mealCoach.style.display="none";
   const mealStudent=$("mealStudentView");if(mealStudent){mealStudent.classList.remove("hide");mealStudent.style.display="block";}
