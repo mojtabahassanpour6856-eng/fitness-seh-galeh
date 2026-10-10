@@ -1374,7 +1374,7 @@ window.loadDashboard = loadDashboard;
       c.auth_user_id=user.id;
     }
     authProfile={id:user.id,role:'trainee',full_name:c.full_name||user.phone||'شاگرد',trainee_id:c.id};
-    clients=[{id:c.id,name:c.full_name,phone:c.phone,gender:c.gender,birth_date:c.birth_date,age:calcAge(c.birth_date),weight:c.current_weight,height:c.height,goal:c.goal,level:c.training_level,history:c.training_history,limitations:c.limitations,training_type:c.training_type||'gym',home_equipment:c.home_equipment||'',training_days:c.training_days||'',training_time:c.training_time||'',active:true,plans:0}];currentClient=clients[0];
+    clients=[{id:c.id,name:c.full_name,phone:c.phone,gender:c.gender,birth_date:c.birth_date,age:calcAge(c.birth_date),weight:c.current_weight,height:c.height,goal:c.goal,level:c.training_level,history:c.training_history,limitations:c.limitations,training_type:c.training_type||'gym',home_equipment:c.home_equipment||'',training_days:c.training_days||'',training_time:c.training_time||'',weekly_sessions:c.weekly_sessions||null,club_registration_date:c.club_registration_date||null,active:true,plans:0}];currentClient=clients[0];
     qsAll('.nav button').forEach(b=>b.style.display='none');$id('navDash').style.display='block';
     ['client','meal','workout','progress'].forEach(sec=>{const b=qsAll('.nav button').find(x=>String(x.getAttribute('onclick')||'').includes("'"+sec+"'"));if(b)b.style.display='block';});
     document.body.classList.remove('locked');$id('authScreen').style.display='none';$id('authUserBar').style.display='block';$id('authUserText').textContent=`${c.full_name||user.phone} | شاگرد`;
@@ -1393,7 +1393,7 @@ window.loadDashboard = loadDashboard;
           <label>رمز همگانی</label><input id="traineeInitialPassword" type="password" inputmode="numeric" placeholder="12345" autocomplete="off">
           <button type="button" onclick="registerTraineePhone()">📨 ارسال درخواست ثبت‌نام</button>
         </div>
-        <div class="trainee-auth-block"><h3>🔐 ورود شاگرد</h3><label>شماره موبایل</label><input id="traineePhoneLogin" type="tel" inputmode="tel" autocomplete="username" placeholder="09121234567"><label>رمز عبور</label><input id="traineeLoginPassword" type="password" autocomplete="current-password" placeholder="رمز اولیه یا رمز شخصی"><button type="button" onclick="loginTraineePhone()">ورود شاگرد</button><p class="muted">پس از تأیید درخواست، با رمز اولیه 12345 وارد شوید و رمز شخصی خود را تعیین کنید.</p></div>
+        <div class="trainee-auth-block"><h3>🔐 ورود شاگرد</h3><label>شماره موبایل</label><input id="traineePhoneLogin" type="tel" inputmode="tel" autocomplete="username" placeholder="09121234567"><label>رمز عبور</label><input id="traineeLoginPassword" type="password" autocomplete="current-password" placeholder="رمز اولیه یا رمز شخصی"><button type="button" onclick="loginTraineePhone()">ورود شاگرد</button><p class="muted">پس از تأیید درخواست، با رمز ورود اولیه 123456 وارد شوید و رمز شخصی خود را تعیین کنید.</p></div>
       </div><div id="authError" class="auth-error"></div>`;
     if(!$id('traineeAuthStyle')){
       const st=document.createElement('style');st.id='traineeAuthStyle';st.textContent=`
@@ -1422,7 +1422,7 @@ window.loadDashboard = loadDashboard;
       const {data,error}=await AUTH_SUPABASE.functions.invoke('trainee-registration-request',{body:{full_name:name,phone,initial_password:initialPassword}});
       if(error)throw error;
       if(data?.error)throw new Error(data.error);
-      showAuthError('✅ درخواست ثبت‌نام برای مربی ارسال شد. پس از تأیید مربی، با شماره موبایل و رمز اولیه 12345 وارد شوید.');
+      showAuthError('✅ درخواست ثبت‌نام برای مربی ارسال شد. پس از تأیید مربی، با شماره موبایل و رمز ورود اولیه 123456 وارد شوید.');
       $id('traineeRegName').value='';$id('traineeRegPhone').value='';$id('traineeInitialPassword').value='';
     }catch(e){console.error('trainee registration request failed',e);showAuthError('❌ ارسال درخواست انجام نشد. '+(e?.message||String(e)));}
     finally{if(btn){btn.disabled=false;btn.textContent='📨 ارسال درخواست ثبت‌نام';}}
@@ -1771,7 +1771,7 @@ const plans=workoutResult.data||[], nutrition=nutritionResult.data||[];
     if(clientMode==='active')arr=arr.filter(c=>c.active);
     if(clientMode==='plan')arr=arr.filter(c=>c.plans);
     if(clientMode==='alert')arr=arr.filter(c=>!c.weight||!c.goal||!c.phone||c.membershipStatus==='منقضی');
-    body.innerHTML=arr.length?arr.map(c=>`<tr><td><b>${escf(c.name||'بدون نام')}</b><br><span class="v4-small">${escf(c.phone||'—')}</span></td><td>${c.training_type==='home'?'🏠 منزل':c.training_type==='online'?'📱 آنلاین':'🏋️ باشگاه'}</td><td>${c.weight?escf(c.weight)+' kg':'—'}</td><td>${escf(c.goal||'—')}</td><td>${escf(c.training_days||'—')}<br><span class="v4-small">${escf(c.training_time||'—')}</span></td><td>${c.plans?'<span class="v4-ok">✓ دارد</span>':'<span class="v4-warn">ندارد</span>'}</td><td>${c.membershipStatus==='وضعیت نامشخص'?'<span class="v4-warn" title="جدول عضویت در دسترس نیست؛ وضعیت قطعی نیست">وضعیت نامشخص</span>':c.active?'<span class="v4-ok">فعال</span>':'<span class="v4-danger">'+escf(c.membershipStatus||'غیرفعال')+'</span>'}</td><td>${escf(c.createdAt?new Date(c.createdAt).toLocaleDateString('fa-IR'):'—')}</td><td><button class="secondary mini" onclick="selectClient('${c.id}')">ورود</button></td></tr>`).join(''):`<tr><td colspan="9" class="muted">شاگردی با این فیلتر پیدا نشد.</td></tr>`;
+    body.innerHTML=arr.length?arr.map(c=>`<tr><td><b>${escf(c.name||'بدون نام')}</b><br><span class="v4-small">${escf(c.phone||'—')}</span></td><td>${c.training_type==='home'?'🏠 منزل':c.training_type==='online'?'📱 آنلاین':'🏋️ باشگاه'}</td><td>${c.weight?escf(c.weight)+' kg':'—'}</td><td>${escf(c.goal||'—')}</td><td>${escf(c.training_days||'—')}<br><span class="v4-small">${escf(c.training_time||'—')} · ${escf(c.weekly_sessions||'—')} جلسه در هفته</span></td><td>${c.plans?'<span class="v4-ok">✓ دارد</span>':'<span class="v4-warn">ندارد</span>'}</td><td>${c.membershipStatus==='وضعیت نامشخص'?'<span class="v4-warn" title="جدول عضویت در دسترس نیست؛ وضعیت قطعی نیست">وضعیت نامشخص</span>':c.active?'<span class="v4-ok">فعال</span>':'<span class="v4-danger">'+escf(c.membershipStatus||'غیرفعال')+'</span>'}</td><td>${escf(c.createdAt?new Date(c.createdAt).toLocaleDateString('fa-IR'):'—')}</td><td><button class="secondary mini" onclick="selectClient('${c.id}')">ورود</button></td></tr>`).join(''):`<tr><td colspan="9" class="muted">شاگردی با این فیلتر پیدا نشد.</td></tr>`;
   }
 
   function wireFinalBadges(){
@@ -4053,6 +4053,18 @@ active('workoutMuscleFilters',wm);active('libraryMuscleFilters',lm);if(document.
   const diff=Math.floor((b-a)/86400000);
   return {start,week:Math.floor(diff/7)+1,days:diff};
  }
+ async function attachCoachWorkoutProgress(){
+  if(isTrainee()||!currentClient?.id||!currentWorkoutPlanId)return;
+  const traineeId=currentClient.id,planId=currentWorkoutPlanId;
+  try{
+   const rows=await sbGet("/trainee_workout_day_logs?trainee_id=eq."+encodeURIComponent(traineeId)+"&workout_plan_id=eq."+encodeURIComponent(planId)+"&select=workout_day,completed_date,cycle_week,is_completed&order=completed_date.desc");
+   if(!currentClient||String(currentClient.id)!==String(traineeId))return;
+   let box=$("coachWorkoutMissionReport");
+   if(!box){box=document.createElement("div");box.id="coachWorkoutMissionReport";box.className="card";const list=$("workoutList");if(list?.parentNode)list.parentNode.insertBefore(box,list);}
+   const weeks=[1,2,3,4].map(w=>{const r=rows.filter(x=>Number(x.cycle_week)===w&&x.is_completed);return '<div class="receipt-item"><b>هفته '+w+'</b><br>'+r.length+' ثبت تمرین'+(r.length?'<p class="muted">'+r.map(x=>safe(x.workout_day)+' · '+safe(fmtDate(x.completed_date))).join('<br>')+'</p>':'')+'</div>';}).join("");
+   box.innerHTML="<h3>📊 پیگیری مأموریت‌های تمرین شاگرد</h3><div class=\"grid2\">"+weeks+"</div>";
+  }catch(e){console.warn("coach workout mission report",e);}
+ }
  async function markWorkoutDayDone(day,button){
   const traineeId=currentClient?.id,planId=window.__sehWorkoutPlanId||currentWorkoutPlanId;
   if(!traineeId||!planId)return alert("برنامه تمرینی پیدا نشد.");
@@ -4108,7 +4120,7 @@ active('workoutMuscleFilters',wm);active('libraryMuscleFilters',lm);if(document.
  if(typeof oldWorkoutRenderer==="function"&&!window.__sehWorkoutRendererWrapped){
   window.renderWorkoutList=function(rows,names){
    const out=oldWorkoutRenderer.apply(this,arguments);
-   if(isTrainee())setTimeout(attachWorkoutMissions,0);
+   if(isTrainee())setTimeout(attachWorkoutMissions,0);else setTimeout(attachCoachWorkoutProgress,0);
    return out;
   };window.__sehWorkoutRendererWrapped=true;
  }
@@ -4127,9 +4139,10 @@ active('workoutMuscleFilters',wm);active('libraryMuscleFilters',lm);if(document.
   if(!isTrainee()||!currentClient?.id)return;
   const id=currentClient.id;
   try{
-   const [members,receipts]=await Promise.all([
+   const [members,receipts,profileRows]=await Promise.all([
     sbGet("/trainee_memberships?trainee_id=eq."+encodeURIComponent(id)+"&select=*&order=created_at.desc&limit=1"),
-    sbGet("/trainee_payment_receipts?trainee_id=eq."+encodeURIComponent(id)+"&select=id,receipt_path,amount,payment_date,note,review_status,created_at&order=created_at.desc")
+    sbGet("/trainee_payment_receipts?trainee_id=eq."+encodeURIComponent(id)+"&select=id,receipt_path,amount,payment_date,note,review_status,created_at&order=created_at.desc"),
+    sbGet("/trainees?id=eq."+encodeURIComponent(id)+"&select=club_registration_date,weekly_sessions,training_days,training_time&limit=1")
    ]);
    if(!currentClient||String(currentClient.id)!==String(id))return;
    const m=members[0];
@@ -4221,6 +4234,7 @@ active('workoutMuscleFilters',wm);active('libraryMuscleFilters',lm);if(document.
     cards[0].querySelectorAll('button[onclick="saveProfile()"],button[onclick="saveProfileExtras()"],button[onclick="saveTrainingSchedule()"]').forEach(b=>b.style.display="none");
    }
    replaceTraineeMembershipCard();
+   const schedule=$("scheduleCard");if(schedule){schedule.style.display="block";schedule.innerHTML='<h2>🗓️ برنامه حضور و ساعت تمرین من</h2><p class="muted">'+safe(currentClient?.weekly_sessions||"—")+' جلسه در هفته</p><div class="receipt-item"><b>روزها:</b> '+safe(currentClient?.training_days||"ثبت نشده")+'<br><b>ساعت:</b> '+safe(String(currentClient?.training_time||"").slice(0,5)||"ثبت نشده")+'</div>';}
   }
   const mealCoach=$("mealCoachView");if(mealCoach)mealCoach.style.display="none";
   const mealStudent=$("mealStudentView");if(mealStudent){mealStudent.classList.remove("hide");mealStudent.style.display="block";}
