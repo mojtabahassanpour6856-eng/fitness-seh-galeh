@@ -1625,6 +1625,379 @@ window.loadDashboard = loadDashboard;
 
 
 
+
+<style id="seh-galeh-trainee-workflow-style">
+#nutritionSubPanel .grid2{gap:8px}#nutritionSubResult{margin-top:9px;padding:10px;border:1px solid #40566a;border-radius:10px;background:#101c29;line-height:1.8}
+.daily-mission{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;margin-top:10px;padding:9px;border:1px solid #3a5369;border-radius:10px;background:#101b27}
+.daily-mission button{margin:0;min-height:34px}.daily-mission .done{color:#72e0b6;font-weight:bold}
+.meal-done-control{display:flex;align-items:center;gap:7px;margin:6px 0 8px;padding:7px;border-radius:8px;background:#132330;font-size:12px}
+.receipt-item{border:1px solid #3a5369;border-radius:10px;padding:10px;margin:8px 0;background:#101b27;overflow-wrap:anywhere}
+.receipt-item .actions{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
+#traineeReceiptUpload input[type=file]{max-width:100%}
+</style>
+<script id="seh-galeh-trainee-workflow">
+(function(){
+ const $=id=>document.getElementById(id);
+ const isTrainee=()=>typeof authProfile!=="undefined"&&authProfile?.role==="trainee";
+ const safe=v=>String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+ const dayNow=()=>typeof today==="function"?today():new Date().toISOString().slice(0,10);
+ const isoDate=v=>typeof window.jalaliToISODate==="function"?window.jalaliToISODate(v):v;
+ const fmtDate=v=>typeof window.isoToJalaliDate==="function"?window.isoToJalaliDate(v):String(v||"").slice(0,10);
+ let mealCompletionBusy=new Set(),dayCompletionBusy=new Set();
+
+ function addRegistrationFields(){
+  const block=document.querySelector("#traineeLoginBox .trainee-auth-block");
+  if(!block||$("traineeWeeklySessions"))return;
+  const btn=block.querySelector('button[onclick="registerTraineePhone()"]');
+  const box=document.createElement("div");
+  box.id="traineeTrainingDetails";
+  box.innerHTML='<label>تعداد جلسات تمرین در هفته</label><select id="traineeWeeklySessions"><option value="">انتخاب تعداد جلسات</option><option value="1">۱ جلسه</option><option value="2">۲ جلسه</option><option value="3">۳ جلسه</option><option value="4">۴ جلسه</option><option value="5">۵ جلسه</option><option value="6">۶ جلسه</option><option value="7">۷ جلسه</option></select><label>روزهای تمرین</label><input id="traineeTrainingDays" placeholder="مثلاً شنبه، دوشنبه، چهارشنبه"><label>ساعت تمرین معمول</label><input id="traineeTrainingTime" type="time">';
+  block.insertBefore(box,btn||null);
+ }
+ addRegistrationFields();
+ const authObserver=new MutationObserver(addRegistrationFields);
+ authObserver.observe($("authScreen")||document.body,{childList:true,subtree:true});
+ window.registerTraineePhone=async function(){
+  const name=($("traineeRegName")?.value||"").trim();
+  const phone=typeof phoneNorm==="function"?phoneNorm($("traineeRegPhone")?.value||""):($("traineeRegPhone")?.value||"").trim();
+  const initialPassword=$("traineeInitialPassword")?.value||"";
+  const sessions=Number($("traineeWeeklySessions")?.value||0);
+  const days=($("traineeTrainingDays")?.value||"").trim();
+  const time=$("traineeTrainingTime")?.value||"";
+  if(name.length<2){showAuthError("نام و نام خانوادگی را وارد کنید.");return;}
+  if(!/^\+989\d{9}$/.test(phone)){showAuthError("شماره موبایل معتبر نیست؛ مانند 09121234567 وارد کنید.");return;}
+  if(initialPassword!=="12345"){showAuthError("رمز درخواست نادرست است.");return;}
+  if(!sessions||sessions<1||sessions>7){showAuthError("تعداد جلسات تمرین در هفته را انتخاب کنید.");return;}
+  if(!days){showAuthError("روزهای تمرین را وارد کنید.");return;}
+  if(!time){showAuthError("ساعت تمرین را انتخاب کنید.");return;}
+  const btn=$("traineeLoginBox")?.querySelector('.trainee-auth-block button');
+  if(btn){btn.disabled=true;btn.textContent="⏳ در حال ارسال درخواست…";}
+  try{
+   const {data,error}=await AUTH_SUPABASE.rpc("submit_trainee_registration_request",{
+    p_full_name:name,p_phone:phone,p_initial_password:initialPassword,p_weekly_sessions:sessions,p_training_days:days,p_training_time:time
+   });
+   if(error)throw error;
+   if(data?.error)throw new Error(data.error);
+   showAuthError("✅ درخواست ثبت‌نام همراه با روزها و ساعت تمرین ارسال شد. پس از بررسی و تأیید مربی می‌توانید وارد شوید.");
+   ["traineeRegName","traineeRegPhone","traineeInitialPassword","traineeWeeklySessions","traineeTrainingDays","traineeTrainingTime"].forEach(id=>{if($(id))$(id).value="";});
+  }catch(e){console.error("registration request",e);showAuthError("❌ ارسال درخواست انجام نشد. "+(e?.message||String(e)));}
+  finally{if(btn){btn.disabled=false;btn.textContent="📨 ارسال درخواست ثبت‌نام";}}
+ };
+
+ function ensureCoachRegistrationDateField(){
+  const sec=$("client");if(!sec||isTrainee())return;
+  const membership=[...sec.querySelectorAll(":scope > .card")].find(c=>c.querySelector("#subStart"));
+  if(!membership||$("subRegistrationDate"))return;
+  const grid=membership.querySelector(".grid2");
+  const wrap=document.createElement("div");
+  wrap.innerHTML='<label>تاریخ ثبت‌نام باشگاه (شمسی)</label><input id="subRegistrationDate" type="text" inputmode="numeric" placeholder="۱۴۰۵/۰۷/۱۸">';
+  grid?.prepend(wrap);
+  const btn=document.createElement("button");btn.type="button";btn.className="secondary";btn.textContent="💾 ذخیره تاریخ ثبت‌نام باشگاه";btn.onclick=saveClubRegistrationDate;
+  membership.appendChild(btn);
+ }
+ window.saveClubRegistrationDate=async function(){
+  if(isTrainee())return alert("این اطلاعات فقط توسط مربی مدیریت می‌شود.");
+  if(!currentClient?.id)return alert("ابتدا شاگرد را انتخاب کنید.");
+  const raw=$("subRegistrationDate")?.value||"";
+  const iso=isoDate(raw);if(!iso)return alert("تاریخ شمسی معتبر وارد کنید؛ نمونه ۱۴۰۵/۰۷/۱۸");
+  try{await sbWrite("/trainees?id=eq."+encodeURIComponent(currentClient.id),"PATCH",{club_registration_date:iso});currentClient.club_registration_date=iso;alert("تاریخ ثبت‌نام باشگاه ذخیره شد.");}
+  catch(e){alert("ذخیره تاریخ ثبت‌نام ناموفق بود. "+(e.message||String(e)));}
+ };
+
+ function ensureSubstitutionPanel(){
+  const section=$("meal");if(!section||$("nutritionSubPanel"))return;
+  const panel=document.createElement("div");panel.id="nutritionSubPanel";panel.className="card";
+  panel.innerHTML='<h2>🔄 جایگزین غذایی با محاسبه دقیق</h2><p class="muted">مقدار جایگزین بر اساس کالری غذای برنامه محاسبه می‌شود و اختلاف پروتئین، کربوهیدرات و چربی نیز نمایش داده می‌شود. مبنا: اطلاعات غذایی هر ۱۰۰ گرم.</p><div class="grid2"><div><label>غذای برنامه</label><select id="nutritionSubOriginal"></select></div><div><label>مقدار غذای برنامه (گرم)</label><input id="nutritionSubOriginalGrams" type="number" min="1" step="1" value="100"></div><div><label>غذای جایگزین</label><select id="nutritionSubReplacement"></select></div></div><button type="button" onclick="calculateNutritionSubstitution()">🧮 محاسبه مقدار معادل</button><div id="nutritionSubResult" class="muted">غذاها را انتخاب کنید تا مقدار معادل و اختلاف درشت‌مغذی‌ها محاسبه شود.</div>';
+  const anchor=$("mealCoachView")||$("mealStudentView");section.insertBefore(panel,anchor||null);
+  const fill=()=>{if(typeof foods==="undefined"||!Array.isArray(foods))return;["nutritionSubOriginal","nutritionSubReplacement"].forEach(id=>{const sel=$(id);if(!sel)return;const old=sel.value;sel.innerHTML=foods.map((f,i)=>'<option value="'+i+'">'+safe(f[0])+'</option>').join("");if(old&&Number(old)<foods.length)sel.value=old;});};
+  fill();setTimeout(fill,500);setTimeout(fill,1600);
+ }
+ window.calculateNutritionSubstitution=function(){
+  const a=typeof foods!=="undefined"?foods[Number($("nutritionSubOriginal")?.value)]:null;
+  const b=typeof foods!=="undefined"?foods[Number($("nutritionSubReplacement")?.value)]:null;
+  const g=Number($("nutritionSubOriginalGrams")?.value||0),out=$("nutritionSubResult");
+  if(!a||!b||!out||!Number.isFinite(g)||g<=0){if(out)out.textContent="غذاها و مقدار معتبر را انتخاب کنید.";return;}
+  const orig=[Number(a[1])||0,Number(a[2])||0,Number(a[3])||0,Number(a[4])||0].map(v=>v*g/100);
+  const repCal=Number(b[1])||0;
+  if(orig[0]<=0||repCal<=0){out.textContent="برای این غذا کالری معتبر ثبت نشده است؛ جایگزینی دقیق ممکن نیست.";return;}
+  const grams=orig[0]/(repCal/100),r=[Number(b[1])||0,Number(b[2])||0,Number(b[3])||0,Number(b[4])||0].map(v=>v*grams/100);
+  const diff=(x,y)=>{const n=y-x;return (n>0?"+":"")+n.toFixed(1);};
+  out.innerHTML='<b>'+safe(a[0])+' '+g+' گرم</b> ≈ <b>'+safe(b[0])+' '+grams.toFixed(1)+' گرم</b><br>کالری دو گزینه: '+orig[0].toFixed(0)+' در برابر '+r[0].toFixed(0)+' kcal<br>پروتئین: '+orig[1].toFixed(1)+'g در برابر '+r[1].toFixed(1)+'g ('+diff(orig[1],r[1])+')<br>کربوهیدرات: '+orig[2].toFixed(1)+'g در برابر '+r[2].toFixed(1)+'g ('+diff(orig[2],r[2])+')<br>چربی: '+orig[3].toFixed(1)+'g در برابر '+r[3].toFixed(1)+'g ('+diff(orig[3],r[3])+')<p class="muted">این جایگزینی کالری را برابر می‌کند، نه لزوماً درشت‌مغذی‌ها را؛ اگر اختلاف پروتئین یا چربی زیاد است با مربی هماهنگ کنید.</p>';
+ };
+ const oldOpenSub=window.openSubstitution;
+ window.openSubstitution=function(foodId,amount){
+  ensureSubstitutionPanel();
+  if(typeof foods!=="undefined"){
+   const idx=foods.findIndex(x=>String(x[5])===String(foodId));
+   if(idx>=0&&$("nutritionSubOriginal"))$("nutritionSubOriginal").value=String(idx);
+  }
+  if($("nutritionSubOriginalGrams"))$("nutritionSubOriginalGrams").value=amount||100;
+  if(typeof window.showSection==="function")window.showSection("meal",document.querySelectorAll(".nav button")[3]);
+  window.calculateNutritionSubstitution();
+  $("nutritionSubPanel")?.scrollIntoView({behavior:"smooth",block:"start"});
+ };
+
+ async function toggleMealDone(mealId,checked){
+  const traineeId=currentClient?.id;if(!traineeId)return alert("شاگرد مشخص نیست.");
+  const key=String(mealId)+"|"+dayNow();if(mealCompletionBusy.has(key))return;mealCompletionBusy.add(key);
+  try{
+   const path="/nutrition_meal_completions?trainee_id=eq."+encodeURIComponent(traineeId)+"&meal_id=eq."+encodeURIComponent(mealId)+"&log_date=eq."+encodeURIComponent(dayNow())+"&select=id";
+   const rows=await sbGet(path);
+   if(!currentClient||String(currentClient.id)!==String(traineeId))throw new Error("شاگرد هنگام ثبت تغییر کرد.");
+   if(rows[0])await sbWrite("/nutrition_meal_completions?id=eq."+encodeURIComponent(rows[0].id),"PATCH",{is_completed:checked,completed_at:new Date().toISOString()});
+   else if(checked)await sbWrite("/nutrition_meal_completions","POST",{trainee_id:traineeId,meal_id:mealId,log_date:dayNow(),is_completed:true,completed_at:new Date().toISOString()});
+   if(typeof loadNutritionForClient==="function")await loadNutritionForClient();
+  }catch(e){alert("ثبت انجام وعده انجام نشد. "+(e.message||String(e)));}
+  finally{mealCompletionBusy.delete(key);}
+ }
+ window.toggleMealDone=toggleMealDone;
+
+ async function attachMealCompletion(){
+  const list=$("studentMealList");if(!list||!currentClient?.id)return;
+  const traineeId=currentClient.id,day=dayNow();
+  try{
+   const logs=await sbGet("/nutrition_meal_completions?trainee_id=eq."+encodeURIComponent(traineeId)+"&log_date=eq."+encodeURIComponent(day)+"&select=meal_id,is_completed");
+   if(!currentClient||String(currentClient.id)!==String(traineeId))return;
+   const done=new Set(logs.filter(x=>x.is_completed).map(x=>String(x.meal_id)));
+   const cards=[...list.querySelectorAll(".student-meal")];
+   cards.forEach((card,i)=>{
+    const mealId=window.__sehMealIds?.[i];if(!mealId||card.querySelector(".meal-done-control"))return;
+    const checked=done.has(String(mealId));
+    const label=document.createElement("label");label.className="meal-done-control";
+    label.innerHTML='<input type="checkbox" '+(checked?'checked':'')+' onchange="toggleMealDone(\''+safe(mealId)+'\',this.checked)"> <b>وعده کامل انجام شد</b>';
+    card.insertBefore(label,card.firstChild);
+   });
+   const summary=$("studentMealTitle");if(summary&&!summary.dataset.mealCompletionBound){summary.dataset.mealCompletionBound="1";}
+  }catch(e){console.warn("meal completion fetch",e);}
+ }
+ const oldStudentMeals=window.renderStudentMeals;
+ if(typeof oldStudentMeals==="function"&&!window.__sehMealRendererWrapped){
+  window.renderStudentMeals=async function(meals,p){
+   window.__sehMealIds=(meals||[]).map(m=>m.id);
+   const result=await oldStudentMeals.apply(this,arguments);
+   await attachMealCompletion();return result;
+  };window.__sehMealRendererWrapped=true;
+ }
+ const oldMealCoach=window.renderMealCoach;
+ if(typeof oldMealCoach==="function"&&!window.__sehCoachMealRendererWrapped){
+  window.renderMealCoach=function(meals){
+   const result=oldMealCoach.apply(this,arguments);
+   const traineeId=currentClient?.id;if(!traineeId)return result;
+   sbGet("/nutrition_meal_completions?trainee_id=eq."+encodeURIComponent(traineeId)+"&log_date=eq."+encodeURIComponent(dayNow())+"&select=meal_id,is_completed").then(logs=>{
+    const done=new Set(logs.filter(x=>x.is_completed).map(x=>String(x.meal_id)));
+    const cards=[...($("mealList")?.querySelectorAll(".meal-card")||[])];
+    (meals||[]).forEach((m,i)=>{const card=cards[i];if(!card||card.querySelector(".coach-meal-done"))return;const badge=document.createElement("div");badge.className="coach-meal-done muted";badge.textContent=(done.has(String(m.id))?"✅ شاگرد این وعده را انجام‌شده ثبت کرده":"◻️ هنوز انجام وعده ثبت نشده");card.insertBefore(badge,card.children[1]||null);});
+   }).catch(e=>console.warn("coach meal completion",e));
+   return result;
+  };window.__sehCoachMealRendererWrapped=true;
+ }
+
+ function weekForPlan(plan){
+  const start=String(plan?.plan_date||plan?.created_at||dayNow()).slice(0,10);
+  const a=new Date(start+"T00:00:00Z"),b=new Date(dayNow()+"T00:00:00Z");
+  const diff=Math.floor((b-a)/86400000);
+  return {start,week:Math.floor(diff/7)+1,days:diff};
+ }
+ async function markWorkoutDayDone(day,button){
+  const traineeId=currentClient?.id,planId=window.__sehWorkoutPlanId||currentWorkoutPlanId;
+  if(!traineeId||!planId)return alert("برنامه تمرینی پیدا نشد.");
+  const lock=String(planId)+"|"+day+"|"+dayNow();if(dayCompletionBusy.has(lock))return;dayCompletionBusy.add(lock);
+  try{
+   const p=await sbGet("/trainee_workout_plans?id=eq."+encodeURIComponent(planId)+"&trainee_id=eq."+encodeURIComponent(traineeId)+"&select=id,plan_date,created_at&limit=1");
+   if(!p[0])throw new Error("مالکیت برنامه تأیید نشد.");
+   const cycle=weekForPlan(p[0]);
+   if(cycle.week<1||cycle.week>4)throw new Error("دوره چهار هفته‌ای این برنامه به پایان رسیده است.");
+   const path="/trainee_workout_day_logs?trainee_id=eq."+encodeURIComponent(traineeId)+"&workout_plan_id=eq."+encodeURIComponent(planId)+"&workout_day=eq."+encodeURIComponent(day)+"&completed_date=eq."+encodeURIComponent(dayNow())+"&select=id";
+   const rows=await sbGet(path);
+   if(!currentClient||String(currentClient.id)!==String(traineeId))throw new Error("شاگرد هنگام ثبت تغییر کرد.");
+   if(rows[0])await sbWrite("/trainee_workout_day_logs?id=eq."+encodeURIComponent(rows[0].id),"PATCH",{is_completed:true,cycle_week:cycle.week,completed_at:new Date().toISOString()});
+   else await sbWrite("/trainee_workout_day_logs","POST",{trainee_id:traineeId,workout_plan_id:planId,workout_day:day,completed_date:dayNow(),cycle_week:cycle.week,is_completed:true,completed_at:new Date().toISOString()});
+   if(typeof loadWorkoutForClient==="function")await loadWorkoutForClient();
+  }catch(e){alert("ثبت مأموریت تمرین انجام نشد. "+(e.message||String(e)));}
+  finally{dayCompletionBusy.delete(lock);}
+ }
+ window.markWorkoutDayDone=markWorkoutDayDone;
+
+ async function attachWorkoutMissions(){
+  const list=$("workoutList"),traineeId=currentClient?.id,planId=currentWorkoutPlanId;
+  if(!list||!traineeId||!planId)return;
+  window.__sehWorkoutPlanId=planId;
+  try{
+   const p=await sbGet("/trainee_workout_plans?id=eq."+encodeURIComponent(planId)+"&trainee_id=eq."+encodeURIComponent(traineeId)+"&select=id,plan_date,created_at&limit=1");
+   if(!p[0])return;
+   const cycle=weekForPlan(p[0]);
+   const logs=await sbGet("/trainee_workout_day_logs?trainee_id=eq."+encodeURIComponent(traineeId)+"&workout_plan_id=eq."+encodeURIComponent(planId)+"&cycle_week=gte.1&select=workout_day,completed_date,is_completed,cycle_week");
+   if(!currentClient||String(currentClient.id)!==String(traineeId))return;
+   const weekLogs=logs.filter(x=>Number(x.cycle_week)===cycle.week&&x.completed_date>=cycle.start&&x.completed_date<=dayNow()&&x.is_completed);
+   const groups=[...list.querySelectorAll(".workout-session-group")];
+   groups.forEach(group=>{
+    if(group.querySelector(".daily-mission"))return;
+    const day=group.getAttribute("data-session-name")||group.querySelector("header strong")?.textContent?.replace(/^🏋️\s*/,"")||"جلسه";
+    const completed=weekLogs.some(x=>x.workout_day===day&&x.completed_date===dayNow());
+    const mission=document.createElement("div");mission.className="daily-mission";
+    const label=document.createElement("span");label.className=completed?"done":"";
+    label.textContent=completed?"✅ مأموریت امروز انجام شد":"🎯 مأموریت امروز: تمرین این جلسه را انجام دادم";
+    const btn=document.createElement("button");btn.type="button";btn.className=completed?"secondary":"";
+    btn.textContent=completed?"ثبت شده":"✅ تمرین امروز انجام شد";
+    btn.disabled=completed||cycle.week<1||cycle.week>4;
+    btn.onclick=()=>markWorkoutDayDone(day,btn);
+    mission.append(label,btn);group.appendChild(mission);
+   });
+   const doneByWeek=[1,2,3,4].map(w=>new Set(logs.filter(x=>Number(x.cycle_week)===w&&x.is_completed).map(x=>x.workout_day)).size);
+   let summary=$("workoutFourWeekSummary");
+   if(!summary){summary=document.createElement("div");summary.id="workoutFourWeekSummary";summary.className="card";list.parentNode.insertBefore(summary,list);}
+   summary.innerHTML='<h3>📅 پیگیری چهار هفته برنامه</h3><div class="grid2">'+doneByWeek.map((n,i)=>'<div class="receipt-item"><b>هفته '+(i+1)+'</b><br>'+n+' جلسه ثبت‌شده</div>').join("")+'</div><p class="muted">'+(cycle.week>=1&&cycle.week<=4?"اکنون هفته "+cycle.week+" از ۴ است.":"دوره چهار هفته‌ای تمام شده؛ برای دوره بعدی با مربی هماهنگ کنید.")+'</p>';
+  }catch(e){console.warn("workout mission load",e);}
+ }
+ const oldWorkoutRenderer=window.renderWorkoutList;
+ if(typeof oldWorkoutRenderer==="function"&&!window.__sehWorkoutRendererWrapped){
+  window.renderWorkoutList=function(rows,names){
+   const out=oldWorkoutRenderer.apply(this,arguments);
+   if(isTrainee())setTimeout(attachWorkoutMissions,0);
+   return out;
+  };window.__sehWorkoutRendererWrapped=true;
+ }
+
+ function replaceTraineeMembershipCard(){
+  if(!isTrainee())return;
+  const sec=$("client");if(!sec)return;
+  const cards=[...sec.querySelectorAll(":scope > .card")];
+  const card=cards.find(c=>c.querySelector("#subStart")||c.querySelector(".role-readonly-message"));
+  if(!card||card.dataset.receiptUi==="1")return;
+  card.dataset.receiptUi="1";
+  card.innerHTML='<h2>💳 عضویت و شهریه</h2><div id="traineeMembershipStatus" class="muted">در حال دریافت وضعیت عضویت…</div><div id="traineeReceiptUpload" class="receipt-item"><h3>📤 ارسال فیش واریزی</h3><p class="muted">فیش فقط برای مربی و حساب خودتان قابل مشاهده است. فرمت JPG، PNG، WEBP یا PDF تا ۵ مگابایت.</p><label>مبلغ پرداختی (تومان)</label><input id="receiptAmount" type="number" min="1" placeholder="مبلغ واریزی"><label>تاریخ واریز (شمسی)</label><input id="receiptDate" type="text" inputmode="numeric" placeholder="۱۴۰۵/۰۷/۱۸"><label>تصویر یا PDF فیش</label><input id="receiptFile" type="file" accept="image/jpeg,image/png,image/webp,application/pdf"><label>توضیح (اختیاری)</label><input id="receiptNote" placeholder="مثلاً شهریه مهر"><button type="button" onclick="submitPaymentReceipt()">📨 ارسال فیش برای مربی</button></div><div id="traineeReceiptHistory"></div>';
+  loadTraineeMembership();
+ }
+ async function loadTraineeMembership(){
+  if(!isTrainee()||!currentClient?.id)return;
+  const id=currentClient.id;
+  try{
+   const [members,receipts]=await Promise.all([
+    sbGet("/trainee_memberships?trainee_id=eq."+encodeURIComponent(id)+"&select=*&order=created_at.desc&limit=1"),
+    sbGet("/trainee_payment_receipts?trainee_id=eq."+encodeURIComponent(id)+"&select=id,receipt_path,amount,payment_date,note,review_status,created_at&order=created_at.desc")
+   ]);
+   if(!currentClient||String(currentClient.id)!==String(id))return;
+   const m=members[0];
+   $("traineeMembershipStatus").innerHTML=m?'<div class="receipt-item"><b>تاریخ شروع عضویت:</b> '+safe(fmtDate(m.start_date)||"ثبت نشده")+'<br><b>تاریخ پایان عضویت:</b> '+safe(fmtDate(m.end_date)||"ثبت نشده")+'<br><b>وضعیت شهریه:</b> '+(m.status==="active"?"<span class=\"done\">پرداخت‌شده / فعال</span>":"<span>پرداخت‌نشده یا در انتظار تأیید</span>")+'</div>':'هنوز اطلاعات عضویت توسط مربی ثبت نشده است.';
+   const box=$("traineeReceiptHistory");
+   if(box){
+    const status={pending:"در انتظار بررسی مربی",approved:"تأیید شده",rejected:"رد شده"};
+    box.innerHTML='<h3>📑 فیش‌های ارسالی من</h3>'+(receipts.length?receipts.map(x=>'<div class="receipt-item"><b>'+safe(Number(x.amount||0).toLocaleString("fa-IR"))+' تومان</b><br>تاریخ: '+safe(fmtDate(x.payment_date)||"—")+'<br>وضعیت: '+safe(status[x.review_status]||x.review_status)+'<br>'+safe(x.note||"")+'</div>').join(""):'<p class="muted">هنوز فیشی ارسال نکرده‌اید.</p>');
+   }
+  }catch(e){$("traineeMembershipStatus").textContent="دریافت وضعیت عضویت انجام نشد؛ دوباره تلاش کنید.";}
+ }
+ window.submitPaymentReceipt=async function(){
+  if(!isTrainee()||!currentClient?.id)return alert("این امکان فقط برای حساب شاگرد فعال است.");
+  const file=$("receiptFile")?.files?.[0],amount=Number($("receiptAmount")?.value||0),rawDate=$("receiptDate")?.value||"",date=isoDate(rawDate);
+  if(!file)return alert("لطفاً تصویر یا PDF فیش را انتخاب کنید.");
+  if(file.size>5*1024*1024)return alert("حجم فایل باید کمتر از ۵ مگابایت باشد.");
+  if(!["image/jpeg","image/png","image/webp","application/pdf"].includes(file.type))return alert("فقط JPG، PNG، WEBP یا PDF مجاز است.");
+  if(!Number.isFinite(amount)||amount<=0)return alert("مبلغ واریزی را وارد کنید.");
+  if(!date)return alert("تاریخ واریز شمسی معتبر وارد کنید.");
+  const traineeId=currentClient.id;let path=null;
+  try{
+   const {data:{user},error:userError}=await AUTH_SUPABASE.auth.getUser();if(userError||!user)throw new Error("نشست حساب شاگرد معتبر نیست.");
+   const name=file.name.replace(/[^a-zA-Z0-9._-]/g,"_").slice(-80)||"receipt";
+   path=user.id+"/"+traineeId+"/"+Date.now()+"_"+name;
+   const {error:uploadError}=await AUTH_SUPABASE.storage.from("payment-receipts").upload(path,file,{upsert:false,contentType:file.type});
+   if(uploadError)throw uploadError;
+   const {error:insertError}=await AUTH_SUPABASE.from("trainee_payment_receipts").insert({trainee_id:traineeId,submitted_by:user.id,receipt_path:path,amount,payment_date:date,note:($("receiptNote")?.value||"").trim()||null,review_status:"pending"});
+   if(insertError){await AUTH_SUPABASE.storage.from("payment-receipts").remove([path]);throw insertError;}
+   $("receiptFile").value="";$("receiptAmount").value="";$("receiptNote").value="";
+   alert("فیش با موفقیت برای بررسی مربی ارسال شد؛ وضعیت شهریه پس از تأیید مربی تغییر می‌کند.");
+   await loadTraineeMembership();
+  }catch(e){alert("ارسال فیش انجام نشد. "+(e.message||String(e)));}
+ };
+
+ async function loadCoachReceipts(){
+  if(isTrainee()||!currentClient?.id)return;
+  const traineeId=currentClient.id;
+  let box=$("coachReceiptReview");if(!box){
+   const sec=$("client");const cards=sec?[...sec.querySelectorAll(":scope > .card")]:[];const card=cards.find(c=>c.querySelector("#subStart"));
+   if(!card)return;box=document.createElement("div");box.id="coachReceiptReview";box.className="receipt-item";box.innerHTML="<h3>📥 فیش‌های واریزی برای بررسی</h3><div id=\"coachReceiptList\"></div>";card.appendChild(box);
+  }
+  try{
+   const rows=await sbGet("/trainee_payment_receipts?trainee_id=eq."+encodeURIComponent(traineeId)+"&select=*&order=created_at.desc");
+   if(!currentClient||String(currentClient.id)!==String(traineeId))return;
+   const items=await Promise.all(rows.map(async x=>{
+    let url="";try{const z=await AUTH_SUPABASE.storage.from("payment-receipts").createSignedUrl(x.receipt_path,3600);url=z.data?.signedUrl||"";}catch(e){}
+    const status={pending:"در انتظار بررسی",approved:"تأیید شده",rejected:"رد شده"};
+    return '<div class="receipt-item"><b>'+safe(Number(x.amount||0).toLocaleString("fa-IR"))+' تومان</b> · '+safe(fmtDate(x.payment_date)||"—")+'<br>وضعیت: '+safe(status[x.review_status]||x.review_status)+'<br>'+safe(x.note||"")+(url?'<p><a target="_blank" rel="noopener" href="'+safe(url)+'">🔎 مشاهده فیش</a></p>':'<p class="muted">لینک فیش در دسترس نیست.</p>')+(x.review_status==="pending"?'<div class="actions"><button type="button" onclick="reviewPaymentReceipt(\''+safe(x.id)+'\',\'approved\')">✅ تأیید فیش و ثبت پرداخت</button><button type="button" class="secondary" onclick="reviewPaymentReceipt(\''+safe(x.id)+'\',\'rejected\')">رد فیش</button></div>':"")+'</div>';
+   }));
+   $("coachReceiptList").innerHTML=items.join("")||'<p class="muted">فیشی ارسال نشده است.</p>';
+  }catch(e){$("coachReceiptList").textContent="دریافت فیش‌ها ناموفق بود: "+(e.message||String(e));}
+ }
+ window.reviewPaymentReceipt=async function(id,decision){
+  if(isTrainee()||!currentClient?.id)return alert("فقط مربی می‌تواند فیش را بررسی کند.");
+  const traineeId=currentClient.id;
+  try{
+   const rows=await sbGet("/trainee_payment_receipts?id=eq."+encodeURIComponent(id)+"&trainee_id=eq."+encodeURIComponent(traineeId)+"&select=*&limit=1");
+   const x=rows[0];if(!x||x.review_status!=="pending")throw new Error("فیش پیدا نشد یا قبلاً بررسی شده است.");
+   const {data:{user}}=await AUTH_SUPABASE.auth.getUser();
+   if(decision==="approved"){
+    const {error:payErr}=await AUTH_SUPABASE.from("trainee_payments").insert({trainee_id:traineeId,amount:x.amount,payment_date:x.payment_date||dayNow(),description:"تأیید فیش واریزی"});
+    if(payErr)throw payErr;
+    const {error:memErr}=await AUTH_SUPABASE.from("trainee_memberships").update({status:"active"}).eq("trainee_id",traineeId);
+    if(memErr)console.warn("membership status update",memErr);
+   }
+   const {error}=await AUTH_SUPABASE.from("trainee_payment_receipts").update({review_status:decision,reviewed_by:user?.id||null,reviewed_at:new Date().toISOString()}).eq("id",id).eq("trainee_id",traineeId);
+   if(error)throw error;
+   alert(decision==="approved"?"فیش تأیید و پرداخت ثبت شد.":"فیش رد شد؛ شاگرد می‌تواند فیش صحیح ارسال کند.");
+   await loadCoachReceipts();if(typeof loadMembershipHistory==="function")await loadMembershipHistory();
+  }catch(e){alert("بررسی فیش انجام نشد. "+(e.message||String(e)));}
+ };
+
+ function applyFeatureUI(){
+  addRegistrationFields();ensureSubstitutionPanel();ensureCoachRegistrationDateField();
+  if(!isTrainee())return;
+  const workout=$("workout");
+  if(workout){
+   const cards=workout.querySelectorAll(":scope > .card");
+   if(cards[0])cards[0].style.display="none";
+   cards.forEach(c=>c.querySelectorAll('button[onclick*="saveWorkoutPlan"]').forEach(b=>b.style.display="none"));
+   const p=workout.querySelector("p.muted");if(p&&p.textContent.includes("اول شاگرد را انتخاب کنید"))p.style.display="none";
+   $("workoutList")?.querySelectorAll(".workout-exercise-actions .checkfood").forEach(el=>el.style.display="none");
+  }
+  const client=$("client");
+  if(client){
+   const cards=client.querySelectorAll(":scope > .card");
+   if(cards[0]){
+    cards[0].querySelectorAll("input,select,textarea").forEach(el=>{el.disabled=true;el.setAttribute("aria-readonly","true");});
+    cards[0].querySelectorAll('button[onclick="saveProfile()"],button[onclick="saveProfileExtras()"],button[onclick="saveTrainingSchedule()"]').forEach(b=>b.style.display="none");
+   }
+   replaceTraineeMembershipCard();
+  }
+  const mealCoach=$("mealCoachView");if(mealCoach)mealCoach.style.display="none";
+  const mealStudent=$("mealStudentView");if(mealStudent){mealStudent.classList.remove("hide");mealStudent.style.display="block";}
+  const panel=$("nutritionSubPanel");if(panel)panel.style.display="block";
+ }
+ const oldSelect=window.selectClient;
+ if(typeof oldSelect==="function"&&!window.__sehSelectWrapped){
+  window.selectClient=async function(id){const result=await oldSelect.apply(this,arguments);applyFeatureUI();if(isTrainee())await loadTraineeMembership();else await loadCoachReceipts();return result;};
+  window.__sehSelectWrapped=true;
+ }
+ const oldShow=window.showSection;
+ if(typeof oldShow==="function"&&!window.__sehShowWrapped){
+  window.showSection=function(id,btn){const r=oldShow.apply(this,arguments);setTimeout(applyFeatureUI,0);return r;};
+  window.__sehShowWrapped=true;
+ }
+ const oldLoadNutrition=window.loadNutritionForClient;
+ if(typeof oldLoadNutrition==="function"&&!window.__sehNutritionLoadWrapped){
+  window.loadNutritionForClient=async function(){const r=await oldLoadNutrition.apply(this,arguments);if(isTrainee())setTimeout(attachMealCompletion,0);return r;};
+  window.__sehNutritionLoadWrapped=true;
+ }
+ const oldLoadWorkout=window.loadWorkoutForClient;
+ if(typeof oldLoadWorkout==="function"&&!window.__sehWorkoutLoadWrapped){
+  window.loadWorkoutForClient=async function(){const r=await oldLoadWorkout.apply(this,arguments);if(isTrainee())setTimeout(attachWorkoutMissions,0);return r;};
+  window.__sehWorkoutLoadWrapped=true;
+ }
+ const mo=new MutationObserver(()=>{if(isTrainee())applyFeatureUI();});
+ mo.observe(document.body,{childList:true,subtree:true});
+ document.addEventListener("DOMContentLoaded",applyFeatureUI);
+ setTimeout(applyFeatureUI,100);setTimeout(applyFeatureUI,900);setTimeout(applyFeatureUI,2200);
+})();
+</script>
+
 </body></html>`;
     const w=window.open('','_blank');if(w){w.document.write(html);w.document.close();}
   };
