@@ -3794,11 +3794,16 @@ active('workoutMuscleFilters',wm);active('libraryMuscleFilters',lm);if(document.
     if(!msg){msg=document.createElement("p");msg.className="muted role-readonly-message";msg.textContent="اطلاعات عضویت و شهریه توسط مربی مدیریت می‌شود.";cards[2].appendChild(msg);}
    }
    if(cards[3])cards[3].style.display="none"; // goals/limitations are coach-managed
-   [cards[4],cards[5]].forEach(card=>{
-    if(!card)return;
-    card.querySelectorAll("input,select,textarea,button").forEach(el=>el.style.display="none");
-    const h=card.querySelector("h2");if(h)h.textContent=h.textContent.replace("ثبت","مشاهده");
-   });
+   if(cards[4]){
+    cards[4].querySelectorAll("input,select,textarea,button").forEach(el=>el.style.display="none");
+    const h=cards[4].querySelector("h2");if(h)h.textContent="💊 مکمل‌های ثبت‌شده توسط مربی";
+   }
+   if(cards[5]){
+    const note=cards[5].querySelector("#injNote");if(note)note.style.display="none";
+    const status=cards[5].querySelector("#injStatus");if(status)status.style.display="none";
+    const btn=cards[5].querySelector('button[onclick="saveInjury()"]');if(btn)btn.textContent="📨 ارسال گزارش آسیب به مربی";
+    const h=cards[5].querySelector("h2");if(h)h.textContent="⚠️ گزارش آسیب / محدودیت تمرینی";
+   }
    const schedule=document.getElementById("scheduleCard");
    if(schedule){schedule.querySelectorAll("input,select,textarea,button").forEach(el=>el.style.display="none");}
   }
@@ -3842,7 +3847,7 @@ active('workoutMuscleFilters',wm);active('libraryMuscleFilters',lm);if(document.
   }
  }
  const coachOnly=[
-  "saveProfile","saveProfileExtras","saveSubscription","saveSupplement","saveInjury",
+  "saveProfile","saveProfileExtras","saveSubscription","saveSupplement",
   "saveNutritionPlan","saveMealFood","deleteMealFood","saveLibraryExercise",
   "saveWorkoutPlan","addWorkoutExercise","deleteWorkoutExercise","editWorkoutExercise",
   "moveWorkoutExercise","saveAnalysis","saveNote","saveTrainingSchedule","addClient",
