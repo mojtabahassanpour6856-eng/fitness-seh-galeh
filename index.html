@@ -1329,9 +1329,12 @@ window.loadDashboard = loadDashboard;
     try{
       const {data,error}=await AUTH_SUPABASE.auth.signUp({email,password,options:{data:{full_name:name,phone:phone||null,role:'trainee'}}});
       if(error)throw error;
+      if(data?.user && Array.isArray(data.user.identities) && data.user.identities.length===0){
+        throw new Error('این ایمیل قبلاً ثبت‌نام شده است؛ از بخش ورود شاگرد استفاده کنید.');
+      }
       if(data?.session&&data?.user){
         await window.finishLogin(data.user);
-        showAuthError('✅ حساب ساخته شد. اطلاعات تکمیلی را در پروفایل شاگرد ثبت کنید.');
+        alert('حساب شاگرد ساخته شد. اکنون از بخش «شاگرد» اطلاعات قد، وزن، هدف و سابقه تمرین را تکمیل کنید.');
       }else{
         showAuthError('✅ درخواست ثبت‌نام ثبت شد. اگر تأیید ایمیل در Supabase فعال است، ایمیل را تأیید کنید؛ سپس از بخش «ورود شاگرد» با همین ایمیل و رمز عبور وارد شوید. پروفایل در زمان ساخت حساب ایجاد می‌شود.');
       }
