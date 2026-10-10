@@ -2297,7 +2297,7 @@ window.toggleExerciseFavorite=async function(id,value){try{await sbWrite(`/train
    window.__coachMessageSelectWrapped=true;
   }
   const oldFinish=window.finishLogin;
-  window.finishLogin=async function(user){await oldFinish(user);addFinalStyle();addShareButtons();addCoachStatusFilters();wireFinalBadges();addGoalHistory();if(authProfile?.role==='coach'){await window.loadClients();}else if(authProfile?.role==='trainee'){await selectClient(currentClient?.id);await loadDashboard();}await applyFastingRole();};
+  window.finishLogin=async function(user){await oldFinish(user);addFinalStyle();addShareButtons();addCoachStatusFilters();wireFinalBadges();addGoalHistory();if(authProfile?.role==='coach'){await window.loadClients();}else if(authProfile?.role==='trainee'){await selectClient(currentClient?.id);await loadDashboard();if(typeof window.refreshTraineeCoachMessage==="function")await window.refreshTraineeCoachMessage();}await applyFastingRole();};
 
   // Re-run UI helpers after dynamic sections appear.
   const oldShow=window.showSection;
@@ -3842,6 +3842,8 @@ active('workoutMuscleFilters',wm);active('libraryMuscleFilters',lm);if(document.
    const section=document.getElementById("client");
    const goal=document.getElementById("goalBox");
    if(goal){goal.style.setProperty("display","none","important");goal.setAttribute("aria-hidden","true");}
+   // Make the read-only message refresher callable after profile/dashboard loading.
+   window.refreshTraineeCoachMessage=applyStudentCoachMessage;
    if(!section)return;
    let card=document.getElementById("coachMessageNotice");
    if(!card){card=document.createElement("div");card.className="card";card.id="coachMessageNotice";card.innerHTML='<h2>📣 پیام و توصیه مربی</h2><div id="coachMessageNoticeBody" class="muted">در حال بررسی پیام‌ها…</div>';section.appendChild(card);}
@@ -3851,11 +3853,12 @@ active('workoutMuscleFilters',wm);active('libraryMuscleFilters',lm);if(document.
    card.style.display="";
    body.textContent="در حال دریافت پیام مربی…";
    try{
-    const rows=await sbGet('/trainee_goals?trainee_id=eq.'+encodeURIComponent(traineeId)+'&select=notes,target_date,created_at&order=created_at.desc&limit=1');
+    const rows=await sbGet('/trainee_goals?trainee_id=eq.'+encodeURIComponent(traineeId)+'&notes=not.is.null&select=notes,target_date,created_at&order=created_at.desc&limit=20');
     if(!isTrainee()||String(currentClient?.id||authProfile?.trainee_id)!==String(traineeId))return;
-    if(!rows.length||!String(rows[0].notes||"").trim()){card.style.display="none";return;}
-    const d=rows[0].created_at?new Date(rows[0].created_at).toLocaleDateString("fa-IR"):"";
-    body.innerHTML='<div style="padding:12px;border-radius:10px;background:var(--card-bg,#f3f6f8);line-height:1.9;white-space:pre-wrap;overflow-wrap:anywhere">'+String(rows[0].notes).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]))+'</div>'+(d?'<p class="muted" style="font-size:12px;margin-bottom:0">📅 تاریخ پیام: '+d+'</p>':"");
+    const messageRow=rows.find(x=>String(x.notes||"").trim());
+    if(!messageRow){card.style.display="none";return;}
+    const d=messageRow.created_at?new Date(messageRow.created_at).toLocaleDateString("fa-IR"):"";
+    body.innerHTML='<div style="padding:12px;border-radius:10px;background:var(--card-bg,#f3f6f8);line-height:1.9;white-space:pre-wrap;overflow-wrap:anywhere">'+String(messageRow.notes).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]))+'</div>'+(d?'<p class="muted" style="font-size:12px;margin-bottom:0">📅 تاریخ پیام: '+d+'</p>':"");
    }catch(e){card.style.display="none";console.error("coach message notice",e);}
   }
   function applyRoleAccess(){
@@ -3892,7 +3895,7 @@ active('workoutMuscleFilters',wm);active('libraryMuscleFilters',lm);if(document.
     let msg=cards[2].querySelector(".role-readonly-message");
     if(!msg){msg=document.createElement("p");msg.className="muted role-readonly-message";msg.textContent="اطلاعات عضویت و شهریه توسط مربی مدیریت می‌شود.";cards[2].appendChild(msg);}
    }
-   if(cards[3])cards[3].style.display="none"; // goals/limitations are coach-managed
+   if(cards[3]&&cards[3].id!=="coachMessageNotice")cards[3].style.display="none"; // goals/limitations are coach-managed; keep coach message visible
    if(cards[4]){
     cards[4].querySelectorAll("input,select,textarea,button").forEach(el=>el.style.display="none");
     const h=cards[4].querySelector("h2");if(h)h.textContent="💊 مکمل‌های ثبت‌شده توسط مربی";
