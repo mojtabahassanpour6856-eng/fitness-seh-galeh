@@ -4250,6 +4250,7 @@ active('workoutMuscleFilters',wm);active('libraryMuscleFilters',lm);if(document.
    const list=$("workoutList"),listCard=list?.closest(".card");
    workout.querySelectorAll(":scope > .card").forEach(c=>{c.style.display=c===listCard?"block":"none";});
    if(listCard)listCard.style.display="block";
+   if(list&&listCard)listCard.querySelectorAll("input,select,textarea,button").forEach(el=>{if(!list.contains(el))el.style.display="none";});
    const workoutCards=workout.querySelectorAll(":scope > .card");
    workoutCards.forEach(c=>c.querySelectorAll('button[onclick*="saveWorkoutPlan"],button[onclick*="addWorkoutExercise"]').forEach(b=>b.style.display="none"));
    const p=workout.querySelector("p.muted");if(p&&p.textContent.includes("اول شاگرد را انتخاب کنید"))p.style.display="none";
