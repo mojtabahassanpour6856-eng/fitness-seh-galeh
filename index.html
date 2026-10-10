@@ -2665,3 +2665,71 @@ window.useLibraryExercise=async function(id){
 })();
 </script>
 
+
+
+<script id="FITNESS_LIBRARY_SYNC_BY_NAME_V3">
+/* Sync freshly saved coach-library movements by their exact name, independent of whether the insert response includes the new row ID. */
+(function(){
+  window.syncLibraryExerciseByName = async function(rawName){
+    const name=String(rawName||'').trim();
+    if(!name) throw new Error('نام حرکت برای همگام‌سازی خالی است.');
+    const bankRows=await sbGet('/trainer_exercises?name=eq.'+encodeURIComponent(name)+'&select=id,name,target_muscle,category,equipment,coach_note,created_at&order=created_at.desc&limit=1');
+    const bank=bankRows&&bankRows[0];
+    if(!bank) throw new Error('حرکت در بانک دیده می‌شود، اما برای همگام‌سازی دوباره از دیتابیس خوانده نشد. صفحه را یک‌بار تازه‌سازی کنید.');
+    let matches=await sbGet('/exercises?name=eq.'+encodeURIComponent(name)+'&select=id,name&limit=1');
+    let ex=matches&&matches[0];
+    if(!ex){
+      const payload={name:bank.name,category:bank.category||null,muscle_group:bank.target_muscle||null,equipment:bank.equipment||null,instructions:bank.coach_note||null};
+      try{
+        const result=await sbWrite('/exercises','POST',payload);
+        ex=Array.isArray(result)?result[0]:result;
+      }catch(insertError){
+        matches=await sbGet('/exercises?name=eq.'+encodeURIComponent(name)+'&select=id,name&limit=1');
+        ex=matches&&matches[0];
+        if(!ex) throw insertError;
+      }
+    }
+    if(!ex||!ex.id){
+      matches=await sbGet('/exercises?name=eq.'+encodeURIComponent(name)+'&select=id,name&limit=1');
+      ex=matches&&matches[0];
+    }
+    if(!ex||!ex.id) throw new Error('حرکت در بانک ذخیره است، اما ثبت آن در فهرست حرکات برنامه انجام نشد.');
+    const sel=document.getElementById('workoutExercise');
+    if(!sel) throw new Error('فهرست «حرکت» در بخش افزودن حرکت پیدا نشد.');
+    try{await loadExercises();}catch(e){console.warn('بارگذاری مجدد حرکات ناموفق بود؛ گزینه را مستقیم اضافه می‌کنیم.',e);}
+    let option=Array.from(sel.options).find(o=>String(o.value)===String(ex.id));
+    if(!option){option=new Option(ex.name||name,String(ex.id));sel.add(option);}
+    option.textContent=ex.name||name;
+    sel.value=String(ex.id);
+    if(String(sel.value)!==String(ex.id)){option.selected=true;sel.selectedIndex=Array.from(sel.options).indexOf(option);}
+    if(String(sel.value)!==String(ex.id)) throw new Error('حرکت ساخته شد، اما انتخاب آن در فهرست انجام نشد.');
+    sel.dispatchEvent(new Event('change',{bubbles:true}));
+    return ex;
+  };
+
+  window.saveLibraryExercise=async function(){
+    const name=String(document.getElementById('libName')?.value||'').trim();
+    if(!name){alert('نام حرکت را وارد کنید.');return;}
+    const payload={
+      name,
+      target_muscle:document.getElementById('libMuscle')?.value.trim()||null,
+      category:document.getElementById('libCategory')?.value||'سایر',
+      level:document.getElementById('libLevel')?.value||'مبتدی',
+      goal:document.getElementById('libGoal')?.value||null,
+      equipment:document.getElementById('libEquipment')?.value.trim()||null,
+      coach_note:document.getElementById('libNote')?.value.trim()||null,
+      is_favorite:false
+    };
+    try{
+      await sbWrite('/trainer_exercises','POST',payload);
+      await loadLibraryExercises();
+      const ex=await window.syncLibraryExerciseByName(name);
+      ['libName','libMuscle','libEquipment','libNote','libGoal'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+      alert('حرکت «'+(ex.name||name)+'» هم در بانک ذخیره شد و هم در فهرست «حرکت» انتخاب شد. حالا ست و تکرار را وارد کن و «افزودن به برنامه» را بزن.');
+    }catch(e){
+      console.error('saveLibraryExercise sync-by-name failed',e);
+      alert('حرکت ممکن است در بانک ذخیره شده باشد، اما انتقال آن به فهرست «افزودن حرکت» کامل نشد.\n'+(e.message||String(e)));
+    }
+  };
+})();
+</script>
