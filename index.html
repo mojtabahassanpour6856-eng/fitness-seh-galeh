@@ -1247,7 +1247,7 @@ window.loadDashboard = loadDashboard;
    document.addEventListener('pointerdown',e=>{if(pop&&!pop.hidden&&!pop.contains(e.target)&&e.target!==active&&!e.target.closest('.jalali-open-btn'))close();});
    window.addEventListener('resize',position);window.addEventListener('scroll',position,true);
  }
- function open(input){setupInput(input);ensurePop();active=input;const raw=shown(input),iso=jToIso(raw);chosen=iso?g2j(...iso.split('-').map(Number).filter((_,i)=>i!==0)):null;
+ function open(input){setupInput(input);ensurePop();active=input;const raw=shown(input),iso=jToIso(raw);chosen=null;
    // Convert ISO date to Jalali with explicit components.
    if(iso){const p=iso.split('-').map(Number);chosen=g2j(p[0],p[1],p[2]);}
    if(!chosen){const t=todayJ();chosen=t.slice();}view=chosen.slice(0,2);pop.hidden=false;render();position();}
