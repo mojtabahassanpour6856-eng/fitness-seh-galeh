@@ -1301,7 +1301,7 @@ memberships=membershipRows||[];
     }catch(e){
       console.error(e);
       if($f('clientTableBody'))$f('clientTableBody').innerHTML=`<tr><td colspan="9" class="v4-danger">دریافت شاگردان انجام نشد: ${escf(e.message)}</td></tr>`;
-      else if($f('clientList'))$f('clientList').textContent='دریافت شاگردان انجام نشد. اتصال و دسترسی دیتابیس را بررسی کنید.';
+      else if($f('clientList'))$f('clientList').textContent='خطای دیتابیس: '+(e.message||String(e));
     }
   };
 
