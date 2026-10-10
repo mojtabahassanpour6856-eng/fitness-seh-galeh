@@ -843,6 +843,27 @@ async function saveFasting(){
  try{await sbWrite("/fasting_logs","POST",{trainee_id:currentClient.id,fasting_date:today(),start_time:st||null,end_time:en||null,duration_minutes:duration,description:`نوع ${t} | ${$("fastMeals").value||0} وعده`});$("fastStatus").textContent=`فستینگ ${t} با موفقیت ثبت شد.`;alert("فستینگ ثبت شد.");}
  catch(e){alert("ثبت فستینگ انجام نشد.\n"+e.message);}
 }
+async function applyFastingRole(){
+ const card=$("fastType")?.closest(".card");
+ if(!card||authProfile?.role!=="trainee")return;
+ const editor=card.querySelector(".grid2");
+ const saveBtn=card.querySelector('button[onclick="saveFasting()"]');
+ if(editor)editor.style.display="none";
+ if(saveBtn)saveBtn.style.display="none";
+ const status=$("fastStatus");
+ if(status)status.textContent="برنامه فستینگ فقط توسط مربی تعیین می‌شود.";
+ if(!currentClient?.id)return;
+ try{
+  const rows=await sbGet("/fasting_logs?trainee_id=eq."+encodeURIComponent(currentClient.id)+"&order=created_at.desc&limit=1");
+  if(!status)return;
+  if(rows?.length){
+   const x=rows[0];
+   status.textContent="برنامه ثبت‌شده توسط مربی: "+(x.description||"فستینگ")+
+    (x.start_time?" | شروع: "+String(x.start_time).slice(0,5):"")+
+    (x.end_time?" | پایان: "+String(x.end_time).slice(0,5):"");
+  }else status.textContent="برنامه فستینگ فقط توسط مربی تعیین می‌شود؛ هنوز برنامه‌ای برای شما ثبت نشده است.";
+ }catch(e){if(status)status.textContent="برنامه فستینگ را از مربی خود پیگیری کنید.";}
+}
 async function saveSubscription(){
  if(!currentClient){alert("اول شاگرد را انتخاب کنید.");return;}
  const start=$("subStart").value||today(),end=$("subEnd").value||null,amount=+$("subAmount").value||0,paid=$("subPaid").value;
@@ -2223,7 +2244,7 @@ window.toggleExerciseFavorite=async function(id,value){try{await sbWrite(`/train
   window.finalStatusFilter=function(mode,btn){clientMode=mode;qsa('#f18statusfilters button').forEach(b=>b.classList.remove('active'));btn.classList.add('active');renderFinalClients();};
 
   const oldFinish=window.finishLogin;
-  window.finishLogin=async function(user){await oldFinish(user);addFinalStyle();addShareButtons();addCoachStatusFilters();wireFinalBadges();addGoalHistory();if(authProfile?.role==='coach'){await window.loadClients();}else if(authProfile?.role==='trainee'){await selectClient(currentClient?.id);await loadDashboard();}};
+  window.finishLogin=async function(user){await oldFinish(user);addFinalStyle();addShareButtons();addCoachStatusFilters();wireFinalBadges();addGoalHistory();if(authProfile?.role==='coach'){await window.loadClients();}else if(authProfile?.role==='trainee'){await selectClient(currentClient?.id);await loadDashboard();}await applyFastingRole();};
 
   // Re-run UI helpers after dynamic sections appear.
   const oldShow=window.showSection;
