@@ -1272,13 +1272,13 @@ window.loadDashboard = loadDashboard;
       const data=await sbGet('/trainees?select=*&order=created_at.desc');
       let memberships=[], membershipAvailable=true, membershipError='';
       try{
-       const {data:membershipRows,error:membershipQueryError}=await window.AUTH_SUPABASE.from('trainee_memberships').select('id,trainee_id,start_date,end_date,status,amount,created_at').order('created_at',{ascending:false});
+       const {data:membershipRows,error:membershipQueryError}=await window.AUTH_SUPABASE.from('trainee_memberships').select('id,trainee_id,start_date,end_date,status,created_at').order('created_at',{ascending:false});
 if(membershipQueryError) throw membershipQueryError;
 memberships=membershipRows||[];
       }catch(pluralError){
         // سازگاری خواندن با نام مفرد جدول در نسخه‌های قدیمی دیتابیس
         try{
-          const {data:membershipRows,error:membershipQueryError}=await window.AUTH_SUPABASE.from('trainee_membership').select('id,trainee_id,start_date,end_date,status,amount,created_at').order('created_at',{ascending:false});
+          const {data:membershipRows,error:membershipQueryError}=await window.AUTH_SUPABASE.from('trainee_membership').select('id,trainee_id,start_date,end_date,status,created_at').order('created_at',{ascending:false});
 if(membershipQueryError) throw membershipQueryError;
 memberships=membershipRows||[];
         }catch(singularError){
@@ -1979,8 +1979,7 @@ const plans=workoutResult.data||[], nutrition=nutritionResult.data||[];
     saving=true;
     try{
       const membershipBody={trainee_id:traineeId,start_date:start,end_date:end,
-        status:isPaid?'active':'pending',amount,
-        payment_date:isPaid?(typeof today==='function'?today():new Date().toISOString().slice(0,10)):null,
+        status:isPaid?'active':'pending',
         description:'عضویت باشگاه'};
       await window.sbWrite('/trainee_memberships','POST',membershipBody);
       if(isPaid && amount>0){
