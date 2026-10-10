@@ -2557,3 +2557,52 @@ async function useLibraryExercise(id){
  }catch(e){alert('انتقال حرکت ناموفق بود: '+(e.message||String(e)));}
 }
 </script>
+
+
+<script id="FITNESS_WORKOUT_SYSTEM_LAYOUT_FIX_V1">
+(function(){
+  function fixWorkoutSystemLayout(){
+    const card=document.querySelector('#workout .card:nth-of-type(3)');
+    const system=document.getElementById('workoutSystem');
+    const wrap=system&&system.closest('.grid2');
+    const notes=document.getElementById('workoutExerciseNotes');
+    if(!card||!wrap||!notes)return;
+    const notesLabel=notes.previousElementSibling;
+    if(notesLabel&&notesLabel.tagName==='LABEL'&&(wrap.parentElement!==card||wrap.nextElementSibling!==notesLabel)){
+      card.insertBefore(wrap,notesLabel);
+    }else if(wrap.parentElement!==card){
+      card.appendChild(wrap);
+    }
+    const options=[
+      ['normal','نرمال'],['superset','سوپرست'],['triset','تری‌ست'],['giant','جاینت‌ست'],
+      ['drop','دراپ‌ست'],['rest_pause','رست‌پاز'],['timed','تایم‌دار'],
+      ['multi_stage','چندمرحله‌ای'],['pyramid','هرمی'],['reverse_pyramid','هرمی معکوس'],
+      ['pre_exhaust','پیش‌خستگی'],['mechanical_drop','دراپ‌ست مکانیکی'],['custom','سفارشی']
+    ];
+    const existing=new Set(Array.from(system.options).map(o=>o.value));
+    options.forEach(([value,label])=>{if(!existing.has(value))system.add(new Option(label,value));});
+    let hint=document.getElementById('workoutSystemHint');
+    if(!hint){hint=document.createElement('small');hint.id='workoutSystemHint';hint.className='muted';wrap.appendChild(hint);}
+    const names=Object.fromEntries(options);
+    const explain=()=>{hint.textContent=({
+      normal:'اجرای معمولی حرکت.',
+      superset:'دو حرکت یا بیشتر را با گروه یکسان (مثلاً A1 و A2) پشت‌سرهم اجرا کنید.',
+      triset:'سه حرکت پشت‌سرهم؛ برای هر سه، گروه یکسان وارد کنید.',
+      giant:'چهار حرکت یا بیشتر پشت‌سرهم؛ برای همه، گروه یکسان وارد کنید.',
+      drop:'پس از رسیدن به ناتوانی، وزنه را کم کرده و تکرارهای بیشتری اجرا کنید؛ جزئیات را در توضیحات بنویسید.',
+      rest_pause:'ست را به بخش‌های کوتاه با مکث‌های کوتاه تقسیم کنید؛ جزئیات را در توضیحات بنویسید.',
+      timed:'مدت اجرا را در توضیحات حرکت وارد کنید.',
+      multi_stage:'مراحل و تکرارهای هر مرحله را در توضیحات وارد کنید.',
+      pyramid:'وزنه را مرحله‌به‌مرحله افزایش و تکرار را کاهش دهید.',
+      reverse_pyramid:'از سنگین‌ترین ست شروع کنید و در ست‌های بعد وزنه را کاهش دهید.',
+      pre_exhaust:'ابتدا حرکت تک‌مفصلی، سپس حرکت چندمفصلی همان عضله.',
+      mechanical_drop:'پس از خستگی، بدون استراحت به شکل آسان‌تر همان حرکت بروید.',
+      custom:'روش سفارشی را در توضیحات حرکت مشخص کنید.'
+    })[system.value]||names[system.value]||'';};
+    if(!system.dataset.hintBound){system.addEventListener('change',explain);system.dataset.hintBound='1';}
+    explain();
+  }
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',fixWorkoutSystemLayout,{once:true});
+  else fixWorkoutSystemLayout();
+})();
+</script>
