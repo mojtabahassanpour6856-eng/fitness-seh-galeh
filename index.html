@@ -49,6 +49,24 @@ body.locked .page{display:none!important}
 body.locked{overflow:hidden}
 .logout-btn{background:#b83232!important;color:#fff!important;margin-top:8px!important}
 </style>
+<style id="FITNESS_FINAL_WORKOUT_SESSION_CSS">
+#workoutList{display:flex!important;flex-direction:column!important;align-items:stretch!important;gap:9px!important;max-height:460px!important;overflow-y:auto!important;overflow-x:hidden!important;padding:8px!important;border:1px solid #344354!important;border-radius:13px!important;background:#0d141d!important;box-sizing:border-box!important}
+#workoutList>.workout-total-summary{flex:0 0 auto!important;width:100%!important;margin:0!important}
+#workoutList>.workout-session-group{display:block!important;flex:0 0 auto!important;width:100%!important;min-width:0!important;box-sizing:border-box!important;margin:0!important;padding:9px!important;border:2px solid #536b83!important;border-radius:12px!important;background:#111b26!important}
+#workoutList .workout-session-heading{display:flex!important;align-items:center!important;justify-content:space-between!important;gap:8px!important;flex-wrap:wrap!important;margin:0 0 8px!important;padding:0 0 8px!important;border-bottom:1px solid #526579!important;color:#fff!important}
+#workoutList .workout-session-heading strong{font-size:14px!important;line-height:1.5!important}
+#workoutList .workout-session-heading span{font-size:11px!important;color:#c2cfdb!important}
+#workoutList .workout-session-exercises{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:7px!important;align-items:start!important;min-width:0!important}
+#workoutList .workout-session-exercise{display:block!important;min-width:0!important;width:auto!important;margin:0!important;padding:8px!important;border:1px solid #3b4d60!important;border-radius:9px!important;background:#1a2633!important;box-sizing:border-box!important}
+#workoutList .workout-session-exercise .meal-head h3{font-size:12px!important;line-height:1.45!important;margin:0!important;overflow-wrap:anywhere!important}
+#workoutList .workout-exercise-meta{display:flex!important;flex-direction:column!important;gap:3px!important;margin:5px 0!important;font-size:10px!important;color:#d2dce6!important}
+#workoutList .workout-exercise-meta strong{font-size:11px!important;color:#fff!important}
+#workoutList .workout-group-tag,#workoutList .workout-exercise-note{font-size:10px!important;line-height:1.5!important;margin:4px 0!important;overflow-wrap:anywhere!important}
+#workoutList .workout-exercise-actions{display:flex!important;align-items:center!important;flex-wrap:wrap!important;gap:3px!important;padding-top:5px!important;border-top:1px dashed #46596d!important}
+#workoutList .workout-exercise-actions .mini{min-width:25px!important;min-height:25px!important;padding:3px 5px!important;margin:0!important;font-size:10px!important}
+#workoutList .workout-exercise-actions .checkfood{font-size:10px!important;margin:0 3px 0 0!important}
+@media(max-width:340px){#workoutList .workout-session-exercises{grid-template-columns:minmax(0,1fr)!important}}
+</style>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style id="FITNESS_LIBRARY_DETAIL_VIEW_STYLE">
 #libraryList{display:grid;grid-template-columns:repeat(auto-fit,minmax(145px,1fr));gap:10px}
@@ -3500,5 +3518,23 @@ window.loadLibraryExercises=async function(){
 }
 window.toggleExerciseFavorite=async function(id,value){try{await sbWrite('/trainer_exercises?id=eq.'+encodeURIComponent(id),'PATCH',{is_favorite:!value});await window.loadLibraryExercises();await window.loadExercises();}catch(x){alert('تغییر علاقه‌مندی انجام نشد.\n'+(x.message||String(x)));}};
 active('workoutMuscleFilters',wm);active('libraryMuscleFilters',lm);if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>{window.loadExercises();window.loadLibraryExercises();});else{window.loadExercises();window.loadLibraryExercises();}
+})();
+</script>
+
+
+<script id="FITNESS_FINAL_WORKOUT_SESSION_RENDERER">
+(function(){
+  const esc=v=>typeof escf==='function'?escf(v):String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  window.renderWorkoutList=function(rows,names){
+    const box=document.getElementById('workoutList');if(!box)return;
+    if(!Array.isArray(rows)||!rows.length){box.innerHTML='<p class="muted">هنوز حرکتی ثبت نشده است.</p>';return;}
+    const rank=v=>{const t=String(v||'').trim();const m=t.match(/(اول|دوم|سوم|چهارم|پنجم|ششم|هفتم|هشتم|نهم|دهم|[0-9۰-۹]+)/);const n={'اول':1,'دوم':2,'سوم':3,'چهارم':4,'پنجم':5,'ششم':6,'هفتم':7,'هشتم':8,'نهم':9,'دهم':10};if(!m)return 999;const q=n[m[1]]||Number(String(m[1]).replace(/[۰-۹]/g,d=>'۰۱۲۳۴۵۶۷۸۹'.indexOf(d)));return Number.isFinite(q)&&q>0?q:999;};
+    const sessions=new Map();rows.forEach((row,index)=>{const day=String(row.training_day||'').trim()||'جلسه بدون نام';if(!sessions.has(day))sessions.set(day,[]);sessions.get(day).push({...row,_renderIndex:index});});
+    const ordered=[...sessions.entries()].sort((a,b)=>{const ra=rank(a[0]),rb=rank(b[0]);return ra===rb?Math.min(...a[1].map(x=>x._renderIndex))-Math.min(...b[1].map(x=>x._renderIndex)):ra-rb;});
+    const done=rows.filter(x=>x.is_completed===true).length,pct=Math.round(done*100/rows.length);
+    const summary='<div class="card workout-total-summary"><div class="f18-kpi"><div><b>'+rows.length+'</b>حرکت کل</div><div><b>'+done+'</b>انجام‌شده</div><div><b>'+pct+'%</b>پیشرفت کل</div></div></div>';
+    const html=ordered.map(([day,items])=>{const sd=items.filter(x=>x.is_completed===true).length;const cards=items.map(x=>{const exercise=(names&&(names[String(x.exercise_id)]||names[x.exercise_id]))||'حرکت',sys=String(x.training_system||'normal');const sysLabels={normal:'عادی',superset:'سوپرست',triset:'تری‌ست',giant:'جاینت‌ست','drop-set':'دراپ‌ست',dropset:'دراپ‌ست'};return '<article class="meal-card workout-session-exercise '+(x.is_completed===true?'v4-complete':'')+'" data-workout-id="'+esc(x.id)+'"><div class="meal-head"><h3>'+esc(x._renderIndex+1)+'. '+esc(exercise)+'</h3></div><div class="workout-exercise-meta"><strong>'+esc(x.sets??'—')+' ست × '+esc(x.reps||'—')+'</strong><span>استراحت '+esc(x.rest_seconds??0)+' ثانیه</span><span>'+esc(sysLabels[sys]||sys)+'</span></div>'+(x.group_key?'<div class="muted workout-group-tag">گروه '+esc(x.group_key)+'</div>':'')+(x.notes?'<div class="muted workout-exercise-note">'+esc(x.notes)+'</div>':'')+'<div class="workout-exercise-actions"><label class="checkfood"><input type="checkbox" '+(x.is_completed===true?'checked':'')+' onchange="toggleWorkoutComplete(\''+esc(x.id)+'\',this.checked)"> انجام</label><button class="mini secondary" onclick="editWorkoutExercise(\''+esc(x.id)+'\')" title="ویرایش">✏️</button><button class="mini secondary" onclick="moveWorkoutExercise(\''+esc(x.id)+'\',-1)" title="انتقال به بالا">⬆️</button><button class="mini secondary" onclick="moveWorkoutExercise(\''+esc(x.id)+'\',1)" title="انتقال به پایین">⬇️</button><button class="mini danger" onclick="deleteWorkoutExercise(\''+esc(x.id)+'\')" title="حذف">🗑</button></div></article>';}).join('');return '<section class="workout-session-group" data-session-name="'+esc(day)+'"><header class="workout-session-heading"><strong>🏋️ '+esc(day)+'</strong><span>'+items.length+' حرکت · '+sd+' انجام‌شده</span></header><div class="workout-session-exercises">'+cards+'</div></section>';}).join('');
+    box.innerHTML=summary+html;
+  };
 })();
 </script>
