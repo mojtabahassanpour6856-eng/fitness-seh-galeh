@@ -1239,10 +1239,10 @@ loadExercises();
   window.loadRegistrationRequests=async function(){
     const box=$id('registrationRequests');if(!box)return;
     try{
-      const {data,error}=await AUTH_SUPABASE.from('trainee_registration_requests').select('id,full_name,phone,created_at,status,weekly_sessions,training_days,training_time').eq('status','pending').order('created_at',{ascending:true});
+      const {data,error}=await AUTH_SUPABASE.from('trainee_registration_requests').select('id,full_name,phone,created_at,status,weekly_sessions,training_days,training_time,birth_date,current_weight,height,goal,training_history,injuries,training_type,home_equipment').eq('status','pending').order('created_at',{ascending:true});
       if(error)throw error;
       if(!data?.length){box.innerHTML='<p class="muted">در حال حاضر درخواست جدیدی وجود ندارد.</p>';return;}
-      box.innerHTML='<div class="v4-table"><table><thead><tr><th>نام</th><th>شماره موبایل</th><th>جلسات / روز و ساعت</th><th>تاریخ درخواست</th><th>تصمیم مربی</th></tr></thead><tbody>'+data.map(r=>'<tr><td>'+esc2(r.full_name)+'</td><td>'+esc2(r.phone)+'</td><td>'+esc2(r.weekly_sessions||'—')+' جلسه<br>'+esc2(r.training_days||'—')+'<br>'+esc2(String(r.training_time||'').slice(0,5)||'—')+'</td><td>'+esc2(new Date(r.created_at).toLocaleDateString('fa-IR'))+'</td><td><button class="mini" onclick="reviewTraineeRequest(\''+r.id+'\',\'approve\')">✅ تأیید</button> <button class="mini danger" onclick="reviewTraineeRequest(\''+r.id+'\',\'reject\')">رد</button></td></tr>').join('')+'</tbody></table></div>';
+      box.innerHTML='<div class="v4-table"><table><thead><tr><th>نام</th><th>شماره موبایل</th><th>اطلاعات اولیه و برنامه حضور</th><th>تاریخ درخواست</th><th>تصمیم مربی</th></tr></thead><tbody>'+data.map(r=>'<tr><td>'+esc2(r.full_name)+'</td><td>'+esc2(r.phone)+'</td><td>'+'تولد: '+esc2(window.isoToJalaliDate(r.birth_date)||'—')+'<br>وزن: '+esc2(r.current_weight||'—')+' کیلو<br>قد: '+esc2(r.height||'—')+' سانتی‌متر<br>هدف: '+esc2(r.goal||'—')+'<br>سابقه: '+esc2(r.training_history||'—')+'<br>آسیب/محدودیت: '+esc2(r.injuries||'—')+'<br>نوع: '+esc2(({gym:'باشگاه/حضوری',home:'منزل',online:'آنلاین'})[r.training_type]||'—')+(r.home_equipment?'<br>تجهیزات: '+esc2(r.home_equipment):'')+'<br>'+esc2(r.weekly_sessions||'—')+' جلسه · '+esc2(r.training_days||'—')+' · '+esc2(String(r.training_time||'').slice(0,5)||'—')+'</td><td>'+esc2(new Date(r.created_at).toLocaleDateString('fa-IR'))+'</td><td><button class="mini" onclick="reviewTraineeRequest(\''+r.id+'\',\'approve\')">✅ تأیید</button> <button class="mini danger" onclick="reviewTraineeRequest(\''+r.id+'\',\'reject\')">رد</button></td></tr>').join('')+'</tbody></table></div>';
     }catch(e){console.error(e);box.innerHTML='<p class="v4-danger">دریافت درخواست‌ها انجام نشد: '+esc2(e.message||e)+'</p>';}
   };
   window.reviewTraineeRequest=async function(id,decision){
@@ -1251,15 +1251,15 @@ loadExercises();
     try{
       let requestRow=null;
       if(decision==='approve'){
-        const q=await AUTH_SUPABASE.from('trainee_registration_requests').select('weekly_sessions,training_days,training_time').eq('id',id).maybeSingle();
+        const q=await AUTH_SUPABASE.from('trainee_registration_requests').select('*').eq('id',id).maybeSingle();
         if(q.error)throw q.error;requestRow=q.data;
-        if(!requestRow?.weekly_sessions||!requestRow?.training_days||!requestRow?.training_time)throw new Error('اطلاعات تعداد جلسات، روزها یا ساعت تمرین در درخواست کامل نیست؛ درخواست را بررسی کنید.');
+        if(!requestRow?.weekly_sessions||!requestRow?.training_days||!requestRow?.training_time||!requestRow?.birth_date||!requestRow?.current_weight||!requestRow?.height||!requestRow?.goal||!requestRow?.training_history||!requestRow?.injuries||!requestRow?.training_type)throw new Error('اطلاعات اولیه شاگرد کامل نیست؛ پیش از تأیید درخواست را بررسی کنید.');
       }
       const {data,error}=await AUTH_SUPABASE.functions.invoke('review-trainee-registration',{body:{request_id:id,decision}});
       if(error)throw error;if(data?.error)throw new Error(data.error);
       let scheduleWarning='';
       if(decision==='approve'&&data?.trainee_id&&requestRow){
-        const upd=await AUTH_SUPABASE.functions.invoke('apply-trainee-schedule',{body:{trainee_id:data.trainee_id,weekly_sessions:requestRow.weekly_sessions,training_days:requestRow.training_days,training_time:String(requestRow.training_time).slice(0,5)}});
+        const upd=await AUTH_SUPABASE.functions.invoke('apply-trainee-schedule',{body:{trainee_id:data.trainee_id,weekly_sessions:requestRow.weekly_sessions,training_days:requestRow.training_days,training_time:String(requestRow.training_time).slice(0,5),birth_date:requestRow.birth_date,current_weight:requestRow.current_weight,height:requestRow.height,goal:requestRow.goal,training_history:requestRow.training_history,injuries:requestRow.injuries,training_type:requestRow.training_type,home_equipment:requestRow.home_equipment}});
         if(upd.error||upd.data?.error)scheduleWarning='\nهشدار: حساب ساخته شد، اما برنامه حضور به‌صورت خودکار ذخیره نشد. اطلاعات را از پنل مربی تکمیل کنید.';
       }
       alert((decision==='approve'?'شاگرد تأیید شد. ورود اولیه با شماره موبایل و رمز 123456 است؛ در اولین ورود باید رمز شخصی بسازد.':'درخواست رد شد.')+scheduleWarning);
@@ -1410,6 +1410,11 @@ window.loadDashboard = loadDashboard;
         <div class="trainee-auth-block"><h3>🆕 درخواست ثبت‌نام شاگرد</h3><p class="muted">درخواست پس از تأیید مربی فعال می‌شود. رمز درخواست ثبت‌نام: <b>12345</b>؛ رمز ورود اولیه پس از تأیید: <b>123456</b>.</p>
           <label>نام و نام خانوادگی</label><input id="traineeRegName" autocomplete="name" placeholder="نام کامل">
           <label>شماره موبایل</label><input id="traineeRegPhone" type="tel" inputmode="tel" autocomplete="tel" placeholder="09121234567">
+          <div class="grid2"><div><label>تاریخ تولد (شمسی)</label><input id="traineeRegBirthDate" inputmode="numeric" placeholder="۱۳۷۸/۰۵/۲۲" autocomplete="bday"></div><div><label>وزن فعلی (کیلوگرم)</label><input id="traineeRegWeight" type="number" min="25" max="350" step="0.1" placeholder="مثلاً ۷۲"></div><div><label>قد (سانتی‌متر)</label><input id="traineeRegHeight" type="number" min="100" max="250" step="0.1" placeholder="مثلاً ۱۷۲"></div><div><label>هدف تمرینی</label><select id="traineeRegGoal"><option value="">انتخاب کنید</option><option>کاهش وزن</option><option>افزایش وزن</option><option>عضله‌سازی</option><option>چربی‌سوزی</option><option>تناسب اندام</option><option>افزایش قدرت</option><option>آمادگی جسمانی</option></select></div></div>
+          <label>سابقه تمرین</label><input id="traineeRegHistory" placeholder="مثلاً ۱ سال بدنسازی؛ تازه‌کار: بدون سابقه">
+          <label>آسیب‌دیدگی، درد یا محدودیت حرکتی</label><textarea id="traineeRegInjuries" rows="2" placeholder="محل آسیب، سابقه جراحی یا حرکات ممنوع؛ اگر ندارید بنویسید «ندارم»"></textarea>
+          <label>محل و نوع تمرین</label><select id="traineeRegType"><option value="">انتخاب کنید</option><option value="gym">🏋️ باشگاه / حضوری</option><option value="home">🏠 تمرین در منزل</option><option value="online">📱 آنلاین</option></select>
+          <label>تجهیزات منزل (برای تمرین خانگی)</label><input id="traineeRegEquipment" placeholder="مثلاً دمبل و کش؛ بدون وسیله">
           <label>تعداد جلسات تمرین در هفته</label><select id="traineeRegSessions"><option value="">انتخاب کنید</option><option value="1">۱ جلسه</option><option value="2">۲ جلسه</option><option value="3">۳ جلسه</option><option value="4">۴ جلسه</option><option value="5">۵ جلسه</option><option value="6">۶ جلسه</option><option value="7">۷ جلسه</option></select>
           <label>روزهای تمرین</label><input id="traineeRegDays" placeholder="مثلاً شنبه، دوشنبه، چهارشنبه">
           <label>ساعت تمرین</label><input id="traineeRegTime" type="time">
@@ -4101,23 +4106,39 @@ active('workoutMuscleFilters',wm);active('libraryMuscleFilters',lm);if(document.
   const name=($("traineeRegName")?.value||"").trim();
   const phone=typeof phoneNorm==="function"?phoneNorm($("traineeRegPhone")?.value||""):($("traineeRegPhone")?.value||"").trim();
   const initialPassword=$("traineeInitialPassword")?.value||"";
-  const sessions=Number($("traineeRegSessions")?.value||0);
-  const days=($("traineeRegDays")?.value||"").trim();
-  const time=$("traineeRegTime")?.value||"";
+  const birthRaw=($("traineeRegBirthDate")?.value||"").trim();
+  const birth_date=typeof window.jalaliToISODate==="function"?window.jalaliToISODate(birthRaw):"";
+  const current_weight=Number($("traineeRegWeight")?.value||0);
+  const height=Number($("traineeRegHeight")?.value||0);
+  const goal=($("traineeRegGoal")?.value||"").trim();
+  const training_history=($("traineeRegHistory")?.value||"").trim();
+  const injuries=($("traineeRegInjuries")?.value||"").trim();
+  const training_type=$("traineeRegType")?.value||"";
+  const home_equipment=($("traineeRegEquipment")?.value||"").trim();
+  const weekly_sessions=Number($("traineeRegSessions")?.value||0);
+  const training_days=($("traineeRegDays")?.value||"").trim();
+  const training_time=$("traineeRegTime")?.value||"";
   if(name.length<2){showAuthError("نام و نام خانوادگی را وارد کنید.");return;}
-  if(!/^\\+989\\d{9}$/.test(phone)){showAuthError("شماره موبایل معتبر نیست؛ مانند 09121234567 وارد کنید.");return;}
-  if(initialPassword!=="12345"){showAuthError("رمز درخواست نادرست است.");return;}
-  if(!Number.isInteger(sessions)||sessions<1||sessions>7){showAuthError("تعداد جلسات تمرین در هفته را انتخاب کنید.");return;}
-  if(!days){showAuthError("روزهای تمرین را وارد کنید.");return;}
-  if(!time){showAuthError("ساعت تمرین را انتخاب کنید.");return;}
+  if(!/^\+989\d{9}$/.test(phone)){showAuthError("شماره موبایل معتبر نیست؛ مانند 09121234567 وارد کنید.");return;}
+  if(!birth_date){showAuthError("تاریخ تولد را به‌صورت شمسی مانند ۱۳۷۸/۰۵/۲۲ وارد کنید.");return;}
+  if(!Number.isFinite(current_weight)||current_weight<25||current_weight>350){showAuthError("وزن معتبر بین ۲۵ تا ۳۵۰ کیلوگرم وارد کنید.");return;}
+  if(!Number.isFinite(height)||height<100||height>250){showAuthError("قد معتبر بین ۱۰۰ تا ۲۵۰ سانتی‌متر وارد کنید.");return;}
+  if(!goal){showAuthError("هدف تمرینی را انتخاب کنید.");return;}
+  if(!training_history){showAuthError("سابقه تمرین را وارد کنید؛ اگر تازه‌کار هستید بنویسید «بدون سابقه».");return;}
+  if(!injuries){showAuthError("وضعیت آسیب‌ها را مشخص کنید؛ اگر موردی ندارید بنویسید «ندارم».");return;}
+  if(!["gym","home","online"].includes(training_type)){showAuthError("محل و نوع تمرین را انتخاب کنید.");return;}
+  if(training_type==="home"&&!home_equipment){showAuthError("تجهیزات منزل را مشخص کنید؛ اگر وسیله ندارید بنویسید «بدون وسیله».");return;}
+  if(!Number.isInteger(weekly_sessions)||weekly_sessions<1||weekly_sessions>7){showAuthError("تعداد جلسات تمرین در هفته را انتخاب کنید.");return;}
+  if(!training_days){showAuthError("روزهای تمرین را وارد کنید.");return;}
+  if(!training_time){showAuthError("ساعت تمرین را انتخاب کنید.");return;}
+  if(initialPassword!=="12345"){showAuthError("رمز همگانی نادرست است.");return;}
   const btn=$("traineeLoginBox")?.querySelector('button[onclick="registerTraineePhone()"]');
   if(btn){btn.disabled=true;btn.textContent="⏳ در حال ارسال درخواست…";}
   try{
-   const {data,error}=await AUTH_SUPABASE.functions.invoke("trainee-registration-request",{body:{full_name:name,phone,initial_password:initialPassword,weekly_sessions:sessions,training_days:days,training_time:time}});
-   if(error)throw error;
-   if(data?.error)throw new Error(data.error);
-   showAuthError("✅ درخواست ثبت‌نام همراه با روزها و ساعت تمرین ارسال شد. پس از بررسی و تأیید مربی می‌توانید وارد شوید.");
-   ["traineeRegName","traineeRegPhone","traineeInitialPassword","traineeRegSessions","traineeRegDays","traineeRegTime"].forEach(id=>{if($(id))$(id).value="";});
+   const {data,error}=await AUTH_SUPABASE.functions.invoke("trainee-registration-request",{body:{full_name:name,phone,initial_password:initialPassword,birth_date,current_weight,height,goal,training_history,injuries,training_type,home_equipment,weekly_sessions,training_days,training_time}});
+   if(error)throw error;if(data?.error)throw new Error(data.error);
+   showAuthError("✅ درخواست کامل ثبت‌نام برای مربی ارسال شد. پس از بررسی و تأیید مربی، حساب شاگرد فعال می‌شود.");
+   ["traineeRegName","traineeRegPhone","traineeInitialPassword","traineeRegBirthDate","traineeRegWeight","traineeRegHeight","traineeRegGoal","traineeRegHistory","traineeRegInjuries","traineeRegType","traineeRegEquipment","traineeRegSessions","traineeRegDays","traineeRegTime"].forEach(id=>{if($(id))$(id).value="";});
   }catch(e){console.error("registration request",e);showAuthError("❌ ارسال درخواست انجام نشد. "+(e?.message||String(e)));}
   finally{if(btn){btn.disabled=false;btn.textContent="📨 ارسال درخواست ثبت‌نام";}}
  };
@@ -4512,7 +4533,7 @@ active('workoutMuscleFilters',wm);active('libraryMuscleFilters',lm);if(document.
 </style>
 <script id="seh-auth-input-interaction-fix-js">
 (function(){
- const ids=['traineeRegName','traineeRegPhone','traineeRegSessions','traineeRegDays','traineeRegTime','traineeInitialPassword','traineePhoneLogin','traineeLoginPassword'];
+ const ids=['traineeRegName','traineeRegPhone','traineeRegBirthDate','traineeRegWeight','traineeRegHeight','traineeRegGoal','traineeRegHistory','traineeRegInjuries','traineeRegType','traineeRegEquipment','traineeRegSessions','traineeRegDays','traineeRegTime','traineeInitialPassword','traineePhoneLogin','traineeLoginPassword'];
  function repairAuthInputs(){
    ids.forEach(id=>{
      const el=document.getElementById(id);
