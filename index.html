@@ -3130,7 +3130,25 @@ window.toggleExerciseFavorite=async function(id,value){try{await sbWrite(`/train
    for(let d=1;d<=max;d++){const sel=chosen&&chosen[0]===view[0]&&chosen[1]===view[1]&&chosen[2]===d;const now=todayJ();const istoday=now[0]===view[0]&&now[1]===view[1]&&now[2]===d;const b=document.createElement('button');b.type='button';b.textContent=String(d).replace(/\d/g,x=>faDigits[+x]);b.dataset.day=String(d);if(sel)b.classList.add('jp-selected');if(istoday)b.classList.add('jp-today');days.appendChild(b);}
  }
  function scan(root){if(root.matches?.('input'))setupInput(root);root.querySelectorAll?.('input').forEach(setupInput);}
- function start(){scan(document);const observer=new MutationObserver(ms=>ms.forEach(m=>m.addedNodes.forEach(n=>{if(n.nodeType===1)scan(n);})));observer.observe(document.body,{childList:true,subtree:true});}
+ function start(){
+   scan(document);
+   // Batch relevant inserted inputs instead of repeatedly deep-scanning the whole page.
+   let pending=new Set(),scheduled=false;
+   const observer=new MutationObserver(ms=>{
+     for(const m of ms)for(const n of m.addedNodes){
+       if(n.nodeType!==1)continue;
+       if(n.matches?.('input')||n.querySelector?.('input'))pending.add(n);
+     }
+     if(scheduled||!pending.size)return;
+     scheduled=true;
+     setTimeout(()=>{
+       scheduled=false;
+       const batch=[...pending];pending.clear();
+       batch.forEach(n=>{if(n.isConnected)scan(n);});
+     },40);
+   });
+   observer.observe(document.body,{childList:true,subtree:true});
+ }
  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start,{once:true});else start();
 })();
 </script>
@@ -3690,7 +3708,20 @@ window.useLibraryExercise=async function(id){
     setupGroupPicker();
     if(document.getElementById('workoutGroupPicker'))return;
     if(window.__fitnessGroupPickerBootObserver)return;
-    window.__fitnessGroupPickerBootObserver=new MutationObserver(function(){
+    window.__fitnessGroupPickerBootObserver=new MutationObserver(function(records){
+      // Ignore unrelated DOM changes; retry only when workout controls appear.
+      let relevant=false;
+      for(const record of records){
+        for(const node of record.addedNodes){
+          if(node.nodeType!==1)continue;
+          if(node.id==='workoutExercise'||node.id==='workoutSystem'||
+             node.querySelector?.('#workoutExercise, #workoutSystem')){
+            relevant=true;break;
+          }
+        }
+        if(relevant)break;
+      }
+      if(!relevant)return;
       setupGroupPicker();
       if(document.getElementById('workoutGroupPicker')){
         window.__fitnessGroupPickerBootObserver.disconnect();
