@@ -1109,12 +1109,29 @@ function renderMealCoach(meals){
  const names=["صبحانه","میان‌وعده صبح","ناهار","میان‌وعده عصر","شام","قبل خواب"];
  $("mealList").innerHTML=meals.map((m,i)=>{const fs=m.foods||[];const total=fs.reduce((a,x)=>{const v=foodMetrics(x.food||{},x.amount,x.unit);return v.valid?[a[0]+v.cal,a[1]+v.pro,a[2]+v.carb,a[3]+v.fat]:a},[0,0,0,0]);const ti=Math.min(i,5);
  return '<div class="meal-card"><div class="meal-head"><h3>🍽️ '+esc(m.meal_name||names[i]||"وعده")+'</h3><span class="meal-total">'+total[0].toFixed(0)+' kcal</span></div><div class="muted" data-meal-target="'+ti+'" style="margin:8px 0;padding:8px;background:#172636;border-radius:9px">هدف وعده در حال محاسبه…</div><div class="muted">مصرف فعلی: '+total[0].toFixed(0)+' kcal | پروتئین '+total[1].toFixed(1)+'g | کربوهیدرات '+total[2].toFixed(1)+'g | چربی '+total[3].toFixed(1)+'g</div>'+(fs.length?fs.map(x=>foodLine(x)).join(""):"<p class=\'muted\'>هنوز غذایی ثبت نشده است.</p>")+'<button class="mini" onclick="openMealFoodModal(&quot;'+m.id+'&quot;)">＋ افزودن غذا</button></div>';}).join("");
+ if(meals.length&&!meals.some(m=>String(m.meal_name||"").replace(/\s/g,"").includes("قبلخواب")))$("mealList").insertAdjacentHTML("beforeend",'<div class="card"><button onclick="addBedtimeMeal()">🌙 ＋ افزودن وعده قبل خواب</button></div>');
  if(!meals.length)$("mealList").innerHTML=`<div class="card"><p class="muted">هیچ وعده‌ای برای این برنامه ثبت نشده است.</p><button onclick="createDefaultMeals()">＋ ساخت ۶ وعده استاندارد</button></div>`;
  updateDayTotals(meals);updateMealTargets();
 }
 function foodLine(x){const f=x.food||{},m=foodMetrics(f,x.amount,x.unit),note=String(x.notes||""),recipePrefix="[دستور ترکیبی: ",recipeTag=note.includes(recipePrefix)?note.split(" | ")[0]:"";return `<div class="food-line"><div><div class="food-name">${esc(f.name||"غذا")}</div>${recipeTag?`<div class="food-meta">🍽️ ${esc(recipeTag.slice(recipePrefix.length,-1))}</div>`:""}<div class="food-meta">${m.valid?`🔥 ${m.cal.toFixed(0)} kcal | P ${m.pro.toFixed(1)} | C ${m.carb.toFixed(1)} | F ${m.fat.toFixed(1)}`:'⚠️ برای محاسبه تغذیه‌ای، وزن معادل گرم لازم است.'}</div></div><span>${x.amount} ${esc(x.unit||"گرم")}</span><button class="mini secondary" onclick="openSubstitution('${x.food_id}','${x.amount}')">🔄</button><button class="mini danger" onclick="deleteMealFood('${x.id}')">🗑</button></div>`;}
 function updateDayTotals(meals){const t=meals.reduce((a,m)=>(m.foods||[]).reduce((b,x)=>{const v=foodMetrics(x.food||{},x.amount,x.unit);return v.valid?[b[0]+v.cal,b[1]+v.pro,b[2]+v.carb,b[3]+v.fat]:b},a),[0,0,0,0]);$("dayCal").textContent=t[0].toFixed(0);$("dayPro").textContent=t[1].toFixed(1)+" g";$("dayCarb").textContent=t[2].toFixed(1)+" g";$("dayFat").textContent=t[3].toFixed(1)+" g";}
 let defaultMealsBusy=false;
+async function addBedtimeMeal(){
+ if(defaultMealsBusy)return;
+ if(!currentClient||!currentPlanId){alert("ابتدا برنامه غذایی شاگرد را ذخیره کنید.");return;}
+ const traineeId=currentClient.id,planId=currentPlanId;defaultMealsBusy=true;
+ try{
+  const plans=await sbGet(`/nutrition_plans?id=eq.${encodeURIComponent(planId)}&trainee_id=eq.${encodeURIComponent(traineeId)}&select=id&limit=1`);
+  if(!plans.length)throw new Error("برنامه غذایی متعلق به شاگرد انتخاب‌شده نیست.");
+  if(!currentClient||String(currentClient.id)!==String(traineeId)||String(currentPlanId)!==String(planId))throw new Error("شاگرد یا برنامه تغییر کرده است؛ دوباره تلاش کنید.");
+  const existing=await sbGet(`/nutrition_meals?plan_id=eq.${encodeURIComponent(planId)}&select=id,meal_name,meal_order&order=meal_order.asc`);
+  if(existing.some(m=>String(m.meal_name||"").replace(/\\s/g,"").includes("قبلخواب"))){alert("وعده قبل خواب از قبل وجود دارد.");return;}
+  const nextOrder=Math.max(0,...existing.map(m=>Number(m.meal_order)||0))+1;
+  await sbWrite("/nutrition_meals","POST",[{plan_id:planId,meal_name:"قبل خواب",meal_order:nextOrder}]);
+  if(currentClient&&String(currentClient.id)===String(traineeId)&&String(currentPlanId)===String(planId))await loadNutritionForClient();
+ }catch(e){alert("افزودن وعده قبل خواب انجام نشد.\\n"+e.message);}
+ finally{defaultMealsBusy=false;}
+}
 async function createDefaultMeals(){
  if(defaultMealsBusy)return;
  if(!currentClient||!currentPlanId){alert("ابتدا برنامه غذایی شاگرد را ذخیره کنید.");return;}
