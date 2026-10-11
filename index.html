@@ -340,8 +340,9 @@ body.library-room #workout .library-room-card .library-detail-view{width:100%!im
 <button onclick="toggle()">＋ افزودن غذای سفارشی</button>
 <div id="custom">
 <div class="grid2">
-<div><label>نام غذا</label><input id="n"></div>
-<div><label>کالری / ۱۰۰ گرم</label><input id="kc" type="number"></div>
+<div><label>نام غذا</label><input id="n" placeholder="مثلاً چای، شیک پروتئینی یا غذای جدید"></div>
+<div><label>دسته‌بندی</label><select id="foodCategory"><option>غلات</option><option>برنج و غلات</option><option>نان</option><option>گوشت و مرغ</option><option>ماهی</option><option>تخم مرغ</option><option>لبنیات</option><option>حبوبات</option><option>میوه</option><option>میوه خشک</option><option>سبزیجات</option><option>مغزها</option><option>دانه‌ها</option><option>چربی‌ها</option><option>نوشیدنی</option><option>مکمل و شیک</option><option>شیرینی و تنقلات</option><option>سایر</option></select></div>
+<div><label>کالری / ۱۰۰ گرم یا ۱۰۰ میلی‌لیتر</label><input id="kc" type="number"></div>
 <div><label>پروتئین / ۱۰۰ گرم</label><input id="pr" type="number"></div>
 <div><label>کربوهیدرات / ۱۰۰ گرم</label><input id="ca" type="number"></div>
 <div><label>چربی / ۱۰۰ گرم</label><input id="fa" type="number"></div>
@@ -655,7 +656,7 @@ async function loadFoods(){
  try{
   // از لایه REST احراز هویت‌شده استفاده می‌کنیم تا RLS با توکن واقعی نشست اعمال شود.
   const data=await sbGet('/foods?select=*&order=name');
-  foods=data.map(x=>[x.name,+x.calories||0,+x.protein||0,+x.carbs||0,+x.fat||0,x.id]);
+  foods=data.map(x=>[x.name,+x.calories||0,+x.protein||0,+x.carbs||0,+x.fat||0,x.id,x.category||""]);
   fillFoods();
  }catch(e){console.error(e);alert("دریافت غذاها از Supabase انجام نشد.\n"+(e?.message||e));}
 }
@@ -683,11 +684,11 @@ function calc(){
 }
 function toggle(){ $("custom").style.display=$("custom").style.display==="block"?"none":"block"; }
 async function add(){
- const name=$("n").value.trim(), calories=+$("kc").value, protein=+$("pr").value||0, carbs=+$("ca").value||0, fat=+$("fa").value||0;
+ const name=$("n").value.trim(), category=$("foodCategory")?.value||"سایر", calories=+$("kc").value, protein=+$("pr").value||0, carbs=+$("ca").value||0, fat=+$("fa").value||0;
  if(!name||!Number.isFinite(calories)||calories<=0){alert("نام غذا و کالری معتبر را وارد کنید.");return;}
  if([protein,carbs,fat].some(v=>!Number.isFinite(v)||v<0)){alert("مقادیر پروتئین، کربوهیدرات و چربی باید صفر یا بیشتر باشند.");return;}
  try{
-  await sbWrite('/foods','POST',{name,calories,protein,carbs,fat});
+  await sbWrite('/foods','POST',{name,category,calories,protein,carbs,fat,serving_unit:/چای|قهوه|اسپرسو|دمنوش|دوغ|شیک پروتئینی|شیر/.test(name)?"میلی‌لیتر":"گرم",serving_amount:100});
   await loadFoods(); $("n").value="";$("kc").value="";$("pr").value="";$("ca").value="";$("fa").value="";
   alert("غذا با موفقیت ذخیره شد.");
  }catch(e){console.error(e);alert("ذخیره غذا انجام نشد.\n"+(e?.message||e));}
@@ -695,18 +696,18 @@ async function add(){
 function editFood(){
  const food=foods[+$("orig").value];
  if(!food){alert("غذایی انتخاب نشده است.");return;}
- $("n").value=food[0];$("kc").value=food[1];$("pr").value=food[2];$("ca").value=food[3];$("fa").value=food[4];
+ $("n").value=food[0];$("kc").value=food[1];$("pr").value=food[2];$("ca").value=food[3];$("fa").value=food[4];if($("foodCategory"))$("foodCategory").value=food[6]||"سایر";
  $("custom").style.display="block";
  window.scrollTo({top:document.body.scrollHeight,behavior:"smooth"});
 }
 async function saveEdit(){
  const index=+$("orig").value,food=foods[index];
  if(!food||!food[5]){alert("غذایی انتخاب نشده است.");return;}
- const name=$("n").value.trim(),calories=+$("kc").value,protein=+$("pr").value||0,carbs=+$("ca").value||0,fat=+$("fa").value||0;
+ const name=$("n").value.trim(),category=$("foodCategory")?.value||"سایر",calories=+$("kc").value,protein=+$("pr").value||0,carbs=+$("ca").value||0,fat=+$("fa").value||0;
  if(!name||!Number.isFinite(calories)||calories<=0){alert("نام غذا و کالری معتبر را وارد کنید.");return;}
  if([protein,carbs,fat].some(v=>!Number.isFinite(v)||v<0)){alert("مقادیر پروتئین، کربوهیدرات و چربی باید صفر یا بیشتر باشند.");return;}
  try{
-  await sbWrite(`/foods?id=eq.${encodeURIComponent(food[5])}`,'PATCH',{name,calories,protein,carbs,fat});
+  await sbWrite(`/foods?id=eq.${encodeURIComponent(food[5])}`,'PATCH',{name,category,calories,protein,carbs,fat,serving_unit:/چای|قهوه|اسپرسو|دمنوش|دوغ|شیک پروتئینی|شیر/.test(name)?"میلی‌لیتر":"گرم",serving_amount:100});
   await loadFoods(); $("custom").style.display="none"; alert("غذا با موفقیت ویرایش شد.");
  }catch(e){console.error(e);alert("ویرایش غذا انجام نشد.\n"+(e?.message||e));}
 }
@@ -905,7 +906,13 @@ function mealFoodUnitInfo(name){
   if(single)units.push(["عدد","عدد (وزن تقریبی بر اساس نوع مغز)"]);
   return {kind:"nuts",units,defaultUnit:"مشت",defaultAmount:1};
  }
- if(/سیب|موز|پرتقال|نارنگی|گلابی|هلو|شلیل|کیوی|انبه|گریپ\s*فروت|خرمالو|آووکادو|آووکادو|خرما/.test(n)){
+ if(/چای|قهوه|اسپرسو|دمنوش|دوغ|شیک پروتئینی|شیر کم‌چرب|شیر پرچرب/.test(n)){
+  return {kind:"drink",units:[["میلی‌لیتر","میلی‌لیتر"],["لیوان","لیوان (حدود ۲۵۰ میلی‌لیتر)"]],defaultUnit:"لیوان",defaultAmount:1};
+ }
+ if(/پودر وی|پودر پروتئین/.test(n)){
+  return {kind:"supplement",units:[["پیمانه","پیمانه (حدود ۳۰ گرم)"]],defaultUnit:"پیمانه",defaultAmount:1};
+ }
+ if(/سیب|موز|پرتقال|نارنگی|گلابی|هلو|شلیل|کیوی|انبه|گریپ\s*فروت|خرمالو|آووکادو|خرما|توت.?فرنگی|بلوبری|انگور|هندوانه/.test(n)){
   return {kind:"fruit",units:[["عدد","عدد (وزن تقریبی بر اساس میوه)"]],defaultUnit:"عدد",defaultAmount:1};
  }
  return {kind:"other",units:[],defaultUnit:"گرم",defaultAmount:100};
@@ -916,6 +923,9 @@ function mealUnitGrams(name,unit){
  if(u==="عدد" && /تخم\s*مرغ|تخممرغ/.test(n))return 50;
  if(u==="بشقاب" && /سالاد/.test(n))return 250;
  if(u==="مشت" && /بادام|پسته|فندق|گردو|بادام\s*هندی|تخمه|آجیل|اجیل|مغز/.test(n))return 25;
+ if(u==="میلی‌لیتر" && /چای|قهوه|اسپرسو|دمنوش|دوغ|شیک پروتئینی|شیر کم‌چرب|شیر پرچرب/.test(n))return 1;
+ if(u==="لیوان" && /چای|قهوه|اسپرسو|دمنوش|دوغ|شیک پروتئینی|شیر کم‌چرب|شیر پرچرب/.test(n))return 250;
+ if(u==="پیمانه" && /پودر وی|پودر پروتئین/.test(n))return 30;
  if(u==="عدد"){
   if(/بادام\s*هندی/.test(n))return 1.5;
   if(/بادام/.test(n))return 1.2;
