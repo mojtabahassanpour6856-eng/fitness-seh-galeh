@@ -5173,37 +5173,69 @@ active('workoutMuscleFilters',wm);active('libraryMuscleFilters',lm);if(document.
 </script>
 
 
-<script id="SEH_EXPORT_POPUP_GESTURE_FIX_V1">
-/* Open the export tab directly during the tap, before any async work.
-   Then route the exporter's first window.open() call to that already-open tab. */
+<script id="SEH_EXPORT_POPUP_GESTURE_FIX_V2">
+/* Mobile-safe export surface: use an in-app iframe instead of a popup window. */
 (function(){
-  if(window.__sehExportPopupGestureFixInstalled) return;
-  window.__sehExportPopupGestureFixInstalled = true;
+  if(window.__sehExportPopupGestureFixV2Installed) return;
+  window.__sehExportPopupGestureFixV2Installed = true;
   const originalSharePlan = window.sharePlan;
   if(typeof originalSharePlan !== 'function') {
-    console.error('Export fix: sharePlan was not available when the patch loaded.');
+    console.error('Export fix V2: sharePlan was not available.');
     return;
   }
+  let activeFrame = null;
+  function createExportFrame(){
+    const old = document.getElementById('seh-export-overlay');
+    if(old) old.remove();
+    const overlay = document.createElement('div');
+    overlay.id = 'seh-export-overlay';
+    overlay.style.cssText = 'position:fixed;inset:0;z-index:2147483647;background:#111827;display:flex;flex-direction:column;padding:0;margin:0;';
+    const bar = document.createElement('div');
+    bar.style.cssText = 'display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px;background:#111827;color:#fff;font:14px Tahoma,Arial,sans-serif;flex:0 0 auto;';
+    const label = document.createElement('strong');
+    label.textContent = 'برگهٔ برنامه | فیتنس سه‌قلعه';
+    const close = document.createElement('button');
+    close.type = 'button';
+    close.textContent = 'بستن برگه ✕';
+    close.style.cssText = 'width:auto;margin:0;padding:10px 14px;border:0;border-radius:9px;background:#ffbd16;color:#111;font:bold 14px Tahoma,Arial,sans-serif;';
+    close.addEventListener('click', function(){ overlay.remove(); activeFrame = null; });
+    bar.append(label, close);
+    const frame = document.createElement('iframe');
+    frame.title = 'برگه خروجی برنامه';
+    frame.style.cssText = 'display:block;flex:1 1 auto;width:100%;height:100%;min-height:0;border:0;background:#fff;';
+    frame.setAttribute('allow', 'share');
+    overlay.append(bar, frame);
+    document.body.appendChild(overlay);
+    activeFrame = frame;
+    try { frame.contentWindow.focus(); } catch(e) {}
+    return frame.contentWindow;
+  }
   window.sharePlan = function(kind){
-    let popup = null;
-    try { popup = window.open('about:blank', '_blank'); } catch(e) {}
-    if(!popup) {
-      alert('مرورگر اجازه بازشدن صفحه خروجی را نداد. تنظیمات مرورگر را باز کنید و اجازه بازشدن پنجره‌های بازشو (Pop-ups) را برای سایت اپ فعال کنید، سپس دوباره بزنید.');
+    let exportWindow;
+    try { exportWindow = createExportFrame(); }
+    catch(error) {
+      console.error('Could not create in-app export frame:', error);
+      alert('برگه خروجی باز نشد. صفحه را تازه‌سازی کنید و دوباره تلاش کنید.');
       return;
     }
     const nativeOpen = window.open;
     let supplied = false;
     window.open = function(){
-      if(!supplied) { supplied = true; return popup; }
+      if(!supplied) { supplied = true; return exportWindow; }
       return nativeOpen.apply(window, arguments);
     };
     try {
       const result = originalSharePlan.apply(this, arguments);
+      if(result && typeof result.catch === 'function') {
+        result.catch(function(error){
+          console.error('Export generation failed:', error);
+          alert('ساخت برگه خروجی ناموفق بود: '+(error && error.message ? error.message : String(error)));
+        });
+      }
       return result;
     } catch(error) {
-      try { popup.close(); } catch(_) {}
       console.error('Export launch failed:', error);
-      alert('بازکردن خروجی برنامه انجام نشد: ' + (error && error.message ? error.message : String(error)));
+      alert('بازکردن خروجی برنامه انجام نشد: '+(error && error.message ? error.message : String(error)));
     } finally {
       window.open = nativeOpen;
     }
