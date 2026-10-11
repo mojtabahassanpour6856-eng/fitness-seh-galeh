@@ -4188,7 +4188,7 @@ window.useLibraryExercise=async function(id){
         }).join('');
         body='<div class="meal-groups">'+body+'</div>';
       } else {
-        const p = (await sbGet('/trainee_workout_plans?trainee_id=eq.+encodeURIComponent(trainee.id)+'&select=*&order=created_at.desc&limit=1'))[0];
+        const p = (await sbGet('/trainee_workout_plans?trainee_id=eq.'+encodeURIComponent(trainee.id)+'&select=*&order=created_at.desc&limit=1'))[0];
         if(!p) throw new Error('برنامه تمرینی ذخیره‌شده‌ای برای این شاگرد پیدا نشد.');
         const rows = await sbGet('/trainee_workout_exercises?workout_plan_id=eq.'+encodeURIComponent(p.id)+'&select=*&order=sort_order.asc,created_at.asc');
         const ids = [...new Set(rows.map(x=>x.exercise_id).filter(x=>x!==null&&x!==undefined&&x!==''))];
