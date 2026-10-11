@@ -686,6 +686,17 @@ function showSection(id,btn){
   if(btn) btn.classList.add("active");
 }
 
+function foodNutritionInputError(calories,protein,carbs,fat){
+ const values=[Number(calories),Number(protein),Number(carbs),Number(fat)];
+ if(values.some(v=>!Number.isFinite(v)||v<0))return "همه مقادیر باید عدد معتبر و صفر یا بیشتر باشند.";
+ const [k,p,c,f]=values;
+ if(k<=0)return "کالری باید بیشتر از صفر باشد؛ برای غذای ناقص، مقدار حدسی ثبت نکن.";
+ if(k>950)return "کالری واردشده برای هر ۱۰۰ گرم/میلی‌لیتر غیرعادی است. واحد پایه این بانک ۱۰۰ گرم یا ۱۰۰ میلی‌لیتر است؛ مقدار را بررسی کن.";
+ if(p>100||c>100||f>100)return "هرکدام از پروتئین، کربوهیدرات و چربی در ۱۰۰ گرم/میلی‌لیتر باید حداکثر ۱۰۰ گرم باشد.";
+ const estimated=p*4+c*4+f*9;
+ if(Math.abs(k-estimated)>Math.max(120,k*0.5))return "کالری با پروتئین، کربوهیدرات و چربی اختلاف زیادی دارد. مقدارها را بررسی کن؛ کالری باید برای هر ۱۰۰ گرم/میلی‌لیتر باشد.";
+ return "";
+}
 function renderMealFoodBank(){
  const list=$("mealFoodBankList");if(!list)return;
  const q=String($("mealFoodBankSearch")?.value||"").trim().toLocaleLowerCase("fa");
@@ -699,7 +710,8 @@ async function addFoodFromMealBank(){
  const name=String($("mealBankName")?.value||"").trim(),category=$("mealBankCategory")?.value||"سایر";
  const calories=Number($("mealBankCalories")?.value),protein=Number($("mealBankProtein")?.value||0),carbs=Number($("mealBankCarbs")?.value||0),fat=Number($("mealBankFat")?.value||0);
  if(!name){alert("نام غذا را وارد کن.");$("mealBankName")?.focus();return;}
- if(!Number.isFinite(calories)||calories<0||![protein,carbs,fat].every(v=>Number.isFinite(v)&&v>=0)){alert("کالری و مقادیر پروتئین، کربوهیدرات و چربی را به‌صورت عدد صفر یا بیشتر وارد کن.");return;}
+ if(!Number.isFinite(calories)||![protein,carbs,fat].every(v=>Number.isFinite(v)&&v>=0)){alert("کالری و مقادیر پروتئین، کربوهیدرات و چربی را به‌صورت عدد معتبر وارد کن.");return;}
+ const nutritionError=foodNutritionInputError(calories,protein,carbs,fat);if(nutritionError){alert(nutritionError);return;}
  const norm=s=>String(s||"").trim().toLocaleLowerCase("fa").replace(/[ي]/g,"ی").replace(/[ك]/g,"ک");
  if(foods.some(f=>norm(f[0])===norm(name))){alert("این غذا از قبل در بانک وجود دارد. از جست‌وجو استفاده کن تا تکراری ساخته نشود.");$("mealFoodBankSearch").value=name;renderMealFoodBank();return;}
  const serving_unit=/چای|قهوه|اسپرسو|دمنوش|دوغ|شیک پروتئینی|شیر/.test(name)?"میلی‌لیتر":"گرم";
@@ -748,6 +760,7 @@ async function add(){
  const name=$("n").value.trim(), category=$("foodCategory")?.value||"سایر", calories=+$("kc").value, protein=+$("pr").value||0, carbs=+$("ca").value||0, fat=+$("fa").value||0;
  if(!name||!Number.isFinite(calories)||calories<=0){alert("نام غذا و کالری معتبر را وارد کنید.");return;}
  if([protein,carbs,fat].some(v=>!Number.isFinite(v)||v<0)){alert("مقادیر پروتئین، کربوهیدرات و چربی باید صفر یا بیشتر باشند.");return;}
+ const nutritionError=foodNutritionInputError(calories,protein,carbs,fat);if(nutritionError){alert(nutritionError);return;}
  try{
   await sbWrite('/foods','POST',{name,category,calories,protein,carbs,fat,serving_unit:/چای|قهوه|اسپرسو|دمنوش|دوغ|شیک پروتئینی|شیر/.test(name)?"میلی‌لیتر":"گرم",serving_amount:100});
   await loadFoods(); $("n").value="";$("kc").value="";$("pr").value="";$("ca").value="";$("fa").value="";
@@ -767,6 +780,7 @@ async function saveEdit(){
  const name=$("n").value.trim(),category=$("foodCategory")?.value||"سایر",calories=+$("kc").value,protein=+$("pr").value||0,carbs=+$("ca").value||0,fat=+$("fa").value||0;
  if(!name||!Number.isFinite(calories)||calories<=0){alert("نام غذا و کالری معتبر را وارد کنید.");return;}
  if([protein,carbs,fat].some(v=>!Number.isFinite(v)||v<0)){alert("مقادیر پروتئین، کربوهیدرات و چربی باید صفر یا بیشتر باشند.");return;}
+ const nutritionError=foodNutritionInputError(calories,protein,carbs,fat);if(nutritionError){alert(nutritionError);return;}
  try{
   await sbWrite(`/foods?id=eq.${encodeURIComponent(food[5])}`,'PATCH',{name,category,calories,protein,carbs,fat,serving_unit:/چای|قهوه|اسپرسو|دمنوش|دوغ|شیک پروتئینی|شیر/.test(name)?"میلی‌لیتر":"گرم",serving_amount:100});
   await loadFoods(); $("custom").style.display="none"; alert("غذا با موفقیت ویرایش شد.");
