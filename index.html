@@ -4441,9 +4441,15 @@ window.loadLibraryExercises=async function(){
   const cats=['سینه','پشت','سرشانه','جلو بازو','پشت بازو','پا','شکم','کاردیو','اصلاحی','سایر'];
   const icons={'سینه':'🏋️','پشت':'💪','سرشانه':'🔱','جلو بازو':'💪','پشت بازو':'⚡','پا':'🦵','شکم':'🎯','کاردیو':'🏃','اصلاحی':'🧘','سایر':'📚'};
   function categoryOf(x){
-   const fields=[x.category,x.target_muscle,x.name,x.equipment,x.coach_note].map(n);
+   // Respect the coach-selected category first. Keyword inference must never override it:
+   // e.g. "پشت ران" belongs to "پا" even though its name contains "پشت".
+   const direct=String(x.category||'').trim();
+   if(cats.includes(direct))return direct;
+   const target=String(x.target_muscle||'').trim();
+   if(cats.includes(target))return target;
+   const fields=[x.name,x.equipment,x.coach_note,x.target_muscle].map(n);
    for(const c of cats){if(c==='سایر')continue;const keys=kw[c]||[c];if(fields.some(v=>v===n(c)||keys.some(k=>v.includes(n(k)))))return c;}
-   const direct=String(x.category||'').trim();return cats.includes(direct)?direct:'سایر';
+   return 'سایر';
   }
   const selected=window.__fitnessSelectedLibraryMuscle||'';
   const filtered=source.filter(x=>(!selected||categoryOf(x)===selected)&&(lm==='همه حرکات'||selected||(lm==='علاقه‌مندی'?!!x.is_favorite:match(x,lm)))&&(!q||n([x.name,x.category,x.target_muscle,x.equipment,x.level,x.goal,x.coach_note].join(' ')).includes(q)));
