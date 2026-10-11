@@ -807,7 +807,7 @@ async function loadFoods(){
   data=await sbGet('/foods?select=*&order=name');
  }catch(e){
   console.error("loadFoods: Supabase request failed",e);
-  alert("دریافت غذاها از Supabase انجام نشد.\\n"+(e?.message||e));
+  alert("دریافت غذاها از Supabase انجام نشد.\n"+(e?.message||e));
   return;
  }
  foods=(Array.isArray(data)?data:[]).map(x=>[x.name,+x.calories||0,+x.protein||0,+x.carbs||0,+x.fat||0,x.id,x.category||""]);
@@ -1014,9 +1014,9 @@ async function saveFasting(){
  const mealPlan=$("fastMealPlan")?.value.trim()||"";
  if(t==="بدون فستینگ"){ $("fastStatus").textContent="فستینگ برای این شاگرد فعال نیست."; return; }
  let duration=0;if(st&&en){let a=+st.split(":")[0]*60 + +st.split(":")[1],b=+en.split(":")[0]*60 + +en.split(":")[1];duration=b-a;if(duration<0)duration+=1440;}
- const description=`نوع ${t} | ${$("fastMeals").value||0} وعده${mealPlan?"\\nبرنامه غذایی در بازه مجاز خوردن:\\n"+mealPlan:""}`;
- try{await sbWrite("/fasting_logs","POST",{trainee_id:currentClient.id,fasting_date:today(),start_time:st||null,end_time:en||null,duration_minutes:duration,description});$("fastStatus").textContent=`فستینگ ${t} با موفقیت ثبت شد.${mealPlan?"\\nبرنامه غذایی فستینگ هم ذخیره شد.":""}`;alert(mealPlan?"فستینگ و برنامه غذایی آن ذخیره شد.":"فستینگ ثبت شد.");}
- catch(e){alert("ثبت فستینگ انجام نشد.\\n"+e.message);}
+ const description=`نوع ${t} | ${$("fastMeals").value||0} وعده${mealPlan?"\nبرنامه غذایی در بازه مجاز خوردن:\n"+mealPlan:""}`;
+ try{await sbWrite("/fasting_logs","POST",{trainee_id:currentClient.id,fasting_date:today(),start_time:st||null,end_time:en||null,duration_minutes:duration,description});$("fastStatus").textContent=`فستینگ ${t} با موفقیت ثبت شد.${mealPlan?"\nبرنامه غذایی فستینگ هم ذخیره شد.":""}`;alert(mealPlan?"فستینگ و برنامه غذایی آن ذخیره شد.":"فستینگ ثبت شد.");}
+ catch(e){alert("ثبت فستینگ انجام نشد.\n"+e.message);}
 }
 async function applyFastingRole(){
  const card=$("fastType")?.closest(".card");
@@ -3328,7 +3328,7 @@ window.toggleExerciseFavorite=async function(id,value){try{await sbWrite(`/train
       alert(groupMode?('گروه '+(system==='superset'?'سوپرست':system==='triset'?'تری‌ست':'جاینت‌ست')+' با '+added+' حرکت انتخاب‌شده ثبت شد.'):'حرکت به برنامه اضافه شد.');
     }catch(e){
       try{if(same(currentTraineeId(),traineeId)&&same(currentWorkoutPlanId,planId))await window.loadWorkoutForClient();}catch(_){}
-      alert('ثبت حرکت کامل نشد؛ '+added+' حرکت از '+chosen.length+' حرکت ثبت شد.\\n'+(e.message||String(e)));
+      alert('ثبت حرکت کامل نشد؛ '+added+' حرکت از '+chosen.length+' حرکت ثبت شد.\n'+(e.message||String(e)));
     }
   };
 
@@ -3596,8 +3596,8 @@ window.toggleExerciseFavorite=async function(id,value){try{await sbWrite(`/train
       const profile=await window.AUTH_SUPABASE.from('profiles').select('id,role').eq('id',session.user.id).maybeSingle();
       if(profile.error)throw profile.error;
       const traineeCount=Array.isArray(clients)?clients.length:0;
-      alert('گزارش تشخیص اتصال\\nشناسه حساب: '+session.user.id+'\\nنقش پروفایل: '+(profile.data?.role||'پیدا نشد')+'\\nشاگردهای قابل مشاهده: '+traineeCount+'\\nپروژه اپ: '+SUPABASE_URL+'\\n\\nاگر تعداد شاگردها صفر است، باید coach_user_id رکوردها و سیاست‌های RLS در همین پروژه بررسی شوند.');
-    }catch(e){alert('گرفتن گزارش اتصال ناموفق بود.\\n'+(e.message||String(e)));}
+      alert('گزارش تشخیص اتصال\nشناسه حساب: '+session.user.id+'\nنقش پروفایل: '+(profile.data?.role||'پیدا نشد')+'\nشاگردهای قابل مشاهده: '+traineeCount+'\nپروژه اپ: '+SUPABASE_URL+'\n\nاگر تعداد شاگردها صفر است، باید coach_user_id رکوردها و سیاست‌های RLS در همین پروژه بررسی شوند.');
+    }catch(e){alert('گرفتن گزارش اتصال ناموفق بود.\n'+(e.message||String(e)));}
   };
   window.updateStats=async function(){
     const total=Array.isArray(clients)?clients.length:0;
@@ -4258,7 +4258,7 @@ window.useLibraryExercise=async function(id){
           if(!grouped.has(day)){ grouped.set(day, []); sessions.push(day); }
           grouped.get(day).push(x);
         });
-        body = '<div class="plan-meta"><div><b>نام شاگرد:</b> '+esc(trainee.name||'—')+'</div><div><b>عنوان برنامه:</b> '+esc(p.title||title)+'</div><div><b>هدف برنامه:</b> '+esc(p.goal||trainee.goal||'—')+'</div></div>'+(String(p.notes||'').trim()?'<section class="workout-plan-description"><b>توضیحات برنامه:</b><div>'+esc(String(p.notes).trim()).replace(/\\n/g,'<br>')+'</div></section>':'')+'<p class="plan-count">تعداد جلسات: '+sessions.length+' | تعداد حرکات: '+rows.length+'</p>';
+        body = '<div class="plan-meta"><div><b>نام شاگرد:</b> '+esc(trainee.name||'—')+'</div><div><b>عنوان برنامه:</b> '+esc(p.title||title)+'</div><div><b>هدف برنامه:</b> '+esc(p.goal||trainee.goal||'—')+'</div></div>'+(String(p.notes||'').trim()?'<section class="workout-plan-description"><b>توضیحات برنامه:</b><div>'+esc(String(p.notes).trim()).replace(/\n/g,'<br>')+'</div></section>':'')+'<p class="plan-count">تعداد جلسات: '+sessions.length+' | تعداد حرکات: '+rows.length+'</p>';
         if(!sessions.length) {
           body += '<p>برای این برنامه هنوز حرکتی ثبت نشده است.</p>';
         } else {
