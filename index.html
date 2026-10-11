@@ -2602,6 +2602,27 @@ const plans=workoutResult.data||[], nutrition=nutritionResult.data||[];
   if(button){button.disabled=false;button.textContent=originalText||'💾 ذخیره حرکت';}
  }
 };
+window.deleteLibraryExercise=async function(id,name){
+ const safeId=String(id||'').trim();
+ if(!safeId){alert('شناسهٔ حرکت پیدا نشد.');return;}
+ const label=String(name||'این حرکت').trim();
+ if(!confirm('حرکت «'+label+'» از بانک حرکات مربی حذف شود؟ این کار قابل بازگشت نیست.'))return;
+ try{
+  const result=await sbWrite('/trainer_exercises?id=eq.'+encodeURIComponent(safeId),'DELETE');
+  // Confirm deletion by checking whether the same bank row still exists.
+  const remaining=await sbGet('/trainer_exercises?id=eq.'+encodeURIComponent(safeId)+'&select=id&limit=1');
+  if(Array.isArray(remaining)&&remaining.length){
+   alert('حرکت حذف نشد؛ سرور هنوز آن را در بانک نشان می‌دهد.');
+   return;
+  }
+  await window.loadLibraryExercises();
+  if(typeof window.loadExercises==='function')await window.loadExercises();
+  alert('حرکت «'+label+'» از بانک حرکات حذف شد.');
+ }catch(error){
+  console.error('deleteLibraryExercise failed',error);
+  alert('حذف حرکت انجام نشد: '+(error&&error.message?error.message:String(error)));
+ }
+};
 window.toggleExerciseFavorite=async function(id,value){try{await sbWrite(`/trainer_exercises?id=eq.${encodeURIComponent(id)}`,'PATCH',{is_favorite:!value});await loadLibraryExercises();}catch(e){alert('تغییر علاقه‌مندی انجام نشد.\n'+e.message)}};
   // Keep the category-aware library renderer. A later legacy override used to replace
   // the grouped muscle view with one flat list, making saved exercises appear in every section.
@@ -4480,10 +4501,10 @@ window.loadLibraryExercises=async function(){
    const detail=box.querySelector('.library-detail-view');
    if(detail){
     const list=detail.querySelector('.library-detail-exercises');
-    if(list){const cards=items.map(x=>'<div class="library-exercise-card"><div class="library-exercise-title">'+(x.is_favorite?'⭐':'🏋️')+' '+e(x.name)+'</div><div class="library-exercise-meta"><span class="pill">'+e(x.target_muscle||x.category||selected)+'</span><span class="pill">'+e(x.level||'سطح نامشخص')+'</span><span class="pill">'+e(x.equipment||'بدون تجهیزات')+'</span></div>'+(x.coach_note?'<p class="muted">'+e(x.coach_note)+'</p>':'')+'<div class="f18-actions"><button class="secondary mini" data-id="'+e(x.id)+'" onclick="editLibraryExercise(this.dataset.id)">✏️ ویرایش</button><button class="secondary mini" data-id="'+e(x.id)+'" data-favorite="'+String(!!x.is_favorite)+'" onclick="toggleExerciseFavorite(this.dataset.id,this.dataset.favorite===\'true\')">'+(x.is_favorite?'☆ حذف علاقه‌مندی':'⭐ علاقه‌مندی')+'</button><button class="secondary mini" data-id="'+e(x.id)+'" onclick="useLibraryExercise(this.dataset.id)">➕ استفاده در برنامه</button></div></div>').join('');list.innerHTML=cards||'<p class="muted">هنوز حرکتی برای این بخش ثبت نشده است.</p>';}
+    if(list){const cards=items.map(x=>'<div class="library-exercise-card"><div class="library-exercise-title">'+(x.is_favorite?'⭐':'🏋️')+' '+e(x.name)+'</div><div class="library-exercise-meta"><span class="pill">'+e(x.target_muscle||x.category||selected)+'</span><span class="pill">'+e(x.level||'سطح نامشخص')+'</span><span class="pill">'+e(x.equipment||'بدون تجهیزات')+'</span></div>'+(x.coach_note?'<p class="muted">'+e(x.coach_note)+'</p>':'')+'<div class="f18-actions"><button class="secondary mini" data-id="'+e(x.id)+'" onclick="editLibraryExercise(this.dataset.id)">✏️ ویرایش</button><button class="secondary mini" data-id="'+e(x.id)+'" data-favorite="'+String(!!x.is_favorite)+'" onclick="toggleExerciseFavorite(this.dataset.id,this.dataset.favorite===\'true\')">'+(x.is_favorite?'☆ حذف علاقه‌مندی':'⭐ علاقه‌مندی')+'</button><button class="secondary mini" data-id="'+e(x.id)+'" onclick="useLibraryExercise(this.dataset.id)">➕ استفاده در برنامه</button><button class="secondary mini" data-id="'+e(x.id)+'" data-name="'+e(x.name)+'" onclick="deleteLibraryExercise(this.dataset.id,this.dataset.name)">🗑️ حذف از بانک</button></div></div>').join('');list.innerHTML=cards||'<p class="muted">هنوز حرکتی برای این بخش ثبت نشده است.</p>';}
     return;
    }
-   const cards=items.map(x=>'<div class="library-exercise-card"><div class="library-exercise-title">'+(x.is_favorite?'⭐':'🏋️')+' '+e(x.name)+'</div><div class="library-exercise-meta"><span class="pill">'+e(x.target_muscle||x.category||selected)+'</span><span class="pill">'+e(x.level||'سطح نامشخص')+'</span><span class="pill">'+e(x.equipment||'بدون تجهیزات')+'</span></div>'+(x.coach_note?'<p class="muted">'+e(x.coach_note)+'</p>':'')+'<div class="f18-actions"><button class="secondary mini" data-id="'+e(x.id)+'" onclick="editLibraryExercise(this.dataset.id)">✏️ ویرایش</button><button class="secondary mini" onclick="toggleExerciseFavorite(\''+e(x.id)+'\','+!!x.is_favorite+')">'+(x.is_favorite?'☆ حذف علاقه‌مندی':'⭐ علاقه‌مندی')+'</button><button class="secondary mini" onclick="useLibraryExercise(\''+e(x.id)+'\')">➕ استفاده در برنامه</button></div></div>').join('');
+   const cards=items.map(x=>'<div class="library-exercise-card"><div class="library-exercise-title">'+(x.is_favorite?'⭐':'🏋️')+' '+e(x.name)+'</div><div class="library-exercise-meta"><span class="pill">'+e(x.target_muscle||x.category||selected)+'</span><span class="pill">'+e(x.level||'سطح نامشخص')+'</span><span class="pill">'+e(x.equipment||'بدون تجهیزات')+'</span></div>'+(x.coach_note?'<p class="muted">'+e(x.coach_note)+'</p>':'')+'<div class="f18-actions"><button class="secondary mini" data-id="'+e(x.id)+'" onclick="editLibraryExercise(this.dataset.id)">✏️ ویرایش</button><button class="secondary mini" onclick="toggleExerciseFavorite(\''+e(x.id)+'\','+!!x.is_favorite+')">'+(x.is_favorite?'☆ حذف علاقه‌مندی':'⭐ علاقه‌مندی')+'</button><button class="secondary mini" onclick="useLibraryExercise(\''+e(x.id)+'\')">➕ استفاده در برنامه</button><button class="secondary mini" data-id="'+e(x.id)+'" data-name="'+e(x.name)+'" onclick="deleteLibraryExercise(this.dataset.id,this.dataset.name)">🗑️ حذف از بانک</button></div></div>').join('');
    box.innerHTML='<div class="library-detail-view"><button type="button" class="secondary" onclick="backToLibraryGroups()">← بازگشت به همه عضلات</button><h3 style="margin:12px 0">'+(icons[selected]||'🏋️')+' بانک حرکات '+e(selected)+'</h3><p class="muted">حرکت‌های این عضله را ببین، حرکت تازه اضافه کن یا هر حرکت را به برنامه شاگرد بفرست.</p><div class="library-detail-exercises">'+(cards||'<p class="muted">هنوز حرکتی برای این بخش ثبت نشده است.</p>')+'</div><div class="library-inline-add"><strong>➕ افزودن حرکت جدید به '+e(selected)+'</strong><div class="grid2"><div><label>نام حرکت</label><input data-new-ex-name placeholder="مثلاً پرس سینه دمبل"></div><div><label>تجهیزات</label><input data-new-ex-equipment placeholder="مثلاً دمبل یا دستگاه"></div><div><label>سطح</label><select data-new-ex-level><option>مبتدی</option><option>متوسط</option><option>پیشرفته</option></select></div><div><label>نکته مربی (اختیاری)</label><input data-new-ex-note placeholder="نکته کوتاه درباره اجرا"></div></div><button type="button" data-category="'+e(selected)+'" data-new-ex-save="1">💾 ذخیره حرکت در '+e(selected)+'</button><p class="muted" data-new-ex-status>حرکت در بانک همین عضله ذخیره می‌شود و برای افزودن به برنامه شاگرد آماده خواهد شد.</p></div></div>';
    return;
   }
