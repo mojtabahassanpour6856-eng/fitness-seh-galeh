@@ -4273,8 +4273,29 @@ window.useLibraryExercise=async function(id){
       const downloadImageButton=popup.document.getElementById('downloadImageFile');
       shareButton.textContent='🖼️ ارسال عکس برنامه';
       downloadImageButton.textContent='💾 دانلود عکس PNG';
+      let preparedImageFile=null;
       async function processPlanImage(forceDownload){
         const button=shareButton;
+        /* The first tap builds the PNG. A second direct tap shares the already-built File,
+           preserving Android's transient user activation required by Web Share. */
+        if(!forceDownload && preparedImageFile){
+          const fileToShare=preparedImageFile;
+          if(typeof window.navigator.share!=='function'){
+            alert('این محیط مرورگر قابلیت اشتراک‌گذاری مستقیم فایل را ندارد. عکس آماده است؛ از «دانلود عکس PNG» ذخیره کنید و آن را در پیام‌رسان پیوست کنید.');
+            return;
+          }
+          try{
+            const sharePromise=window.navigator.share({title:title+' | '+(trainee.name||''),text:'برنامه '+title+' از باشگاه فیتنس سه‌قلعه',files:[fileToShare]});
+            await sharePromise;
+            preparedImageFile=null;
+            button.textContent='🖼️ ارسال عکس برنامه';
+          }catch(shareError){
+            if(shareError && shareError.name==='AbortError') return;
+            console.warn('Direct file share failed',shareError);
+            alert('مرورگر یا محیط فعلی اجازه اشتراک مستقیم فایل را نداد. عکس ساخته شده است؛ «دانلود عکس PNG» را بزنید و سپس آن را از پوشه Downloads در واتساپ یا پیام‌رسان پیوست کنید.');
+          }
+          return;
+        }
         const oldText=button.textContent;
         shareButton.disabled=true;downloadImageButton.disabled=true;button.textContent='در حال آماده‌سازی عکس…';
         let actions=null, actionsDisplay='';
@@ -4343,6 +4364,12 @@ window.useLibraryExercise=async function(id){
             alert('عکس PNG برنامه دانلود شد. در گوشی می‌توانید آن را از پوشه Downloads باز کنید و در صورت نیاز «ذخیره در گالری» را بزنید.');
             return;
           }
+          /* Prepare first; sharing happens on the next explicit tap so the browser still
+             recognizes a fresh user gesture after canvas rendering has completed. */
+          preparedImageFile=imageFile;
+          button.textContent='📤 عکس آماده است؛ برای اشتراک دوباره بزنید';
+          alert('عکس برنامه آماده شد. حالا یک بار دیگر روی «عکس آماده است؛ برای اشتراک دوباره بزنید» بزنید تا منوی اشتراک‌گذاری گوشی باز شود.');
+          return;
           button.textContent='در حال آماده‌سازی اشتراک…';
           if(typeof window.navigator.share === 'function'){
             try{
@@ -4374,7 +4401,7 @@ window.useLibraryExercise=async function(id){
           alert('ساخت عکس انجام نشد. '+(e&&e.message?e.message:String(e)));
         }finally{
           if(actions){actions.style.display=actionsDisplay;}
-          button.disabled=false;shareButton.disabled=false;downloadImageButton.disabled=false;shareButton.textContent='🖼️ ارسال عکس برنامه';downloadImageButton.textContent='💾 دانلود عکس PNG';
+          button.disabled=false;shareButton.disabled=false;downloadImageButton.disabled=false;shareButton.textContent=preparedImageFile?'📤 عکس آماده است؛ برای اشتراک دوباره بزنید':'🖼️ ارسال عکس برنامه';downloadImageButton.textContent='💾 دانلود عکس PNG';
         }
       }
       shareButton.addEventListener('click',function(){processPlanImage(false);});
