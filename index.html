@@ -5240,6 +5240,22 @@ active('workoutMuscleFilters',wm);active('libraryMuscleFilters',lm);if(document.
       window.open = nativeOpen;
     }
   };
+  /* Route BOTH print and share buttons through the same mobile-safe export view.
+     Delegation also covers buttons created after login. */
+  document.addEventListener('click', function(event){
+    const button = event.target && event.target.closest
+      ? event.target.closest('#printMealBtn, #printWorkoutBtn')
+      : null;
+    if(!button) return;
+    event.preventDefault();
+    event.stopPropagation();
+    if(typeof event.stopImmediatePropagation === 'function') event.stopImmediatePropagation();
+    if(typeof window.sharePlan !== 'function') {
+      alert('بخش خروجی برنامه بارگذاری نشده است. صفحه را تازه‌سازی کنید و دوباره تلاش کنید.');
+      return;
+    }
+    window.sharePlan(button.id === 'printMealBtn' ? 'meal' : 'workout');
+  }, true);
   function makeButtonNonSubmit(id){
     const button = document.getElementById(id);
     if(button && button.tagName === 'BUTTON') button.type = 'button';
