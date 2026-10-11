@@ -1211,19 +1211,33 @@ function renderMealCoach(meals){
   {key:"preworkout",name:"قبل تمرین",icon:"⚡"},
   {key:"postworkout",name:"بعد تمرین",icon:"💪"}
  ];
- const normalized=s=>String(s||"").replace(/[\s\u200c\u200f]/g,"");
- const targetIndex=name=>{const n=normalized(name);if(n.includes("قبلتمرین"))return 6;if(n.includes("بعدتمرین"))return 7;if(n.includes("قبلخواب"))return 5;if(n.includes("میانوعدهعصر"))return 3;if(n.includes("میانوعدهصبح"))return 1;if(n.includes("صبحانه"))return 0;if(n.includes("ناهار"))return 2;if(n.includes("شام"))return 4;return 0;};
+ const normalized=v=>String(v||"").replace(/[\s\u200c\u200f]/g,"");
+ const kindForMeal=name=>{
+  const n=normalized(name);
+  if(n.includes("قبلتمرین"))return "preworkout";
+  if(n.includes("بعدتمرین"))return "postworkout";
+  if(n.includes("قبلخواب"))return "bedtime";
+  if(n.includes("میانوعدهعصر"))return "afternoon";
+  if(n.includes("میانوعدهصبح"))return "morning";
+  if(n.includes("صبحانه"))return "breakfast";
+  if(n.includes("ناهار"))return "lunch";
+  if(n.includes("شام"))return "dinner";
+  return "";
+ };
+ const targetIndex=name=>{const k=kindForMeal(name);return ({breakfast:0,morning:1,lunch:2,afternoon:3,dinner:4,bedtime:5,preworkout:6,postworkout:7})[k]??0;};
  $("mealList").innerHTML=meals.map((m,i)=>{
   const fs=m.foods||[];
   const total=fs.reduce((a,x)=>{const v=foodMetrics(x.food||{},x.amount,x.unit);return v.valid?[a[0]+v.cal,a[1]+v.pro,a[2]+v.carb,a[3]+v.fat]:a},[0,0,0,0]);
   const ti=targetIndex(m.meal_name||"");
-  return '<div class="meal-card"><div class="meal-head"><h3>🍽️ '+esc(m.meal_name||"وعده "+(i+1))+'</h3><span class="meal-total">'+total[0].toFixed(0)+' kcal</span></div><div class="muted" data-meal-target="'+ti+'" style="margin:8px 0;padding:8px;background:#172636;border-radius:9px">هدف وعده در حال محاسبه…</div><div class="muted">مصرف فعلی: '+total[0].toFixed(0)+' kcal | پروتئین '+total[1].toFixed(1)+'g | کربوهیدرات '+total[2].toFixed(1)+'g | چربی '+total[3].toFixed(1)+'g</div>'+(fs.length?fs.map(x=>foodLine(x)).join(""):"<p class=\'muted\'>هنوز غذایی ثبت نشده است.</p>")+'<button class="mini" onclick="openMealFoodModal(&quot;'+m.id+'&quot;)">＋ افزودن غذا</button></div>';
+  const kind=kindForMeal(m.meal_name||"");
+  const addOption=kind?'<button class="mini secondary" onclick="addMealOption(\''+kind+'\')">＋ افزودن گزینه دیگر برای '+esc(kinds.find(k=>k.key===kind).name)+'</button>':"";
+  return '<div class="meal-card"><div class="meal-head"><h3>🍽️ '+esc(m.meal_name||"وعده "+(i+1))+'</h3><span class="meal-total">'+total[0].toFixed(0)+' kcal</span></div><div class="muted" data-meal-target="'+ti+'" style="margin:8px 0;padding:8px;background:#172636;border-radius:9px">هدف وعده در حال محاسبه…</div><div class="muted">مصرف فعلی: '+total[0].toFixed(0)+' kcal | پروتئین '+total[1].toFixed(1)+'g | کربوهیدرات '+total[2].toFixed(1)+'g | چربی '+total[3].toFixed(1)+'g</div>'+(fs.length?fs.map(x=>foodLine(x)).join(""):"<p class=\'muted\'>هنوز غذایی ثبت نشده است.</p>")+'<div class="row" style="flex-wrap:wrap;gap:8px"><button class="mini" onclick="openMealFoodModal(&quot;'+m.id+'&quot;)">＋ افزودن غذا به همین گزینه</button>'+addOption+'</div></div>';
  }).join("");
  if(meals.length){
   const buttons=kinds.map(k=>'<button class="mini" onclick="addMealOption(\''+k.key+'\')">'+k.icon+' ＋ گزینه جدید '+k.name+(k.key==="preworkout"||k.key==="postworkout"?" (اختیاری)":"")+'</button>').join("");
-  $("mealList").insertAdjacentHTML("beforeend",'<div class="card"><h3>➕ افزودن گزینه غذایی</h3><p class="muted">برای هر وعده می‌توانی چند گزینه مستقل بسازی؛ مثلاً صبحانه ۱، صبحانه ۲ و صبحانه ۳. غذاها و مقدار هر گزینه جداگانه ذخیره می‌شود.</p><div class="row" style="flex-wrap:wrap;gap:8px">'+buttons+'</div></div>');
+  $("mealList").insertAdjacentHTML("beforeend",'<div class="card"><h3>➕ افزودن گزینه غذایی</h3><p class="muted">هر گزینه مستقل است. مثلاً از دکمه کنار صبحانه، صبحانه ۲ و سپس صبحانه ۳ ساخته می‌شود. برای هر گزینه غذاها و مقدارها جدا ثبت می‌شوند.</p><div class="row" style="flex-wrap:wrap;gap:8px">'+buttons+'</div></div>');
  }
- if(!meals.length)$("mealList").innerHTML='<div class="card"><p class="muted">هیچ وعده‌ای برای این برنامه ثبت نشده است.</p><button onclick="createDefaultMeals()">＋ ساخت ۶ وعده استاندارد</button><p class="muted">قبل و بعد تمرین جداگانه و به‌صورت اختیاری اضافه می‌شوند.</p></div>';
+ if(!meals.length)$("mealList").innerHTML='<div class="card"><p class="muted">هیچ وعده‌ای برای این برنامه ثبت نشده است.</p><button onclick="createDefaultMeals()">＋ ساخت ۶ وعده استاندارد</button><p class="muted">بعد از ساخت وعده‌ها، برای هرکدام می‌توانی گزینه‌های ۲ و ۳ و بیشتر اضافه کنی.</p></div>';
  updateDayTotals(meals);updateMealTargets();
 }
 function foodLine(x){const f=x.food||{},m=foodMetrics(f,x.amount,x.unit),note=String(x.notes||""),recipePrefix="[دستور ترکیبی: ",recipeTag=note.includes(recipePrefix)?note.split(" | ")[0]:"";return `<div class="food-line"><div><div class="food-name">${esc(f.name||"غذا")}</div>${recipeTag?`<div class="food-meta">🍽️ ${esc(recipeTag.slice(recipePrefix.length,-1))}</div>`:""}<div class="food-meta">${m.valid?`🔥 ${m.cal.toFixed(0)} kcal | P ${m.pro.toFixed(1)} | C ${m.carb.toFixed(1)} | F ${m.fat.toFixed(1)}`:'⚠️ برای محاسبه تغذیه‌ای، وزن معادل گرم لازم است.'}</div></div><span>${x.amount} ${esc(x.unit||"گرم")}</span><button class="mini secondary" onclick="openSubstitution('${x.food_id}','${x.amount}')">🔄</button><button class="mini danger" onclick="deleteMealFood('${x.id}')">🗑</button></div>`;}
