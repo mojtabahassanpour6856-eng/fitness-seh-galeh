@@ -4114,14 +4114,31 @@ window.useLibraryExercise=async function(id){
         const p = (await sbGet('/nutrition_plans?trainee_id=eq.'+encodeURIComponent(trainee.id)+'&select=*&order=created_at.desc&limit=1'))[0];
         if(!p) throw new Error('برنامه غذایی ذخیره‌شده‌ای برای این شاگرد پیدا نشد.');
         const meals = await sbGet('/nutrition_meals?plan_id=eq.'+encodeURIComponent(p.id)+'&select=*&order=meal_order.asc');
-        body = '<h2>'+esc(p.title||title)+'</h2><p>هدف روزانه: کالری '+esc(p.daily_calories||'—')+' | پروتئین '+esc(p.protein_target||'—')+' | کربوهیدرات '+esc(p.carbs_target||'—')+' | چربی '+esc(p.fat_target||'—')+'</p>';
+        body = '<h2 style="text-align:center;margin:4px 0 8px;font-size:19px;color:#6b4709">'+esc(p.title||title)+'</h2>';
+        const mealBlocks=[];
         for(const meal of meals) {
           const foods = await sbGet('/nutrition_meal_foods?meal_id=eq.'+encodeURIComponent(meal.id)+'&select=*&order=created_at.asc');
           const ids = [...new Set(foods.map(x=>x.food_id).filter(Boolean))];
-          const list = ids.length ? await sbGet('/foods?id=in.('+ids.join(',')+')&select=id,name,calories,protein,carbs,fat') : [];
+          const list = ids.length ? await sbGet('/foods?id=in.('+ids.join(',')+')&select=id,name') : [];
           const byId = Object.fromEntries(list.map(x=>[String(x.id),x]));
-          body += '<h3>'+esc(meal.meal_name||'وعده غذایی')+'</h3><table><thead><tr><th>غذا</th><th>مقدار</th><th>کالری</th><th>پروتئین</th><th>کربوهیدرات</th><th>چربی</th></tr></thead><tbody>'+foods.map(item=>{const f=byId[String(item.food_id)]||{};let m={valid:false};try{m=foodMetrics(f,item.amount,item.unit)}catch(e){}return '<tr><td>'+esc(f.name||'غذا')+'</td><td>'+esc(item.amount)+' '+esc(item.unit||'گرم')+'</td><td>'+(m.valid?m.cal.toFixed(0):'—')+'</td><td>'+(m.valid?m.pro.toFixed(1):'—')+'</td><td>'+(m.valid?m.carb.toFixed(1):'—')+'</td><td>'+(m.valid?m.fat.toFixed(1):'—')+'</td></tr>'}).join('')+'</tbody></table>';
+          const items=foods.map(item=>{const f=byId[String(item.food_id)]||{};const amount=String(item.amount??'').trim();const unit=String(item.unit||'گرم').trim();return '<span style="display:inline-block;margin:1px 2px;white-space:normal"><b>'+esc(f.name||'غذا')+'</b> <span style="color:#6b5a39;font-weight:700">'+esc(amount)+' '+esc(unit)+'</span></span>';}).join('<span style="color:#bd861c;font-weight:900;padding:0 3px"> + </span>');
+          const rawName=String(meal.meal_name||'وعده غذایی').trim();
+          const base=rawName.replace(/(?:\s*[-–—:]?\s*)(?:گزینه\s*)?(?:شماره\s*)?(?:[۰-۹0-9]+|اول|اولین|دوم|دومین|سوم|سومین|چهارم|چهارمین|یک|دو|سه|چهار)\s*$/u,'').trim()||rawName;
+          mealBlocks.push({base,rawName,items,notes:String(meal.notes||'').trim()});
         }
+        const groups=[];
+        for(const block of mealBlocks){
+          const last=groups[groups.length-1];
+          if(last && last.base===block.base){last.options.push(block);}
+          else groups.push({base:block.base,options:[block]});
+        }
+        body += groups.map(group=>{
+          const rows=group.options.map((opt,index)=>{
+            const label=opt.rawName===group.base?(group.options.length>1?group.base+' '+['یک','دو','سه','چهار'][index]:'گزینه '+(index+1)):opt.rawName;
+            return '<div style="display:flex;align-items:flex-start;gap:7px;padding:5px 7px;border-bottom:1px dashed #e2d1a7;break-inside:avoid"><div style="flex:0 0 auto;min-width:72px;color:#79520c;font-weight:900;white-space:nowrap">↳ '+esc(label)+'</div><div style="flex:1;min-width:0;line-height:1.9">'+(opt.items||'<span style="color:#777">غذایی برای این گزینه ثبت نشده</span>')+(opt.notes?'<div style="font-size:10px;color:#665f50">نکته: '+esc(opt.notes)+'</div>':'')+'</div></div>';
+          }).join('');
+          return '<section style="margin:8px 0 10px;border:1px solid #c69b43;border-radius:8px;overflow:hidden;break-inside:avoid"><h3 style="margin:0;padding:5px 9px;background:#fff0c2;color:#51380b;border-bottom:1px solid #c69b43;font-size:15px">'+esc(group.base)+'</h3>'+rows+'</section>';
+        }).join('');
       } else {
         const p = (await sbGet('/trainee_workout_plans?trainee_id=eq.'+encodeURIComponent(trainee.id)+'&select=*&order=created_at.desc&limit=1'))[0];
         if(!p) throw new Error('برنامه تمرینی ذخیره‌شده‌ای برای این شاگرد پیدا نشد.');
@@ -5159,3 +5176,14 @@ active('workoutMuscleFilters',wm);active('libraryMuscleFilters',lm);if(document.
 })();
 </script>
 
+
+<script id="SEH_MEAL_A4_LINEAR_EXPORT_V1">
+(function(){
+  const previousPrintPlanForMeal = window.printPlan;
+  window.printPlan = async function(kind){
+    if(kind === 'meal') return window.sharePlan('meal');
+    if(typeof previousPrintPlanForMeal === 'function') return previousPrintPlanForMeal.apply(this, arguments);
+    alert('خروجی این نوع برنامه در دسترس نیست.');
+  };
+})();
+</script>
