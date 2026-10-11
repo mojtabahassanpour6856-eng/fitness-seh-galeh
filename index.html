@@ -486,7 +486,9 @@ body.library-room #workout .library-room-card .library-detail-view{width:100%!im
 <div><label>ناهار ٪</label><input id="mealPct2" type="number" min="0" max="100" value="30" oninput="updateMealTargets()"></div>
 <div><label>میان‌وعده عصر ٪</label><input id="mealPct3" type="number" min="0" max="100" value="10" oninput="updateMealTargets()"></div>
 <div><label>شام ٪</label><input id="mealPct4" type="number" min="0" max="100" value="20" oninput="updateMealTargets()"></div>
-<div><label>قبل خواب ٪</label><input id="mealPct5" type="number" min="0" max="100" value="5" oninput="updateMealTargets()"></div>
+ <div><label>قبل خواب ٪</label><input id="mealPct5" type="number" min="0" max="100" value="5" oninput="updateMealTargets()"></div>
+<div><label>قبل تمرین ٪ (اختیاری)</label><input id="mealPct6" type="number" min="0" max="100" value="0" oninput="updateMealTargets()"></div>
+<div><label>بعد تمرین ٪ (اختیاری)</label><input id="mealPct7" type="number" min="0" max="100" value="0" oninput="updateMealTargets()"></div>
 </div>
 <div id="mealTargetSummary" class="muted">برای دیدن سهم هر وعده، ابتدا هدف روزانه برنامه را وارد کن.</div>
 </div>
@@ -534,7 +536,7 @@ body.library-room #workout .library-room-card .library-detail-view{width:100%!im
 <h3>➕ افزودن غذا به وعده</h3>
 <div><label>نوع افزودن</label><select id="mealFoodMode" onchange="switchMealFoodMode()"><option value="single">غذای تکی</option><option value="recipe">غذای ترکیبی / دستور آماده</option></select></div>
 <div id="mealSingleFoodFields">
-<div><label>دسته غذا بر اساس وعده</label><select id="mealSingleFoodCategory" onchange="filterMealSingleFoods()"><option value="all">همه غذاها</option><option value="breakfast">صبحانه</option><option value="lunch">ناهار</option><option value="dinner">شام</option><option value="snack">میان‌وعده</option><option value="bedtime">قبل خواب</option></select></div>
+<div><label>دسته غذا بر اساس وعده</label><select id="mealSingleFoodCategory" onchange="filterMealSingleFoods()"><option value="all">همه غذاها</option><option value="breakfast">صبحانه</option><option value="lunch">ناهار</option><option value="dinner">شام</option><option value="snack">میان‌وعده</option><option value="bedtime">قبل خواب</option><option value="preworkout">قبل تمرین</option><option value="postworkout">بعد تمرین</option></select></div>
 <div><label>غذا</label><select id="mealFoodSelect"></select></div>
 <div class="grid2">
 <div><label>مقدار</label><input id="mealFoodAmount" type="number" value="100" min="0.1" step="0.1"></div>
@@ -542,7 +544,7 @@ body.library-room #workout .library-room-card .library-detail-view{width:100%!im
 </div>
 </div>
 <div id="mealRecipeFields" class="hide">
-<label>دسته وعده</label><select id="mealRecipeCategory" onchange="filterMealRecipes()"><option value="all">همه دستورها</option><option value="breakfast">صبحانه</option><option value="lunch">ناهار</option><option value="dinner">شام</option><option value="snack">میان‌وعده</option><option value="bedtime">قبل خواب</option></select>
+ <label>دسته وعده</label><select id="mealRecipeCategory" onchange="filterMealRecipes()"><option value="all">همه دستورها</option><option value="breakfast">صبحانه</option><option value="lunch">ناهار</option><option value="dinner">شام</option><option value="snack">میان‌وعده</option><option value="bedtime">قبل خواب</option><option value="preworkout">قبل تمرین</option><option value="postworkout">بعد تمرین</option></select>
 <label>انتخاب دستور ترکیبی</label><select id="mealRecipeSelect" onchange="previewMealRecipe()"></select>
 <div id="mealRecipeIngredients" class="sub-result"></div>
 </div>
@@ -993,7 +995,9 @@ const MEAL_RECIPES=[
  {name:"پودینگ چیا و توت‌فرنگی",category:"snack",ingredients:[["شیر کم چرب",150,"میلی‌لیتر"],["تخم چیا",15,"گرم"],["ماست یونانی ساده کم‌چرب",100,"گرم"],["توت‌فرنگی",50,"گرم"],["عسل",0.5,"قاشق غذاخوری"]],note:"مواد را مخلوط کن و چند ساعت در یخچال بگذار تا دانه چیا ژله‌ای شود."},
  {name:"سالاد مرغ و سبزیجات",category:"lunch",ingredients:[["سینه مرغ پخته",120,"گرم"],["کاهو",50,"گرم"],["خیار",80,"گرم"],["گوجه‌فرنگی",80,"گرم"],["روغن زیتون",5,"گرم"]],note:"مرغ پخته و خردشده را با سبزیجات مخلوط کن؛ روغن زیتون به‌عنوان چاشنی در محاسبه لحاظ شده است."},
  {name:"کیک خانگی بدون شکر افزوده",category:"snack",ingredients:[["جو دوسر",80,"گرم"],["تخم مرغ کامل",2,"عدد"],["موز",1,"عدد"],["شیر کم چرب",60,"میلی‌لیتر"],["ماست یونانی ساده کم‌چرب",50,"گرم"],["دارچین آسیاب‌شده",1,"گرم"]],note:"همه مواد را مخلوط کن و در قالب کوچکِ نچسب بریز؛ در فر از قبل گرم‌شده با دمای ۱۸۰ درجه حدود ۲۵ تا ۳۵ دقیقه بپز و با خلال دندان بررسی کن. شکر، عسل یا شیره اضافه نمی‌شود؛ شیرینی از موز است. زمان پخت به فر و اندازه قالب بستگی دارد."},
- {name:"وعده قبل خواب؛ ماست یونانی و شیر",category:"bedtime",ingredients:[["ماست یونانی ساده کم‌چرب",150,"گرم"],["شیر کم چرب",150,"میلی‌لیتر"],["تخم چیا",5,"گرم"]],note:"یک گزینه سبک برای قبل خواب؛ مقدار و تناسب آن با هدف کالری و پروتئین شاگرد تنظیم شود."}
+ {name:"وعده قبل خواب؛ ماست یونانی و شیر",category:"bedtime",ingredients:[["ماست یونانی ساده کم‌چرب",150,"گرم"],["شیر کم چرب",150,"میلی‌لیتر"],["تخم چیا",5,"گرم"]],note:"یک گزینه سبک برای قبل خواب؛ مقدار و تناسب آن با هدف کالری و پروتئین شاگرد تنظیم شود."},
+  {name:"قبل تمرین؛ موز و ماست",category:"preworkout",ingredients:[["موز",1,"عدد"],["ماست یونانی ساده کم‌چرب",100,"گرم"]],note:"گزینه پیشنهادی و اختیاری؛ زمان و مقدار با فاصله تا تمرین و تحمل گوارشی شاگرد تنظیم شود."},
+  {name:"بعد تمرین؛ مرغ و برنج",category:"postworkout",ingredients:[["سینه مرغ پخته",100,"گرم"],["برنج پخته",150,"گرم"]],note:"گزینه پیشنهادی و اختیاری؛ مقدار بر اساس هدف روزانه و برنامه شاگرد تنظیم شود."}
 ];
 function switchMealFoodMode(){
  const recipe=$("mealFoodMode").value==="recipe";
@@ -1018,7 +1022,9 @@ function mealFoodMatchesCategory(f,cat){
   lunch:has(["مرغ","گوشت","ماهی","تن ماهی","بوقلمون","برنج","ماکارونی","پاستا","سیب زمینی","سیب‌زمینی","عدس","لوبیا","نخود","کینوا","بروکلی","کاهو","خیار","گوجه","سبزی","سالاد","روغن","نان"]),
   dinner:has(["مرغ","گوشت","ماهی","تن ماهی","بوقلمون","برنج","ماکارونی","پاستا","سیب زمینی","سیب‌زمینی","عدس","لوبیا","نخود","کینوا","بروکلی","کاهو","خیار","گوجه","سبزی","سالاد","تخم مرغ","تخم‌مرغ","پنیر","ماست"]),
   snack:has(["موز","سیب","پرتقال","پرتقال","توت","توت‌فرنگی","انگور","خرما","میوه","ماست","شیر","مغز","بادام","گردو","پسته","فندق","کشمش","عسل","شکلات","پودینگ","پروتئین وی","وی","اسموتی"]),
-  bedtime:has(["شیر","ماست","پنیر","تخم مرغ","تخم‌مرغ","کازئین","پروتئین وی","وی","تخم چیا","چیا","بادام","گردو"])
+  bedtime:has(["شیر","ماست","پنیر","تخم مرغ","تخم‌مرغ","کازئین","پروتئین وی","وی","تخم چیا","چیا","بادام","گردو"]),
+  preworkout:has(["موز","خرما","نان","جو دوسر","اوتمیل","عسل","برنج","سیب زمینی","سیب‌زمینی","قهوه","ماست","وی","پروتئین وی"]),
+  postworkout:has(["مرغ","تخم مرغ","تخم‌مرغ","شیر","ماست","وی","پروتئین وی","ماهی","تن ماهی","گوشت","برنج","سیب زمینی","سیب‌زمینی","نان"])
  };
  if(categoryMatches[cat])return categoryMatches[cat];
  if(dbcat.includes(cat))return true;
@@ -1133,7 +1139,8 @@ async function saveNutritionPlan(){
  finally{nutritionPlanSaveBusy=false;}
 }
 function getMealTargetShares(){
- const raw=[0,1,2,3,4,5].map(i=>Math.max(0,Number($("mealPct"+i)?.value)||0)),sum=raw.reduce((a,b)=>a+b,0);
+  const raw=[0,1,2,3,4,5,6,7].map(i=>Math.max(0,Number($("mealPct"+i)?.value)||0)),sum=raw.reduce((a,b)=>a+b,0);
+  return sum>0?raw.map(v=>v/sum):[.25,.10,.30,.10,.20,.05,0,0];
  return sum>0?raw.map(v=>v/sum):[.25,.10,.30,.10,.20,.05];
 }
 function mealTargetValues(i){
@@ -1141,15 +1148,17 @@ function mealTargetValues(i){
  return {pct:p*100,cal:(Number($("mealCalories").value)||0)*p,pro:(Number($("mealProtein").value)||0)*p,carb:(Number($("mealCarbs").value)||0)*p,fat:(Number($("mealFat").value)||0)*p};
 }
 function updateMealTargets(){
- const ids=[0,1,2,3,4,5],names=["صبحانه","میان‌وعده صبح","ناهار","میان‌وعده عصر","شام","قبل خواب"],shares=getMealTargetShares();
+  const ids=[0,1,2,3,4,5,6,7],names=["صبحانه","میان‌وعده صبح","ناهار","میان‌وعده عصر","شام","قبل خواب","قبل تمرین","بعد تمرین"],shares=getMealTargetShares();
  ids.forEach(i=>{const el=document.querySelector('[data-meal-target="'+i+'"]');if(!el)return;const t=mealTargetValues(i);el.textContent=(Number($("mealCalories").value)>0?("🎯 هدف: "+t.cal.toFixed(0)+" kcal | P "+t.pro.toFixed(1)+"g · C "+t.carb.toFixed(1)+"g · F "+t.fat.toFixed(1)+"g"):"🎯 ابتدا کالری و ماکروهای هدف روز را وارد کن")+" | سهم محاسباتی "+t.pct.toFixed(1)+"٪";});
  const summary=$("mealTargetSummary");if(summary){const rawTotal=ids.reduce((a,i)=>a+Math.max(0,Number($("mealPct"+i)?.value)||0),0);summary.textContent="مجموع درصدهای واردشده: "+rawTotal.toFixed(1)+"٪. سهم نهایی محاسباتی: "+names.map((n,i)=>n+" "+(shares[i]*100).toFixed(1)+"٪").join("، ")+". اگر مجموع درصدها ۱۰۰ نباشد، سهم‌ها خودکار نرمال می‌شوند.";}
 }
-function renderMealCoach(meals){
+ function renderMealCoach(meals){
+  const names=["صبحانه","میان‌وعده صبح","ناهار","میان‌وعده عصر","شام","قبل خواب","قبل تمرین","بعد تمرین"];
+  const targetIndex=name=>{const n=String(name||"").replace(/\s/g,"");if(n.includes("قبلتمرین"))return 6;if(n.includes("بعدتمرین"))return 7;if(n.includes("قبلخواب"))return 5;if(n.includes("میان‌وعدهعصر"))return 3;if(n.includes("میان‌وعدهصبح"))return 1;if(n.includes("صبحانه"))return 0;if(n.includes("ناهار"))return 2;if(n.includes("شام"))return 4;return 0;};
  const names=["صبحانه","میان‌وعده صبح","ناهار","میان‌وعده عصر","شام","قبل خواب"];
- $("mealList").innerHTML=meals.map((m,i)=>{const fs=m.foods||[];const total=fs.reduce((a,x)=>{const v=foodMetrics(x.food||{},x.amount,x.unit);return v.valid?[a[0]+v.cal,a[1]+v.pro,a[2]+v.carb,a[3]+v.fat]:a},[0,0,0,0]);const ti=Math.min(i,5);
+const ti=targetIndex(m.meal_name||names[i]);
  return '<div class="meal-card"><div class="meal-head"><h3>🍽️ '+esc(m.meal_name||names[i]||"وعده")+'</h3><span class="meal-total">'+total[0].toFixed(0)+' kcal</span></div><div class="muted" data-meal-target="'+ti+'" style="margin:8px 0;padding:8px;background:#172636;border-radius:9px">هدف وعده در حال محاسبه…</div><div class="muted">مصرف فعلی: '+total[0].toFixed(0)+' kcal | پروتئین '+total[1].toFixed(1)+'g | کربوهیدرات '+total[2].toFixed(1)+'g | چربی '+total[3].toFixed(1)+'g</div>'+(fs.length?fs.map(x=>foodLine(x)).join(""):"<p class=\'muted\'>هنوز غذایی ثبت نشده است.</p>")+'<button class="mini" onclick="openMealFoodModal(&quot;'+m.id+'&quot;)">＋ افزودن غذا</button></div>';}).join("");
- if(meals.length&&!meals.some(m=>String(m.meal_name||"").replace(/\s/g,"").includes("قبلخواب")))$("mealList").insertAdjacentHTML("beforeend",'<div class="card"><button onclick="addBedtimeMeal()">🌙 ＋ افزودن وعده قبل خواب</button></div>');
+if(meals.length){const compact=meals.map(m=>String(m.meal_name||"").replace(/\s/g,""));let buttons="";if(!compact.some(n=>n.includes("قبلخواب")))buttons+='<button onclick="addBedtimeMeal()">🌙 ＋ افزودن وعده قبل خواب</button>';if(!compact.some(n=>n.includes("قبلتمرین")))buttons+='<button onclick="addPreWorkoutMeal()">⚡ ＋ افزودن وعده قبل تمرین (اختیاری)</button>';if(!compact.some(n=>n.includes("بعدتمرین")))buttons+='<button onclick="addPostWorkoutMeal()">💪 ＋ افزودن وعده بعد تمرین (اختیاری)</button>';if(buttons)$("mealList").insertAdjacentHTML("beforeend",'<div class="card"><p class="muted">وعده‌های قبل و بعد تمرین اختیاری هستند؛ فقط در صورت نیاز شاگرد آن‌ها را اضافه کن.</p>'+buttons+'</div>');}
  if(!meals.length)$("mealList").innerHTML=`<div class="card"><p class="muted">هیچ وعده‌ای برای این برنامه ثبت نشده است.</p><button onclick="createDefaultMeals()">＋ ساخت ۶ وعده استاندارد</button></div>`;
  updateDayTotals(meals);updateMealTargets();
 }
@@ -1172,6 +1181,25 @@ async function addBedtimeMeal(){
  }catch(e){alert("افزودن وعده قبل خواب انجام نشد.\n"+e.message);}
  finally{defaultMealsBusy=false;}
 }
+async function addTrainingMeal(kind){
+  if(defaultMealsBusy)return;
+  if(!currentClient||!currentPlanId){alert("ابتدا برنامه غذایی شاگرد را ذخیره کنید.");return;}
+  const isPre=kind==="preworkout",mealName=isPre?"قبل تمرین":"بعد تمرین",needle=isPre?"قبلتمرین":"بعدتمرین";
+  const traineeId=currentClient.id,planId=currentPlanId;defaultMealsBusy=true;
+  try{
+   const plans=await sbGet(`/nutrition_plans?id=eq.${encodeURIComponent(planId)}&trainee_id=eq.${encodeURIComponent(traineeId)}&select=id&limit=1`);
+   if(!plans.length)throw new Error("برنامه غذایی متعلق به شاگرد انتخاب‌شده نیست.");
+   if(!currentClient||String(currentClient.id)!==String(traineeId)||String(currentPlanId)!==String(planId))throw new Error("شاگرد یا برنامه تغییر کرده است؛ دوباره تلاش کنید.");
+   const existing=await sbGet(`/nutrition_meals?plan_id=eq.${encodeURIComponent(planId)}&select=id,meal_name,meal_order&order=meal_order.asc`);
+   if(existing.some(m=>String(m.meal_name||"").replace(/\s/g,"").includes(needle))){alert("این وعده از قبل وجود دارد.");return;}
+   const nextOrder=Math.max(0,...existing.map(m=>Number(m.meal_order)||0))+1;
+   await sbWrite("/nutrition_meals","POST",[{plan_id:planId,meal_name:mealName,meal_order:nextOrder}]);
+   if(currentClient&&String(currentClient.id)===String(traineeId)&&String(currentPlanId)===String(planId))await loadNutritionForClient();
+  }catch(e){alert("افزودن وعده "+mealName+" انجام نشد.\\n"+e.message);}
+  finally{defaultMealsBusy=false;}
+ }
+function addPreWorkoutMeal(){return addTrainingMeal("preworkout");}
+function addPostWorkoutMeal(){return addTrainingMeal("postworkout");}
 async function createDefaultMeals(){
  if(defaultMealsBusy)return;
  if(!currentClient||!currentPlanId){alert("ابتدا برنامه غذایی شاگرد را ذخیره کنید.");return;}
