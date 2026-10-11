@@ -540,6 +540,7 @@ body.library-room #workout .library-room-card .library-detail-view{width:100%!im
 </div>
 </div>
 <div id="mealRecipeFields" class="hide">
+<label>دسته وعده</label><select id="mealRecipeCategory" onchange="filterMealRecipes()"><option value="all">همه دستورها</option><option value="breakfast">صبحانه</option><option value="lunch">ناهار</option><option value="dinner">شام</option><option value="snack">میان‌وعده</option></select>
 <label>انتخاب دستور ترکیبی</label><select id="mealRecipeSelect" onchange="previewMealRecipe()"></select>
 <div id="mealRecipeIngredients" class="sub-result"></div>
 </div>
@@ -981,15 +982,15 @@ function mealTab(tab){
  if(tab!=="coach"&&currentClient){loadNutritionForClient();}
 }
 const MEAL_RECIPES=[
- {name:"اوتمیل موز، عسل و کره بادام‌زمینی",ingredients:[["جو دوسر",50,"گرم"],["موز",1,"عدد"],["عسل",1,"قاشق غذاخوری"],["کره بادام زمینی",1,"قاشق غذاخوری"],["شیر کم چرب",250,"میلی‌لیتر"],["دارچین آسیاب‌شده",1,"گرم"]],note:"دارچین حدود ۱ گرم؛ قابل حذف یا تغییر."},
- {name:"شیک پروتئینی موزی",ingredients:[["شیر کم چرب",250,"میلی‌لیتر"],["پودر وی پروتئین",30,"گرم"],["موز",1,"عدد"]]},
- {name:"کاسه ماست یونانی و میوه",ingredients:[["ماست یونانی ساده کم‌چرب",170,"گرم"],["موز",1,"عدد"],["جو دوسر",20,"گرم"],["تخم چیا",5,"گرم"],["عسل",0.5,"قاشق غذاخوری"]]},
- {name:"صبحانه تخم‌مرغ و نان تست",ingredients:[["تخم مرغ کامل",2,"عدد"],["نان تست سبوس‌دار",60,"گرم"],["گوجه‌فرنگی",50,"گرم"]]},
- {name:"بشقاب مرغ، برنج و بروکلی",ingredients:[["سینه مرغ پخته",150,"گرم"],["برنج پخته",150,"گرم"],["کلم بروکلی پخته",100,"گرم"],["روغن زیتون",5,"گرم"]]},
- {name:"پنکیک موز و جو دوسر",ingredients:[["جو دوسر",40,"گرم"],["تخم مرغ کامل",1,"عدد"],["موز",0.5,"عدد"],["شیر کم چرب",60,"میلی‌لیتر"]],note:"جو دوسر را آسیاب کن، با تخم‌مرغ، موز له‌شده و شیر مخلوط کن و در تابه نچسب بپز. روغن اضافه در محاسبه نیامده است."},
- {name:"پودینگ چیا و توت‌فرنگی",ingredients:[["شیر کم چرب",150,"میلی‌لیتر"],["تخم چیا",15,"گرم"],["ماست یونانی ساده کم‌چرب",100,"گرم"],["توت‌فرنگی",50,"گرم"],["عسل",0.5,"قاشق غذاخوری"]],note:"مواد را مخلوط کن و چند ساعت در یخچال بگذار تا دانه چیا ژله‌ای شود."},
- {name:"سالاد مرغ و سبزیجات",ingredients:[["سینه مرغ پخته",120,"گرم"],["کاهو",50,"گرم"],["خیار",80,"گرم"],["گوجه‌فرنگی",80,"گرم"],["روغن زیتون",5,"گرم"]],note:"مرغ پخته و خردشده را با سبزیجات مخلوط کن؛ روغن زیتون به‌عنوان چاشنی در محاسبه لحاظ شده است."},
- {name:"کیک خانگی بدون شکر افزوده",ingredients:[["جو دوسر",80,"گرم"],["تخم مرغ کامل",2,"عدد"],["موز",1,"عدد"],["شیر کم چرب",60,"میلی‌لیتر"],["ماست یونانی ساده کم‌چرب",50,"گرم"],["دارچین آسیاب‌شده",1,"گرم"]],note:"همه مواد را مخلوط کن و در قالب کوچکِ نچسب بریز؛ در فر از قبل گرم‌شده با دمای ۱۸۰ درجه حدود ۲۵ تا ۳۵ دقیقه بپز و با خلال دندان بررسی کن. شکر، عسل یا شیره اضافه نمی‌شود؛ شیرینی از موز است. زمان پخت به فر و اندازه قالب بستگی دارد."}
+ {name:"اوتمیل موز، عسل و کره بادام‌زمینی",category:"breakfast",ingredients:[["جو دوسر",50,"گرم"],["موز",1,"عدد"],["عسل",1,"قاشق غذاخوری"],["کره بادام زمینی",1,"قاشق غذاخوری"],["شیر کم چرب",250,"میلی‌لیتر"],["دارچین آسیاب‌شده",1,"گرم"]],note:"دارچین حدود ۱ گرم؛ قابل حذف یا تغییر."},
+ {name:"شیک پروتئینی موزی",category:"snack",ingredients:[["شیر کم چرب",250,"میلی‌لیتر"],["پودر وی پروتئین",30,"گرم"],["موز",1,"عدد"]]},
+ {name:"کاسه ماست یونانی و میوه",category:"breakfast",ingredients:[["ماست یونانی ساده کم‌چرب",170,"گرم"],["موز",1,"عدد"],["جو دوسر",20,"گرم"],["تخم چیا",5,"گرم"],["عسل",0.5,"قاشق غذاخوری"]]},
+ {name:"صبحانه تخم‌مرغ و نان تست",category:"breakfast",ingredients:[["تخم مرغ کامل",2,"عدد"],["نان تست سبوس‌دار",60,"گرم"],["گوجه‌فرنگی",50,"گرم"]]},
+ {name:"بشقاب مرغ، برنج و بروکلی",category:"lunch",ingredients:[["سینه مرغ پخته",150,"گرم"],["برنج پخته",150,"گرم"],["کلم بروکلی پخته",100,"گرم"],["روغن زیتون",5,"گرم"]]},
+ {name:"پنکیک موز و جو دوسر",category:"breakfast",ingredients:[["جو دوسر",40,"گرم"],["تخم مرغ کامل",1,"عدد"],["موز",0.5,"عدد"],["شیر کم چرب",60,"میلی‌لیتر"]],note:"جو دوسر را آسیاب کن، با تخم‌مرغ، موز له‌شده و شیر مخلوط کن و در تابه نچسب بپز. روغن اضافه در محاسبه نیامده است."},
+ {name:"پودینگ چیا و توت‌فرنگی",category:"snack",ingredients:[["شیر کم چرب",150,"میلی‌لیتر"],["تخم چیا",15,"گرم"],["ماست یونانی ساده کم‌چرب",100,"گرم"],["توت‌فرنگی",50,"گرم"],["عسل",0.5,"قاشق غذاخوری"]],note:"مواد را مخلوط کن و چند ساعت در یخچال بگذار تا دانه چیا ژله‌ای شود."},
+ {name:"سالاد مرغ و سبزیجات",category:"lunch",ingredients:[["سینه مرغ پخته",120,"گرم"],["کاهو",50,"گرم"],["خیار",80,"گرم"],["گوجه‌فرنگی",80,"گرم"],["روغن زیتون",5,"گرم"]],note:"مرغ پخته و خردشده را با سبزیجات مخلوط کن؛ روغن زیتون به‌عنوان چاشنی در محاسبه لحاظ شده است."},
+ {name:"کیک خانگی بدون شکر افزوده",category:"snack",ingredients:[["جو دوسر",80,"گرم"],["تخم مرغ کامل",2,"عدد"],["موز",1,"عدد"],["شیر کم چرب",60,"میلی‌لیتر"],["ماست یونانی ساده کم‌چرب",50,"گرم"],["دارچین آسیاب‌شده",1,"گرم"]],note:"همه مواد را مخلوط کن و در قالب کوچکِ نچسب بریز؛ در فر از قبل گرم‌شده با دمای ۱۸۰ درجه حدود ۲۵ تا ۳۵ دقیقه بپز و با خلال دندان بررسی کن. شکر، عسل یا شیره اضافه نمی‌شود؛ شیرینی از موز است. زمان پخت به فر و اندازه قالب بستگی دارد."}
 ];
 function switchMealFoodMode(){
  const recipe=$("mealFoodMode").value==="recipe";
@@ -999,10 +1000,18 @@ function switchMealFoodMode(){
 }
 function fillMealFoodSelect(){
  const s=$("mealFoodSelect");if(!s)return;s.innerHTML=foods.map((f,i)=>`<option value="${i}">${esc(f[0])}</option>`).join("");
- const rs=$("mealRecipeSelect");rs.innerHTML=MEAL_RECIPES.map((r,i)=>`<option value="${i}">${esc(r.name)}</option>`).join("");
+ const rs=$("mealRecipeSelect");filterMealRecipes();
  s.onchange=()=>{$("mealFoodAmount").dataset.unitInitialized="";updateMealFoodUnits();previewMealFood();};
  $("mealFoodAmount").oninput=previewMealFood;$("mealFoodUnit").onchange=previewMealFood;
  updateMealFoodUnits();switchMealFoodMode();previewMealFood();previewMealRecipe();
+}
+function filterMealRecipes(){
+ const rs=$("mealRecipeSelect"),cat=$("mealRecipeCategory")?.value||"all";if(!rs)return;
+ const previous=rs.value;
+ const available=MEAL_RECIPES.map((r,i)=>({r,i})).filter(x=>cat==="all"||x.r.category===cat);
+ rs.innerHTML=available.map(x=>`<option value="${x.i}">${esc(x.r.name)}</option>`).join("");
+ if(available.some(x=>String(x.i)===previous))rs.value=previous;
+ previewMealRecipe();
 }
 function previewMealFood(){
  const f=foods[+$("mealFoodSelect").value],g=+$("mealFoodAmount").value||0;if(!f)return;
