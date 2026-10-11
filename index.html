@@ -894,23 +894,63 @@ function openClientMealPlan(){
 }
 
 let currentPlanId=null,currentMealId=null,currentMealFoods=[];
-// مقادیر بانک غذا برای هر ۱۰۰ گرم هستند؛ برای تخم‌مرغ هر عدد به‌طور تقریبی ۵۰ گرم در نظر گرفته می‌شود.
+// مقادیر بانک غذا برای هر ۱۰۰ گرم هستند؛ تبدیل واحدهای خانگی تقریبی است و فقط برای غذاهای شناخته‌شده فعال می‌شود.
+function mealFoodUnitInfo(name){
+ const n=String(name||"").replace(/ي/g,"ی").replace(/ك/g,"ک");
+ if(/تخم\s*مرغ|تخممرغ/.test(n))return {kind:"egg",units:[["عدد","عدد (حدود ۵۰ گرم)"]],defaultUnit:"عدد",defaultAmount:2};
+ if(/سالاد/.test(n))return {kind:"salad",units:[["بشقاب","بشقاب (حدود ۲۵۰ گرم)"]],defaultUnit:"بشقاب",defaultAmount:1};
+ if(/بادام|پسته|فندق|گردو|بادام\s*هندی|تخمه|آجیل|اجیل|مغز/.test(n)){
+  const single=/بادام(?!\s*هندی)|پسته|فندق|تخمه/.test(n);
+  const units=[["مشت","مشت (حدود ۲۵ گرم)"]];
+  if(single)units.push(["عدد","عدد (وزن تقریبی بر اساس نوع مغز)"]);
+  return {kind:"nuts",units,defaultUnit:"مشت",defaultAmount:1};
+ }
+ if(/سیب|موز|پرتقال|نارنگی|گلابی|هلو|شلیل|کیوی|انبه|گریپ\s*فروت|خرمالو|آووکادو|آووکادو|خرما/.test(n)){
+  return {kind:"fruit",units:[["عدد","عدد (وزن تقریبی بر اساس میوه)"]],defaultUnit:"عدد",defaultAmount:1};
+ }
+ return {kind:"other",units:[],defaultUnit:"گرم",defaultAmount:100};
+}
+function mealUnitGrams(name,unit){
+ const n=String(name||"").replace(/ي/g,"ی").replace(/ك/g,"ک"), u=String(unit||"گرم");
+ if(u==="گرم")return 1;
+ if(u==="عدد" && /تخم\s*مرغ|تخممرغ/.test(n))return 50;
+ if(u==="بشقاب" && /سالاد/.test(n))return 250;
+ if(u==="مشت" && /بادام|پسته|فندق|گردو|بادام\s*هندی|تخمه|آجیل|اجیل|مغز/.test(n))return 25;
+ if(u==="عدد"){
+  if(/بادام\s*هندی/.test(n))return 1.5;
+  if(/بادام/.test(n))return 1.2;
+  if(/پسته|تخمه/.test(n))return 0.6;
+  if(/فندق/.test(n))return 1.3;
+  if(/گردو/.test(n))return 4;
+  if(/سیب/.test(n))return 180;
+  if(/موز/.test(n))return 120;
+  if(/پرتقال/.test(n))return 160;
+  if(/نارنگی/.test(n))return 90;
+  if(/گلابی/.test(n))return 170;
+  if(/هلو|شلیل/.test(n))return 150;
+  if(/کیوی/.test(n))return 75;
+  if(/انبه/.test(n))return 200;
+  if(/گریپ\s*فروت/.test(n))return 230;
+  if(/خرمالو/.test(n))return 170;
+  if(/آووکادو/.test(n))return 150;
+  if(/خرما/.test(n))return 8;
+ }
+ return null;
+}
 function foodMetrics(foodRow, amount, unit){
  const f=foodRow||{}, q=Number(amount)||0, u=String(unit||"گرم").trim();
- let grams=q;
- if(u==="گرم") grams=q;
- else if(u==="عدد" && /تخم\s*مرغ|تخممرغ/i.test(String(f.name||""))) grams=q*50;
- else return {valid:false,cal:0,pro:0,carb:0,fat:0};
- const ratio=grams/100;
+ const factor=mealUnitGrams(f.name,u);
+ if(factor===null)return {valid:false,cal:0,pro:0,carb:0,fat:0};
+ const grams=q*factor, ratio=grams/100;
  return {valid:true,grams,cal:(+f.calories||0)*ratio,pro:(+f.protein||0)*ratio,carb:(+f.carbs||0)*ratio,fat:(+f.fat||0)*ratio};
 }
 function updateMealFoodUnits(){
  const select=$("mealFoodSelect"), unit=$("mealFoodUnit"), amount=$("mealFoodAmount");
  if(!select||!unit||!amount)return;
- const f=foods[+select.value], isEgg=/تخم\s*مرغ|تخممرغ/i.test(String(f?.[0]||""));
- unit.innerHTML=isEgg?'<option value="عدد">عدد (هر عدد حدود ۵۰ گرم)</option><option value="گرم">گرم</option>':'<option value="گرم">گرم</option>';
- if(isEgg){unit.value="عدد";if(!amount.dataset.unitInitialized){amount.value=2;amount.dataset.unitInitialized="1";}}
- else {unit.value="گرم";if(!amount.dataset.unitInitialized){amount.value=100;amount.dataset.unitInitialized="1";}}
+ const f=foods[+select.value], info=mealFoodUnitInfo(f?.[0]);
+ unit.innerHTML='<option value="گرم">گرم</option>'+info.units.map(x=>'<option value="'+x[0]+'">'+x[1]+'</option>').join("");
+ unit.value=info.defaultUnit;
+ if(!amount.dataset.unitInitialized){amount.value=info.defaultAmount;amount.dataset.unitInitialized="1";}
 }
 function mealTab(tab){
  ["coach","student","report"].forEach(x=>{const b=$("mealTab"+x.charAt(0).toUpperCase()+x.slice(1));if(b)b.classList.toggle("active",x===tab);});
@@ -928,7 +968,8 @@ function fillMealFoodSelect(){
 function previewMealFood(){
  const f=foods[+$("mealFoodSelect").value],g=+$("mealFoodAmount").value||0;if(!f)return;
  const unit=$("mealFoodUnit").value, m=foodMetrics({name:f[0],calories:f[1],protein:f[2],carbs:f[3],fat:f[4]},g,unit);
- $("mealFoodPreview").innerHTML=m.valid?`<b>${esc(f[0])}</b> — ${g} ${esc(unit)}${unit==="عدد"?" (تقریباً "+m.grams+" گرم)":""}<br>🔥 ${m.cal.toFixed(0)} kcal | پروتئین ${m.pro.toFixed(1)}g | کربوهیدرات ${m.carb.toFixed(1)}g | چربی ${m.fat.toFixed(1)}g`:`<b>${esc(f[0])}</b> — ${g} ${esc(unit)}<br><span class="warning-text">برای این غذا هنوز تبدیل دقیق این واحد به گرم تعریف نشده؛ لطفاً واحد «گرم» را انتخاب کن تا محاسبه صحیح بماند.</span>`;
+ const approx=m.valid&&unit!=="گرم"?" (حدود "+m.grams+" گرم؛ تخمینی)":"";
+ $("mealFoodPreview").innerHTML=m.valid?`<b>${esc(f[0])}</b> — ${g} ${esc(unit)}${approx}<br>🔥 ${m.cal.toFixed(0)} kcal | پروتئین ${m.pro.toFixed(1)}g | کربوهیدرات ${m.carb.toFixed(1)}g | چربی ${m.fat.toFixed(1)}g`:`<b>${esc(f[0])}</b> — ${g} ${esc(unit)}<br><span class="warning-text">برای این غذا تبدیل قابل‌اعتماد این واحد تعریف نشده؛ لطفاً «گرم» را انتخاب کن.</span>`;
 }
 async function loadNutritionForClient(){
  const requestedTraineeId=currentClient?.id;
