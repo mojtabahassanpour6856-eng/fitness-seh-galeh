@@ -534,6 +534,7 @@ body.library-room #workout .library-room-card .library-detail-view{width:100%!im
 <h3>➕ افزودن غذا به وعده</h3>
 <div><label>نوع افزودن</label><select id="mealFoodMode" onchange="switchMealFoodMode()"><option value="single">غذای تکی</option><option value="recipe">غذای ترکیبی / دستور آماده</option></select></div>
 <div id="mealSingleFoodFields">
+<div><label>دسته غذا بر اساس وعده</label><select id="mealSingleFoodCategory" onchange="filterMealSingleFoods()"><option value="all">همه غذاها</option><option value="breakfast">صبحانه</option><option value="lunch">ناهار</option><option value="dinner">شام</option><option value="snack">میان‌وعده</option><option value="bedtime">قبل خواب</option></select></div>
 <div><label>غذا</label><select id="mealFoodSelect"></select></div>
 <div class="grid2">
 <div><label>مقدار</label><input id="mealFoodAmount" type="number" value="100" min="0.1" step="0.1"></div>
@@ -1001,11 +1002,38 @@ function switchMealFoodMode(){
  if(recipe)previewMealRecipe();else previewMealFood();
 }
 function fillMealFoodSelect(){
- const s=$("mealFoodSelect");if(!s)return;s.innerHTML=foods.map((f,i)=>`<option value="${i}">${esc(f[0])}</option>`).join("");
+ const s=$("mealFoodSelect");if(!s)return;filterMealSingleFoods();
  const rs=$("mealRecipeSelect");filterMealRecipes();
  s.onchange=()=>{$("mealFoodAmount").dataset.unitInitialized="";updateMealFoodUnits();previewMealFood();};
  $("mealFoodAmount").oninput=previewMealFood;$("mealFoodUnit").onchange=previewMealFood;
  updateMealFoodUnits();switchMealFoodMode();previewMealFood();previewMealRecipe();
+}
+function mealFoodMatchesCategory(f,cat){
+ if(cat==="all")return true;
+ const name=String(f?.[0]||"").toLowerCase().replace(/[ي]/g,"ی").replace(/[ك]/g,"ک");
+ const dbcat=String(f?.[6]||"").toLowerCase().replace(/[ي]/g,"ی").replace(/[ك]/g,"ک");
+ const has=(words)=>words.some(w=>name.includes(w));
+ const categoryMatches={
+  breakfast:has(["تخم مرغ","تخم‌مرغ","نان","تست","جو دوسر","اوتمیل","عسل","کره بادام","پنیر","شیر","ماست","موز","خرما","ارده","گردو","کرن فلکس","غلات صبحانه","پنکیک"]),
+  lunch:has(["مرغ","گوشت","ماهی","تن ماهی","بوقلمون","برنج","ماکارونی","پاستا","سیب زمینی","سیب‌زمینی","عدس","لوبیا","نخود","کینوا","بروکلی","کاهو","خیار","گوجه","سبزی","سالاد","روغن","نان"]),
+  dinner:has(["مرغ","گوشت","ماهی","تن ماهی","بوقلمون","برنج","ماکارونی","پاستا","سیب زمینی","سیب‌زمینی","عدس","لوبیا","نخود","کینوا","بروکلی","کاهو","خیار","گوجه","سبزی","سالاد","تخم مرغ","تخم‌مرغ","پنیر","ماست"]),
+  snack:has(["موز","سیب","پرتقال","پرتقال","توت","توت‌فرنگی","انگور","خرما","میوه","ماست","شیر","مغز","بادام","گردو","پسته","فندق","کشمش","عسل","شکلات","پودینگ","پروتئین وی","وی","اسموتی"]),
+  bedtime:has(["شیر","ماست","پنیر","تخم مرغ","تخم‌مرغ","کازئین","پروتئین وی","وی","تخم چیا","چیا","بادام","گردو"])
+ };
+ if(categoryMatches[cat])return categoryMatches[cat];
+ if(dbcat.includes(cat))return true;
+ return false;
+}
+function filterMealSingleFoods(){
+ const sel=$("mealFoodSelect"),cat=$("mealSingleFoodCategory")?.value||"all";
+ if(!sel)return;
+ const previousId=sel.value?String(foods[Number(sel.value)]?.[5]??""):"";
+ let available=foods.map((f,i)=>({f,i})).filter(x=>mealFoodMatchesCategory(x.f,cat));
+ // If the category has no matches, show all foods instead of leaving an unusable empty list.
+ if(!available.length)available=foods.map((f,i)=>({f,i}));
+ sel.innerHTML=available.map(x=>'<option value="'+x.i+'">'+esc(x.f[0])+'</option>').join("");
+ const keep=available.find(x=>String(x.f[5]??"")===previousId);
+ if(keep)sel.value=String(keep.i);
 }
 function filterMealRecipes(){
  const rs=$("mealRecipeSelect"),cat=$("mealRecipeCategory")?.value||"all";if(!rs)return;
@@ -1048,8 +1076,16 @@ async function loadNutritionForClient(){
   }
   $("mealTitle").value=p.title||"";$("mealStart").value=p.start_date||today();$("mealEnd").value=p.end_date||"";
   $("mealCalories").value=p.daily_calories||"";$("mealProtein").value=p.protein_target||"";$("mealCarbs").value=p.carbs_target||"";$("mealFat").value=p.fat_target||"";$("mealNotes").value=p.notes||"";$("mealActive").value=String(p.is_active!==false);
-  const meals=await sbGet(`/nutrition_meals?plan_id=eq.${encodeURIComponent(requestedPlanId)}&select=*&order=meal_order.asc`);
+  let meals=await sbGet(`/nutrition_meals?plan_id=eq.${encodeURIComponent(requestedPlanId)}&select=*&order=meal_order.asc`);
   if(!sameTrainee()||String(currentPlanId)!==String(requestedPlanId))return;
+  // Coaches get a real sixth database meal, not merely a recipe-category label.
+  if(authProfile?.role==="coach"&&!meals.some(m=>String(m.meal_name||"").replace(/\\s/g,"").includes("قبلخواب"))){
+   try{
+    await sbWrite("/nutrition_meals","POST",[{plan_id:requestedPlanId,meal_name:"قبل خواب",meal_order:Math.max(0,...meals.map(m=>Number(m.meal_order)||0))+1}]);
+    if(!sameTrainee()||String(currentPlanId)!==String(requestedPlanId))return;
+    meals=await sbGet(`/nutrition_meals?plan_id=eq.${encodeURIComponent(requestedPlanId)}&select=*&order=meal_order.asc`);
+   }catch(addMealError){console.warn("افزودن خودکار وعده قبل خواب انجام نشد؛ دکمه افزودن دستی نمایش داده می‌شود.",addMealError);}
+  }
   const ids=meals.map(x=>x.id);let foodsBy={};
   if(ids.length){const mf=await sbGet(`/nutrition_meal_foods?meal_id=in.(${ids.map(encodeURIComponent).join(",")})&select=*&order=created_at.asc`);
    if(!sameTrainee()||String(currentPlanId)!==String(requestedPlanId))return;
