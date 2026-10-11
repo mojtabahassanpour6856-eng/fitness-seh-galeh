@@ -3211,7 +3211,7 @@ window.toggleExerciseFavorite=async function(id,value){try{await sbWrite(`/train
       currentWorkoutPlanId=null;workoutPlanOwnerId=null;workoutExercisesCache=[];
     }
     try{
-      const plans=await sbGet(`/trainee_workout_plans?trainee_id=eq.${encodeURIComponent(traineeId)}&select=*&order=created_at.desc&limit=1`);
+      const plans=await sbGet(`/trainee_workout_plans?trainee_id=eq.${encodeURIComponent(traineeId)}&select=*&order=created_at.desc`);
       if(requestId!==workoutRequestSeq||!same(currentTraineeId(),traineeId))return;
       const plan=plans[0]||null;
       if(!plan){
@@ -3222,8 +3222,11 @@ window.toggleExerciseFavorite=async function(id,value){try{await sbWrite(`/train
         if(typeof window.renderWorkoutList==='function')window.renderWorkoutList([],{});else setWorkoutMessage('برای این شاگرد هنوز برنامه تمرینی ثبت نشده است.');
         return;
       }
-      const rows=await sbGet(`/trainee_workout_exercises?workout_plan_id=eq.${encodeURIComponent(plan.id)}&select=*&order=sort_order.asc,created_at.asc`);
+      // Recover exercises saved across accidental duplicate plans for this same trainee.
+      // Do not delete or rewrite any existing database rows.
+      const rowGroups=await Promise.all(plans.map(p=>sbGet(`/trainee_workout_exercises?workout_plan_id=eq.${encodeURIComponent(p.id)}&select=*&order=sort_order.asc,created_at.asc`)));
       if(requestId!==workoutRequestSeq||!same(currentTraineeId(),traineeId))return;
+      const rows=rowGroups.flat().sort((a,b)=>(Number(a.sort_order)||0)-(Number(b.sort_order)||0)||String(a.created_at||'').localeCompare(String(b.created_at||''))||Number(a.id)-Number(b.id));
       const ids=[...new Set(rows.map(x=>x.exercise_id).filter(x=>x!=null))];
       let exercises=[];
       if(ids.length)exercises=await sbGet(`/exercises?id=in.(${ids.map(encodeURIComponent).join(',')})&select=id,name`);
