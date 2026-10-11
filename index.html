@@ -477,6 +477,28 @@ body.library-room #workout .library-room-card .library-detail-view{width:100%!im
 <button onclick="saveNutritionPlan()">💾 ذخیره اطلاعات برنامه</button>
 </div>
 
+<div class="card" id="mealFoodBankPanel">
+<h2>🥗 بانک غذایی برنامه</h2>
+<p class="muted">غذاهای این بانک در انتخاب غذای وعده‌ها هم در دسترس هستند. می‌توانی غذای جدید با کالری و درشت‌مغذی‌های هر ۱۰۰ گرم به بانک اضافه کنی.</p>
+<div class="grid2">
+<div><label for="mealFoodBankSearch">جست‌وجو در بانک غذا</label><input id="mealFoodBankSearch" type="search" placeholder="نام غذا یا دسته..." oninput="renderMealFoodBank()"></div>
+<div><label for="mealFoodBankCategory">دسته‌بندی</label><select id="mealFoodBankCategory" onchange="renderMealFoodBank()"><option value="all">همه دسته‌ها</option><option>غلات</option><option>برنج و غلات</option><option>نان</option><option>گوشت و مرغ</option><option>ماهی</option><option>تخم مرغ</option><option>لبنیات</option><option>حبوبات</option><option>میوه</option><option>میوه خشک</option><option>سبزیجات</option><option>مغزها</option><option>دانه‌ها</option><option>چربی‌ها</option><option>نوشیدنی</option><option>مکمل و شیک</option><option>شیرینی و تنقلات</option><option>سایر</option></select></div>
+</div>
+<div id="mealFoodBankList" class="muted" aria-live="polite">بانک غذایی در حال بارگذاری است…</div>
+<details style="margin-top:12px"><summary style="cursor:pointer;font-weight:bold;color:#ffcf58;padding:8px 0">＋ افزودن غذای جدید به بانک</summary>
+<div class="grid2">
+<div><label for="mealBankName">نام غذا</label><input id="mealBankName" maxlength="100" placeholder="مثلاً سیب‌زمینی آب‌پز"></div>
+<div><label for="mealBankCategory">دسته</label><select id="mealBankCategory"><option>غلات</option><option>برنج و غلات</option><option>نان</option><option>گوشت و مرغ</option><option>ماهی</option><option>تخم مرغ</option><option>لبنیات</option><option>حبوبات</option><option>میوه</option><option>میوه خشک</option><option>سبزیجات</option><option>مغزها</option><option>دانه‌ها</option><option>چربی‌ها</option><option>نوشیدنی</option><option>مکمل و شیک</option><option>شیرینی و تنقلات</option><option>سایر</option></select></div>
+<div><label for="mealBankCalories">کالری در ۱۰۰ گرم</label><input id="mealBankCalories" type="number" min="0" step="0.1" placeholder="مثلاً 130"></div>
+<div><label for="mealBankProtein">پروتئین (گرم)</label><input id="mealBankProtein" type="number" min="0" step="0.1" value="0"></div>
+<div><label for="mealBankCarbs">کربوهیدرات (گرم)</label><input id="mealBankCarbs" type="number" min="0" step="0.1" value="0"></div>
+<div><label for="mealBankFat">چربی (گرم)</label><input id="mealBankFat" type="number" min="0" step="0.1" value="0"></div>
+</div>
+<p class="muted">مقادیر تغذیه‌ای را بر اساس هر ۱۰۰ گرم از بخش خوراکی و با توجه به خام یا پخته بودن وارد کن.</p>
+<button type="button" onclick="addFoodFromMealBank()">💾 ذخیره در بانک غذایی</button>
+</details>
+</div>
+
 <div class="card" id="mealTargetPlanner">
 <h2>🎯 تقسیم هدف روزانه بین وعده‌ها</h2>
 <p class="muted">کالری و درشت‌مغذی‌های هدف روز را در اطلاعات برنامه وارد کن. درصد هر وعده قابل تنظیم است؛ سهم‌ها بر اساس مجموع درصدها نرمال می‌شوند. این تقسیم‌بندی نقطه شروع است و با هدف و شرایط شاگرد تنظیمش کن.</p>
@@ -664,12 +686,48 @@ function showSection(id,btn){
   if(btn) btn.classList.add("active");
 }
 
+function renderMealFoodBank(){
+ const list=$("mealFoodBankList");if(!list)return;
+ const q=String($("mealFoodBankSearch")?.value||"").trim().toLocaleLowerCase("fa");
+ const cat=$("mealFoodBankCategory")?.value||"all";
+ const rows=foods.filter(f=>(!q||(String(f[0]||"")+" "+String(f[6]||"")).toLocaleLowerCase("fa").includes(q))&&(cat==="all"||String(f[6]||"سایر")===cat));
+ list.innerHTML='<p class="muted">تعداد غذاهای بانک: '+foods.length.toLocaleString("fa-IR")+' · نتیجه جست‌وجو: '+rows.length.toLocaleString("fa-IR")+'</p>'+
+ (rows.length?rows.slice(0,80).map(f=>'<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;padding:8px 2px;border-top:1px solid #26384a"><div style="min-width:0"><b>'+esc(f[0])+'</b><div class="muted">'+esc(f[6]||"سایر")+' · '+(+f[1]||0)+' kcal · پروتئین '+(+f[2]||0)+'g · کربوهیدرات '+(+f[3]||0)+'g · چربی '+(+f[4]||0)+'g در ۱۰۰ گرم</div></div><button type="button" class="mini secondary" style="width:auto;white-space:nowrap" onclick="useMealBankFood(\''+String(f[5]||"").replace(/'/g,"\\'")+'\')">انتخاب</button></div>').join(""):'<p class="muted">غذایی با این جست‌وجو پیدا نشد.</p>')+
+ (rows.length>80?'<p class="muted">برای کوتاه ماندن فهرست، ۸۰ نتیجه اول نمایش داده می‌شود؛ جست‌وجو را دقیق‌تر کن.</p>':"");
+}
+function useMealBankFood(id){
+ const f=foods.find(x=>String(x[5])===String(id));if(!f)return alert("این غذا در بانک پیدا نشد.");
+ if(!$("currentMealId")&&typeof currentMealId==="undefined")return;
+ if(!currentMealId){alert("برای افزودن غذا، ابتدا وعده موردنظر را انتخاب کن و پنجره افزودن غذا را باز کن.");return;}
+ $("mealFoodMode").value="single";switchMealFoodMode();$("mealSingleFoodCategory").value="all";filterMealSingleFoods();
+ const sel=$("mealFoodSelect");if(sel)sel.value=String(foods.findIndex(x=>String(x[5])===String(id)));
+ $("mealFoodAmount").dataset.unitInitialized="";updateMealFoodUnits();previewMealFood();
+ $("mealModal").classList.add("show");
+}
+async function addFoodFromMealBank(){
+ const name=String($("mealBankName")?.value||"").trim(),category=$("mealBankCategory")?.value||"سایر";
+ const calories=Number($("mealBankCalories")?.value),protein=Number($("mealBankProtein")?.value||0),carbs=Number($("mealBankCarbs")?.value||0),fat=Number($("mealBankFat")?.value||0);
+ if(!name){alert("نام غذا را وارد کن.");$("mealBankName")?.focus();return;}
+ if(!Number.isFinite(calories)||calories<0||![protein,carbs,fat].every(v=>Number.isFinite(v)&&v>=0)){alert("کالری و مقادیر پروتئین، کربوهیدرات و چربی را به‌صورت عدد صفر یا بیشتر وارد کن.");return;}
+ const norm=s=>String(s||"").trim().toLocaleLowerCase("fa").replace(/[ي]/g,"ی").replace(/[ك]/g,"ک");
+ if(foods.some(f=>norm(f[0])===norm(name))){alert("این غذا از قبل در بانک وجود دارد. از جست‌وجو استفاده کن تا تکراری ساخته نشود.");$("mealFoodBankSearch").value=name;renderMealFoodBank();return;}
+ const serving_unit=/چای|قهوه|اسپرسو|دمنوش|دوغ|شیک پروتئینی|شیر/.test(name)?"میلی‌لیتر":"گرم";
+ try{
+  await sbWrite("/foods","POST",{name,category,calories,protein,carbs,fat,serving_unit,serving_amount:100});
+  const data=await sbGet("/foods?select=*&order=name");
+  foods=data.map(x=>[x.name,+x.calories||0,+x.protein||0,+x.carbs||0,+x.fat||0,x.id,x.category||""]);
+  fillFoods();fillMealFoodSelect();renderMealFoodBank();
+  $("mealBankName").value="";$("mealBankCalories").value="";$("mealBankProtein").value="0";$("mealBankCarbs").value="0";$("mealBankFat").value="0";
+  $("mealFoodBankSearch").value=name;renderMealFoodBank();
+  alert("غذا در بانک ذخیره شد و اکنون در فهرست انتخاب غذای وعده‌ها هم قابل استفاده است.");
+ }catch(e){console.error("addFoodFromMealBank",e);alert("ذخیره غذا در بانک انجام نشد. "+(e?.message||e));}
+}
 async function loadFoods(){
  try{
   // از لایه REST احراز هویت‌شده استفاده می‌کنیم تا RLS با توکن واقعی نشست اعمال شود.
   const data=await sbGet('/foods?select=*&order=name');
   foods=data.map(x=>[x.name,+x.calories||0,+x.protein||0,+x.carbs||0,+x.fat||0,x.id,x.category||""]);
-  fillFoods();
+  fillFoods();renderMealFoodBank();
  }catch(e){console.error(e);alert("دریافت غذاها از Supabase انجام نشد.\n"+(e?.message||e));}
 }
 function fillFoods(){
