@@ -1079,12 +1079,14 @@ async function loadNutritionForClient(){
   let meals=await sbGet(`/nutrition_meals?plan_id=eq.${encodeURIComponent(requestedPlanId)}&select=*&order=meal_order.asc`);
   if(!sameTrainee()||String(currentPlanId)!==String(requestedPlanId))return;
   // Coaches get a real sixth database meal, not merely a recipe-category label.
-  if(authProfile?.role==="coach"&&!meals.some(m=>String(m.meal_name||"").replace(/\\s/g,"").includes("قبلخواب"))){
+  if(authProfile?.role==="coach"&&!meals.some(m=>String(m.meal_name||"").replace(/\s/g,"").includes("قبلخواب"))){
    try{
-    await sbWrite("/nutrition_meals","POST",[{plan_id:requestedPlanId,meal_name:"قبل خواب",meal_order:Math.max(0,...meals.map(m=>Number(m.meal_order)||0))+1}]);
+    const standardNames=["صبحانه","میان‌وعده صبح","ناهار","میان‌وعده عصر","شام","قبل خواب"];
+    const rowsToAdd=!meals.length?standardNames.map((meal_name,i)=>({plan_id:requestedPlanId,meal_name,meal_order:i+1})):[{plan_id:requestedPlanId,meal_name:"قبل خواب",meal_order:Math.max(0,...meals.map(m=>Number(m.meal_order)||0))+1}];
+    await sbWrite("/nutrition_meals","POST",rowsToAdd);
     if(!sameTrainee()||String(currentPlanId)!==String(requestedPlanId))return;
     meals=await sbGet(`/nutrition_meals?plan_id=eq.${encodeURIComponent(requestedPlanId)}&select=*&order=meal_order.asc`);
-   }catch(addMealError){console.warn("افزودن خودکار وعده قبل خواب انجام نشد؛ دکمه افزودن دستی نمایش داده می‌شود.",addMealError);}
+   }catch(addMealError){console.warn("افزودن وعده‌های استاندارد انجام نشد؛ دکمه افزودن دستی نمایش داده می‌شود.",addMealError);}
   }
   const ids=meals.map(x=>x.id);let foodsBy={};
   if(ids.length){const mf=await sbGet(`/nutrition_meal_foods?meal_id=in.(${ids.map(encodeURIComponent).join(",")})&select=*&order=created_at.asc`);
