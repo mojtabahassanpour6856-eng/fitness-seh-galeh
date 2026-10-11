@@ -894,11 +894,23 @@ function openClientMealPlan(){
 }
 
 let currentPlanId=null,currentMealId=null,currentMealFoods=[];
-// Nutrition values in foods are per 100 g. Never treat pieces/spoons/cups as grams.
+// مقادیر بانک غذا برای هر ۱۰۰ گرم هستند؛ برای تخم‌مرغ هر عدد به‌طور تقریبی ۵۰ گرم در نظر گرفته می‌شود.
 function foodMetrics(foodRow, amount, unit){
  const f=foodRow||{}, q=Number(amount)||0, u=String(unit||"گرم").trim();
- if(u!=="گرم") return {valid:false,cal:0,pro:0,carb:0,fat:0};
- return {valid:true,cal:(+f.calories||0)*q/100,pro:(+f.protein||0)*q/100,carb:(+f.carbs||0)*q/100,fat:(+f.fat||0)*q/100};
+ let grams=q;
+ if(u==="گرم") grams=q;
+ else if(u==="عدد" && /تخم\s*مرغ|تخممرغ/i.test(String(f.name||""))) grams=q*50;
+ else return {valid:false,cal:0,pro:0,carb:0,fat:0};
+ const ratio=grams/100;
+ return {valid:true,grams,cal:(+f.calories||0)*ratio,pro:(+f.protein||0)*ratio,carb:(+f.carbs||0)*ratio,fat:(+f.fat||0)*ratio};
+}
+function updateMealFoodUnits(){
+ const select=$("mealFoodSelect"), unit=$("mealFoodUnit"), amount=$("mealFoodAmount");
+ if(!select||!unit||!amount)return;
+ const f=foods[+select.value], isEgg=/تخم\s*مرغ|تخممرغ/i.test(String(f?.[0]||""));
+ unit.innerHTML=isEgg?'<option value="عدد">عدد (هر عدد حدود ۵۰ گرم)</option><option value="گرم">گرم</option>':'<option value="گرم">گرم</option>';
+ if(isEgg){unit.value="عدد";if(!amount.dataset.unitInitialized){amount.value=2;amount.dataset.unitInitialized="1";}}
+ else {unit.value="گرم";if(!amount.dataset.unitInitialized){amount.value=100;amount.dataset.unitInitialized="1";}}
 }
 function mealTab(tab){
  ["coach","student","report"].forEach(x=>{const b=$("mealTab"+x.charAt(0).toUpperCase()+x.slice(1));if(b)b.classList.toggle("active",x===tab);});
@@ -909,12 +921,14 @@ function mealTab(tab){
 }
 function fillMealFoodSelect(){
  const s=$("mealFoodSelect");if(!s)return;s.innerHTML=foods.map((f,i)=>`<option value="${i}">${esc(f[0])}</option>`).join("");
- s.onchange=previewMealFood;$("mealFoodAmount").oninput=previewMealFood;$("mealFoodUnit").onchange=previewMealFood;previewMealFood();
+ s.onchange=()=>{updateMealFoodUnits();previewMealFood();};
+ $("mealFoodAmount").oninput=previewMealFood;$("mealFoodUnit").onchange=previewMealFood;
+ updateMealFoodUnits();previewMealFood();
 }
 function previewMealFood(){
  const f=foods[+$("mealFoodSelect").value],g=+$("mealFoodAmount").value||0;if(!f)return;
- const unit=$("mealFoodUnit").value, m=foodMetrics({calories:f[1],protein:f[2],carbs:f[3],fat:f[4]},g,unit);
- $("mealFoodPreview").innerHTML=m.valid?`<b>${esc(f[0])}</b> — ${g} ${esc(unit)}<br>🔥 ${m.cal.toFixed(0)} kcal | پروتئین ${m.pro.toFixed(1)}g | کربوهیدرات ${m.carb.toFixed(1)}g | چربی ${m.fat.toFixed(1)}g`:`<b>${esc(f[0])}</b> — ${g} ${esc(unit)}<br><span class="warning-text">برای محاسبه کالری و درشت‌مغذی‌ها، وزن معادل گرم این واحد لازم است. فعلاً مقدار به‌صورت ${esc(unit)} ذخیره می‌شود، اما محاسبه نمی‌شود.</span>`;
+ const unit=$("mealFoodUnit").value, m=foodMetrics({name:f[0],calories:f[1],protein:f[2],carbs:f[3],fat:f[4]},g,unit);
+ $("mealFoodPreview").innerHTML=m.valid?`<b>${esc(f[0])}</b> — ${g} ${esc(unit)}${unit==="عدد"?" (تقریباً "+m.grams+" گرم)":""}<br>🔥 ${m.cal.toFixed(0)} kcal | پروتئین ${m.pro.toFixed(1)}g | کربوهیدرات ${m.carb.toFixed(1)}g | چربی ${m.fat.toFixed(1)}g`:`<b>${esc(f[0])}</b> — ${g} ${esc(unit)}<br><span class="warning-text">برای این غذا هنوز تبدیل دقیق این واحد به گرم تعریف نشده؛ لطفاً واحد «گرم» را انتخاب کن تا محاسبه صحیح بماند.</span>`;
 }
 async function loadNutritionForClient(){
  const requestedTraineeId=currentClient?.id;
@@ -1017,7 +1031,7 @@ async function createDefaultMeals(){
  }catch(e){alert("ساخت وعده‌ها انجام نشد.\n"+e.message);}
  finally{defaultMealsBusy=false;}
 }
-async function openMealFoodModal(mealId){currentMealId=mealId;fillMealFoodSelect();$("mealFoodAmount").value=100;$("mealFoodNote").value="";$("mealModal").classList.add("show");previewMealFood();}
+async function openMealFoodModal(mealId){currentMealId=mealId;$("mealFoodAmount").dataset.unitInitialized="";fillMealFoodSelect();$("mealFoodNote").value="";$("mealModal").classList.add("show");previewMealFood();}
 function closeMealModal(){$("mealModal").classList.remove("show");currentMealId=null;}
 async function saveMealFood(){if(!currentMealId)return;const f=foods[+$("mealFoodSelect").value],amount=+$("mealFoodAmount").value;if(!f||amount<=0)return;try{await sbWrite("/nutrition_meal_foods","POST",{meal_id:currentMealId,food_id:f[5],amount,unit:$("mealFoodUnit").value,notes:$("mealFoodNote").value.trim()||null});closeMealModal();await loadNutritionForClient();}catch(e){alert("افزودن غذا انجام نشد.\n"+e.message);}}
 async function deleteMealFood(id){if(!confirm("این غذا از وعده حذف شود؟"))return;try{await sbWrite(`/nutrition_meal_foods?id=eq.${encodeURIComponent(id)}`,"DELETE",{});await loadNutritionForClient();}catch(e){alert("حذف غذا انجام نشد.\n"+e.message);}}
