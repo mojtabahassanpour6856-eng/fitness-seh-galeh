@@ -2033,6 +2033,27 @@ window.loadDashboard = loadDashboard;
 
 </script>
 
+<!-- AUTH SCREEN FALLBACK: keeps role choices available if the main initializer exits early -->
+<script>
+(function(){
+  const card=document.querySelector('#authScreen .auth-card');
+  if(!card||document.getElementById('authTabs'))return;
+  card.innerHTML=`<div class="auth-logo">🏋️</div><h2>باشگاه فیتنس سه‌قلعه</h2><p class="muted" style="text-align:center">ورود به سامانه مربی مجتبی</p>
+    <div id="authTabs" class="meal-tabs"><button type="button" class="active" id="authCoachTab" onclick="fallbackAuthMode('coach')">👨‍🏫 مربی</button><button type="button" id="authTraineeTab" onclick="fallbackAuthMode('trainee')">👤 شاگرد</button></div>
+    <div id="coachLoginBox"><label>ایمیل</label><input id="loginEmail" type="email" autocomplete="username" placeholder="ایمیل مربی"><label>رمز عبور</label><input id="loginPassword" type="password" autocomplete="current-password" placeholder="رمز عبور"><button type="button" onclick="if(typeof window.loginApp==='function')window.loginApp();else document.getElementById('authError').textContent='کد ورود بارگذاری نشده؛ صفحه را دوباره بارگیری کنید.'">🔐 ورود مربی</button></div>
+    <div id="traineeLoginBox" class="hide"><div class="trainee-auth-block"><h3>🔐 ورود شاگرد</h3><label>شماره موبایل</label><input id="traineePhoneLogin" type="tel" inputmode="tel" autocomplete="username" placeholder="09121234567"><label>رمز عبور</label><input id="traineeLoginPassword" type="password" autocomplete="current-password" placeholder="رمز اولیه یا رمز شخصی"><button type="button" onclick="if(typeof window.loginTraineePhone==='function')window.loginTraineePhone();else document.getElementById('authError').textContent='کد ورود شاگرد بارگذاری نشده؛ صفحه را دوباره بارگیری کنید.'">ورود شاگرد</button><p class="muted">ورود پس از تأیید درخواست ثبت‌نام توسط مربی امکان‌پذیر است.</p></div></div>
+    <div id="authError" class="auth-error"></div>`;
+  window.fallbackAuthMode=function(mode){
+    const coach=document.getElementById('coachLoginBox'),trainee=document.getElementById('traineeLoginBox');
+    if(coach)coach.classList.toggle('hide',mode!=='coach');
+    if(trainee)trainee.classList.toggle('hide',mode!=='trainee');
+    document.getElementById('authCoachTab')?.classList.toggle('active',mode==='coach');
+    document.getElementById('authTraineeTab')?.classList.toggle('active',mode==='trainee');
+    const err=document.getElementById('authError');if(err)err.style.display='none';
+  };
+})();
+</script>
+
 <!-- FINAL COMPLETION LAYER: 18/18 -->
 <script>
 (function(){
