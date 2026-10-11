@@ -1244,32 +1244,65 @@ function foodLine(x){const f=x.food||{},m=foodMetrics(f,x.amount,x.unit),note=St
 function updateDayTotals(meals){const t=meals.reduce((a,m)=>(m.foods||[]).reduce((b,x)=>{const v=foodMetrics(x.food||{},x.amount,x.unit);return v.valid?[b[0]+v.cal,b[1]+v.pro,b[2]+v.carb,b[3]+v.fat]:b},a),[0,0,0,0]);$("dayCal").textContent=t[0].toFixed(0);$("dayPro").textContent=t[1].toFixed(1)+" g";$("dayCarb").textContent=t[2].toFixed(1)+" g";$("dayFat").textContent=t[3].toFixed(1)+" g";}
 let defaultMealsBusy=false;
 async function addMealOption(kind){
- if(defaultMealsBusy){alert('ثبت گزینه قبلی هنوز در حال انجام است؛ چند ثانیه صبر کنید.');return;}
- if(!currentClient||!currentPlanId){alert("ابتدا برنامه غذایی شاگرد را ذخیره کنید.");return;}
- const types={
-  breakfast:"صبحانه",morning:"میان‌وعده صبح",lunch:"ناهار",afternoon:"میان‌وعده عصر",
-  dinner:"شام",bedtime:"قبل خواب",preworkout:"قبل تمرین",postworkout:"بعد تمرین"
+ if(defaultMealsBusy){
+  const st=document.getElementById("mealOptionStatus");
+  if(st){st.textContent="ثبت گزینه قبلی هنوز در حال انجام است؛ چند ثانیه صبر کن.";st.style.color="#ffd166";}
+  return;
+ }
+ const status=()=>{
+  let el=document.getElementById("mealOptionStatus");
+  if(!el){
+   el=document.createElement("div");el.id="mealOptionStatus";el.className="card";
+   el.setAttribute("role","status");el.setAttribute("aria-live","polite");
+   const list=document.getElementById("mealList");
+   if(list&&list.parentNode)list.parentNode.insertBefore(el,list);
+  }
+  return el;
  };
- const base=types[kind];if(!base){alert("نوع وعده معتبر نیست.");return;}
- const traineeId=currentClient.id,planId=currentPlanId;defaultMealsBusy=true;
+ const showStatus=(msg,ok=false)=>{const el=status();el.textContent=msg;el.style.color=ok?"#67e8a5":"#ffd166";el.style.display="block";};
+ if(!currentClient||!currentPlanId){showStatus("ابتدا شاگرد را انتخاب کن و اطلاعات برنامه غذایی را ذخیره کن.");return;}
+ const types={breakfast:"صبحانه",morning:"میان‌وعده صبح",lunch:"ناهار",afternoon:"میان‌وعده عصر",dinner:"شام",bedtime:"قبل خواب",preworkout:"قبل تمرین",postworkout:"بعد تمرین"};
+ const base=types[kind];if(!base){showStatus("نوع وعده معتبر نیست: "+String(kind));return;}
+ const traineeId=currentClient.id,planId=currentPlanId;
+ defaultMealsBusy=true;
+ const buttons=[...document.querySelectorAll("#mealList button[data-meal-kind]")];
+ buttons.forEach(b=>b.disabled=true);
+ showStatus("در حال ثبت گزینه جدید برای "+base+"… لطفاً صفحه را نبند.");
  try{
-  const plans=await sbGet(`/nutrition_plans?id=eq.${encodeURIComponent(planId)}&trainee_id=eq.${encodeURIComponent(traineeId)}&select=id&limit=1`);
-  if(!plans.length)throw new Error("برنامه غذایی متعلق به شاگرد انتخاب‌شده نیست.");
-  if(!currentClient||String(currentClient.id)!==String(traineeId)||String(currentPlanId)!==String(planId))throw new Error("شاگرد یا برنامه تغییر کرده است؛ دوباره تلاش کنید.");
-  const existing=await sbGet(`/nutrition_meals?plan_id=eq.${encodeURIComponent(planId)}&select=id,meal_name,meal_order&order=meal_order.asc`);
-  if(!currentClient||String(currentClient.id)!==String(traineeId)||String(currentPlanId)!==String(planId))throw new Error("شاگرد یا برنامه تغییر کرده است؛ دوباره تلاش کنید.");
-  const norm=v=>String(v||"").replace(/[\s\u200c\u200f]/g,"");
-  const baseNorm=norm(base);
-  const matches=existing.filter(m=>{const n=norm(m.meal_name);return n===baseNorm||new RegExp("^"+baseNorm+"[0-9۰-۹]*$").test(n);});
-  const ordinals=matches.map(m=>{const n=norm(m.meal_name).slice(baseNorm.length);const western=n.replace(/[۰-۹]/g,d=>"۰۱۲۳۴۵۶۷۸۹".indexOf(d));return n?Number(western)||1:1;});
-  const nextOption=Math.max(0,...ordinals)+1;
-  const persianDigits=n=>String(n).replace(/[0-9]/g,d=>"۰۱۲۳۴۵۶۷۸۹"[Number(d)]);
-  const mealName=nextOption===1?base:base+" "+persianDigits(nextOption);
-  const nextOrder=Math.max(0,...existing.map(m=>Number(m.meal_order)||0))+1;
-  await sbWrite("/nutrition_meals","POST",[{plan_id:planId,meal_name:mealName,meal_order:nextOrder}]);
-  if(currentClient&&String(currentClient.id)===String(traineeId)&&String(currentPlanId)===String(planId))await loadNutritionForClient();
- }catch(e){alert("افزودن گزینه وعده انجام نشد.\n"+e.message);}
- finally{defaultMealsBusy=false;}
+  const plans=await sbGet("/nutrition_plans?id=eq."+encodeURIComponent(planId)+"&trainee_id=eq."+encodeURIComponent(traineeId)+"&select=id&limit=1");
+  if(!plans.length)throw new Error("برنامه غذایی برای شاگرد انتخاب‌شده پیدا نشد یا دسترسی خواندن وجود ندارد.");
+  if(!currentClient||String(currentClient.id)!==String(traineeId)||String(currentPlanId)!==String(planId))throw new Error("شاگرد یا برنامه هنگام ثبت تغییر کرده است؛ ثبت لغو شد.");
+  const existing=await sbGet("/nutrition_meals?plan_id=eq."+encodeURIComponent(planId)+"&select=id,meal_name,meal_order&order=meal_order.asc");
+  if(!currentClient||String(currentClient.id)!==String(traineeId)||String(currentPlanId)!==String(planId))throw new Error("شاگرد یا برنامه هنگام ثبت تغییر کرده است؛ ثبت لغو شد.");
+  const norm=v=>String(v||"").normalize("NFC").replace(/[\s\u200c\u200f]/g,"");
+  const bn=norm(base);
+  const matches=existing.filter(m=>{const n=norm(m.meal_name);return n===bn||new RegExp("^"+bn+"[0-9۰-۹]*$").test(n);});
+  const ordinals=matches.map(m=>{const n=norm(m.meal_name).slice(bn.length);const digits=n.replace(/[۰-۹]/g,d=>"۰۱۲۳۴۵۶۷۸۹".indexOf(d));return n?Number(digits)||1:1;});
+  const next=Math.max(0,...ordinals)+1;
+  const fa=n=>String(n).replace(/[0-9]/g,d=>"۰۱۲۳۴۵۶۷۸۹"[Number(d)]);
+  const mealName=next===1?base:base+" "+fa(next);
+  const order=Math.max(0,...existing.map(m=>Number(m.meal_order)||0))+1;
+  const inserted=await sbWrite("/nutrition_meals","POST",[{plan_id:planId,meal_name:mealName,meal_order:order}]);
+  const created=Array.isArray(inserted)?inserted[0]:inserted;
+  if(!created||!created.id)throw new Error("پاسخ ذخیره‌سازی شناسه وعده برنگرداند؛ احتمالاً دسترسی INSERT یا تنظیمات پاسخ دیتابیس مشکل دارد.");
+  if(!currentClient||String(currentClient.id)!==String(traineeId)||String(currentPlanId)!==String(planId)){
+   showStatus("گزینه «"+mealName+"» در سرور ثبت شد؛ برای دیدن آن دوباره همین شاگرد را انتخاب کن.",true);return;
+  }
+  const verify=await sbGet("/nutrition_meals?id=eq."+encodeURIComponent(created.id)+"&plan_id=eq."+encodeURIComponent(planId)+"&select=id,meal_name,meal_order&limit=1");
+  if(!verify.length)throw new Error("درخواست درج شناسه گرفت، اما خواندن همان ردیف از دیتابیس ممکن نشد. سیاست دسترسی SELECT را باید بررسی کنیم.");
+  await loadNutritionForClient();
+  if(!currentClient||String(currentClient.id)!==String(traineeId)||String(currentPlanId)!==String(planId))return;
+  const visible=[...document.querySelectorAll("#mealList .meal-card h3")].some(h=>norm(h.textContent).includes(norm(mealName)));
+  if(!visible)throw new Error("گزینه در دیتابیس ثبت شده (شناسه "+created.id+") اما در فهرست صفحه نمایش داده نشد. این بار خطا را پنهان نمی‌کنیم.");
+  showStatus("✅ گزینه «"+mealName+"» ثبت و در فهرست نمایش داده شد. حالا می‌توانی غذاهایش را جداگانه اضافه کنی.",true);
+ }catch(e){
+  console.error("addMealOption failed",e);
+  showStatus("❌ ثبت گزینه انجام نشد: "+(e&&e.message?e.message:String(e)));
+  alert("افزودن گزینه وعده انجام نشد.\n"+(e&&e.message?e.message:String(e)));
+ }finally{
+  defaultMealsBusy=false;
+  document.querySelectorAll("#mealList button[data-meal-kind]").forEach(b=>b.disabled=false);
+ }
 }
 window.addMealOption=addMealOption;
 // Handle meal-option clicks centrally so no surrounding form or inline handler can submit/reload the page.
