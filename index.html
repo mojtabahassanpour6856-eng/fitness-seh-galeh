@@ -1034,6 +1034,8 @@ function filterMealSingleFoods(){
  sel.innerHTML=available.map(x=>'<option value="'+x.i+'">'+esc(x.f[0])+'</option>').join("");
  const keep=available.find(x=>String(x.f[5]??"")===previousId);
  if(keep)sel.value=String(keep.i);
+ if(typeof updateMealFoodUnits==="function")updateMealFoodUnits();
+ if(typeof previewMealFood==="function")previewMealFood();
 }
 function filterMealRecipes(){
  const rs=$("mealRecipeSelect"),cat=$("mealRecipeCategory")?.value||"all";if(!rs)return;
