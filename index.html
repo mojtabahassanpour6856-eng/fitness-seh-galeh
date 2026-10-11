@@ -2171,28 +2171,7 @@ window.loadDashboard = loadDashboard;
 
 
 
-</body>
-<script id="FITNESS_LIBRARY_SAVE_CLICK_FIX">
-(function(){
- if(window.__librarySaveClickFixInstalled)return;
- window.__librarySaveClickFixInstalled=true;
- document.addEventListener('click',function(event){
-  const button=event.target&&event.target.closest?event.target.closest('button[data-new-ex-save]'):null;
-  if(!button)return;
-  event.preventDefault();
-  if(typeof event.stopImmediatePropagation==='function')event.stopImmediatePropagation();
-  else event.stopPropagation();
-  if(typeof window.saveLibraryExerciseInGroup!=='function'){
-   const status=button.closest('.library-inline-add')?.querySelector('[data-new-ex-status]');
-   if(status)status.textContent='خطا: بخش ذخیره حرکت بارگذاری نشده است؛ صفحه را تازه‌سازی کنید.';
-   alert('بخش ذخیره حرکت بارگذاری نشده است. صفحه را تازه‌سازی کنید.');
-   return;
-  }
-  window.saveLibraryExerciseInGroup(button.dataset.category,button);
- },true);
-})();
-</script>
-</html>`;
+</body></html>`;
     const w=window.open('','_blank');if(w){w.document.write(html);w.document.close();}
   };
 
@@ -5318,3 +5297,25 @@ active('workoutMuscleFilters',wm);active('libraryMuscleFilters',lm);if(document.
   }
 })();
 </script>
+
+<script id="FITNESS_LIBRARY_SAVE_CLICK_FIX">
+(function(){
+ if(window.__librarySaveClickFixInstalled)return;
+ window.__librarySaveClickFixInstalled=true;
+ document.addEventListener('click',function(event){
+  const button=event.target&&event.target.closest?event.target.closest('button[data-new-ex-save]'):null;
+  if(!button)return;
+  event.preventDefault();
+  if(typeof event.stopImmediatePropagation==='function')event.stopImmediatePropagation();
+  else event.stopPropagation();
+  if(typeof window.saveLibraryExerciseInGroup!=='function'){
+   const status=button.closest('.library-inline-add')?.querySelector('[data-new-ex-status]');
+   if(status)status.textContent='خطا: بخش ذخیره حرکت بارگذاری نشده است؛ صفحه را تازه‌سازی کنید.';
+   alert('بخش ذخیره حرکت بارگذاری نشده است. صفحه را تازه‌سازی کنید.');
+   return;
+  }
+  window.saveLibraryExerciseInGroup(button.dataset.category,button);
+ },true);
+})();
+</script>
+
