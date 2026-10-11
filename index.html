@@ -2548,34 +2548,57 @@ const plans=workoutResult.data||[], nutrition=nutritionResult.data||[];
 
   // -------- Exercise library: favorite toggle --------
   window.saveLibraryExerciseInGroup=async function(cat,button){
+ if(window.__savingLibraryExercise) return;
+ const form=button&&button.closest('.library-inline-add');
+ if(!form){alert('فرم افزودن حرکت پیدا نشد.');return;}
+ const name=form.querySelector('[data-new-ex-name]')?.value.trim();
+ const equipment=form.querySelector('[data-new-ex-equipment]')?.value.trim();
+ const level=form.querySelector('[data-new-ex-level]')?.value||'مبتدی';
+ const note=form.querySelector('[data-new-ex-note]')?.value.trim();
+ const status=form.querySelector('[data-new-ex-status]');
+ if(!name){alert('نام حرکت را وارد کنید.');return;}
+ window.__savingLibraryExercise=true;
+ const originalText=button.textContent;
+ button.disabled=true;button.textContent='در حال ذخیره…';
+ if(status)status.textContent='در حال ذخیره حرکت؛ لطفاً صفحه را نبندید و دوباره روی دکمه نزنید.';
+ const withTimeout=(promise,label,ms=12000)=>Promise.race([promise,new Promise((_,reject)=>setTimeout(()=>reject(new Error(label+' بیش از حد طول کشید. اتصال را بررسی کنید؛ برای جلوگیری از ثبت تکراری، قبل از تلاش دوباره بانک را تازه کنید.')),ms))]);
+ let bankSaved=false;
  try{
-  const body=button&&button.closest('.library-inline-add');
-  if(!body)throw new Error('فرم افزودن حرکت پیدا نشد.');
-  const name=body.querySelector('[data-new-ex-name]')?.value.trim();
-  const equipment=body.querySelector('[data-new-ex-equipment]')?.value.trim();
-  const level=body.querySelector('[data-new-ex-level]')?.value||'مبتدی';
-  const note=body.querySelector('[data-new-ex-note]')?.value.trim();
-  const status=body.querySelector('[data-new-ex-status]');
-  if(!name){alert('نام حرکت را وارد کنید.');return;}
-  button.disabled=true;button.textContent='در حال ذخیره…';
-  if(status)status.textContent='در حال ذخیره حرکت در بانک…';
-  await sbWrite('/trainer_exercises','POST',{name:name,target_muscle:cat,category:cat,equipment:equipment||null,level:level,coach_note:note||null,is_favorite:false});
-  const found=await sbGet('/trainer_exercises?name=eq.'+encodeURIComponent(name)+'&select=id,name&order=created_at.desc&limit=1');
-  const saved=found&&found[0];
-  if(!saved||!saved.id)throw new Error('ذخیره انجام شد، اما شناسه حرکت دریافت نشد. فهرست را تازه کنید.');
-  if(typeof window.syncLibraryExerciseByName==='function')await window.syncLibraryExerciseByName(name);
-  await window.loadLibraryExercises();
-  if(typeof window.loadExercises==='function')await window.loadExercises();
-  body.querySelector('[data-new-ex-name]').value='';
-  body.querySelector('[data-new-ex-equipment]').value='';
-  body.querySelector('[data-new-ex-note]').value='';
-  if(status)status.textContent='حرکت «'+name+'» در بخش '+cat+' ذخیره شد و به فهرست حرکات برنامه همگام شد. برای افزودنش به برنامه شاگرد، از کارت حرکت «استفاده در برنامه» را بزنید و سپس «افزودن به برنامه» را انتخاب کنید.';
-  button.textContent='✅ ذخیره شد';
-  setTimeout(()=>{if(button.isConnected){button.disabled=false;button.textContent='💾 ذخیره حرکت در '+cat;}},1800);
+  let found=await withTimeout(sbGet('/trainer_exercises?name=eq.'+encodeURIComponent(name)+'&target_muscle=eq.'+encodeURIComponent(cat)+'&select=id,name&order=created_at.desc&limit=1'),'بررسی بانک حرکات');
+  let saved=Array.isArray(found)?found[0]:null;
+  if(!saved){
+   await withTimeout(sbWrite('/trainer_exercises','POST',{name:name,target_muscle:cat,category:cat,equipment:equipment||null,level:level,coach_note:note||null,is_favorite:false}),'ذخیره حرکت در بانک');
+   bankSaved=true;
+   found=await withTimeout(sbGet('/trainer_exercises?name=eq.'+encodeURIComponent(name)+'&target_muscle=eq.'+encodeURIComponent(cat)+'&select=id,name&order=created_at.desc&limit=1'),'خواندن حرکت ذخیره‌شده');
+   saved=Array.isArray(found)?found[0]:null;
+  }else{
+   bankSaved=true;
+  }
+  if(!saved||!saved.id) throw new Error('حرکت احتمالاً در بانک ذخیره شده، اما شناسه آن خوانده نشد. پیش از تلاش دوباره، بانک را تازه کنید.');
+  let syncError=null;
+  try{
+   if(typeof window.syncLibraryExerciseByName==='function') await withTimeout(window.syncLibraryExerciseByName(name),'همگام‌سازی با فهرست برنامه',15000);
+  }catch(e){syncError=e;}
+  try{await withTimeout(window.loadLibraryExercises(),'تازه‌سازی بانک',10000);}catch(e){console.warn('تازه‌سازی بانک انجام نشد:',e);}
+  try{if(typeof window.loadExercises==='function')await withTimeout(window.loadExercises(),'تازه‌سازی فهرست حرکات',10000);}catch(e){console.warn('تازه‌سازی فهرست حرکات انجام نشد:',e);}
+  const nameInput=form.querySelector('[data-new-ex-name]');if(nameInput)nameInput.value='';
+  const eqInput=form.querySelector('[data-new-ex-equipment]');if(eqInput)eqInput.value='';
+  const noteInput=form.querySelector('[data-new-ex-note]');if(noteInput)noteInput.value='';
+  if(syncError){
+   if(status)status.textContent='حرکت در بانک ذخیره شد؛ همگام‌سازی با فهرست برنامه کامل نشد. بانک را تازه کنید و از تکرار ثبت همان حرکت خودداری کنید.';
+   alert('حرکت در بانک ذخیره شد، اما همگام‌سازی با فهرست حرکات برنامه کامل نشد.\n'+(syncError.message||String(syncError)));
+  }else{
+   if(status)status.textContent='حرکت «'+name+'» در بانک '+cat+' ذخیره شد و فهرست حرکات به‌روزرسانی شد.';
+   button.textContent='✅ ذخیره شد';
+  }
  }catch(x){
   console.error('saveLibraryExerciseInGroup failed',x);
-  alert('ذخیره حرکت انجام نشد یا همگام‌سازی کامل نشد. '+(x&&x.message?x.message:String(x)));
-  if(button){button.disabled=false;button.textContent='💾 ذخیره حرکت در '+cat;}
+  const msg=(x&&x.message)?x.message:String(x);
+  if(status)status.textContent=bankSaved?'حرکت ممکن است در بانک ذخیره شده باشد؛ قبل از تلاش دوباره، بانک را تازه کنید.':'ذخیره کامل نشد؛ اتصال را بررسی کنید.';
+  alert((bankSaved?'حرکت در بانک ثبت شده یا احتمال ثبت آن وجود دارد. ':'ذخیره حرکت انجام نشد. ')+msg);
+ }finally{
+  window.__savingLibraryExercise=false;
+  if(button){button.disabled=false;button.textContent=originalText||'💾 ذخیره حرکت';}
  }
 };
 window.toggleExerciseFavorite=async function(id,value){try{await sbWrite(`/trainer_exercises?id=eq.${encodeURIComponent(id)}`,'PATCH',{is_favorite:!value});await loadLibraryExercises();}catch(e){alert('تغییر علاقه‌مندی انجام نشد.\n'+e.message)}};
