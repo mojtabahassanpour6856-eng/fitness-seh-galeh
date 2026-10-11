@@ -3205,8 +3205,11 @@ window.toggleExerciseFavorite=async function(id,value){try{await sbWrite(`/train
     const traineeId=currentTraineeId();
     const requestId=++workoutRequestSeq;
     if(!traineeId){currentWorkoutPlanId=null;workoutPlanOwnerId=null;workoutExercisesCache=[];setWorkoutMessage('ابتدا شاگرد را انتخاب کنید.');return;}
-    // Clear cross-trainee cache immediately, before any asynchronous request.
-    currentWorkoutPlanId=null;workoutPlanOwnerId=null;workoutExercisesCache=[];
+    // Keep the current trainee's last successfully loaded plan visible while refreshing.
+    // Only clear state when switching to a different trainee.
+    if(!same(workoutPlanOwnerId,traineeId)){
+      currentWorkoutPlanId=null;workoutPlanOwnerId=null;workoutExercisesCache=[];
+    }
     try{
       const plans=await sbGet(`/trainee_workout_plans?trainee_id=eq.${encodeURIComponent(traineeId)}&select=*&order=created_at.desc&limit=1`);
       if(requestId!==workoutRequestSeq||!same(currentTraineeId(),traineeId))return;
@@ -3234,7 +3237,16 @@ window.toggleExerciseFavorite=async function(id,value){try{await sbWrite(`/train
     }catch(e){
       if(requestId===workoutRequestSeq&&same(currentTraineeId(),traineeId)){
         console.error('Load workout failed:',e);
-        setWorkoutMessage('دریافت برنامه تمرینی انجام نشد. اطلاعات قبلی حفظ نشدند؛ اتصال و مجوزهای دیتابیس را بررسی کنید.');
+        // Never replace a previously rendered workout with an empty/error panel
+        // after a transient refresh failure; the database rows are not deleted here.
+        const box=byId('workoutList');
+        if((workoutExercisesCache||[]).length && box){
+          let warning=byId('workoutLoadWarning');
+          if(!warning){warning=document.createElement('p');warning.id='workoutLoadWarning';warning.className='muted';box.prepend(warning);}
+          warning.textContent='⚠️ تازه‌سازی فهرست کامل نشد؛ حرکات قبلی نگه داشته شده‌اند. اتصال را بررسی کنید و دوباره تازه‌سازی کنید.';
+        }else{
+          setWorkoutMessage('دریافت برنامه تمرینی انجام نشد؛ این خطا به‌تنهایی به معنی حذف حرکات نیست. اتصال و مجوزهای دیتابیس را بررسی کنید.');
+        }
       }
     }
   };
