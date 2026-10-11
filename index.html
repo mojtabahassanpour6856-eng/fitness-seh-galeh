@@ -5549,6 +5549,44 @@ active('workoutMuscleFilters',wm);active('libraryMuscleFilters',lm);if(document.
 </script>
 
 
+
+<script id="SEH_LIBRARY_DELETE_RUNTIME_FALLBACK_V3">
+(function(){
+  // Define the delete action at the very end of the page so an earlier initialization
+  // failure cannot leave the visible delete buttons without their required function.
+  window.deleteLibraryExercise = async function(id, name){
+    var safeId=String(id==null?'':id).trim();
+    var label=String(name||'این حرکت').trim();
+    if(!safeId){alert('شناسه حرکت روی دکمه پیدا نشد. بانک حرکات را تازه‌سازی کنید.');return;}
+    if(!window.confirm('حرکت «'+label+'» فقط از بانک حرکات مربی حذف شود؟'))return;
+    var client=window.AUTH_SUPABASE;
+    if(!client || !client.auth || typeof client.from!=='function'){
+      alert('اتصال پایگاه داده آماده نیست. از حساب مربی خارج شوید، دوباره وارد شوید و صفحه را تازه کنید.');return;
+    }
+    try{
+      var sr=await client.auth.getSession();
+      if(sr.error)throw sr.error;
+      var session=sr.data&&sr.data.session;
+      var coachId=session&&session.user&&session.user.id;
+      if(!coachId)throw new Error('نشست مربی پیدا نشد؛ دوباره وارد حساب مربی شوید.');
+      var result=await client.from('trainer_exercises').delete().eq('id',safeId).eq('coach_user_id',coachId).select('id');
+      if(result.error)throw result.error;
+      if(!result.data||!result.data.length){
+        var check=await client.from('trainer_exercises').select('id,coach_user_id').eq('id',safeId).maybeSingle();
+        if(check.error)throw check.error;
+        if(check.data)throw new Error('ردیف حذف نشد؛ مجوز حذف یا مالکیت این حرکت اجازه نمی‌دهد.');
+        // The row is already gone; refresh the view below.
+      }
+      if(typeof window.loadLibraryExercises==='function')await window.loadLibraryExercises();
+      if(typeof window.loadExercises==='function')await window.loadExercises();
+      alert(result.data&&result.data.length?'حرکت «'+label+'» از بانک حرکات حذف شد.':'این حرکت قبلاً از بانک حذف شده بود؛ فهرست تازه شد.');
+    }catch(err){
+      console.error('SEH delete fallback failed',err);
+      alert('حذف حرکت انجام نشد: '+(err&&err.message?err.message:String(err)));
+    }
+  };
+})();
+</script>
 <script id="SEH_LIBRARY_DELETE_CLICK_DELEGATION_V2">
 (function(){
  if(window.__sehLibraryDeleteClickV2)return;
