@@ -1011,7 +1011,7 @@ let fastingMealRows=[];
 function initFastingMealPlanner(){
  if(fastingMealRows.length)return;
  const n=Math.max(1,Math.min(8,Number($("fastMeals")?.value)||3));
- const start=$("fastStart")?.value||"12:00",end=$("fastEnd")?.value||"20:00";
+ const start=$("fastEnd")?.value||"12:00",end=$("fastStart")?.value||"20:00";
  const startM=Number(start.split(":")[0])*60+Number(start.split(":")[1]||0);
  let windowM=(Number(end.split(":")[0])*60+Number(end.split(":")[1]||0)-startM+1440)%1440;
  if(windowM===0)windowM=480;
@@ -1039,7 +1039,7 @@ function renderFastingMealPlanner(){
 function setFastingMealTime(i,v){if(fastingMealRows[i])fastingMealRows[i].time=v;}
 function setFastingFood(i,j,v){if(fastingMealRows[i]?.items[j]){fastingMealRows[i].items[j].foodIndex=v===""?"":String(Number(v));renderFastingMealPlanner();}}
 function setFastingAmount(i,j,v){if(fastingMealRows[i]?.items[j])fastingMealRows[i].items[j].amount=Math.max(1,Number(v)||1);}
-function addFastingMeal(){if(!fastingMealRows.length)initFastingMealPlanner();if(fastingMealRows.length>=8){alert("حداکثر ۸ وعده می‌توان اضافه کرد.");return;}fastingMealRows.push({time:$("fastEnd")?.value||"19:00",items:[{foodIndex:"","amount":100}]});renderFastingMealPlanner();}
+function addFastingMeal(){if(!fastingMealRows.length)initFastingMealPlanner();if(fastingMealRows.length>=8){alert("حداکثر ۸ وعده می‌توان اضافه کرد.");return;}fastingMealRows.push({time:$("fastEnd")?.value||"12:00",items:[{foodIndex:"","amount":100}]});renderFastingMealPlanner();}
 function removeFastingMeal(i){fastingMealRows.splice(i,1);renderFastingMealPlanner();}
 function addFastingFood(i){if(!fastingMealRows[i])return;if(fastingMealRows[i].items.length>=12){alert("برای هر وعده حداکثر ۱۲ قلم غذا مجاز است.");return;}fastingMealRows[i].items.push({foodIndex:"","amount":100});renderFastingMealPlanner();}
 function removeFastingFood(i,j){if(!fastingMealRows[i])return;fastingMealRows[i].items.splice(j,1);if(!fastingMealRows[i].items.length)fastingMealRows[i].items.push({foodIndex:foods.length?"0":"","amount":100});renderFastingMealPlanner();}
