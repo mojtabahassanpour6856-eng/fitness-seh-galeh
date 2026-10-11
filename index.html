@@ -2695,15 +2695,37 @@ window.toggleExerciseFavorite=async function(id,value){try{await sbWrite(`/train
     const title=kind==='meal'?'برنامه غذایی':'برنامه تمرینی';let body='';
     try{
       if(kind==='meal'){
-        const p=(await sbGet(`/nutrition_plans?trainee_id=eq.${encodeURIComponent(currentClient.id)}&select=*&order=created_at.desc&limit=1`))[0];if(!p)return alert('برنامه غذایی وجود ندارد.');
-        const meals=await sbGet(`/nutrition_meals?plan_id=eq.${encodeURIComponent(p.id)}&select=*&order=meal_order.asc`);body=`<h2>${escf(p.title||title)}</h2><p>کالری هدف: ${escf(p.daily_calories||'—')} | P ${escf(p.protein_target||'—')} | C ${escf(p.carbs_target||'—')} | F ${escf(p.fat_target||'—')}</p>`;
-        for(const m of meals){const mf=await sbGet(`/nutrition_meal_foods?meal_id=eq.${encodeURIComponent(m.id)}&select=*&order=created_at.asc`);const ids=[...new Set(mf.map(x=>x.food_id).filter(Boolean))];let fd=[];if(ids.length)fd=await sbGet(`/foods?id=in.(${ids.join(',')})&select=id,name,calories,protein,carbs,fat`);const names=Object.fromEntries(fd.map(x=>[String(x.id),x]));body+=`<h3>${escf(m.meal_name)}</h3><table><tr><th>غذا</th><th>مقدار</th><th>کالری</th><th>P</th><th>C</th><th>F</th></tr>${mf.map(x=>{const f=names[String(x.food_id)]||{},v=foodMetrics(f,x.amount,x.unit);return `<tr><td>${escf(f.name||'غذا')}</td><td>${escf(x.amount)} ${escf(x.unit||'گرم')}</td><td>${v.valid?v.cal.toFixed(0):'نیازمند وزن گرم'}</td><td>${v.valid?v.pro.toFixed(1):'—'}</td><td>${v.valid?v.carb.toFixed(1):'—'}</td><td>${v.valid?v.fat.toFixed(1):'—'}</td></tr>`}).join('')}</table>`;}
+        const p=(await sbGet(`/nutrition_plans?trainee_id=eq.${encodeURIComponent(currentClient.id)}&select=*&order=created_at.desc&limit=1`))[0];
+        if(!p)return alert('برنامه غذایی وجود ندارد.');
+        const meals=await sbGet(`/nutrition_meals?plan_id=eq.${encodeURIComponent(p.id)}&select=*&order=meal_order.asc`);
+        const ready=[];
+        for(const m of meals){
+          const mf=await sbGet(`/nutrition_meal_foods?meal_id=eq.${encodeURIComponent(m.id)}&select=*&order=created_at.asc`);
+          const validItems=mf.filter(x=>x.food_id&&x.amount!==null&&x.amount!==undefined&&String(x.amount).trim()!==''&&Number(x.amount)>0);
+          if(!validItems.length) continue;
+          const ids=[...new Set(validItems.map(x=>x.food_id).filter(Boolean))];
+          let fd=[];if(ids.length)fd=await sbGet(`/foods?id=in.(${ids.join(',')})&select=id,name`);
+          const names=Object.fromEntries(fd.map(x=>[String(x.id),x.name]));
+          const items=validItems.map(x=>({name:names[String(x.food_id)],amount:x.amount,unit:x.unit||'گرم',notes:x.notes||''})).filter(x=>x.name);
+          if(!items.length) continue;
+          const normalized=String(m.meal_name||'وعده').replace(/[۰-۹0-9]+$/,'').replace(/\s+(?:یک|دو|سه|چهار|اول|دوم|سوم|چهارم)$/,'').trim()||'وعده';
+          ready.push({name:String(m.meal_name||normalized),base:normalized,items,notes:m.notes||''});
+        }
+        if(!ready.length)return alert('برای هیچ وعده‌ای ماده غذایی و مقدار ثبت نشده است؛ خروجی ساخته نشد.');
+        const groups=[];
+        for(const meal of ready){
+          let group=groups[groups.length-1];
+          if(!group||group.base!==meal.base){group={base:meal.base,options:[]};groups.push(group);}
+          group.options.push(meal);
+        }
+        const faNum=n=>String(n).replace(/0/g,'۰').replace(/1/g,'۱').replace(/2/g,'۲').replace(/3/g,'۳').replace(/4/g,'۴').replace(/5/g,'۵').replace(/6/g,'۶').replace(/7/g,'۷').replace(/8/g,'۸').replace(/9/g,'۹');
+        body=`<h2 class="plan-title">${escf(p.title||title)}</h2><div class="meal-plan-list">${groups.map(g=>`<section class="meal-block"><h3>${escf(g.base)}</h3>${g.options.map((o,i)=>`<div class="meal-option"><div class="option-label">${g.options.length>1?'گزینه '+faNum(i+1):escf(o.name)}</div><div class="food-chain">${o.items.map(x=>`<span>${escf(x.name)} <b>${escf(x.amount)} ${escf(x.unit)}</b></span>`).join('<i> + </i>')}</div>${o.notes?'<p class="meal-note">'+escf(o.notes)+'</p>':''}</div>`).join('')}</section>`).join('')}</div>`;
       }else{
         const p=(await sbGet(`/trainee_workout_plans?trainee_id=eq.${encodeURIComponent(currentClient.id)}&select=*&order=created_at.desc&limit=1`))[0];if(!p)return alert('برنامه تمرینی وجود ندارد.');
         const rows=await sbGet(`/trainee_workout_exercises?workout_plan_id=eq.${encodeURIComponent(p.id)}&select=*&order=sort_order.asc`);const ids=[...new Set(rows.map(x=>x.exercise_id).filter(Boolean))];let ex=[];if(ids.length)ex=await sbGet(`/exercises?id=in.(${ids.join(',')})&select=id,name`);const names=Object.fromEntries(ex.map(x=>[String(x.id),x.name]));
         body=`<h2>${escf(p.title||title)}</h2><p>هدف: ${escf(p.goal||'—')}</p><table><tr><th>حرکت</th><th>روز</th><th>ست</th><th>تکرار/زمان</th><th>استراحت</th><th>سیستم</th><th>گروه</th></tr>${rows.map(x=>`<tr><td>${escf(names[String(x.exercise_id)]||'حرکت')}</td><td>${escf(x.training_day||'—')}</td><td>${escf(x.sets||'')}</td><td>${escf(x.reps||'')}</td><td>${escf(x.rest_seconds||0)}</td><td>${escf(sysName[x.training_system||'normal']||'')}</td><td>${escf(x.group_key||'—')}</td></tr>`).join('')}</table>`;
       }
-      const html=`<!doctype html><html lang="fa" dir="rtl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${title}</title><style>body{font-family:Tahoma,Arial;padding:24px;line-height:1.9;color:#111}table{width:100%;border-collapse:collapse;margin-top:12px}td,th{border:1px solid #aaa;padding:7px;text-align:center;font-size:12px}h1{font-size:22px}</style></head><body><h1>باشگاه فیتنس سه‌قلعه | مربی مجتبی</h1><p>شاگرد: ${escf(currentClient.name||'')} | تاریخ: ${today()}</p>${body}<p>این صفحه برای چاپ و ذخیره PDF آماده است.</p><script>window.onload=()=>setTimeout(()=>window.print(),400)<\/script><\/script>
+      const html=`<!doctype html><html lang="fa" dir="rtl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${title}</title><style>@page{size:A4;margin:12mm}*{box-sizing:border-box}body{font-family:Tahoma,Arial;padding:12px;line-height:1.75;color:#17202a;margin:0}h1{font-size:19px;text-align:center;margin:0 0 4px;color:#24384a}h2.plan-title{font-size:16px;text-align:center;margin:8px 0 12px;padding:7px;background:#fff4d4;border:1px solid #d5a52a;border-radius:8px}.meal-plan-list{display:flex;flex-direction:column;gap:9px}.meal-block{border:1px solid #c6d0d9;border-radius:9px;overflow:hidden;break-inside:avoid;page-break-inside:avoid}.meal-block>h3{font-size:14px;margin:0;padding:5px 9px;background:#fff0c2;border-bottom:1px solid #e0c66d;color:#24384a}.meal-option{padding:7px 9px;border-bottom:1px dashed #cbd2d8;break-inside:avoid}.meal-option:last-child{border-bottom:0}.option-label{font-size:10px;color:#7b5a12;font-weight:bold;margin-bottom:2px}.food-chain{display:flex;flex-wrap:wrap;align-items:center;gap:3px 6px;font-size:12px}.food-chain span{white-space:nowrap}.food-chain b{font-size:11px}.food-chain i{font-style:normal;color:#9a7a2d;font-weight:bold}.meal-note{font-size:10px;margin:3px 0 0;color:#505b66}@media print{body{padding:0}.meal-plan-list{gap:7px}}</style></head><body><h1>باشگاه فیتنس سه‌قلعه | مربی مجتبی</h1><p>شاگرد: ${escf(currentClient.name||'')} | تاریخ: ${today()}</p>${body}<p>این صفحه برای چاپ و ذخیره PDF آماده است.</p><script>window.onload=()=>setTimeout(()=>window.print(),400)<\/script><\/script>
 
 
 </body></html>`;
