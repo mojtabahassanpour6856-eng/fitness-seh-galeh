@@ -1125,11 +1125,11 @@ async function addBedtimeMeal(){
   if(!plans.length)throw new Error("برنامه غذایی متعلق به شاگرد انتخاب‌شده نیست.");
   if(!currentClient||String(currentClient.id)!==String(traineeId)||String(currentPlanId)!==String(planId))throw new Error("شاگرد یا برنامه تغییر کرده است؛ دوباره تلاش کنید.");
   const existing=await sbGet(`/nutrition_meals?plan_id=eq.${encodeURIComponent(planId)}&select=id,meal_name,meal_order&order=meal_order.asc`);
-  if(existing.some(m=>String(m.meal_name||"").replace(/\\s/g,"").includes("قبلخواب"))){alert("وعده قبل خواب از قبل وجود دارد.");return;}
+  if(existing.some(m=>String(m.meal_name||"").replace(/\s/g,"").includes("قبلخواب"))){alert("وعده قبل خواب از قبل وجود دارد.");return;}
   const nextOrder=Math.max(0,...existing.map(m=>Number(m.meal_order)||0))+1;
   await sbWrite("/nutrition_meals","POST",[{plan_id:planId,meal_name:"قبل خواب",meal_order:nextOrder}]);
   if(currentClient&&String(currentClient.id)===String(traineeId)&&String(currentPlanId)===String(planId))await loadNutritionForClient();
- }catch(e){alert("افزودن وعده قبل خواب انجام نشد.\\n"+e.message);}
+ }catch(e){alert("افزودن وعده قبل خواب انجام نشد.\n"+e.message);}
  finally{defaultMealsBusy=false;}
 }
 async function createDefaultMeals(){
