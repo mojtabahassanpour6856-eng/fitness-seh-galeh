@@ -692,17 +692,8 @@ function renderMealFoodBank(){
  const cat=$("mealFoodBankCategory")?.value||"all";
  const rows=foods.filter(f=>(!q||(String(f[0]||"")+" "+String(f[6]||"")).toLocaleLowerCase("fa").includes(q))&&(cat==="all"||String(f[6]||"سایر")===cat));
  list.innerHTML='<p class="muted">تعداد غذاهای بانک: '+foods.length.toLocaleString("fa-IR")+' · نتیجه جست‌وجو: '+rows.length.toLocaleString("fa-IR")+'</p>'+
- (rows.length?rows.slice(0,80).map(f=>'<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;padding:8px 2px;border-top:1px solid #26384a"><div style="min-width:0"><b>'+esc(f[0])+'</b><div class="muted">'+esc(f[6]||"سایر")+' · '+(+f[1]||0)+' kcal · پروتئین '+(+f[2]||0)+'g · کربوهیدرات '+(+f[3]||0)+'g · چربی '+(+f[4]||0)+'g در ۱۰۰ گرم</div></div><button type="button" class="mini secondary" style="width:auto;white-space:nowrap" onclick="useMealBankFood(\''+String(f[5]||"").replace(/'/g,"\\'")+'\')">انتخاب</button></div>').join(""):'<p class="muted">غذایی با این جست‌وجو پیدا نشد.</p>')+
+ (rows.length?rows.slice(0,80).map(f=>'<div style="padding:8px 2px;border-top:1px solid #26384a"><b>'+esc(f[0])+'</b><div class="muted">'+esc(f[6]||"سایر")+' · '+(+f[1]||0)+' kcal · پروتئین '+(+f[2]||0)+'g · کربوهیدرات '+(+f[3]||0)+'g · چربی '+(+f[4]||0)+'g در ۱۰۰ گرم</div></div>').join(""):'<p class="muted">غذایی با این جست‌وجو پیدا نشد.</p>')+
  (rows.length>80?'<p class="muted">برای کوتاه ماندن فهرست، ۸۰ نتیجه اول نمایش داده می‌شود؛ جست‌وجو را دقیق‌تر کن.</p>':"");
-}
-function useMealBankFood(id){
- const f=foods.find(x=>String(x[5])===String(id));if(!f)return alert("این غذا در بانک پیدا نشد.");
- if(!$("currentMealId")&&typeof currentMealId==="undefined")return;
- if(!currentMealId){alert("برای افزودن غذا، ابتدا وعده موردنظر را انتخاب کن و پنجره افزودن غذا را باز کن.");return;}
- $("mealFoodMode").value="single";switchMealFoodMode();$("mealSingleFoodCategory").value="all";filterMealSingleFoods();
- const sel=$("mealFoodSelect");if(sel)sel.value=String(foods.findIndex(x=>String(x[5])===String(id)));
- $("mealFoodAmount").dataset.unitInitialized="";updateMealFoodUnits();previewMealFood();
- $("mealModal").classList.add("show");
 }
 async function addFoodFromMealBank(){
  const name=String($("mealBankName")?.value||"").trim(),category=$("mealBankCategory")?.value||"سایر";
