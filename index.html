@@ -5335,7 +5335,14 @@ active('workoutMuscleFilters',wm);active('libraryMuscleFilters',lm);if(document.
    const timeout=new Promise((_,reject)=>{timer=setTimeout(()=>reject(new Error('پاسخ سرور طی ۲۰ ثانیه نرسید. قبل از ثبت دوباره، بانک حرکات را تازه کنید.')),20000);});
    const rows=await Promise.race([request,timeout]);
    if(!Array.isArray(rows)||!rows.length||!rows[0].id)throw new Error('سرور ثبت حرکت را تأیید نکرد؛ فهرست بانک را تازه کنید و بررسی کنید که حرکت ثبت شده نباشد.');
-   if(status)status.textContent='✅ حرکت «'+name+'» ذخیره شد. برای نمایش آن، بازگشت به عضلات را بزنید و دوباره وارد همین عضله شوید.';
+   if(status)status.textContent='حرکت در بانک ثبت شد؛ در حال آماده‌سازی آن برای فهرست افزودن به برنامه…';
+   if(typeof window.syncLibraryExerciseByName==='function'){
+    await window.syncLibraryExerciseByName(name);
+   }else if(typeof window.loadExercises==='function'){
+    await window.loadExercises();
+   }
+   if(typeof window.loadLibraryExercises==='function')await window.loadLibraryExercises();
+   if(status)status.textContent='✅ حرکت «'+name+'» در بانک ذخیره و برای انتخاب در برنامه آماده شد.';
    form.querySelector('[data-new-ex-name]').value='';
    form.querySelector('[data-new-ex-equipment]').value='';
    form.querySelector('[data-new-ex-note]').value='';
