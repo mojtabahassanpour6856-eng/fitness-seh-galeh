@@ -4469,7 +4469,8 @@ window.loadLibraryExercises=async function(){
    return;
   }
   const ordered=lm!=='همه حرکات'&&lm!=='علاقه‌مندی'?[lm,...cats.filter(c=>c!==lm)]:cats;
-  const shown=ordered.filter(c=>(groups.get(c)||[]).length||(!q&&lm==='همه حرکات'));
+  /* Always show every predefined muscle room, even when it has zero exercises. This lets the coach open empty categories and add movements. */
+  const shown=ordered;
   box.innerHTML=shown.length?shown.map(cat=>'<button type="button" class="library-muscle-card library-muscle-entry" onclick="openLibraryMuscle(\''+e(cat)+'\')"><span class="library-entry-icon">'+(icons[cat]||'🏋️')+'</span><span class="library-entry-name">'+e(cat)+'</span><span class="library-group-count">'+((groups.get(cat)||[]).length)+' حرکت</span><span class="library-entry-arrow">‹</span></button>').join(''):'<div class="muted">حرکتی مطابق جستجو پیدا نشد.</div>';
  }catch(x){console.error(x);box.textContent='دریافت بانک حرکات انجام نشد؛ اتصال یا مجوز بانک را بررسی کنید.';}
 }
