@@ -1230,11 +1230,11 @@ function renderMealCoach(meals){
   const total=fs.reduce((a,x)=>{const v=foodMetrics(x.food||{},x.amount,x.unit);return v.valid?[a[0]+v.cal,a[1]+v.pro,a[2]+v.carb,a[3]+v.fat]:a},[0,0,0,0]);
   const ti=targetIndex(m.meal_name||"");
   const kind=kindForMeal(m.meal_name||"");
-  const addOption=kind?'<button class="mini secondary" onclick="addMealOption(\''+kind+'\')">＋ افزودن گزینه دیگر برای '+esc(kinds.find(k=>k.key===kind).name)+'</button>':"";
+  const addOption=kind?'<button class="mini secondary" onclick="window.addMealOption(\''+kind+'\')">＋ افزودن گزینه دیگر برای '+esc(kinds.find(k=>k.key===kind).name)+'</button>':"";
   return '<div class="meal-card"><div class="meal-head"><h3>🍽️ '+esc(m.meal_name||"وعده "+(i+1))+'</h3><span class="meal-total">'+total[0].toFixed(0)+' kcal</span></div><div class="muted" data-meal-target="'+ti+'" style="margin:8px 0;padding:8px;background:#172636;border-radius:9px">هدف وعده در حال محاسبه…</div><div class="muted">مصرف فعلی: '+total[0].toFixed(0)+' kcal | پروتئین '+total[1].toFixed(1)+'g | کربوهیدرات '+total[2].toFixed(1)+'g | چربی '+total[3].toFixed(1)+'g</div>'+(fs.length?fs.map(x=>foodLine(x)).join(""):"<p class=\'muted\'>هنوز غذایی ثبت نشده است.</p>")+'<div class="row" style="flex-wrap:wrap;gap:8px"><button class="mini" onclick="openMealFoodModal(&quot;'+m.id+'&quot;)">＋ افزودن غذا به همین گزینه</button>'+addOption+'</div></div>';
  }).join("");
  if(meals.length){
-  const buttons=kinds.map(k=>'<button class="mini" onclick="addMealOption(\''+k.key+'\')">'+k.icon+' ＋ گزینه جدید '+k.name+(k.key==="preworkout"||k.key==="postworkout"?" (اختیاری)":"")+'</button>').join("");
+  const buttons=kinds.map(k=>'<button class="mini" onclick="window.addMealOption(\''+k.key+'\')">'+k.icon+' ＋ گزینه جدید '+k.name+(k.key==="preworkout"||k.key==="postworkout"?" (اختیاری)":"")+'</button>').join("");
   $("mealList").insertAdjacentHTML("beforeend",'<div class="card"><h3>➕ افزودن گزینه غذایی</h3><p class="muted">هر گزینه مستقل است. مثلاً از دکمه کنار صبحانه، صبحانه ۲ و سپس صبحانه ۳ ساخته می‌شود. برای هر گزینه غذاها و مقدارها جدا ثبت می‌شوند.</p><div class="row" style="flex-wrap:wrap;gap:8px">'+buttons+'</div></div>');
  }
  if(!meals.length)$("mealList").innerHTML='<div class="card"><p class="muted">هیچ وعده‌ای برای این برنامه ثبت نشده است.</p><button onclick="createDefaultMeals()">＋ ساخت ۶ وعده استاندارد</button><p class="muted">بعد از ساخت وعده‌ها، برای هرکدام می‌توانی گزینه‌های ۲ و ۳ و بیشتر اضافه کنی.</p></div>';
@@ -1271,6 +1271,7 @@ async function addMealOption(kind){
  }catch(e){alert("افزودن گزینه وعده انجام نشد.\n"+e.message);}
  finally{defaultMealsBusy=false;}
 }
+window.addMealOption=addMealOption;
 function addBedtimeMeal(){return addMealOption("bedtime");}
 function addPreWorkoutMeal(){return addMealOption("preworkout");}
 function addPostWorkoutMeal(){return addMealOption("postworkout");}
