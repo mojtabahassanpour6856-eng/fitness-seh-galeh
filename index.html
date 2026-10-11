@@ -1014,10 +1014,11 @@ function mealUnitGrams(name,unit){
 }
 function foodMetrics(foodRow, amount, unit){
  const f=foodRow||{}, q=Number(amount)||0, u=String(unit||"گرم").trim();
- const factor=mealUnitGrams(f.name,u);
- if(factor===null)return {valid:false,cal:0,pro:0,carb:0,fat:0};
+ const factor=mealUnitGrams(f.name,u), kcal=Number(f.calories);
+ if(factor===null||!Number.isFinite(kcal)||kcal<=0||q<=0)return {valid:false,cal:0,pro:0,carb:0,fat:0};
  const grams=q*factor, ratio=grams/100;
- return {valid:true,grams,cal:(+f.calories||0)*ratio,pro:(+f.protein||0)*ratio,carb:(+f.carbs||0)*ratio,fat:(+f.fat||0)*ratio};
+ if(!Number.isFinite(grams)||grams<=0||grams>100000)return {valid:false,cal:0,pro:0,carb:0,fat:0};
+ return {valid:true,grams,cal:kcal*ratio,pro:(+f.protein||0)*ratio,carb:(+f.carbs||0)*ratio,fat:(+f.fat||0)*ratio};
 }
 function updateMealFoodUnits(){
  const select=$("mealFoodSelect"), unit=$("mealFoodUnit"), amount=$("mealFoodAmount");
@@ -1025,7 +1026,10 @@ function updateMealFoodUnits(){
  const f=foods[+select.value], info=mealFoodUnitInfo(f?.[0]);
  unit.innerHTML='<option value="گرم">گرم</option>'+info.units.map(x=>'<option value="'+x[0]+'">'+x[1]+'</option>').join("");
  unit.value=info.defaultUnit;
- if(!amount.dataset.unitInitialized){amount.value=info.defaultAmount;amount.dataset.unitInitialized="1";}
+ // هر بار غذا عوض می‌شود، مقدار پیش‌فرض همان غذا جایگزین مقدار قبلی شود؛
+ // وگرنه مثلاً ۱۰۰ گرم غذای قبلی ممکن است به ۱۰۰ عدد آووکادو تبدیل شود.
+ amount.value=info.defaultAmount;
+ amount.dataset.unitInitialized="1";
 }
 function mealTab(tab){
  ["coach","student","report"].forEach(x=>{const b=$("mealTab"+x.charAt(0).toUpperCase()+x.slice(1));if(b)b.classList.toggle("active",x===tab);});
@@ -1057,8 +1061,14 @@ function switchMealFoodMode(){
 function fillMealFoodSelect(){
  const s=$("mealFoodSelect");if(!s)return;filterMealSingleFoods();
  const rs=$("mealRecipeSelect");filterMealRecipes();
- s.onchange=()=>{$("mealFoodAmount").dataset.unitInitialized="";updateMealFoodUnits();previewMealFood();};
- $("mealFoodAmount").oninput=previewMealFood;$("mealFoodUnit").onchange=previewMealFood;
+ s.onchange=()=>{updateMealFoodUnits();previewMealFood();};
+ $("mealFoodAmount").oninput=previewMealFood;
+ $("mealFoodUnit").onchange=()=>{
+  const f=foods[+s.value],info=mealFoodUnitInfo(f?.[0]),u=$("mealFoodUnit").value;
+  // تغییر واحد نیز مقدار را با واحد تازه هماهنگ می‌کند تا ۱۰۰ گرم ناخواسته ۱۰۰ عدد نشود.
+  $("mealFoodAmount").value=u==="گرم"?100:(u==="میلی‌لیتر"||u==="میلی لیتر"?250:(u===info.defaultUnit?info.defaultAmount:1));
+  previewMealFood();
+ };
  updateMealFoodUnits();switchMealFoodMode();previewMealFood();previewMealRecipe();
 }
 function mealFoodMatchesCategory(f,cat){
@@ -1240,7 +1250,7 @@ function renderMealCoach(meals){
  if(!meals.length)$("mealList").innerHTML='<div class="card"><p class="muted">هیچ وعده‌ای برای این برنامه ثبت نشده است.</p><button onclick="createDefaultMeals()">＋ ساخت ۶ وعده استاندارد</button><p class="muted">بعد از ساخت وعده‌ها، برای هرکدام می‌توانی گزینه‌های ۲ و ۳ و بیشتر اضافه کنی.</p></div>';
  updateDayTotals(meals);updateMealTargets();
 }
-function foodLine(x){const f=x.food||{},m=foodMetrics(f,x.amount,x.unit),note=String(x.notes||""),recipePrefix="[دستور ترکیبی: ",recipeTag=note.includes(recipePrefix)?note.split(" | ")[0]:"";return `<div class="food-line"><div><div class="food-name">${esc(f.name||"غذا")}</div>${recipeTag?`<div class="food-meta">🍽️ ${esc(recipeTag.slice(recipePrefix.length,-1))}</div>`:""}<div class="food-meta">${m.valid?`🔥 ${m.cal.toFixed(0)} kcal | P ${m.pro.toFixed(1)} | C ${m.carb.toFixed(1)} | F ${m.fat.toFixed(1)}`:'⚠️ برای محاسبه تغذیه‌ای، وزن معادل گرم لازم است.'}</div></div><span>${x.amount} ${esc(x.unit||"گرم")}</span><button class="mini secondary" onclick="openSubstitution('${x.food_id}','${x.amount}')">🔄</button><button class="mini danger" onclick="deleteMealFood('${x.id}')">🗑</button></div>`;}
+function foodLine(x){const f=x.food||{},m=foodMetrics(f,x.amount,x.unit),note=String(x.notes||""),recipePrefix="[دستور ترکیبی: ",recipeTag=note.includes(recipePrefix)?note.split(" | ")[0]:"";return `<div class="food-line"><div><div class="food-name">${esc(f.name||"غذا")}</div>${recipeTag?`<div class="food-meta">🍽️ ${esc(recipeTag.slice(recipePrefix.length,-1))}</div>`:""}<div class="food-meta">${m.valid?`🔥 ${m.cal.toFixed(0)} kcal | P ${m.pro.toFixed(1)} | C ${m.carb.toFixed(1)} | F ${m.fat.toFixed(1)}`:'⚠️ کالری این غذا ناقص است یا واحد/مقدار آن نیاز به اصلاح دارد؛ تا اصلاح، در جمع کالری محاسبه نمی‌شود.'}</div></div><span>${x.amount} ${esc(x.unit||"گرم")}</span><button class="mini secondary" onclick="openSubstitution('${x.food_id}','${x.amount}')">🔄</button><button class="mini danger" onclick="deleteMealFood('${x.id}')">🗑</button></div>`;}
 function updateDayTotals(meals){const t=meals.reduce((a,m)=>(m.foods||[]).reduce((b,x)=>{const v=foodMetrics(x.food||{},x.amount,x.unit);return v.valid?[b[0]+v.cal,b[1]+v.pro,b[2]+v.carb,b[3]+v.fat]:b},a),[0,0,0,0]);$("dayCal").textContent=t[0].toFixed(0);$("dayPro").textContent=t[1].toFixed(1)+" g";$("dayCarb").textContent=t[2].toFixed(1)+" g";$("dayFat").textContent=t[3].toFixed(1)+" g";}
 let defaultMealsBusy=false;
 async function addMealOption(kind){
@@ -1350,9 +1360,14 @@ async function saveMealFood(){
    const payload=rows.map(x=>({meal_id:currentMealId,food_id:x.f[5],amount:x.amount,unit:x.unit,notes:[label,extra].filter(Boolean).join(" | ")||null}));
    await sbWrite("/nutrition_meal_foods","POST",payload);
   }else{
-   const f=foods[+$("mealFoodSelect").value],amount=+$("mealFoodAmount").value;
-   if(!f||amount<=0){alert("غذا و مقدار معتبر انتخاب کن.");return;}
-   await sbWrite("/nutrition_meal_foods","POST",{meal_id:currentMealId,food_id:f[5],amount,unit:$("mealFoodUnit").value,notes:$("mealFoodNote").value.trim()||null});
+   const f=foods[+$("mealFoodSelect").value],amount=+$("mealFoodAmount").value,unit=$("mealFoodUnit").value;
+   if(!f||!Number.isFinite(amount)||amount<=0){alert("غذا و مقدار معتبر انتخاب کن.");return;}
+   const metrics=foodMetrics({name:f[0],calories:f[1],protein:f[2],carbs:f[3],fat:f[4]},amount,unit);
+   if(!metrics.valid){alert("کالری این غذا در بانک ناقص است یا تبدیل واحد معتبر نیست. ابتدا اطلاعات غذا را اصلاح کن یا مقدار را به گرم وارد کن.");return;}
+   if(metrics.cal>5000||(unit==="عدد"&&/آووکادو|سیب|موز|پرتقال|نارنگی|گلابی|هلو|شلیل|کیوی|انبه|خرمالو|گریپ|هندوانه|توت.?فرنگی|بلوبری|انگور/.test(f[0])&&amount>10)){
+    alert("مقدار واردشده برای این واحد غیرعادی و کالری آن بسیار زیاد است. اگر منظورت ۱۰۰ گرم است، واحد «گرم» را انتخاب کن؛ اگر منظورت تعداد است، تعداد واقعی میوه را وارد کن.");return;
+   }
+   await sbWrite("/nutrition_meal_foods","POST",{meal_id:currentMealId,food_id:f[5],amount,unit,notes:$("mealFoodNote").value.trim()||null});
   }
   closeMealModal();await loadNutritionForClient();
  }catch(e){alert("افزودن غذا انجام نشد.\n"+e.message);}
