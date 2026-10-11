@@ -432,8 +432,16 @@ body.library-room .library-inline-add button{position:relative!important;z-index
 <div><label>پایان فست</label><input id="fastEnd" type="time" value="12:00"></div>
 <div><label>تعداد وعده</label><input id="fastMeals" type="number" value="3" min="1"></div>
 </div>
-<button onclick="saveFasting()">ذخیره فستینگ</button>
-<p id="fastStatus" class="muted"></p>
+<div style="margin-top:12px">
+<label for="fastMealPlan">🍽️ برنامه غذایی مخصوص فستینگ (در بازه مجاز خوردن)</label>
+<textarea id="fastMealPlan" rows="5" placeholder="مثلاً:
+وعده اول ساعت ۱۲: تخم‌مرغ، نان و سبزیجات؛ مقدارها را دقیق بنویسید.
+وعده دوم ساعت ۱۶: مرغ، برنج و سالاد؛ مقدار هر ماده غذایی.
+وعده آخر ساعت ۱۹: شام تعیین‌شده همراه مقدار مواد غذایی."></textarea>
+<small class="muted">برنامه را وعده‌به‌وعده همراه ساعت و مقدار مواد غذایی بنویسید. این متن همراه زمان‌بندی فستینگ ذخیره می‌شود و برای شاگرد نمایش داده خواهد شد.</small>
+</div>
+<button onclick="saveFasting()">ذخیره فستینگ و برنامه غذایی</button>
+<p id="fastStatus" class="muted" style="white-space:pre-line"></p>
 </div>
 
 <div class="card">
@@ -1003,10 +1011,12 @@ async function saveFasting(){
  if(authProfile?.role!=="coach"){alert("تعیین و تغییر برنامه فستینگ فقط در دسترس مربی است.");return;}
  if(!currentClient){alert("اول شاگرد را انتخاب کنید.");return;}
  const st=$("fastStart").value,en=$("fastEnd").value,t=$("fastType").value;
+ const mealPlan=$("fastMealPlan")?.value.trim()||"";
  if(t==="بدون فستینگ"){ $("fastStatus").textContent="فستینگ برای این شاگرد فعال نیست."; return; }
  let duration=0;if(st&&en){let a=+st.split(":")[0]*60 + +st.split(":")[1],b=+en.split(":")[0]*60 + +en.split(":")[1];duration=b-a;if(duration<0)duration+=1440;}
- try{await sbWrite("/fasting_logs","POST",{trainee_id:currentClient.id,fasting_date:today(),start_time:st||null,end_time:en||null,duration_minutes:duration,description:`نوع ${t} | ${$("fastMeals").value||0} وعده`});$("fastStatus").textContent=`فستینگ ${t} با موفقیت ثبت شد.`;alert("فستینگ ثبت شد.");}
- catch(e){alert("ثبت فستینگ انجام نشد.\n"+e.message);}
+ const description=`نوع ${t} | ${$("fastMeals").value||0} وعده${mealPlan?"\\nبرنامه غذایی در بازه مجاز خوردن:\\n"+mealPlan:""}`;
+ try{await sbWrite("/fasting_logs","POST",{trainee_id:currentClient.id,fasting_date:today(),start_time:st||null,end_time:en||null,duration_minutes:duration,description});$("fastStatus").textContent=`فستینگ ${t} با موفقیت ثبت شد.${mealPlan?"\\nبرنامه غذایی فستینگ هم ذخیره شد.":""}`;alert(mealPlan?"فستینگ و برنامه غذایی آن ذخیره شد.":"فستینگ ثبت شد.");}
+ catch(e){alert("ثبت فستینگ انجام نشد.\\n"+e.message);}
 }
 async function applyFastingRole(){
  const card=$("fastType")?.closest(".card");
