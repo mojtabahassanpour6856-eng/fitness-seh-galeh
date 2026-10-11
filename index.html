@@ -4156,7 +4156,7 @@ window.useLibraryExercise=async function(id){
           for(const item of usableFoods){
             const food=byId[String(item.food_id)]||{};
             const amount=Number(item.amount),kcal=Number(food.calories);
-            if(!Number.isFinite(amount)||amount<=0||!Number.isFinite(kcal)||kcal<0){calorieComplete=false;continue;}
+            if(!Number.isFinite(amount)||amount<=0||food.calories===null||food.calories===undefined||String(food.calories).trim()===''||!Number.isFinite(kcal)||kcal<0){calorieComplete=false;continue;}
             const unit=String(item.unit||'گرم').trim().toLocaleLowerCase('fa');
             const servingUnit=String(food.serving_unit||'').trim().toLocaleLowerCase('fa');
             const servingAmount=Number(food.serving_amount);
@@ -4182,7 +4182,7 @@ window.useLibraryExercise=async function(id){
         body += groups.map(group=>{
           const rows=group.options.map((opt,index)=>{
             const label=opt.rawName===group.base?(group.options.length>1?group.base+' '+['یک','دو','سه','چهار'][index]:group.base):opt.rawName;
-            return '<div class="meal-option-row" style="display:flex;align-items:flex-start;gap:10px;padding:10px 11px;border-bottom:1px dashed #e2d1a7;break-inside:avoid"><div style="flex:0 0 auto;min-width:72px;color:#79520c;font-weight:900;white-space:nowrap;font-size:17px">'+esc(label)+'</div><div style="flex:1;min-width:0;line-height:2;font-size:18px">'+(opt.items||'')+(opt.notes?'<div style="font-size:13px;color:#665f50">نکته: '+esc(opt.notes)+'</div>':'')+(opt.calories!==null?'<div class="meal-kcal">کالری این وعده: '+esc(opt.calories)+' کیلوکالری</div>':'')+'</div></div>';
+            return '<div class="meal-option-row" style="display:flex;align-items:flex-start;gap:10px;padding:10px 11px;border-bottom:1px dashed #e2d1a7;break-inside:avoid"><div style="flex:0 0 auto;min-width:72px;color:#79520c;font-weight:900;white-space:nowrap;font-size:17px">'+esc(label)+'</div><div style="flex:1;min-width:0;line-height:2;font-size:18px">'+(opt.items||'')+(opt.notes?'<div style="font-size:13px;color:#665f50">نکته: '+esc(opt.notes)+'</div>':'')+(opt.calories!==null?'<div class="meal-kcal">کالری این وعده: '+esc(new Intl.NumberFormat('fa-IR').format(opt.calories))+' کیلوکالری</div>':'')+'</div></div>';
           }).join('');
           return '<section class="meal-group" style="margin:5px 0 8px;border:1px solid #c69b43;border-radius:8px;overflow:hidden;break-inside:avoid"><h3 style="margin:0;padding:9px 11px;background:#fff0c2;color:#51380b;border-bottom:1px solid #c69b43;font-size:19px">'+esc(group.base)+'</h3>'+rows+'</section>';
         }).join('');
