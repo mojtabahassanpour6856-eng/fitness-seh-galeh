@@ -292,6 +292,7 @@ body.library-room #workout .library-room-card .library-detail-view{width:100%!im
 
 <div class="nav">
   <button class="active" onclick="showSection('food',this)">🍽️ غذا</button>
+  <button onclick="showSection('foodBank',this)">🥗 بانک غذا</button>
   <button onclick="showSection('coach',this)">👨‍🏫 پنل مربی</button>
   <button onclick="showSection('client',this)">👤 شاگرد</button>
   <button onclick="showSection('meal',this)">📋 برنامه غذایی</button>
@@ -336,6 +337,33 @@ body.library-room #workout .library-room-card .library-detail-view{width:100%!im
 </div>
 </div>
 
+</section>
+
+<!-- FOOD BANK -->
+<section id="foodBank" class="section">
+<div class="card" id="mealFoodBankPanel">
+<h2>🥗 بانک غذا</h2>
+<p class="muted">غذاهای این بانک در انتخاب غذای وعده‌ها هم در دسترس هستند. می‌توانی غذای جدید با کالری و درشت‌مغذی‌های هر ۱۰۰ گرم به بانک اضافه کنی.</p>
+<div class="grid2">
+<div><label for="mealFoodBankSearch">جست‌وجو در بانک غذا</label><input id="mealFoodBankSearch" type="search" placeholder="نام غذا یا دسته..." oninput="renderMealFoodBank()"></div>
+<div><label for="mealFoodBankCategory">دسته‌بندی</label><select id="mealFoodBankCategory" onchange="renderMealFoodBank()"><option value="all">همه دسته‌ها</option><option>غلات</option><option>برنج و غلات</option><option>نان</option><option>گوشت و مرغ</option><option>ماهی</option><option>تخم مرغ</option><option>لبنیات</option><option>حبوبات</option><option>میوه</option><option>میوه خشک</option><option>سبزیجات</option><option>مغزها</option><option>دانه‌ها</option><option>چربی‌ها</option><option>نوشیدنی</option><option>مکمل و شیک</option><option>شیرینی و تنقلات</option><option>سایر</option></select></div>
+</div>
+<div id="mealFoodBankList" class="muted" aria-live="polite">بانک غذایی در حال بارگذاری است…</div>
+<details style="margin-top:12px"><summary style="cursor:pointer;font-weight:bold;color:#ffcf58;padding:8px 0">＋ افزودن غذای جدید به بانک</summary>
+<div class="grid2">
+<div><label for="mealBankName">نام غذا</label><input id="mealBankName" maxlength="100" placeholder="مثلاً سیب‌زمینی آب‌پز"></div>
+<div><label for="mealBankCategory">دسته</label><select id="mealBankCategory"><option>غلات</option><option>برنج و غلات</option><option>نان</option><option>گوشت و مرغ</option><option>ماهی</option><option>تخم مرغ</option><option>لبنیات</option><option>حبوبات</option><option>میوه</option><option>میوه خشک</option><option>سبزیجات</option><option>مغزها</option><option>دانه‌ها</option><option>چربی‌ها</option><option>نوشیدنی</option><option>مکمل و شیک</option><option>شیرینی و تنقلات</option><option>سایر</option></select></div>
+<div><label for="mealBankCalories">کالری در ۱۰۰ گرم</label><input id="mealBankCalories" type="number" min="0" step="0.1" placeholder="مثلاً 130"></div>
+<div><label for="mealBankProtein">پروتئین (گرم)</label><input id="mealBankProtein" type="number" min="0" step="0.1" value="0"></div>
+<div><label for="mealBankCarbs">کربوهیدرات (گرم)</label><input id="mealBankCarbs" type="number" min="0" step="0.1" value="0"></div>
+<div><label for="mealBankFat">چربی (گرم)</label><input id="mealBankFat" type="number" min="0" step="0.1" value="0"></div>
+</div>
+<p class="muted">مقادیر تغذیه‌ای را بر اساس هر ۱۰۰ گرم از بخش خوراکی و با توجه به خام یا پخته بودن وارد کن.</p>
+<button type="button" onclick="addFoodFromMealBank()">💾 ذخیره در بانک غذایی</button>
+</details>
+</div>
+
+<div class="card" id="legacyFoodEditPanel"><h2>✏️ ویرایش یا حذف غذای موجود</h2><p class="muted">برای ویرایش یا حذف، از صفحه محاسبه‌گر روی «ویرایش غذای انتخاب‌شده» بزن؛ اطلاعات اینجا باز می‌شود.</p>
 <div class="card">
 <button onclick="toggle()">＋ افزودن غذای سفارشی</button>
 <div id="custom">
@@ -352,6 +380,8 @@ body.library-room #workout .library-room-card .library-detail-view{width:100%!im
 <button class="danger" onclick="deleteFood()">🗑️ حذف غذای انتخاب‌شده</button>
 </div>
 </div>
+</div>
+
 </div>
 </section>
 
@@ -475,28 +505,6 @@ body.library-room #workout .library-room-card .library-detail-view{width:100%!im
 </div>
 <label>یادداشت برنامه</label><textarea id="mealNotes" placeholder="توضیحات مربی..."></textarea>
 <button onclick="saveNutritionPlan()">💾 ذخیره اطلاعات برنامه</button>
-</div>
-
-<div class="card" id="mealFoodBankPanel">
-<h2>🥗 بانک غذایی برنامه</h2>
-<p class="muted">غذاهای این بانک در انتخاب غذای وعده‌ها هم در دسترس هستند. می‌توانی غذای جدید با کالری و درشت‌مغذی‌های هر ۱۰۰ گرم به بانک اضافه کنی.</p>
-<div class="grid2">
-<div><label for="mealFoodBankSearch">جست‌وجو در بانک غذا</label><input id="mealFoodBankSearch" type="search" placeholder="نام غذا یا دسته..." oninput="renderMealFoodBank()"></div>
-<div><label for="mealFoodBankCategory">دسته‌بندی</label><select id="mealFoodBankCategory" onchange="renderMealFoodBank()"><option value="all">همه دسته‌ها</option><option>غلات</option><option>برنج و غلات</option><option>نان</option><option>گوشت و مرغ</option><option>ماهی</option><option>تخم مرغ</option><option>لبنیات</option><option>حبوبات</option><option>میوه</option><option>میوه خشک</option><option>سبزیجات</option><option>مغزها</option><option>دانه‌ها</option><option>چربی‌ها</option><option>نوشیدنی</option><option>مکمل و شیک</option><option>شیرینی و تنقلات</option><option>سایر</option></select></div>
-</div>
-<div id="mealFoodBankList" class="muted" aria-live="polite">بانک غذایی در حال بارگذاری است…</div>
-<details style="margin-top:12px"><summary style="cursor:pointer;font-weight:bold;color:#ffcf58;padding:8px 0">＋ افزودن غذای جدید به بانک</summary>
-<div class="grid2">
-<div><label for="mealBankName">نام غذا</label><input id="mealBankName" maxlength="100" placeholder="مثلاً سیب‌زمینی آب‌پز"></div>
-<div><label for="mealBankCategory">دسته</label><select id="mealBankCategory"><option>غلات</option><option>برنج و غلات</option><option>نان</option><option>گوشت و مرغ</option><option>ماهی</option><option>تخم مرغ</option><option>لبنیات</option><option>حبوبات</option><option>میوه</option><option>میوه خشک</option><option>سبزیجات</option><option>مغزها</option><option>دانه‌ها</option><option>چربی‌ها</option><option>نوشیدنی</option><option>مکمل و شیک</option><option>شیرینی و تنقلات</option><option>سایر</option></select></div>
-<div><label for="mealBankCalories">کالری در ۱۰۰ گرم</label><input id="mealBankCalories" type="number" min="0" step="0.1" placeholder="مثلاً 130"></div>
-<div><label for="mealBankProtein">پروتئین (گرم)</label><input id="mealBankProtein" type="number" min="0" step="0.1" value="0"></div>
-<div><label for="mealBankCarbs">کربوهیدرات (گرم)</label><input id="mealBankCarbs" type="number" min="0" step="0.1" value="0"></div>
-<div><label for="mealBankFat">چربی (گرم)</label><input id="mealBankFat" type="number" min="0" step="0.1" value="0"></div>
-</div>
-<p class="muted">مقادیر تغذیه‌ای را بر اساس هر ۱۰۰ گرم از بخش خوراکی و با توجه به خام یا پخته بودن وارد کن.</p>
-<button type="button" onclick="addFoodFromMealBank()">💾 ذخیره در بانک غذایی</button>
-</details>
 </div>
 
 <div class="card" id="mealTargetPlanner">
@@ -702,7 +710,8 @@ function renderMealFoodBank(){
  const q=String($("mealFoodBankSearch")?.value||"").trim().toLocaleLowerCase("fa");
  const cat=$("mealFoodBankCategory")?.value||"all";
  const rows=foods.filter(f=>(!q||(String(f[0]||"")+" "+String(f[6]||"")).toLocaleLowerCase("fa").includes(q))&&(cat==="all"||String(f[6]||"سایر")===cat));
- list.innerHTML='<p class="muted">تعداد غذاهای بانک: '+foods.length.toLocaleString("fa-IR")+' · نتیجه جست‌وجو: '+rows.length.toLocaleString("fa-IR")+'</p>'+
+ if(!q&&cat==="all"){list.innerHTML='<p class="muted">برای دیدن غذای مشخص، نام آن را جست‌وجو کن یا یک دسته را انتخاب کن. فهرست کامل به‌صورت پیش‌فرض نمایش داده نمی‌شود.</p>';return;}
+ list.innerHTML='<p class="muted">نتیجه جست‌وجو: '+rows.length.toLocaleString("fa-IR")+'</p>'+
  (rows.length?rows.slice(0,80).map(f=>'<div style="padding:8px 2px;border-top:1px solid #26384a"><b>'+esc(f[0])+'</b><div class="muted">'+esc(f[6]||"سایر")+' · '+(+f[1]||0)+' kcal · پروتئین '+(+f[2]||0)+'g · کربوهیدرات '+(+f[3]||0)+'g · چربی '+(+f[4]||0)+'g در ۱۰۰ گرم</div></div>').join(""):'<p class="muted">غذایی با این جست‌وجو پیدا نشد.</p>')+
  (rows.length>80?'<p class="muted">برای کوتاه ماندن فهرست، ۸۰ نتیجه اول نمایش داده می‌شود؛ جست‌وجو را دقیق‌تر کن.</p>':"");
 }
@@ -771,6 +780,7 @@ function editFood(){
  const food=foods[+$("orig").value];
  if(!food){alert("غذایی انتخاب نشده است.");return;}
  $("n").value=food[0];$("kc").value=food[1];$("pr").value=food[2];$("ca").value=food[3];$("fa").value=food[4];if($("foodCategory"))$("foodCategory").value=food[6]||"سایر";
+ showSection("foodBank",document.querySelector('.nav button[onclick*="foodBank"]'));
  $("custom").style.display="block";
  window.scrollTo({top:document.body.scrollHeight,behavior:"smooth"});
 }
