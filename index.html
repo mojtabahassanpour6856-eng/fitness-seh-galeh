@@ -790,12 +790,19 @@ async function addFoodFromMealBank(){
  }catch(e){console.error("addFoodFromMealBank",e);alert("ذخیره غذا در بانک انجام نشد. "+(e?.message||e));}
 }
 async function loadFoods(){
+ let data;
  try{
-  // از لایه REST احراز هویت‌شده استفاده می‌کنیم تا RLS با توکن واقعی نشست اعمال شود.
-  const data=await sbGet('/foods?select=*&order=name');
-  foods=data.map(x=>[x.name,+x.calories||0,+x.protein||0,+x.carbs||0,+x.fat||0,x.id,x.category||""]);
-  fillFoods();renderMealFoodBank();
- }catch(e){console.error(e);alert("دریافت غذاها از Supabase انجام نشد.\n"+(e?.message||e));}
+  // مرحله دریافت از Supabase را از نمایش رابط جدا نگه می‌داریم تا خطای DOM
+  // به‌اشتباه به‌عنوان خطای اتصال پایگاه داده گزارش نشود.
+  data=await sbGet('/foods?select=*&order=name');
+ }catch(e){
+  console.error("loadFoods: Supabase request failed",e);
+  alert("دریافت غذاها از Supabase انجام نشد.\\n"+(e?.message||e));
+  return;
+ }
+ foods=(Array.isArray(data)?data:[]).map(x=>[x.name,+x.calories||0,+x.protein||0,+x.carbs||0,+x.fat||0,x.id,x.category||""]);
+ try{fillFoods();}catch(e){console.error("loadFoods: fillFoods render failed",e);}
+ try{renderMealFoodBank();}catch(e){console.error("loadFoods: food bank render failed",e);}
 }
 function fillFoods(){
  // بخش قدیمی محاسبه‌گر جایگزین ممکن است در بعضی صفحات وجود نداشته باشد.
