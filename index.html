@@ -4047,7 +4047,7 @@ window.useLibraryExercise=async function(id){
         const p = (await sbGet('/nutrition_plans?trainee_id=eq.'+encodeURIComponent(trainee.id)+'&select=*&order=created_at.desc&limit=1'))[0];
         if(!p) throw new Error('برنامه غذایی ذخیره‌شده‌ای برای این شاگرد پیدا نشد.');
         const meals = await sbGet('/nutrition_meals?plan_id=eq.'+encodeURIComponent(p.id)+'&select=*&order=meal_order.asc');
-        body = '<h2 style="text-align:center;margin:4px 0 8px;font-size:19px;color:#6b4709">'+esc(p.title||title)+'</h2><div class="meal-trainee-meta"><span><b>نام شاگرد:</b> '+esc(trainee.name||'—')+'</span><span><b>وزن:</b> '+esc(trainee.weight!==null&&trainee.weight!==undefined&&String(trainee.weight).trim()!==''?trainee.weight:'—')+' کیلوگرم</span></div>';
+        body = '<h2 style="text-align:center;margin:4px 0 8px;font-size:19px;color:#6b4709">'+esc(p.title||title)+'</h2><div class="meal-trainee-meta"><span><b>ورزشکار:</b> '+esc(trainee.name||'—')+'</span><span><b>وزن:</b> '+esc(trainee.weight!==null&&trainee.weight!==undefined&&String(trainee.weight).trim()!==''?trainee.weight:'—')+' کیلوگرم</span></div>';
         const mealBlocks=[];
         for(const meal of meals) {
           const foods = await sbGet('/nutrition_meal_foods?meal_id=eq.'+encodeURIComponent(meal.id)+'&select=*&order=created_at.asc');
