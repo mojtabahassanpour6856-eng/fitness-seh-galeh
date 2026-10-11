@@ -2548,7 +2548,7 @@ const plans=workoutResult.data||[], nutrition=nutritionResult.data||[];
 
   // -------- Exercise library: favorite toggle --------
   window.saveLibraryExerciseInGroup=async function(cat,button){
- if(window.__savingLibraryExercise) return;
+ if(window.__savingLibraryExercise)return;
  const form=button&&button.closest('.library-inline-add');
  if(!form){alert('فرم افزودن حرکت پیدا نشد.');return;}
  const name=form.querySelector('[data-new-ex-name]')?.value.trim();
@@ -2556,47 +2556,39 @@ const plans=workoutResult.data||[], nutrition=nutritionResult.data||[];
  const level=form.querySelector('[data-new-ex-level]')?.value||'مبتدی';
  const note=form.querySelector('[data-new-ex-note]')?.value.trim();
  const status=form.querySelector('[data-new-ex-status]');
- if(!name){alert('نام حرکت را وارد کنید.');return;}
+ if(!name){alert('نام حرکت را وارد کنید.');form.querySelector('[data-new-ex-name]')?.focus();return;}
  window.__savingLibraryExercise=true;
  const originalText=button.textContent;
  button.disabled=true;button.textContent='در حال ذخیره…';
- if(status)status.textContent='در حال ذخیره حرکت؛ لطفاً صفحه را نبندید و دوباره روی دکمه نزنید.';
- const withTimeout=(promise,label,ms=12000)=>Promise.race([promise,new Promise((_,reject)=>setTimeout(()=>reject(new Error(label+' بیش از حد طول کشید. اتصال را بررسی کنید؛ برای جلوگیری از ثبت تکراری، قبل از تلاش دوباره بانک را تازه کنید.')),ms))]);
- let bankSaved=false;
+ if(status)status.textContent='در حال ذخیره فقط همین حرکت…';
+ let requestTimer=null;
  try{
-  let found=await withTimeout(sbGet('/trainer_exercises?name=eq.'+encodeURIComponent(name)+'&target_muscle=eq.'+encodeURIComponent(cat)+'&select=id,name&order=created_at.desc&limit=1'),'بررسی بانک حرکات');
-  let saved=Array.isArray(found)?found[0]:null;
-  if(!saved){
-   await withTimeout(sbWrite('/trainer_exercises','POST',{name:name,target_muscle:cat,category:cat,equipment:equipment||null,level:level,coach_note:note||null,is_favorite:false}),'ذخیره حرکت در بانک');
-   bankSaved=true;
-   found=await withTimeout(sbGet('/trainer_exercises?name=eq.'+encodeURIComponent(name)+'&target_muscle=eq.'+encodeURIComponent(cat)+'&select=id,name&order=created_at.desc&limit=1'),'خواندن حرکت ذخیره‌شده');
-   saved=Array.isArray(found)?found[0]:null;
-  }else{
-   bankSaved=true;
-  }
-  if(!saved||!saved.id) throw new Error('حرکت احتمالاً در بانک ذخیره شده، اما شناسه آن خوانده نشد. پیش از تلاش دوباره، بانک را تازه کنید.');
-  let syncError=null;
-  try{
-   if(typeof window.syncLibraryExerciseByName==='function') await withTimeout(window.syncLibraryExerciseByName(name),'همگام‌سازی با فهرست برنامه',15000);
-  }catch(e){syncError=e;}
-  try{await withTimeout(window.loadLibraryExercises(),'تازه‌سازی بانک',10000);}catch(e){console.warn('تازه‌سازی بانک انجام نشد:',e);}
-  try{if(typeof window.loadExercises==='function')await withTimeout(window.loadExercises(),'تازه‌سازی فهرست حرکات',10000);}catch(e){console.warn('تازه‌سازی فهرست حرکات انجام نشد:',e);}
+  const controller=typeof AbortController!=='undefined'?new AbortController():null;
+  const timeout=new Promise((_,reject)=>{requestTimer=setTimeout(()=>{if(controller)controller.abort();reject(new Error('پاسخ سرور در ۱۵ ثانیه نرسید. بانک را قبل از تلاش مجدد تازه کنید تا حرکت تکراری ساخته نشود.'));},15000);});
+  const request=fetch(SUPABASE_URL+'/rest/v1/trainer_exercises',{
+   method:'POST',
+   headers:{'apikey':SUPABASE_KEY,'Authorization':'Bearer '+SUPABASE_KEY,'Content-Type':'application/json','Prefer':'return=representation'},
+   body:JSON.stringify({name:name,target_muscle:cat,category:cat,equipment:equipment||null,level:level,coach_note:note||null,is_favorite:false}),
+   signal:controller?controller.signal:undefined
+  }).then(async response=>{
+   if(!response.ok)throw new Error(await response.text());
+   return response.json();
+  });
+  const rows=await Promise.race([request,timeout]);
+  if(requestTimer)clearTimeout(requestTimer);
+  if(!Array.isArray(rows)||!rows.length||!rows[0].id)throw new Error('پاسخ ذخیره‌سازی تأیید نشد؛ قبل از تلاش مجدد بانک را تازه کنید.');
+  if(status)status.textContent='✅ حرکت «'+name+'» در بانک عضلهٔ '+cat+' ذخیره شد. برای دیدن فهرست تازه، به عقب برگرد و دوباره وارد همین عضله شو.';
   const nameInput=form.querySelector('[data-new-ex-name]');if(nameInput)nameInput.value='';
   const eqInput=form.querySelector('[data-new-ex-equipment]');if(eqInput)eqInput.value='';
   const noteInput=form.querySelector('[data-new-ex-note]');if(noteInput)noteInput.value='';
-  if(syncError){
-   if(status)status.textContent='حرکت در بانک ذخیره شد؛ همگام‌سازی با فهرست برنامه کامل نشد. بانک را تازه کنید و از تکرار ثبت همان حرکت خودداری کنید.';
-   alert('حرکت در بانک ذخیره شد، اما همگام‌سازی با فهرست حرکات برنامه کامل نشد.\n'+(syncError.message||String(syncError)));
-  }else{
-   if(status)status.textContent='حرکت «'+name+'» در بانک '+cat+' ذخیره شد و فهرست حرکات به‌روزرسانی شد.';
-   button.textContent='✅ ذخیره شد';
-  }
- }catch(x){
-  console.error('saveLibraryExerciseInGroup failed',x);
-  const msg=(x&&x.message)?x.message:String(x);
-  if(status)status.textContent=bankSaved?'حرکت ممکن است در بانک ذخیره شده باشد؛ قبل از تلاش دوباره، بانک را تازه کنید.':'ذخیره کامل نشد؛ اتصال را بررسی کنید.';
-  alert((bankSaved?'حرکت در بانک ثبت شده یا احتمال ثبت آن وجود دارد. ':'ذخیره حرکت انجام نشد. ')+msg);
+  button.textContent='✅ ذخیره شد';
+ }catch(error){
+  console.error('saveLibraryExerciseInGroup failed',error);
+  const msg=error&&error.message?error.message:String(error);
+  if(status)status.textContent='ذخیره تأیید نشد. اگر پاسخ دیر رسیده، ابتدا به عقب برگرد و بانک را دوباره باز کن؛ فعلاً همان حرکت را دوباره ثبت نکن.';
+  alert('ذخیره حرکت تأیید نشد. برای جلوگیری از ثبت تکراری، قبل از تلاش دوباره بانک را تازه کن.\n'+msg);
  }finally{
+  if(requestTimer)clearTimeout(requestTimer);
   window.__savingLibraryExercise=false;
   if(button){button.disabled=false;button.textContent=originalText||'💾 ذخیره حرکت';}
  }
