@@ -4096,7 +4096,7 @@ window.useLibraryExercise=async function(id){
               }
             }
           }
-          mealBlocks.push({base,rawName,items,notes:String(meal.notes||'').trim(),calories:calorieItems?Math.round(mealCalories):null,calorieIncomplete:!calorieComplete,protein:macroCounts.protein?mealProtein:null,carbs:macroCounts.carbs?mealCarbs:null,fat:macroCounts.fat?mealFat:null});
+          mealBlocks.push({base,rawName,items,notes:String(meal.notes||'').trim(),calories:calorieItems?Math.round(mealCalories):null,calorieIncomplete:!calorieComplete,protein:macroCounts.protein===usableFoods.length?mealProtein:null,carbs:macroCounts.carbs===usableFoods.length?mealCarbs:null,fat:macroCounts.fat===usableFoods.length?mealFat:null});
         }
         // گزینه‌های هم‌وعده را کنار هم نگه می‌داریم؛ حتی اگر ترتیب ذخیره‌شده‌ی ردیف‌ها آن‌ها را از هم جدا کرده باشد.
         // ترتیب گروه‌ها بر اساس اولین حضور و ترتیب گزینه‌ها بر اساس ترتیب اصلی برنامه حفظ می‌شود.
@@ -4119,11 +4119,12 @@ window.useLibraryExercise=async function(id){
           return '<section class="meal-group" style="margin:5px 0 8px;border:1px solid #c69b43;border-radius:8px;overflow:hidden;break-inside:avoid"><h3 style="margin:0;padding:9px 11px;background:#fff0c2;color:#51380b;border-bottom:1px solid #c69b43;font-size:17px">'+esc(group.base)+'</h3>'+rows+'</section>';
         }).join('');
         body='<div class="meal-groups">'+body+'</div>';
-        const sumMacro=key=>{const vals=mealBlocks.map(x=>x[key]);return vals.length&&vals.every(v=>v!==null&&v!==undefined)?vals.reduce((a,v)=>a+Number(v||0),0):null;};
-        const totalCalories=mealBlocks.length&&mealBlocks.every(x=>x.calories!==null&&x.calories!==undefined)?mealBlocks.reduce((a,x)=>a+Number(x.calories||0),0):null;
+        const dailyBlocks=groups.map(group=>group.options[0]).filter(Boolean);
+        const sumMacro=key=>{const vals=dailyBlocks.map(x=>x[key]);return vals.length&&vals.every(v=>v!==null&&v!==undefined)?vals.reduce((a,v)=>a+Number(v||0),0):null;};
+        const totalCalories=dailyBlocks.length&&dailyBlocks.every(x=>x.calories!==null&&x.calories!==undefined)?dailyBlocks.reduce((a,x)=>a+Number(x.calories||0),0):null;
         const fmtMacro=v=>v===null||v===undefined?'ثبت نشده':new Intl.NumberFormat('fa-IR',{maximumFractionDigits:0}).format(Math.round(v))+' گرم';
         const fmtKcal=v=>v===null||v===undefined?'ثبت نشده':new Intl.NumberFormat('fa-IR').format(v)+' kcal';
-        body+='<section class="nutrition-summary"><h3>جمع‌بندی تغذیه روزانه</h3><div class="nutrition-metrics"><div class="nutrition-metric"><span>کالری روزانه</span><b>'+fmtKcal(totalCalories)+'</b></div><div class="nutrition-metric"><span>پروتئین</span><b>'+fmtMacro(sumMacro('protein'))+'</b></div><div class="nutrition-metric"><span>کربوهیدرات</span><b>'+fmtMacro(sumMacro('carbs'))+'</b></div><div class="nutrition-metric"><span>چربی</span><b>'+fmtMacro(sumMacro('fat'))+'</b></div></div><p>نکته مربی: آب کافی بنوشید و مقادیر ثبت‌شده را طبق برنامه رعایت کنید.</p></section>';
+        body+='<section class="nutrition-summary"><h3>جمع‌بندی تغذیه روزانه <small style="font-size:10px;font-weight:500">(بر اساس گزینه اول هر وعده)</small></h3><div class="nutrition-metrics"><div class="nutrition-metric"><span>کالری روزانه</span><b>'+fmtKcal(totalCalories)+'</b></div><div class="nutrition-metric"><span>پروتئین</span><b>'+fmtMacro(sumMacro('protein'))+'</b></div><div class="nutrition-metric"><span>کربوهیدرات</span><b>'+fmtMacro(sumMacro('carbs'))+'</b></div><div class="nutrition-metric"><span>چربی</span><b>'+fmtMacro(sumMacro('fat'))+'</b></div></div><p>نکته مربی: آب کافی بنوشید و مقادیر ثبت‌شده را طبق برنامه رعایت کنید.</p></section>';
         let supplementRows=[];
         try {
           const savedSupplements=await sbGet('/trainee_supplements?trainee_id=eq.'+encodeURIComponent(trainee.id)+'&select=name,dose,timing,frequency,days,duration,coach_note,status&order=created_at.asc');
