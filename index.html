@@ -4441,14 +4441,20 @@ window.loadLibraryExercises=async function(){
   const cats=['سینه','پشت','سرشانه','جلو بازو','پشت بازو','پا','شکم','کاردیو','اصلاحی','سایر'];
   const icons={'سینه':'🏋️','پشت':'💪','سرشانه':'🔱','جلو بازو':'💪','پشت بازو':'⚡','پا':'🦵','شکم':'🎯','کاردیو':'🏃','اصلاحی':'🧘','سایر':'📚'};
   function categoryOf(x){
-   // Respect the coach-selected category first. Keyword inference must never override it:
-   // e.g. "پشت ران" belongs to "پا" even though its name contains "پشت".
-   const direct=String(x.category||'').trim();
-   if(cats.includes(direct))return direct;
+   // target_muscle is written directly from the section the coach selected when saving.
+   // Prefer it over category, which may contain legacy/incorrect inferred values.
    const target=String(x.target_muscle||'').trim();
    if(cats.includes(target))return target;
-   const fields=[x.name,x.equipment,x.coach_note,x.target_muscle].map(n);
-   for(const c of cats){if(c==='سایر')continue;const keys=kw[c]||[c];if(fields.some(v=>v===n(c)||keys.some(k=>v.includes(n(k)))))return c;}
+   const direct=String(x.category||'').trim();
+   if(cats.includes(direct))return direct;
+   // Only use name-based inference for legacy rows that have no valid saved section.
+   // Check specific/longer labels first so "پشت بازو" can never be mistaken for "پشت".
+   const fields=[x.name,x.equipment,x.coach_note].map(n);
+   const ordered=cats.filter(c=>c!=='سایر').sort((a,b)=>n(b).length-n(a).length);
+   for(const c of ordered){
+    const keys=(kw[c]||[c]).slice().sort((a,b)=>n(b).length-n(a).length);
+    if(fields.some(v=>keys.some(k=>v.includes(n(k)))))return c;
+   }
    return 'سایر';
   }
   const selected=window.__fitnessSelectedLibraryMuscle||'';
