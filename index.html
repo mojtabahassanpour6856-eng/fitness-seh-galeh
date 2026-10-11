@@ -1211,7 +1211,7 @@ function renderMealCoach(meals){
   {key:"preworkout",name:"قبل تمرین",icon:"⚡"},
   {key:"postworkout",name:"بعد تمرین",icon:"💪"}
  ];
- const normalized=s=>String(s||"").replace(/[\\s\\u200c\\u200f]/g,"");
+ const normalized=s=>String(s||"").replace(/[\s\u200c\u200f]/g,"");
  const targetIndex=name=>{const n=normalized(name);if(n.includes("قبلتمرین"))return 6;if(n.includes("بعدتمرین"))return 7;if(n.includes("قبلخواب"))return 5;if(n.includes("میان‌وعدهعصر")||n.includes("میانوع‌دهعصر"))return 3;if(n.includes("میان‌وعدهصبح")||n.includes("میانوع‌دهصبح"))return 1;if(n.includes("صبحانه"))return 0;if(n.includes("ناهار"))return 2;if(n.includes("شام"))return 4;return 0;};
  $("mealList").innerHTML=meals.map((m,i)=>{
   const fs=m.foods||[];
@@ -1244,7 +1244,7 @@ async async function addMealOption(kind){
   if(!currentClient||String(currentClient.id)!==String(traineeId)||String(currentPlanId)!==String(planId))throw new Error("شاگرد یا برنامه تغییر کرده است؛ دوباره تلاش کنید.");
   const existing=await sbGet(`/nutrition_meals?plan_id=eq.${encodeURIComponent(planId)}&select=id,meal_name,meal_order&order=meal_order.asc`);
   if(!currentClient||String(currentClient.id)!==String(traineeId)||String(currentPlanId)!==String(planId))throw new Error("شاگرد یا برنامه تغییر کرده است؛ دوباره تلاش کنید.");
-  const norm=v=>String(v||"").replace(/[\\s\\u200c\\u200f]/g,"");
+  const norm=v=>String(v||"").replace(/[\s\u200c\u200f]/g,"");
   const baseNorm=norm(base);
   const matches=existing.filter(m=>{const n=norm(m.meal_name);return n===baseNorm||new RegExp("^"+baseNorm+"[0-9۰-۹]*$").test(n);});
   const ordinals=matches.map(m=>{const n=norm(m.meal_name).slice(baseNorm.length);const western=n.replace(/[۰-۹]/g,d=>"۰۱۲۳۴۵۶۷۸۹".indexOf(d));return n?Number(western)||1:1;});
@@ -1254,7 +1254,7 @@ async async function addMealOption(kind){
   const nextOrder=Math.max(0,...existing.map(m=>Number(m.meal_order)||0))+1;
   await sbWrite("/nutrition_meals","POST",[{plan_id:planId,meal_name:mealName,meal_order:nextOrder}]);
   if(currentClient&&String(currentClient.id)===String(traineeId)&&String(currentPlanId)===String(planId))await loadNutritionForClient();
- }catch(e){alert("افزودن گزینه وعده انجام نشد.\\n"+e.message);}
+ }catch(e){alert("افزودن گزینه وعده انجام نشد.\n"+e.message);}
  finally{defaultMealsBusy=false;}
 }
 function addBedtimeMeal(){return addMealOption("bedtime");}
