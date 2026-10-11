@@ -1144,6 +1144,8 @@ if(profileError) throw profileError;
       }
     }
     authProfile=rows[0];document.body.classList.remove('locked');$('authScreen').style.display='none';$('authUserBar').style.display='block';$('authUserText').textContent=`${authProfile.full_name||user.email} | ${authProfile.role==='coach'?'مربی':'شاگرد'}`;
+    // Reload the food catalog after authentication so RLS sees the active session.
+    await loadFoods();
     if(authProfile.role==='trainee'){
       document.querySelectorAll('.nav button').forEach(b=>b.style.display='none');
       [document.querySelectorAll('.nav button')[2],document.querySelectorAll('.nav button')[3],document.querySelectorAll('.nav button')[4]].forEach(b=>{if(b)b.style.display='block';});
