@@ -1212,7 +1212,7 @@ function renderMealCoach(meals){
   {key:"postworkout",name:"بعد تمرین",icon:"💪"}
  ];
  const normalized=s=>String(s||"").replace(/[\s\u200c\u200f]/g,"");
- const targetIndex=name=>{const n=normalized(name);if(n.includes("قبلتمرین"))return 6;if(n.includes("بعدتمرین"))return 7;if(n.includes("قبلخواب"))return 5;if(n.includes("میان‌وعدهعصر")||n.includes("میانوع‌دهعصر"))return 3;if(n.includes("میان‌وعدهصبح")||n.includes("میانوع‌دهصبح"))return 1;if(n.includes("صبحانه"))return 0;if(n.includes("ناهار"))return 2;if(n.includes("شام"))return 4;return 0;};
+ const targetIndex=name=>{const n=normalized(name);if(n.includes("قبلتمرین"))return 6;if(n.includes("بعدتمرین"))return 7;if(n.includes("قبلخواب"))return 5;if(n.includes("میانوعدهعصر"))return 3;if(n.includes("میانوعدهصبح"))return 1;if(n.includes("صبحانه"))return 0;if(n.includes("ناهار"))return 2;if(n.includes("شام"))return 4;return 0;};
  $("mealList").innerHTML=meals.map((m,i)=>{
   const fs=m.foods||[];
   const total=fs.reduce((a,x)=>{const v=foodMetrics(x.food||{},x.amount,x.unit);return v.valid?[a[0]+v.cal,a[1]+v.pro,a[2]+v.carb,a[3]+v.fat]:a},[0,0,0,0]);
