@@ -4344,21 +4344,30 @@ window.useLibraryExercise=async function(id){
             return;
           }
           button.textContent='در حال آماده‌سازی اشتراک…';
-          if(window.navigator.share && window.navigator.canShare && window.navigator.canShare({files:[imageFile]})){
+          if(typeof window.navigator.share === 'function'){
             try{
+              /* Try native file sharing even when canShare({files}) is absent or incorrectly reports false on Android WebView browsers. */
               await window.navigator.share({title:title+' | '+(trainee.name||''),text:'برنامه '+title+' از باشگاه فیتنس سه‌قلعه',files:[imageFile]});
+              return;
             }catch(shareError){
               if(shareError && shareError.name==='AbortError') return;
+              console.warn('Native image share failed; trying text/link share',shareError);
+              try{
+                await window.navigator.share({title:title+' | '+(trainee.name||''),text:'برنامه '+title+' از باشگاه فیتنس سه‌قلعه'});
+                alert('منوی اشتراک‌گذاری باز شد، اما مرورگر نتوانست عکس را به آن ضمیمه کند. عکس PNG هم دانلود می‌شود تا بتوانید آن را در پیام‌رسان پیوست کنید.');
+              }catch(textShareError){
+                console.warn('Native text share failed',textShareError);
+                alert('مرورگر گوشی اجازه اشتراک مستقیم عکس را نداد؛ عکس PNG دانلود می‌شود. برای ارسال، آن را از Downloads در پیام‌رسان پیوست کنید.');
+              }
               const url=URL.createObjectURL(png);
               const link=doc.createElement('a');link.href=url;link.download=imageFile.name;doc.body.appendChild(link);link.click();link.remove();
               setTimeout(()=>URL.revokeObjectURL(url),60000);
-              alert('ارسال مستقیم انجام نشد؛ عکس PNG ذخیره می‌شود. سپس آن را از پوشه دانلودها در واتساپ یا پیام‌رسان بفرستید.');
             }
           }else{
             const url=URL.createObjectURL(png);
             const link=doc.createElement('a');link.href=url;link.download=imageFile.name;doc.body.appendChild(link);link.click();link.remove();
             setTimeout(()=>URL.revokeObjectURL(url),60000);
-            alert('عکس برنامه ساخته شد و برای ذخیره آماده است. از پوشه دانلودها می‌توانید آن را به‌صورت عکس ارسال کنید.');
+            alert('این مرورگر منوی اشتراک‌گذاری فایل را پشتیبانی نمی‌کند؛ عکس PNG دانلود شد. آن را از Downloads در پیام‌رسان پیوست کنید.');
           }
         }catch(e){
           console.error('PNG sharing failed',e);
