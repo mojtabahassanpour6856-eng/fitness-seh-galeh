@@ -961,7 +961,7 @@ function mealTab(tab){
 }
 function fillMealFoodSelect(){
  const s=$("mealFoodSelect");if(!s)return;s.innerHTML=foods.map((f,i)=>`<option value="${i}">${esc(f[0])}</option>`).join("");
- s.onchange=()=>{updateMealFoodUnits();previewMealFood();};
+ s.onchange=()=>{$("mealFoodAmount").dataset.unitInitialized="";updateMealFoodUnits();previewMealFood();};
  $("mealFoodAmount").oninput=previewMealFood;$("mealFoodUnit").onchange=previewMealFood;
  updateMealFoodUnits();previewMealFood();
 }
