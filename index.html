@@ -430,7 +430,7 @@ body.library-room .library-inline-add button{position:relative!important;z-index
 <div><label>نوع</label><select id="fastType"><option>بدون فستینگ</option><option>12:12</option><option>14:10</option><option>16:8</option><option>18:6</option></select></div>
 <div><label>شروع فست</label><input id="fastStart" type="time" value="20:00"></div>
 <div><label>پایان فست</label><input id="fastEnd" type="time" value="12:00"></div>
-<div><label>تعداد وعده</label><input id="fastMeals" type="number" value="3" min="1"></div>
+<div><label>تعداد وعده</label><input id="fastMeals" type="number" value="3" min="1" max="8" onchange="syncFastingMealCount()"></div>
 </div>
 <div style="margin-top:12px">
 <h3>🍽️ برنامه‌ساز غذایی فستینگ</h3>
@@ -792,7 +792,7 @@ async function addFoodFromMealBank(){
   await sbWrite("/foods","POST",{name,category,calories,protein,carbs,fat,serving_unit,serving_amount:100});
   const data=await sbGet("/foods?select=*&order=name");
   foods=data.map(x=>[x.name,+x.calories||0,+x.protein||0,+x.carbs||0,+x.fat||0,x.id,x.category||""]);
-  fillFoods();fillMealFoodSelect();renderMealFoodBank();
+  fillFoods();fillMealFoodSelect();renderMealFoodBank();renderFastingMealPlanner();
   $("mealBankName").value="";$("mealBankCalories").value="";$("mealBankProtein").value="0";$("mealBankCarbs").value="0";$("mealBankFat").value="0";
   $("mealFoodBankSearch").value=name;renderMealFoodBank();
   alert("غذا در بانک ذخیره شد و اکنون در فهرست انتخاب غذای وعده‌ها هم قابل استفاده است.");
@@ -812,6 +812,7 @@ async function loadFoods(){
  foods=(Array.isArray(data)?data:[]).map(x=>[x.name,+x.calories||0,+x.protein||0,+x.carbs||0,+x.fat||0,x.id,x.category||""]);
  try{fillFoods();}catch(e){console.error("loadFoods: fillFoods render failed",e);}
  try{renderMealFoodBank();}catch(e){console.error("loadFoods: food bank render failed",e);}
+  try{renderFastingMealPlanner();}catch(e){console.error("loadFoods: fasting meal planner render failed",e);}
 }
 function fillFoods(){
  // بخش قدیمی محاسبه‌گر جایگزین ممکن است در بعضی صفحات وجود نداشته باشد.
@@ -1010,14 +1011,21 @@ let fastingMealRows=[];
 function initFastingMealPlanner(){
  if(fastingMealRows.length)return;
  const n=Math.max(1,Math.min(8,Number($("fastMeals")?.value)||3));
- const end=$("fastEnd")?.value||"20:00";
+ const start=$("fastStart")?.value||"12:00",end=$("fastEnd")?.value||"20:00";
+ const startM=Number(start.split(":")[0])*60+Number(start.split(":")[1]||0);
+ let windowM=(Number(end.split(":")[0])*60+Number(end.split(":")[1]||0)-startM+1440)%1440;
+ if(windowM===0)windowM=480;
  for(let i=0;i<n;i++){
-  const mins=(Number(end.split(":")[0])*60+(Number(end.split(":")[1])||0));
-  const span=Math.max(60,Math.min(600,mins-(Number($("fastStart")?.value||"12:00").split(":")[0]*60+(Number(($("fastStart")?.value||"12:00").split(":")[1]))||0)));
-  const startM=Number(($("fastStart")?.value||"12:00").split(":")[0])*60+Number(($("fastStart")?.value||"12:00").split(":")[1]||0);
-  let t=(startM+Math.round((i+0.5)*span/n))%1440;
-  fastingMealRows.push({time:String(Math.floor(t/60)).padStart(2,"0")+":"+String(t%60).padStart(2,"0"),items:[{foodIndex:foods.length?"0":"","amount":100}]});
+  const t=(startM+Math.round(windowM*(i+1)/(n+1)))%1440;
+  fastingMealRows.push({time:String(Math.floor(t/60)).padStart(2,"0")+":"+String(t%60).padStart(2,"0"),items:[{foodIndex:"",amount:100}]});
  }
+}
+function syncFastingMealCount(){
+ const n=Math.max(1,Math.min(8,Number($("fastMeals")?.value)||3));
+ if(!fastingMealRows.length)initFastingMealPlanner();
+ while(fastingMealRows.length<n)fastingMealRows.push({time:$("fastEnd")?.value||"19:00",items:[{foodIndex:"",amount:100}]});
+ while(fastingMealRows.length>n)fastingMealRows.pop();
+ renderFastingMealPlanner();
 }
 function renderFastingMealPlanner(){
  const host=$("fastMealPlanner");if(!host)return;
@@ -1031,9 +1039,9 @@ function renderFastingMealPlanner(){
 function setFastingMealTime(i,v){if(fastingMealRows[i])fastingMealRows[i].time=v;}
 function setFastingFood(i,j,v){if(fastingMealRows[i]?.items[j]){fastingMealRows[i].items[j].foodIndex=v===""?"":String(Number(v));renderFastingMealPlanner();}}
 function setFastingAmount(i,j,v){if(fastingMealRows[i]?.items[j])fastingMealRows[i].items[j].amount=Math.max(1,Number(v)||1);}
-function addFastingMeal(){if(!fastingMealRows.length)initFastingMealPlanner();if(fastingMealRows.length>=8){alert("حداکثر ۸ وعده می‌توان اضافه کرد.");return;}fastingMealRows.push({time:$("fastEnd")?.value||"19:00",items:[{foodIndex:foods.length?"0":"","amount":100}]});renderFastingMealPlanner();}
+function addFastingMeal(){if(!fastingMealRows.length)initFastingMealPlanner();if(fastingMealRows.length>=8){alert("حداکثر ۸ وعده می‌توان اضافه کرد.");return;}fastingMealRows.push({time:$("fastEnd")?.value||"19:00",items:[{foodIndex:"","amount":100}]});renderFastingMealPlanner();}
 function removeFastingMeal(i){fastingMealRows.splice(i,1);renderFastingMealPlanner();}
-function addFastingFood(i){if(!fastingMealRows[i])return;if(fastingMealRows[i].items.length>=12){alert("برای هر وعده حداکثر ۱۲ قلم غذا مجاز است.");return;}fastingMealRows[i].items.push({foodIndex:foods.length?"0":"","amount":100});renderFastingMealPlanner();}
+function addFastingFood(i){if(!fastingMealRows[i])return;if(fastingMealRows[i].items.length>=12){alert("برای هر وعده حداکثر ۱۲ قلم غذا مجاز است.");return;}fastingMealRows[i].items.push({foodIndex:"","amount":100});renderFastingMealPlanner();}
 function removeFastingFood(i,j){if(!fastingMealRows[i])return;fastingMealRows[i].items.splice(j,1);if(!fastingMealRows[i].items.length)fastingMealRows[i].items.push({foodIndex:foods.length?"0":"","amount":100});renderFastingMealPlanner();}
 function buildFastingMealPlanText(){
  return fastingMealRows.map((meal,i)=>{
@@ -1055,10 +1063,9 @@ async function saveFasting(){
 async function applyFastingRole(){
  const card=$("fastType")?.closest(".card");
  if(!card||authProfile?.role!=="trainee")return;
- const editor=card.querySelector(".grid2");
- const saveBtn=card.querySelector('button[onclick="saveFasting()"]');
- if(editor)editor.style.display="none";
- if(saveBtn)saveBtn.style.display="none";
+ card.querySelectorAll("input,select,textarea,button").forEach(el=>el.style.display="none");
+ const planner=$("fastMealPlanner");if(planner)planner.style.display="none";
+ const plannerStatus=$("fastMealPlannerStatus");if(plannerStatus)plannerStatus.style.display="none";
  const status=$("fastStatus");
  if(status)status.textContent="برنامه فستینگ فقط توسط مربی تعیین می‌شود.";
  if(!currentClient?.id)return;
