@@ -153,14 +153,16 @@ body.locked{overflow:hidden}
 .library-inline-add input,.library-inline-add select{width:100%;min-width:0}.library-inline-add label{font-size:12px}
 .library-detail-view h3{color:#f1c66b}
 
-/* نمای اتاق مستقل برای هر عضله؛ در این حالت فقط بانک حرکات دیده می‌شود */
-body.library-room{overflow:hidden!important;background:#0c1118!important}
+/* نمای بانک حرکات سازگار با صفحه‌کلید گوشی؛ از قفل‌کردن body و fixed scroll اجتناب شود */
+body.library-room{overflow-x:hidden!important;overflow-y:auto!important;background:#0c1118!important}
 body.library-room .page> :not(#workout){display:none!important}
-body.library-room .page #workout{display:block!important;position:fixed!important;inset:0!important;z-index:99999!important;overflow-y:auto!important;overflow-x:hidden!important;margin:0!important;padding:12px!important;background:#0c1118!important;box-sizing:border-box!important}
+body.library-room .page #workout{display:block!important;position:relative!important;inset:auto!important;z-index:1!important;overflow:visible!important;margin:0!important;padding:12px!important;background:#0c1118!important;box-sizing:border-box!important;min-height:100vh!important}
 body.library-room #workout> :not(.library-room-card){display:none!important}
-body.library-room #workout .library-room-card{display:block!important;position:relative!important;width:100%!important;max-width:900px!important;min-height:calc(100dvh - 24px)!important;margin:0 auto!important;box-sizing:border-box!important;border:1px solid #3d4a5a!important;border-radius:16px!important;background:#151c25!important;padding:14px!important}
+body.library-room #workout .library-room-card{display:block!important;position:relative!important;width:100%!important;max-width:900px!important;min-height:calc(100vh - 24px)!important;height:auto!important;overflow:visible!important;margin:0 auto!important;box-sizing:border-box!important;border:1px solid #3d4a5a!important;border-radius:16px!important;background:#151c25!important;padding:14px!important}
 body.library-room #workout .library-room-card #libraryList{display:block!important}
 body.library-room #workout .library-room-card .library-detail-view{width:100%!important}
+body.library-room .library-inline-add input,body.library-room .library-inline-add select,body.library-room .library-inline-add textarea{position:relative!important;z-index:2!important;pointer-events:auto!important;touch-action:manipulation!important}
+body.library-room .library-inline-add button{position:relative!important;z-index:2!important;pointer-events:auto!important;touch-action:manipulation!important}
 </style>
 <style id="FITNESS_COMPACT_WORKOUT_LIST">
 /* کارت‌های حرکات برنامه: فشرده، هم‌اندازه و خوانا */
