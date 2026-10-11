@@ -2174,6 +2174,33 @@ window.loadDashboard = loadDashboard;
 
 
 
+
+<script id="SEH_LIBRARY_DELETE_CLICK_DELEGATION_V1">
+(function(){
+ if(window.__sehLibraryDeleteDelegationV1)return;
+ window.__sehLibraryDeleteDelegationV1=true;
+ document.addEventListener('click',function(event){
+  var button=event.target&&event.target.closest?event.target.closest('button[onclick*="deleteLibraryExercise"],button[data-delete-library-exercise]'):null;
+  if(!button)return;
+  event.preventDefault();
+  event.stopPropagation();
+  if(typeof event.stopImmediatePropagation==='function')event.stopImmediatePropagation();
+  if(button.dataset.deleteBusy==='1')return;
+  var id=button.dataset.id||button.getAttribute('data-exercise-id')||'';
+  var name=button.dataset.name||button.getAttribute('data-exercise-name')||'این حرکت';
+  if(!id){alert('شناسه حرکت روی دکمه پیدا نشد. بانک حرکات را تازه‌سازی کنید.');return;}
+  if(typeof window.deleteLibraryExercise!=='function'){alert('بخش حذف حرکت بارگذاری نشده است. صفحه را تازه‌سازی کنید.');return;}
+  button.dataset.deleteBusy='1';
+  var oldText=button.textContent;
+  button.disabled=true;
+  button.textContent='در حال حذف…';
+  Promise.resolve().then(function(){return window.deleteLibraryExercise(id,name);})
+   .catch(function(error){console.error('Delegated library delete failed:',error);alert('حذف حرکت انجام نشد: '+(error&&error.message?error.message:String(error)));})
+   .finally(function(){button.dataset.deleteBusy='0';button.disabled=false;if(button.isConnected)button.textContent=oldText;});
+ },true);
+})();
+</script>
+
 </body></html>`;
     const w=window.open('','_blank');if(w){w.document.write(html);w.document.close();}
   };
