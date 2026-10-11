@@ -433,12 +433,11 @@ body.library-room .library-inline-add button{position:relative!important;z-index
 <div><label>تعداد وعده</label><input id="fastMeals" type="number" value="3" min="1"></div>
 </div>
 <div style="margin-top:12px">
-<label for="fastMealPlan">🍽️ برنامه غذایی مخصوص فستینگ (در بازه مجاز خوردن)</label>
-<textarea id="fastMealPlan" rows="5" placeholder="مثلاً:
-وعده اول ساعت ۱۲: تخم‌مرغ، نان و سبزیجات؛ مقدارها را دقیق بنویسید.
-وعده دوم ساعت ۱۶: مرغ، برنج و سالاد؛ مقدار هر ماده غذایی.
-وعده آخر ساعت ۱۹: شام تعیین‌شده همراه مقدار مواد غذایی."></textarea>
-<small class="muted">برنامه را وعده‌به‌وعده همراه ساعت و مقدار مواد غذایی بنویسید. این متن همراه زمان‌بندی فستینگ ذخیره می‌شود و برای شاگرد نمایش داده خواهد شد.</small>
+<h3>🍽️ برنامه‌ساز غذایی فستینگ</h3>
+<p class="muted">وعده‌ها را در بازه مجاز خوردن تنظیم کن، ساعت هر وعده را انتخاب کن و از بانک غذای اپ، غذا و مقدار آن را اضافه کن.</p>
+<div id="fastMealPlanner"></div>
+<div class="close-row"><button type="button" class="secondary" onclick="addFastingMeal()">➕ افزودن وعده</button></div>
+<p id="fastMealPlannerStatus" class="muted"></p>
 </div>
 <button onclick="saveFasting()">ذخیره فستینگ و برنامه غذایی</button>
 <p id="fastStatus" class="muted" style="white-space:pre-line"></p>
@@ -1007,15 +1006,50 @@ async function saveSupplement(){if(!currentClient)return alert('اول شاگر�
 async function saveInjury(){if(!currentClient)return alert('اول شاگرد را انتخاب کنید.');const type=$('injType').value.trim();if(!type)return alert('نوع مشکل را وارد کنید.');try{await sbWrite('/trainee_injuries','POST',{trainee_id:currentClient.id,problem_type:type,body_area:$('injArea').value.trim()||null,severity:$('injSeverity').value.trim()||null,record_date:$('injDate').value||today(),movement_limit:$('injLimit').value.trim()||null,coach_note:$('injNote').value.trim()||null,status:$('injStatus').value});await loadInjuries();}catch(e){alert('ثبت محدودیت انجام نشد.\n'+e.message);}}
 async function loadInjuries(){if(!currentClient||!$('injList'))return;try{const rows=await sbGet(`/trainee_injuries?trainee_id=eq.${encodeURIComponent(currentClient.id)}&order=created_at.desc`);$('injList').innerHTML=rows.map(x=>`<div class="report-row"><span>⚠️ ${esc(x.problem_type)} | ${esc(x.body_area||'')}</span><b>${esc(x.status||'')}</b></div>`).join('')||'موردی ثبت نشده است.';}catch(e){$('injList').textContent='برای فعال شدن این بخش، SQL جدید را اجرا کنید.';}}
 
+let fastingMealRows=[];
+function initFastingMealPlanner(){
+ if(fastingMealRows.length)return;
+ const n=Math.max(1,Math.min(8,Number($("fastMeals")?.value)||3));
+ const end=$("fastEnd")?.value||"20:00";
+ for(let i=0;i<n;i++){
+  const mins=(Number(end.split(":")[0])*60+(Number(end.split(":")[1])||0));
+  const span=Math.max(60,Math.min(600,mins-(Number($("fastStart")?.value||"12:00").split(":")[0]*60+(Number(($("fastStart")?.value||"12:00").split(":")[1]))||0)));
+  const startM=Number(($("fastStart")?.value||"12:00").split(":")[0])*60+Number(($("fastStart")?.value||"12:00").split(":")[1]||0);
+  let t=(startM+Math.round((i+0.5)*span/n))%1440;
+  fastingMealRows.push({time:String(Math.floor(t/60)).padStart(2,"0")+":"+String(t%60).padStart(2,"0"),items:[{foodIndex:foods.length?"0":"","amount":100}]});
+ }
+}
+function renderFastingMealPlanner(){
+ const host=$("fastMealPlanner");if(!host)return;
+ if(!fastingMealRows.length)initFastingMealPlanner();
+ if(!foods.length){host.innerHTML='<p class="warning-text">بانک غذا هنوز بارگذاری نشده است؛ صفحه را تازه‌سازی کن و دوباره وارد این بخش شو.</p>';return;}
+ const opts='<option value="">انتخاب غذا…</option>'+foods.map((f,i)=>'<option value="'+i+'">'+esc(f[0])+'</option>').join("");
+ host.innerHTML=fastingMealRows.map((meal,i)=>'<div class="card" style="padding:12px;margin:10px 0;border:1px solid #d8c9a5"><div class="grid2"><div><label>وعده '+(i+1)+' — ساعت</label><input type="time" value="'+esc(meal.time)+'" onchange="setFastingMealTime('+i+',this.value)"></div><div style="display:flex;align-items:end"><button type="button" class="secondary" onclick="removeFastingMeal('+i+')">حذف وعده</button></div></div>'+meal.items.map((item,j)=>'<div class="grid2" style="margin-top:8px"><div><label>غذا</label><select onchange="setFastingFood('+i+','+j+',this.value)">'+opts+'</select></div><div><label>مقدار (گرم)</label><input type="number" min="1" step="1" value="'+esc(item.amount)+'" onchange="setFastingAmount('+i+','+j+',this.value)"></div></div><div class="close-row"><button type="button" class="secondary" onclick="removeFastingFood('+i+','+j+')">حذف این غذا</button></div>').join("")+'<button type="button" class="secondary" onclick="addFastingFood('+i+')">➕ افزودن غذا به این وعده</button></div>').join("");
+ fastingMealRows.forEach((meal,i)=>meal.items.forEach((item,j)=>{const sels=host.querySelectorAll("select");const select=sels[fastingMealRows.slice(0,i).reduce((n,m)=>n+m.items.length,0)+j];if(select)select.value=item.foodIndex===""?"":String(item.foodIndex);}));
+ const st=$("fastMealPlannerStatus");if(st)st.textContent="غذاها از بانک غذای اپ انتخاب می‌شوند؛ مقدارها بر حسب گرم ثبت می‌شوند.";
+}
+function setFastingMealTime(i,v){if(fastingMealRows[i])fastingMealRows[i].time=v;}
+function setFastingFood(i,j,v){if(fastingMealRows[i]?.items[j]){fastingMealRows[i].items[j].foodIndex=v===""?"":String(Number(v));renderFastingMealPlanner();}}
+function setFastingAmount(i,j,v){if(fastingMealRows[i]?.items[j])fastingMealRows[i].items[j].amount=Math.max(1,Number(v)||1);}
+function addFastingMeal(){if(!fastingMealRows.length)initFastingMealPlanner();if(fastingMealRows.length>=8){alert("حداکثر ۸ وعده می‌توان اضافه کرد.");return;}fastingMealRows.push({time:$("fastEnd")?.value||"19:00",items:[{foodIndex:foods.length?"0":"","amount":100}]});renderFastingMealPlanner();}
+function removeFastingMeal(i){fastingMealRows.splice(i,1);renderFastingMealPlanner();}
+function addFastingFood(i){if(!fastingMealRows[i])return;if(fastingMealRows[i].items.length>=12){alert("برای هر وعده حداکثر ۱۲ قلم غذا مجاز است.");return;}fastingMealRows[i].items.push({foodIndex:foods.length?"0":"","amount":100});renderFastingMealPlanner();}
+function removeFastingFood(i,j){if(!fastingMealRows[i])return;fastingMealRows[i].items.splice(j,1);if(!fastingMealRows[i].items.length)fastingMealRows[i].items.push({foodIndex:foods.length?"0":"","amount":100});renderFastingMealPlanner();}
+function buildFastingMealPlanText(){
+ return fastingMealRows.map((meal,i)=>{
+  const parts=meal.items.filter(x=>x.foodIndex!==""&&foods[Number(x.foodIndex)]).map(x=>{const f=foods[Number(x.foodIndex)];return f[0]+" ("+(Number(x.amount)||0)+" گرم)";});
+  return parts.length?"وعده "+(i+1)+" — ساعت "+(meal.time||"تعیین‌نشده")+": "+parts.join("، "):"";
+ }).filter(Boolean).join("\n");
+}
 async function saveFasting(){
  if(authProfile?.role!=="coach"){alert("تعیین و تغییر برنامه فستینگ فقط در دسترس مربی است.");return;}
  if(!currentClient){alert("اول شاگرد را انتخاب کنید.");return;}
  const st=$("fastStart").value,en=$("fastEnd").value,t=$("fastType").value;
- const mealPlan=$("fastMealPlan")?.value.trim()||"";
+ const mealPlan=buildFastingMealPlanText();
  if(t==="بدون فستینگ"){ $("fastStatus").textContent="فستینگ برای این شاگرد فعال نیست."; return; }
  let duration=0;if(st&&en){let a=+st.split(":")[0]*60 + +st.split(":")[1],b=+en.split(":")[0]*60 + +en.split(":")[1];duration=b-a;if(duration<0)duration+=1440;}
- const description=`نوع ${t} | ${$("fastMeals").value||0} وعده${mealPlan?"\nبرنامه غذایی در بازه مجاز خوردن:\n"+mealPlan:""}`;
- try{await sbWrite("/fasting_logs","POST",{trainee_id:currentClient.id,fasting_date:today(),start_time:st||null,end_time:en||null,duration_minutes:duration,description});$("fastStatus").textContent=`فستینگ ${t} با موفقیت ثبت شد.${mealPlan?"\nبرنامه غذایی فستینگ هم ذخیره شد.":""}`;alert(mealPlan?"فستینگ و برنامه غذایی آن ذخیره شد.":"فستینگ ثبت شد.");}
+ const description="نوع "+t+" | "+($("fastMeals").value||0)+" وعده"+(mealPlan?"\nبرنامه غذایی فستینگ:\n"+mealPlan:"");
+ try{await sbWrite("/fasting_logs","POST",{trainee_id:currentClient.id,fasting_date:today(),start_time:st||null,end_time:en||null,duration_minutes:duration,description});$("fastStatus").textContent="فستینگ "+t+" با موفقیت ثبت شد."+(mealPlan?" برنامه غذایی انتخاب‌شده هم ذخیره شد.":"");alert(mealPlan?"فستینگ و برنامه غذایی انتخاب‌شده ذخیره شد.":"فستینگ ثبت شد.");}
  catch(e){alert("ثبت فستینگ انجام نشد.\n"+e.message);}
 }
 async function applyFastingRole(){
