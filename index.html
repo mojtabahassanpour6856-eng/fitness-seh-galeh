@@ -1346,6 +1346,8 @@ async function addMealOption(kind){
   if(!currentClient||String(currentClient.id)!==String(traineeId)||String(currentPlanId)!==String(planId)){
    showStatus("گزینه «"+mealName+"» در سرور ثبت شد؛ برای دیدن آن دوباره همین شاگرد را انتخاب کن.",true);return;
   }
+  // پس از ساخت گزینه تازه، همان گزینه باز شود تا مربی مستقیم غذاهایش را وارد کند.
+  selectedMealOptions[kind]=String(created.id);
   const verify=await sbGet("/nutrition_meals?id=eq."+encodeURIComponent(created.id)+"&plan_id=eq."+encodeURIComponent(planId)+"&select=id,meal_name,meal_order&limit=1");
   if(!verify.length)throw new Error("درخواست درج شناسه گرفت، اما خواندن همان ردیف از دیتابیس ممکن نشد. سیاست دسترسی SELECT را باید بررسی کنیم.");
   await loadNutritionForClient();
