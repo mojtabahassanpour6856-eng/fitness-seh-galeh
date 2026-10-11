@@ -720,27 +720,66 @@ async function searchFoodNutritionSource(){
  const name=String($("mealBankName")?.value||"").trim();
  const status=$("mealFoodLookupStatus"),results=$("mealFoodLookupResults");
  if(!name){if(status)status.textContent="ابتدا نام غذا را وارد کن."; $("mealBankName")?.focus();return;}
- if(status)status.textContent="در حال جست‌وجو در منبع Open Food Facts…";
+ if(status)status.textContent="در حال جست‌وجوی نام غذا و شکل‌های جایگزین آن در Open Food Facts…";
  if(results)results.innerHTML="";
  try{
-  const url="https://world.openfoodfacts.org/cgi/search.pl?search_terms="+encodeURIComponent(name)+"&search_simple=1&action=process&json=1&page_size=10&fields=product_name,product_name_fa,brands,nutriments,code,url,quantity";
-  const response=await fetch(url,{headers:{"Accept":"application/json"}});
-  if(!response.ok)throw new Error("پاسخ منبع غذایی دریافت نشد ("+response.status+").");
-  const data=await response.json();
-  const products=(data.products||[]).map(p=>{
+  const aliases=[
+   [/\b(برنج|چلو)\b/i,"rice cooked"],
+   [/مرغ/i,"chicken cooked"],
+   [/سیب.?زمینی/i,"potato boiled"],
+   [/تخم.?مرغ/i,"egg boiled"],
+   [/نان سنگک/i,"sangak bread"],
+   [/نان بربری/i,"barbari bread"],
+   [/نان لواش/i,"lavash bread"],
+   [/نان تست/i,"white bread toast"],
+   [/گوشت چرخ.?کرده/i,"ground beef cooked"],
+   [/عدس/i,"lentils cooked"],
+   [/لوبیا/i,"beans cooked"],
+   [/ماکارونی|پاستا/i,"pasta cooked"],
+   [/جو دوسر|اوتمیل/i,"oats"],
+   [/ماست/i,"plain yogurt"],
+   [/شیر/i,"whole milk"],
+   [/موز/i,"banana raw"],
+   [/سیب$/i,"apple raw"],
+   [/تن ماهی/i,"canned tuna"],
+   [/سینه مرغ/i,"chicken breast cooked"]
+  ];
+  const alias=aliases.find(([re])=>re.test(name))?.[1];
+  const queries=[name,...(alias?[alias]:[])];
+  const seen=new Set(),raw=[];
+  for(const term of queries){
+   const url="https://world.openfoodfacts.org/cgi/search.pl?search_terms="+encodeURIComponent(term)+"&search_simple=1&action=process&json=1&page_size=12&fields=product_name,product_name_fa,brands,nutriments,code,url,quantity";
+   const response=await fetch(url,{headers:{"Accept":"application/json"}});
+   if(!response.ok)continue;
+   const data=await response.json();
+   for(const p of (data.products||[])){
+    const key=String(p.code||p.url||p.product_name||"");
+    if(!seen.has(key)){seen.add(key);raw.push(p);}
+   }
+  }
+  const products=raw.map(p=>{
    const n=p.nutriments||{};
-   const calories=Number(n["energy-kcal_100g"]??(Number(n["energy-kj_100g"])/4.184));
-   const protein=Number(n["proteins_100g"]),carbs=Number(n["carbohydrates_100g"]),fat=Number(n["fat_100g"]);
-   return {name:String(p.product_name_fa||p.product_name||"").trim(),brand:String(p.brands||"").trim(),calories,protein,carbs,fat,url:p.url||("https://world.openfoodfacts.org/product/"+(p.code||"")),quantity:p.quantity||""};
-  }).filter(p=>p.name&&Number.isFinite(p.calories)&&p.calories>0&&p.calories<=950&&[p.protein,p.carbs,p.fat].every(v=>Number.isFinite(v)&&v>=0&&v<=100))
-  .sort((a,b)=>a.name.length-b.name.length).slice(0,8);
-  if(!products.length){if(status)status.textContent="اطلاعات کامل و قابل استفاده‌ای برای این نام پیدا نشد. می‌توانی مقادیر را دستی وارد کنی؛ مقدار حدسی خودکار ثبت نمی‌شود.";return;}
-  if(status)status.textContent="نتایج زیر از Open Food Facts هستند؛ اطلاعات محصولات ممکن است توسط کاربران ثبت شده باشد. نزدیک‌ترین مورد را انتخاب و مقادیر را پیش از ذخیره بررسی کن.";
-  if(results)results.innerHTML=products.map((p,i)=>'<div style="border:1px solid #34495e;border-radius:10px;padding:10px;margin-top:8px"><b>'+esc(p.name)+'</b>'+(p.brand?' <span class="muted">· '+esc(p.brand)+'</span>':'')+'<div class="muted">در ۱۰۰ گرم: '+p.calories.toFixed(1)+' kcal · پروتئین '+p.protein.toFixed(1)+'g · کربوهیدرات '+p.carbs.toFixed(1)+'g · چربی '+p.fat.toFixed(1)+'g</div><div class="muted">منبع: <a href="'+esc(p.url)+'" target="_blank" rel="noopener noreferrer">مشاهده اطلاعات منبع</a></div><button type="button" class="secondary" onclick="applyFoodNutritionLookup('+i+')">استفاده از این مقادیر</button></div>').join("");
+   const get=(...keys)=>{for(const k of keys){const v=n[k];if(v!==undefined&&v!==null&&v!==""&&Number.isFinite(Number(v)))return Number(v);}return null;};
+   let calories=get("energy-kcal_100g");
+   if(calories===null){const kj=get("energy-kj_100g");if(kj!==null)calories=kj/4.184;}
+   const protein=get("proteins_100g"),carbs=get("carbohydrates_100g"),fat=get("fat_100g");
+   const valid=v=>v!==null&&v>=0&&v<=100;
+   const kcalOK=calories!==null&&calories>0&&calories<=950;
+   const macrosOK=[protein,carbs,fat].every(valid);
+   return {name:String(p.product_name_fa||p.product_name||"").trim(),brand:String(p.brands||"").trim(),calories,protein,carbs,fat,url:p.url||("https://world.openfoodfacts.org/product/"+(p.code||"")),quantity:p.quantity||"",complete:kcalOK&&macrosOK,kcalOK,macroOK:[valid(protein),valid(carbs),valid(fat)]};
+  }).filter(p=>p.name&&(p.kcalOK||p.macroOK.some(Boolean)))
+   .sort((a,b)=>(b.complete?1:0)-(a.complete?1:0)||a.name.length-b.name.length).slice(0,10);
+  if(!products.length){if(status)status.textContent="نتیجه‌ای با اطلاعات تغذیه‌ای قابل نمایش پیدا نشد. نام را کوتاه‌تر یا دقیق‌تر بنویس؛ برای نمونه «برنج پخته» یا «سینه مرغ». مقادیر حدسی ثبت نمی‌شوند.";return;}
+  if(status)status.textContent="نتایج از Open Food Facts هستند و ممکن است توسط کاربران ثبت شده باشند. موارد ناقص نیز برای بررسی نمایش داده می‌شوند؛ فقط نتیجه‌ای را انتخاب کن که با نوع و حالت غذایت تطابق دارد.";
   window.mealFoodLookupCandidates=products;
+  if(results)results.innerHTML=products.map((p,i)=>{
+   const fmt=(v,unit)=>v===null?"ثبت نشده":v.toFixed(1)+unit;
+   const details='در ۱۰۰ گرم: '+fmt(p.calories,' kcal')+' · پروتئین '+fmt(p.protein,'g')+' · کربوهیدرات '+fmt(p.carbs,'g')+' · چربی '+fmt(p.fat,'g');
+   return '<div style="border:1px solid #34495e;border-radius:10px;padding:10px;margin-top:8px"><b>'+esc(p.name)+'</b>'+(p.brand?' <span class="muted">· '+esc(p.brand)+'</span>':'')+'<div class="muted">'+details+'</div><div class="muted">'+(p.complete?'اطلاعات کامل موجود است.':'⚠️ اطلاعات ناقص است؛ برای جلوگیری از ثبت مقدار نادرست، این نتیجه را نمی‌توان مستقیم وارد فرم کرد.')+'</div><div class="muted">منبع: <a href="'+esc(p.url)+'" target="_blank" rel="noopener noreferrer">مشاهده اطلاعات منبع</a></div>'+(p.complete?'<button type="button" class="secondary" onclick="applyFoodNutritionLookup('+i+')">استفاده از این مقادیر</button>':'')+'</div>';
+  }).join("");
  }catch(e){
   console.error("searchFoodNutritionSource",e);
-  if(status)status.textContent="جست‌وجوی آنلاین انجام نشد. اتصال اینترنت را بررسی کن یا مقادیر را دستی وارد کن.";
+  if(status)status.textContent="جست‌وجوی آنلاین انجام نشد. اتصال اینترنت را بررسی کن و دوباره تلاش کن؛ در صورت تکرار، اطلاعات را از منبع معتبر دستی وارد کن.";
  }
 }
 function applyFoodNutritionLookup(index){
