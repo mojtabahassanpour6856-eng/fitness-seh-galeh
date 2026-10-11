@@ -4204,7 +4204,7 @@ window.useLibraryExercise=async function(id){
       async function processPlanImage(forceDownload){
         const button=shareButton;
         const oldText=button.textContent;
-        button.disabled=true; button.textContent='در حال آماده‌سازی عکس…';
+        shareButton.disabled=true;downloadImageButton.disabled=true;button.textContent='در حال آماده‌سازی عکس…';
         let actions=null, actionsDisplay='';
         try {
           const doc=popup.document;
