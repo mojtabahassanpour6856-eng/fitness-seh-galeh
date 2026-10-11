@@ -2171,7 +2171,28 @@ window.loadDashboard = loadDashboard;
 
 
 
-</body></html>`;
+</body>
+<script id="FITNESS_LIBRARY_SAVE_CLICK_FIX">
+(function(){
+ if(window.__librarySaveClickFixInstalled)return;
+ window.__librarySaveClickFixInstalled=true;
+ document.addEventListener('click',function(event){
+  const button=event.target&&event.target.closest?event.target.closest('button[data-new-ex-save]'):null;
+  if(!button)return;
+  event.preventDefault();
+  if(typeof event.stopImmediatePropagation==='function')event.stopImmediatePropagation();
+  else event.stopPropagation();
+  if(typeof window.saveLibraryExerciseInGroup!=='function'){
+   const status=button.closest('.library-inline-add')?.querySelector('[data-new-ex-status]');
+   if(status)status.textContent='خطا: بخش ذخیره حرکت بارگذاری نشده است؛ صفحه را تازه‌سازی کنید.';
+   alert('بخش ذخیره حرکت بارگذاری نشده است. صفحه را تازه‌سازی کنید.');
+   return;
+  }
+  window.saveLibraryExerciseInGroup(button.dataset.category,button);
+ },true);
+})();
+</script>
+</html>`;
     const w=window.open('','_blank');if(w){w.document.write(html);w.document.close();}
   };
 
@@ -2567,7 +2588,13 @@ const plans=workoutResult.data||[], nutrition=nutritionResult.data||[];
  try{
   const timeout=new Promise((_,reject)=>{requestTimer=setTimeout(()=>reject(new Error('پاسخ سرور در ۱۵ ثانیه نرسید. برای جلوگیری از ثبت تکراری، ابتدا بانک حرکات را دوباره باز کن.')),15000);});
   // استفاده از درخواست احراز هویت‌شدهٔ خود اپ؛ کلید عمومی به‌تنهایی ممکن است با سیاست‌های RLS رد شود.
-  const request=window.sbWrite('/trainer_exercises','POST',{name:name,target_muscle:cat,category:cat,equipment:equipment||null,level:level,coach_note:note||null,is_favorite:false});
+  const authClient=window.AUTH_SUPABASE;
+  if(!authClient||!authClient.auth)throw new Error('اتصال ورود مربی آماده نیست؛ صفحه را تازه‌سازی و دوباره وارد حساب مربی شوید.');
+  const sessionResult=await authClient.auth.getSession();
+  if(sessionResult.error)throw sessionResult.error;
+  const coachId=sessionResult.data&&sessionResult.data.session&&sessionResult.data.session.user&&sessionResult.data.session.user.id;
+  if(!coachId)throw new Error('نشست مربی پیدا نشد؛ یک‌بار خارج شوید و دوباره وارد شوید.');
+  const request=window.sbWrite('/trainer_exercises','POST',{name:name,target_muscle:cat,category:cat,equipment:equipment||null,level:level,coach_note:note||null,is_favorite:false,coach_user_id:coachId});
   const rows=await Promise.race([request,timeout]);
   if(requestTimer)clearTimeout(requestTimer);
   if(!Array.isArray(rows)||!rows.length||!rows[0].id)throw new Error('پاسخ ذخیره‌سازی تأیید نشد؛ قبل از تلاش مجدد بانک را تازه کنید.');
@@ -4415,7 +4442,7 @@ window.renderLibraryMuscleShell=function(cat){
  const box=document.getElementById('libraryList');if(!box)return;
  const e=v=>typeof escf==='function'?escf(v):String(v??'').replace(/[&<>"]/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[ch]));
  const icons={'سینه':'🏋️','پشت':'💪','سرشانه':'🔱','جلو بازو':'💪','پشت بازو':'⚡','پا':'🦵','شکم':'🎯','کاردیو':'🏃','اصلاحی':'🧘','سایر':'📚'};
- box.innerHTML='<div class="library-detail-view"><button type="button" class="secondary" onclick="backToLibraryGroups()">← بازگشت به همه عضلات</button><h3 style="margin:12px 0">'+(icons[cat]||'🏋️')+' بانک حرکات '+e(cat)+'</h3><p class="muted">فرم افزودن حرکت آماده است؛ دریافت فهرست حرکات جداگانه انجام می‌شود.</p><div class="library-detail-exercises"><p class="muted">در حال دریافت حرکات…</p></div><div class="library-inline-add"><strong>➕ افزودن حرکت جدید به '+e(cat)+'</strong><div class="grid2"><div><label>نام حرکت</label><input data-new-ex-name placeholder="مثلاً پرس سینه دمبل"></div><div><label>تجهیزات</label><input data-new-ex-equipment placeholder="مثلاً دمبل یا دستگاه"></div><div><label>سطح</label><select data-new-ex-level><option>مبتدی</option><option>متوسط</option><option>پیشرفته</option></select></div><div><label>نکته مربی (اختیاری)</label><input data-new-ex-note placeholder="نکته کوتاه درباره اجرا"></div></div><button type="button" data-category="'+e(cat)+'" onclick="saveLibraryExerciseInGroup(this.dataset.category,this)">💾 ذخیره حرکت در '+e(cat)+'</button><p class="muted" data-new-ex-status>حرکت در بانک همین عضله ذخیره می‌شود.</p></div></div>';
+ box.innerHTML='<div class="library-detail-view"><button type="button" class="secondary" onclick="backToLibraryGroups()">← بازگشت به همه عضلات</button><h3 style="margin:12px 0">'+(icons[cat]||'🏋️')+' بانک حرکات '+e(cat)+'</h3><p class="muted">فرم افزودن حرکت آماده است؛ دریافت فهرست حرکات جداگانه انجام می‌شود.</p><div class="library-detail-exercises"><p class="muted">در حال دریافت حرکات…</p></div><div class="library-inline-add"><strong>➕ افزودن حرکت جدید به '+e(cat)+'</strong><div class="grid2"><div><label>نام حرکت</label><input data-new-ex-name placeholder="مثلاً پرس سینه دمبل"></div><div><label>تجهیزات</label><input data-new-ex-equipment placeholder="مثلاً دمبل یا دستگاه"></div><div><label>سطح</label><select data-new-ex-level><option>مبتدی</option><option>متوسط</option><option>پیشرفته</option></select></div><div><label>نکته مربی (اختیاری)</label><input data-new-ex-note placeholder="نکته کوتاه درباره اجرا"></div></div><button type="button" data-category="'+e(cat)+'" data-new-ex-save="1">💾 ذخیره حرکت در '+e(cat)+'</button><p class="muted" data-new-ex-status>حرکت در بانک همین عضله ذخیره می‌شود.</p></div></div>';
 };
 window.openLibraryMuscle=function(cat){window.__fitnessSelectedLibraryMuscle=cat;document.body.classList.add('library-room');window.renderLibraryMuscleShell(cat);window.loadLibraryExercises();};
 window.backToLibraryGroups=function(){window.__fitnessSelectedLibraryMuscle='';document.body.classList.remove('library-room');window.loadLibraryExercises();};
@@ -4456,7 +4483,7 @@ window.loadLibraryExercises=async function(){
     return;
    }
    const cards=items.map(x=>'<div class="library-exercise-card"><div class="library-exercise-title">'+(x.is_favorite?'⭐':'🏋️')+' '+e(x.name)+'</div><div class="library-exercise-meta"><span class="pill">'+e(x.target_muscle||x.category||selected)+'</span><span class="pill">'+e(x.level||'سطح نامشخص')+'</span><span class="pill">'+e(x.equipment||'بدون تجهیزات')+'</span></div>'+(x.coach_note?'<p class="muted">'+e(x.coach_note)+'</p>':'')+'<div class="f18-actions"><button class="secondary mini" onclick="toggleExerciseFavorite(\''+e(x.id)+'\','+!!x.is_favorite+')">'+(x.is_favorite?'☆ حذف علاقه‌مندی':'⭐ علاقه‌مندی')+'</button><button class="secondary mini" onclick="useLibraryExercise(\''+e(x.id)+'\')">➕ استفاده در برنامه</button></div></div>').join('');
-   box.innerHTML='<div class="library-detail-view"><button type="button" class="secondary" onclick="backToLibraryGroups()">← بازگشت به همه عضلات</button><h3 style="margin:12px 0">'+(icons[selected]||'🏋️')+' بانک حرکات '+e(selected)+'</h3><p class="muted">حرکت‌های این عضله را ببین، حرکت تازه اضافه کن یا هر حرکت را به برنامه شاگرد بفرست.</p><div class="library-detail-exercises">'+(cards||'<p class="muted">هنوز حرکتی برای این بخش ثبت نشده است.</p>')+'</div><div class="library-inline-add"><strong>➕ افزودن حرکت جدید به '+e(selected)+'</strong><div class="grid2"><div><label>نام حرکت</label><input data-new-ex-name placeholder="مثلاً پرس سینه دمبل"></div><div><label>تجهیزات</label><input data-new-ex-equipment placeholder="مثلاً دمبل یا دستگاه"></div><div><label>سطح</label><select data-new-ex-level><option>مبتدی</option><option>متوسط</option><option>پیشرفته</option></select></div><div><label>نکته مربی (اختیاری)</label><input data-new-ex-note placeholder="نکته کوتاه درباره اجرا"></div></div><button type="button" data-category="'+e(selected)+'" onclick="saveLibraryExerciseInGroup(this.dataset.category,this)">💾 ذخیره حرکت در '+e(selected)+'</button><p class="muted" data-new-ex-status>حرکت در بانک همین عضله ذخیره می‌شود و برای افزودن به برنامه شاگرد آماده خواهد شد.</p></div></div>';
+   box.innerHTML='<div class="library-detail-view"><button type="button" class="secondary" onclick="backToLibraryGroups()">← بازگشت به همه عضلات</button><h3 style="margin:12px 0">'+(icons[selected]||'🏋️')+' بانک حرکات '+e(selected)+'</h3><p class="muted">حرکت‌های این عضله را ببین، حرکت تازه اضافه کن یا هر حرکت را به برنامه شاگرد بفرست.</p><div class="library-detail-exercises">'+(cards||'<p class="muted">هنوز حرکتی برای این بخش ثبت نشده است.</p>')+'</div><div class="library-inline-add"><strong>➕ افزودن حرکت جدید به '+e(selected)+'</strong><div class="grid2"><div><label>نام حرکت</label><input data-new-ex-name placeholder="مثلاً پرس سینه دمبل"></div><div><label>تجهیزات</label><input data-new-ex-equipment placeholder="مثلاً دمبل یا دستگاه"></div><div><label>سطح</label><select data-new-ex-level><option>مبتدی</option><option>متوسط</option><option>پیشرفته</option></select></div><div><label>نکته مربی (اختیاری)</label><input data-new-ex-note placeholder="نکته کوتاه درباره اجرا"></div></div><button type="button" data-category="'+e(selected)+'" data-new-ex-save="1">💾 ذخیره حرکت در '+e(selected)+'</button><p class="muted" data-new-ex-status>حرکت در بانک همین عضله ذخیره می‌شود و برای افزودن به برنامه شاگرد آماده خواهد شد.</p></div></div>';
    return;
   }
   const ordered=lm!=='همه حرکات'&&lm!=='علاقه‌مندی'?[lm,...cats.filter(c=>c!==lm)]:cats;
