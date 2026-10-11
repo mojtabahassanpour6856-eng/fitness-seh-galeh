@@ -426,6 +426,7 @@ body.library-room .library-inline-add button{position:relative!important;z-index
 
 <div class="card">
 <h2>⏳ فستینگ</h2>
+<div id="fastingSavedSummary" class="muted" style="display:none;background:#111f2b;border:1px solid #c7a34b;border-radius:10px;padding:9px 11px;margin:0 0 12px;white-space:pre-line;font-size:12px;line-height:1.8"></div>
 <div class="grid2">
 <div><label>نوع</label><select id="fastType" onchange="configureFastingModel()"><option>بدون فستینگ</option><option>12:12</option><option>14:10</option><option>16:8</option><option>18:6</option></select></div>
 <div><label>شروع فست</label><input id="fastStart" type="time" value="20:00" onchange="refreshFastingMealTimes()"></div>
@@ -1067,6 +1068,20 @@ function buildFastingMealPlanText(){
   return parts.length?"وعده "+(i+1)+" — ساعت "+(meal.time||"تعیین‌نشده")+": "+parts.join("، "):"";
  }).filter(Boolean).join("\n");
 }
+async function loadFastingSummary(){
+ const box=$("fastingSavedSummary");if(!box)return;
+ if(authProfile?.role!=="coach"||!currentClient?.id){box.style.display="none";return;}
+ box.style.display="block";box.textContent="در حال بارگذاری فستینگ ثبت‌شده…";
+ try{
+  const rows=await sbGet("/fasting_logs?trainee_id=eq."+encodeURIComponent(currentClient.id)+"&order=created_at.desc&limit=1");
+  if(!rows?.length){box.textContent="هنوز فستینگی برای این شاگرد ثبت نشده است.";return;}
+  const x=rows[0];
+  const d=String(x.description||"").replace(/^نوع\s*/,"");
+  box.textContent="✅ فستینگ ثبت‌شده | "+d+
+   (x.start_time?"\nشروع فست: "+String(x.start_time).slice(0,5):"")+
+   (x.end_time?"  •  پایان فست: "+String(x.end_time).slice(0,5):"");
+ }catch(e){box.textContent="نمایش فستینگ ثبت‌شده ممکن نیست؛ اتصال را بررسی کنید.";}
+}
 async function saveFasting(){
  if(authProfile?.role!=="coach"){alert("تعیین و تغییر برنامه فستینگ فقط در دسترس مربی است.");return;}
  if(!currentClient){alert("اول شاگرد را انتخاب کنید.");return;}
@@ -1075,7 +1090,7 @@ async function saveFasting(){
  if(t==="بدون فستینگ"){ $("fastStatus").textContent="فستینگ برای این شاگرد فعال نیست."; return; }
  let duration=0;if(st&&en){let a=+st.split(":")[0]*60 + +st.split(":")[1],b=+en.split(":")[0]*60 + +en.split(":")[1];duration=b-a;if(duration<0)duration+=1440;}
  const description="نوع "+t+" | "+($("fastMeals").value||0)+" وعده"+(mealPlan?"\nبرنامه غذایی فستینگ:\n"+mealPlan:"");
- try{await sbWrite("/fasting_logs","POST",{trainee_id:currentClient.id,fasting_date:today(),start_time:st||null,end_time:en||null,duration_minutes:duration,description});$("fastStatus").textContent="فستینگ "+t+" با موفقیت ثبت شد."+(mealPlan?" برنامه غذایی انتخاب‌شده هم ذخیره شد.":"");alert(mealPlan?"فستینگ و برنامه غذایی انتخاب‌شده ذخیره شد.":"فستینگ ثبت شد.");}
+ try{await sbWrite("/fasting_logs","POST",{trainee_id:currentClient.id,fasting_date:today(),start_time:st||null,end_time:en||null,duration_minutes:duration,description});$("fastStatus").textContent="فستینگ "+t+" با موفقیت ثبت شد."+(mealPlan?" برنامه غذایی انتخاب‌شده هم ذخیره شد.":"");await loadFastingSummary();alert(mealPlan?"فستینگ و برنامه غذایی انتخاب‌شده ذخیره شد.":"فستینگ ثبت شد.");}
  catch(e){alert("ثبت فستینگ انجام نشد.\n"+e.message);}
 }
 async function applyFastingRole(){
@@ -1891,7 +1906,7 @@ loadExercises();
     $id('pn').value=currentClient.name||'';$id('page').value=currentClient.age||'';$id('pweight').value=currentClient.weight||'';$id('pheight').value=currentClient.height||'';$id('pgoal').value=currentClient.goal||'کاهش وزن';$id('plevel').value=currentClient.level||'مبتدی';
     if($id('ptype'))$id('ptype').value=currentClient.training_type||'gym';if($id('ptype2'))$id('ptype2').value=currentClient.training_type||'gym';if($id('pequipment'))$id('pequipment').value=currentClient.home_equipment||'';if($id('pequipment2'))$id('pequipment2').value=currentClient.home_equipment||'';if($id('plimit'))$id('plimit').value=currentClient.limitations||'';
     showSection('client',qsAll('.nav button')[2]);
-    await Promise.allSettled([loadNutritionForClient(),loadWorkoutForClient(),loadSupplements(),loadInjuries(),loadActivityToday(),loadDashboard(),loadProgressHistory()]);
+    await Promise.allSettled([loadNutritionForClient(),loadWorkoutForClient(),loadSupplements(),loadInjuries(),loadActivityToday(),loadDashboard(),loadProgressHistory(),loadFastingSummary()]);
   };
 
   window.saveProfile=async function(){
