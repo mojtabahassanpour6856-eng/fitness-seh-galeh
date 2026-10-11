@@ -433,6 +433,7 @@ body.library-room .library-inline-add button{position:relative!important;z-index
 <div><label>پایان فست</label><input id="fastEnd" type="time" value="08:00" onchange="refreshFastingMealTimes()"></div>
 <div><label>تعداد وعده</label><input id="fastMeals" type="number" value="2" min="1" max="8" onchange="syncFastingMealCount()"></div>
 </div>
+<div id="fastingWindowSummary" class="muted" style="background:#132330;border:1px solid #c7a34b;border-radius:10px;padding:10px 12px;margin:10px 0 12px;white-space:pre-line;font-size:13px;line-height:1.9">بازه فستینگ و غذا خوردن اینجا نمایش داده می‌شود.</div>
 <div style="margin-top:12px">
 <h3>🍽️ برنامه‌ساز غذایی فستینگ</h3>
 <p class="muted">وعده‌ها را در بازه مجاز خوردن تنظیم کن، ساعت هر وعده را انتخاب کن و از بانک غذای اپ، غذا و مقدار آن را اضافه کن.</p>
@@ -1009,7 +1010,20 @@ async function saveInjury(){if(!currentClient)return alert('اول شاگرد ر
 async function loadInjuries(){if(!currentClient||!$('injList'))return;try{const rows=await sbGet(`/trainee_injuries?trainee_id=eq.${encodeURIComponent(currentClient.id)}&order=created_at.desc`);$('injList').innerHTML=rows.map(x=>`<div class="report-row"><span>⚠️ ${esc(x.problem_type)} | ${esc(x.body_area||'')}</span><b>${esc(x.status||'')}</b></div>`).join('')||'موردی ثبت نشده است.';}catch(e){$('injList').textContent='برای فعال شدن این بخش، SQL جدید را اجرا کنید.';}}
 
 let fastingMealRows=[];
+function updateFastingWindowSummary(){
+ const box=$("fastingWindowSummary");if(!box)return;
+ const type=$("fastType")?.value||"بدون فستینگ";
+ const st=$("fastStart")?.value||"20:00",en=$("fastEnd")?.value||"08:00";
+ if(type==="بدون فستینگ"){box.textContent="فستینگ فعال نیست.";return;}
+ const a=st.split(":").map(Number),b=en.split(":").map(Number);
+ let mins=(b[0]*60+b[1])-(a[0]*60+a[1]);if(mins<0)mins+=1440;
+ const fmt=n=>String(Math.floor(n/60)%24).padStart(2,"0")+":"+String(n%60).padStart(2,"0");
+ const eatStart=fmt(b[0]*60+b[1]),eatEnd=fmt(a[0]*60+a[1]);
+ const hours=Math.floor(mins/60),minutes=mins%60;
+ box.textContent="⏳ مدت فست: "+hours+" ساعت"+(minutes?" و "+minutes+" دقیقه":"")+" ("+st+" تا "+en+")\n🍽️ بازه مجاز غذا خوردن: "+eatStart+" تا "+eatEnd+" روز بعد از پایان فست";
+}
 function configureFastingModel(){
+ updateFastingWindowSummary();
  const type=$("fastType")?.value;
  const models={"12:12":{end:"08:00",meals:2},"14:10":{end:"10:00",meals:3},"16:8":{end:"12:00",meals:3},"18:6":{end:"14:00",meals:2}};
  const model=models[type];if(!model)return;
@@ -1020,6 +1034,7 @@ function configureFastingModel(){
  refreshFastingMealTimes();renderFastingMealPlanner();
 }
 function refreshFastingMealTimes(){
+ updateFastingWindowSummary();
  if(!fastingMealRows.length)initFastingMealPlanner();
  const start=$("fastEnd")?.value||"12:00",end=$("fastStart")?.value||"20:00";
  const startM=Number(start.split(":")[0])*60+Number(start.split(":")[1]||0);
