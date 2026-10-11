@@ -727,6 +727,8 @@ async function searchFoodNutritionSource(){
    [/\b(برنج|چلو)\b/i,"rice cooked"],
    [/مرغ/i,"chicken cooked"],
    [/سیب.?زمینی/i,"potato boiled"],
+   [/کره بادام.?زمینی/i,"peanut butter"],
+   [/بادام.?زمینی/i,"peanuts"],
    [/تخم.?مرغ/i,"egg boiled"],
    [/نان سنگک/i,"sangak bread"],
    [/نان بربری/i,"barbari bread"],
@@ -747,15 +749,21 @@ async function searchFoodNutritionSource(){
   const alias=aliases.find(([re])=>re.test(name))?.[1];
   const queries=[name,...(alias?[alias]:[])];
   const seen=new Set(),raw=[];
+  let serviceFailures=0,lastHttpStatus=0;
   for(const term of queries){
    const url=SUPABASE_URL+"/functions/v1/food-nutrition-search?q="+encodeURIComponent(term);
    const response=await fetch(url,{headers:{"Accept":"application/json","apikey":SUPABASE_KEY,"Authorization":"Bearer "+SUPABASE_KEY}});
-   if(!response.ok){console.warn("Food nutrition proxy HTTP",response.status);continue;}
+   if(!response.ok){serviceFailures++;lastHttpStatus=response.status;console.warn("Food nutrition proxy HTTP",response.status);continue;}
    const data=await response.json();
+   if(data.error)console.warn("Food nutrition source error",data.error,data.details||"");
    for(const p of (data.products||[])){
     const key=String(p.code||p.url||p.product_name||"");
     if(!seen.has(key)){seen.add(key);raw.push(p);}
    }
+  }
+  if(!raw.length&&serviceFailures===queries.length){
+   if(status)status.textContent="سرویس جست‌وجوی غذایی در دسترس نیست (خطای "+lastHttpStatus+"). چند لحظه بعد دوباره تلاش کن.";
+   return;
   }
   const products=raw.map(p=>{
    const n=p.nutriments||{};
