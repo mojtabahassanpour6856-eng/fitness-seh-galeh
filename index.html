@@ -303,40 +303,10 @@ body.library-room #workout .library-room-card .library-detail-view{width:100%!im
 <!-- FOOD -->
 <section id="food" class="section active">
 <div class="card">
-<h2>محاسبه‌گر جایگزین غذایی</h2>
-<div class="grid">
-<div>
-<label>غذای برنامه</label>
-<select id="orig"></select>
-<button class="secondary" onclick="editFood()">✏️ ویرایش غذای انتخاب‌شده</button>
+<h2>🍽️ مدیریت غذاها</h2>
+<p class="muted">محاسبه‌گر جایگزین غذایی از پنل مربی حذف شده است. برای جست‌وجو، افزودن و ویرایش مواد غذایی از بانک غذا استفاده کنید.</p>
+<button type="button" onclick="showSection('foodBank',document.querySelectorAll('.nav button')[1])">🥗 رفتن به بانک غذا</button>
 </div>
-<div>
-<label>مقدار (گرم)</label>
-<input id="origG" type="number" value="100" min="1">
-</div>
-</div>
-</div>
-
-<div class="card">
-<h2>غذای جایگزین</h2>
-<label>غذایی که می‌خواهید جایگزین کنید</label>
-<select id="rep"></select>
-<button onclick="calc()">محاسبه مقدار جایگزین</button>
-<div class="result" id="result">
-<div class="sub">مقدار پیشنهادی غذای جایگزین</div>
-<div class="big" id="grams"></div>
-<div class="sub" id="cal"></div>
-<div class="stats">
-<div class="stat"><b id="p"></b>پروتئین</div>
-<div class="stat"><b id="c"></b>کربوهیدرات</div>
-<div class="stat"><b id="f"></b>چربی</div>
-<div class="stat"><b id="k"></b>کالری</div>
-</div>
-<table><thead><tr><th>مورد</th><th>وعده برنامه</th><th>جایگزین</th></tr></thead><tbody id="tb"></tbody></table>
-<p class="muted">محاسبه بر اساس برابر کردن کالری است؛ در برنامه‌های ورزشی، پروتئین و سایر درشت‌مغذی‌ها باید توسط مربی بررسی شوند.</p>
-</div>
-</div>
-
 </section>
 
 <!-- FOOD BANK -->
@@ -364,7 +334,7 @@ body.library-room #workout .library-room-card .library-detail-view{width:100%!im
 </details>
 </div>
 
-<div class="card" id="legacyFoodEditPanel"><h2>✏️ ویرایش یا حذف غذای موجود</h2><p class="muted">برای ویرایش یا حذف، از صفحه محاسبه‌گر روی «ویرایش غذای انتخاب‌شده» بزن؛ اطلاعات اینجا باز می‌شود.</p>
+<div class="card" id="legacyFoodEditPanel"><h2>✏️ ویرایش یا حذف غذای موجود</h2><p class="muted">برای افزودن یا ویرایش مواد غذایی از فرم‌های همین بخش و فهرست بانک غذا استفاده کن.</p>
 <div class="card">
 <button onclick="toggle()">＋ افزودن غذای سفارشی</button>
 <div id="custom">
@@ -1396,7 +1366,7 @@ function renderMealCoach(meals){
  updateDayTotals(meals);updateMealTargets();
 }
 
-function foodLine(x){const f=x.food||{},m=foodMetrics(f,x.amount,x.unit),note=String(x.notes||""),recipePrefix="[دستور ترکیبی: ",recipeTag=note.includes(recipePrefix)?note.split(" | ")[0]:"";return `<div class="food-line"><div><div class="food-name">${esc(f.name||"غذا")}</div>${recipeTag?`<div class="food-meta">🍽️ ${esc(recipeTag.slice(recipePrefix.length,-1))}</div>`:""}<div class="food-meta">${m.valid?`🔥 ${m.cal.toFixed(0)} kcal | P ${m.pro.toFixed(1)} | C ${m.carb.toFixed(1)} | F ${m.fat.toFixed(1)}`:'⚠️ کالری این غذا ناقص است یا واحد/مقدار آن نیاز به اصلاح دارد؛ تا اصلاح، در جمع کالری محاسبه نمی‌شود.'}</div></div><span>${x.amount} ${esc(x.unit||"گرم")}</span><button class="mini secondary" onclick="openSubstitution('${x.food_id}','${x.amount}')">🔄</button><button class="mini danger" onclick="deleteMealFood('${x.id}')">🗑</button></div>`;}
+function foodLine(x){const f=x.food||{},m=foodMetrics(f,x.amount,x.unit),note=String(x.notes||""),recipePrefix="[دستور ترکیبی: ",recipeTag=note.includes(recipePrefix)?note.split(" | ")[0]:"";return `<div class="food-line"><div><div class="food-name">${esc(f.name||"غذا")}</div>${recipeTag?`<div class="food-meta">🍽️ ${esc(recipeTag.slice(recipePrefix.length,-1))}</div>`:""}<div class="food-meta">${m.valid?`🔥 ${m.cal.toFixed(0)} kcal | P ${m.pro.toFixed(1)} | C ${m.carb.toFixed(1)} | F ${m.fat.toFixed(1)}`:'⚠️ کالری این غذا ناقص است یا واحد/مقدار آن نیاز به اصلاح دارد؛ تا اصلاح، در جمع کالری محاسبه نمی‌شود.'}</div></div><span>${x.amount} ${esc(x.unit||"گرم")}</span><button class="mini danger" onclick="deleteMealFood('${x.id}')">🗑</button></div>`;}
 function updateDayTotals(meals){const t=meals.reduce((a,m)=>(m.foods||[]).reduce((b,x)=>{const v=foodMetrics(x.food||{},x.amount,x.unit);return v.valid?[b[0]+v.cal,b[1]+v.pro,b[2]+v.carb,b[3]+v.fat]:b},a),[0,0,0,0]);$("dayCal").textContent=t[0].toFixed(0);$("dayPro").textContent=t[1].toFixed(1)+" g";$("dayCarb").textContent=t[2].toFixed(1)+" g";$("dayFat").textContent=t[3].toFixed(1)+" g";}
 let defaultMealsBusy=false;
 async function addMealOption(kind){
@@ -1521,7 +1491,6 @@ async function saveMealFood(){
  }catch(e){alert("افزودن غذا انجام نشد.\n"+e.message);}
 }
 async function deleteMealFood(id){if(!confirm("این غذا از وعده حذف شود؟"))return;try{await sbWrite(`/nutrition_meal_foods?id=eq.${encodeURIComponent(id)}`,"DELETE",{});await loadNutritionForClient();}catch(e){alert("حذف غذا انجام نشد.\n"+e.message);}}
-function openSubstitution(foodId,amount){const f=foods.find(x=>String(x[5])===String(foodId));if(!f){alert("غذا پیدا نشد.");return;}$("orig").value=foods.findIndex(x=>String(x[5])===String(foodId));$("origG").value=amount;showSection("food",document.querySelectorAll(".nav button")[0]);alert("غذای برنامه انتخاب شد؛ حالا غذای جایگزین را انتخاب و محاسبه کنید.");}
 function renderStudentEmpty(){$("studentMealTitle").textContent="برای این شاگرد هنوز برنامه غذایی فعال ثبت نشده است.";$("studentMealList").innerHTML="";$("studentTargetCal").textContent="۰";$("studentDoneCal").textContent="۰";$("studentWater").textContent="۰";$("studentDoneCount").textContent="۰";}
 let waterSchema={trainee:"trainee_id",amount:"amount_ml",date:"log_date"};
 
@@ -2537,78 +2506,7 @@ const plans=workoutResult.data||[], nutrition=nutritionResult.data||[];
   window.toggleWorkoutComplete=async function(id,checked){try{await sbWrite(`/trainee_workout_exercises?id=eq.${encodeURIComponent(id)}`,'PATCH',{is_completed:checked});await loadWorkoutForClient();}catch(e){alert('ثبت وضعیت حرکت انجام نشد.\n'+e.message)}};
 
   // -------- Nutrition: substitution is linked to the actual meal food; custom food remains DB-backed --------
-  window.openSubstitution=function(foodId,amount){const f=foods.find(x=>String(x[5])===String(foodId));if(!f)return alert('غذا پیدا نشد.');$f('orig').value=foods.findIndex(x=>String(x[5])===String(foodId));$f('origG').value=amount||100;showSection('food',qsa('.nav button').find(b=>String(b.getAttribute('onclick')||'').includes("'food'")));calc();window.scrollTo({top:0,behavior:'smooth'});};
-
-  // -------- Notes history: isolate async responses by selected trainee --------
-  async function loadNoteHistory(){
-    const traineeId=currentClient?.id;if(traineeId==null)return;
-    const sec=$f('progress');if(!sec)return;
-    let box=$f('noteHistoryBox');if(!box){box=document.createElement('div');box.className='card';box.id='noteHistoryBox';box.innerHTML='<h2>🗂️ تاریخچه یادداشت‌های مربی</h2><div id="noteHistory"></div>';sec.appendChild(box);}
-    const target=$f('noteHistory');if(!target)return;target.innerHTML='<p class="f18-muted">در حال دریافت یادداشت‌ها…</p>';
-    try{
-      const rows=await sbGet(`/trainee_notes?trainee_id=eq.${encodeURIComponent(traineeId)}&select=*&order=created_at.desc`);
-      if(!currentClient||String(currentClient.id)!==String(traineeId))return;
-      target.innerHTML=rows.length?rows.map(x=>`<div class="f18-note"><b>${escf(x.created_at?new Date(x.created_at).toLocaleDateString('fa-IR'):'')}</b><br>${escf(x.note||'')}</div>`).join(''):'<p class="f18-muted">یادداشتی ثبت نشده است.</p>';
-    }catch(e){if(currentClient&&String(currentClient.id)===String(traineeId))target.innerHTML='<p class="f18-muted">تاریخچه یادداشت دریافت نشد؛ اتصال و دسترسی را بررسی کنید.</p>';console.error('loadNoteHistory',e);}
-  }
-
-  // -------- Progress chart/report --------
-  async function loadProgressChart(){
-    const traineeId=currentClient?.id;if(traineeId==null)return;const sec=$f('progress');if(!sec)return;
-    let box=$f('progressChartBox');if(!box){box=document.createElement('div');box.className='card';box.id='progressChartBox';box.innerHTML='<h2>📉 نمودار وزن</h2><div id="progressChart"></div>';sec.appendChild(box);}
-    const target=$f('progressChart');if(!target)return;target.innerHTML='<p class="f18-muted">در حال دریافت سوابق وزن…</p>';
-    try{
-      const rows=await sbGet(`/body_analyses?trainee_id=eq.${encodeURIComponent(traineeId)}&select=analysis_date,weight&order=analysis_date.asc&limit=12`);
-      if(!currentClient||String(currentClient.id)!==String(traineeId))return;
-      const valid=rows.filter(x=>x.weight!=null&&Number.isFinite(Number(x.weight)));
-      if(!valid.length){target.innerHTML='<p class="f18-muted">برای نمودار هنوز وزن ثبت نشده است.</p>';return;}
-      const max=Math.max(...valid.map(x=>Number(x.weight))),min=Math.min(...valid.map(x=>Number(x.weight))),range=Math.max(1,max-min);
-      target.innerHTML=`<div class="f18-chart">${valid.map(x=>{const h=25+((Number(x.weight)-min)/range)*90;return `<div class="f18-bar" style="height:${h}px"><b>${escf(x.weight)}</b><span>${escf((x.analysis_date||'').slice(5))}</span></div>`}).join('')}</div><p class="f18-muted">کمینه: ${fmtf(min)} kg | بیشینه: ${fmtf(max)} kg | آخرین: ${fmtf(valid[valid.length-1].weight)} kg</p>`;
-    }catch(e){if(currentClient&&String(currentClient.id)===String(traineeId))target.innerHTML='<p class="f18-muted">نمودار وزن دریافت نشد؛ سوابق را مصرف‌نشده یا خالی فرض نکردیم.</p>';console.error('loadProgressChart',e);}
-  }
-
-  // -------- Challenges: coach creation + assignment + progress/status --------
-  async function loadChallengeForCurrent(){if(!currentClient||!$f('challenges'))return;loadChallenges();}
-  window.updateChallengeProgress=async function(id){const p=prompt('درصد پیشرفت (۰ تا ۱۰۰)',document.querySelector(`[data-challenge-id="${id}"]`)?.dataset.progress||'0');if(p===null)return;const v=Math.max(0,Math.min(100,+p||0));try{await sbWrite(`/challenge_participants?id=eq.${encodeURIComponent(id)}`,'PATCH',{progress:v,status:v>=100?'completed':'active'});await loadChallenges();await loadDashboard();}catch(e){alert('ثبت پیشرفت چالش انجام نشد.\n'+e.message)}};
-  const oldLoadChallenges=window.loadChallenges;
-  window.loadChallenges=async function(){if(!$f('challengeList'))return;try{const rows=await sbGet(`/challenge_participants?trainee_id=eq.${encodeURIComponent(currentClient.id)}&select=id,status,progress,challenges(name,start_date,end_date,target_value,unit)&order=created_at.desc`);$f('challengeList').innerHTML=rows.length?rows.map(x=>`<div class="client" data-challenge-id="${x.id}" data-progress="${x.progress||0}"><strong>🏆 ${escf(x.challenges?.name||'چالش')}</strong><div><span class="f18-chip">${escf(x.status||'active')}</span><span class="f18-chip">پیشرفت ${escf(x.progress??0)}%</span>${x.challenges?.start_date?`<span class="f18-chip">از ${escf(x.challenges.start_date)}</span>`:''}${x.challenges?.end_date?`<span class="f18-chip">تا ${escf(x.challenges.end_date)}</span>`:''}</div><button class="secondary mini" onclick="updateChallengeProgress('${x.id}')">📈 ثبت پیشرفت</button></div>`).join(''):'<p class="muted">چالشی ثبت نشده است.</p>';}catch(e){$f('challengeList').innerHTML='<p class="muted">چالش‌ها در دسترس نیستند.</p>';}};
-
-  // -------- Membership history + status --------
-  async function loadMembershipHistory(){
-    if(!currentClient)return;const sec=$f('client');if(!sec)return;let box=$f('membershipHistoryBox');if(!box){box=document.createElement('div');box.className='card';box.id='membershipHistoryBox';box.innerHTML='<h2>💳 سوابق عضویت و پرداخت</h2><div id="membershipHistory"></div>';sec.appendChild(box);}try{const rows=await sbGet(`/trainee_memberships?trainee_id=eq.${encodeURIComponent(currentClient.id)}&select=*&order=start_date.desc,created_at.desc`);$f('membershipHistory').innerHTML=rows.length?rows.map(x=>`<div class="report-row"><span>${escf(window.isoToJalaliDate(x.start_date)||'—')} تا ${escf(window.isoToJalaliDate(x.end_date)||'—')} | عضویت: ${escf(statusForMembership(x))} | شهریه: ${x.payment_status==='paid'?'پرداخت‌شده':x.payment_status==='pending'?'در انتظار بررسی':'پرداخت‌نشده'}</span><b>${fmtf(x.amount||0)} تومان</b></div>`).join(''):'<p class="f18-muted">سابقه عضویتی ثبت نشده است.</p>';}catch(e){}}
-
-  // -------- Profile completeness: editable basic info --------
-  function addProfileBasicFields(){
-    const card=$f('client')?.querySelector(':scope > .card');if(!card)return;
-    const anchor=$f('pn')?.parentElement?.parentElement;if(!anchor)return;
-    anchor.classList.add('profile-compact-grid');
-    if(!$f('pbirth')){
-      const row=document.createElement('div');row.className='profile-compact-grid profile-extra-fields';row.innerHTML='<div><label>تاریخ تولد</label><input id="pbirth" type="text" inputmode="numeric" placeholder="۱۴۰۵/۰۷/۱۸"></div><div><label>جنسیت</label><select id="pgender"><option>زن</option><option>مرد</option></select></div><div><label>تاریخ ثبت‌نام</label><input id="profileRegistrationDate" type="text" readonly aria-readonly="true" placeholder="ثبت نشده"></div>';anchor.appendChild(row);
-    }
-    let style=document.getElementById('profile-compact-style');
-    if(!style){style=document.createElement('style');style.id='profile-compact-style';document.head.appendChild(style);}
-    style.textContent='#client > .card:first-child{padding:10px!important;margin:7px 0!important;box-sizing:border-box!important}#client > .card:first-child h2{font-size:15px!important;margin:0 0 7px!important}#client > .card:first-child .grid2,#client > .card:first-child .profile-compact-grid{display:grid!important;grid-template-columns:repeat(3,minmax(0,1fr))!important;gap:5px!important;align-items:start!important}#client > .card:first-child .grid2>div,#client > .card:first-child .profile-extra-fields>div{min-width:0!important}#client > .card:first-child label{font-size:11px!important;margin:3px 0!important}#client > .card:first-child input,#client > .card:first-child select{box-sizing:border-box!important;width:100%!important;min-width:0!important;padding:6px!important;font-size:12px!important;min-height:32px!important;margin:0!important}#client > .card:first-child button{padding:7px!important;margin-top:6px!important;font-size:12px!important}@media(max-width:600px){#client > .card:first-child .grid2,#client > .card:first-child .profile-compact-grid{grid-template-columns:repeat(2,minmax(0,1fr))!important}}';
-    // اطمینان از قابل‌ویرایش بودن فیلدهای پروفایل پس از ساخت/بازسازی فرم؛ تاریخ ثبت‌نام فقط‌خواندنی است.
-    card.querySelectorAll('input,select,textarea').forEach(el=>{
-      if(el.id==='profileRegistrationDate'){el.readOnly=true;el.setAttribute('readonly','readonly');el.disabled=false;return;}
-      if((el.id==='pgoal'||el.id==='plevel')&&typeof isTrainee==='function'&&isTrainee()){el.disabled=true;el.setAttribute('aria-disabled','true');return;}
-      el.disabled=false;el.removeAttribute('disabled');el.removeAttribute('aria-disabled');
-      if(el.tagName==='INPUT'||el.tagName==='TEXTAREA'){el.readOnly=false;el.removeAttribute('readonly');}
-      el.style.pointerEvents='auto';el.style.userSelect='text';el.style.webkitUserSelect='text';
-    });
-  }
-  async function loadProfileBasic(){addProfileBasicFields();if(!currentClient)return;if($f('pbirth'))$f('pbirth').value=window.isoToJalaliDate(currentClient.birth_date)||'';if($f('pgender'))$f('pgender').value=currentClient.gender||'زن';if($f('profileRegistrationDate'))$f('profileRegistrationDate').value=window.isoToJalaliDate(currentClient.club_registration_date||currentClient.createdAt||currentClient.created_at)||'ثبت نشده';}
-  const baseSelectForProfile=window.selectClient;
-  window.selectClient=async function(id){await baseSelectForProfile(id);await loadProfileBasic();};
-  const baseSaveProfile=window.saveProfile;
-  window.saveProfile=async function(){
-    if(!currentClient)return alert('اول شاگرد را انتخاب کنید.');
-    const birthRaw=($f('pbirth')?.value||'').trim(),birthISO=window.jalaliToISODate(birthRaw);
-    if(birthRaw&&!birthISO)return alert('تاریخ تولد معتبر نیست؛ آن را به صورت شمسی مانند ۱۴۰۵/۰۷/۱۸ وارد کنید.');
-    const payload={full_name:$f('pn').value.trim(),current_weight:+$f('pweight').value||null,height:+$f('pheight').value||null,goal:$f('pgoal').value||null,training_level:$f('plevel').value||null,training_type:$f('ptype')?.value||'gym',home_equipment:$f('pequipment')?.value.trim()||null,birth_date:birthISO||null,gender:$f('pgender')?.value||null};
-    if(!payload.full_name)return alert('نام شاگرد را وارد کنید.');
-    try{await sbWrite(`/trainees?id=eq.${encodeURIComponent(currentClient.id)}`,'PATCH',payload);await loadClients();currentClient=clients.find(x=>String(x.id)===String(currentClient.id));await loadProfileBasic();await loadDashboard();alert('پروفایل کامل شاگرد ذخیره شد.');}catch(e){alert('ذخیره پروفایل انجام نشد.\n'+e.message)}
-  };
+  
   addProfileBasicFields();
 
   // -------- Subscription/payment completeness --------
@@ -4701,7 +4599,7 @@ active('workoutMuscleFilters',wm);active('libraryMuscleFilters',lm);if(document.
 </script>
 
 <style id="seh-galeh-trainee-workflow-style">
-#nutritionSubPanel .grid2{gap:8px}#nutritionSubResult{margin-top:9px;padding:10px;border:1px solid #40566a;border-radius:10px;background:#101c29;line-height:1.8}
+
 .daily-mission{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;margin-top:10px;padding:9px;border:1px solid #3a5369;border-radius:10px;background:#101b27}
 .daily-mission button{margin:0;min-height:34px}.daily-mission .done{color:#72e0b6;font-weight:bold}
 .meal-done-control{display:flex;align-items:center;gap:7px;margin:6px 0 8px;padding:7px;border-radius:8px;background:#132330;font-size:12px}
@@ -4783,39 +4681,6 @@ active('workoutMuscleFilters',wm);active('libraryMuscleFilters',lm);if(document.
   const iso=isoDate(raw);if(!iso)return alert("تاریخ شمسی معتبر وارد کنید؛ نمونه ۱۴۰۵/۰۷/۱۸");
   try{await sbWrite("/trainees?id=eq."+encodeURIComponent(currentClient.id),"PATCH",{club_registration_date:iso});currentClient.club_registration_date=iso;alert("تاریخ ثبت‌نام باشگاه ذخیره شد.");}
   catch(e){alert("ذخیره تاریخ ثبت‌نام ناموفق بود. "+(e.message||String(e)));}
- };
-
- function ensureSubstitutionPanel(){
-  const section=$("meal");if(!section||$("nutritionSubPanel"))return;
-  const panel=document.createElement("div");panel.id="nutritionSubPanel";panel.className="card";
-  panel.innerHTML='<h2>🔄 جایگزین غذایی با محاسبه دقیق</h2><p class="muted">مقدار جایگزین بر اساس کالری غذای برنامه محاسبه می‌شود و اختلاف پروتئین، کربوهیدرات و چربی نیز نمایش داده می‌شود. مبنا: اطلاعات غذایی هر ۱۰۰ گرم.</p><div class="grid2"><div><label>غذای برنامه</label><select id="nutritionSubOriginal"></select></div><div><label>مقدار غذای برنامه (گرم)</label><input id="nutritionSubOriginalGrams" type="number" min="1" step="1" value="100"></div><div><label>غذای جایگزین</label><select id="nutritionSubReplacement"></select></div></div><button type="button" onclick="calculateNutritionSubstitution()">🧮 محاسبه مقدار معادل</button><div id="nutritionSubResult" class="muted">غذاها را انتخاب کنید تا مقدار معادل و اختلاف درشت‌مغذی‌ها محاسبه شود.</div>';
-  const anchor=$("mealCoachView")||$("mealStudentView");section.insertBefore(panel,anchor||null);
-  const fill=()=>{if(typeof foods==="undefined"||!Array.isArray(foods))return;["nutritionSubOriginal","nutritionSubReplacement"].forEach(id=>{const sel=$(id);if(!sel)return;const old=sel.value;sel.innerHTML=foods.map((f,i)=>'<option value="'+i+'">'+safe(f[0])+'</option>').join("");if(old&&Number(old)<foods.length)sel.value=old;});};
-  window.fillNutritionSubstitutionOptions=fill;fill();setTimeout(fill,500);setTimeout(fill,1600);
- }
- window.calculateNutritionSubstitution=function(){
-  const a=typeof foods!=="undefined"?foods[Number($("nutritionSubOriginal")?.value)]:null;
-  const b=typeof foods!=="undefined"?foods[Number($("nutritionSubReplacement")?.value)]:null;
-  const g=Number($("nutritionSubOriginalGrams")?.value||0),out=$("nutritionSubResult");
-  if(!a||!b||!out||!Number.isFinite(g)||g<=0){if(out)out.textContent="غذاها و مقدار معتبر را انتخاب کنید.";return;}
-  const orig=[Number(a[1])||0,Number(a[2])||0,Number(a[3])||0,Number(a[4])||0].map(v=>v*g/100);
-  const repCal=Number(b[1])||0;
-  if(orig[0]<=0||repCal<=0){out.textContent="برای این غذا کالری معتبر ثبت نشده است؛ جایگزینی دقیق ممکن نیست.";return;}
-  const grams=orig[0]/(repCal/100),r=[Number(b[1])||0,Number(b[2])||0,Number(b[3])||0,Number(b[4])||0].map(v=>v*grams/100);
-  const diff=(x,y)=>{const n=y-x;return (n>0?"+":"")+n.toFixed(1);};
-  out.innerHTML='<b>'+safe(a[0])+' '+g+' گرم</b> ≈ <b>'+safe(b[0])+' '+grams.toFixed(1)+' گرم</b><br>کالری دو گزینه: '+orig[0].toFixed(0)+' در برابر '+r[0].toFixed(0)+' kcal<br>پروتئین: '+orig[1].toFixed(1)+'g در برابر '+r[1].toFixed(1)+'g ('+diff(orig[1],r[1])+')<br>کربوهیدرات: '+orig[2].toFixed(1)+'g در برابر '+r[2].toFixed(1)+'g ('+diff(orig[2],r[2])+')<br>چربی: '+orig[3].toFixed(1)+'g در برابر '+r[3].toFixed(1)+'g ('+diff(orig[3],r[3])+')<p class="muted">این جایگزینی کالری را برابر می‌کند، نه لزوماً درشت‌مغذی‌ها را؛ اگر اختلاف پروتئین یا چربی زیاد است با مربی هماهنگ کنید.</p>';
- };
- const oldOpenSub=window.openSubstitution;
- window.openSubstitution=function(foodId,amount){
-  ensureSubstitutionPanel();
-  if(typeof foods!=="undefined"){
-   const idx=foods.findIndex(x=>String(x[5])===String(foodId));
-   if(idx>=0&&$("nutritionSubOriginal"))$("nutritionSubOriginal").value=String(idx);
-  }
-  if($("nutritionSubOriginalGrams"))$("nutritionSubOriginalGrams").value=amount||100;
-  if(typeof window.showSection==="function")window.showSection("meal",document.querySelectorAll(".nav button")[3]);
-  window.calculateNutritionSubstitution();
-  $("nutritionSubPanel")?.scrollIntoView({behavior:"smooth",block:"start"});
  };
 
  async function toggleMealDone(mealId,checked){
@@ -5048,7 +4913,7 @@ active('workoutMuscleFilters',wm);active('libraryMuscleFilters',lm);if(document.
  };
 
  function applyFeatureUI(){
-  addRegistrationFields();ensureSubstitutionPanel();ensureCoachRegistrationDateField();
+  addRegistrationFields();ensureCoachRegistrationDateField();
   if(!isTrainee())return;
   const workout=$("workout");
   if(workout){
@@ -5102,7 +4967,7 @@ active('workoutMuscleFilters',wm);active('libraryMuscleFilters',lm);if(document.
   }
   const mealCoach=$("mealCoachView");if(mealCoach)mealCoach.style.display="none";
   const mealStudent=$("mealStudentView");if(mealStudent){mealStudent.classList.remove("hide");mealStudent.style.display="block";}
-  const panel=$("nutritionSubPanel");if(panel)panel.style.display="block";
+  
  }
  const oldSelect=window.selectClient;
  if(typeof oldSelect==="function"&&!window.__sehSelectWrapped){
@@ -5110,7 +4975,7 @@ active('workoutMuscleFilters',wm);active('libraryMuscleFilters',lm);if(document.
   window.__sehSelectWrapped=true;
  }
  const oldLoadFoods=window.loadFoods;
- if(typeof oldLoadFoods==="function"&&!window.__sehFoodsWrapped){window.loadFoods=async function(){const r=await oldLoadFoods.apply(this,arguments);window.fillNutritionSubstitutionOptions?.();return r;};window.__sehFoodsWrapped=true;}
+ if(typeof oldLoadFoods==="function"&&!window.__sehFoodsWrapped){window.loadFoods=async function(){return await oldLoadFoods.apply(this,arguments);};window.__sehFoodsWrapped=true;}
  const oldShow=window.showSection;
  if(typeof oldShow==="function"&&!window.__sehShowWrapped){
   window.showSection=function(id,btn){const r=oldShow.apply(this,arguments);setTimeout(applyFeatureUI,0);return r;};
