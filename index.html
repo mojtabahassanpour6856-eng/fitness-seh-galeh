@@ -427,10 +427,10 @@ body.library-room .library-inline-add button{position:relative!important;z-index
 <div class="card">
 <h2>⏳ فستینگ</h2>
 <div class="grid2">
-<div><label>نوع</label><select id="fastType"><option>بدون فستینگ</option><option>12:12</option><option>14:10</option><option>16:8</option><option>18:6</option></select></div>
-<div><label>شروع فست</label><input id="fastStart" type="time" value="20:00"></div>
-<div><label>پایان فست</label><input id="fastEnd" type="time" value="12:00"></div>
-<div><label>تعداد وعده</label><input id="fastMeals" type="number" value="3" min="1" max="8" onchange="syncFastingMealCount()"></div>
+<div><label>نوع</label><select id="fastType" onchange="configureFastingModel()"><option>بدون فستینگ</option><option>12:12</option><option>14:10</option><option>16:8</option><option>18:6</option></select></div>
+<div><label>شروع فست</label><input id="fastStart" type="time" value="20:00" onchange="refreshFastingMealTimes()"></div>
+<div><label>پایان فست</label><input id="fastEnd" type="time" value="08:00" onchange="refreshFastingMealTimes()"></div>
+<div><label>تعداد وعده</label><input id="fastMeals" type="number" value="2" min="1" max="8" onchange="syncFastingMealCount()"></div>
 </div>
 <div style="margin-top:12px">
 <h3>🍽️ برنامه‌ساز غذایی فستینگ</h3>
@@ -1008,6 +1008,24 @@ async function saveInjury(){if(!currentClient)return alert('اول شاگرد ر
 async function loadInjuries(){if(!currentClient||!$('injList'))return;try{const rows=await sbGet(`/trainee_injuries?trainee_id=eq.${encodeURIComponent(currentClient.id)}&order=created_at.desc`);$('injList').innerHTML=rows.map(x=>`<div class="report-row"><span>⚠️ ${esc(x.problem_type)} | ${esc(x.body_area||'')}</span><b>${esc(x.status||'')}</b></div>`).join('')||'موردی ثبت نشده است.';}catch(e){$('injList').textContent='برای فعال شدن این بخش، SQL جدید را اجرا کنید.';}}
 
 let fastingMealRows=[];
+function configureFastingModel(){
+ const type=$("fastType")?.value;
+ const models={"12:12":{end:"08:00",meals:2},"14:10":{end:"10:00",meals:3},"16:8":{end:"12:00",meals:3},"18:6":{end:"14:00",meals:2}};
+ const model=models[type];if(!model)return;
+ $("fastStart").value="20:00";$("fastEnd").value=model.end;$("fastMeals").value=model.meals;
+ if(!fastingMealRows.length)initFastingMealPlanner();
+ while(fastingMealRows.length<model.meals)fastingMealRows.push({time:"",items:[{foodIndex:"",amount:100}]});
+ while(fastingMealRows.length>model.meals)fastingMealRows.pop();
+ refreshFastingMealTimes();renderFastingMealPlanner();
+}
+function refreshFastingMealTimes(){
+ if(!fastingMealRows.length)initFastingMealPlanner();
+ const start=$("fastEnd")?.value||"12:00",end=$("fastStart")?.value||"20:00";
+ const startM=Number(start.split(":")[0])*60+Number(start.split(":")[1]||0);
+ let windowM=(Number(end.split(":")[0])*60+Number(end.split(":")[1]||0)-startM+1440)%1440;
+ if(windowM===0)windowM=480;
+ fastingMealRows.forEach((meal,i)=>{const m=(startM+Math.round(windowM*(i+1)/(fastingMealRows.length+1)))%1440;meal.time=String(Math.floor(m/60)).padStart(2,"0")+":"+String(m%60).padStart(2,"0");});
+}
 function initFastingMealPlanner(){
  if(fastingMealRows.length)return;
  const n=Math.max(1,Math.min(8,Number($("fastMeals")?.value)||3));
