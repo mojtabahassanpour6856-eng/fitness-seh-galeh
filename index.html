@@ -798,12 +798,16 @@ async function loadFoods(){
  }catch(e){console.error(e);alert("دریافت غذاها از Supabase انجام نشد.\n"+(e?.message||e));}
 }
 function fillFoods(){
- $("orig").innerHTML=""; $("rep").innerHTML="";
- foods.forEach((x,i)=>{ $("orig").add(new Option(x[0],i)); $("rep").add(new Option(x[0],i)); });
+ // بخش قدیمی محاسبه‌گر جایگزین ممکن است در بعضی صفحات وجود نداشته باشد.
+ // نبودن این عناصر نباید بارگذاری بانک غذا یا ورود به اپ را متوقف کند.
+ const orig=$("orig"),rep=$("rep");
+ if(!orig||!rep)return;
+ orig.innerHTML=""; rep.innerHTML="";
+ foods.forEach((x,i)=>{ orig.add(new Option(x[0],i)); rep.add(new Option(x[0],i)); });
  const rice=foods.findIndex(x=>x[0]==="برنج پخته"||x[0]==="برنج سفید پخته");
  const pasta=foods.findIndex(x=>x[0]==="ماکارونی پخته"||x[0]==="ماکارونی با گوشت");
- if(rice>=0)$("orig").value=rice;
- if(pasta>=0)$("rep").value=pasta;
+ if(rice>=0)orig.value=rice;
+ if(pasta>=0)rep.value=pasta;
 }
 function calc(){
  const o=foods[+$("orig").value],r=foods[+$("rep").value],g=+$("origG").value;
