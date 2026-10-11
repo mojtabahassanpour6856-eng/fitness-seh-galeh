@@ -4161,10 +4161,16 @@ window.useLibraryExercise=async function(id){
             const food=byId[String(item.food_id)]||{};
             const amount=Number(item.amount),kcal=Number(food.calories);
             if(!Number.isFinite(amount)||amount<=0||food.calories===null||food.calories===undefined||String(food.calories).trim()===''||!Number.isFinite(kcal)||kcal<0){calorieComplete=false;continue;}
-            const unit=normUnit(item.unit||'گرم');
+            const rawUnit=String(item.unit||'گرم').trim();
+            const unit=normUnit(rawUnit);
             const servingUnit=normUnit(food.serving_unit||'');
             const servingAmount=Number(food.serving_amount);
-            if(servingUnit&&unit===servingUnit&&Number.isFinite(servingAmount)&&servingAmount>0){
+            // خروجی باید همان تبدیل واحدهای وعده‌ساز را به‌کار ببرد؛ مثل لیوان چای و مشت بادام.
+            let gramsPerUnit=null;
+            try{if(typeof mealUnitGrams==='function')gramsPerUnit=mealUnitGrams(food.name,rawUnit);}catch(_){}
+            if(Number.isFinite(gramsPerUnit)&&gramsPerUnit>0){
+              mealCalories+=(amount*gramsPerUnit/100)*kcal;calorieItems++;
+            } else if(servingUnit&&unit===servingUnit&&Number.isFinite(servingAmount)&&servingAmount>0){
               mealCalories+=(amount/servingAmount)*kcal;calorieItems++;
             } else if(/^(g|gr|gram|ml)$/.test(unit)){
               mealCalories+=(amount/100)*kcal;calorieItems++;
