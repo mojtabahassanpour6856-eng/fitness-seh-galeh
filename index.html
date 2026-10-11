@@ -5171,3 +5171,53 @@ active('workoutMuscleFilters',wm);active('libraryMuscleFilters',lm);if(document.
   };
 })();
 </script>
+
+
+<script id="SEH_EXPORT_POPUP_GESTURE_FIX_V1">
+/* Open the export tab directly during the tap, before any async work.
+   Then route the exporter's first window.open() call to that already-open tab. */
+(function(){
+  if(window.__sehExportPopupGestureFixInstalled) return;
+  window.__sehExportPopupGestureFixInstalled = true;
+  const originalSharePlan = window.sharePlan;
+  if(typeof originalSharePlan !== 'function') {
+    console.error('Export fix: sharePlan was not available when the patch loaded.');
+    return;
+  }
+  window.sharePlan = function(kind){
+    let popup = null;
+    try { popup = window.open('about:blank', '_blank'); } catch(e) {}
+    if(!popup) {
+      alert('مرورگر اجازه بازشدن صفحه خروجی را نداد. تنظیمات مرورگر را باز کنید و اجازه بازشدن پنجره‌های بازشو (Pop-ups) را برای سایت اپ فعال کنید، سپس دوباره بزنید.');
+      return;
+    }
+    const nativeOpen = window.open;
+    let supplied = false;
+    window.open = function(){
+      if(!supplied) { supplied = true; return popup; }
+      return nativeOpen.apply(window, arguments);
+    };
+    try {
+      const result = originalSharePlan.apply(this, arguments);
+      return result;
+    } catch(error) {
+      try { popup.close(); } catch(_) {}
+      console.error('Export launch failed:', error);
+      alert('بازکردن خروجی برنامه انجام نشد: ' + (error && error.message ? error.message : String(error)));
+    } finally {
+      window.open = nativeOpen;
+    }
+  };
+  function makeButtonNonSubmit(id){
+    const button = document.getElementById(id);
+    if(button && button.tagName === 'BUTTON') button.type = 'button';
+  }
+  function fixButtons(){
+    ['printMealBtn','printWorkoutBtn','shareMealBtn','shareWorkoutBtn'].forEach(makeButtonNonSubmit);
+  }
+  fixButtons();
+  if(window.MutationObserver && document.body) {
+    new MutationObserver(fixButtons).observe(document.body,{childList:true,subtree:true});
+  }
+})();
+</script>
