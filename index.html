@@ -4286,7 +4286,13 @@ window.useLibraryExercise=async function(id){
               const script=doc.createElement('script');
               script.src='https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js';
               script.onload=resolve;
-              script.onerror=()=>reject(new Error('ابزار ساخت عکس بارگذاری نشد؛ اینترنت گوشی را بررسی و دوباره امتحان کنید.'));
+              script.onerror=()=>{
+                const fallback=doc.createElement('script');
+                fallback.src='https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js';
+                fallback.onload=resolve;
+                fallback.onerror=()=>reject(new Error('ابزار ساخت عکس از دو منبع بارگذاری نشد. اتصال اینترنت را بررسی کنید؛ گزینه چاپ/ذخیره PDF همچنان در همین برگه موجود است.'));
+                doc.head.appendChild(fallback);
+              };
               doc.head.appendChild(script);
             });
           }
@@ -4338,9 +4344,9 @@ window.useLibraryExercise=async function(id){
             return;
           }
           button.textContent='در حال آماده‌سازی اشتراک…';
-          if(popup.navigator.share && popup.navigator.canShare && popup.navigator.canShare({files:[imageFile]})){
+          if(window.navigator.share && window.navigator.canShare && window.navigator.canShare({files:[imageFile]})){
             try{
-              await popup.navigator.share({title:title+' | '+(trainee.name||''),text:'برنامه '+title+' از باشگاه فیتنس سه‌قلعه',files:[imageFile]});
+              await window.navigator.share({title:title+' | '+(trainee.name||''),text:'برنامه '+title+' از باشگاه فیتنس سه‌قلعه',files:[imageFile]});
             }catch(shareError){
               if(shareError && shareError.name==='AbortError') return;
               const url=URL.createObjectURL(png);
