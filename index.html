@@ -748,9 +748,9 @@ async function searchFoodNutritionSource(){
   const queries=[name,...(alias?[alias]:[])];
   const seen=new Set(),raw=[];
   for(const term of queries){
-   const url="https://world.openfoodfacts.org/cgi/search.pl?search_terms="+encodeURIComponent(term)+"&search_simple=1&action=process&json=1&page_size=12&fields=product_name,product_name_fa,brands,nutriments,code,url,quantity";
-   const response=await fetch(url,{headers:{"Accept":"application/json"}});
-   if(!response.ok)continue;
+   const url=SUPABASE_URL+"/functions/v1/food-nutrition-search?q="+encodeURIComponent(term);
+   const response=await fetch(url,{headers:{"Accept":"application/json","apikey":SUPABASE_KEY,"Authorization":"Bearer "+SUPABASE_KEY}});
+   if(!response.ok){console.warn("Food nutrition proxy HTTP",response.status);continue;}
    const data=await response.json();
    for(const p of (data.products||[])){
     const key=String(p.code||p.url||p.product_name||"");
@@ -779,7 +779,7 @@ async function searchFoodNutritionSource(){
   }).join("");
  }catch(e){
   console.error("searchFoodNutritionSource",e);
-  if(status)status.textContent="جست‌وجوی آنلاین انجام نشد. اتصال اینترنت را بررسی کن و دوباره تلاش کن؛ در صورت تکرار، اطلاعات را از منبع معتبر دستی وارد کن.";
+  if(status)status.textContent="ارتباط با سرویس جست‌وجوی ارزش غذایی برقرار نشد. چند لحظه بعد دوباره امتحان کن؛ اگر تکرار شد، وضعیت سرویس را بررسی می‌کنیم.";
  }
 }
 function applyFoodNutritionLookup(index){
