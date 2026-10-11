@@ -2171,6 +2171,179 @@ window.loadDashboard = loadDashboard;
 
 
 
+
+<script id="SEH_EXERCISE_BANK_SYNC_FIX_V1">
+/* Keep coach bank exercises and the workout-plan selector in sync.
+   trainer_exercises is the coach-owned source; exercises supplies the FK used by workout plans. */
+(function(){
+  if(window.__sehExerciseBankSyncFixV1) return;
+  window.__sehExerciseBankSyncFixV1 = true;
+  const norm = v => String(v == null ? '' : v)
+    .toLocaleLowerCase('fa')
+    .replace(/[يى]/g,'ی').replace(/ك/g,'ک')
+    .replace(/[\u200c\s_-]+/g,' ').trim();
+
+  async function getExerciseRows(){
+    try {
+      const rows = await sbGet('/exercises?select=id,name,category,muscle_group,equipment,instructions&order=name.asc');
+      return Array.isArray(rows) ? rows : [];
+    } catch (_) {
+      const rows = await sbGet('/exercises?select=id,name&order=name.asc');
+      return Array.isArray(rows) ? rows : [];
+    }
+  }
+  async function getBankRows(){
+    try {
+      const rows = await sbGet('/trainer_exercises?select=*&order=is_favorite.desc,created_at.desc');
+      return Array.isArray(rows) ? rows : [];
+    } catch (err) {
+      console.warn('بانک حرکات مربی در دسترس نیست:', err);
+      return [];
+    }
+  }
+  window.loadExercises = async function(){
+    const select = document.getElementById('workoutExercise');
+    const count = document.getElementById('workoutExerciseCount');
+    try {
+      if (count) count.textContent = 'در حال هماهنگ‌سازی بانک حرکات…';
+      let [rows, bank] = await Promise.all([getExerciseRows(), getBankRows()]);
+      const byName = new Map(rows.map(x => [norm(x.name), x]));
+      const bankByName = new Map();
+      bank.forEach(x => {
+        const key = norm(x.name);
+        if (key && !bankByName.has(key)) bankByName.set(key, x);
+      });
+
+      // Create only the missing exercise FK rows; never duplicate names.
+      for (const [key, item] of bankByName) {
+        if (byName.has(key)) continue;
+        try {
+          const inserted = await sbWrite('/exercises', 'POST', {name: String(item.name).trim()});
+          const created = Array.isArray(inserted) ? inserted[0] : inserted;
+          if (created && created.id) {
+            byName.set(key, created);
+            rows.push(created);
+          }
+        } catch (err) {
+          console.warn('انتقال حرکت بانک به فهرست برنامه ناموفق بود:', item.name, err);
+        }
+      }
+
+      // Refresh after inserts so the selector uses actual database IDs.
+      rows = await getExerciseRows();
+      const bankMeta = new Map(bank.map(x => [norm(x.name), x]));
+      const merged = rows.map(r => {
+        const b = bankMeta.get(norm(r.name));
+        if (!b) return r;
+        return {
+          ...b, ...r,
+          category: r.category || b.category,
+          muscle_group: r.muscle_group || b.target_muscle || b.category,
+          target_muscle: b.target_muscle || b.category || r.muscle_group,
+          equipment: r.equipment || b.equipment,
+          instructions: r.instructions || b.coach_note,
+          coach_note: b.coach_note,
+          is_favorite: !!b.is_favorite
+        };
+      });
+      // In case the exercises table could not be written, do not fake IDs or offer
+      // unpersistable bank rows as workout options.
+      if (window.__sehWorkoutExerciseBankState) window.__sehWorkoutExerciseBankState = null;
+      if (typeof window.renderWorkoutExerciseOptions === 'function') {
+        window.__sehExerciseSyncRows = merged;
+        window.__sehSetExerciseRowsV1 && window.__sehSetExerciseRowsV1(merged);
+      }
+      if (select && !window.renderWorkoutExerciseOptions) {
+        const old = select.value;
+        select.innerHTML = rows.map(x => '<option value="' + String(x.id).replace(/"/g,'&quot;') + '">' +
+          String(x.name || '').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])) + '</option>').join('');
+        if (old) select.value = old;
+      }
+      if (count && typeof window.renderWorkoutExerciseOptions !== 'function') {
+        count.textContent = rows.length + ' حرکت آماده انتخاب است.';
+      }
+      if (typeof window.loadLibraryExercises === 'function') {
+        // Do not replace the current open library view; the next normal refresh will show it.
+      }
+    } catch (err) {
+      console.error('Exercise bank sync failed:', err);
+      if (count) count.textContent = 'دریافت حرکات انجام نشد؛ صفحه را تازه‌سازی کنید.';
+    }
+  };
+
+  // The muscle-filter module keeps its data in a closure. Wrap its renderer and
+  // load method so the latest merged rows, including bank metadata, feed that closure.
+  const waitForRenderer = () => {
+    if (typeof window.renderWorkoutExerciseOptions !== 'function') return false;
+    const originalLoad = window.loadExercises;
+    const originalRender = window.renderWorkoutExerciseOptions;
+    window.renderWorkoutExerciseOptions = function(){
+      if (Array.isArray(window.__sehExerciseSyncRows)) {
+        const sel = document.getElementById('workoutExercise');
+        if (!sel) return;
+        const normLocal = norm;
+        const muscleButtons = document.getElementById('workoutMuscleFilters');
+        const activeButton = muscleButtons && muscleButtons.querySelector('.muscle-filter.active');
+        const chosen = activeButton && activeButton.dataset.muscle || 'سینه';
+        const q = norm(document.getElementById('workoutExerciseSearch')?.value);
+        const keys = {
+          'سینه':['سینه','قفسه','فلای','chest','pectoral','pec deck'],
+          'پشت':['پشت','زیر بغل','زیربغل','لت','قایقی','ددلیفت','back','lat pulldown','row'],
+          'سرشانه':['سرشانه','نشر','دلتوئید','shoulder','deltoid'],
+          'جلو بازو':['جلو بازو','biceps','bicep','curl'],
+          'پشت بازو':['پشت بازو','triceps','tricep','pushdown'],
+          'پا':['پا','چهارسر','همسترینگ','ساق','باسن','گلوت','اسکوات','لانج','leg','quad','hamstring','glute','calf','squat','lunge'],
+          'شکم':['شکم','کرانچ','پلانک','core','abs','crunch','plank'],
+          'کاردیو':['کاردیو','هوازی','تردمیل','دوچرخه ثابت','طناب','cardio','treadmill'],
+          'اصلاحی':['اصلاحی','کششی','موبیلیتی','توانبخشی','قوز','corrective','rehab','mobility','stretch']
+        };
+        const all = window.__sehExerciseSyncRows;
+        const selectedTemplate = document.getElementById('workoutSessionTemplate')?.value;
+        const groups = {
+          'chest-triceps':['سینه','پشت بازو'],'back-biceps':['پشت','جلو بازو'],
+          'shoulders-abs':['سرشانه','شکم'],'legs-abs':['پا','شکم'],
+          'chest-back':['سینه','پشت'],'arms':['جلو بازو','پشت بازو'],
+          'full-body':['سینه','پشت','سرشانه','جلو بازو','پشت بازو','پا','شکم'],
+          'cardio-core':['کاردیو','شکم'],'corrective':['اصلاحی']
+        };
+        const category = r => norm(r.target_muscle || r.category || r.muscle_group);
+        const matches = (r, m) => {
+          if (!m || m === 'همه حرکات') return true;
+          if (m === 'علاقه‌مندی') return !!r.is_favorite;
+          const hay = norm([r.category,r.muscle_group,r.target_muscle,r.name,r.equipment,r.instructions,r.coach_note].join(' '));
+          return (keys[m] || [m]).some(k => hay.includes(norm(k)));
+        };
+        const allowed = selectedTemplate && groups[selectedTemplate] ? groups[selectedTemplate] : [chosen];
+        const filtered = all.filter(r => allowed.some(m => matches(r,m)) && (!q || norm([r.name,r.category,r.muscle_group,r.target_muscle,r.equipment].join(' ')).includes(q)));
+        const prev = sel.value;
+        sel.innerHTML = filtered.length ? filtered.map(r => '<option value="'+String(r.id).replace(/"/g,'&quot;')+'">'+
+          String(r.name||'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]))+
+          (r.category ? ' · '+String(r.category).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]) : '')+'</option>').join('')
+          : '<option value="">این گروه حرکت قابل انتخاب ندارد</option>';
+        if (prev && filtered.some(r=>String(r.id)===String(prev))) sel.value=prev;
+        const c = document.getElementById('workoutExerciseCount');
+        if (c) c.textContent = filtered.length + ' حرکت قابل انتخاب در «' + chosen + '»' + (q ? ' · جستجو فعال' : '');
+        return;
+      }
+      return originalRender.apply(this, arguments);
+    };
+    return true;
+  };
+
+  // Capture the data inside the existing filter module by adapting the rendered selector.
+  // This safe fallback keeps the selector usable while preserving real exercises-table IDs.
+  const oldUse = window.useLibraryExercise;
+  window.useLibraryExercise = async function(id){
+    if (typeof oldUse === 'function') await oldUse.apply(this, arguments);
+    await window.loadExercises();
+    const sel = document.getElementById('workoutExercise');
+    if (sel) sel.value = String(sel.value || '');
+  };
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', () => {waitForRenderer(); window.loadExercises();}, {once:true});
+  else {waitForRenderer(); window.loadExercises();}
+})();
+</script>
+
 </body></html>`;
     const w=window.open('','_blank');if(w){w.document.write(html);w.document.close();}
   };
