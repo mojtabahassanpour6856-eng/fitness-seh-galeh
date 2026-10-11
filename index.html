@@ -4154,11 +4154,18 @@ window.useLibraryExercise=async function(id){
           const base=rawName.replace(/(?:\s*[-–—:]?\s*)(?:گزینه\s*)?(?:شماره\s*)?(?:[۰-۹0-9]+|اول|اولین|دوم|دومین|سوم|سومین|چهارم|چهارمین|یک|دو|سه|چهار)\s*$/u,'').trim()||rawName;
           mealBlocks.push({base,rawName,items,notes:String(meal.notes||'').trim()});
         }
+        // گزینه‌های هم‌وعده را کنار هم نگه می‌داریم؛ حتی اگر ترتیب ذخیره‌شده‌ی ردیف‌ها آن‌ها را از هم جدا کرده باشد.
+        // ترتیب گروه‌ها بر اساس اولین حضور و ترتیب گزینه‌ها بر اساس ترتیب اصلی برنامه حفظ می‌شود.
         const groups=[];
+        const groupByBase=new Map();
         for(const block of mealBlocks){
-          const last=groups[groups.length-1];
-          if(last && last.base===block.base){last.options.push(block);}
-          else groups.push({base:block.base,options:[block]});
+          let group=groupByBase.get(block.base);
+          if(!group){
+            group={base:block.base,options:[]};
+            groupByBase.set(block.base,group);
+            groups.push(group);
+          }
+          group.options.push(block);
         }
         body += groups.map(group=>{
           const rows=group.options.map((opt,index)=>{
