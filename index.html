@@ -1272,7 +1272,10 @@ async function loadNutritionForClient(){
    meals.forEach(m=>m.foods=mf.filter(x=>String(x.meal_id)===String(m.id)).map(x=>({...x,food:foodsBy[x.food_id]})));
   }
   if(!sameTrainee()||String(currentPlanId)!==String(requestedPlanId))return;
-  renderMealCoach(meals);renderStudentMeals(meals,p);renderMealReport(meals,p);
+  renderMealCoach(meals);
+  // شاگرد و گزارش فقط وعده‌هایی را ببینند که دست‌کم یک غذای معتبر با مقدار مثبت دارند؛ فهرست مربی برای ویرایش خالی‌ها کامل می‌ماند.
+  const visibleStudentMeals=meals.filter(m=>(m.foods||[]).some(x=>x.food_id&&x.food&&x.amount!==null&&x.amount!==undefined&&String(x.amount).trim()!==''&&Number(x.amount)>0));
+  renderStudentMeals(visibleStudentMeals,p);renderMealReport(visibleStudentMeals,p);
  }catch(e){console.error(e);if(sameTrainee())alert("دریافت برنامه غذایی از Supabase انجام نشد.\n"+e.message);}
 }
 async function sbGet(path){
@@ -4140,10 +4143,13 @@ window.useLibraryExercise=async function(id){
         const mealBlocks=[];
         for(const meal of meals) {
           const foods = await sbGet('/nutrition_meal_foods?meal_id=eq.'+encodeURIComponent(meal.id)+'&select=*&order=created_at.asc');
-          const ids = [...new Set(foods.map(x=>x.food_id).filter(Boolean))];
+          const usableFoods=foods.filter(item=>item.food_id&&item.amount!==null&&item.amount!==undefined&&String(item.amount).trim()!==''&&Number(item.amount)>0);
+          if(!usableFoods.length) continue;
+          const ids = [...new Set(usableFoods.map(x=>x.food_id).filter(Boolean))];
           const list = ids.length ? await sbGet('/foods?id=in.('+ids.join(',')+')&select=id,name') : [];
           const byId = Object.fromEntries(list.map(x=>[String(x.id),x]));
-          const items=foods.map(item=>{const f=byId[String(item.food_id)]||{};const amount=String(item.amount??'').trim();const unit=String(item.unit||'گرم').trim();return '<span style="display:inline-block;margin:1px 2px;white-space:normal"><b>'+esc(f.name||'غذا')+'</b> <span style="color:#6b5a39;font-weight:700">'+esc(amount)+' '+esc(unit)+'</span></span>';}).join('<span style="color:#bd861c;font-weight:900;padding:0 3px"> + </span>');
+          const items=usableFoods.map(item=>{const f=byId[String(item.food_id)]||{};if(!f.name)return '';const amount=String(item.amount??'').trim();const unit=String(item.unit||'گرم').trim();return '<span style="display:inline-block;margin:1px 2px;white-space:normal"><b>'+esc(f.name)+'</b> <span style="color:#6b5a39;font-weight:700">'+esc(amount)+' '+esc(unit)+'</span></span>';}).filter(Boolean).join('<span style="color:#bd861c;font-weight:900;padding:0 3px"> + </span>');
+          if(!items) continue;
           const rawName=String(meal.meal_name||'وعده غذایی').trim();
           const base=rawName.replace(/(?:\s*[-–—:]?\s*)(?:گزینه\s*)?(?:شماره\s*)?(?:[۰-۹0-9]+|اول|اولین|دوم|دومین|سوم|سومین|چهارم|چهارمین|یک|دو|سه|چهار)\s*$/u,'').trim()||rawName;
           mealBlocks.push({base,rawName,items,notes:String(meal.notes||'').trim()});
@@ -4157,7 +4163,7 @@ window.useLibraryExercise=async function(id){
         body += groups.map(group=>{
           const rows=group.options.map((opt,index)=>{
             const label=opt.rawName===group.base?(group.options.length>1?group.base+' '+['یک','دو','سه','چهار'][index]:'گزینه '+(index+1)):opt.rawName;
-            return '<div style="display:flex;align-items:flex-start;gap:7px;padding:5px 7px;border-bottom:1px dashed #e2d1a7;break-inside:avoid"><div style="flex:0 0 auto;min-width:72px;color:#79520c;font-weight:900;white-space:nowrap">↳ '+esc(label)+'</div><div style="flex:1;min-width:0;line-height:1.9">'+(opt.items||'<span style="color:#777">غذایی برای این گزینه ثبت نشده</span>')+(opt.notes?'<div style="font-size:10px;color:#665f50">نکته: '+esc(opt.notes)+'</div>':'')+'</div></div>';
+            return '<div style="display:flex;align-items:flex-start;gap:7px;padding:5px 7px;border-bottom:1px dashed #e2d1a7;break-inside:avoid"><div style="flex:0 0 auto;min-width:72px;color:#79520c;font-weight:900;white-space:nowrap">↳ '+esc(label)+'</div><div style="flex:1;min-width:0;line-height:1.9">'+(opt.items||'')+(opt.notes?'<div style="font-size:10px;color:#665f50">نکته: '+esc(opt.notes)+'</div>':'')+'</div></div>';
           }).join('');
           return '<section style="margin:8px 0 10px;border:1px solid #c69b43;border-radius:8px;overflow:hidden;break-inside:avoid"><h3 style="margin:0;padding:5px 9px;background:#fff0c2;color:#51380b;border-bottom:1px solid #c69b43;font-size:15px">'+esc(group.base)+'</h3>'+rows+'</section>';
         }).join('');
