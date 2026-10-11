@@ -4199,11 +4199,10 @@ window.useLibraryExercise=async function(id){
       popup.document.getElementById('printFullFile').addEventListener('click', function(){ popup.print(); });
       const shareButton=popup.document.getElementById('shareFullFile');
       const downloadImageButton=popup.document.getElementById('downloadImageFile');
-      let forceDownloadImage=false;
-      downloadImageButton.addEventListener('click',function(){forceDownloadImage=true;shareButton.click();});
-      shareButton.textContent='🖼️ ساخت و ارسال عکس برنامه';
-      shareButton.addEventListener('click', async function(){
-        const button=this;
+      shareButton.textContent='🖼️ ارسال عکس برنامه';
+      downloadImageButton.textContent='💾 دانلود عکس PNG';
+      async function processPlanImage(forceDownload){
+        const button=shareButton;
         const oldText=button.textContent;
         button.disabled=true; button.textContent='در حال آماده‌سازی عکس…';
         let actions=null, actionsDisplay='';
@@ -4259,8 +4258,7 @@ window.useLibraryExercise=async function(id){
           });
           const safeName=String(trainee.name||'شاگرد').replace(/[\\/:*?"<>|]/g,'_');
           const imageFile=new File([png],(kind==='meal'?'برنامه_غذایی_':'برنامه_تمرینی_')+safeName+'.png',{type:'image/png'});
-          if(forceDownloadImage){
-            forceDownloadImage=false;
+          if(forceDownload){
             const url=URL.createObjectURL(png);
             const link=doc.createElement('a');link.href=url;link.download=imageFile.name;doc.body.appendChild(link);link.click();link.remove();
             setTimeout(()=>URL.revokeObjectURL(url),60000);
@@ -4289,9 +4287,11 @@ window.useLibraryExercise=async function(id){
           alert('ساخت عکس انجام نشد. '+(e&&e.message?e.message:String(e)));
         }finally{
           if(actions){actions.style.display=actionsDisplay;}
-          button.disabled=false;button.textContent='🖼️ ارسال برنامه به‌صورت عکس';forceDownloadImage=false;
+          button.disabled=false;shareButton.disabled=false;downloadImageButton.disabled=false;shareButton.textContent='🖼️ ارسال عکس برنامه';downloadImageButton.textContent='💾 دانلود عکس PNG';
         }
-      });;
+      }
+      shareButton.addEventListener('click',function(){processPlanImage(false);});
+      downloadImageButton.addEventListener('click',function(){processPlanImage(true);});
     } catch(e) {
       console.error('Full plan export failed',e);
       try { popup.document.body.innerHTML = '<p>ساخت خروجی برنامه ناموفق بود: '+esc(e.message||e)+'</p>'; } catch(_) {}
