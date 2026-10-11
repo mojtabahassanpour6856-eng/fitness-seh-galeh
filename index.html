@@ -2554,6 +2554,10 @@ const plans=workoutResult.data||[], nutrition=nutritionResult.data||[];
   // -------- Exercise library: favorite toggle --------
   window.saveLibraryExerciseInGroup=async function(cat,button){
  if(window.__savingLibraryExercise)return;
+ // The open muscle section is the single source of truth; never infer category from exercise name.
+ const openCategory=String(window.__fitnessSelectedLibraryMuscle||'').trim();
+ if(openCategory)cat=openCategory;
+ if(window.__fitnessLibrarySaveInFlight)return;
  const form=button&&button.closest('.library-inline-add');
  if(!form){alert('فرم افزودن حرکت پیدا نشد.');return;}
  const name=form.querySelector('[data-new-ex-name]')?.value.trim();
@@ -2580,7 +2584,9 @@ const plans=workoutResult.data||[], nutrition=nutritionResult.data||[];
   const rows=await Promise.race([request,timeout]);
   if(requestTimer)clearTimeout(requestTimer);
   if(!Array.isArray(rows)||!rows.length||!rows[0].id)throw new Error('پاسخ ذخیره‌سازی تأیید نشد؛ قبل از تلاش مجدد بانک را تازه کنید.');
-  if(status)status.textContent='✅ حرکت «'+name+'» در بانک عضلهٔ '+cat+' ذخیره شد. برای دیدن فهرست تازه، به عقب برگرد و دوباره وارد همین عضله شو.';
+  if(status)status.textContent='✅ حرکت «'+name+'» فقط در بخش «'+cat+'» ذخیره شد.';
+  // Refresh the currently open category immediately, without switching to the all-exercises list.
+  if(typeof window.loadLibraryExercises==='function')await window.loadLibraryExercises();
   const nameInput=form.querySelector('[data-new-ex-name]');if(nameInput)nameInput.value='';
   const eqInput=form.querySelector('[data-new-ex-equipment]');if(eqInput)eqInput.value='';
   const noteInput=form.querySelector('[data-new-ex-note]');if(noteInput)noteInput.value='';
@@ -2597,10 +2603,11 @@ const plans=workoutResult.data||[], nutrition=nutritionResult.data||[];
  }
 };
 window.toggleExerciseFavorite=async function(id,value){try{await sbWrite(`/trainer_exercises?id=eq.${encodeURIComponent(id)}`,'PATCH',{is_favorite:!value});await loadLibraryExercises();}catch(e){alert('تغییر علاقه‌مندی انجام نشد.\n'+e.message)}};
+  // Keep the category-aware library renderer. A later legacy override used to replace
+  // the grouped muscle view with one flat list, making saved exercises appear in every section.
   const originalLoadLibrary=window.loadLibraryExercises;
   window.loadLibraryExercises=async function(){
-    if(!$f('libraryList'))return;
-    try{const q=encodeURIComponent(($f('libSearch')?.value||'').trim());const rows=await sbGet('/trainer_exercises?select=*&order=is_favorite.desc,created_at.desc'+(q?'&name=ilike.*'+q+'*':''));$f('libraryList').innerHTML=rows.length?rows.map(x=>`<div class="client"><strong>${x.is_favorite?'⭐':'☆'} ${escf(x.name)}</strong><span class="pill">${escf(x.category||'')}</span><span class="pill">${escf(x.target_muscle||'')}</span><span class="pill">${escf(x.level||'')}</span><span class="pill">${escf(x.goal||'')}</span><span class="pill">${escf(x.equipment||'بدون تجهیزات')}</span><div class="f18-actions"><button class="secondary mini" onclick="toggleExerciseFavorite('${x.id}',${!!x.is_favorite})">${x.is_favorite?'☆ حذف علاقه‌مندی':'⭐ علاقه‌مندی'}</button><button class="secondary mini" onclick="useLibraryExercise('${x.id}')">➕ استفاده در برنامه</button></div>${x.coach_note?`<p class="f18-muted">${escf(x.coach_note)}</p>`:''}</div>`).join(''):'هنوز حرکت اختصاصی ثبت نشده است.';}catch(e){$f('libraryList').innerHTML='دریافت بانک حرکات انجام نشد.';}
+    if(typeof originalLoadLibrary==='function')return originalLoadLibrary.apply(this,arguments);
   };
 
   // -------- Weekly activity report --------
