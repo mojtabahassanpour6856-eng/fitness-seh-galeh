@@ -531,10 +531,17 @@ body.library-room #workout .library-room-card .library-detail-view{width:100%!im
 <div id="mealModal" class="modal-back">
 <div class="modal">
 <h3>➕ افزودن غذا به وعده</h3>
+<div><label>نوع افزودن</label><select id="mealFoodMode" onchange="switchMealFoodMode()"><option value="single">غذای تکی</option><option value="recipe">غذای ترکیبی / دستور آماده</option></select></div>
+<div id="mealSingleFoodFields">
 <div><label>غذا</label><select id="mealFoodSelect"></select></div>
 <div class="grid2">
 <div><label>مقدار</label><input id="mealFoodAmount" type="number" value="100" min="0.1" step="0.1"></div>
-<div><label>واحد</label><select id="mealFoodUnit"><option>گرم</option><option>عدد</option><option>قاشق</option><option>لیوان</option><option>کف دست</option><option>پیمانه</option></select></div>
+<div><label>واحد</label><select id="mealFoodUnit"><option>گرم</option><option>عدد</option><option>قاشق غذاخوری</option><option>لیوان</option><option>میلی‌لیتر</option><option>کف دست</option><option>پیمانه</option></select></div>
+</div>
+</div>
+<div id="mealRecipeFields" class="hide">
+<label>انتخاب دستور ترکیبی</label><select id="mealRecipeSelect" onchange="previewMealRecipe()"></select>
+<div id="mealRecipeIngredients" class="sub-result"></div>
 </div>
 <label>یادداشت</label><input id="mealFoodNote" placeholder="اختیاری">
 <div id="mealFoodPreview" class="sub-result"></div>
@@ -899,6 +906,8 @@ let currentPlanId=null,currentMealId=null,currentMealFoods=[];
 function mealFoodUnitInfo(name){
  const n=String(name||"").replace(/ي/g,"ی").replace(/ك/g,"ک");
  if(/تخم\s*مرغ|تخممرغ/.test(n))return {kind:"egg",units:[["عدد","عدد (حدود ۵۰ گرم)"]],defaultUnit:"عدد",defaultAmount:2};
+ if(/عسل/.test(n))return {kind:"spoon",units:[["قاشق غذاخوری","قاشق غذاخوری (حدود ۲۱ گرم)"]],defaultUnit:"قاشق غذاخوری",defaultAmount:1};
+ if(/کره بادام زمینی/.test(n))return {kind:"spoon",units:[["قاشق غذاخوری","قاشق غذاخوری (حدود ۱۶ گرم)"]],defaultUnit:"قاشق غذاخوری",defaultAmount:1};
  if(/سالاد/.test(n))return {kind:"salad",units:[["بشقاب","بشقاب (حدود ۲۵۰ گرم)"]],defaultUnit:"بشقاب",defaultAmount:1};
  if(/بادام|پسته|فندق|گردو|بادام\s*هندی|تخمه|آجیل|اجیل|مغز/.test(n)){
   const single=/بادام(?!\s*هندی)|پسته|فندق|تخمه/.test(n);
@@ -906,7 +915,7 @@ function mealFoodUnitInfo(name){
   if(single)units.push(["عدد","عدد (وزن تقریبی بر اساس نوع مغز)"]);
   return {kind:"nuts",units,defaultUnit:"مشت",defaultAmount:1};
  }
- if(/چای|قهوه|اسپرسو|دمنوش|دوغ|شیک پروتئینی|شیر کم‌چرب|شیر پرچرب/.test(n)){
+ if(/چای|قهوه|اسپرسو|دمنوش|دوغ|شیک پروتئینی|شیر\s*کم[\s‌-]*چرب|شیر\s*پر[\s‌-]*چرب/.test(n)){
   return {kind:"drink",units:[["میلی‌لیتر","میلی‌لیتر"],["لیوان","لیوان (حدود ۲۵۰ میلی‌لیتر)"]],defaultUnit:"لیوان",defaultAmount:1};
  }
  if(/پودر وی|پودر پروتئین/.test(n)){
@@ -923,8 +932,10 @@ function mealUnitGrams(name,unit){
  if(u==="عدد" && /تخم\s*مرغ|تخممرغ/.test(n))return 50;
  if(u==="بشقاب" && /سالاد/.test(n))return 250;
  if(u==="مشت" && /بادام|پسته|فندق|گردو|بادام\s*هندی|تخمه|آجیل|اجیل|مغز/.test(n))return 25;
- if(u==="میلی‌لیتر" && /چای|قهوه|اسپرسو|دمنوش|دوغ|شیک پروتئینی|شیر کم‌چرب|شیر پرچرب/.test(n))return 1;
- if(u==="لیوان" && /چای|قهوه|اسپرسو|دمنوش|دوغ|شیک پروتئینی|شیر کم‌چرب|شیر پرچرب/.test(n))return 250;
+ if(u==="قاشق غذاخوری" && /عسل/.test(n))return 21;
+ if(u==="قاشق غذاخوری" && /کره بادام زمینی/.test(n))return 16;
+ if((u==="میلی‌لیتر"||u==="میلی لیتر") && /چای|قهوه|اسپرسو|دمنوش|دوغ|شیک پروتئینی|شیر\s*کم[\s‌-]*چرب|شیر\s*پر[\s‌-]*چرب/.test(n))return 1;
+ if(u==="لیوان" && /چای|قهوه|اسپرسو|دمنوش|دوغ|شیک پروتئینی|شیر\s*کم[\s‌-]*چرب|شیر\s*پر[\s‌-]*چرب/.test(n))return 250;
  if(u==="پیمانه" && /پودر وی|پودر پروتئین/.test(n))return 30;
  if(u==="عدد"){
   if(/بادام\s*هندی/.test(n))return 1.5;
@@ -969,17 +980,41 @@ function mealTab(tab){
  $("mealReportView").classList.toggle("hide",tab!=="report");
  if(tab!=="coach"&&currentClient){loadNutritionForClient();}
 }
+const MEAL_RECIPES=[
+ {name:"اوتمیل موز، عسل و کره بادام‌زمینی",ingredients:[["جو دوسر",50,"گرم"],["موز",1,"عدد"],["عسل",1,"قاشق غذاخوری"],["کره بادام زمینی",1,"قاشق غذاخوری"],["شیر کم چرب",250,"میلی‌لیتر"],["دارچین آسیاب‌شده",1,"گرم"]],note:"دارچین حدود ۱ گرم؛ قابل حذف یا تغییر."},
+ {name:"شیک پروتئینی موزی",ingredients:[["شیر کم چرب",250,"میلی‌لیتر"],["پودر وی پروتئین",30,"گرم"],["موز",1,"عدد"]]},
+ {name:"کاسه ماست یونانی و میوه",ingredients:[["ماست یونانی ساده کم‌چرب",170,"گرم"],["موز",1,"عدد"],["جو دوسر",20,"گرم"],["تخم چیا",5,"گرم"],["عسل",0.5,"قاشق غذاخوری"]]},
+ {name:"صبحانه تخم‌مرغ و نان تست",ingredients:[["تخم مرغ کامل",2,"عدد"],["نان تست سبوس‌دار",60,"گرم"],["گوجه‌فرنگی",50,"گرم"]]},
+ {name:"بشقاب مرغ، برنج و بروکلی",ingredients:[["سینه مرغ پخته",150,"گرم"],["برنج پخته",150,"گرم"],["کلم بروکلی پخته",100,"گرم"],["روغن زیتون",5,"گرم"]]}
+];
+function switchMealFoodMode(){
+ const recipe=$("mealFoodMode").value==="recipe";
+ $("mealSingleFoodFields").classList.toggle("hide",recipe);
+ $("mealRecipeFields").classList.toggle("hide",!recipe);
+ if(recipe)previewMealRecipe();else previewMealFood();
+}
 function fillMealFoodSelect(){
  const s=$("mealFoodSelect");if(!s)return;s.innerHTML=foods.map((f,i)=>`<option value="${i}">${esc(f[0])}</option>`).join("");
+ const rs=$("mealRecipeSelect");rs.innerHTML=MEAL_RECIPES.map((r,i)=>`<option value="${i}">${esc(r.name)}</option>`).join("");
  s.onchange=()=>{$("mealFoodAmount").dataset.unitInitialized="";updateMealFoodUnits();previewMealFood();};
  $("mealFoodAmount").oninput=previewMealFood;$("mealFoodUnit").onchange=previewMealFood;
- updateMealFoodUnits();previewMealFood();
+ updateMealFoodUnits();switchMealFoodMode();previewMealFood();previewMealRecipe();
 }
 function previewMealFood(){
  const f=foods[+$("mealFoodSelect").value],g=+$("mealFoodAmount").value||0;if(!f)return;
  const unit=$("mealFoodUnit").value, m=foodMetrics({name:f[0],calories:f[1],protein:f[2],carbs:f[3],fat:f[4]},g,unit);
  const approx=m.valid&&unit!=="گرم"?" (حدود "+m.grams+" گرم؛ تخمینی)":"";
  $("mealFoodPreview").innerHTML=m.valid?`<b>${esc(f[0])}</b> — ${g} ${esc(unit)}${approx}<br>🔥 ${m.cal.toFixed(0)} kcal | پروتئین ${m.pro.toFixed(1)}g | کربوهیدرات ${m.carb.toFixed(1)}g | چربی ${m.fat.toFixed(1)}g`:`<b>${esc(f[0])}</b> — ${g} ${esc(unit)}<br><span class="warning-text">برای این غذا تبدیل قابل‌اعتماد این واحد تعریف نشده؛ لطفاً «گرم» را انتخاب کن.</span>`;
+}
+function mealRecipeRows(recipe){
+ return recipe.ingredients.map(([name,amount,unit])=>{const f=foods.find(x=>x[0]===name);if(!f)return {missing:name};return {f,amount,unit,metrics:foodMetrics({name:f[0],calories:f[1],protein:f[2],carbs:f[3],fat:f[4]},amount,unit)};});
+}
+function previewMealRecipe(){
+ const recipe=MEAL_RECIPES[+$("mealRecipeSelect")?.value||0];if(!recipe)return;
+ const rows=mealRecipeRows(recipe),missing=rows.filter(x=>x.missing),valid=rows.filter(x=>x.f&&x.metrics.valid);
+ const total=valid.reduce((a,x)=>[a[0]+x.metrics.cal,a[1]+x.metrics.pro,a[2]+x.metrics.carb,a[3]+x.metrics.fat],[0,0,0,0]);
+ $("mealRecipeIngredients").innerHTML="<b>مواد لازم:</b><ul>"+rows.map(x=>x.missing?`<li class="warning-text">${esc(x.missing)} — در بانک غذا پیدا نشد</li>`:`<li>${esc(x.f[0])}: ${x.amount} ${esc(x.unit)}</li>`).join("")+"</ul>"+(recipe.note?`<small>${esc(recipe.note)}</small><br>`:"")+`<b>مجموع کل دستور:</b> 🔥 ${total[0].toFixed(0)} kcal | پروتئین ${total[1].toFixed(1)}g | کربوهیدرات ${total[2].toFixed(1)}g | چربی ${total[3].toFixed(1)}g`+(missing.length?'<br><span class="warning-text">برای ثبت، ابتدا مواد جاافتاده را به بانک غذا اضافه کن.</span>':"");
+ $("mealFoodPreview").innerHTML="مقدارها برای یک نوبت تهیه دستور هستند. پس از افزودن، هر ماده جداگانه در برنامه غذایی ثبت می‌شود تا مقدار و محاسبات آن شفاف بماند.";
 }
 async function loadNutritionForClient(){
  const requestedTraineeId=currentClient?.id;
@@ -1062,7 +1097,7 @@ function renderMealCoach(meals){
  if(!meals.length)$("mealList").innerHTML=`<div class="card"><p class="muted">هیچ وعده‌ای برای این برنامه ثبت نشده است.</p><button onclick="createDefaultMeals()">＋ ساخت ۵ وعده استاندارد</button></div>`;
  updateDayTotals(meals);updateMealTargets();
 }
-function foodLine(x){const f=x.food||{},m=foodMetrics(f,x.amount,x.unit);return `<div class="food-line"><div><div class="food-name">${esc(f.name||"غذا")}</div><div class="food-meta">${m.valid?`🔥 ${m.cal.toFixed(0)} kcal | P ${m.pro.toFixed(1)} | C ${m.carb.toFixed(1)} | F ${m.fat.toFixed(1)}`:'⚠️ برای محاسبه تغذیه‌ای، وزن معادل گرم لازم است.'}</div></div><span>${x.amount} ${esc(x.unit||"گرم")}</span><button class="mini secondary" onclick="openSubstitution('${x.food_id}','${x.amount}')">🔄</button><button class="mini danger" onclick="deleteMealFood('${x.id}')">🗑</button></div>`;}
+function foodLine(x){const f=x.food||{},m=foodMetrics(f,x.amount,x.unit),recipeTag=(x.notes||"").match(/\\[دستور ترکیبی: [^\\]]+\\]/)?.[0];return `<div class="food-line"><div><div class="food-name">${esc(f.name||"غذا")}</div>${recipeTag?`<div class="food-meta">🍽️ ${esc(recipeTag.replace(/^\\[دستور ترکیبی: |\\]$/g,""))}</div>`:""}<div class="food-meta">${m.valid?`🔥 ${m.cal.toFixed(0)} kcal | P ${m.pro.toFixed(1)} | C ${m.carb.toFixed(1)} | F ${m.fat.toFixed(1)}`:'⚠️ برای محاسبه تغذیه‌ای، وزن معادل گرم لازم است.'}</div></div><span>${x.amount} ${esc(x.unit||"گرم")}</span><button class="mini secondary" onclick="openSubstitution('${x.food_id}','${x.amount}')">🔄</button><button class="mini danger" onclick="deleteMealFood('${x.id}')">🗑</button></div>`;}
 function updateDayTotals(meals){const t=meals.reduce((a,m)=>(m.foods||[]).reduce((b,x)=>{const v=foodMetrics(x.food||{},x.amount,x.unit);return v.valid?[b[0]+v.cal,b[1]+v.pro,b[2]+v.carb,b[3]+v.fat]:b},a),[0,0,0,0]);$("dayCal").textContent=t[0].toFixed(0);$("dayPro").textContent=t[1].toFixed(1)+" g";$("dayCarb").textContent=t[2].toFixed(1)+" g";$("dayFat").textContent=t[3].toFixed(1)+" g";}
 let defaultMealsBusy=false;
 async function createDefaultMeals(){
@@ -1084,7 +1119,24 @@ async function createDefaultMeals(){
 }
 async function openMealFoodModal(mealId){currentMealId=mealId;$("mealFoodAmount").dataset.unitInitialized="";fillMealFoodSelect();$("mealFoodNote").value="";$("mealModal").classList.add("show");previewMealFood();}
 function closeMealModal(){$("mealModal").classList.remove("show");currentMealId=null;}
-async function saveMealFood(){if(!currentMealId)return;const f=foods[+$("mealFoodSelect").value],amount=+$("mealFoodAmount").value;if(!f||amount<=0)return;try{await sbWrite("/nutrition_meal_foods","POST",{meal_id:currentMealId,food_id:f[5],amount,unit:$("mealFoodUnit").value,notes:$("mealFoodNote").value.trim()||null});closeMealModal();await loadNutritionForClient();}catch(e){alert("افزودن غذا انجام نشد.\n"+e.message);}}
+async function saveMealFood(){
+ if(!currentMealId)return;
+ try{
+  if($("mealFoodMode").value==="recipe"){
+   const recipe=MEAL_RECIPES[+$("mealRecipeSelect").value],rows=recipe?mealRecipeRows(recipe):[];
+   if(!recipe||!rows.length||rows.some(x=>!x.f||!x.metrics.valid)){alert("یکی از مواد دستور در بانک غذا موجود نیست یا مقدار آن قابل محاسبه نیست.");return;}
+   const label="[دستور ترکیبی: "+recipe.name+"]";
+   const extra=$("mealFoodNote").value.trim();
+   const payload=rows.map(x=>({meal_id:currentMealId,food_id:x.f[5],amount:x.amount,unit:x.unit,notes:[label,extra].filter(Boolean).join(" | ")||null}));
+   await sbWrite("/nutrition_meal_foods","POST",payload);
+  }else{
+   const f=foods[+$("mealFoodSelect").value],amount=+$("mealFoodAmount").value;
+   if(!f||amount<=0){alert("غذا و مقدار معتبر انتخاب کن.");return;}
+   await sbWrite("/nutrition_meal_foods","POST",{meal_id:currentMealId,food_id:f[5],amount,unit:$("mealFoodUnit").value,notes:$("mealFoodNote").value.trim()||null});
+  }
+  closeMealModal();await loadNutritionForClient();
+ }catch(e){alert("افزودن غذا انجام نشد.\n"+e.message);}
+}
 async function deleteMealFood(id){if(!confirm("این غذا از وعده حذف شود؟"))return;try{await sbWrite(`/nutrition_meal_foods?id=eq.${encodeURIComponent(id)}`,"DELETE",{});await loadNutritionForClient();}catch(e){alert("حذف غذا انجام نشد.\n"+e.message);}}
 function openSubstitution(foodId,amount){const f=foods.find(x=>String(x[5])===String(foodId));if(!f){alert("غذا پیدا نشد.");return;}$("orig").value=foods.findIndex(x=>String(x[5])===String(foodId));$("origG").value=amount;showSection("food",document.querySelectorAll(".nav button")[0]);alert("غذای برنامه انتخاب شد؛ حالا غذای جایگزین را انتخاب و محاسبه کنید.");}
 function renderStudentEmpty(){$("studentMealTitle").textContent="برای این شاگرد هنوز برنامه غذایی فعال ثبت نشده است.";$("studentMealList").innerHTML="";$("studentTargetCal").textContent="۰";$("studentDoneCal").textContent="۰";$("studentWater").textContent="۰";$("studentDoneCount").textContent="۰";}
