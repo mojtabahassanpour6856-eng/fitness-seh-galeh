@@ -352,6 +352,7 @@ body.library-room #workout .library-room-card .library-detail-view{width:100%!im
 <details style="margin-top:12px"><summary style="cursor:pointer;font-weight:bold;color:#ffcf58;padding:8px 0">＋ افزودن غذای جدید به بانک</summary>
 <div class="grid2">
 <div><label for="mealBankName">نام غذا</label><input id="mealBankName" maxlength="100" placeholder="مثلاً سیب‌زمینی آب‌پز"></div>
+<div style="grid-column:1/-1"><button type="button" class="secondary" onclick="searchFoodNutritionSource()">🔎 جست‌وجوی کالری و ارزش غذایی</button><div id="mealFoodLookupStatus" class="muted" aria-live="polite">نام غذا را وارد کن و جست‌وجو بزن؛ اطلاعات پیدا‌شده را بررسی و انتخاب کن.</div><div id="mealFoodLookupResults"></div></div>
 <div><label for="mealBankCategory">دسته</label><select id="mealBankCategory"><option>غلات</option><option>برنج و غلات</option><option>نان</option><option>گوشت و مرغ</option><option>ماهی</option><option>تخم مرغ</option><option>لبنیات</option><option>حبوبات</option><option>میوه</option><option>میوه خشک</option><option>سبزیجات</option><option>مغزها</option><option>دانه‌ها</option><option>چربی‌ها</option><option>نوشیدنی</option><option>مکمل و شیک</option><option>شیرینی و تنقلات</option><option>سایر</option></select></div>
 <div><label for="mealBankCalories">کالری در ۱۰۰ گرم</label><input id="mealBankCalories" type="number" min="0" step="0.1" placeholder="مثلاً 130"></div>
 <div><label for="mealBankProtein">پروتئین (گرم)</label><input id="mealBankProtein" type="number" min="0" step="0.1" value="0"></div>
@@ -714,6 +715,43 @@ function renderMealFoodBank(){
  list.innerHTML='<p class="muted">نتیجه جست‌وجو: '+rows.length.toLocaleString("fa-IR")+'</p>'+
  (rows.length?rows.slice(0,80).map(f=>'<div style="padding:8px 2px;border-top:1px solid #26384a"><b>'+esc(f[0])+'</b><div class="muted">'+esc(f[6]||"سایر")+' · '+(+f[1]||0)+' kcal · پروتئین '+(+f[2]||0)+'g · کربوهیدرات '+(+f[3]||0)+'g · چربی '+(+f[4]||0)+'g در ۱۰۰ گرم</div></div>').join(""):'<p class="muted">غذایی با این جست‌وجو پیدا نشد.</p>')+
  (rows.length>80?'<p class="muted">برای کوتاه ماندن فهرست، ۸۰ نتیجه اول نمایش داده می‌شود؛ جست‌وجو را دقیق‌تر کن.</p>':"");
+}
+async function searchFoodNutritionSource(){
+ const name=String($("mealBankName")?.value||"").trim();
+ const status=$("mealFoodLookupStatus"),results=$("mealFoodLookupResults");
+ if(!name){if(status)status.textContent="ابتدا نام غذا را وارد کن."; $("mealBankName")?.focus();return;}
+ if(status)status.textContent="در حال جست‌وجو در منبع Open Food Facts…";
+ if(results)results.innerHTML="";
+ try{
+  const url="https://world.openfoodfacts.org/cgi/search.pl?search_terms="+encodeURIComponent(name)+"&search_simple=1&action=process&json=1&page_size=10&fields=product_name,product_name_fa,brands,nutriments,code,url,quantity";
+  const response=await fetch(url,{headers:{"Accept":"application/json"}});
+  if(!response.ok)throw new Error("پاسخ منبع غذایی دریافت نشد ("+response.status+").");
+  const data=await response.json();
+  const products=(data.products||[]).map(p=>{
+   const n=p.nutriments||{};
+   const calories=Number(n["energy-kcal_100g"]??(Number(n["energy-kj_100g"])/4.184));
+   const protein=Number(n["proteins_100g"]),carbs=Number(n["carbohydrates_100g"]),fat=Number(n["fat_100g"]);
+   return {name:String(p.product_name_fa||p.product_name||"").trim(),brand:String(p.brands||"").trim(),calories,protein,carbs,fat,url:p.url||("https://world.openfoodfacts.org/product/"+(p.code||"")),quantity:p.quantity||""};
+  }).filter(p=>p.name&&Number.isFinite(p.calories)&&p.calories>0&&p.calories<=950&&[p.protein,p.carbs,p.fat].every(v=>Number.isFinite(v)&&v>=0&&v<=100))
+  .sort((a,b)=>a.name.length-b.name.length).slice(0,8);
+  if(!products.length){if(status)status.textContent="اطلاعات کامل و قابل استفاده‌ای برای این نام پیدا نشد. می‌توانی مقادیر را دستی وارد کنی؛ مقدار حدسی خودکار ثبت نمی‌شود.";return;}
+  if(status)status.textContent="نتایج زیر از Open Food Facts هستند؛ اطلاعات محصولات ممکن است توسط کاربران ثبت شده باشد. نزدیک‌ترین مورد را انتخاب و مقادیر را پیش از ذخیره بررسی کن.";
+  if(results)results.innerHTML=products.map((p,i)=>'<div style="border:1px solid #34495e;border-radius:10px;padding:10px;margin-top:8px"><b>'+esc(p.name)+'</b>'+(p.brand?' <span class="muted">· '+esc(p.brand)+'</span>':'')+'<div class="muted">در ۱۰۰ گرم: '+p.calories.toFixed(1)+' kcal · پروتئین '+p.protein.toFixed(1)+'g · کربوهیدرات '+p.carbs.toFixed(1)+'g · چربی '+p.fat.toFixed(1)+'g</div><div class="muted">منبع: <a href="'+esc(p.url)+'" target="_blank" rel="noopener noreferrer">مشاهده اطلاعات منبع</a></div><button type="button" class="secondary" onclick="applyFoodNutritionLookup('+i+')">استفاده از این مقادیر</button></div>').join("");
+  window.mealFoodLookupCandidates=products;
+ }catch(e){
+  console.error("searchFoodNutritionSource",e);
+  if(status)status.textContent="جست‌وجوی آنلاین انجام نشد. اتصال اینترنت را بررسی کن یا مقادیر را دستی وارد کن.";
+ }
+}
+function applyFoodNutritionLookup(index){
+ const p=window.mealFoodLookupCandidates?.[index];
+ if(!p){alert("اطلاعات انتخاب‌شده دیگر در دسترس نیست؛ دوباره جست‌وجو کن.");return;}
+ $("mealBankCalories").value=Number(p.calories.toFixed(1));
+ $("mealBankProtein").value=Number(p.protein.toFixed(1));
+ $("mealBankCarbs").value=Number(p.carbs.toFixed(1));
+ $("mealBankFat").value=Number(p.fat.toFixed(1));
+ if($("mealFoodLookupStatus"))$("mealFoodLookupStatus").textContent="مقادیر در فرم قرار گرفتند. خام یا پخته بودن غذا و تطابق نام را بررسی کن؛ با زدن «ذخیره در بانک غذایی» ثبت می‌شوند.";
+ if($("mealFoodLookupResults"))$("mealFoodLookupResults").innerHTML="";
 }
 async function addFoodFromMealBank(){
  const name=String($("mealBankName")?.value||"").trim(),category=$("mealBankCategory")?.value||"سایر";
