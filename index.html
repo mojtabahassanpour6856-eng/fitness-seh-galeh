@@ -5302,18 +5302,62 @@ active('workoutMuscleFilters',wm);active('libraryMuscleFilters',lm);if(document.
 (function(){
  if(window.__librarySaveClickFixInstalled)return;
  window.__librarySaveClickFixInstalled=true;
+
+ // تعریف مستقل در انتهای فایل؛ حتی اگر اسکریپت بزرگ بانک حرکات زودتر خطای اجرایی داشته باشد.
+ window.saveLibraryExerciseInGroup=async function(cat,button){
+  const form=button&&button.closest('.library-inline-add');
+  const status=form&&form.querySelector('[data-new-ex-status]');
+  if(!form){alert('فرم افزودن حرکت پیدا نشد.');return;}
+  const name=form.querySelector('[data-new-ex-name]')?.value.trim();
+  const equipment=form.querySelector('[data-new-ex-equipment]')?.value.trim();
+  const level=form.querySelector('[data-new-ex-level]')?.value||'مبتدی';
+  const note=form.querySelector('[data-new-ex-note]')?.value.trim();
+  if(!name){if(status)status.textContent='ابتدا نام حرکت را وارد کنید.';alert('نام حرکت را وارد کنید.');form.querySelector('[data-new-ex-name]')?.focus();return;}
+  if(window.__savingLibraryExercise)return;
+  window.__savingLibraryExercise=true;
+  const oldText=button.textContent;
+  button.disabled=true;button.textContent='در حال ذخیره…';
+  if(status)status.textContent='کلیک دریافت شد؛ در حال ارسال حرکت به پایگاه داده…';
+  let timer;
+  try{
+   const authClient=window.AUTH_SUPABASE;
+   if(!authClient||!authClient.auth)throw new Error('اتصال ورود مربی آماده نیست؛ صفحه را تازه‌سازی و دوباره وارد حساب مربی شوید.');
+   const sessionResult=await authClient.auth.getSession();
+   if(sessionResult.error)throw sessionResult.error;
+   const session=sessionResult.data&&sessionResult.data.session;
+   const coachId=session&&session.user&&session.user.id;
+   if(!coachId)throw new Error('نشست مربی پیدا نشد؛ یک‌بار خارج شوید و دوباره وارد شوید.');
+   if(typeof window.sbWrite!=='function')throw new Error('تابع ارتباط با پایگاه داده بارگذاری نشده است.');
+   const request=window.sbWrite('/trainer_exercises','POST',{name,target_muscle:cat,category:cat,equipment:equipment||null,level,coach_note:note||null,is_favorite:false,coach_user_id:coachId});
+   const timeout=new Promise((_,reject)=>{timer=setTimeout(()=>reject(new Error('پاسخ سرور طی ۲۰ ثانیه نرسید. قبل از ثبت دوباره، بانک حرکات را تازه کنید.')),20000);});
+   const rows=await Promise.race([request,timeout]);
+   if(!Array.isArray(rows)||!rows.length||!rows[0].id)throw new Error('سرور ثبت حرکت را تأیید نکرد؛ فهرست بانک را تازه کنید و بررسی کنید که حرکت ثبت شده نباشد.');
+   if(status)status.textContent='✅ حرکت «'+name+'» ذخیره شد. برای نمایش آن، بازگشت به عضلات را بزنید و دوباره وارد همین عضله شوید.';
+   form.querySelector('[data-new-ex-name]').value='';
+   form.querySelector('[data-new-ex-equipment]').value='';
+   form.querySelector('[data-new-ex-note]').value='';
+   button.textContent='✅ ذخیره شد';
+  }catch(error){
+   console.error('Standalone exercise save failed:',error);
+   const msg=error&&error.message?error.message:String(error);
+   if(status)status.textContent='❌ ذخیره نشد: '+msg;
+   alert('ذخیره حرکت انجام نشد.\n'+msg);
+  }finally{
+   if(timer)clearTimeout(timer);
+   window.__savingLibraryExercise=false;
+   button.disabled=false;
+   if(button.textContent!=='✅ ذخیره شد')button.textContent=oldText||'💾 ذخیره حرکت';
+  }
+ };
+
  document.addEventListener('click',function(event){
   const button=event.target&&event.target.closest?event.target.closest('button[data-new-ex-save]'):null;
   if(!button)return;
   event.preventDefault();
   if(typeof event.stopImmediatePropagation==='function')event.stopImmediatePropagation();
   else event.stopPropagation();
-  if(typeof window.saveLibraryExerciseInGroup!=='function'){
-   const status=button.closest('.library-inline-add')?.querySelector('[data-new-ex-status]');
-   if(status)status.textContent='خطا: بخش ذخیره حرکت بارگذاری نشده است؛ صفحه را تازه‌سازی کنید.';
-   alert('بخش ذخیره حرکت بارگذاری نشده است. صفحه را تازه‌سازی کنید.');
-   return;
-  }
+  const status=button.closest('.library-inline-add')?.querySelector('[data-new-ex-status]');
+  if(status)status.textContent='کلیک دکمه دریافت شد؛ تابع ذخیره آماده است…';
   window.saveLibraryExerciseInGroup(button.dataset.category,button);
  },true);
 })();
