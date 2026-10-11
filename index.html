@@ -4280,12 +4280,17 @@ window.useLibraryExercise=async function(id){
            preserving Android's transient user activation required by Web Share. */
         if(!forceDownload && preparedImageFile){
           const fileToShare=preparedImageFile;
-          if(typeof window.navigator.share!=='function'){
+          try {
+            window.parent.__sehPendingPlanShare = {file:fileToShare,title:title+' | '+(trainee.name||''),text:'برنامه '+title+' از باشگاه فیتنس سه‌قلعه'};
+            const topButtons=window.parent.document.querySelectorAll('#seh-export-overlay button');
+            if(topButtons && topButtons.length>1) topButtons[0].style.display='inline-block';
+          } catch(parentError) { console.warn('Could not prepare top-level share control',parentError); }
+          if(typeof window.parent.navigator.share!=='function'){
             alert('این محیط مرورگر قابلیت اشتراک‌گذاری مستقیم فایل را ندارد. عکس آماده است؛ از «دانلود عکس PNG» ذخیره کنید و آن را در پیام‌رسان پیوست کنید.');
             return;
           }
           try{
-            const sharePromise=window.navigator.share({title:title+' | '+(trainee.name||''),text:'برنامه '+title+' از باشگاه فیتنس سه‌قلعه',files:[fileToShare]});
+            const sharePromise=window.parent.navigator.share({title:title+' | '+(trainee.name||''),text:'برنامه '+title+' از باشگاه فیتنس سه‌قلعه',files:[fileToShare]});
             await sharePromise;
             preparedImageFile=null;
             button.textContent='🖼️ ارسال عکس برنامه';
@@ -4367,8 +4372,13 @@ window.useLibraryExercise=async function(id){
           /* Prepare first; sharing happens on the next explicit tap so the browser still
              recognizes a fresh user gesture after canvas rendering has completed. */
           preparedImageFile=imageFile;
-          button.textContent='📤 عکس آماده است؛ برای اشتراک دوباره بزنید';
-          alert('عکس برنامه آماده شد. حالا یک بار دیگر روی «عکس آماده است؛ برای اشتراک دوباره بزنید» بزنید تا منوی اشتراک‌گذاری گوشی باز شود.');
+          try {
+            window.parent.__sehPendingPlanShare = {file:imageFile,title:title+' | '+(trainee.name||''),text:'برنامه '+title+' از باشگاه فیتنس سه‌قلعه'};
+            const topButtons=window.parent.document.querySelectorAll('#seh-export-overlay button');
+            if(topButtons && topButtons.length>1) topButtons[0].style.display='inline-block';
+          } catch(parentError) { console.warn('Could not expose top-level share button',parentError); }
+          button.textContent='📤 عکس آماده شد؛ دکمه سبز بالای برگه را بزنید';
+          alert('عکس برنامه آماده شد. این بار دکمه سبز «اشتراک عکس» در بالای برگه را بزنید.');
           return;
           button.textContent='در حال آماده‌سازی اشتراک…';
           if(typeof window.navigator.share === 'function'){
@@ -5335,12 +5345,33 @@ active('workoutMuscleFilters',wm);active('libraryMuscleFilters',lm);if(document.
     bar.style.cssText = 'display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px;background:#111827;color:#fff;font:14px Tahoma,Arial,sans-serif;flex:0 0 auto;';
     const label = document.createElement('strong');
     label.textContent = 'برگهٔ برنامه | فیتنس سه‌قلعه';
+    const shareNative = document.createElement('button');
+    shareNative.type = 'button';
+    shareNative.textContent = '📤 اشتراک عکس';
+    shareNative.style.cssText = 'display:none;width:auto;margin:0;padding:10px 14px;border:0;border-radius:9px;background:#d9f99d;color:#14210a;font:bold 14px Tahoma,Arial,sans-serif;';
+    shareNative.addEventListener('click', async function(){
+      const pending = window.__sehPendingPlanShare;
+      if(!pending || !pending.file){ alert('ابتدا عکس برنامه را در برگه خروجی آماده کنید.'); return; }
+      if(typeof navigator.share !== 'function'){
+        alert('این محیط قابلیت اشتراک‌گذاری مستقیم فایل را ندارد. عکس را با «دانلود عکس PNG» ذخیره و در پیام‌رسان پیوست کنید.');
+        return;
+      }
+      try{
+        await navigator.share({title:pending.title,text:pending.text,files:[pending.file]});
+        window.__sehPendingPlanShare = null;
+        shareNative.style.display = 'none';
+      }catch(err){
+        if(err && err.name === 'AbortError') return;
+        console.warn('Top-level native share failed:',err);
+        alert('اشتراک‌گذاری مستقیم توسط مرورگر مسدود شد. از «دانلود عکس PNG» استفاده کنید و عکس را از پوشه Downloads در پیام‌رسان پیوست کنید.');
+      }
+    });
     const close = document.createElement('button');
     close.type = 'button';
     close.textContent = 'بستن برگه ✕';
     close.style.cssText = 'width:auto;margin:0;padding:10px 14px;border:0;border-radius:9px;background:#ffbd16;color:#111;font:bold 14px Tahoma,Arial,sans-serif;';
     close.addEventListener('click', function(){ overlay.remove(); activeFrame = null; });
-    bar.append(label, close);
+    bar.append(label, shareNative, close);
     const frame = document.createElement('iframe');
     frame.title = 'برگه خروجی برنامه';
     frame.style.cssText = 'display:block;flex:1 1 auto;width:100%;height:100%;min-height:0;border:0;background:#fff;';
