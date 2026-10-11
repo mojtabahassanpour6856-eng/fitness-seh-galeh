@@ -4152,19 +4152,25 @@ window.useLibraryExercise=async function(id){
           if(!items) continue;
           const rawName=String(meal.meal_name||'وعده غذایی').trim();
           const base=rawName.replace(/(?:\s*[-–—:]?\s*)(?:گزینه\s*)?(?:شماره\s*)?(?:[۰-۹0-9]+|اول|اولین|دوم|دومین|سوم|سومین|چهارم|چهارمین|یک|دو|سه|چهار)\s*$/u,'').trim()||rawName;
-          let mealCalories=0,calorieComplete=true;
+          let mealCalories=0,calorieComplete=true,calorieItems=0;
+          const normUnit=value=>String(value||'').trim().toLocaleLowerCase('fa')
+            .replace(/[ي]/g,'ی').replace(/[ك]/g,'ک').replace(/\s+/g,'')
+            .replace(/میلی.?لیتر/g,'ml').replace(/میلیلیتر/g,'ml')
+            .replace(/گرم/g,'g').replace(/عدد/g,'عدد');
           for(const item of usableFoods){
             const food=byId[String(item.food_id)]||{};
             const amount=Number(item.amount),kcal=Number(food.calories);
             if(!Number.isFinite(amount)||amount<=0||food.calories===null||food.calories===undefined||String(food.calories).trim()===''||!Number.isFinite(kcal)||kcal<0){calorieComplete=false;continue;}
-            const unit=String(item.unit||'گرم').trim().toLocaleLowerCase('fa');
-            const servingUnit=String(food.serving_unit||'').trim().toLocaleLowerCase('fa');
+            const unit=normUnit(item.unit||'گرم');
+            const servingUnit=normUnit(food.serving_unit||'');
             const servingAmount=Number(food.serving_amount);
-            if(servingUnit&&unit===servingUnit&&Number.isFinite(servingAmount)&&servingAmount>0) mealCalories+=(amount/servingAmount)*kcal;
-            else if(/^(گرم|g|gr|ml|میلی.?لیتر|میلیلیتر)$/.test(unit)) mealCalories+=(amount/100)*kcal;
-            else {calorieComplete=false;}
+            if(servingUnit&&unit===servingUnit&&Number.isFinite(servingAmount)&&servingAmount>0){
+              mealCalories+=(amount/servingAmount)*kcal;calorieItems++;
+            } else if(/^(g|gr|gram|ml)$/.test(unit)){
+              mealCalories+=(amount/100)*kcal;calorieItems++;
+            } else {calorieComplete=false;}
           }
-          mealBlocks.push({base,rawName,items,notes:String(meal.notes||'').trim(),calories:calorieComplete?Math.round(mealCalories):null});
+          mealBlocks.push({base,rawName,items,notes:String(meal.notes||'').trim(),calories:calorieItems?Math.round(mealCalories):null,calorieIncomplete:!calorieComplete});
         }
         // گزینه‌های هم‌وعده را کنار هم نگه می‌داریم؛ حتی اگر ترتیب ذخیره‌شده‌ی ردیف‌ها آن‌ها را از هم جدا کرده باشد.
         // ترتیب گروه‌ها بر اساس اولین حضور و ترتیب گزینه‌ها بر اساس ترتیب اصلی برنامه حفظ می‌شود.
@@ -4182,7 +4188,7 @@ window.useLibraryExercise=async function(id){
         body += groups.map(group=>{
           const rows=group.options.map((opt,index)=>{
             const label=opt.rawName===group.base?(group.options.length>1?group.base+' '+['یک','دو','سه','چهار'][index]:group.base):opt.rawName;
-            return '<div class="meal-option-row" style="display:flex;align-items:flex-start;gap:10px;padding:10px 11px;border-bottom:1px dashed #e2d1a7;break-inside:avoid"><div style="flex:0 0 auto;min-width:72px;color:#79520c;font-weight:900;white-space:nowrap;font-size:17px">'+esc(label)+'</div><div style="flex:1;min-width:0;line-height:2;font-size:18px">'+(opt.items||'')+(opt.notes?'<div style="font-size:13px;color:#665f50">نکته: '+esc(opt.notes)+'</div>':'')+(opt.calories!==null?'<div class="meal-kcal">کالری این وعده: '+esc(new Intl.NumberFormat('fa-IR').format(opt.calories))+' کیلوکالری</div>':'')+'</div></div>';
+            return '<div class="meal-option-row" style="display:flex;align-items:flex-start;gap:10px;padding:10px 11px;border-bottom:1px dashed #e2d1a7;break-inside:avoid"><div style="flex:0 0 auto;min-width:72px;color:#79520c;font-weight:900;white-space:nowrap;font-size:17px">'+esc(label)+'</div><div style="flex:1;min-width:0;line-height:2;font-size:18px">'+(opt.items||'')+(opt.notes?'<div style="font-size:13px;color:#665f50">نکته: '+esc(opt.notes)+'</div>':'')+(opt.calories!==null?'<div class="meal-kcal">'+(opt.calorieIncomplete?'کالری محاسبه‌شدهٔ اقلام قابل محاسبه: ':'کالری این وعده: ')+esc(new Intl.NumberFormat('fa-IR').format(opt.calories))+' کیلوکالری'+(opt.calorieIncomplete?' <span style="font-size:11px;font-weight:500"> (برای کالری کامل، واحد یا اطلاعات بعضی مواد باید تکمیل شود)</span>':'')+'</div>':'<div class="meal-kcal">کالری این وعده به‌دلیل ناقص بودن اطلاعات مواد غذایی قابل محاسبه نیست.</div>')+'</div></div>';
           }).join('');
           return '<section class="meal-group" style="margin:5px 0 8px;border:1px solid #c69b43;border-radius:8px;overflow:hidden;break-inside:avoid"><h3 style="margin:0;padding:9px 11px;background:#fff0c2;color:#51380b;border-bottom:1px solid #c69b43;font-size:17px">'+esc(group.base)+'</h3>'+rows+'</section>';
         }).join('');
