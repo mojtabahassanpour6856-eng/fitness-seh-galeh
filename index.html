@@ -4169,8 +4169,8 @@ window.useLibraryExercise=async function(id){
         }
         body += groups.map(group=>{
           const rows=group.options.map((opt,index)=>{
-            const label=opt.rawName===group.base?(group.options.length>1?group.base+' '+['یک','دو','سه','چهار'][index]:'گزینه '+(index+1)):opt.rawName;
-            return '<div style="display:flex;align-items:flex-start;gap:7px;padding:5px 7px;border-bottom:1px dashed #e2d1a7;break-inside:avoid"><div style="flex:0 0 auto;min-width:72px;color:#79520c;font-weight:900;white-space:nowrap">↳ '+esc(label)+'</div><div style="flex:1;min-width:0;line-height:1.9">'+(opt.items||'')+(opt.notes?'<div style="font-size:10px;color:#665f50">نکته: '+esc(opt.notes)+'</div>':'')+'</div></div>';
+            const label=opt.rawName===group.base?(group.options.length>1?group.base+' '+['یک','دو','سه','چهار'][index]:group.base):opt.rawName;
+            return '<div style="display:flex;align-items:flex-start;gap:7px;padding:5px 7px;border-bottom:1px dashed #e2d1a7;break-inside:avoid"><div style="flex:0 0 auto;min-width:72px;color:#79520c;font-weight:900;white-space:nowrap">'+esc(label)+'</div><div style="flex:1;min-width:0;line-height:1.9">'+(opt.items||'')+(opt.notes?'<div style="font-size:10px;color:#665f50">نکته: '+esc(opt.notes)+'</div>':'')+'</div></div>';
           }).join('');
           return '<section style="margin:8px 0 10px;border:1px solid #c69b43;border-radius:8px;overflow:hidden;break-inside:avoid"><h3 style="margin:0;padding:5px 9px;background:#fff0c2;color:#51380b;border-bottom:1px solid #c69b43;font-size:15px">'+esc(group.base)+'</h3>'+rows+'</section>';
         }).join('');
