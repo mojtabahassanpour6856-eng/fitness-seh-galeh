@@ -2304,6 +2304,55 @@ window.loadDashboard = loadDashboard;
 
 
 
+
+<script id="FITNESS_AUTO_WORKOUT_BANK_BY_TRAINEE_V1">
+(function(){
+ const $=id=>document.getElementById(id);
+ function isHomeTrainee(){return !!(typeof currentClient!=="undefined"&&currentClient&&currentClient.training_type==="home");}
+ window.syncWorkoutBankForSelectedTrainee=function(){
+   const trainee=typeof currentClient!=="undefined"?currentClient:null;
+   const controls=$("workout")?.querySelector(".workout-bank-mode");
+   const hint=$("workoutBankHint");
+   const home=!!(trainee&&trainee.training_type==="home");
+   if(typeof window.setWorkoutBankMode==="function")window.setWorkoutBankMode(home?"home":"gym");
+   if(controls)controls.style.display="none";
+   if(hint){
+     hint.style.display="";
+     hint.textContent=!trainee
+       ?"برای نمایش بانک درست، ابتدا شاگرد را انتخاب کنید."
+       :(home
+         ?"🏠 بانک فعال: تمرین در منزل — فقط حرکات خانگی و تجهیزات منزل نمایش داده می‌شوند."
+         :"🏋️ بانک فعال: باشگاه / حضوری / آنلاین — فقط حرکات بانک باشگاه نمایش داده می‌شوند.");
+   }
+   const addCard=$("workout")?.querySelector(".workout-add-exercise-card");
+   if(addCard)addCard.style.display=trainee?"":"none";
+   const libCard=$("workout")?.querySelector(".library-room-card");
+   if(typeof window.loadLibraryExercises==="function"&&trainee){
+     Promise.resolve(window.loadLibraryExercises()).catch(e=>console.warn("sync coach exercise library",e));
+   }
+ };
+ const oldSelect=window.selectClient;
+ if(typeof oldSelect==="function"&&!window.__autoWorkoutBankSelectWrapped){
+   window.selectClient=async function(id){
+     const result=await oldSelect.apply(this,arguments);
+     window.syncWorkoutBankForSelectedTrainee();
+     return result;
+   };
+   window.__autoWorkoutBankSelectWrapped=true;
+ }
+ const oldShow=window.showSection;
+ if(typeof oldShow==="function"&&!window.__autoWorkoutBankShowWrapped){
+   window.showSection=function(id,btn){
+     const result=oldShow.apply(this,arguments);
+     if(id==="workout")window.syncWorkoutBankForSelectedTrainee();
+     return result;
+   };
+   window.__autoWorkoutBankShowWrapped=true;
+ }
+ document.addEventListener("DOMContentLoaded",function(){window.syncWorkoutBankForSelectedTrainee();});
+})();
+</script>
+
 </body></html>`;
     const w=window.open('','_blank');if(w){w.document.write(html);w.document.close();}
   };
@@ -2710,7 +2759,9 @@ const plans=workoutResult.data||[], nutrition=nutritionResult.data||[];
   if(sessionResult.error)throw sessionResult.error;
   const coachId=sessionResult.data&&sessionResult.data.session&&sessionResult.data.session.user&&sessionResult.data.session.user.id;
   if(!coachId)throw new Error('نشست مربی پیدا نشد؛ یک‌بار خارج شوید و دوباره وارد شوید.');
-  const request=window.sbWrite('/trainer_exercises','POST',{name:name,target_muscle:cat,category:cat,equipment:equipment||null,level:level,coach_note:note||null,is_favorite:false,coach_user_id:coachId});
+  const homeMode=!!(typeof currentClient!=='undefined'&&currentClient&&currentClient.training_type==='home');
+  const taggedEquipment=(homeMode?'منزل: ':'باشگاه: ')+(equipment|| (homeMode?'وزن بدن':'تجهیزات باشگاه'));
+  const request=window.sbWrite('/trainer_exercises','POST',{name:name,target_muscle:cat,category:cat,equipment:taggedEquipment,level:level,coach_note:note||null,is_favorite:false,coach_user_id:coachId});
   const rows=await Promise.race([request,timeout]);
   if(requestTimer)clearTimeout(requestTimer);
   if(!Array.isArray(rows)||!rows.length||!rows[0].id)throw new Error('پاسخ ذخیره‌سازی تأیید نشد؛ قبل از تلاش مجدد بانک را تازه کنید.');
@@ -4710,7 +4761,8 @@ window.loadLibraryExercises=async function(){
    return 'سایر';
   }
   const selected=window.__fitnessSelectedLibraryMuscle||'';
-  const filtered=source.filter(x=>(!selected||categoryOf(x)===selected)&&(lm==='همه حرکات'||selected||(lm==='علاقه‌مندی'?!!x.is_favorite:match(x,lm)))&&(!q||n([x.name,x.category,x.target_muscle,x.equipment,x.level,x.goal,x.coach_note].join(' ')).includes(q)));
+  const homeMode=!!(typeof currentClient!=='undefined'&&currentClient&&currentClient.training_type==='home');
+  const filtered=source.filter(x=>((homeMode?String(x.equipment||'').startsWith('منزل:'):!String(x.equipment||'').startsWith('منزل:')))&&(!selected||categoryOf(x)===selected)&&(lm==='همه حرکات'||selected||(lm==='علاقه‌مندی'?!!x.is_favorite:match(x,lm)))&&(!q||n([x.name,x.category,x.target_muscle,x.equipment,x.level,x.goal,x.coach_note].join(' ')).includes(q)));
   const groups=new Map();cats.forEach(c=>groups.set(c,[]));
   filtered.forEach(x=>groups.get(categoryOf(x)).push(x));
   const search=document.getElementById('libSearch'),filters=document.getElementById('libraryMuscleFilters');
