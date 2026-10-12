@@ -6073,3 +6073,121 @@ active('workoutMuscleFilters',wm);active('libraryMuscleFilters',lm);if(document.
  else window.syncWorkoutBankForSelectedTrainee();
 })();
 </script>
+
+
+<script id="FITNESS_PROGRESS_PANEL_V1">
+(function(){
+  const $=id=>document.getElementById(id);
+  let requestSeq=0;
+  const same=(a,b)=>String(a??'')===String(b??'');
+  function esc(v){return String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+  function dateFa(v){
+    if(!v)return '—';
+    const d=new Date(String(v).slice(0,10)+'T12:00:00');
+    return Number.isNaN(d.getTime())?esc(v):d.toLocaleDateString('fa-IR');
+  }
+  function ensureProgressCards(){
+    const sec=$('progress');if(!sec)return;
+    let chart=$('progressTrend');
+    if(!chart){
+      chart=document.createElement('div');chart.id='progressTrend';chart.className='card';
+      chart.innerHTML='<h2>📈 نمودار روند پیشرفت</h2><div id="progressTrendBody" class="muted">ابتدا شاگرد را انتخاب کنید.</div>';
+      const first=sec.querySelector(':scope > .card');
+      if(first&&first.nextSibling)sec.insertBefore(chart,first.nextSibling);else sec.appendChild(chart);
+    }
+    let history=$('progressHistory');
+    if(!history){
+      history=document.createElement('div');history.id='progressHistory';history.className='card';
+      history.innerHTML='<h2>📋 تاریخچه پیشرفت</h2><div id="progressHistoryBody" class="muted">ابتدا شاگرد را انتخاب کنید.</div>';
+      sec.appendChild(history);
+    }else if(!$('progressHistoryBody')){
+      history.insertAdjacentHTML('beforeend','<div id="progressHistoryBody" class="muted"></div>');
+    }
+    return {chart:$('progressTrendBody'),history:$('progressHistoryBody')};
+  }
+  function render(rows, traineeId, seq){
+    if(seq!==requestSeq || !currentClient || !same(currentClient.id,traineeId))return;
+    const boxes=ensureProgressCards();if(!boxes)return;
+    const list=Array.isArray(rows)?rows:[];
+    const weighted=list.filter(x=>Number.isFinite(Number(x.weight))&&x.weight!==null&&x.weight!=='').sort((a,b)=>String(a.analysis_date||'').localeCompare(String(b.analysis_date||'')));
+    if(!list.length){
+      boxes.chart.innerHTML='<p class="muted">هنوز پیشرفتی برای این شاگرد ثبت نشده است. از بخش «ثبت پیشرفت» یا «آنالیز بدن» اولین اندازه‌ها را وارد کنید.</p>';
+      boxes.history.innerHTML='<p class="muted">تاریخچه‌ای ثبت نشده است.</p>';
+      return;
+    }
+    const latest=weighted[weighted.length-1], first=weighted[0];
+    const delta=latest&&first&&weighted.length>1?Number(latest.weight)-Number(first.weight):null;
+    const maxW=weighted.length?Math.max(...weighted.map(x=>Number(x.weight))):0;
+    const minW=weighted.length?Math.min(...weighted.map(x=>Number(x.weight))):0;
+    const span=Math.max(maxW-minW,1);
+    const bars=weighted.slice(-10).map(x=>{
+      const w=Number(x.weight),h=Math.max(8,Math.round(18+((w-minW)/span)*58));
+      return '<div style="display:flex;flex-direction:column;align-items:center;justify-content:flex-end;min-width:34px;flex:1;gap:5px"><b style="font-size:11px">'+esc(w)+'</b><div title="'+esc(dateFa(x.analysis_date))+'" style="height:'+h+'px;width:20px;max-width:85%;background:linear-gradient(180deg,#f4c44e,#a87b12);border-radius:6px 6px 2px 2px"></div><span style="font-size:9px;white-space:nowrap;color:var(--muted,#9aa7b4)">'+esc(dateFa(x.analysis_date))+'</span></div>';
+    }).join('');
+    const deltaText=delta===null?'برای محاسبه تغییر وزن، حداقل دو ثبت وزن لازم است.':('تغییر از اولین ثبت: <b>'+ (delta>0?'+':'')+esc(delta.toFixed(1))+' کیلوگرم</b>');
+    boxes.chart.innerHTML='<div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-bottom:12px"><div class="receipt-item"><small>آخرین وزن</small><div style="font-weight:800;font-size:18px">'+(latest?esc(Number(latest.weight).toLocaleString('fa-IR')+' kg'):'—')+'</div></div><div class="receipt-item"><small>درصد چربی اخیر</small><div style="font-weight:800;font-size:18px">'+(list.slice().reverse().find(x=>x.body_fat!==null&&x.body_fat!=='')?esc(list.slice().reverse().find(x=>x.body_fat!==null&&x.body_fat!=='').body_fat)+'٪':'—')+'</div></div><div class="receipt-item"><small>تعداد ثبت‌ها</small><div style="font-weight:800;font-size:18px">'+esc(list.length.toLocaleString('fa-IR'))+'</div></div></div><p style="margin:4px 0 10px;font-size:12px">'+deltaText+'</p>'+(bars?'<div style="display:flex;align-items:flex-end;gap:6px;overflow-x:auto;padding:12px 4px 26px;min-height:125px;border-bottom:1px solid #b9a36a">'+bars+'</div><p class="muted" style="font-size:11px">نمودار وزن بر اساس ثبت‌های آنالیز بدن است؛ برای مشاهده جزئیات، تاریخچه زیر را بررسی کنید.</p>':'<p class="muted">برای نمایش نمودار، وزن را در ثبت پیشرفت یا آنالیز بدن وارد کنید.</p>');
+    const historyRows=list.slice().sort((a,b)=>String(b.analysis_date||'').localeCompare(String(a.analysis_date||'')));
+    boxes.history.innerHTML='<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;min-width:560px"><thead><tr><th>تاریخ</th><th>وزن</th><th>چربی ٪</th><th>عضله</th><th>شکم</th><th>کمر</th><th>باسن</th><th>ران</th></tr></thead><tbody>'+historyRows.map(x=>'<tr><td>'+esc(dateFa(x.analysis_date))+'</td><td>'+esc(x.weight??'—')+'</td><td>'+esc(x.body_fat??'—')+'</td><td>'+esc(x.muscle_mass??'—')+'</td><td>'+esc(x.abdomen??'—')+'</td><td>'+esc(x.waist??'—')+'</td><td>'+esc(x.hip??'—')+'</td><td>'+esc(x.thigh??'—')+'</td></tr>').join('')+'</tbody></table></div>';
+  }
+  async function loadProgressData(){
+    const trainee=typeof currentClient!=='undefined'?currentClient:null;
+    const traineeId=trainee?.id;
+    const seq=++requestSeq;
+    const boxes=ensureProgressCards();if(!boxes)return;
+    if(!traineeId){boxes.chart.textContent='ابتدا شاگرد را انتخاب کنید.';boxes.history.textContent='ابتدا شاگرد را انتخاب کنید.';return;}
+    boxes.chart.textContent='در حال بارگذاری روند پیشرفت…';
+    boxes.history.textContent='در حال دریافت تاریخچه…';
+    try{
+      const rows=await sbGet('/body_analyses?trainee_id=eq.'+encodeURIComponent(traineeId)+'&select=analysis_date,weight,body_fat,muscle_mass,abdomen,waist,hip,thigh&order=analysis_date.asc&limit=100');
+      render(rows,traineeId,seq);
+    }catch(e){
+      if(seq!==requestSeq)return;
+      boxes.chart.innerHTML='<p class="warning-text">بارگذاری نمودار پیشرفت ناموفق بود: '+esc(e?.message||String(e))+'</p>';
+      boxes.history.innerHTML='<p class="warning-text">تاریخچه پیشرفت بارگذاری نشد. اتصال و دسترسی پایگاه داده را بررسی کنید.</p>';
+    }
+  }
+  window.loadProgressChart=loadProgressData;
+  window.loadProgressHistory=loadProgressData;
+  // Refresh the chart after the existing measurement and analysis saves complete.
+  const oldSaveProgress=window.saveProgress;
+  if(typeof oldSaveProgress==='function'&&!window.__progressChartSaveWrapped){
+    window.saveProgress=async function(){
+      const traineeId=typeof currentClient!=='undefined'?currentClient?.id:null;
+      const result=await oldSaveProgress.apply(this,arguments);
+      if(traineeId!=null&&typeof currentClient!=='undefined'&&same(currentClient?.id,traineeId))await loadProgressData();
+      return result;
+    };
+    window.__progressChartSaveWrapped=true;
+  }
+  const oldSaveAnalysis=window.saveAnalysis;
+  if(typeof oldSaveAnalysis==='function'&&!window.__progressAnalysisSaveWrapped){
+    window.saveAnalysis=async function(){
+      const traineeId=typeof currentClient!=='undefined'?currentClient?.id:null;
+      const result=await oldSaveAnalysis.apply(this,arguments);
+      if(traineeId!=null&&typeof currentClient!=='undefined'&&same(currentClient?.id,traineeId))await loadProgressData();
+      return result;
+    };
+    window.__progressAnalysisSaveWrapped=true;
+  }
+  const oldSelect=window.selectClient;
+  if(typeof oldSelect==='function'&&!window.__progressSelectWrapped){
+    window.selectClient=async function(){
+      const result=await oldSelect.apply(this,arguments);
+      await loadProgressData();
+      return result;
+    };
+    window.__progressSelectWrapped=true;
+  }
+  const oldShow=window.showSection;
+  if(typeof oldShow==='function'&&!window.__progressShowWrapped){
+    window.showSection=function(id,btn){
+      const result=oldShow.apply(this,arguments);
+      if(id==='progress'&&typeof currentClient!=='undefined'&&currentClient)loadProgressData();
+      return result;
+    };
+    window.__progressShowWrapped=true;
+  }
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>{ensureProgressCards();},{once:true});
+  else ensureProgressCards();
+})();
+</script>
