@@ -673,8 +673,8 @@ body.library-room .library-inline-add button{position:relative!important;z-index
 </div>
 </section>
 
-<div class="card">
-<h2>🔥 فعالیت و کالری روزانه</h2>
+<div class="card" id="activityDailyPanel">
+<h2>🔥 فعالیت و کالری روزانه من</h2>
 <div class="grid2">
 <div><label>تاریخ</label><input id="actDate" type="date"></div>
 <div><label>نوع فعالیت</label><select id="actType"><option>پیاده‌روی</option><option>دویدن</option><option>دوچرخه</option><option>بدنسازی</option><option>فوتبال</option><option>کاردیو</option><option>سایر</option></select></div>
@@ -1830,6 +1830,10 @@ loadExercises();
     `;document.head.appendChild(st);
   }
 
+  function moveActivityPanelToStudentDashboard(){
+    const panel=$id('activityDailyPanel'),dashboard=$id('traineeDashboard');
+    if(panel&&dashboard&&panel.parentElement!==dashboard)dashboard.appendChild(panel);
+  }
   function buildDashboard(){
     const existing=$id('traineeDashboard');
     if(existing){
@@ -1837,6 +1841,7 @@ loadExercises();
       if(grid&&!grid.querySelector('[data-profile-card="1"]')){
         grid.insertAdjacentHTML('beforeend',`<div class="v4-card" data-profile-card="1" onclick="dashOpen('client')"><b>👤</b>پروفایل من<span class="v4-small">مشاهده و ثبت اطلاعات شخصی</span></div>`);
       }
+      moveActivityPanelToStudentDashboard();
       return;
     }
     const sec=document.createElement('section');sec.id='traineeDashboard';sec.className='section';sec.innerHTML=`
@@ -1854,6 +1859,7 @@ loadExercises();
         <div class="v4-card" onclick="dashOpen('client')"><b>👤</b>پروفایل من<span class="v4-small">مشاهده و ثبت اطلاعات شخصی</span></div>
       </div>`;
     const page=document.querySelector('.page');const nav=document.querySelector('.nav');page.insertBefore(sec,nav.nextSibling);
+    moveActivityPanelToStudentDashboard();
   }
 
   window.dashOpen=function(section){
