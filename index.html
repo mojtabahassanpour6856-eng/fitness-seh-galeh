@@ -5959,6 +5959,19 @@ active('workoutMuscleFilters',wm);active('libraryMuscleFilters',lm);if(document.
    };
    window.__autoWorkoutBankShowWrapped=true;
  }
+ // Enforce the selected trainee's bank immediately before EVERY exercise-list render.
+ // This prevents a previous gym selection or an async refresh from leaking gym movements into home training.
+ const originalRenderWorkoutOptions=window.renderWorkoutExerciseOptions;
+ if(typeof originalRenderWorkoutOptions==="function"&&!window.__strictTraineeWorkoutBankRenderWrapped){
+   window.renderWorkoutExerciseOptions=function(){
+     const trainee=selectedTrainee();
+     if(trainee&&typeof window.setWorkoutBankMode==="function"){
+       window.setWorkoutBankMode(isHomeTrainee(trainee)?"home":"gym");
+     }
+     return originalRenderWorkoutOptions.apply(this,arguments);
+   };
+   window.__strictTraineeWorkoutBankRenderWrapped=true;
+ }
  // Re-sync after either profile form saves, so the next workout view reflects the saved value.
  for(const name of ["saveProfile","saveProfileExtras"]){
    const original=window[name];
