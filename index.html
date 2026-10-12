@@ -5959,9 +5959,9 @@ active('workoutMuscleFilters',wm);active('libraryMuscleFilters',lm);if(document.
    };
    window.__autoWorkoutBankShowWrapped=true;
  }
- // Enforce the selected trainee's bank before rendering, without recursive mode switching.
- let enforcedMode=null;
+ // Enforce the trainee's actual selected bank on every render.
  let coachHomeNames=new Set();
+ let switchingBankMode=false;
  async function refreshCoachHomeNames(){
    try{
      const get=typeof sbGet==="function"?sbGet:window.sbGet;
@@ -5973,32 +5973,62 @@ active('workoutMuscleFilters',wm);active('libraryMuscleFilters',lm);if(document.
        .filter(Boolean));
    }catch(e){console.warn("خواندن بانک اختصاصی منزل انجام نشد",e);}
  }
+ function applyEmptyHomeBank(){
+   const sel=$("workoutExercise");
+   if(sel){
+     sel.innerHTML='<option value="">بانک منزل خالی است؛ حرکتی ذخیره نشده</option>';
+     sel.value="";
+   }
+   const count=$("workoutExerciseCount");
+   if(count)count.textContent="بانک منزل خالی است؛ هنوز حرکتی برای منزل ذخیره نکرده‌اید.";
+   const hint=$("workoutBankHint");
+   if(hint)hint.textContent="🏠 بانک منزل خالی است؛ چون هنوز حرکتی در بانک منزل ذخیره نکرده‌اید، هیچ حرکتی برای انتخاب نمایش داده نمی‌شود.";
+   for(const id of ["workoutExerciseSearch","workoutMuscleFilters"]){
+     const el=$(id);if(el)el.style.display="none";
+   }
+   const template=$("workoutSessionTemplate")?.closest(".workout-template-box");
+   if(template)template.style.display="none";
+   const add=$("workoutExercise")?.closest(".workout-add-exercise-card")?.querySelector('button[onclick*="addWorkoutExercise"]')
+     ||$("workoutExercise")?.parentElement?.parentElement?.querySelector('button[onclick*="addWorkoutExercise"]');
+   if(add){add.disabled=true;add.style.opacity=".5";add.title="بانک منزل خالی است";}
+ }
+ function restoreHomeBankControls(){
+   for(const id of ["workoutExerciseSearch","workoutMuscleFilters"]){const el=$(id);if(el)el.style.display="";}
+   const template=$("workoutSessionTemplate")?.closest(".workout-template-box");if(template)template.style.display="";
+   const add=$("workoutExercise")?.closest(".workout-add-exercise-card")?.querySelector('button[onclick*="addWorkoutExercise"]')
+     ||$("workoutExercise")?.parentElement?.parentElement?.querySelector('button[onclick*="addWorkoutExercise"]');
+   if(add){add.disabled=false;add.style.opacity="";add.title="";}
+ }
  const originalRenderWorkoutOptions=window.renderWorkoutExerciseOptions;
  if(typeof originalRenderWorkoutOptions==="function"&&!window.__strictTraineeWorkoutBankRenderWrapped){
    window.renderWorkoutExerciseOptions=function(){
      const trainee=selectedTrainee();
      const desired=trainee?(isHomeTrainee(trainee)?"home":"gym"):null;
-     if(desired&&desired!==enforcedMode&&typeof window.setWorkoutBankMode==="function"){
-       enforcedMode=desired;
-       window.setWorkoutBankMode(desired);
+     const homeButton=$("workoutBankHome");
+     const actualHome=!!(homeButton&&homeButton.classList.contains("active"));
+     if(desired&&!switchingBankMode&&actualHome!==(desired==="home")&&typeof window.setWorkoutBankMode==="function"){
+       switchingBankMode=true;
+       try{window.setWorkoutBankMode(desired);}finally{switchingBankMode=false;}
      }
+     restoreHomeBankControls();
      const result=originalRenderWorkoutOptions.apply(this,arguments);
-     // The home picker must contain only exercises explicitly saved by this coach in the home bank.
-     // General catalogue entries tagged "home" are not coach-saved home-bank entries.
      if(desired==="home"){
        const sel=$("workoutExercise");
        if(sel){
-         for(const option of Array.from(sel.options)){
-           if(!option.value)continue;
-           const label=String(option.textContent||"").split(" · ")[0].trim().toLocaleLowerCase("fa");
-           if(!coachHomeNames.has(label))option.remove();
-         }
-         const count=$("workoutExerciseCount");
-         if(count)count.textContent=coachHomeNames.size
-           ?Array.from(sel.options).filter(o=>o.value).length+" حرکت ذخیره‌شده در بانک منزل"
-           :"بانک منزل خالی است؛ هنوز حرکتی برای منزل ذخیره نکرده‌اید.";
-         if(sel.options.length===0||!Array.from(sel.options).some(o=>o.value)){
-           sel.innerHTML='<option value="">بانک منزل خالی است؛ حرکتی ذخیره نشده</option>';
+         if(coachHomeNames.size){
+           for(const option of Array.from(sel.options)){
+             if(!option.value)continue;
+             const label=String(option.textContent||"").split(" · ")[0].trim().toLocaleLowerCase("fa");
+             if(!coachHomeNames.has(label))option.remove();
+           }
+           if(!Array.from(sel.options).some(o=>o.value)){
+             applyEmptyHomeBank();
+           }else{
+             const count=$("workoutExerciseCount");
+             if(count)count.textContent=Array.from(sel.options).filter(o=>o.value).length+" حرکت ذخیره‌شده در بانک منزل";
+           }
+         }else{
+           applyEmptyHomeBank();
          }
        }
      }
@@ -6007,6 +6037,20 @@ active('workoutMuscleFilters',wm);active('libraryMuscleFilters',lm);if(document.
    window.__strictTraineeWorkoutBankRenderWrapped=true;
  }
  refreshCoachHomeNames().then(()=>{if(typeof window.renderWorkoutExerciseOptions==="function")window.renderWorkoutExerciseOptions();});
+ // Never add a movement from an empty home bank, even if a stale selection exists.
+ const oldAdd=window.addWorkoutExercise;
+ if(typeof oldAdd==="function"&&!window.__guardEmptyHomeWorkoutAdd){
+   window.addWorkoutExercise=async function(){
+     const trainee=selectedTrainee();
+     if(trainee&&isHomeTrainee(trainee)&&coachHomeNames.size===0){
+       applyEmptyHomeBank();
+       alert("بانک حرکات منزل خالی است؛ ابتدا باید حرکتی در بانک منزل ذخیره شود.");
+       return;
+     }
+     return oldAdd.apply(this,arguments);
+   };
+   window.__guardEmptyHomeWorkoutAdd=true;
+ }
  // Re-sync after either profile form saves, so the next workout view reflects the saved value.
  for(const name of ["saveProfile","saveProfileExtras"]){
    const original=window[name];
