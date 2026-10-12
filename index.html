@@ -1658,20 +1658,26 @@ async function addWaterLog(){
   const traineeId=currentClient?.id;if(traineeId==null){alert("اول شاگرد را انتخاب کنید.");return;}
   const n=Number($("waterAmount").value)||0;
   if(n<=0){alert("مقدار آب را وارد کنید.");return;}
+  if(!currentClient||String(currentClient.id)!==String(traineeId)){alert("شاگرد انتخاب‌شده تغییر کرده است؛ ثبت آب لغو شد.");return;}
+  // ذخیره رکورد از تازه‌سازی نمایش‌ها جداست تا خطای بخش دیگر، ثبت موفق را ناموفق جلوه ندهد.
   try{
-    if(!currentClient||String(currentClient.id)!==String(traineeId))throw new Error("شاگرد انتخاب‌شده تغییر کرده است؛ ثبت آب لغو شد.");
     await sbWrite("/water_logs","POST",{
       trainee_id:traineeId,
       log_date:today(),
       amount_ml:n
     });
-    if(!currentClient||String(currentClient.id)!==String(traineeId))return;
-    await loadWaterToday();
-    if(!currentClient||String(currentClient.id)!==String(traineeId))return;
-    await loadWeeklyWaterLogs();
-    await loadNutritionForClient();
-    alert("آب با موفقیت ثبت شد.");
-  }catch(e){console.error("addWaterLog",e);alert("ثبت آب انجام نشد.\n"+e.message);}
+  }catch(e){
+    console.error("water log insert failed",e);
+    alert("ثبت آب در پایگاه داده انجام نشد.\\n"+(e?.message||String(e)));
+    return;
+  }
+  if(!currentClient||String(currentClient.id)!==String(traineeId))return;
+  if($("waterAmount"))$("waterAmount").value="";
+  alert("آب ثبت شد: "+n.toLocaleString("fa-IR")+" میلی‌لیتر.");
+  try{await loadWaterToday();}catch(e){console.error("refresh water today",e);}
+  if(!currentClient||String(currentClient.id)!==String(traineeId))return;
+  try{await loadWeeklyWaterLogs();}catch(e){console.error("refresh weekly water",e);}
+  try{await loadNutritionForClient();}catch(e){console.error("refresh nutrition after water",e);}
 }
 
 
