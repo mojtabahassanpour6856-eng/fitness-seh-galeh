@@ -648,7 +648,7 @@ body.library-room .library-inline-add button{position:relative!important;z-index
 <button onclick="saveProgress()">ثبت اندازه‌ها</button>
 </div>
 
-<div class="card">
+<div class="card" id="bodyAnalysisEntryPanel">
 <h2>📊 آنالیز بدن</h2>
 <div class="grid2">
 <div><label>تاریخ آنالیز</label><input id="anDate" type="date"></div>
@@ -1695,6 +1695,7 @@ async function saveProgress(){
  }catch(e){alert("ثبت پیشرفت انجام نشد.\n"+e.message);}
 }
 async function saveAnalysis(){
+ if(typeof authProfile==="undefined"||authProfile?.role!=="coach"){alert("ثبت آنالیز دستگاه فقط توسط مربی انجام می‌شود.");return;}
  if(!currentClient){alert("اول شاگرد را انتخاب کنید.");return;}
  const body={trainee_id:currentClient.id,analysis_date:$("anDate").value||today(),weight:+$("anWeight").value||null,body_fat:+$("anFat").value||null,muscle_mass:+$("anMuscle").value||null,body_water:+$("anWater").value||null,visceral_fat:+$("anVisceral").value||null,notes:`BMI: ${$("anBmi").value||"-"} | BMR: ${$("anBmr").value||"-"}`};
  try{await sbWrite("/body_analyses","POST",body);alert("آنالیز بدن ثبت شد.");}catch(e){alert("ثبت آنالیز انجام نشد.\n"+e.message);}
@@ -4777,6 +4778,9 @@ active('workoutMuscleFilters',wm);active('libraryMuscleFilters',lm);if(document.
   window.refreshTraineeCoachMessage=applyStudentCoachMessage;
   function applyRoleAccess(){
   if(!isTrainee())return;
+  // ثبت آنالیز دستگاه فقط برای مربی است؛ شاگرد فقط تاریخچه نتایج ثبت‌شده را می‌بیند.
+  const analysisEntry=document.getElementById("bodyAnalysisEntryPanel");
+  if(analysisEntry){analysisEntry.style.setProperty("display","none","important");analysisEntry.setAttribute("aria-hidden","true");}
   // هدف عددی فقط در پنل مربی نمایش داده می‌شود؛ شاگرد داشبورد ۹ بخشی را می‌بیند.
   const traineeGoalBox=document.getElementById("goalBox");
   if(traineeGoalBox){traineeGoalBox.style.setProperty("display","none","important");traineeGoalBox.setAttribute("aria-hidden","true");}
