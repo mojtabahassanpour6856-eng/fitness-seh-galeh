@@ -551,14 +551,15 @@ body.library-room .library-inline-add button{position:relative!important;z-index
 <div class="meal-summary">
 <div class="stat"><b id="studentTargetCal">۰</b>کالری هدف</div>
 <div class="stat"><b id="studentDoneCal">۰</b>مصرف ثبت‌شده</div>
-<div class="stat"><b id="studentWater">۰</b>میلی‌لیتر آب</div>
+
 <div class="stat"><b id="studentDoneCount">۰</b>غذای مصرف‌شده</div>
 </div>
 </div>
 <div id="studentMealList"></div>
-<div class="card">
-<h2>💧 آب امروز</h2>
-<div class="row"><input id="waterAmount" type="number" value="500" min="1"><button onclick="addWaterLog()">+ ثبت آب</button></div>
+<div class="card" id="studentWaterEntryCard">
+<h2>💧 ثبت آب روزانه</h2>
+<div class="report-row"><span>مقدار ثبت‌شده امروز</span><b><span id="studentWater">۰</span> میلی‌لیتر</b></div>
+<div class="row"><input id="waterAmount" type="number" value="500" min="1" aria-label="مقدار آب به میلی‌لیتر"><button onclick="addWaterLog()">+ ثبت آب</button></div>
 </div>
 </div>
 
@@ -1869,7 +1870,7 @@ loadExercises();
         <div class="v4-card" onclick="dashOpen('meal')"><b>🍎</b>برنامه غذایی<span id="dashMeal" class="v4-small">—</span></div>
         <div class="v4-card" onclick="dashOpen('progress')"><b>📈</b>پیشرفت<span id="dashProgress" class="v4-small">—</span></div>
         <div class="v4-card" onclick="dashOpen('progress')"><b>📊</b>آنالیز بدن<span id="dashAnalysis" class="v4-small">—</span></div>
-        <div class="v4-card" onclick="dashOpen('meal')"><b>💧</b>آب امروز<span id="dashWater" class="v4-small">—</span></div>
+        <div class="v4-card" onclick="dashOpen('water')"><b>💧</b>آب امروز<span id="dashWater" class="v4-small">—</span></div>
         <div class="v4-card" onclick="dashOpen('progress')"><b>🔥</b>فعالیت امروز<span id="dashActivity" class="v4-small">—</span></div>
         <div class="v4-card" onclick="dashOpen('client')"><b>🎯</b>هدف من<span id="dashGoal" class="v4-small">—</span></div>
         <div class="v4-card" onclick="dashOpen('challenges')"><b>🏆</b>چالش‌ها<span id="dashChallenges" class="v4-small">—</span></div>
@@ -1887,6 +1888,7 @@ loadExercises();
     showSection(section,btn||null);
     if(section==='workout'&&currentClient)loadWorkoutForClient();
     if(section==='meal'&&currentClient)loadNutritionForClient();
+    if(section==='water'&&currentClient){loadWaterToday();loadWaterGoal();loadWeeklyWaterLogs();}
     if(section==='progress'&&currentClient){loadProgressHistory();}
   };
 
@@ -2328,7 +2330,16 @@ window.loadDashboard = loadDashboard;
     form.appendChild(days.firstElementChild);form.appendChild(days.lastElementChild);
   }
   function addWaterGoal(){
-    const studentCard=$id('mealStudentView')?.querySelector('.card:last-child');
+    let waterSection=$id('water');
+    if(!waterSection){
+      waterSection=document.createElement('section');waterSection.id='water';waterSection.className='section';
+      waterSection.innerHTML='<div class="card"><h2>💧 آب روزانه من</h2><p class="muted">ثبت آب، هدف تعیین‌شده توسط مربی و گزارش هفتگی فقط در این بخش نمایش داده می‌شود.</p></div>';
+      const page=document.querySelector('.page'),nav=document.querySelector('.nav');
+      if(page&&nav)page.insertBefore(waterSection,nav.nextSibling);else document.body.appendChild(waterSection);
+    }
+    const waterCard=$id('studentWaterEntryCard')||$id('waterAmount')?.closest('.card');
+    if(waterCard&&waterCard.parentElement!==waterSection)waterSection.appendChild(waterCard);
+    const studentCard=waterCard;
     if(studentCard&&!$id('studentWaterGoal')){const goal=document.createElement('div');goal.id='studentWaterGoal';goal.className='muted';goal.style.cssText='margin:0 0 10px;padding:9px 11px;border:1px solid #c7a34b;border-radius:10px;background:#111f2b;line-height:1.8';goal.textContent='هدف آب تعیین‌شده توسط مربی: در حال دریافت…';const heading=studentCard.querySelector('h2');if(heading)heading.insertAdjacentElement('afterend',goal);else studentCard.insertBefore(goal,studentCard.firstChild);}
     if(studentCard&&!$id('studentWaterWeek')){const week=document.createElement('div');week.id='studentWaterWeek';week.className='muted';week.style.cssText='margin-top:10px;padding-top:10px;border-top:1px solid #26384a;line-height:1.9';week.innerHTML='<b>📅 گزارش آب ۷ روز اخیر</b><div>در انتظار ثبت اطلاعات…</div>';studentCard.appendChild(week);}
     const clientSec=$id('client');
@@ -2673,7 +2684,7 @@ const plans=workoutResult.data||[], nutrition=nutritionResult.data||[];
     const traineeId=currentClient&&currentClient.id;if(traineeId==null)return;
     let done;try{done=await getConsumedFoodIds(traineeId);}catch(e){$f('mealReport').innerHTML='<p class="muted">گزارش مصرف غذا از دیتابیس دریافت نشد. اطلاعات را مصرف‌نشده فرض نکردیم.</p>';console.error('Could not load meal report:',e);return;}
     if(!currentClient||String(currentClient.id)!==String(traineeId))return;
-    let total=0,count=0,all=0,unknownUnits=0;meals.forEach(m=>(m.foods||[]).forEach(x=>{all++;const metric=foodMetrics(x.food||{},x.amount,x.unit);if(!metric.valid)unknownUnits++;if(done.has(String(x.id))){count++;if(metric.valid)total+=metric.cal;}}));const w=await loadWaterToday();if(!currentClient||String(currentClient.id)!==String(traineeId))return;$f('mealReport').innerHTML=`<div class="report-row"><span>برنامه</span><b>${escf(p.title||'بدون برنامه')}</b></div><div class="report-row"><span>غذاهای مصرف‌شده</span><b>${fmtf(count)} از ${fmtf(all)}</b></div><div class="report-row"><span>کالری ثبت‌شده (فقط واحد گرم)</span><b>${total.toFixed(0)} kcal</b></div>${unknownUnits?`<div class="report-row"><span>اقلام نیازمند وزن معادل گرم</span><b>${unknownUnits}</b></div>`:''}<div class="report-row"><span>آب امروز</span><b>${fmtf(w)} ml</b></div><div class="report-row"><span>هدف کالری</span><b>${fmtf(p.daily_calories||0)} kcal</b></div>`;
+    let total=0,count=0,all=0,unknownUnits=0;meals.forEach(m=>(m.foods||[]).forEach(x=>{all++;const metric=foodMetrics(x.food||{},x.amount,x.unit);if(!metric.valid)unknownUnits++;if(done.has(String(x.id))){count++;if(metric.valid)total+=metric.cal;}}));const w=await loadWaterToday();if(!currentClient||String(currentClient.id)!==String(traineeId))return;$f('mealReport').innerHTML=`<div class="report-row"><span>برنامه</span><b>${escf(p.title||'بدون برنامه')}</b></div><div class="report-row"><span>غذاهای مصرف‌شده</span><b>${fmtf(count)} از ${fmtf(all)}</b></div><div class="report-row"><span>کالری ثبت‌شده (فقط واحد گرم)</span><b>${total.toFixed(0)} kcal</b></div>${unknownUnits?`<div class="report-row"><span>اقلام نیازمند وزن معادل گرم</span><b>${unknownUnits}</b></div>`:''}<div class="report-row"><span>هدف کالری</span><b>${fmtf(p.daily_calories||0)} kcal</b></div>`;
   };
 
   // Workout completion is also DB-only in the final version.
