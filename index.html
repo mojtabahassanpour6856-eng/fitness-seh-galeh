@@ -424,11 +424,31 @@ body.library-room .library-inline-add button{position:relative!important;z-index
 <button class="secondary" onclick="openClientMealPlan()">🍽️ برنامه غذایی این شاگرد</button>
 </div>
 
-<div class="card">
-<h2>⏳ فستینگ</h2>
+
+
+<div class="card" id="dietTypePanel">
+<h2>🥗 نوع رژیم غذایی شاگرد</h2>
+<div id="dietSavedSummary" class="muted" style="background:#111f2b;border:1px solid #c7a34b;border-radius:10px;padding:9px 11px;margin:0 0 12px;white-space:pre-line;font-size:12px;line-height:1.8">هنوز رژیم غذایی برای این شاگرد ثبت نشده است.</div>
+<p class="muted">ابتدا نوع رژیم را انتخاب کن. اگر «فستینگ» را انتخاب کنی، تنظیم ساعت‌ها، نسبت فست، تعداد وعده و برنامه‌ساز غذایی همین‌جا نمایش داده می‌شود.</p>
+<div class="grid2">
+<div><label for="dietTypeSelect">نوع رژیم غذایی</label><select id="dietTypeSelect">
+<option value="">انتخاب نوع رژیم…</option>
+<option value="fasting">⏳ فستینگ / روزه‌داری متناوب</option>
+<option>وگان (Vegan)</option><option>وجترین / گیاه‌خواری (Vegetarian)</option><option>کتوژنیک (Keto)</option><option>مدیترانه‌ای</option><option>کم‌کربوهیدرات</option><option>پروتئین بالا</option><option>چرخه کربوهیدرات</option><option>پالئو (Paleo)</option><option>فلکسترین (Flexitarian)</option><option>کم‌چرب</option><option>داش (DASH)</option><option>بدون گلوتن</option><option>بدون لاکتوز</option><option>رژیم اختصاصی مربی</option><option value="custom">سایر / رژیم دلخواه</option>
+</select></div>
+<div id="dietCustomWrap" class="hide"><label for="dietCustomName">نام رژیم دلخواه</label><input id="dietCustomName" maxlength="100" placeholder="نام رژیم را بنویس"></div>
+</div>
+<div id="dietNonFastingWrap">
+<label for="dietSettings">تنظیمات اختصاصی رژیم</label><textarea id="dietSettings" rows="3" placeholder="مثلاً مقدار کربوهیدرات، مواد غذایی مجاز یا ممنوع، تعداد وعده‌ها و نکات مهم..."></textarea>
+<label for="dietNotes">توضیحات مربی</label><textarea id="dietNotes" rows="2" placeholder="توضیحات و ملاحظات مخصوص این شاگرد"></textarea>
+<button type="button" onclick="saveDietConfiguration()">💾 ذخیره نوع رژیم</button>
+<p id="dietStatus" class="muted" aria-live="polite"></p>
+</div>
+<div id="dietFastingWrap" class="hide">
+<h3>⏳ تنظیمات فستینگ</h3>
 <div id="fastingSavedSummary" class="muted" style="display:none;background:#111f2b;border:1px solid #c7a34b;border-radius:10px;padding:9px 11px;margin:0 0 12px;white-space:pre-line;font-size:12px;line-height:1.8"></div>
 <div class="grid2">
-<div><label>نوع</label><select id="fastType" onchange="configureFastingModel()"><option>بدون فستینگ</option><option>12:12</option><option>14:10</option><option>16:8</option><option>18:6</option></select></div>
+<div><label>مدل فستینگ</label><select id="fastType" onchange="configureFastingModel()"><option>بدون فستینگ</option><option>12:12</option><option>14:10</option><option>16:8</option><option>18:6</option></select></div>
 <div><label>شروع فست</label><input id="fastStart" type="time" value="20:00" onchange="refreshFastingMealTimes()"></div>
 <div><label>پایان فست</label><input id="fastEnd" type="time" value="08:00" onchange="refreshFastingMealTimes()"></div>
 <div><label>تعداد وعده</label><input id="fastMeals" type="number" value="2" min="1" max="8" onchange="syncFastingMealCount()"></div>
@@ -441,25 +461,9 @@ body.library-room .library-inline-add button{position:relative!important;z-index
 <div class="close-row"><button type="button" class="secondary" onclick="addFastingMeal()">➕ افزودن وعده</button></div>
 <p id="fastMealPlannerStatus" class="muted"></p>
 </div>
-<button onclick="saveFasting()">ذخیره فستینگ و برنامه غذایی</button>
+<button onclick="saveFasting()">💾 ذخیره فستینگ و برنامه غذایی</button>
 <p id="fastStatus" class="muted" style="white-space:pre-line"></p>
 </div>
-
-<div class="card" id="dietTypePanel">
-<h2>🥗 نوع رژیم غذایی شاگرد</h2>
-<div id="dietSavedSummary" class="muted" style="background:#111f2b;border:1px solid #c7a34b;border-radius:10px;padding:9px 11px;margin:0 0 12px;white-space:pre-line;font-size:12px;line-height:1.8">هنوز رژیم غذایی جداگانه‌ای برای این شاگرد ثبت نشده است.</div>
-<p class="muted">نوع رژیم را جدا از فستینگ انتخاب کن. این تنظیمات برای همین شاگرد ذخیره می‌شود و جایگزین یا حذف‌کننده فستینگ فعلی نیست.</p>
-<div class="grid2">
-<div><label for="dietTypeSelect">نوع رژیم غذایی</label><select id="dietTypeSelect">
-<option value="">انتخاب نوع رژیم…</option>
-<option>وگان (Vegan)</option><option>وجترین / گیاه‌خواری (Vegetarian)</option><option>کتوژنیک (Keto)</option><option>مدیترانه‌ای</option><option>کم‌کربوهیدرات</option><option>پروتئین بالا</option><option>چرخه کربوهیدرات</option><option>پالئو (Paleo)</option><option>فلکسترین (Flexitarian)</option><option>کم‌چرب</option><option>داش (DASH)</option><option>بدون گلوتن</option><option>بدون لاکتوز</option><option>رژیم اختصاصی مربی</option><option value="custom">سایر / رژیم دلخواه</option>
-</select></div>
-<div id="dietCustomWrap" class="hide"><label for="dietCustomName">نام رژیم دلخواه</label><input id="dietCustomName" maxlength="100" placeholder="نام رژیم را بنویس"></div>
-</div>
-<label for="dietSettings">تنظیمات اختصاصی رژیم</label><textarea id="dietSettings" rows="3" placeholder="مثلاً مقدار کربوهیدرات، مواد غذایی مجاز یا ممنوع، تعداد وعده‌ها و نکات مهم..."></textarea>
-<label for="dietNotes">توضیحات مربی</label><textarea id="dietNotes" rows="2" placeholder="توضیحات و ملاحظات مخصوص این شاگرد"></textarea>
-<button type="button" onclick="saveDietConfiguration()">💾 ذخیره نوع رژیم</button>
-<p id="dietStatus" class="muted" aria-live="polite"></p>
 </div>
 
 <div class="card">
@@ -1100,7 +1104,7 @@ function buildFastingMealPlanText(){
   return parts.length?"وعده "+(i+1)+" — ساعت "+(meal.time||"تعیین‌نشده")+": "+parts.join("، "):"";
  }).filter(Boolean).join("\n");
 }
-async function loadFastingSummary(){
+window.loadFastingSummary=async function(){
  const box=$("fastingSavedSummary");if(!box)return;
  if(authProfile?.role!=="coach"||!currentClient?.id){box.style.display="none";return;}
  box.style.display="block";box.textContent="در حال بارگذاری فستینگ ثبت‌شده…";
@@ -1114,7 +1118,7 @@ async function loadFastingSummary(){
    (x.end_time?"  •  پایان فست: "+String(x.end_time).slice(0,5):"");
  }catch(e){box.textContent="نمایش فستینگ ثبت‌شده ممکن نیست؛ اتصال را بررسی کنید.";}
 }
-async function saveFasting(){
+window.saveFasting=async function(){
  if(authProfile?.role!=="coach"){alert("تعیین و تغییر برنامه فستینگ فقط در دسترس مربی است.");return;}
  if(!currentClient){alert("اول شاگرد را انتخاب کنید.");return;}
  const st=$("fastStart").value,en=$("fastEnd").value,t=$("fastType").value;
@@ -5851,11 +5855,25 @@ active('workoutMuscleFilters',wm);active('libraryMuscleFilters',lm);if(document.
   if(!select)return "";
   return select.value==="custom"?String($diet("dietCustomName")?.value||"").trim():String(select.value||"").trim();
  }
- $diet("dietTypeSelect")?.addEventListener("change",function(){
-  $diet("dietCustomWrap")?.classList.toggle("hide",this.value!=="custom");
- });
+ function syncDietTypeUI(){
+  const fasting=$diet("dietTypeSelect")?.value==="fasting";
+  $diet("dietFastingWrap")?.classList.toggle("hide",!fasting);
+  if($diet("dietNonFastingWrap"))$diet("dietNonFastingWrap").classList.toggle("hide",fasting);
+  $diet("dietCustomWrap")?.classList.toggle("hide",$diet("dietTypeSelect")?.value!=="custom");
+  if(fasting){
+   if(typeof window.configureFastingModel==="function")window.configureFastingModel();
+   if(typeof window.loadFastingSummary==="function")window.loadFastingSummary();
+  }
+ }
+ $diet("dietTypeSelect")?.addEventListener("change",syncDietTypeUI);
  window.saveDietConfiguration=async function(){
   if(!isCoach()){alert("تنظیم نوع رژیم فقط در دسترس مربی است.");return;}
+  if($diet("dietTypeSelect")?.value==="fasting"){
+   syncDietTypeUI();
+   if(typeof window.saveFasting==="function")return window.saveFasting();
+   alert("بخش ذخیره فستینگ بارگذاری نشده است؛ صفحه را تازه‌سازی کن.");
+   return;
+  }
   const trainee=selectedTrainee();
   if(!trainee){alert("ابتدا یک شاگرد را انتخاب کن.");return;}
   const type=selectedDietName();
@@ -5885,17 +5903,18 @@ active('workoutMuscleFilters',wm);active('libraryMuscleFilters',lm);if(document.
    if(!selectedTrainee()||String(selectedTrainee())!==String(trainee))return;
    const row=(rows||[]).find(x=>parseDiet(x));
    const data=row&&parseDiet(row);
-   if(!data){box.textContent="هنوز رژیم غذایی جداگانه‌ای برای این شاگرد ثبت نشده است.";return;}
+   if(!data){box.textContent="هنوز رژیم غذایی برای این شاگرد ثبت نشده است.";return;}
    box.textContent="✅ رژیم ثبت‌شده: "+data.type+
     (data.settings?"\nتنظیمات: "+data.settings:"")+
     (data.notes?"\nتوضیحات مربی: "+data.notes:"");
    const select=$diet("dietTypeSelect");
    if(select){
     const option=Array.from(select.options).find(o=>o.value===data.type||o.text===data.type);
-    if(option){select.value=option.value;$diet("dietCustomWrap")?.classList.toggle("hide",option.value!=="custom");}
+    if(option){select.value=option.value;}
     else{select.value="custom";$diet("dietCustomWrap")?.classList.remove("hide");if($diet("dietCustomName"))$diet("dietCustomName").value=data.type;}
-    $diet("dietSettings").value=data.settings||"";
-    $diet("dietNotes").value=data.notes||"";
+    if($diet("dietSettings"))$diet("dietSettings").value=data.settings||"";
+    if($diet("dietNotes"))$diet("dietNotes").value=data.notes||"";
+    syncDietTypeUI();
    }
   }catch(error){
    console.error("loadDietSummary",error);
@@ -5907,9 +5926,11 @@ active('workoutMuscleFilters',wm);active('libraryMuscleFilters',lm);if(document.
   window.selectClient=function(){
    const result=originalSelectClient.apply(this,arguments);
    window.loadDietSummary();
+   if(typeof window.loadFastingSummary==="function")window.loadFastingSummary();
    return result;
   };
  }
+ window.syncDietTypeUI=syncDietTypeUI;
 })();
 </script>
 
