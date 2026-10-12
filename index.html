@@ -6157,7 +6157,7 @@ active('workoutMuscleFilters',wm);active('libraryMuscleFilters',lm);if(document.
     const sec=$('progress');if(!sec)return;
     let chart=$('progressTrend');
     let viewer=$('coachAnalysisView');
-    if(!viewer){viewer=document.createElement('div');viewer.id='coachAnalysisView';viewer.className='card';viewer.innerHTML='<h2>🧾 آخرین برگه آنالیز مربی</h2><div id="coachAnalysisViewBody" class="muted">ابتدا شاگرد را انتخاب کنید.</div>';sec.appendChild(viewer);}
+    if(!viewer){viewer=document.createElement('div');viewer.id='coachAnalysisView';viewer.className='card';viewer.innerHTML='<h2>🧾 آخرین برگه آنالیز مربی</h2><div id="coachAnalysisViewBody" class="muted">ابتدا شاگرد را انتخاب کنید.</div>';sec.appendChild(viewer);} if(chart)sec.insertBefore(viewer,chart);
     if(!chart){
       chart=document.createElement('div');chart.id='progressTrend';chart.className='card';
       chart.innerHTML='<h2>📈 نمودار روند پیشرفت</h2><div id="progressTrendBody" class="muted">ابتدا شاگرد را انتخاب کنید.</div>';
@@ -6184,8 +6184,8 @@ active('workoutMuscleFilters',wm);active('libraryMuscleFilters',lm);if(document.
       if(!latestAnalysis){view.innerHTML='<p class="muted">هنوز برگه آنالیزی از طرف مربی ثبت نشده است.</p>';}
       else {
         const rawNotes=String(latestAnalysis.notes||'');
-        const imageMatch=rawNotes.match(/ANALYSIS_IMAGE_DATA:(data:image\\/[^;]+;base64,[A-Za-z0-9+/=]+)/);
-        const cleanNotes=rawNotes.replace(/ANALYSIS_IMAGE_DATA:data:image\\/[^;]+;base64,[A-Za-z0-9+/=]+/g,'').trim();
+        const marker='ANALYSIS_IMAGE_DATA:';const markerAt=rawNotes.indexOf(marker);const imageValue=markerAt>=0?rawNotes.slice(markerAt+marker.length).split(' | ')[0]:'';const imageMatch=imageValue.startsWith('data:image/')?[imageValue,imageValue]:null;
+        const cleanNotes=(markerAt>=0?rawNotes.slice(0,markerAt):rawNotes).replace(/\\s*\\|\\s*$/,'').trim();
         const metric=(label,value,unit='')=>value!==null&&value!==undefined&&value!==''?'<div class="receipt-item"><small>'+label+'</small><b>'+esc(value)+unit+'</b></div>':'';
         view.innerHTML='<p class="muted">تاریخ برگه: <b>'+esc(dateFa(latestAnalysis.analysis_date))+'</b></p>'+(imageMatch?'<a href="'+imageMatch[1]+'" target="_blank" rel="noopener"><img src="'+imageMatch[1]+'" alt="عکس برگه آنالیز ثبت‌شده توسط مربی" style="display:block;width:100%;max-width:680px;max-height:560px;object-fit:contain;margin:8px auto;border-radius:12px;border:1px solid var(--border,#ddd)"></a>':'<p class="muted">عکس برگه برای این آنالیز ذخیره نشده است.</p>')+'<div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px">'+metric('وزن',latestAnalysis.weight,' کیلوگرم')+metric('درصد چربی',latestAnalysis.body_fat,'٪')+metric('توده عضلانی',latestAnalysis.muscle_mass,' کیلوگرم')+metric('آب بدن',latestAnalysis.body_water,'٪')+metric('چربی احشایی',latestAnalysis.visceral_fat)+metric('دور شکم',latestAnalysis.abdomen,' سانتی‌متر')+metric('دور کمر',latestAnalysis.waist,' سانتی‌متر')+metric('دور باسن',latestAnalysis.hip,' سانتی‌متر')+metric('دور ران',latestAnalysis.thigh,' سانتی‌متر')+'</div>'+(cleanNotes?'<p class="muted">'+esc(cleanNotes.replace(/ANALYSIS_IMAGE_DATA:[\\s\\S]*/,''))+'</p>':'');
       }
@@ -6219,7 +6219,7 @@ active('workoutMuscleFilters',wm);active('libraryMuscleFilters',lm);if(document.
     boxes.chart.textContent='در حال بارگذاری روند پیشرفت…';
     boxes.history.textContent='در حال دریافت تاریخچه…';
     try{
-      const rows=await sbGet('/body_analyses?trainee_id=eq.'+encodeURIComponent(traineeId)+'&select=analysis_date,weight,body_fat,muscle_mass,abdomen,waist,hip,thigh&order=analysis_date.asc&limit=100');
+      const rows=await sbGet('/body_analyses?trainee_id=eq.'+encodeURIComponent(traineeId)+'&select=analysis_date,weight,body_fat,muscle_mass,body_water,visceral_fat,abdomen,waist,hip,thigh,notes&order=analysis_date.asc&limit=100');
       render(rows,traineeId,seq);
     }catch(e){
       if(seq!==requestSeq)return;
