@@ -6228,3 +6228,149 @@ active('workoutMuscleFilters',wm);active('libraryMuscleFilters',lm);if(document.
   window.__homeExerciseSaveClassifierInstalled=true;
 })();
 </script>
+
+
+<!-- FITNESS WATER GOAL + WEEKLY LOG V1 -->
+<script id="FITNESS_WATER_GOAL_WEEKLY_LOG_V1">
+(function(){
+  const $=id=>document.getElementById(id);
+  const escWater=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  function role(){try{return typeof authProfile!=='undefined'?authProfile?.role:null;}catch(e){return window.authProfile?.role||null;}}
+  function trainee(){try{return typeof currentClient!=='undefined'?currentClient:(window.currentClient||null);}catch(e){return window.currentClient||null;}}
+  function isoToday(){try{return String(typeof today==='function'?today():new Date().toISOString().slice(0,10)).slice(0,10);}catch(e){return new Date().toISOString().slice(0,10);}}
+  function dateFa(v){try{return new Date(String(v).slice(0,10)+'T12:00:00').toLocaleDateString('fa-IR');}catch(e){return String(v||'—');}}
+  function weekRange(){
+    const end=isoToday(), d=new Date(end+'T00:00:00Z');
+    d.setUTCDate(d.getUTCDate()-6);
+    return {start:d.toISOString().slice(0,10),end};
+  }
+  function waterCard(){
+    const view=$('mealStudentView');
+    if(!view)return null;
+    const amount=$('waterAmount');
+    return amount?.closest('.card')||$('waterGoal')?.closest('.card')||null;
+  }
+  function ensureWeekCard(){
+    const view=$('mealStudentView'), card=waterCard();
+    if(!view||!card)return null;
+    let week=$('waterWeekCard');
+    if(!week){
+      week=document.createElement('div');week.id='waterWeekCard';week.className='card';
+      week.innerHTML='<h2>💧 گزارش آب هفتگی شاگرد</h2><p id="waterWeekSummary" class="muted">در حال دریافت گزارش…</p><div id="waterWeekRows"></div><button type="button" class="secondary" id="waterWeekRefresh">🔄 به‌روزرسانی گزارش آب</button>';
+      card.insertAdjacentElement('afterend',week);
+      $('waterWeekRefresh').addEventListener('click',()=>refreshWaterPanel());
+    }
+    return week;
+  }
+  function setGoalDisplay(goal){
+    const card=waterCard();if(!card)return;
+    let box=$('studentWaterGoalDisplay');
+    if(!box){
+      const h=card.querySelector('h2');
+      box=document.createElement('div');box.id='studentWaterGoalDisplay';
+      box.style.cssText='padding:10px 12px;margin:8px 0 12px;border:1px solid #8a702c;border-radius:11px;background:#171f27;line-height:1.9;font-size:13px';
+      if(h)h.insertAdjacentElement('afterend',box);else card.insertBefore(box,card.firstChild);
+    }
+    const n=Number(goal)||0;
+    box.innerHTML=n>0?('🎯 <b>هدف آب تعیین‌شده توسط مربی:</b> '+escWater(n.toLocaleString('fa-IR'))+' میلی‌لیتر در روز'): '🎯 هنوز هدف آب روزانه توسط مربی تعیین نشده است.';
+  }
+  async function refreshWaterPanel(){
+    const r=role(), t=trainee();
+    if(!t?.id||!['coach','trainee'].includes(r))return;
+    const card=waterCard();
+    if(!card)return;
+    // The trainee may view the coach's target, but cannot edit or save it.
+    const goalInput=$('waterGoal');
+    if(r==='trainee'){
+      if(goalInput){const row=goalInput.closest('.row');if(row)row.style.display='none';else goalInput.style.display='none';}
+      if(typeof sbGet==='function'){
+        try{
+          const rows=await sbGet('/trainees?id=eq.'+encodeURIComponent(t.id)+'&select=water_goal_ml&limit=1');
+          if(!trainee()?.id||String(trainee().id)!==String(t.id))return;
+          setGoalDisplay(rows?.[0]?.water_goal_ml);
+        }catch(e){setGoalDisplay(t.water_goal_ml);}
+      }else setGoalDisplay(t.water_goal_ml);
+    }else{
+      if(goalInput){const row=goalInput.closest('.row');if(row)row.style.display='';else goalInput.style.display='';}
+      setGoalDisplay(t.water_goal_ml);
+      if(goalInput&&typeof sbGet==='function'){
+        try{const rows=await sbGet('/trainees?id=eq.'+encodeURIComponent(t.id)+'&select=water_goal_ml&limit=1');if(rows?.length){goalInput.value=rows[0].water_goal_ml||'';setGoalDisplay(rows[0].water_goal_ml);}}catch(e){}
+      }
+    }
+    const week=ensureWeekCard();if(!week)return;
+    const summary=$('waterWeekSummary'), rowsBox=$('waterWeekRows');
+    if(summary)summary.textContent='در حال دریافت ثبت‌های هفت روز اخیر…';
+    if(rowsBox)rowsBox.innerHTML='';
+    try{
+      const range=weekRange();
+      const logs=await sbGet('/water_logs?trainee_id=eq.'+encodeURIComponent(t.id)+'&log_date=gte.'+range.start+'&log_date=lte.'+range.end+'&select=log_date,amount_ml&order=log_date.desc');
+      if(!trainee()?.id||String(trainee().id)!==String(t.id))return;
+      const totals={};
+      (Array.isArray(logs)?logs:[]).forEach(x=>{const d=String(x.log_date||'').slice(0,10);if(!d)return;totals[d]=(totals[d]||0)+(Number(x.amount_ml)||0);});
+      const goal=Number($('studentWaterGoalDisplay')?.textContent?.match(/[0-9۰-۹٬,]+/)?.[0]?.replace(/[٬,]/g,'').replace(/[۰-۹]/g,d=>'۰۱۲۳۴۵۶۷۸۹'.indexOf(d)))||Number(t.water_goal_ml)||0;
+      let total=0, days=0, html='';
+      for(let i=0;i<7;i++){
+        const d=new Date(range.end+'T00:00:00Z');d.setUTCDate(d.getUTCDate()-i);
+        const iso=d.toISOString().slice(0,10), amount=totals[iso]||0;
+        total+=amount;if(amount>0)days++;
+        const pct=goal>0?Math.min(100,Math.round(amount/goal*100)):0;
+        html+='<div style="padding:9px 0;border-bottom:1px solid #293b4b"><div style="display:flex;justify-content:space-between;gap:8px;align-items:center;font-size:12px"><b>'+escWater(dateFa(iso))+'</b><span>'+escWater(amount.toLocaleString('fa-IR'))+' میلی‌لیتر'+(goal>0?' · '+pct.toLocaleString('fa-IR')+'٪ هدف':'')+'</span></div>'+(goal>0?'<div style="height:6px;background:#23313e;border-radius:8px;margin-top:6px;overflow:hidden"><div style="height:100%;width:'+pct+'%;background:#ffbd16;border-radius:8px"></div></div>':'')+'</div>';
+      }
+      if(summary)summary.innerHTML='مجموع ثبت‌شده در ۷ روز: <b>'+total.toLocaleString('fa-IR')+' میلی‌لیتر</b> · روزهای دارای ثبت: <b>'+days.toLocaleString('fa-IR')+' از ۷</b>';
+      if(rowsBox)rowsBox.innerHTML=html;
+    }catch(e){
+      if(summary)summary.textContent='گزارش آب بارگذاری نشد: '+(e?.message||String(e));
+      if(rowsBox)rowsBox.innerHTML='<p class="muted">اتصال و دسترسی خواندن جدول ثبت آب را بررسی کنید.</p>';
+    }
+  }
+  // Block the trainee role from invoking the coach-only goal editor even if called manually.
+  const oldSaveGoal=window.saveWaterGoal;
+  if(typeof oldSaveGoal==='function'&&!window.__traineeWaterGoalBlocked){
+    window.saveWaterGoal=async function(){
+      if(role()==='trainee'){alert('هدف آب را فقط مربی تعیین می‌کند.');return;}
+      const result=await oldSaveGoal.apply(this,arguments);
+      await refreshWaterPanel();
+      return result;
+    };
+    window.__traineeWaterGoalBlocked=true;
+  }
+  const oldAddWater=window.addWaterLog;
+  if(typeof oldAddWater==='function'&&!window.__weeklyWaterAddWrapped){
+    window.addWaterLog=async function(){
+      const result=await oldAddWater.apply(this,arguments);
+      await refreshWaterPanel();
+      return result;
+    };
+    window.__weeklyWaterAddWrapped=true;
+  }
+  const oldSelect=window.selectClient;
+  if(typeof oldSelect==='function'&&!window.__weeklyWaterSelectWrapped){
+    window.selectClient=async function(){
+      const result=await oldSelect.apply(this,arguments);
+      await refreshWaterPanel();
+      return result;
+    };
+    window.__weeklyWaterSelectWrapped=true;
+  }
+  const oldShow=window.showSection;
+  if(typeof oldShow==='function'&&!window.__weeklyWaterShowWrapped){
+    window.showSection=function(id,btn){
+      const result=oldShow.apply(this,arguments);
+      if(id==='meal'||id==='traineeDashboard')Promise.resolve().then(()=>refreshWaterPanel());
+      return result;
+    };
+    window.__weeklyWaterShowWrapped=true;
+  }
+  const oldFinish=window.finishLogin;
+  if(typeof oldFinish==='function'&&!window.__weeklyWaterFinishWrapped){
+    window.finishLogin=async function(user){
+      const result=await oldFinish.apply(this,arguments);
+      await refreshWaterPanel();
+      return result;
+    };
+    window.__weeklyWaterFinishWrapped=true;
+  }
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>{if(role())refreshWaterPanel();},{once:true});
+  else if(role())refreshWaterPanel();
+})();
+</script>
