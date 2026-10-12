@@ -5903,7 +5903,18 @@ active('workoutMuscleFilters',wm);active('libraryMuscleFilters',lm);if(document.
    if(!selectedTrainee()||String(selectedTrainee())!==String(trainee))return;
    const row=(rows||[]).find(x=>parseDiet(x));
    const data=row&&parseDiet(row);
-   if(!data){box.textContent="هنوز رژیم غذایی برای این شاگرد ثبت نشده است.";return;}
+   if(!data){
+    const fastingRows=(rows||[]).filter(x=>!String(x.description||"").startsWith(PREFIX));
+    const fastingRow=fastingRows.find(x=>String(x.description||"").includes("نوع ")&&!String(x.description||"").includes("رژیم‌غذایی::"));
+    if(fastingRow&&$diet("dietTypeSelect")){
+     $diet("dietTypeSelect").value="fasting";
+     syncDietTypeUI();
+     box.textContent="✅ برای این شاگرد فستینگ ثبت شده است؛ تنظیمات و برنامه غذایی را در همین بخش مشاهده کن.";
+     if(typeof window.loadFastingSummary==="function")window.loadFastingSummary();
+     return;
+    }
+    box.textContent="هنوز رژیم غذایی برای این شاگرد ثبت نشده است.";return;
+   }
    box.textContent="✅ رژیم ثبت‌شده: "+data.type+
     (data.settings?"\nتنظیمات: "+data.settings:"")+
     (data.notes?"\nتوضیحات مربی: "+data.notes:"");
