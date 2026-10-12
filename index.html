@@ -5983,6 +5983,7 @@ active('workoutMuscleFilters',wm);active('libraryMuscleFilters',lm);if(document.
        .filter(Boolean));
    }catch(e){console.warn("خواندن بانک اختصاصی منزل انجام نشد",e);}
  }
+ window.refreshCoachHomeNames=refreshCoachHomeNames;
  function applyEmptyHomeBank(){
    const sel=$("workoutExercise");
    if(sel){
@@ -6199,5 +6200,37 @@ active('workoutMuscleFilters',wm);active('libraryMuscleFilters',lm);if(document.
   }
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>{ensureProgressCards();},{once:true});
   else ensureProgressCards();
+})();
+</script>
+
+<script id="SEH_HOME_EXERCISE_SAVE_CLASSIFIER_V1">
+(function(){
+  const previousSave=window.saveLibraryExercise;
+  if(typeof previousSave!=="function"||window.__homeExerciseSaveClassifierInstalled)return;
+  window.saveLibraryExercise=async function(){
+    const trainee=(typeof currentClient!=="undefined"&&currentClient)?currentClient:window.currentClient;
+    const mode=String(trainee?.training_type||trainee?.training_location||trainee?.training_mode||"").toLowerCase().trim();
+    const home=mode==="home"||mode.includes("منزل")||mode.includes("خانه");
+    const equipment=document.getElementById("libEquipment");
+    const originalEquipment=equipment?String(equipment.value||"").trim():"";
+    if(home&&equipment&&!originalEquipment.startsWith("منزل:")){
+      equipment.value="منزل: "+(originalEquipment||"بدون تجهیزات");
+    }
+    try{
+      await previousSave.apply(this,arguments);
+    }finally{
+      const nameInput=document.getElementById("libName");
+      // Save handler clears the name only after the database insert succeeds.
+      if(nameInput&&nameInput.value.trim()&&equipment)equipment.value=originalEquipment;
+      if(home){
+        try{
+          if(typeof window.refreshCoachHomeNames==="function")await window.refreshCoachHomeNames();
+          if(typeof window.loadLibraryExercises==="function")await window.loadLibraryExercises();
+          if(typeof window.renderWorkoutExerciseOptions==="function")window.renderWorkoutExerciseOptions();
+        }catch(refreshError){console.warn("تازه‌سازی بانک منزل پس از ذخیره انجام نشد",refreshError);}
+      }
+    }
+  };
+  window.__homeExerciseSaveClassifierInstalled=true;
 })();
 </script>
