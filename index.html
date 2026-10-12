@@ -445,6 +445,23 @@ body.library-room .library-inline-add button{position:relative!important;z-index
 <p id="fastStatus" class="muted" style="white-space:pre-line"></p>
 </div>
 
+<div class="card" id="dietTypePanel">
+<h2>🥗 نوع رژیم غذایی شاگرد</h2>
+<div id="dietSavedSummary" class="muted" style="background:#111f2b;border:1px solid #c7a34b;border-radius:10px;padding:9px 11px;margin:0 0 12px;white-space:pre-line;font-size:12px;line-height:1.8">هنوز رژیم غذایی جداگانه‌ای برای این شاگرد ثبت نشده است.</div>
+<p class="muted">نوع رژیم را جدا از فستینگ انتخاب کن. این تنظیمات برای همین شاگرد ذخیره می‌شود و جایگزین یا حذف‌کننده فستینگ فعلی نیست.</p>
+<div class="grid2">
+<div><label for="dietTypeSelect">نوع رژیم غذایی</label><select id="dietTypeSelect">
+<option value="">انتخاب نوع رژیم…</option>
+<option>وگان (Vegan)</option><option>وجترین / گیاه‌خواری (Vegetarian)</option><option>کتوژنیک (Keto)</option><option>مدیترانه‌ای</option><option>کم‌کربوهیدرات</option><option>پروتئین بالا</option><option>چرخه کربوهیدرات</option><option>پالئو (Paleo)</option><option>فلکسترین (Flexitarian)</option><option>کم‌چرب</option><option>داش (DASH)</option><option>بدون گلوتن</option><option>بدون لاکتوز</option><option>رژیم اختصاصی مربی</option><option value="custom">سایر / رژیم دلخواه</option>
+</select></div>
+<div id="dietCustomWrap" class="hide"><label for="dietCustomName">نام رژیم دلخواه</label><input id="dietCustomName" maxlength="100" placeholder="نام رژیم را بنویس"></div>
+</div>
+<label for="dietSettings">تنظیمات اختصاصی رژیم</label><textarea id="dietSettings" rows="3" placeholder="مثلاً مقدار کربوهیدرات، مواد غذایی مجاز یا ممنوع، تعداد وعده‌ها و نکات مهم..."></textarea>
+<label for="dietNotes">توضیحات مربی</label><textarea id="dietNotes" rows="2" placeholder="توضیحات و ملاحظات مخصوص این شاگرد"></textarea>
+<button type="button" onclick="saveDietConfiguration()">💾 ذخیره نوع رژیم</button>
+<p id="dietStatus" class="muted" aria-live="polite"></p>
+</div>
+
 <div class="card">
 <h2>💳 عضویت باشگاه</h2>
 <div class="grid2">
@@ -984,7 +1001,7 @@ function selectClient(id){
   currentClient=clients.find(x=>String(x.id)===String(id));if(!currentClient)return;
   $("pn").value=currentClient.name||"";$("page").value=currentClient.age||"";$("pweight").value=currentClient.weight||"";
   $("pheight").value=currentClient.height||"";$("pgoal").value=currentClient.goal||"کاهش وزن";
-  $("plevel").value=currentClient.level||"مبتدی";loadNutritionForClient();loadWorkoutForClient();
+  $("plevel").value=currentClient.level||"مبتدی";loadNutritionForClient();loadWorkoutForClient();loadDietSummary();
   showSection("client",document.querySelectorAll(".nav button")[2]); if($("ptype"))$("ptype").value=currentClient.training_type||"gym"; if($("ptype2"))$("ptype2").value=currentClient.training_type||"gym"; if($("pequipment"))$("pequipment").value=currentClient.home_equipment||""; if($("pequipment2"))$("pequipment2").value=currentClient.home_equipment||""; if($("plimit"))$("plimit").value=currentClient.limitations||""; if($("actDate"))$("actDate").value=today(); loadActivityToday(); loadSupplements(); loadInjuries(); loadLibraryExercises();
 }
 
@@ -1088,9 +1105,9 @@ async function loadFastingSummary(){
  if(authProfile?.role!=="coach"||!currentClient?.id){box.style.display="none";return;}
  box.style.display="block";box.textContent="در حال بارگذاری فستینگ ثبت‌شده…";
  try{
-  const rows=await sbGet("/fasting_logs?trainee_id=eq."+encodeURIComponent(currentClient.id)+"&order=created_at.desc&limit=1");
-  if(!rows?.length){box.textContent="هنوز فستینگی برای این شاگرد ثبت نشده است.";return;}
-  const x=rows[0];
+  const rows=await sbGet("/fasting_logs?trainee_id=eq."+encodeURIComponent(currentClient.id)+"&order=created_at.desc&limit=30");
+  const x=(rows||[]).find(row=>!String(row.description||"").startsWith("رژیم‌غذایی::"));
+  if(!x){box.textContent="هنوز فستینگی برای این شاگرد ثبت نشده است.";return;}
   const d=String(x.description||"").replace(/^نوع\s*/,"");
   box.textContent="✅ فستینگ ثبت‌شده | "+d+
    (x.start_time?"\nشروع فست: "+String(x.start_time).slice(0,5):"")+
@@ -5814,6 +5831,85 @@ active('workoutMuscleFilters',wm);active('libraryMuscleFilters',lm);if(document.
    if(button.isConnected)button.textContent=oldText;
   });
  },true);
+})();
+</script>
+
+
+<script id="FITNESS_TRAINEE_DIET_TYPES_V1">
+(function(){
+ const PREFIX="رژیم‌غذایی::";
+ const $diet=id=>document.getElementById(id);
+ const isCoach=()=>authProfile?.role==="coach";
+ const selectedTrainee=()=>currentClient&&currentClient.id;
+ function parseDiet(row){
+  const raw=String(row&&row.description||"");
+  if(!raw.startsWith(PREFIX))return null;
+  try{return JSON.parse(raw.slice(PREFIX.length));}catch(e){return null;}
+ }
+ function selectedDietName(){
+  const select=$diet("dietTypeSelect");
+  if(!select)return "";
+  return select.value==="custom"?String($diet("dietCustomName")?.value||"").trim():String(select.value||"").trim();
+ }
+ $diet("dietTypeSelect")?.addEventListener("change",function(){
+  $diet("dietCustomWrap")?.classList.toggle("hide",this.value!=="custom");
+ });
+ window.saveDietConfiguration=async function(){
+  if(!isCoach()){alert("تنظیم نوع رژیم فقط در دسترس مربی است.");return;}
+  const trainee=selectedTrainee();
+  if(!trainee){alert("ابتدا یک شاگرد را انتخاب کن.");return;}
+  const type=selectedDietName();
+  if(!type){alert("نوع رژیم را انتخاب کن و در صورت انتخاب «سایر»، نام آن را بنویس.");return;}
+  const data={type,settings:String($diet("dietSettings")?.value||"").trim(),notes:String($diet("dietNotes")?.value||"").trim(),updatedAt:new Date().toISOString()};
+  const status=$diet("dietStatus");
+  if(status)status.textContent="در حال ذخیره رژیم برای این شاگرد…";
+  try{
+   await sbWrite("/fasting_logs","POST",{trainee_id:trainee,fasting_date:today(),description:PREFIX+JSON.stringify(data)});
+   if(status)status.textContent="✅ نوع رژیم برای این شاگرد ذخیره شد.";
+   await window.loadDietSummary();
+  }catch(error){
+   console.error("saveDietConfiguration",error);
+   if(status)status.textContent="❌ ذخیره رژیم انجام نشد: "+(error?.message||String(error));
+   alert("ذخیره نوع رژیم انجام نشد.\n"+(error?.message||String(error)));
+  }
+ };
+ window.loadDietSummary=async function(){
+  const box=$diet("dietSavedSummary");
+  if(!box)return;
+  const trainee=selectedTrainee();
+  if(!trainee){box.textContent="ابتدا شاگرد را انتخاب کن.";return;}
+  if(!isCoach()){box.textContent="نوع رژیم غذایی را مربی تعیین می‌کند.";return;}
+  box.textContent="در حال بارگذاری رژیم ثبت‌شده…";
+  try{
+   const rows=await sbGet("/fasting_logs?trainee_id=eq."+encodeURIComponent(trainee)+"&order=created_at.desc&limit=30");
+   if(!selectedTrainee()||String(selectedTrainee())!==String(trainee))return;
+   const row=(rows||[]).find(x=>parseDiet(x));
+   const data=row&&parseDiet(row);
+   if(!data){box.textContent="هنوز رژیم غذایی جداگانه‌ای برای این شاگرد ثبت نشده است.";return;}
+   box.textContent="✅ رژیم ثبت‌شده: "+data.type+
+    (data.settings?"\nتنظیمات: "+data.settings:"")+
+    (data.notes?"\nتوضیحات مربی: "+data.notes:"");
+   const select=$diet("dietTypeSelect");
+   if(select){
+    const option=Array.from(select.options).find(o=>o.value===data.type||o.text===data.type);
+    if(option){select.value=option.value;$diet("dietCustomWrap")?.classList.toggle("hide",option.value!=="custom");}
+    else{select.value="custom";$diet("dietCustomWrap")?.classList.remove("hide");if($diet("dietCustomName"))$diet("dietCustomName").value=data.type;}
+    $diet("dietSettings").value=data.settings||"";
+    $diet("dietNotes").value=data.notes||"";
+   }
+  }catch(error){
+   console.error("loadDietSummary",error);
+   box.textContent="نمایش رژیم ثبت‌شده ممکن نیست؛ اتصال پایگاه داده را بررسی کن.";
+  }
+ };
+ const originalSelectClient=window.selectClient;
+ if(typeof originalSelectClient==="function"){
+  window.selectClient=function(){
+   const result=originalSelectClient.apply(this,arguments);
+   window.loadDietSummary();
+   return result;
+  };
+ }
 })();
 </script>
 
