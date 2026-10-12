@@ -439,9 +439,16 @@ body.library-room .library-inline-add button{position:relative!important;z-index
 <div id="dietCustomWrap" class="hide"><label for="dietCustomName">نام رژیم دلخواه</label><input id="dietCustomName" maxlength="100" placeholder="نام رژیم را بنویس"></div>
 </div>
 <div id="dietNonFastingWrap">
-<label for="dietSettings">تنظیمات اختصاصی رژیم</label><textarea id="dietSettings" rows="3" placeholder="مثلاً مقدار کربوهیدرات، مواد غذایی مجاز یا ممنوع، تعداد وعده‌ها و نکات مهم..."></textarea>
+<label for="dietSettings">تنظیمات اختصاصی رژیم</label><textarea id="dietSettings" rows="3" placeholder="مثلاً مواد غذایی مجاز یا ممنوع، مقدار کربوهیدرات، هدف پروتئین و نکات مهم..."></textarea>
 <label for="dietNotes">توضیحات مربی</label><textarea id="dietNotes" rows="2" placeholder="توضیحات و ملاحظات مخصوص این شاگرد"></textarea>
-<button type="button" onclick="saveDietConfiguration()">💾 ذخیره نوع رژیم</button>
+<div style="border-top:1px solid #c7a34b;margin-top:14px;padding-top:10px">
+<h3>🍽️ برنامه غذایی متناسب با این رژیم</h3>
+<p class="muted">وعده‌ها را اضافه کن، ساعت هر وعده را تعیین کن و غذاها را از بانک غذای اپ همراه مقدارشان انتخاب کن. این برنامه با نوع رژیم انتخاب‌شده ذخیره می‌شود.</p>
+<div id="dietMealPlanner"></div>
+<div class="close-row"><button type="button" class="secondary" onclick="addDietMeal()">➕ افزودن وعده غذایی</button></div>
+<p id="dietMealPlannerStatus" class="muted"></p>
+</div>
+<button type="button" onclick="saveDietConfiguration()">💾 ذخیره رژیم و برنامه غذایی</button>
 <p id="dietStatus" class="muted" aria-live="polite"></p>
 </div>
 <div id="dietFastingWrap" class="hide">
@@ -5845,102 +5852,68 @@ active('workoutMuscleFilters',wm);active('libraryMuscleFilters',lm);if(document.
  const $diet=id=>document.getElementById(id);
  const isCoach=()=>authProfile?.role==="coach";
  const selectedTrainee=()=>currentClient&&currentClient.id;
- function parseDiet(row){
-  const raw=String(row&&row.description||"");
-  if(!raw.startsWith(PREFIX))return null;
-  try{return JSON.parse(raw.slice(PREFIX.length));}catch(e){return null;}
- }
- function selectedDietName(){
-  const select=$diet("dietTypeSelect");
-  if(!select)return "";
-  return select.value==="custom"?String($diet("dietCustomName")?.value||"").trim():String(select.value||"").trim();
- }
+ let dietMealRows=[];
+ function parseDiet(row){const raw=String(row&&row.description||"");if(!raw.startsWith(PREFIX))return null;try{return JSON.parse(raw.slice(PREFIX.length));}catch(e){return null;}}
+ function selectedDietName(){const select=$diet("dietTypeSelect");if(!select)return "";return select.value==="custom"?String($diet("dietCustomName")?.value||"").trim():String(select.value||"").trim();}
  function syncDietTypeUI(){
   const fasting=$diet("dietTypeSelect")?.value==="fasting";
   $diet("dietFastingWrap")?.classList.toggle("hide",!fasting);
   if($diet("dietNonFastingWrap"))$diet("dietNonFastingWrap").classList.toggle("hide",fasting);
   $diet("dietCustomWrap")?.classList.toggle("hide",$diet("dietTypeSelect")?.value!=="custom");
-  if(fasting){
-   if(typeof window.configureFastingModel==="function")window.configureFastingModel();
-   if(typeof window.loadFastingSummary==="function")window.loadFastingSummary();
-  }
+  if(fasting){if(typeof window.configureFastingModel==="function")window.configureFastingModel();if(typeof window.loadFastingSummary==="function")window.loadFastingSummary();}
+  else if($diet("dietMealPlanner")){if(!dietMealRows.length)dietMealRows=[{name:"صبحانه",time:"08:00",items:[{foodIndex:"",amount:100}]},{name:"ناهار",time:"13:00",items:[{foodIndex:"",amount:100}]},{name:"شام",time:"19:00",items:[{foodIndex:"",amount:100}]}];renderDietMealPlanner();}
  }
+ function renderDietMealPlanner(){
+  const host=$diet("dietMealPlanner");if(!host)return;
+  if(!dietMealRows.length)dietMealRows=[{name:"صبحانه",time:"08:00",items:[{foodIndex:"",amount:100}]}];
+  if(!Array.isArray(foods)||!foods.length){host.innerHTML='<p class="warning-text">بانک غذا هنوز بارگذاری نشده است؛ کمی بعد این بخش را دوباره باز کن.</p>';return;}
+  const opts='<option value="">انتخاب غذا…</option>'+foods.map((f,i)=>'<option value="'+i+'">'+esc(f[0])+'</option>').join("");
+  host.innerHTML=dietMealRows.map((meal,i)=>'<div class="card" style="padding:12px;margin:10px 0;border:1px solid #d8c9a5"><div class="grid2"><div><label>وعده '+(i+1)+' — عنوان</label><input maxlength="50" value="'+esc(meal.name||("وعده "+(i+1)))+'" onchange="setDietMealName('+i+',this.value)"></div><div><label>ساعت وعده</label><input type="time" value="'+esc(meal.time||"12:00")+'" onchange="setDietMealTime('+i+',this.value)"></div></div>'+meal.items.map((item,j)=>'<div class="grid2" style="margin-top:8px"><div><label>غذا</label><select onchange="setDietFood('+i+','+j+',this.value)">'+opts+'</select></div><div><label>مقدار (گرم)</label><input type="number" min="1" step="1" value="'+esc(item.amount||100)+'" onchange="setDietAmount('+i+','+j+',this.value)"></div></div><div class="close-row"><button type="button" class="secondary" onclick="removeDietFood('+i+','+j+')">حذف این غذا</button></div>').join("")+'<div class="close-row"><button type="button" class="secondary" onclick="addDietFood('+i+')">➕ افزودن غذا به این وعده</button> <button type="button" class="secondary" onclick="removeDietMeal('+i+')">حذف وعده</button></div></div>').join("");
+  let k=0;dietMealRows.forEach(meal=>meal.items.forEach(item=>{const select=host.querySelectorAll("select")[k++];if(select)select.value=item.foodIndex===""?"":String(item.foodIndex);}));
+  const status=$diet("dietMealPlannerStatus");if(status)status.textContent="غذاها از بانک غذا انتخاب می‌شوند؛ مقدارها بر حسب گرم است. برای هر وعده می‌توانی چند غذا ثبت کنی.";
+ }
+ function dietMealPlanText(){return dietMealRows.map((meal,i)=>{const parts=(meal.items||[]).filter(x=>x.foodIndex!==""&&foods[Number(x.foodIndex)]).map(x=>foods[Number(x.foodIndex)][0]+" ("+(Number(x.amount)||0)+" گرم)");return parts.length?(meal.name||("وعده "+(i+1)))+" — ساعت "+(meal.time||"تعیین‌نشده")+": "+parts.join("، "):"";}).filter(Boolean).join("\n");}
+ window.addDietMeal=function(){if(dietMealRows.length>=8){alert("حداکثر ۸ وعده غذایی می‌توانی اضافه کنی.");return;}dietMealRows.push({name:"وعده "+(dietMealRows.length+1),time:"12:00",items:[{foodIndex:"",amount:100}]});renderDietMealPlanner();};
+ window.removeDietMeal=function(i){dietMealRows.splice(i,1);renderDietMealPlanner();};
+ window.setDietMealName=function(i,v){if(dietMealRows[i])dietMealRows[i].name=String(v||"").slice(0,50);};
+ window.setDietMealTime=function(i,v){if(dietMealRows[i])dietMealRows[i].time=v;};
+ window.addDietFood=function(i){if(!dietMealRows[i])return;if(dietMealRows[i].items.length>=12){alert("برای هر وعده حداکثر ۱۲ قلم غذا مجاز است.");return;}dietMealRows[i].items.push({foodIndex:"",amount:100});renderDietMealPlanner();};
+ window.removeDietFood=function(i,j){if(!dietMealRows[i])return;dietMealRows[i].items.splice(j,1);if(!dietMealRows[i].items.length)dietMealRows[i].items.push({foodIndex:"",amount:100});renderDietMealPlanner();};
+ window.setDietFood=function(i,j,v){if(dietMealRows[i]?.items[j]){dietMealRows[i].items[j].foodIndex=v===""?"":String(Number(v));renderDietMealPlanner();}};
+ window.setDietAmount=function(i,j,v){if(dietMealRows[i]?.items[j])dietMealRows[i].items[j].amount=Math.max(1,Number(v)||1);};
  $diet("dietTypeSelect")?.addEventListener("change",syncDietTypeUI);
  window.saveDietConfiguration=async function(){
   if(!isCoach()){alert("تنظیم نوع رژیم فقط در دسترس مربی است.");return;}
-  if($diet("dietTypeSelect")?.value==="fasting"){
-   syncDietTypeUI();
-   if(typeof window.saveFasting==="function")return window.saveFasting();
-   alert("بخش ذخیره فستینگ بارگذاری نشده است؛ صفحه را تازه‌سازی کن.");
-   return;
-  }
-  const trainee=selectedTrainee();
-  if(!trainee){alert("ابتدا یک شاگرد را انتخاب کن.");return;}
-  const type=selectedDietName();
-  if(!type){alert("نوع رژیم را انتخاب کن و در صورت انتخاب «سایر»، نام آن را بنویس.");return;}
-  const data={type,settings:String($diet("dietSettings")?.value||"").trim(),notes:String($diet("dietNotes")?.value||"").trim(),updatedAt:new Date().toISOString()};
-  const status=$diet("dietStatus");
-  if(status)status.textContent="در حال ذخیره رژیم برای این شاگرد…";
-  try{
-   await sbWrite("/fasting_logs","POST",{trainee_id:trainee,fasting_date:today(),description:PREFIX+JSON.stringify(data)});
-   if(status)status.textContent="✅ نوع رژیم برای این شاگرد ذخیره شد.";
-   await window.loadDietSummary();
-  }catch(error){
-   console.error("saveDietConfiguration",error);
-   if(status)status.textContent="❌ ذخیره رژیم انجام نشد: "+(error?.message||String(error));
-   alert("ذخیره نوع رژیم انجام نشد.\n"+(error?.message||String(error)));
-  }
+  if($diet("dietTypeSelect")?.value==="fasting"){syncDietTypeUI();if(typeof window.saveFasting==="function")return window.saveFasting();alert("بخش ذخیره فستینگ بارگذاری نشده است؛ صفحه را تازه‌سازی کن.");return;}
+  const trainee=selectedTrainee();if(!trainee){alert("ابتدا یک شاگرد را انتخاب کن.");return;}
+  const type=selectedDietName();if(!type){alert("نوع رژیم را انتخاب کن و در صورت انتخاب «سایر»، نام آن را بنویس.");return;}
+  const data={type,settings:String($diet("dietSettings")?.value||"").trim(),notes:String($diet("dietNotes")?.value||"").trim(),meals:dietMealRows,mealPlanText:dietMealPlanText(),updatedAt:new Date().toISOString()};
+  const status=$diet("dietStatus");if(status)status.textContent="در حال ذخیره رژیم و برنامه غذایی برای این شاگرد…";
+  try{await sbWrite("/fasting_logs","POST",{trainee_id:trainee,fasting_date:today(),description:PREFIX+JSON.stringify(data)});if(status)status.textContent="✅ رژیم و برنامه غذایی برای این شاگرد ذخیره شد.";await window.loadDietSummary();}
+  catch(error){console.error("saveDietConfiguration",error);if(status)status.textContent="❌ ذخیره رژیم انجام نشد: "+(error?.message||String(error));alert("ذخیره رژیم انجام نشد.\n"+(error?.message||String(error)));}
  };
  window.loadDietSummary=async function(){
-  const box=$diet("dietSavedSummary");
-  if(!box)return;
-  const trainee=selectedTrainee();
-  if(!trainee){box.textContent="ابتدا شاگرد را انتخاب کن.";return;}
-  if(!isCoach()){box.textContent="نوع رژیم غذایی را مربی تعیین می‌کند.";return;}
+  const box=$diet("dietSavedSummary");if(!box)return;const trainee=selectedTrainee();
+  if(!trainee){box.textContent="ابتدا شاگرد را انتخاب کن.";return;}if(!isCoach()){box.textContent="نوع رژیم غذایی را مربی تعیین می‌کند.";return;}
   box.textContent="در حال بارگذاری رژیم ثبت‌شده…";
   try{
-   const rows=await sbGet("/fasting_logs?trainee_id=eq."+encodeURIComponent(trainee)+"&order=created_at.desc&limit=30");
-   if(!selectedTrainee()||String(selectedTrainee())!==String(trainee))return;
-   const row=(rows||[]).find(x=>parseDiet(x));
-   const data=row&&parseDiet(row);
+   const rows=await sbGet("/fasting_logs?trainee_id=eq."+encodeURIComponent(trainee)+"&order=created_at.desc&limit=30");if(!selectedTrainee()||String(selectedTrainee())!==String(trainee))return;
+   const row=(rows||[]).find(x=>parseDiet(x)),data=row&&parseDiet(row);
    if(!data){
-    const fastingRows=(rows||[]).filter(x=>!String(x.description||"").startsWith(PREFIX));
-    const fastingRow=fastingRows.find(x=>String(x.description||"").includes("نوع ")&&!String(x.description||"").includes("رژیم‌غذایی::"));
-    if(fastingRow&&$diet("dietTypeSelect")){
-     $diet("dietTypeSelect").value="fasting";
-     syncDietTypeUI();
-     box.textContent="✅ برای این شاگرد فستینگ ثبت شده است؛ تنظیمات و برنامه غذایی را در همین بخش مشاهده کن.";
-     if(typeof window.loadFastingSummary==="function")window.loadFastingSummary();
-     return;
-    }
+    const fastingRows=(rows||[]).filter(x=>!String(x.description||"").startsWith(PREFIX)),fastingRow=fastingRows.find(x=>String(x.description||"").includes("نوع "));
+    if(fastingRow&&$diet("dietTypeSelect")){$diet("dietTypeSelect").value="fasting";syncDietTypeUI();box.textContent="✅ برای این شاگرد فستینگ ثبت شده است؛ تنظیمات و برنامه غذایی را در همین بخش مشاهده کن.";if(typeof window.loadFastingSummary==="function")window.loadFastingSummary();return;}
     box.textContent="هنوز رژیم غذایی برای این شاگرد ثبت نشده است.";return;
    }
-   box.textContent="✅ رژیم ثبت‌شده: "+data.type+
-    (data.settings?"\nتنظیمات: "+data.settings:"")+
-    (data.notes?"\nتوضیحات مربی: "+data.notes:"");
+   box.textContent="✅ رژیم ثبت‌شده: "+data.type+(data.settings?"\nتنظیمات: "+data.settings:"")+(data.mealPlanText?"\n\nبرنامه غذایی:\n"+data.mealPlanText:"")+(data.notes?"\nتوضیحات مربی: "+data.notes:"");
    const select=$diet("dietTypeSelect");
-   if(select){
-    const option=Array.from(select.options).find(o=>o.value===data.type||o.text===data.type);
-    if(option){select.value=option.value;}
-    else{select.value="custom";$diet("dietCustomWrap")?.classList.remove("hide");if($diet("dietCustomName"))$diet("dietCustomName").value=data.type;}
-    if($diet("dietSettings"))$diet("dietSettings").value=data.settings||"";
-    if($diet("dietNotes"))$diet("dietNotes").value=data.notes||"";
-    syncDietTypeUI();
+   if(select){const option=Array.from(select.options).find(o=>o.value===data.type||o.text===data.type);if(option)select.value=option.value;else{select.value="custom";$diet("dietCustomWrap")?.classList.remove("hide");if($diet("dietCustomName"))$diet("dietCustomName").value=data.type;}
+    if($diet("dietSettings"))$diet("dietSettings").value=data.settings||"";if($diet("dietNotes"))$diet("dietNotes").value=data.notes||"";
+    dietMealRows=Array.isArray(data.meals)?data.meals:[];syncDietTypeUI();if(select.value!=="fasting")renderDietMealPlanner();
    }
-  }catch(error){
-   console.error("loadDietSummary",error);
-   box.textContent="نمایش رژیم ثبت‌شده ممکن نیست؛ اتصال پایگاه داده را بررسی کن.";
-  }
+  }catch(error){console.error("loadDietSummary",error);box.textContent="نمایش رژیم ثبت‌شده ممکن نیست؛ اتصال پایگاه داده را بررسی کن.";}
  };
  const originalSelectClient=window.selectClient;
- if(typeof originalSelectClient==="function"){
-  window.selectClient=function(){
-   const result=originalSelectClient.apply(this,arguments);
-   window.loadDietSummary();
-   if(typeof window.loadFastingSummary==="function")window.loadFastingSummary();
-   return result;
-  };
- }
+ if(typeof originalSelectClient==="function"){window.selectClient=function(){const result=originalSelectClient.apply(this,arguments);window.loadDietSummary();if(typeof window.loadFastingSummary==="function")window.loadFastingSummary();return result;};}
  window.syncDietTypeUI=syncDietTypeUI;
 })();
 </script>
