@@ -2222,6 +2222,13 @@ window.loadDashboard = loadDashboard;
 
   window.finishLogin=async function(user){
     try{
+      // Phone/password authentication is the trainee flow. Do not require a separate
+      // profiles row first: setupTraineeAuth securely matches the authenticated phone
+      // to the trainee record and checks approval/duplicate links.
+      if(user && user.phone){
+        await setupTraineeAuth(user);
+        return;
+      }
       let {data:rows,error}=await AUTH_SUPABASE.from('profiles').select('*').eq('id',user.id);if(error)throw error;
       if(!rows?.length){
         const refreshed=await AUTH_SUPABASE.auth.refreshSession();
