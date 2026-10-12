@@ -5911,14 +5911,20 @@ active('workoutMuscleFilters',wm);active('libraryMuscleFilters',lm);if(document.
 <script id="FITNESS_AUTO_WORKOUT_BANK_BY_TRAINEE_V1">
 (function(){
  const $=id=>document.getElementById(id);
- function isHomeTrainee(){
-   const t=window.currentClient;
-   const value=String(t?.training_type||t?.training_location||t?.training_mode||"").toLowerCase();
+ // currentClient is declared with top-level let in the main app script, so it is
+ // not exposed as window.currentClient. Read that shared lexical binding first.
+ function selectedTrainee(){
+   try{if(typeof currentClient!=="undefined"&&currentClient)return currentClient;}catch(e){}
+   return window.currentClient||null;
+ }
+ function isHomeTrainee(trainee){
+   const t=trainee||selectedTrainee();
+   const value=String(t?.training_type||t?.training_location||t?.training_mode||"").toLowerCase().trim();
    return value==="home"||value.includes("منزل")||value.includes("خانه");
  }
  window.syncWorkoutBankForSelectedTrainee=function(){
-   const trainee=window.currentClient||null;
-   const home=!!(trainee&&isHomeTrainee());
+   const trainee=selectedTrainee();
+   const home=!!(trainee&&isHomeTrainee(trainee));
    const controls=document.querySelector("#workout .workout-bank-mode");
    const hint=$("workoutBankHint");
    const title=$("coachExerciseBankTitle");
@@ -5952,6 +5958,24 @@ active('workoutMuscleFilters',wm);active('libraryMuscleFilters',lm);if(document.
      return result;
    };
    window.__autoWorkoutBankShowWrapped=true;
+ }
+ // Re-sync after either profile form saves, so the next workout view reflects the saved value.
+ for(const name of ["saveProfile","saveProfileExtras"]){
+   const original=window[name];
+   const flag="__autoWorkoutBankWrapped_"+name;
+   if(typeof original==="function"&&!window[flag]){
+     window[name]=async function(){
+       const traineeId=selectedTrainee()?.id;
+       const result=await original.apply(this,arguments);
+       if(typeof window.loadClients==="function")await window.loadClients();
+       if(traineeId!=null&&typeof currentClient!=="undefined"){
+         try{currentClient=(typeof clients!=="undefined"?clients:[]).find(x=>String(x.id)===String(traineeId))||currentClient;}catch(e){}
+       }
+       window.syncWorkoutBankForSelectedTrainee();
+       return result;
+     };
+     window[flag]=true;
+   }
  }
  if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",()=>window.syncWorkoutBankForSelectedTrainee(),{once:true});
  else window.syncWorkoutBankForSelectedTrainee();
