@@ -5614,7 +5614,7 @@ active('workoutMuscleFilters',wm);active('libraryMuscleFilters',lm);if(document.
    const coachId=session&&session.user&&session.user.id;
    if(!coachId)throw new Error('نشست مربی پیدا نشد؛ یک‌بار خارج شوید و دوباره وارد شوید.');
    if(typeof window.sbWrite!=='function')throw new Error('تابع ارتباط با پایگاه داده بارگذاری نشده است.');
-   const traineeForBank=(typeof currentClient!=='undefined'&&currentClient)?currentClient:window.currentClient; const trainingModeForBank=String(traineeForBank?.training_type||traineeForBank?.training_location||traineeForBank?.training_mode||'').toLowerCase().trim(); const homeMode=trainingModeForBank==='home'||trainingModeForBank.includes('منزل')||trainingModeForBank.includes('خانه'); const rawEquipment=String(equipment||'').trim(); const taggedEquipment=(homeMode?'منزل: ':'باشگاه: ')+(rawEquipment.replace(/^(منزل|باشگاه)\s*:\s*/i,'')||(homeMode?'وزن بدن':'تجهیزات باشگاه')); const request=window.sbWrite('/trainer_exercises','POST',{name,target_muscle:cat,category:cat,equipment:taggedEquipment,level,coach_note:note||null,is_favorite:false,coach_user_id:coachId});
+   const homeMode=!!(document.getElementById('workoutBankHome')?.classList.contains('active')||window.homeWorkoutMode===true); const rawEquipment=String(equipment||'').trim(); const taggedEquipment=(homeMode?'منزل: ':'باشگاه: ')+(rawEquipment.replace(/^(منزل|باشگاه)\s*:\s*/i,'')||(homeMode?'وزن بدن':'تجهیزات باشگاه')); const request=window.sbWrite('/trainer_exercises','POST',{name,target_muscle:cat,category:cat,equipment:taggedEquipment,level,coach_note:note||null,is_favorite:false,coach_user_id:coachId});
    const timeout=new Promise((_,reject)=>{timer=setTimeout(()=>reject(new Error('پاسخ سرور طی ۲۰ ثانیه نرسید. قبل از ثبت دوباره، بانک حرکات را تازه کنید.')),20000);});
    const rows=await Promise.race([request,timeout]);
    if(!Array.isArray(rows)||!rows.length||!rows[0].id)throw new Error('سرور ثبت حرکت را تأیید نکرد؛ فهرست بانک را تازه کنید و بررسی کنید که حرکت ثبت شده نباشد.');
@@ -6208,27 +6208,21 @@ active('workoutMuscleFilters',wm);active('libraryMuscleFilters',lm);if(document.
   const previousSave=window.saveLibraryExercise;
   if(typeof previousSave!=="function"||window.__homeExerciseSaveClassifierInstalled)return;
   window.saveLibraryExercise=async function(){
-    const trainee=(typeof currentClient!=="undefined"&&currentClient)?currentClient:window.currentClient;
-    const mode=String(trainee?.training_type||trainee?.training_location||trainee?.training_mode||"").toLowerCase().trim();
-    const home=mode==="home"||mode.includes("منزل")||mode.includes("خانه");
     const equipment=document.getElementById("libEquipment");
     const originalEquipment=equipment?String(equipment.value||"").trim():"";
-    if(home&&equipment&&!originalEquipment.startsWith("منزل:")){
-      equipment.value="منزل: "+(originalEquipment||"بدون تجهیزات");
-    }
+    const home=!!(document.getElementById("workoutBankHome")?.classList.contains("active")||window.homeWorkoutMode===true);
+    const cleanEquipment=originalEquipment.replace(/^(منزل|باشگاه)\s*:\s*/i,"").trim();
+    if(equipment)equipment.value=(home?"منزل: ":"باشگاه: ")+(cleanEquipment||(home?"وزن بدن":"تجهیزات باشگاه"));
     try{
       await previousSave.apply(this,arguments);
     }finally{
       const nameInput=document.getElementById("libName");
-      // Save handler clears the name only after the database insert succeeds.
       if(nameInput&&nameInput.value.trim()&&equipment)equipment.value=originalEquipment;
-      if(home){
-        try{
-          if(typeof window.refreshCoachHomeNames==="function")await window.refreshCoachHomeNames();
-          if(typeof window.loadLibraryExercises==="function")await window.loadLibraryExercises();
-          if(typeof window.renderWorkoutExerciseOptions==="function")window.renderWorkoutExerciseOptions();
-        }catch(refreshError){console.warn("تازه‌سازی بانک منزل پس از ذخیره انجام نشد",refreshError);}
-      }
+      try{
+        if(typeof window.refreshCoachHomeNames==="function")await window.refreshCoachHomeNames();
+        if(typeof window.loadLibraryExercises==="function")await window.loadLibraryExercises();
+        if(typeof window.renderWorkoutExerciseOptions==="function")window.renderWorkoutExerciseOptions();
+      }catch(refreshError){console.warn("تازه‌سازی بانک حرکات پس از ذخیره انجام نشد",refreshError);}
     }
   };
   window.__homeExerciseSaveClassifierInstalled=true;
