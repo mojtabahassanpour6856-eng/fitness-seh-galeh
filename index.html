@@ -1851,8 +1851,20 @@ loadExercises();
   }
 
   function moveActivityPanelToStudentDashboard(){
-    const panel=$id('activityDailyPanel'),dashboard=$id('traineeDashboard');
-    if(panel&&dashboard&&panel.parentElement!==dashboard)dashboard.appendChild(panel);
+    const panel=$id('activityDailyPanel');
+    if(!panel)return;
+    let section=$id('activitySection');
+    if(!section){
+      section=document.createElement('section');
+      section.id='activitySection';
+      section.className='section';
+      section.style.display='';
+      const page=document.querySelector('.page');
+      const nav=document.querySelector('.nav');
+      if(page&&nav)page.insertBefore(section,nav.nextSibling);
+      else document.body.appendChild(section);
+    }
+    if(panel.parentElement!==section)section.appendChild(panel);
   }
   function buildDashboard(){
     const existing=$id('traineeDashboard');
@@ -1910,7 +1922,8 @@ loadExercises();
     if(section==='analysis')buildTraineeAnalysisSection();
     if(section==='challenges'&&!$id('challenges'))buildChallengesSection();
     if(section==='client'){addProfileBasicFields();if(currentClient)loadProfileBasic();}
-    showSection(section==='analysis'?'traineeAnalysis':section,btn||null);
+    showSection(section==='analysis'?'traineeAnalysis':section==='activity'?'activitySection':section,btn||null);
+    if(section==='activity'){if(typeof loadActivityToday==='function')loadActivityToday();if(typeof previewActivityCalories==='function')previewActivityCalories();return;}
     if(section==='analysis'){loadTraineeAnalysis();return;}
     if(section==='workout'&&currentClient)loadWorkoutForClient();
     if(section==='meal'&&currentClient)loadNutritionForClient();
