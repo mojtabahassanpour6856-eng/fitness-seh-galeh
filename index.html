@@ -2701,7 +2701,7 @@ const plans=workoutResult.data||[], nutrition=nutritionResult.data||[];
   if(sessionResult.error)throw sessionResult.error;
   const coachId=sessionResult.data&&sessionResult.data.session&&sessionResult.data.session.user&&sessionResult.data.session.user.id;
   if(!coachId)throw new Error('نشست مربی پیدا نشد؛ یک‌بار خارج شوید و دوباره وارد شوید.');
-  const homeMode=!!(typeof currentClient!=='undefined'&&currentClient&&currentClient.training_type==='home');
+  const traineeForBank=(typeof currentClient!=='undefined'&&currentClient)?currentClient:window.currentClient; const trainingModeForBank=String(traineeForBank?.training_type||traineeForBank?.training_location||traineeForBank?.training_mode||'').toLowerCase().trim(); const homeMode=trainingModeForBank==='home'||trainingModeForBank.includes('منزل')||trainingModeForBank.includes('خانه');
   const taggedEquipment=(homeMode?'منزل: ':'باشگاه: ')+(equipment|| (homeMode?'وزن بدن':'تجهیزات باشگاه'));
   const request=window.sbWrite('/trainer_exercises','POST',{name:name,target_muscle:cat,category:cat,equipment:taggedEquipment,level:level,coach_note:note||null,is_favorite:false,coach_user_id:coachId});
   const rows=await Promise.race([request,timeout]);
@@ -4703,7 +4703,7 @@ window.loadLibraryExercises=async function(){
    return 'سایر';
   }
   const selected=window.__fitnessSelectedLibraryMuscle||'';
-  const homeMode=!!(typeof currentClient!=='undefined'&&currentClient&&currentClient.training_type==='home');
+  const traineeForBank=(typeof currentClient!=='undefined'&&currentClient)?currentClient:window.currentClient; const trainingModeForBank=String(traineeForBank?.training_type||traineeForBank?.training_location||traineeForBank?.training_mode||'').toLowerCase().trim(); const homeMode=trainingModeForBank==='home'||trainingModeForBank.includes('منزل')||trainingModeForBank.includes('خانه');
   const filtered=source.filter(x=>((homeMode?String(x.equipment||'').startsWith('منزل:'):!String(x.equipment||'').startsWith('منزل:')))&&(!selected||categoryOf(x)===selected)&&(lm==='همه حرکات'||selected||(lm==='علاقه‌مندی'?!!x.is_favorite:match(x,lm)))&&(!q||n([x.name,x.category,x.target_muscle,x.equipment,x.level,x.goal,x.coach_note].join(' ')).includes(q)));
   const groups=new Map();cats.forEach(c=>groups.set(c,[]));
   filtered.forEach(x=>groups.get(categoryOf(x)).push(x));
