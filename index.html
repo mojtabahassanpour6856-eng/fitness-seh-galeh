@@ -4704,7 +4704,7 @@ window.loadLibraryExercises=async function(){
   }
   const selected=window.__fitnessSelectedLibraryMuscle||'';
   const traineeForBank=(typeof currentClient!=='undefined'&&currentClient)?currentClient:window.currentClient; const trainingModeForBank=String(traineeForBank?.training_type||traineeForBank?.training_location||traineeForBank?.training_mode||'').toLowerCase().trim(); const homeMode=trainingModeForBank==='home'||trainingModeForBank.includes('منزل')||trainingModeForBank.includes('خانه');
-  const filtered=source.filter(x=>((homeMode?(String(x.equipment||'').startsWith('منزل:')||!String(x.equipment||'').trim()):!String(x.equipment||'').startsWith('منزل:')))&&(!selected||categoryOf(x)===selected)&&(lm==='همه حرکات'||selected||(lm==='علاقه‌مندی'?!!x.is_favorite:match(x,lm)))&&(!q||n([x.name,x.category,x.target_muscle,x.equipment,x.level,x.goal,x.coach_note].join(' ')).includes(q)));
+  const filtered=source.filter(x=>((homeMode?String(x.equipment||'').trim().startsWith('منزل:'):!String(x.equipment||'').trim().startsWith('منزل:')))&&(!selected||categoryOf(x)===selected)&&(lm==='همه حرکات'||selected||(lm==='علاقه‌مندی'?!!x.is_favorite:match(x,lm)))&&(!q||n([x.name,x.category,x.target_muscle,x.equipment,x.level,x.goal,x.coach_note].join(' ')).includes(q)));
   const groups=new Map();cats.forEach(c=>groups.set(c,[]));
   filtered.forEach(x=>groups.get(categoryOf(x)).push(x));
   const search=document.getElementById('libSearch'),filters=document.getElementById('libraryMuscleFilters');
