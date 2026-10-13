@@ -4860,9 +4860,10 @@ body.workout-output .empty-cell{display:none!important}
               setImportant(el,'break-inside','avoid');
             });
             doc.querySelectorAll('.session-exercises').forEach(el=>{
+              setImportant(el,'display','block');
               setImportant(el,'height','auto');setImportant(el,'min-height','0');
               setImportant(el,'max-height','none');setImportant(el,'flex','0 0 auto');
-              setImportant(el,'overflow','visible');setImportant(el,'justify-content','flex-start');
+              setImportant(el,'overflow','visible');setImportant(el,'justify-content','normal');
             });
             doc.querySelectorAll('.exercise-card,.exercise-unit').forEach(el=>{
               setImportant(el,'height','auto');setImportant(el,'min-height','0');
@@ -4933,7 +4934,18 @@ body.workout-output .empty-cell{display:none!important}
               const date=clonedDoc.querySelector('.plan-date');if(date){date.style.fontSize='16px';date.style.fontWeight='900';date.style.padding='6px 9px';date.style.borderWidth='2px';}
               const grid=clonedDoc.querySelector('.session-grid');if(grid){grid.style.setProperty('display','grid','important');grid.style.setProperty('grid-template-columns','repeat(2,minmax(0,1fr))','important');grid.style.setProperty('grid-template-rows','none','important');grid.style.setProperty('grid-auto-flow','row','important');grid.style.setProperty('grid-auto-rows','auto','important');grid.style.setProperty('align-content','start','important');grid.style.setProperty('align-items','stretch','important');grid.style.setProperty('min-height','0','important');grid.style.setProperty('height','auto','important');grid.style.setProperty('max-height','none','important');grid.style.setProperty('flex','0 0 auto','important');grid.style.setProperty('overflow','visible','important');}
               clonedDoc.querySelectorAll('.session-cell').forEach(function(cell){cell.style.height='auto';cell.style.minHeight='0';cell.style.maxHeight='none';cell.style.overflow='visible';cell.style.breakInside='avoid';});
-              clonedDoc.querySelectorAll('.session-exercises').forEach(function(list){list.style.height='auto';list.style.minHeight='0';list.style.maxHeight='none';list.style.flex='0 0 auto';list.style.overflow='visible';list.style.justifyContent='flex-start';});
+              clonedDoc.querySelectorAll('.session-exercises').forEach(function(list){
+                /* Use natural block flow in the export. A flex column with space-evenly and
+                   a constrained grid row can hide earlier movements while leaving the last
+                   items visible, especially in the first session on mobile-sized source pages. */
+                list.style.setProperty('display','block','important');
+                list.style.setProperty('height','auto','important');
+                list.style.setProperty('min-height','0','important');
+                list.style.setProperty('max-height','none','important');
+                list.style.setProperty('flex','0 0 auto','important');
+                list.style.setProperty('overflow','visible','important');
+                list.style.setProperty('justify-content','normal','important');
+              });
               clonedDoc.querySelectorAll('.exercise-card,.exercise-unit').forEach(function(card){card.style.height='auto';card.style.minHeight='0';card.style.maxHeight='none';card.style.flex='0 0 auto';card.style.overflow='visible';card.style.breakInside='avoid';});
               const notes=clonedDoc.querySelector('.system-notes');if(notes){notes.style.marginTop='auto';notes.style.display='flex';notes.style.flexDirection='row';notes.style.flexWrap='wrap';notes.style.alignItems='center';notes.style.gap='6px 14px';notes.style.fontSize='14px';notes.style.lineHeight='1.7';notes.style.padding='9px 11px';Array.from(notes.children).forEach(function(item){item.style.display='inline-block';item.style.flex='0 1 auto';item.style.margin='0';});}
             }
