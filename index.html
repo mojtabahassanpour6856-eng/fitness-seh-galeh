@@ -8238,3 +8238,66 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
   },true);
 })();
 </script>
+
+<!-- SEH_TRAINEE_DASHBOARD_PLAN_IMAGE_BUTTONS_V1 -->
+<script id="SEH_TRAINEE_DASHBOARD_PLAN_IMAGE_BUTTONS_V1">
+(function(){
+  'use strict';
+  function isTrainee(){
+    try { if(typeof authProfile!=='undefined'&&authProfile&&authProfile.role==='trainee')return true; } catch(e){}
+    return !!(window.authProfile&&window.authProfile.role==='trainee');
+  }
+  function addButtons(){
+    if(!isTrainee())return;
+    var dashboard=document.getElementById('traineeDashboard');
+    if(!dashboard)return;
+    [
+      {span:'dashMeal',id:'sehDashMealImageBtn',kind:'meal',label:'🖼️ دانلود عکس برنامه غذایی'},
+      {span:'dashWorkout',id:'sehDashWorkoutImageBtn',kind:'workout',label:'🖼️ دانلود عکس برنامه تمرینی'}
+    ].forEach(function(item){
+      var marker=document.getElementById(item.span);
+      var card=marker&&marker.closest('.v4-card');
+      if(!card||card.querySelector('#'+item.id))return;
+      var button=document.createElement('button');
+      button.type='button';button.id=item.id;button.className='secondary';
+      button.textContent=item.label;
+      button.style.cssText='display:block;width:100%;margin:9px 0 0;padding:8px 6px;border-radius:9px;font: bold 11px Tahoma,Arial,sans-serif;line-height:1.5;white-space:normal;';
+      button.addEventListener('click',function(e){
+        e.preventDefault();e.stopPropagation();
+        var client=null;
+        try{client=typeof currentClient!=='undefined'?currentClient:null;}catch(_){}
+        if(!client&&window.currentClient)client=window.currentClient;
+        if(!client||!client.id){alert('ابتدا وارد حساب شاگرد شوید و برنامه را باز کنید.');return;}
+        if(typeof window.sharePlan==='function'){
+          window.sharePlan(item.kind);
+          var old=card.querySelector('.seh-dash-export-status');
+          if(old)old.remove();
+          var status=document.createElement('div');status.className='muted seh-dash-export-status';
+          status.style.cssText='font-size:10px;line-height:1.7;margin-top:6px;';
+          status.textContent='برگه خروجی باز می‌شود؛ در آن گزینه «دانلود عکس PNG» را بزنید.';
+          button.insertAdjacentElement('afterend',status);
+        }else if(typeof window.printPlan==='function'){
+          window.printPlan(item.kind);
+        }else{
+          alert('ابزار دانلود عکس هنوز بارگذاری نشده است؛ صفحه را تازه‌سازی کنید.');
+        }
+      });
+      card.appendChild(button);
+    });
+  }
+  function init(){
+    addButtons();
+    if(document.body&&typeof MutationObserver==='function'){
+      var observer=new MutationObserver(function(){addButtons();});
+      observer.observe(document.body,{childList:true,subtree:true});
+    }
+    [250,700,1400,2500,4000].forEach(function(ms){setTimeout(addButtons,ms);});
+    var oldFinish=window.finishLogin;
+    if(typeof oldFinish==='function'&&!window.__sehDashPlanImageLoginHook){
+      window.__sehDashPlanImageLoginHook=true;
+      window.finishLogin=async function(){var result=await oldFinish.apply(this,arguments);addButtons();setTimeout(addButtons,350);return result;};
+    }
+  }
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init,{once:true});else init();
+})();
+</script>
