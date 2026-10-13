@@ -7457,7 +7457,8 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
   `;
   if(!$('seh-multi-account-style'))document.head.appendChild(css);
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',install);else install();
-  const obs=new MutationObserver(install);obs.observe(document.body,{childList:true,subtree:true,attributes:true,attributeFilter:['style','class']});
+  const authScreen=$('authScreen');
+  if(authScreen){const authObs=new MutationObserver(()=>{if(authScreen.style.display!=='none')render();});authObs.observe(authScreen,{attributes:true,attributeFilter:['style','class']});}
   setTimeout(install,400);setTimeout(install,1200);
 })();
 </script>
