@@ -4087,9 +4087,9 @@ window.toggleExerciseFavorite=async function(id,value){try{await sbWrite(`/train
 
 <style id="jalali-picker-style">
 .jalali-field-wrap{position:relative;min-width:0}
-.jalali-field-wrap>input{padding-left:43px!important}
-.jalali-open-btn{position:absolute;left:5px;top:50%;transform:translateY(-50%);width:32px;height:32px;padding:0;margin:0;border:1px solid #34495c;border-radius:8px;background:#162434;color:#ffbd16;font-size:17px;line-height:1}
-.jalali-pop{position:fixed;z-index:10050;width:min(310px,calc(100vw - 24px));background:#0d1722;color:#fff;border:1px solid #3a5267;border-radius:14px;padding:11px;box-shadow:0 14px 45px rgba(0,0,0,.55);direction:rtl}
+.jalali-field-wrap>input{padding-left:43px!important;position:relative;z-index:1}
+.jalali-open-btn{position:absolute;left:5px;top:50%;transform:translateY(-50%);z-index:3;width:32px;height:32px;padding:0;margin:0;border:1px solid #34495c;border-radius:8px;background:#162434;color:#ffbd16;font-size:17px;line-height:1;cursor:pointer;touch-action:manipulation;pointer-events:auto}
+.jalali-pop{position:fixed!important;z-index:2147483000!important;width:min(310px,calc(100vw - 24px));pointer-events:auto;background:#0d1722;color:#fff;border:1px solid #3a5267;border-radius:14px;padding:11px;box-shadow:0 14px 45px rgba(0,0,0,.55);direction:rtl}
 .jalali-pop-head{display:grid;grid-template-columns:38px 1fr 38px;align-items:center;gap:5px}
 .jalali-pop button{margin:0;min-height:34px;padding:6px;background:#162434;color:#fff;border:1px solid #34495c;font-size:12px}
 .jalali-pop .jp-month{font-weight:bold;text-align:center;font-size:13px}
