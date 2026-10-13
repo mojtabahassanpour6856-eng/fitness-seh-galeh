@@ -7079,7 +7079,19 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
  }
  function openMembership(attempt){
   attempt=attempt||0;
-  if(document.getElementById(overlayId))return;
+  var existingOverlay=document.getElementById(overlayId);
+  if(existingOverlay){
+   existingOverlay.style.display='flex';
+   existingOverlay.style.visibility='visible';
+   existingOverlay.style.pointerEvents='auto';
+   existingOverlay.style.zIndex='2147483000';
+   var existingDialog=existingOverlay.querySelector('[role="dialog"]');
+   if(existingDialog){existingDialog.style.display='block';existingDialog.style.visibility='visible';}
+   var existingContent=document.getElementById(contentId);
+   var existingCard=existingContent&&(existingContent.querySelector('#traineeMembershipStatus')?.closest('.card')||existingContent.querySelector('.card'));
+   if(existingCard){existingCard.hidden=false;existingCard.classList.remove('hide');existingCard.style.display='block';}
+   return;
+  }
   if(typeof window.ensureTraineeMembershipCard==='function')window.ensureTraineeMembershipCard();
   var card=findMembershipCard();
   if(!card){
