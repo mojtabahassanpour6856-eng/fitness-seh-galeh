@@ -7069,6 +7069,9 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
   var overlay=document.getElementById(overlayId),content=document.getElementById(contentId),placeholder=document.getElementById(placeholderId);
   var card=content&&(content.querySelector('#traineeMembershipStatus')?.closest('.card')||content.querySelector('.card'));
   if(card&&placeholder&&placeholder.parentNode)placeholder.parentNode.insertBefore(card,placeholder);
+  var receiptBox=document.getElementById('coachReceiptReview');
+  var clientRoot=document.getElementById('client');
+  if(receiptBox&&clientRoot&&receiptBox.parentElement!==clientRoot)clientRoot.appendChild(receiptBox);
   if(placeholder)placeholder.remove();
   if(overlay)overlay.remove();
   if(card){card.style.removeProperty('width');card.style.removeProperty('box-sizing');}
@@ -7117,6 +7120,14 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
   card.style.removeProperty('display');card.style.removeProperty('visibility');card.style.width='100%';card.style.boxSizing='border-box';
   document.body.appendChild(overlay);
   if(typeof window.ensureTraineeMembershipCard==='function')window.ensureTraineeMembershipCard();
+  // Coach receipts must be shown inside the membership dialog, not left behind in the hidden client section.
+  if(typeof isTrainee==='function'&&!isTrainee()&&typeof window.loadCoachReceipts==='function'){
+   Promise.resolve(window.loadCoachReceipts()).then(function(){
+    var receiptBox=document.getElementById('coachReceiptReview');
+    var modalContent=document.getElementById(contentId);
+    if(receiptBox&&modalContent&&document.getElementById(overlayId))modalContent.appendChild(receiptBox);
+   }).catch(function(err){console.warn('فیش‌های شاگرد در کارت عضویت بارگذاری نشدند.',err);});
+  }
  }
  window.dashOpen=function(section){
   if(section==='membership'){openMembership(0);return;}
