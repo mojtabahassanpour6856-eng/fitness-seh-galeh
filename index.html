@@ -8377,16 +8377,30 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
 </script>
 
 
-<!-- SEH_RESTORE_PREMIUM_PLAN_OUTPUT_ROUTE_V1 -->
-<script id="SEH_RESTORE_PREMIUM_PLAN_OUTPUT_ROUTE_V1">
+<!-- SEH_RESTORE_PREMIUM_PLAN_OUTPUT_ROUTE_V2 -->
+<script id="SEH_RESTORE_PREMIUM_PLAN_OUTPUT_ROUTE_V2">
 (function(){
   'use strict';
-  var routed=function(kind){
-    var type=kind==='meal'?'meal':'workout';
-    if(typeof window.sharePlan==='function') return window.sharePlan(type);
-    alert('خروجی برنامه بارگذاری نشده است؛ صفحه را تازه‌سازی کنید و دوباره تلاش کنید.');
+  var previousPrint = window.printPlan;
+  var routed = function(kind){
+    var type = kind === 'meal' ? 'meal' : 'workout';
+    if (typeof window.sharePlan === 'function') {
+      return window.sharePlan(type);
+    }
+    /* If the newest exporter did not initialize, preserve the app's earlier print handler
+       instead of stopping with a misleading refresh-only alert. */
+    if (typeof previousPrint === 'function' && previousPrint !== routed) {
+      try { return previousPrint.call(this, type); }
+      catch (error) { console.error('Previous plan output handler failed:', error); }
+    }
+    console.error('Plan exporter unavailable at click time.', {
+      readyState: document.readyState,
+      sharePlanType: typeof window.sharePlan,
+      printPlanType: typeof previousPrint
+    });
+    alert('برگه خروجی برنامه آماده نشد. لطفاً از حساب شاگرد خارج و دوباره وارد شوید؛ اگر مشکل ماند، تصویر پیام را بفرستید.');
   };
-  routed.__sehPremiumPlanOutput=true;
-  window.printPlan=routed;
+  routed.__sehPremiumPlanOutput = true;
+  window.printPlan = routed;
 })();
 </script>
