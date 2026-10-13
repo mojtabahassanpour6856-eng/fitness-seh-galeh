@@ -290,6 +290,7 @@ body.library-room .library-inline-add button{position:relative!important;z-index
     <h1>باشگاه فیتنس سه‌قلعه</h1>
     <p>سامانه مربی مجتبی | برنامه غذایی، تمرینی و پیگیری شاگردان</p>
   </div>
+  <button type="button" id="sehAddTraineeRequestOpen" class="seh-add-trainee-open" style="display:none" aria-label="افزودن شاگرد" onclick="window.openAddTraineeRequest()">👤＋ افزودن شاگرد</button>
 </div>
 
 <div class="nav">
@@ -7357,3 +7358,87 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
   setTimeout(ensureProfileFields,1200);
 })();
 </script>
+
+
+<style id="seh-add-trainee-request-style">
+.hero{position:relative}
+.seh-add-trainee-open{position:absolute;left:12px;top:12px;border:1px solid #c99b32!important;background:linear-gradient(135deg,#fff5cf,#d9ad48)!important;color:#30230a!important;border-radius:12px!important;padding:9px 12px!important;font-weight:800;box-shadow:0 3px 10px #0002;z-index:5}
+#sehAddTraineeModal{position:fixed;inset:0;z-index:10050;background:#050a11c9;display:none;align-items:center;justify-content:center;padding:14px}
+#sehAddTraineeModal .seh-add-trainee-panel{width:min(460px,100%);max-height:90vh;overflow:auto;background:#0d1722;color:#f4f6f8;border:1px solid #b58a35;border-radius:18px;padding:18px;box-shadow:0 18px 55px #0008}
+#sehAddTraineeModal h3{margin:0 0 8px;color:#f2cf73}
+#sehAddTraineeModal label{display:block;margin:10px 0 5px;font-size:13px}
+#sehAddTraineeModal input,#sehAddTraineeModal select{box-sizing:border-box;width:100%;padding:11px;border:1px solid #415064;border-radius:9px;background:#111e2b;color:#fff;font:inherit}
+#sehAddTraineeModal .seh-modal-actions{display:flex;gap:8px;margin-top:14px}
+#sehAddTraineeModal .seh-modal-actions button{flex:1}
+#sehAddTraineeModal .seh-modal-message{font-size:13px;line-height:1.8;margin-top:10px;white-space:pre-wrap}
+@media(max-width:520px){.hero{padding-top:58px!important}.seh-add-trainee-open{top:8px;left:8px;font-size:12px;padding:7px 9px!important}}
+</style>
+<div id="sehAddTraineeModal" role="dialog" aria-modal="true" aria-labelledby="sehAddTraineeTitle">
+  <div class="seh-add-trainee-panel">
+    <h3 id="sehAddTraineeTitle">👤＋ درخواست ثبت‌نام شاگرد جدید</h3>
+    <p style="font-size:12px;color:#bdc7d2;line-height:1.8">اطلاعات فرد جدید را وارد کنید. درخواست برای تأیید مربی ارسال می‌شود؛ ارسال درخواست به‌معنای فعال‌شدن حساب نیست.</p>
+    <form id="sehAddTraineeForm">
+      <label for="sehAddTraineeName">نام و نام خانوادگی</label><input id="sehAddTraineeName" autocomplete="name" required maxlength="120" placeholder="نام کامل">
+      <label for="sehAddTraineePhone">شماره موبایل فرد جدید</label><input id="sehAddTraineePhone" type="tel" inputmode="tel" autocomplete="off" required placeholder="09121234567">
+      <label for="sehAddTraineeSessions">تعداد جلسات تمرین در هفته</label><select id="sehAddTraineeSessions" required><option value="">انتخاب کنید</option><option value="1">۱ جلسه</option><option value="2">۲ جلسه</option><option value="3">۳ جلسه</option><option value="4">۴ جلسه</option><option value="5">۵ جلسه</option><option value="6">۶ جلسه</option><option value="7">۷ جلسه</option></select>
+      <label for="sehAddTraineeDays">روزهای تمرین</label><input id="sehAddTraineeDays" required maxlength="160" placeholder="مثلاً شنبه، دوشنبه، چهارشنبه">
+      <label for="sehAddTraineeTime">ساعت تمرین</label><input id="sehAddTraineeTime" type="time" required>
+      <div id="sehAddTraineeMessage" class="seh-modal-message" role="status"></div>
+      <div class="seh-modal-actions"><button type="submit" id="sehAddTraineeSubmit">📨 ارسال درخواست</button><button type="button" onclick="window.closeAddTraineeRequest()">بستن</button></div>
+    </form>
+  </div>
+</div>
+<script id="seh-add-trainee-request-js">
+(function(){
+  const byId=id=>document.getElementById(id);
+  const modal=byId('sehAddTraineeModal'), openBtn=byId('sehAddTraineeRequestOpen'), form=byId('sehAddTraineeForm');
+  if(!modal||!openBtn||!form||window.__sehAddTraineeRequestInstalled)return;
+  window.__sehAddTraineeRequestInstalled=true;
+  function updateVisibility(){
+    const text=(byId('authUserText')?.textContent||'').trim();
+    const loggedIn=document.body.classList.contains('locked')===false && text.length>0;
+    const isTrainee=/شاگرد/.test(text);
+    openBtn.style.display=(loggedIn&&isTrainee)?'inline-flex':'none';
+    if(!isTrainee&&modal.style.display==='flex')modal.style.display='none';
+  }
+  window.openAddTraineeRequest=function(){
+    updateVisibility();
+    if(openBtn.style.display==='none'){alert('برای ارسال درخواست جدید ابتدا با حساب شاگرد وارد شوید.');return;}
+    modal.style.display='flex';byId('sehAddTraineeMessage').textContent='';
+    byId('sehAddTraineeName').focus();
+  };
+  window.closeAddTraineeRequest=function(){modal.style.display='none';};
+  modal.addEventListener('click',e=>{if(e.target===modal)window.closeAddTraineeRequest();});
+  document.addEventListener('keydown',e=>{if(e.key==='Escape'&&modal.style.display==='flex')window.closeAddTraineeRequest();});
+  const observer=new MutationObserver(updateVisibility);
+  observer.observe(byId('authUserText'),{childList:true,subtree:true,characterData:true});
+  observer.observe(document.body,{attributes:true,attributeFilter:['class']});
+  updateVisibility();
+  form.addEventListener('submit',async function(e){
+    e.preventDefault();
+    const msg=byId('sehAddTraineeMessage'),btn=byId('sehAddTraineeSubmit');
+    const name=byId('sehAddTraineeName').value.trim();
+    let phone=byId('sehAddTraineePhone').value.trim().replace(/[\s()-]/g,'').replace(/[۰-۹]/g,d=>String('۰۱۲۳۴۵۶۷۸۹'.indexOf(d)));
+    if(/^09\d{9}$/.test(phone))phone='+98'+phone.slice(1);else if(/^989\d{9}$/.test(phone))phone='+'+phone;else if(/^00989\d{9}$/.test(phone))phone='+'+phone.slice(2);
+    const weekly_sessions=Number(byId('sehAddTraineeSessions').value);
+    const training_days=byId('sehAddTraineeDays').value.trim();
+    const training_time=byId('sehAddTraineeTime').value;
+    msg.style.color='#ffb7b7';msg.textContent='';
+    if(name.length<2){msg.textContent='نام و نام خانوادگی را درست وارد کنید.';return;}
+    if(!/^\+989\d{9}$/.test(phone)){msg.textContent='شماره موبایل معتبر نیست؛ مانند 09121234567 وارد کنید.';return;}
+    if(!Number.isInteger(weekly_sessions)||weekly_sessions<1||weekly_sessions>7||!training_days||!training_time){msg.textContent='همه اطلاعات را کامل کنید.';return;}
+    if(!window.AUTH_SUPABASE?.functions?.invoke){msg.textContent='ارتباط با سامانه آماده نیست. صفحه را تازه‌سازی و دوباره امتحان کنید.';return;}
+    btn.disabled=true;btn.textContent='⏳ در حال ارسال…';
+    try{
+      const {data,error}=await window.AUTH_SUPABASE.functions.invoke('trainee-registration-request',{body:{full_name:name,phone,weekly_sessions,training_days,training_time}});
+      if(error)throw error;if(data?.error)throw new Error(data.error);
+      msg.style.color='#9be2b0';msg.textContent='✅ درخواست ثبت شد و برای تأیید مربی ارسال شد.';
+      form.reset();
+    }catch(err){
+      console.error('add trainee request failed',err);
+      msg.style.color='#ffb7b7';msg.textContent='ارسال درخواست انجام نشد: '+(err?.message||String(err));
+    }finally{btn.disabled=false;btn.textContent='📨 ارسال درخواست';}
+  });
+})();
+</script>
+
