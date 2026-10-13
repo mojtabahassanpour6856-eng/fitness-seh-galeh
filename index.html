@@ -4834,17 +4834,55 @@ body.workout-output .empty-cell{display:none!important}
           if(actions){actionsDisplay=actions.style.display;actions.style.display='none';}
           button.textContent='در حال ساخت تصویر PNG…';
           const target=doc.body;
-          /* Wait for the exported document to finish layout before capturing the actual PNG. */
+          /* Apply the export layout to the SOURCE document before measuring it.
+             Previously these rules existed only in onclone, so html2canvas measured the
+             compressed original grid first and then captured the expanded clone into a
+             canvas sized for the old layout. That clipped session one despite its rows existing. */
           if(doc.fonts && doc.fonts.ready) await doc.fonts.ready;
+          const setImportant=(el,prop,value)=>{if(el)el.style.setProperty(prop,value,'important');};
+          if(kind!=='meal'){
+            setImportant(target,'height','auto');
+            setImportant(target,'min-height','0');
+            setImportant(target,'max-height','none');
+            setImportant(target,'overflow','visible');
+            const sourceGrid=doc.querySelector('.session-grid');
+            setImportant(sourceGrid,'grid-template-columns','repeat(2,minmax(0,1fr))');
+            setImportant(sourceGrid,'grid-template-rows','none');
+            setImportant(sourceGrid,'grid-auto-rows','auto');
+            setImportant(sourceGrid,'height','auto');
+            setImportant(sourceGrid,'min-height','0');
+            setImportant(sourceGrid,'max-height','none');
+            setImportant(sourceGrid,'flex','0 0 auto');
+            setImportant(sourceGrid,'overflow','visible');
+            doc.querySelectorAll('.session-cell').forEach(el=>{
+              setImportant(el,'height','auto');setImportant(el,'min-height','0');
+              setImportant(el,'max-height','none');setImportant(el,'overflow','visible');
+              setImportant(el,'break-inside','avoid');
+            });
+            doc.querySelectorAll('.session-exercises').forEach(el=>{
+              setImportant(el,'height','auto');setImportant(el,'min-height','0');
+              setImportant(el,'max-height','none');setImportant(el,'flex','0 0 auto');
+              setImportant(el,'overflow','visible');setImportant(el,'justify-content','flex-start');
+            });
+            doc.querySelectorAll('.exercise-card,.exercise-unit').forEach(el=>{
+              setImportant(el,'height','auto');setImportant(el,'min-height','0');
+              setImportant(el,'max-height','none');setImportant(el,'flex','0 0 auto');
+              setImportant(el,'overflow','visible');setImportant(el,'break-inside','avoid');
+            });
+          }
+          /* Wait for the expanded source layout to settle, then measure the FULL content height. */
           await new Promise(resolve=>popup.requestAnimationFrame(()=>popup.requestAnimationFrame(resolve)));
           const captureWidth=Math.max(900,Math.ceil(target.getBoundingClientRect().width),target.scrollWidth,doc.documentElement.scrollWidth);
-          /* Do not freeze the PNG canvas height before cloned styles/layout are applied:
-             workout sessions with many exercises can grow taller during capture, and a stale
-             height clips the bottom of session one (or its last exercise) from the exported image. */
+          const captureHeight=Math.max(
+            Math.ceil(target.getBoundingClientRect().height),target.scrollHeight,target.offsetHeight,
+            doc.documentElement.scrollHeight,doc.documentElement.offsetHeight
+          );
           const canvas=await popup.html2canvas(target,{
             scale:2, backgroundColor:'#ffffff', useCORS:true, logging:false,
             width:captureWidth,
+            height:captureHeight,
             windowWidth:captureWidth,
+            windowHeight:captureHeight,
             scrollX:0,scrollY:0,
             onclone:function(clonedDoc){
               const clonedBody=clonedDoc.body;
