@@ -7185,6 +7185,22 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
  }
  window.dashOpen=function(section){
   if(section==='membership'){openMembership(0);return;}
+  if(section==='client'){
+   var result=typeof oldDash==='function'?oldDash.apply(this,arguments):undefined;
+   var openProfile=function(){
+    var profile=document.getElementById('client');
+    if(profile){
+     if(typeof window.showSection==='function')window.showSection('client',null);
+     profile.hidden=false;profile.classList.remove('hide');profile.style.setProperty('display','block','important');profile.style.setProperty('visibility','visible','important');
+     if(typeof window.addProfileBasicFields==='function')window.addProfileBasicFields();
+     if(typeof window.loadProfileBasic==='function')window.loadProfileBasic();
+     if(typeof window.applyFeatureUI==='function')window.applyFeatureUI();
+     profile.scrollIntoView({behavior:'smooth',block:'start'});
+    }
+   };
+   Promise.resolve(result).then(function(){setTimeout(openProfile,60);});
+   return result;
+  }
   return typeof oldDash==='function'?oldDash.apply(this,arguments):undefined;
  };
  window.closeTraineeMembershipCard=closeMembership;
