@@ -405,6 +405,21 @@ body.library-room .library-inline-add button{position:relative!important;z-index
 </div>
 <button onclick="addClient()">ذخیره شاگرد در دیتابیس</button>
 </div>
+
+<div class="card water-goal-inline" id="coachWaterGoalCard">
+  <h2>🎯 هدف آب ماهانه شاگرد</h2>
+  <p class="muted">شاگرد را از فهرست انتخاب کنید؛ سپس ماه شمسی و هدف روزانه آب را تعیین کنید. مثلاً ۳۰۰۰ میلی‌لیتر در روز.</p>
+  <div class="grid2">
+    <div><label for="coachWaterGoalMonth">ماه هدف (شمسی)</label><select id="coachWaterGoalMonth"></select></div>
+    <div><label for="coachWaterGoal">هدف روزانه (میلی‌لیتر)</label><input id="coachWaterGoal" type="number" min="1" step="100" placeholder="مثلاً 3000"></div>
+  </div>
+  <button type="button" class="secondary" onclick="saveWaterGoal()">💾 ذخیره هدف آب ماه</button>
+</div>
+<div class="card" id="coachWaterWeekCard">
+  <h2>📅 گزارش آب هفتگی شاگرد</h2>
+  <p id="coachWaterWeekMeta" class="muted">ابتدا شاگرد را انتخاب کنید.</p>
+  <div id="coachWaterWeek" class="muted">گزارش آب ثبت‌شده شاگرد در این بخش نمایش داده می‌شود.</div>
+</div>
 </section>
 
 <!-- CLIENT -->
