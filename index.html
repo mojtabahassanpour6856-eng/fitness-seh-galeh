@@ -871,9 +871,13 @@ async function loadFoods(){
   return;
  }
  foods=(Array.isArray(data)?data:[]).map(x=>[x.name,+x.calories||0,+x.protein||0,+x.carbs||0,+x.fat||0,x.id,x.category||""]);
+ // پس از بارگذاری بانک، همه انتخاب‌گرهای وعده غذایی را نیز تازه‌سازی کن.
  try{fillFoods();}catch(e){console.error("loadFoods: fillFoods render failed",e);}
+ try{fillMealFoodSelect();}catch(e){console.error("loadFoods: meal food selector render failed",e);}
  try{renderMealFoodBank();}catch(e){console.error("loadFoods: food bank render failed",e);}
-  try{renderFastingMealPlanner();}catch(e){console.error("loadFoods: fasting meal planner render failed",e);}
+ try{renderFastingMealPlanner();}catch(e){console.error("loadFoods: fasting meal planner render failed",e);}
+ // اگر فرم رژیم غذایی باز/فعال باشد، گزینه‌های آن را با بانک تازه‌شده دوباره بساز.
+ try{const dietType=$("dietTypeSelect");if(dietType)dietType.dispatchEvent(new Event("change",{bubbles:true}));}catch(e){console.error("loadFoods: diet planner refresh failed",e);}
 }
 function fillFoods(){
  // بخش قدیمی محاسبه‌گر جایگزین ممکن است در بعضی صفحات وجود نداشته باشد.
