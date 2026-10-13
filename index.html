@@ -5533,18 +5533,36 @@ active('workoutMuscleFilters',wm);active('libraryMuscleFilters',lm);if(document.
 
  async function loadCoachReceipts(){
   if(isTrainee()||!currentClient?.id)return;
-  const traineeId=currentClient.id;
-  const sec=$("client");if(!sec)return;let box=$("coachReceiptReview");if(!box){box=document.createElement("div");box.id="coachReceiptReview";box.className="card receipt-item";box.innerHTML='<h2>📥 فیش‌های واریزی شاگرد</h2><div id="coachReceiptList">در حال دریافت فیش‌ها…</div>';}if(box.parentElement!==sec)sec.appendChild(box);box.style.setProperty("display","block","important");box.style.setProperty("visibility","visible","important");box.style.setProperty("opacity","1","important");box.hidden=false;box.removeAttribute("aria-hidden");
+  const traineeId=String(currentClient.id);
+  const sec=$("client");if(!sec)return;
+  // Put submitted receipt history directly inside the coach's membership/tuition card.
+  const cards=[...sec.querySelectorAll(":scope > .card")];
+  const membershipCard=cards.find(c=>c.querySelector("#subStart")||c.querySelector("#subEnd")||c.querySelector("#subAmount"))
+    ||cards.find(c=>/عضویت باشگاه|عضویت و شهریه/.test(c.querySelector("h2")?.textContent||"")&&!c.querySelector("#traineeMembershipStatus"));
+  let box=$("coachReceiptReview");
+  if(!box){box=document.createElement("div");box.id="coachReceiptReview";box.className="receipt-item";box.innerHTML='<h3>📥 فیش واریزی شاگرد</h3><div id="coachReceiptList">در حال دریافت فیش‌ها…</div>';}
+  if(membershipCard&&box.parentElement!==membershipCard)membershipCard.appendChild(box);
+  else if(!membershipCard&&box.parentElement!==sec)sec.appendChild(box);
+  box.style.setProperty("display","block","important");box.style.setProperty("visibility","visible","important");box.style.setProperty("opacity","1","important");box.hidden=false;box.removeAttribute("aria-hidden");
+  const list=box.querySelector("#coachReceiptList");
+  if(list)list.textContent="در حال دریافت فیش‌ها…";
   try{
-   const rows=await sbGet("/trainee_payment_receipts?trainee_id=eq."+encodeURIComponent(traineeId)+"&select=*&order=created_at.desc");
-   if(!currentClient||String(currentClient.id)!==String(traineeId))return;
-   const items=await Promise.all(rows.map(async x=>{
+   const [rows,members,trainees]=await Promise.all([
+    sbGet("/trainee_payment_receipts?trainee_id=eq."+encodeURIComponent(traineeId)+"&select=*&order=created_at.desc"),
+    sbGet("/trainee_memberships?trainee_id=eq."+encodeURIComponent(traineeId)+"&select=start_date,end_date,amount,payment_status,status,created_at&order=created_at.desc&limit=1"),
+    sbGet("/trainees?id=eq."+encodeURIComponent(traineeId)+"&select=club_registration_date&limit=1")
+   ]);
+   if(!currentClient||String(currentClient.id)!==traineeId)return;
+   const m=members?.[0]||{},p=trainees?.[0]||{};
+   const status={pending:"در انتظار بررسی مربی",approved:"تأیید شده",rejected:"رد شده"};
+   let html='<div class="receipt-item"><b>تاریخ ثبت‌نام:</b> '+safe(fmtDate(p.club_registration_date)||"ثبت نشده")+'<br><b>شروع عضویت:</b> '+safe(fmtDate(m.start_date)||"ثبت نشده")+'<br><b>پایان عضویت:</b> '+safe(fmtDate(m.end_date)||"ثبت نشده")+'<br><b>مبلغ عضویت:</b> '+safe(m.amount==null?"—":Number(m.amount).toLocaleString("fa-IR")+" تومان")+'<br><b>وضعیت پرداخت:</b> '+safe(m.payment_status==="paid"?"پرداخت‌شده":m.payment_status==="pending"?"در انتظار پرداخت":m.payment_status==="unpaid"?"پرداخت‌نشده":m.status||"—")+'</div>';
+   const items=await Promise.all((rows||[]).map(async x=>{
     let url="";try{const z=await AUTH_SUPABASE.storage.from("payment-receipts").createSignedUrl(x.receipt_path,3600);url=z.data?.signedUrl||"";}catch(e){}
-    const status={pending:"در انتظار بررسی",approved:"تأیید شده",rejected:"رد شده"};
-    return '<div class="receipt-item"><b>'+safe(Number(x.amount||0).toLocaleString("fa-IR"))+' تومان</b> · '+safe(fmtDate(x.payment_date)||"—")+'<br>وضعیت: '+safe(status[x.review_status]||x.review_status)+'<br>'+safe(x.note||"")+(url?'<p><a target="_blank" rel="noopener" href="'+safe(url)+'">🔎 مشاهده فیش</a></p>':'<p class="muted">لینک فیش در دسترس نیست.</p>')+(x.review_status==="pending"?'<div class="actions"><button type="button" onclick="reviewPaymentReceipt(\''+safe(x.id)+'\',\'approved\')">✅ تأیید فیش و ثبت پرداخت</button><button type="button" class="secondary" onclick="reviewPaymentReceipt(\''+safe(x.id)+'\',\'rejected\')">رد فیش</button></div>':"")+'</div>';
+    return '<div class="receipt-item"><b>'+safe(Number(x.amount||0).toLocaleString("fa-IR"))+' تومان</b> · تاریخ واریز: '+safe(fmtDate(x.payment_date)||"—")+'<br><b>وضعیت فیش:</b> '+safe(status[x.review_status]||x.review_status||"—")+'<br>'+safe(x.note||"")+(url?'<p><a target="_blank" rel="noopener" href="'+safe(url)+'">🔎 مشاهده فیش ارسالی</a></p>':'<p class="muted">فایل فیش در دسترس نیست.</p>')+(x.review_status==="pending"?'<div class="actions"><button type="button" onclick="reviewPaymentReceipt(\''+safe(x.id)+'\',\'approved\')">✅ تأیید فیش و ثبت پرداخت</button><button type="button" class="secondary" onclick="reviewPaymentReceipt(\''+safe(x.id)+'\',\'rejected\')">رد فیش</button></div>':"")+'</div>';
    }));
-   $("coachReceiptList").innerHTML=items.join("")||'<p class="muted">فیشی ارسال نشده است.</p>';
-  }catch(e){$("coachReceiptList").textContent="دریافت فیش‌ها ناموفق بود: "+(e.message||String(e));}
+   html+='<h3>📑 سوابق فیش‌های ارسالی</h3>'+(items.length?items.join(""):'<p class="muted">برای این شاگرد فیشی ثبت نشده است.</p>');
+   const liveList=box.querySelector("#coachReceiptList");if(liveList)liveList.innerHTML=html;
+  }catch(e){console.error("loadCoachReceipts failed",e);const liveList=box.querySelector("#coachReceiptList");if(liveList)liveList.textContent="خطا در دریافت اطلاعات عضویت و فیش: "+(e.message||String(e));}
  }
  window.loadCoachReceipts=loadCoachReceipts;
  window.reviewPaymentReceipt=async function(id,decision){
