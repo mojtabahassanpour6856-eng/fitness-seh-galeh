@@ -7089,7 +7089,9 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
   if(card&&placeholder&&placeholder.parentNode)placeholder.parentNode.insertBefore(card,placeholder);
   var receiptBox=document.getElementById('coachReceiptReview');
   var clientRoot=document.getElementById('client');
-  if(receiptBox&&clientRoot&&receiptBox.parentElement!==clientRoot)clientRoot.appendChild(receiptBox);
+  // When the membership dialog closes, restore coach receipts into the membership card itself.
+  if(receiptBox&&card&&!(typeof isTrainee==='function'&&isTrainee())&&receiptBox.parentElement!==card)card.appendChild(receiptBox);
+  else if(receiptBox&&clientRoot&&receiptBox.parentElement!==clientRoot)clientRoot.appendChild(receiptBox);
   if(placeholder)placeholder.remove();
   if(overlay)overlay.remove();
   if(card){card.style.removeProperty('width');card.style.removeProperty('box-sizing');}
