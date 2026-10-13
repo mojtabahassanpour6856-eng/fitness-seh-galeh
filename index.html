@@ -7855,3 +7855,30 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
   else restoreAfterLogin();
 })();
 </script>
+
+
+<!-- FITNESS_TEMP_DISABLE_BROKEN_DEVICE_LINK_2026_10_13: Keep existing trainee records safe while phone-link login is repaired. -->
+<script id="FITNESS_TEMP_DISABLE_BROKEN_DEVICE_LINK_2026_10_13">
+(function(){
+  function applySafeDeviceRecoveryNotice(){
+    var linkButton=document.getElementById("sehDeviceLinkSubmit");
+    if(linkButton){
+      var block=linkButton.closest(".trainee-auth-block");
+      if(block && block.getAttribute("data-safe-device-notice")!=="1"){
+        block.setAttribute("data-safe-device-notice","1");
+        block.innerHTML='<h3>📱 ورود با گوشی جدید</h3><p class="muted" style="line-height:1.9">برای حفظ برنامه‌ها و سوابق قبلی، با گوشی جدید حساب تازه نسازید و درخواست عضویت تکراری نفرستید. اتصال امن گوشی جدید موقتاً غیرفعال است؛ برای دسترسی به همان پرونده، با مربی مجتبی هماهنگ کنید. اطلاعات حساب قبلی حذف نمی‌شود.</p>';
+      }
+    }
+    var panel=document.getElementById("deviceLinkRequestsPanel");
+    if(panel) panel.style.display="none";
+  }
+  if(document.readyState==="loading"){
+    document.addEventListener("DOMContentLoaded",applySafeDeviceRecoveryNotice);
+  }else{
+    applySafeDeviceRecoveryNotice();
+  }
+  setTimeout(applySafeDeviceRecoveryNotice,900);
+  setTimeout(applySafeDeviceRecoveryNotice,2200);
+})();
+</script>
+
