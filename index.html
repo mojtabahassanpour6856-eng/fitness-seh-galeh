@@ -1934,25 +1934,30 @@ loadExercises();
   }
 
   function addTraineeWorkoutExportPanel(){
-    /* Export actions belong inside the actual workout-program card only. */
     ['traineeWorkoutExportPanel','traineeWorkoutExportInWorkout','sehTraineeWorkoutExportInSection'].forEach(id=>{
       const old=$id(id);if(old)old.remove();
     });
     const section=$id('workout');
     if(!section)return;
-    const card=Array.from(section.children).find(el=>el.classList&&el.classList.contains('card')&&el.querySelector('#workoutTitle'));
+    const trainee=typeof isTrainee==='function'&&isTrainee();
+    /* For trainees, place export controls in the visible card that actually contains the rendered workout list,
+       not in the coach-only plan editor form. */
+    const card=trainee
+      ? (document.getElementById('workoutList')?.closest('.card'))
+      : Array.from(section.children).find(el=>el.classList&&el.classList.contains('card')&&el.querySelector('#workoutTitle'));
     if(!card)return;
-    if(card.querySelector('#sehWorkoutSectionExport'))return;
-    const box=document.createElement('div');
+    let box=card.querySelector('#sehWorkoutSectionExport');
+    if(box)box.remove();
+    box=document.createElement('div');
     box.id='sehWorkoutSectionExport';
-    box.style.cssText='display:flex;flex-wrap:wrap;gap:8px;margin-top:12px;padding-top:10px;border-top:1px solid #26384a';
-    box.innerHTML='<button type="button" class="trainee-workout-pdf">📄 دانلود / چاپ PDF</button><button type="button" class="trainee-workout-image secondary">🖼️ دریافت عکس برنامه</button><p class="muted trainee-workout-export-status" style="width:100%;margin:0"></p>';
+    box.style.cssText='display:flex;flex-wrap:wrap;gap:8px;margin:12px 0 4px;padding-top:10px;border-top:1px solid #26384a';
+    box.innerHTML='<button type="button" class="trainee-workout-pdf">📄 دانلود / چاپ PDF برنامه</button><button type="button" class="trainee-workout-image secondary">🖼️ دانلود عکس برنامه</button><p class="muted trainee-workout-export-status" style="width:100%;margin:0"></p>';
     const run=isImage=>{
       if(!currentClient){alert('حساب شاگرد به پرونده متصل نیست. لطفاً دوباره وارد شوید.');return;}
       if(typeof window.sharePlan==='function'){
         window.sharePlan('workout');
         const status=box.querySelector('.trainee-workout-export-status');
-        if(isImage&&status)status.textContent='در پنجره خروجی، گزینه «دانلود عکس PNG» را انتخاب کن.';
+        if(isImage&&status)status.textContent='برگه خروجی باز شد؛ در همان برگه «دانلود عکس PNG» را بزنید.';
       }else if(typeof window.printPlan==='function')window.printPlan('workout');
       else alert('ابزار خروجی هنوز بارگذاری نشده است؛ صفحه را تازه‌سازی کنید.');
     };
