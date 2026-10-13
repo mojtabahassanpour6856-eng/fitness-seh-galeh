@@ -692,6 +692,27 @@ body.library-room .library-inline-add button{position:relative!important;z-index
 </div>
 
 <script>
+/* Early diagnostics for classic-script failures that can prevent the login initializer from loading. */
+window.__fitnessLastScriptError = null;
+window.addEventListener('error', function(e) {
+  window.__fitnessLastScriptError = {
+    type: 'script',
+    message: String(e.message || 'JavaScript error'),
+    source: String(e.filename || ''),
+    line: Number(e.lineno || 0),
+    column: Number(e.colno || 0)
+  };
+});
+window.addEventListener('unhandledrejection', function(e) {
+  const r = e.reason;
+  window.__fitnessLastScriptError = {
+    type: 'promise',
+    message: String(r && r.message || r || 'Unhandled promise rejection')
+  };
+});
+</script>
+
+<script>
 const SUPABASE_URL="https://qfakyudgidsumeuoqoot.supabase.co";
 const SUPABASE_KEY="sb_publishable_Z7-iwP8A1QQOlXpWIVtE2g_twXL-WNZ";
 let foods=[], clients=[], currentClient=null;
@@ -2474,6 +2495,20 @@ async function loadGoal(){
     <div id="coachLoginBox"><label>ایمیل</label><input id="loginEmail" type="email" autocomplete="username" placeholder="ایمیل مربی"><label>رمز عبور</label><input id="loginPassword" type="password" autocomplete="current-password" placeholder="رمز عبور"><button type="button" onclick="if(typeof window.loginApp==='function')window.loginApp();else {const e=document.getElementById('authError');e.textContent='کد ورود مربی بارگذاری نشده است؛ بخشی از اسکریپت ورود اجرا نشده. صفحه را تازه‌سازی کنید و اگر تکرار شد از صفحه عکس بفرستید.';e.style.display='block';}">🔐 ورود مربی</button></div>
     <div id="traineeLoginBox" class="hide"><div class="trainee-auth-block"><h3>🔐 ورود شاگرد</h3><label>شماره موبایل</label><input id="traineePhoneLogin" type="tel" inputmode="tel" autocomplete="username" placeholder="09121234567"><label>رمز عبور</label><input id="traineeLoginPassword" type="password" autocomplete="current-password" placeholder="رمز اولیه یا رمز شخصی"><button type="button" onclick="if(typeof window.loginTraineePhone==='function')window.loginTraineePhone();else {const e=document.getElementById('authError');e.textContent='کد ورود شاگرد بارگذاری نشده است؛ بخشی از اسکریپت ورود اجرا نشده. صفحه را تازه‌سازی کنید و اگر تکرار شد از صفحه عکس بفرستید.';e.style.display='block';}">ورود شاگرد</button><p class="muted">ورود پس از تأیید درخواست ثبت‌نام توسط مربی امکان‌پذیر است.</p></div></div>
     <div id="authError" class="auth-error"></div>`;
+  const diag=window.__fitnessLastScriptError;
+  if(diag){
+    const e=document.getElementById('authError');
+    if(e){
+      e.style.display='block';
+      e.textContent='خطای واقعی اجرای اسکریپت ورود: '+diag.message+(diag.source?' | فایل: '+diag.source.split('/').pop():'')+(diag.line?' | خط: '+diag.line:'')+(diag.column?' | ستون: '+diag.column:'')+'. این اطلاعات برای رفع علت اصلی ثبت شده است.';
+    }
+  } else {
+    const e=document.getElementById('authError');
+    if(e){
+      e.style.display='block';
+      e.textContent='بخش اصلی ورود اجرا نشده است، اما خطای جاوااسکریپت ثبت‌شده‌ای در دسترس نیست. وضعیت: ورود مربی='+typeof window.loginApp+'، ورود شاگرد='+typeof window.loginTraineePhone+'، اتصال Supabase='+typeof window.AUTH_SUPABASE+'، کتابخانه Supabase='+typeof window.supabase+'.';
+    }
+  }
   window.fallbackAuthMode=function(mode){
     const coach=document.getElementById('coachLoginBox'),trainee=document.getElementById('traineeLoginBox');
     if(coach)coach.classList.toggle('hide',mode!=='coach');
