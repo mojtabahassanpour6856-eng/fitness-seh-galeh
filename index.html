@@ -7651,7 +7651,7 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
       finally{if(btn){btn.disabled=false;btn.textContent="🔗 درخواست اتصال به حساب قبلی";}}
     });
     // Remove remembered trainee identity-only shortcuts: passwordless sessions are restored by Supabase itself.
-    try{const a=JSON.parse(localStorage.getItem("seh_saved_accounts_v1")||"[]");if(Array.isArray(a)){const keep=a.filter(x=>x.type!=="trainee");localStorage.setItem("seh_saved_accounts_v1",JSON.stringify(keep));}}catch(e){}
+    try{const a=JSON.parse(localStorage.getItem("seh_saved_accounts_v1")||"[]");if(Array.isArray(a)){const keep=a.filter(x=>x.type!=="trainee");localStorage.setItem("seh_saved_accounts_v1",JSON.stringify(keep));}const savedBox=$("sehSavedAccounts");if(savedBox){Array.from(savedBox.querySelectorAll(".seh-account-choice")).forEach(b=>{if((b.querySelector("small")?.textContent||"").startsWith("شاگرد"))b.remove();});if(!savedBox.querySelector(".seh-account-choice"))savedBox.style.display="none";}}catch(e){}
   }
   window.registerTraineePhone=async function(){
     const name=$("traineeRegName")?.value.trim()||"",phone=normPhone($("traineeRegPhone")?.value||"");
