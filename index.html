@@ -1934,27 +1934,46 @@ loadExercises();
   function addTraineeWorkoutExportPanel(){
     const dash=$id('traineeDashboard');
     if(!dash)return;
+    function wire(panel){
+      const pdf=panel.querySelector('.trainee-workout-pdf');
+      const img=panel.querySelector('.trainee-workout-image');
+      const status=panel.querySelector('.trainee-workout-export-status');
+      const run=(isImage)=>{
+        if(!currentClient){alert('حساب شاگرد به پرونده متصل نیست. لطفاً دوباره وارد شوید.');return;}
+        if(typeof window.sharePlan==='function'){
+          window.sharePlan('workout');
+          if(isImage&&status)status.textContent='در پنجره خروجی برنامه، گزینه «دانلود عکس PNG» را بزنید.';
+        }else if(typeof window.printPlan==='function'){
+          window.printPlan('workout');
+          if(isImage&&status)status.textContent='خروجی چاپ باز شد؛ برای دریافت عکس، ابزار خروجی تصویری در این نسخه در دسترس نیست.';
+        }else alert('ابزار خروجی هنوز بارگذاری نشده است؛ صفحه را تازه‌سازی کنید.');
+      };
+      if(pdf&&!pdf.dataset.wired){pdf.dataset.wired='1';pdf.addEventListener('click',()=>run(false));}
+      if(img&&!img.dataset.wired){img.dataset.wired='1';img.addEventListener('click',()=>run(true));}
+    }
     let panel=$id('traineeWorkoutExportPanel');
     if(!panel){
       panel=document.createElement('div');
       panel.id='traineeWorkoutExportPanel';
       panel.className='card';
       panel.style.marginTop='10px';
-      panel.innerHTML='<h3>📄 خروجی برنامه تمرینی من</h3><p class="muted">برنامه تمرینی کامل را مانند خروجی مربی ذخیره یا به‌صورت عکس دریافت کن.</p><div style="display:flex;flex-wrap:wrap;gap:8px"><button type="button" id="traineeWorkoutPdfExport">📄 دانلود / چاپ PDF</button><button type="button" id="traineeWorkoutImageExport">🖼️ دریافت عکس برنامه</button></div><p id="traineeWorkoutExportStatus" class="muted"></p>';
+      panel.innerHTML='<h3>📄 خروجی برنامه تمرینی من</h3><p class="muted">برنامه تمرینی را مانند قسمت مربی ذخیره یا به‌صورت عکس دریافت کن.</p><div style="display:flex;flex-wrap:wrap;gap:8px"><button type="button" class="trainee-workout-pdf">📄 دانلود / چاپ PDF</button><button type="button" class="trainee-workout-image">🖼️ دریافت عکس برنامه</button></div><p class="muted trainee-workout-export-status"></p>';
       const grid=dash.querySelector('.v4-dashboard');
       if(grid)grid.insertAdjacentElement('afterend',panel);else dash.appendChild(panel);
-      panel.querySelector('#traineeWorkoutPdfExport').addEventListener('click',function(){
-        if(!currentClient){alert('حساب شاگرد به پرونده متصل نیست. لطفاً دوباره وارد شوید.');return;}
-        if(typeof window.sharePlan!=='function'){alert('ابزار خروجی برنامه هنوز بارگذاری نشده است؛ صفحه را تازه‌سازی کنید.');return;}
-        window.sharePlan('workout');
-      });
-      panel.querySelector('#traineeWorkoutImageExport').addEventListener('click',function(){
-        if(!currentClient){alert('حساب شاگرد به پرونده متصل نیست. لطفاً دوباره وارد شوید.');return;}
-        if(typeof window.sharePlan!=='function'){alert('ابزار خروجی برنامه هنوز بارگذاری نشده است؛ صفحه را تازه‌سازی کنید.');return;}
-        window.sharePlan('workout');
-        const status=panel.querySelector('#traineeWorkoutExportStatus');
-        if(status)status.textContent='در صفحه خروجی برنامه، گزینه «دانلود عکس PNG» را بزنید؛ همچنین امکان چاپ یا ذخیره PDF وجود دارد.';
-      });
+    }
+    wire(panel);
+    const workout=$id('workout');
+    if(workout){
+      let wp=$id('traineeWorkoutExportInWorkout');
+      if(!wp){
+        wp=document.createElement('div');
+        wp.id='traineeWorkoutExportInWorkout';
+        wp.className='card';
+        wp.style.marginTop='10px';
+        wp.innerHTML='<h3>📤 خروجی برنامه تمرینی</h3><p class="muted">برای دریافت نسخه قابل چاپ یا عکس برنامه، یکی از گزینه‌ها را انتخاب کن.</p><div style="display:flex;flex-wrap:wrap;gap:8px"><button type="button" class="trainee-workout-pdf">📄 دانلود / چاپ PDF</button><button type="button" class="trainee-workout-image">🖼️ دریافت عکس برنامه</button></div><p class="muted trainee-workout-export-status"></p>';
+        workout.appendChild(wp);
+      }
+      wire(wp);
     }
   }
 
