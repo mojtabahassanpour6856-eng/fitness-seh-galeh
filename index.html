@@ -6979,5 +6979,62 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
   }
 })();
 </script>
+
+<script id="SEH_TRAINEE_MEAL_EXPORT_ALWAYS_V1">
+(function(){
+  'use strict';
+  function addMealExports(){
+    var section=document.getElementById('meal');
+    if(!section)return;
+    var traineeMode=(typeof authProfile!=='undefined'&&authProfile&&authProfile.role==='trainee')
+      ||(window.authProfile&&window.authProfile.role==='trainee');
+    var view=document.getElementById('mealStudentView');
+    var title=document.getElementById('studentMealTitle');
+    var card=traineeMode&&view&&title?title.closest('.card'):Array.from(section.children).find(function(el){
+      return el.classList&&el.classList.contains('card')&&el.querySelector('#mealTitle');
+    });
+    if(!card)return;
+    if(card.querySelector('#sehMealSectionExport'))return;
+    var box=document.createElement('div');
+    box.id='sehMealSectionExport';
+    box.style.cssText='display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-top:12px;padding-top:10px;border-top:1px solid #26384a';
+    box.innerHTML='<button type="button" id="sehMealExportPdf">📄 دانلود / چاپ PDF</button><button type="button" id="sehMealExportImage" class="secondary">🖼️ دریافت عکس برنامه غذایی</button><span id="sehMealExportMsg" class="muted" style="font-size:11px;width:100%"></span>';
+    function run(isImage){
+      if(!window.currentClient && !(typeof currentClient!=='undefined'&&currentClient)){
+        alert('ابتدا وارد حساب شاگرد شوید و برنامه غذایی را باز کنید.');return;
+      }
+      if(typeof window.sharePlan==='function'){
+        window.sharePlan('meal');
+        if(isImage){
+          var msg=document.getElementById('sehMealExportMsg');
+          if(msg)msg.textContent='در پنجره خروجی، گزینه «دانلود عکس PNG» را انتخاب کن.';
+        }
+      }else if(typeof window.printPlan==='function')window.printPlan('meal');
+      else alert('ابزار خروجی برنامه غذایی هنوز بارگذاری نشده است؛ صفحه را تازه‌سازی کنید.');
+    }
+    box.querySelector('#sehMealExportPdf').addEventListener('click',function(e){e.preventDefault();e.stopPropagation();run(false);});
+    box.querySelector('#sehMealExportImage').addEventListener('click',function(e){e.preventDefault();e.stopPropagation();run(true);});
+    card.appendChild(box);
+  }
+  function init(){
+    addMealExports();
+    if(document.body&&typeof MutationObserver==='function'){
+      var mo=new MutationObserver(function(){addMealExports();});
+      mo.observe(document.body,{childList:true,subtree:true,attributes:true,attributeFilter:['style','class','hidden']});
+    }
+    [250,700,1400,2500].forEach(function(ms){setTimeout(addMealExports,ms);});
+    document.addEventListener('click',function(e){
+      var target=e.target&&e.target.closest&&e.target.closest('button');
+      if(target&&(/برنامه غذایی|داشبورد|🏠/.test(target.textContent||'')))setTimeout(addMealExports,120);
+    },true);
+  }
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init,{once:true});else init();
+  var oldFinish=window.finishLogin;
+  if(typeof oldFinish==='function'&&!window.__sehMealExportLoginHook){
+    window.__sehMealExportLoginHook=true;
+    window.finishLogin=async function(){var result=await oldFinish.apply(this,arguments);addMealExports();return result;};
+  }
+})();
+</script>
 </body>
 </html>
