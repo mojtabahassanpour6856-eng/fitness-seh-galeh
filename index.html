@@ -2194,14 +2194,13 @@ window.loadDashboard = loadDashboard;
       <div id="authTabs" class="meal-tabs"><button class="active" id="authCoachTab" onclick="authMode('coach')">👨‍🏫 مربی</button><button id="authTraineeTab" onclick="authMode('trainee')">👤 شاگرد</button></div>
       <div id="coachLoginBox"><label>ایمیل</label><input id="loginEmail" type="email" autocomplete="username" placeholder="ایمیل مربی"><label>رمز عبور</label><input id="loginPassword" type="password" autocomplete="current-password" placeholder="رمز عبور"><button onclick="loginApp()">🔐 ورود مربی</button></div>
       <div id="traineeLoginBox" class="hide">
-        <div class="trainee-auth-block"><h3>🆕 درخواست ثبت‌نام شاگرد</h3><p class="muted">درخواست پس از تأیید مربی فعال می‌شود. رمز درخواست ثبت‌نام: <b>12345</b>؛ رمز ورود اولیه پس از تأیید: <b>123456</b>.</p>
+        <div class="trainee-auth-block"><h3>🆕 درخواست ثبت‌نام شاگرد</h3><p class="muted">ثبت درخواست بدون رمز انجام می‌شود و پس از بررسی مربی فعال خواهد شد. تا تکمیل مرحله ورود امن بدون رمز، ورود پس از تأیید همچنان با روش فعلی انجام می‌شود.</p>
           <label>نام و نام خانوادگی</label><input id="traineeRegName" autocomplete="name" placeholder="نام کامل">
           <label>شماره موبایل</label><input id="traineeRegPhone" type="tel" inputmode="tel" autocomplete="tel" placeholder="09121234567">
           <p class="muted">پس از تأیید و ورود، مشخصات بدنی، هدف، سابقه تمرین، محدودیت‌ها و نوع تمرین را در بخش «پروفایل من» تکمیل کنید.</p>
           <label>تعداد جلسات تمرین در هفته</label><select id="traineeRegSessions"><option value="">انتخاب کنید</option><option value="1">۱ جلسه</option><option value="2">۲ جلسه</option><option value="3">۳ جلسه</option><option value="4">۴ جلسه</option><option value="5">۵ جلسه</option><option value="6">۶ جلسه</option><option value="7">۷ جلسه</option></select>
           <label>روزهای تمرین</label><input id="traineeRegDays" placeholder="مثلاً شنبه، دوشنبه، چهارشنبه">
           <label>ساعت تمرین</label><input id="traineeRegTime" type="time">
-          <label>رمز همگانی درخواست</label><input id="traineeInitialPassword" type="password" inputmode="numeric" placeholder="12345" autocomplete="off">
           <button type="button" onclick="registerTraineePhone()">📨 ارسال درخواست ثبت‌نام</button>
         </div>
         <div class="trainee-auth-block"><h3>🔐 ورود شاگرد</h3><label>شماره موبایل</label><input id="traineePhoneLogin" type="tel" inputmode="tel" autocomplete="username" placeholder="09121234567"><label>رمز عبور</label><input id="traineeLoginPassword" type="password" autocomplete="current-password" placeholder="رمز اولیه یا رمز شخصی"><button type="button" onclick="loginTraineePhone()">ورود شاگرد</button><p class="muted">پس از تأیید درخواست، با رمز ورود اولیه 123456 وارد شوید و رمز شخصی خود را تعیین کنید.</p></div>
@@ -2223,7 +2222,6 @@ window.loadDashboard = loadDashboard;
   window.registerTraineePhone=async function(){
     const name=($id('traineeRegName')?.value||'').trim();
     const phone=phoneNorm($id('traineeRegPhone')?.value||'');
-    const initialPassword=$id('traineeInitialPassword')?.value||'';
     const weekly_sessions=Number($id('traineeRegSessions')?.value||0);
     const training_days=($id('traineeRegDays')?.value||'').trim();
     const training_time=$id('traineeRegTime')?.value||'';
@@ -2232,15 +2230,14 @@ window.loadDashboard = loadDashboard;
     if(!Number.isInteger(weekly_sessions)||weekly_sessions<1||weekly_sessions>7){showAuthError('تعداد جلسات تمرین در هفته را انتخاب کنید.');return;}
     if(!training_days){showAuthError('روزهای تمرین را وارد کنید.');return;}
     if(!training_time){showAuthError('ساعت تمرین را انتخاب کنید.');return;}
-    if(initialPassword!=='12345'){showAuthError('رمز همگانی نادرست است.');return;}
     const btn=$id('traineeLoginBox')?.querySelector('.trainee-auth-block button');
     if(btn){btn.disabled=true;btn.textContent='⏳ در حال ارسال درخواست…';}
     try{
-      const {data,error}=await AUTH_SUPABASE.functions.invoke('trainee-registration-request',{body:{full_name:name,phone,initial_password:initialPassword,weekly_sessions,training_days,training_time}});
+      const {data,error}=await AUTH_SUPABASE.functions.invoke('trainee-registration-request',{body:{full_name:name,phone,weekly_sessions,training_days,training_time}});
       if(error)throw error;
       if(data?.error)throw new Error(data.error);
-      showAuthError('✅ درخواست ثبت‌نام برای مربی ارسال شد. پس از تأیید مربی، با شماره موبایل و رمز ورود اولیه 123456 وارد شوید.');
-      $id('traineeRegName').value='';$id('traineeRegPhone').value='';$id('traineeRegSessions').value='';$id('traineeRegDays').value='';$id('traineeRegTime').value='';$id('traineeInitialPassword').value='';
+      showAuthError('✅ درخواست ثبت‌نام بدون رمز برای مربی ارسال شد. پس از تأیید مربی، فعلاً از روش ورود فعلی استفاده کنید.');
+      $id('traineeRegName').value='';$id('traineeRegPhone').value='';$id('traineeRegSessions').value='';$id('traineeRegDays').value='';$id('traineeRegTime').value='';
     }catch(e){console.error('trainee registration request failed',e);showAuthError('❌ ارسال درخواست انجام نشد. '+(e?.message||String(e)));}
     finally{if(btn){btn.disabled=false;btn.textContent='📨 ارسال درخواست ثبت‌نام';}}
   };
