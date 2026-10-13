@@ -6832,6 +6832,7 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
    var goals=Array.isArray(data.goals)?data.goals:[];
    var html=goals.length?'<b>هدف‌های انتخاب‌شده شاگرد:</b><div style="display:flex;flex-wrap:wrap;gap:7px;margin:9px 0">'+goals.map(function(g){return '<span style="display:inline-block;border:1px solid #c7a34b;border-radius:9px;padding:7px 10px">'+esc(g)+'</span>';}).join('')+'</div>':'<p>در جدول بازخورد و سابقه اهداف، هدف انتخاب‌شده‌ای برای این شاگرد پیدا نشد.</p>';
    if(data.custom)html+='<p><b>توضیحات شاگرد:</b> '+esc(data.custom)+'</p>';
+   if(parsed&&parsed.note)html+='<div style="margin-top:10px;padding:10px 12px;border:1px solid #c7a34b;border-radius:10px;background:rgba(255,189,22,.07)"><b>💬 پیام مربی:</b><p style="white-space:pre-wrap;margin:6px 0 0">'+esc(parsed.note)+'</p></div>';
    if(data.ratings.length){var rating=data.ratings.slice().sort(function(a,b){return String(b.month||'').localeCompare(String(a.month||''));})[0];html+='<p><b>رضایت ماهانه:</b> '+esc(rating.score)+'٪'+(rating.month?' · '+esc(rating.month):'')+'</p>';}
    if(feedback&&feedback.updated_at)html+='<p class="muted" style="font-size:11px">آخرین ثبت: '+esc(feedback.updated_at)+'</p>';
    preview.innerHTML=html;
