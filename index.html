@@ -6791,8 +6791,8 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
 </script>
 <script id="COACH_GOALS_DIRECT_DISPLAY_FIX">
 (function(){
- if(window.__coachGoalsDirectDisplayFixV2)return;
- window.__coachGoalsDirectDisplayFixV2=true;
+ if(window.__coachGoalsDirectDisplayFixV3)return;
+ window.__coachGoalsDirectDisplayFixV3=true;
  function esc(v){return String(v==null?'':v).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});}
  function coachSection(){return document.getElementById('client');}
  function ensurePanel(){
@@ -6853,6 +6853,31 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
  }
  document.addEventListener('click',function(e){var b=e.target&&e.target.closest&&e.target.closest('button');if(b&&/انتخاب شاگرد|ورود به پروفایل/.test(b.textContent||''))setTimeout(showGoals,350);});
  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',ensurePanel,{once:true});else ensurePanel();
+
+  var oldShowSection=window.showSection;
+  if(typeof oldShowSection==='function'&&!window.__coachGoalsShowSectionHook){
+   window.__coachGoalsShowSectionHook=true;
+   window.showSection=function(name){
+    var result=oldShowSection.apply(this,arguments);
+    if(name==='client'||name==='traineeDashboard')setTimeout(showGoals,250);
+    return result;
+   };
+  }
+  document.addEventListener('click',function(e){
+   var b=e.target&&e.target.closest&&e.target.closest('button');
+   if(b&&(/انتخاب شاگرد|ورود به پروفایل|ذخیره هدف/.test(b.textContent||'')))setTimeout(showGoals,350);
+   if(e.target&&e.target.closest&&e.target.closest('#goalBox'))setTimeout(showGoals,100);
+  });
+  document.addEventListener('visibilitychange',function(){if(!document.hidden)setTimeout(showGoals,150);});
+  function init(){
+   ensurePanel();setTimeout(showGoals,500);
+   var host=document.getElementById('client');
+   if(host&&typeof MutationObserver==='function'){
+    var mo=new MutationObserver(function(){if(host.offsetParent!==null)setTimeout(showGoals,120);});
+    mo.observe(host,{attributes:true,attributeFilter:['style','class','hidden']});
+   }
+  }
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init,{once:true});else init();
 })();
 </script>
 </body>
