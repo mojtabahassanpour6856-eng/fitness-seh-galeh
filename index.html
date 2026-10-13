@@ -7274,6 +7274,11 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
   function run(){
     if(traineeRole())ensureTraineeSchedule();
   }
+  const priorFinishLogin=window.finishLogin;
+  if(typeof priorFinishLogin==='function'&&!window.__traineeScheduleFinishPatch){
+    window.finishLogin=async function(){const result=await priorFinishLogin.apply(this,arguments);setTimeout(run,100);setTimeout(run,900);return result;};
+    window.__traineeScheduleFinishPatch=true;
+  }
   const oldShow=window.showSection;
   if(typeof oldShow==='function'&&!window.__traineeOwnSchedulePatch){
     window.showSection=function(id,btn){const result=oldShow.apply(this,arguments);setTimeout(run,50);return result;};
