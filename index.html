@@ -7217,3 +7217,74 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
 </script>
 </body>
 </html>
+
+
+<!-- TRAINEE SELF-SERVICE TRAINING SCHEDULE PATCH 2026-10-13 -->
+<script>
+(function(){
+  const dayNames=['شنبه','یکشنبه','دوشنبه','سه‌شنبه','چهارشنبه','پنجشنبه','جمعه'];
+  const $=id=>document.getElementById(id);
+  function traineeRole(){
+    try{return window.authProfile && window.authProfile.role==='trainee';}catch(e){return false;}
+  }
+  function ensureTraineeSchedule(){
+    const section=$('client');
+    if(!section||!traineeRole())return;
+    let card=$('traineeScheduleCard');
+    if(!card){
+      card=document.createElement('div');
+      card.className='card';
+      card.id='traineeScheduleCard';
+      card.style.cssText='display:block!important;visibility:visible!important;margin:12px 0;padding:14px;border:1px solid #b89443;border-radius:14px;';
+      card.innerHTML='<h2>🗓️ روزها و ساعت تمرین من</h2><p class="muted">روزهای حضور و ساعت مناسب خودت را انتخاب کن. اطلاعات ذخیره‌شده برای مربی نمایش داده می‌شود.</p><div id="traineeScheduleDayChoices" style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin:12px 0"></div><div style="margin:10px 0"><label for="traineeScheduleTime">ساعت تمرین</label><input id="traineeScheduleTime" type="time" style="width:100%;box-sizing:border-box"></div><button type="button" id="traineeScheduleSaveBtn" style="width:100%">💾 ذخیره روزها و ساعت تمرین</button><p id="traineeScheduleStatus" class="muted" aria-live="polite"></p>';
+      const choices=card.querySelector('#traineeScheduleDayChoices');
+      dayNames.forEach((day,i)=>{const label=document.createElement('label');label.style.cssText='display:flex;align-items:center;gap:7px;padding:8px;border:1px solid #526170;border-radius:9px;font-size:13px';label.innerHTML='<input type="checkbox" value="'+day+'" data-training-day="'+i+'"> '+day;choices.appendChild(label);});
+      card.querySelector('#traineeScheduleSaveBtn').addEventListener('click',save);
+      const profile=section.querySelector(':scope > .card');
+      if(profile&&profile.parentNode===section)profile.insertAdjacentElement('afterend',card);else section.prepend(card);
+    }
+    const c=window.currentClient;
+    if(c){
+      const selected=String(c.training_days||'').split(/[،,؛;]/).map(x=>x.trim()).filter(Boolean);
+      card.querySelectorAll('[data-training-day]').forEach(input=>input.checked=selected.includes(input.value));
+      $('traineeScheduleTime').value=String(c.training_time||'').slice(0,5);
+    }
+  }
+  async function save(){
+    const btn=$('traineeScheduleSaveBtn'),status=$('traineeScheduleStatus');
+    const c=window.currentClient;
+    if(!traineeRole()){if(status)status.textContent='این بخش فقط برای حساب شاگرد است.';return;}
+    if(!c||!c.id){if(status)status.textContent='پروفایل شاگرد پیدا نشد؛ از حساب خارج و دوباره وارد شوید.';return;}
+    const days=[...document.querySelectorAll('#traineeScheduleDayChoices input:checked')].map(x=>x.value);
+    const time=$('traineeScheduleTime')?.value||'';
+    if(!days.length){status.textContent='لطفاً دست‌کم یک روز تمرین انتخاب کنید.';return;}
+    if(!time){status.textContent='لطفاً ساعت تمرین را انتخاب کنید.';return;}
+    btn.disabled=true;btn.textContent='در حال ذخیره…';status.textContent='در حال ذخیره اطلاعات…';
+    try{
+      if(typeof window.sbWrite!=='function')throw new Error('اتصال ذخیره اطلاعات آماده نیست؛ صفحه را تازه‌سازی کنید.');
+      await window.sbWrite('/trainees?id=eq.'+encodeURIComponent(c.id),'PATCH',{training_days:days.join('، '),training_time:time});
+      c.training_days=days.join('، ');c.training_time=time;
+      if(Array.isArray(window.clients)){const found=window.clients.find(x=>String(x.id)===String(c.id));if(found){found.training_days=c.training_days;found.training_time=time;}}
+      status.textContent='✅ روزها و ساعت تمرین ذخیره شد؛ مربی می‌تواند آن را در پرونده شما ببیند.';
+    }catch(e){
+      console.error('trainee schedule save failed',e);
+      status.textContent='ذخیره انجام نشد: '+(e?.message||String(e));
+    }finally{btn.disabled=false;btn.textContent='💾 ذخیره روزها و ساعت تمرین';}
+  }
+  function run(){
+    if(traineeRole())ensureTraineeSchedule();
+  }
+  const oldShow=window.showSection;
+  if(typeof oldShow==='function'&&!window.__traineeOwnSchedulePatch){
+    window.showSection=function(id,btn){const result=oldShow.apply(this,arguments);setTimeout(run,50);return result;};
+    window.__traineeOwnSchedulePatch=true;
+  }
+  const oldSelect=window.selectClient;
+  if(typeof oldSelect==='function'&&!window.__traineeScheduleSelectPatch){
+    window.selectClient=async function(){const result=await oldSelect.apply(this,arguments);setTimeout(run,50);return result;};
+    window.__traineeScheduleSelectPatch=true;
+  }
+  document.addEventListener('DOMContentLoaded',()=>setTimeout(run,300));
+  setTimeout(run,700);setTimeout(run,1800);
+})();
+</script>
