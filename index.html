@@ -1932,49 +1932,31 @@ loadExercises();
   }
 
   function addTraineeWorkoutExportPanel(){
-    const dash=$id('traineeDashboard');
-    if(!dash)return;
-    function wire(panel){
-      const pdf=panel.querySelector('.trainee-workout-pdf');
-      const img=panel.querySelector('.trainee-workout-image');
-      const status=panel.querySelector('.trainee-workout-export-status');
-      const run=(isImage)=>{
-        if(!currentClient){alert('حساب شاگرد به پرونده متصل نیست. لطفاً دوباره وارد شوید.');return;}
-        if(typeof window.sharePlan==='function'){
-          window.sharePlan('workout');
-          if(isImage&&status)status.textContent='در پنجره خروجی برنامه، گزینه «دانلود عکس PNG» را بزنید.';
-        }else if(typeof window.printPlan==='function'){
-          window.printPlan('workout');
-          if(isImage&&status)status.textContent='خروجی چاپ باز شد؛ برای دریافت عکس، ابزار خروجی تصویری در این نسخه در دسترس نیست.';
-        }else alert('ابزار خروجی هنوز بارگذاری نشده است؛ صفحه را تازه‌سازی کنید.');
-      };
-      if(pdf&&!pdf.dataset.wired){pdf.dataset.wired='1';pdf.addEventListener('click',()=>run(false));}
-      if(img&&!img.dataset.wired){img.dataset.wired='1';img.addEventListener('click',()=>run(true));}
-    }
-    let panel=$id('traineeWorkoutExportPanel');
-    if(!panel){
-      panel=document.createElement('div');
-      panel.id='traineeWorkoutExportPanel';
-      panel.className='card';
-      panel.style.marginTop='10px';
-      panel.innerHTML='<h3>📄 خروجی برنامه تمرینی من</h3><p class="muted">برنامه تمرینی را مانند قسمت مربی ذخیره یا به‌صورت عکس دریافت کن.</p><div style="display:flex;flex-wrap:wrap;gap:8px"><button type="button" class="trainee-workout-pdf">📄 دانلود / چاپ PDF</button><button type="button" class="trainee-workout-image">🖼️ دریافت عکس برنامه</button></div><p class="muted trainee-workout-export-status"></p>';
-      const grid=dash.querySelector('.v4-dashboard');
-      if(grid)grid.insertAdjacentElement('afterend',panel);else dash.appendChild(panel);
-    }
-    wire(panel);
-    const workout=$id('workout');
-    if(workout){
-      let wp=$id('traineeWorkoutExportInWorkout');
-      if(!wp){
-        wp=document.createElement('div');
-        wp.id='traineeWorkoutExportInWorkout';
-        wp.className='card';
-        wp.style.marginTop='10px';
-        wp.innerHTML='<h3>📤 خروجی برنامه تمرینی</h3><p class="muted">برای دریافت نسخه قابل چاپ یا عکس برنامه، یکی از گزینه‌ها را انتخاب کن.</p><div style="display:flex;flex-wrap:wrap;gap:8px"><button type="button" class="trainee-workout-pdf">📄 دانلود / چاپ PDF</button><button type="button" class="trainee-workout-image">🖼️ دریافت عکس برنامه</button></div><p class="muted trainee-workout-export-status"></p>';
-        workout.appendChild(wp);
-      }
-      wire(wp);
-    }
+    /* Export actions belong inside the actual workout-program card only. */
+    ['traineeWorkoutExportPanel','traineeWorkoutExportInWorkout','sehTraineeWorkoutExportInSection'].forEach(id=>{
+      const old=$id(id);if(old)old.remove();
+    });
+    const section=$id('workout');
+    if(!section)return;
+    const card=Array.from(section.children).find(el=>el.classList&&el.classList.contains('card')&&el.querySelector('#workoutTitle'));
+    if(!card)return;
+    if(card.querySelector('#sehWorkoutSectionExport'))return;
+    const box=document.createElement('div');
+    box.id='sehWorkoutSectionExport';
+    box.style.cssText='display:flex;flex-wrap:wrap;gap:8px;margin-top:12px;padding-top:10px;border-top:1px solid #26384a';
+    box.innerHTML='<button type="button" class="trainee-workout-pdf">📄 دانلود / چاپ PDF</button><button type="button" class="trainee-workout-image secondary">🖼️ دریافت عکس برنامه</button><p class="muted trainee-workout-export-status" style="width:100%;margin:0"></p>';
+    const run=isImage=>{
+      if(!currentClient){alert('حساب شاگرد به پرونده متصل نیست. لطفاً دوباره وارد شوید.');return;}
+      if(typeof window.sharePlan==='function'){
+        window.sharePlan('workout');
+        const status=box.querySelector('.trainee-workout-export-status');
+        if(isImage&&status)status.textContent='در پنجره خروجی، گزینه «دانلود عکس PNG» را انتخاب کن.';
+      }else if(typeof window.printPlan==='function')window.printPlan('workout');
+      else alert('ابزار خروجی هنوز بارگذاری نشده است؛ صفحه را تازه‌سازی کنید.');
+    };
+    box.querySelector('.trainee-workout-pdf').addEventListener('click',e=>{e.stopPropagation();run(false);});
+    box.querySelector('.trainee-workout-image').addEventListener('click',e=>{e.stopPropagation();run(true);});
+    card.appendChild(box);
   }
 
   function buildTraineeAnalysisSection(){
@@ -6935,70 +6917,41 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
 <script id="SEH_TRAINEE_WORKOUT_EXPORT_ALWAYS_V3">
 (function(){
   'use strict';
-  function runExport(isImage){
-    if(typeof window.sharePlan==='function'){
-      window.sharePlan('workout');
-      if(isImage){
-        var msg=document.getElementById('sehWorkoutExportMsg');
-        if(msg)msg.textContent='در پنجره خروجی، گزینه «دانلود عکس PNG» را انتخاب کن.';
-      }
-    }else if(typeof window.printPlan==='function'){
-      window.printPlan('workout');
-    }else{
-      alert('ابزار خروجی هنوز بارگذاری نشده است؛ صفحه را تازه‌سازی کنید.');
-    }
-  }
-  function makeButtons(id,compact){
-    var box=document.createElement('div');
-    box.id=id;
-    box.className='seh-workout-export-controls';
-    box.style.cssText='display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin-top:10px;position:relative;z-index:5';
-    box.innerHTML='<button type="button" class="seh-export-pdf" style="font-size:'+(compact?'11px':'13px')+';padding:7px 9px">📄 دانلود / چاپ PDF</button><button type="button" class="seh-export-image secondary" style="font-size:'+(compact?'11px':'13px')+';padding:7px 9px">🖼️ دریافت عکس برنامه</button>';
-    box.addEventListener('click',function(e){
-      var b=e.target.closest('button');
-      if(!b)return;
-      e.preventDefault();e.stopPropagation();
-      if(e.stopImmediatePropagation)e.stopImmediatePropagation();
-      runExport(b.classList.contains('seh-export-image'));
-    },true);
-    return box;
-  }
   function addExports(){
-    /* Put export buttons directly inside the trainee dashboard's workout tile. */
-    var dash=document.getElementById('traineeDashboard');
-    var grid=dash&&dash.querySelector('.v4-dashboard');
-    var workoutTile=grid&&Array.from(grid.querySelectorAll('.v4-card')).find(function(c){
-      var onclick=c.getAttribute('onclick')||'';
-      return onclick.indexOf("dashOpen('workout')")>=0 || onclick.indexOf('dashOpen("workout")')>=0;
-    });
-    if(workoutTile&&!workoutTile.querySelector('#sehWorkoutDashboardExport')){
-      workoutTile.appendChild(makeButtons('sehWorkoutDashboardExport',true));
-    }
-
-    /* Also place the same controls inside the actual workout section's first/main card. */
     var section=document.getElementById('workout');
-    var mainCard=section&&Array.from(section.children).find(function(el){return el.classList&&el.classList.contains('card');});
-    if(mainCard&&!mainCard.querySelector('#sehWorkoutSectionExport')){
-      var controls=makeButtons('sehWorkoutSectionExport',false);
-      controls.querySelector('.seh-export-pdf').id='sehWorkoutExportPdf';
-      controls.querySelector('.seh-export-image').id='sehWorkoutExportImage';
-      mainCard.appendChild(controls);
-      var msg=document.createElement('span');msg.id='sehWorkoutExportMsg';msg.className='muted';msg.style.cssText='font-size:11px;display:block;margin-top:5px';
-      controls.appendChild(msg);
-    }
-
-    /* Remove the obsolete standalone export panels, so buttons are only inside the relevant cards. */
-    ['sehTraineeWorkoutExportInSection','traineeWorkoutExportInWorkout','traineeWorkoutExportPanel'].forEach(function(id){
-      var old=document.getElementById(id);
-      if(old)old.remove();
+    if(!section)return;
+    var card=Array.from(section.children).find(function(el){
+      return el.classList&&el.classList.contains('card')&&el.querySelector('#workoutTitle');
     });
+    if(!card)return;
+    /* Remove all previously misplaced export panels and dashboard-tile controls. */
+    ['sehWorkoutDashboardExport','sehTraineeWorkoutExportInSection','traineeWorkoutExportInWorkout','traineeWorkoutExportPanel'].forEach(function(id){
+      var old=document.getElementById(id);if(old)old.remove();
+    });
+    var dash=document.getElementById('traineeDashboard');
+    if(dash)dash.querySelectorAll('.seh-workout-export-controls,.seh-dash-workout-export').forEach(function(el){el.remove();});
+    if(card.querySelector('#sehWorkoutSectionExport'))return;
+    var box=document.createElement('div');
+    box.id='sehWorkoutSectionExport';
+    box.style.cssText='display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-top:12px;padding-top:10px;border-top:1px solid #26384a';
+    box.innerHTML='<button type="button" id="sehWorkoutExportPdf">📄 دانلود / چاپ PDF</button><button type="button" id="sehWorkoutExportImage" class="secondary">🖼️ دریافت عکس برنامه</button><span id="sehWorkoutExportMsg" class="muted" style="font-size:11px;width:100%"></span>';
+    function run(isImage){
+      if(!window.currentClient && !(typeof currentClient!=='undefined'&&currentClient)){alert('ابتدا وارد حساب شاگرد شوید و برنامه را باز کنید.');return;}
+      if(typeof window.sharePlan==='function'){
+        window.sharePlan('workout');
+        if(isImage)document.getElementById('sehWorkoutExportMsg').textContent='در پنجره خروجی، گزینه «دانلود عکس PNG» را انتخاب کن.';
+      }else if(typeof window.printPlan==='function')window.printPlan('workout');
+      else alert('ابزار خروجی هنوز بارگذاری نشده است؛ صفحه را تازه‌سازی کنید.');
+    }
+    box.querySelector('#sehWorkoutExportPdf').addEventListener('click',function(e){e.preventDefault();e.stopPropagation();run(false);});
+    box.querySelector('#sehWorkoutExportImage').addEventListener('click',function(e){e.preventDefault();e.stopPropagation();run(true);});
+    card.appendChild(box);
   }
   function init(){
     addExports();
-    var root=document.body;
-    if(root&&typeof MutationObserver==='function'){
+    if(document.body&&typeof MutationObserver==='function'){
       var mo=new MutationObserver(function(){addExports();});
-      mo.observe(root,{childList:true,subtree:true});
+      mo.observe(document.body,{childList:true,subtree:true});
     }
   }
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init,{once:true});else init();
@@ -7007,9 +6960,6 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
     window.__sehWorkoutExportLoginHook=true;
     window.finishLogin=async function(){var result=await oldFinish.apply(this,arguments);addExports();return result;};
   }
-  document.addEventListener('click',function(e){
-    if(e.target&&e.target.closest&&e.target.closest('.v4-card'))setTimeout(addExports,100);
-  },true);
 })();
 </script>
 </body>
