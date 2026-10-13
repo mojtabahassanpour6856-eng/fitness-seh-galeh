@@ -5534,18 +5534,27 @@ active('workoutMuscleFilters',wm);active('libraryMuscleFilters',lm);if(document.
  async function loadCoachReceipts(){
   if(isTrainee()||!currentClient?.id)return;
   const traineeId=String(currentClient.id);
-  const sec=$("client");if(!sec)return;
-  // Put submitted receipt history directly inside the coach's membership/tuition card.
-  const cards=[...sec.querySelectorAll(":scope > .card")];
-  const membershipCard=cards.find(c=>c.querySelector("#subStart")||c.querySelector("#subEnd")||c.querySelector("#subAmount"))
-    ||cards.find(c=>/عضویت باشگاه|عضویت و شهریه/.test(c.querySelector("h2")?.textContent||"")&&!c.querySelector("#traineeMembershipStatus"));
-  let box=$("coachReceiptReview");
-  if(!box){box=document.createElement("div");box.id="coachReceiptReview";box.className="receipt-item";box.innerHTML='<h3>📥 فیش واریزی شاگرد</h3><div id="coachReceiptList">در حال دریافت فیش‌ها…</div>';}
-  if(membershipCard&&box.parentElement!==membershipCard)membershipCard.appendChild(box);
-  else if(!membershipCard&&box.parentElement!==sec)sec.appendChild(box);
+  const modal=document.getElementById("sehMembershipModalContent");
+  const sec=document.getElementById("client");
+  if(!sec&&!modal)return;
+  // Prefer the card currently displayed in the modal; otherwise use the coach section.
+  const roots=[modal,sec].filter(Boolean);
+  let membershipCard=null;
+  for(const root of roots){
+   membershipCard=root.querySelector("#subStart")?.closest(".card")
+    ||root.querySelector("#traineeMembershipStatus")?.closest(".card")
+    ||[...root.querySelectorAll(".card")].find(c=>/عضویت باشگاه|عضویت و شهریه/.test(c.querySelector("h2")?.textContent||""));
+   if(membershipCard)break;
+  }
+  let box=document.getElementById("coachReceiptReview");
+  if(!box){
+   box=document.createElement("div");box.id="coachReceiptReview";box.className="receipt-item";
+   box.innerHTML='<h3>📥 فیش واریزی شاگرد</h3><div id="coachReceiptList">در حال دریافت فیش‌ها…</div>';
+  }
+  const destination=membershipCard||modal||sec;
+  if(destination&&box.parentElement!==destination)destination.appendChild(box);
   box.style.setProperty("display","block","important");box.style.setProperty("visibility","visible","important");box.style.setProperty("opacity","1","important");box.hidden=false;box.removeAttribute("aria-hidden");
-  const list=box.querySelector("#coachReceiptList");
-  if(list)list.textContent="در حال دریافت فیش‌ها…";
+  const list=box.querySelector("#coachReceiptList");if(list)list.textContent="در حال دریافت فیش‌ها…";
   try{
    const [rows,members,trainees]=await Promise.all([
     sbGet("/trainee_payment_receipts?trainee_id=eq."+encodeURIComponent(traineeId)+"&select=*&order=created_at.desc"),
@@ -5561,8 +5570,10 @@ active('workoutMuscleFilters',wm);active('libraryMuscleFilters',lm);if(document.
     return '<div class="receipt-item"><b>'+safe(Number(x.amount||0).toLocaleString("fa-IR"))+' تومان</b> · تاریخ واریز: '+safe(fmtDate(x.payment_date)||"—")+'<br><b>وضعیت فیش:</b> '+safe(status[x.review_status]||x.review_status||"—")+'<br>'+safe(x.note||"")+(url?'<p><a target="_blank" rel="noopener" href="'+safe(url)+'">🔎 مشاهده فیش ارسالی</a></p>':'<p class="muted">فایل فیش در دسترس نیست.</p>')+(x.review_status==="pending"?'<div class="actions"><button type="button" onclick="reviewPaymentReceipt(\''+safe(x.id)+'\',\'approved\')">✅ تأیید فیش و ثبت پرداخت</button><button type="button" class="secondary" onclick="reviewPaymentReceipt(\''+safe(x.id)+'\',\'rejected\')">رد فیش</button></div>':"")+'</div>';
    }));
    html+='<h3>📑 سوابق فیش‌های ارسالی</h3>'+(items.length?items.join(""):'<p class="muted">برای این شاگرد فیشی ثبت نشده است.</p>');
-   const liveList=box.querySelector("#coachReceiptList");if(liveList)liveList.innerHTML=html;
-  }catch(e){console.error("loadCoachReceipts failed",e);const liveList=box.querySelector("#coachReceiptList");if(liveList)liveList.textContent="خطا در دریافت اطلاعات عضویت و فیش: "+(e.message||String(e));}
+   const liveBox=document.getElementById("coachReceiptReview");
+   const liveList=liveBox?.querySelector("#coachReceiptList");
+   if(liveList)liveList.innerHTML=html;
+  }catch(e){console.error("loadCoachReceipts failed",e);const liveList=document.getElementById("coachReceiptReview")?.querySelector("#coachReceiptList");if(liveList)liveList.textContent="خطا در دریافت اطلاعات عضویت و فیش: "+(e.message||String(e));}
  }
  window.loadCoachReceipts=loadCoachReceipts;
  window.reviewPaymentReceipt=async function(id,decision){
@@ -7145,7 +7156,7 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
    Promise.resolve(window.loadCoachReceipts()).then(function(){
     var receiptBox=document.getElementById('coachReceiptReview');
     var modalContent=document.getElementById(contentId);
-    if(receiptBox&&modalContent&&document.getElementById(overlayId))modalContent.appendChild(receiptBox);
+    if(receiptBox&&modalContent&&document.getElementById(overlayId)){var membershipCard=modalContent.querySelector("#subStart")?.closest(".card")||modalContent.querySelector("#traineeMembershipStatus")?.closest(".card")||modalContent.querySelector(".card");(membershipCard||modalContent).appendChild(receiptBox);}
    }).catch(function(err){console.warn('فیش‌های شاگرد در کارت عضویت بارگذاری نشدند.',err);});
   }
  }
