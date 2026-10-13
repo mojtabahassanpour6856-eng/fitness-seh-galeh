@@ -7063,7 +7063,7 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
  function reveal(card){
   if(!card)return false;
   var node=card;
-  while(node&&node!==document.body){node.hidden=false;node.removeAttribute('aria-hidden');node.classList.remove('hide');if(node.style){node.style.removeProperty('display');node.style.setProperty('display','block','important');node.style.setProperty('visibility','visible','important');}node=node.parentElement;}
+  while(node&&node!==document.body){node.hidden=false;node.removeAttribute('aria-hidden');node.classList.remove('hide');if(node.style&&window.getComputedStyle(node).display==='none'){node.style.setProperty('display','block','important');}node=node.parentElement;}
   card.style.setProperty('display','block','important');card.style.setProperty('visibility','visible','important');
   card.scrollIntoView({behavior:'smooth',block:'start'});return true;
  }
