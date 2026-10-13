@@ -8375,3 +8375,18 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
   [300,900,1800,3500].forEach(function(t){setTimeout(run,t);});
 })();
 </script>
+
+
+<!-- SEH_RESTORE_PREMIUM_PLAN_OUTPUT_ROUTE_V1 -->
+<script id="SEH_RESTORE_PREMIUM_PLAN_OUTPUT_ROUTE_V1">
+(function(){
+  'use strict';
+  var routed=function(kind){
+    var type=kind==='meal'?'meal':'workout';
+    if(typeof window.sharePlan==='function') return window.sharePlan(type);
+    alert('خروجی برنامه بارگذاری نشده است؛ صفحه را تازه‌سازی کنید و دوباره تلاش کنید.');
+  };
+  routed.__sehPremiumPlanOutput=true;
+  window.printPlan=routed;
+})();
+</script>
