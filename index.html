@@ -5477,9 +5477,14 @@ active('workoutMuscleFilters',wm);active('libraryMuscleFilters',lm);if(document.
   if(!card)card=cards.find(c=>c.querySelector(".role-readonly-message")&&!c.querySelector("#traineeMembershipStatus"));
   if(!card){
    const existing=sec.querySelector("#traineeMembershipStatus");
-   if(existing){loadTraineeMembership();return;}
+   if(existing){const existingCard=existing.closest(".card");if(existingCard){existingCard.style.display="block";existingCard.hidden=false;existingCard.classList.remove("hide");}loadTraineeMembership();return;}
    return;
   }
+  // Restore visibility: an older trainee-role rule left the membership card hidden.
+  card.style.display="block";
+  card.hidden=false;
+  card.classList.remove("hide");
+  card.removeAttribute("aria-hidden");
   if(card.dataset.receiptUi==="1"){loadTraineeMembership();return;}
   card.dataset.receiptUi="1";
   card.innerHTML='<h2>💳 عضویت و شهریه</h2><div id="traineeMembershipStatus" class="muted">در حال دریافت وضعیت عضویت…</div><div id="traineeReceiptUpload" class="receipt-item"><h3>📤 ارسال فیش واریزی</h3><p class="muted">فیش فقط برای مربی و حساب خودتان قابل مشاهده است. فرمت JPG، PNG، WEBP یا PDF تا ۵ مگابایت.</p><label>مبلغ پرداختی (تومان)</label><input id="receiptAmount" type="number" min="1" placeholder="مبلغ واریزی"><label>تاریخ واریز (شمسی)</label><input id="receiptDate" type="text" inputmode="numeric" placeholder="۱۴۰۵/۰۷/۱۸" autocomplete="off"><label>تصویر یا PDF فیش</label><input id="receiptFile" type="file" accept="image/jpeg,image/png,image/webp,application/pdf"><label>توضیح (اختیاری)</label><input id="receiptNote" placeholder="مثلاً شهریه مهر"><button id="submitPaymentReceiptBtn" type="button" onclick="submitPaymentReceipt()">📨 ارسال فیش برای مربی</button></div><div id="traineeReceiptHistory"></div>';
