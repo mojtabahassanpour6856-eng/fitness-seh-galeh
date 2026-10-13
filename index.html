@@ -1049,6 +1049,8 @@ function selectClient(id){
   $("pheight").value=currentClient.height||"";$("pgoal").value=currentClient.goal||"کاهش وزن";
   $("plevel").value=currentClient.level||"مبتدی";loadNutritionForClient();loadWorkoutForClient();loadDietSummary();
   showSection("client",document.querySelectorAll(".nav button")[2]); if($("ptype"))$("ptype").value=currentClient.training_type||"gym"; if($("ptype2"))$("ptype2").value=currentClient.training_type||"gym"; if($("pequipment"))$("pequipment").value=currentClient.home_equipment||""; if($("pequipment2"))$("pequipment2").value=currentClient.home_equipment||""; if($("plimit"))$("plimit").value=currentClient.limitations||""; if($("actDate"))$("actDate").value=today(); loadActivityToday(); loadSupplements(); loadInjuries(); loadLibraryExercises();
+   // Explicitly refresh coach goal panel from the selected trainee record.
+   if(typeof window.showCoachGoalsDirectly==="function") setTimeout(function(){window.showCoachGoalsDirectly();},250);
 }
 
 
