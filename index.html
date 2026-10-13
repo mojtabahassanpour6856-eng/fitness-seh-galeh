@@ -2475,7 +2475,7 @@ async function loadGoal(){
     }catch(e){console.error('loadGoal',e);}
   }
   window.saveGoal=async function(){if(!currentClient)return alert('اول شاگرد را انتخاب کنید.');try{const rows=await sbGet('/trainee_goals?trainee_id=eq.'+encodeURIComponent(currentClient.id)+'&select=*&order=created_at.desc&limit=1');const prior=rows[0]||null;const appData=prior&&window.parseGoalNote?window.parseGoalNote(prior.notes).data:{};const v=$id('goalDate').value.trim();const iso=v?(window.jalaliToISODate(v)||null):null;if(v&&!iso)throw new Error('تاریخ هدف را به‌شکل شمسی مانند ۱۴۰۵/۰۸/۱۸ وارد کنید.');const note=$id('goalNote').value.trim()||'';const body={trainee_id:currentClient.id,target_weight:+$id('goalWeight').value||null,target_body_fat:+$id('goalFat').value||null,target_date:iso,notes:window.mergeGoalNote?window.mergeGoalNote(note,appData):(note||null)};if(prior?.id){const updated=await sbWrite('/trainee_goals?id=eq.'+encodeURIComponent(prior.id)+'&trainee_id=eq.'+encodeURIComponent(currentClient.id),'PATCH',body);if(!Array.isArray(updated)||!updated.length)throw new Error('رکورد هدف برای ویرایش پیدا نشد.')}else await sbWrite('/trainee_goals','POST',body);alert('هدف شاگرد ذخیره شد.');await loadDashboard();}catch(e){alert('ذخیره هدف انجام نشد.\\n'+e.message)}};
-  window.loadCoachGoalPanel=async function(){if(authProfile?.role!=='coach')return;buildGoalBox();return loadGoal();};
+  window.loadCoachGoalPanel=async function(){buildGoalBox();return loadGoal();};
   function buildGoalBox(){const sec=$id('client');if(!sec||$id('goalBox'))return;const card=document.createElement('div');card.className='card';card.id='goalBox';card.innerHTML=`<h2>🎯 هدف شاگرد و پیام مربی</h2><div id="goalStructuredPreview" class="muted">پس از انتخاب شاگرد، هدف‌های او اینجا نمایش داده می‌شود.</div><div class="grid2"><input id="goalWeight" type="number" step="0.1" placeholder="وزن هدف"><input id="goalFat" type="number" step="0.1" placeholder="درصد چربی هدف"><input id="goalDate" type="text" inputmode="numeric" placeholder="تاریخ هدف شمسی؛ ۱۴۰۵/۰۸/۱۸" autocomplete="off"></div><textarea id="goalNote" placeholder="پیام یا توصیه مربی که شاگرد در پنل خود مشاهده می‌کند"></textarea><button onclick="saveGoal()">💾 ذخیره هدف</button>`;sec.appendChild(card);}
 
   async function loadMembershipCard(){if(!currentClient)return;const box=$id('membershipCardBox');if(!box)return;try{const rows=await sbGet(`/trainee_memberships?trainee_id=eq.${encodeURIComponent(currentClient.id)}&select=*&order=created_at.desc&limit=1`);const x=rows[0];if(x){$id('cardNumber').value=x.card_number||'';$id('cardHolder').value=x.card_holder||currentClient.name||'';$id('cardExpiry').value=x.card_expiry||'';$id('subAmount').value=x.amount||'';}}catch(e){}}
@@ -6636,14 +6636,37 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
 (function(){
   if(window.__coachGoalPanelRefreshRepair)return;
   window.__coachGoalPanelRefreshRepair=true;
+  function ensureGoalCard(){
+    const host=document.getElementById('client');
+    if(!host)return null;
+    let card=document.getElementById('goalBox');
+    if(!card){
+      card=document.createElement('div');
+      card.className='card';
+      card.id='goalBox';
+      card.innerHTML='<h2>🎯 هدف شاگرد و پیام مربی</h2><div id="goalStructuredPreview" class="muted">پس از انتخاب شاگرد، هدف‌های او اینجا نمایش داده می‌شود.</div><div class="grid2"><input id="goalWeight" type="number" step="0.1" placeholder="وزن هدف"><input id="goalFat" type="number" step="0.1" placeholder="درصد چربی هدف"><input id="goalDate" type="text" inputmode="numeric" placeholder="تاریخ هدف شمسی؛ ۱۴۰۵/۰۸/۱۸" autocomplete="off"></div><textarea id="goalNote" placeholder="پیام یا توصیه مربی که شاگرد در پنل خود مشاهده می‌کند"></textarea><button onclick="saveGoal()">💾 ذخیره هدف</button>';
+      host.appendChild(card);
+    }
+    return card;
+  }
+  async function refreshGoal(){
+    ensureGoalCard();
+    if(typeof window.loadCoachGoalPanel==='function'){
+      try{await window.loadCoachGoalPanel();}
+      catch(e){console.error('Coach goal panel refresh failed:',e);}
+    }
+  }
   const previous=window.selectClient;
-  if(typeof previous!=="function")return;
-  window.selectClient=async function(){
-    const result=await previous.apply(this,arguments);
-    try{if(typeof window.loadCoachGoalPanel==="function")await window.loadCoachGoalPanel();}
-    catch(e){console.error("Coach goal panel refresh failed:",e);}
-    return result;
-  };
+  if(typeof previous==="function"){
+    window.selectClient=async function(){
+      let result;
+      try{result=await previous.apply(this,arguments);}
+      finally{await refreshGoal();}
+      return result;
+    };
+  }
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',ensureGoalCard,{once:true});
+  else ensureGoalCard();
 })();
 </script>
 </body>
