@@ -6646,37 +6646,66 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
 
 <script id="COACH_GOAL_PANEL_REFRESH_REPAIR">
 (function(){
-  if(window.__coachGoalPanelRefreshRepair)return;
-  window.__coachGoalPanelRefreshRepair=true;
+  function escapeGoalText(v){
+    return String(v==null?'':v).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});
+  }
   function ensureGoalCard(){
     const host=document.getElementById('client');
     if(!host)return null;
     let card=document.getElementById('goalBox');
     if(!card){
-      card=document.createElement('div');
-      card.className='card';
-      card.id='goalBox';
-      card.innerHTML='<h2>🎯 هدف شاگرد و پیام مربی</h2><div id="goalStructuredPreview" class="muted">پس از انتخاب شاگرد، هدف‌های او اینجا نمایش داده می‌شود.</div><div class="grid2"><input id="goalWeight" type="number" step="0.1" placeholder="وزن هدف"><input id="goalFat" type="number" step="0.1" placeholder="درصد چربی هدف"><input id="goalDate" type="text" inputmode="numeric" placeholder="تاریخ هدف شمسی؛ ۱۴۰۵/۰۸/۱۸" autocomplete="off"></div><textarea id="goalNote" placeholder="پیام یا توصیه مربی که شاگرد در پنل خود مشاهده می‌کند"></textarea><button onclick="saveGoal()">💾 ذخیره هدف</button>';
-      host.appendChild(card);
+      card=document.createElement('div');card.className='card';card.id='goalBox';
+      card.innerHTML='<h2>🎯 هدف شاگرد و پیام مربی</h2><div id="goalStructuredPreview" class="muted">پس از انتخاب شاگرد، هدف‌های او اینجا نمایش داده می‌شود.</div><div class="grid2"><div><label for="goalWeight">وزن هدف</label><input id="goalWeight" type="number" step="0.1" placeholder="وزن هدف"></div><div><label for="goalFat">درصد چربی هدف</label><input id="goalFat" type="number" step="0.1" placeholder="درصد چربی هدف"></div><div><label for="goalDate">تاریخ هدف شمسی</label><input id="goalDate" type="text" inputmode="numeric" placeholder="۱۴۰۵/۰۸/۱۸" autocomplete="off"></div></div><label for="goalNote">پیام یا توصیه مربی</label><textarea id="goalNote" placeholder="پیام یا توصیه مربی"></textarea><button onclick="saveGoal()">💾 ذخیره هدف</button>';
+      host.insertBefore(card,host.firstChild);
     }
     return card;
   }
-  async function refreshGoal(){
-    ensureGoalCard();
-    if(typeof window.loadCoachGoalPanel==='function'){
-      try{await window.loadCoachGoalPanel();}
-      catch(e){console.error('Coach goal panel refresh failed:',e);}
+  async function renderGoalFor(id){
+    const card=ensureGoalCard(),preview=document.getElementById('goalStructuredPreview');
+    if(!card||!id)return;
+    card.style.removeProperty('display');card.removeAttribute('aria-hidden');
+    if(preview)preview.textContent='در حال دریافت هدف‌های شاگرد…';
+    try{
+      const safeId=encodeURIComponent(String(id));
+      const result=await Promise.all([
+        sbGet('/trainee_goal_feedback?trainee_id=eq.'+safeId+'&select=data&limit=1'),
+        sbGet('/trainee_goals?trainee_id=eq.'+safeId+'&select=*&order=created_at.desc&limit=1')
+      ]);
+      const feedback=result[0]&&result[0][0]&&result[0][0].data&&typeof result[0][0].data==='object'?result[0][0].data:{};
+      const old=result[1]&&result[1][0]?result[1][0]:null;
+      const parsed=old&&window.parseGoalNote?window.parseGoalNote(old.notes):{note:old&&old.notes||'',data:{}};
+      const data=Object.assign({},parsed.data||{},feedback);
+      const goals=Array.isArray(data.goals)?data.goals:[];
+      const ratings=Array.isArray(data.ratings)?data.ratings:[];
+      const custom=data.custom||'';
+      if(preview)preview.innerHTML=
+        (goals.length?'<b>هدف‌های انتخاب‌شده شاگرد:</b><div style="display:flex;flex-wrap:wrap;gap:6px;margin:8px 0">'+goals.map(g=>'<span style="border:1px solid #34495c;border-radius:8px;padding:5px 8px">'+escapeGoalText(g)+'</span>').join('')+'</div>':'<p class="muted">در اطلاعات ذخیره‌شده، هدف انتخاب‌شده‌ای پیدا نشد.</p>')+
+        (custom?'<p><b>توضیحات شاگرد:</b> '+escapeGoalText(custom)+'</p>':'')+
+        (ratings.length?'<p><b>آخرین رضایت ماهانه:</b> '+escapeGoalText(ratings.slice().sort((a,b)=>String(b.month||'').localeCompare(String(a.month||'')))[0].score)+'٪</p>':'');
+      const w=document.getElementById('goalWeight'),f=document.getElementById('goalFat'),d=document.getElementById('goalDate'),n=document.getElementById('goalNote');
+      if(w)w.value=old&&old.target_weight||'';if(f)f.value=old&&old.target_body_fat||'';
+      if(d)d.value=old&&(window.isoToJalaliDate?window.isoToJalaliDate(old.target_date):old.target_date)||'';
+      if(n)n.value=parsed.note||'';
+    }catch(e){
+      console.error('Goal panel direct refresh failed',e);
+      if(preview)preview.innerHTML='<div style="border:1px solid #b45309;border-radius:8px;padding:10px">دریافت هدف‌ها ناموفق بود: '+escapeGoalText(e&&e.message||e)+'</div>';
     }
   }
   const previous=window.selectClient;
-  if(typeof previous==="function"){
-    window.selectClient=async function(){
-      let result;
-      try{result=await previous.apply(this,arguments);}
-      finally{await refreshGoal();}
+  if(typeof previous==='function'&&!window.__coachGoalPanelRefreshRepair){
+    window.__coachGoalPanelRefreshRepair=true;
+    window.selectClient=async function(id){
+      const result=await previous.apply(this,arguments);
+      const selectedId=id||(typeof currentClient!=='undefined'&&currentClient&&currentClient.id);
+      if(selectedId)await renderGoalFor(selectedId);
       return result;
     };
   }
+  window.loadCoachGoalPanel=async function(){
+    const id=typeof currentClient!=='undefined'&&currentClient&&currentClient.id;
+    if(id)return renderGoalFor(id);
+    ensureGoalCard();
+  };
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',ensureGoalCard,{once:true});
   else ensureGoalCard();
 })();
