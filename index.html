@@ -7686,7 +7686,7 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
   window.reviewDeviceLinkRequest=async function(id,decision){
     if(!confirm(decision==="approve"?"اتصال این گوشی به حساب قبلی شاگرد تأیید شود؟ پس از تأیید، گوشی جدید وارد همان حساب می‌شود.":"درخواست اتصال این گوشی رد شود؟"))return;
     try{
-      const {data,error}=await AUTH_SUPABASE.functions.invoke("review-trainee-device-link",{body:{request_id:id,decision}});
+      const {data,error}=await AUTH_SUPABASE.functions.invoke("review-trainee-device-link",{body:{action:"review",request_id:id,decision}});
       if(error)throw error;if(data?.error)throw new Error(data.error);
       alert(decision==="approve"?"اتصال تأیید شد. گوشی جدید پس از چند ثانیه به همان حساب قبلی وارد می‌شود.":"درخواست اتصال رد شد.");
       await loadDeviceLinkRequests();
