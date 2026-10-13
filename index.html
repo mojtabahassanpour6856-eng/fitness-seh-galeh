@@ -4690,16 +4690,12 @@ window.useLibraryExercise=async function(id){
         const allPlans = await sbGet('/trainee_workout_plans?trainee_id=eq.'+encodeURIComponent(trainee.id)+'&select=*&order=created_at.desc');
         const p = (allPlans||[])[0];
         if(!p) throw new Error('برنامه تمرینی ذخیره‌شده‌ای برای این شاگرد پیدا نشد.');
-        /* The workout editor can contain movements saved in more than one plan record
-           for the same trainee. Export all those records together so earlier sessions
-           (especially session one) are not omitted from the printed/exported program. */
-        const rowsByPlan = await Promise.all((allPlans||[]).map(plan =>
-          sbGet('/trainee_workout_exercises?workout_plan_id=eq.'+encodeURIComponent(plan.id)+'&select=*&order=sort_order.asc,created_at.asc')
-            .then(items => (items||[]).map(item => Object.assign({},item,{__exportPlanId:plan.id,__exportPlanDate:plan.created_at||''})))
-        ));
-        const rows = rowsByPlan.flat().sort((a,b) => {
+        /* Export only the selected latest plan. Combining historical plans for this trainee can
+           mix old movements into the current program and make the printed result differ from the
+           plan the coach actually sees. All sessions in this selected plan remain included. */
+        const rows = (await sbGet('/trainee_workout_exercises?workout_plan_id=eq.'+encodeURIComponent(p.id)+'&select=*&order=sort_order.asc,created_at.asc')||[]).sort((a,b) => {
           const dayA=String(a.training_day||'جلسه بدون عنوان'), dayB=String(b.training_day||'جلسه بدون عنوان');
-          const dayNum=value=>{const m=value.match(/(?:جلسه|روز)\s*([۰-۹0-9]+)/);return m?Number(m[1].replace(/[۰-۹]/g,d=>'۰۱۲۳۴۵۶۷۸۹'.indexOf(d))):999;};
+          const dayNum=value=>{const m=value.match(/(?:جلسه|روز)\\s*([۰-۹0-9]+)/);return m?Number(m[1].replace(/[۰-۹]/g,d=>'۰۱۲۳۴۵۶۷۸۹'.indexOf(d))):999;};
           const na=dayNum(dayA),nb=dayNum(dayB);
           if(na!==nb)return na-nb;
           const orderA=Number(a.sort_order)||0,orderB=Number(b.sort_order)||0;
