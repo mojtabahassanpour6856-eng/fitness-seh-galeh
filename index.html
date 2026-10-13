@@ -2395,6 +2395,84 @@ window.loadDashboard = loadDashboard;
     if(kind==='meal'){const rows=await sbGet(`/nutrition_plans?trainee_id=eq.${encodeURIComponent(currentClient.id)}&select=*&order=created_at.desc&limit=1`);body=`<h2>${esc2(rows[0]?.title||title)}</h2><p>کالری هدف: ${esc2(rows[0]?.daily_calories||'—')}</p>`;}else{const rows=await sbGet(`/trainee_workout_plans?trainee_id=eq.${encodeURIComponent(currentClient.id)}&select=*&order=created_at.desc&limit=1`);body=`<h2>${esc2(rows[0]?.title||title)}</h2><p>${esc2(rows[0]?.goal||'')}</p>`;}
     const html=`<!doctype html><html lang="fa" dir="rtl"><head><meta charset="utf-8"><title>${title}</title><style>body{font-family:Tahoma;padding:30px;color:#111}h1{font-size:22px}h2{margin-top:24px}table{width:100%;border-collapse:collapse}td,th{border:1px solid #aaa;padding:8px}</style></head><body><h1>باشگاه فیتنس سه‌قلعه | مربی مجتبی</h1><p>شاگرد: ${esc2(currentClient.name||'')}</p><p>تاریخ: ${today()}</p>${body}
 
+
+<script id="GOAL_FEEDBACK_COACH_FORCE_REFRESH_V2">
+(function(){
+  if(window.__goalFeedbackCoachForceV2)return;
+  window.__goalFeedbackCoachForceV2=true;
+  const el=id=>document.getElementById(id);
+  function ensurePreview(){
+    let box=el('goalBox'),host=el('client');
+    if(!box&&host){
+      box=document.createElement('div');box.className='card';box.id='goalBox';
+      box.innerHTML='<h2>🎯 هدف ثبت‌شده شاگرد</h2><div id="goalStructuredPreview" class="muted">در حال آماده‌سازی نمایش هدف‌ها…</div>';
+      host.insertBefore(box,host.firstChild);
+    }
+    if(box){box.style.removeProperty('display');box.removeAttribute('aria-hidden');}
+    return el('goalStructuredPreview');
+  }
+  function esc(v){return String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+  async function refresh(){
+    const preview=ensurePreview();
+    if(!preview)return;
+    if(!currentClient||!currentClient.id){
+      preview.textContent='برای دیدن هدف‌ها، ابتدا یک شاگرد را از فهرست انتخاب کنید.';
+      return;
+    }
+    const id=String(currentClient.id);
+    preview.textContent='در حال دریافت هدف ثبت‌شده شاگرد…';
+    try{
+      const rows=await sbGet('/trainee_goal_feedback?trainee_id=eq.'+encodeURIComponent(id)+'&select=trainee_id,data,updated_at&limit=1');
+      if(!currentClient||String(currentClient.id)!==id)return;
+      const d=rows&&rows[0]&&rows[0].data&&typeof rows[0].data==='object'?rows[0].data:{};
+      const goals=Array.isArray(d.goals)?d.goals:[];
+      const ratings=Array.isArray(d.ratings)?d.ratings:[];
+      const rating=ratings.slice().sort((a,b)=>String(b.month||'').localeCompare(String(a.month||'')))[0];
+      preview.innerHTML='<div style="font-size:12px;color:#aeb9c4;margin-bottom:8px">شناسه شاگرد: '+esc(id.slice(0,8))+' · منبع: هدف ثبت‌شده شاگرد</div>'+
+        (goals.length?'<b>هدف‌های انتخاب‌شده:</b><div style="display:flex;flex-wrap:wrap;gap:6px;margin:8px 0">'+goals.map(g=>'<span style="border:1px solid #b98a16;border-radius:8px;padding:6px 9px">'+esc(g)+'</span>').join('')+'</div>':'<p>در رکورد هدف این شاگرد، فهرست هدف‌ها خالی است.</p>')+
+        (d.custom?'<p><b>توضیحات شاگرد:</b> '+esc(d.custom)+'</p>':'')+
+        (rating?'<p><b>رضایت ماهانه ('+esc(rating.month||'')+'):</b> '+esc(rating.score)+'٪</p>':'')+
+        '<div style="font-size:11px;color:#aeb9c4">آخرین به‌روزرسانی: '+esc(rows[0]?.updated_at||'ثبت نشده')+'</div>';
+      const weight=el('goalWeight'),fat=el('goalFat'),date=el('goalDate'),note=el('goalNote');
+      if(typeof window.loadCoachGoalPanel==='function'){
+        try{await window.loadCoachGoalPanel();}catch(e){console.warn('Legacy goal fields could not load',e);}
+      }
+      // Keep the directly rendered student feedback visible even if the legacy loader overwrites its preview.
+      const p=el('goalStructuredPreview');
+      if(p&&p.textContent.includes('شاگرد هنوز هدف آماده‌ای انتخاب نکرده است.')){
+        p.innerHTML=(goals.length?'<b>هدف‌های انتخاب‌شده:</b><div style="display:flex;flex-wrap:wrap;gap:6px;margin:8px 0">'+goals.map(g=>'<span style="border:1px solid #b98a16;border-radius:8px;padding:6px 9px">'+esc(g)+'</span>').join('')+'</div>':'<p>در رکورد هدف این شاگرد، فهرست هدف‌ها خالی است.</p>')+(d.custom?'<p><b>توضیحات شاگرد:</b> '+esc(d.custom)+'</p>':'')+(rating?'<p><b>رضایت ماهانه ('+esc(rating.month||'')+'):</b> '+esc(rating.score)+'٪</p>':'');
+      }
+    }catch(e){
+      if(!currentClient||String(currentClient.id)!==id)return;
+      preview.innerHTML='<div style="border:1px solid #b45309;border-radius:8px;padding:10px;color:#fbbf24"><b>خطا در دریافت هدف‌های شاگرد</b><p>'+esc(e?.message||String(e))+'</p><p>این پیام برای مشخص‌کردن علت واقعی خطاست؛ هدف‌ها هنوز تأیید نشده‌اند.</p></div>';
+      console.error('GOAL_FEEDBACK_COACH_FORCE_REFRESH_V2',e);
+    }
+  }
+  const oldSelect=window.selectClient;
+  if(typeof oldSelect==='function'){
+    window.selectClient=function(){
+      const result=oldSelect.apply(this,arguments);
+      Promise.resolve(result).finally(()=>setTimeout(refresh,250));
+      return result;
+    };
+  }
+  const oldShow=window.showSection;
+  if(typeof oldShow==='function'){
+    window.showSection=function(id){
+      const result=oldShow.apply(this,arguments);
+      if(id==='client')setTimeout(refresh,200);
+      return result;
+    };
+  }
+  document.addEventListener('click',function(e){
+    const b=e.target.closest('button');
+    if(b&&(/انتخاب شاگرد/.test(b.textContent||'')))setTimeout(refresh,300);
+  });
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',ensurePreview,{once:true});
+  else ensurePreview();
+})();
+</script>
+
 </body></html>
 </body></html>`;
     const w=window.open('','_blank');if(w){w.document.write(html);w.document.close();}
