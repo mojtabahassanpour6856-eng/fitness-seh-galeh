@@ -5535,8 +5535,7 @@ active('workoutMuscleFilters',wm);active('libraryMuscleFilters',lm);if(document.
   if(isTrainee()||!currentClient?.id)return;
   const traineeId=currentClient.id;
   let box=$("coachReceiptReview");if(!box){
-   const sec=$("client");const cards=sec?[...sec.querySelectorAll(":scope > .card")]:[];const card=cards.find(c=>c.querySelector("#subStart"));
-   if(!card)return;box=document.createElement("div");box.id="coachReceiptReview";box.className="receipt-item";box.innerHTML="<h3>📥 فیش‌های واریزی برای بررسی</h3><div id=\"coachReceiptList\"></div>";card.appendChild(box);
+   const sec=$("client");if(!sec)return;const cards=[...sec.querySelectorAll(":scope > .card")];let card=cards.find(c=>c.querySelector("#subStart"))||cards.find(c=>/عضویت باشگاه|عضویت و شهریه|شهریه/.test(c.querySelector("h2")?.textContent||""));box=document.createElement("div");box.id="coachReceiptReview";box.className="card receipt-item";box.innerHTML="<h3>📥 فیش‌های واریزی شاگرد</h3><div id=\"coachReceiptList\">در حال دریافت فیش‌ها…</div>";if(card)card.appendChild(box);else sec.appendChild(box);
   }
   try{
    const rows=await sbGet("/trainee_payment_receipts?trainee_id=eq."+encodeURIComponent(traineeId)+"&select=*&order=created_at.desc");
