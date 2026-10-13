@@ -2521,67 +2521,7 @@ window.loadDashboard = loadDashboard;
 
 
 
-<script id="FITNESS_WATER_ROLE_FINAL_FIX_20261013">
-(function(){
-  'use strict';
-  var $=function(id){return document.getElementById(id)};
-  function role(){try{return window.authProfile&&window.authProfile.role||(typeof authProfile!=='undefined'&&authProfile&&authProfile.role)||null}catch(e){return null}}
-  function ensureWaterUI(){
-    var r=role(),coach=$('coach'),client=$('client'),page=document.querySelector('.page'),nav=document.querySelector('.nav');
-    var section=$('water');
-    if(!section){
-      section=document.createElement('section');section.id='water';section.className='section';
-      section.innerHTML='<div class="card"><h2>💧 آب روزانه من</h2><p class="muted">ثبت آب روزانه و گزارش هفتگی در این بخش نمایش داده می‌شود.</p></div>';
-      if(page&&nav)page.insertBefore(section,nav.nextSibling);else document.body.appendChild(section);
-    }
-    var daily=$('studentWaterEntryCard')||($('waterAmount')&&$('waterAmount').closest('.card'));
-    if(daily){
-      if(r==='trainee'){
-        if(daily.parentElement!==section)section.appendChild(daily);
-        daily.hidden=false;daily.style.removeProperty('display');
-      }else{
-        daily.hidden=true;daily.style.setProperty('display','none','important');
-      }
-    }
-    if(coach&&!$('coachWaterGoalCard')){
-      var goal=document.createElement('div');goal.id='coachWaterGoalCard';goal.className='card water-goal-inline';
-      goal.innerHTML='<h2>🎯 هدف آب ماهانه شاگرد</h2><p class="muted">شاگرد را انتخاب کنید؛ سپس ماه شمسی و هدف روزانه آب را تعیین و ذخیره کنید.</p><div class="grid2"><div><label for="coachWaterGoalMonth">ماه هدف (شمسی)</label><select id="coachWaterGoalMonth"></select></div><div><label for="coachWaterGoal">هدف روزانه (میلی‌لیتر)</label><input id="coachWaterGoal" type="number" min="1" step="100" placeholder="مثلاً 3000"></div></div><button type="button" class="secondary" onclick="saveWaterGoal()">💾 ذخیره هدف آب ماه</button>';
-      coach.appendChild(goal);
-    }
-    if(coach&&!$('coachWaterWeekCard')){
-      var report=document.createElement('div');report.id='coachWaterWeekCard';report.className='card';
-      report.innerHTML='<h2>📅 گزارش آب هفتگی شاگرد</h2><p id="coachWaterWeekMeta" class="muted">ابتدا شاگرد را انتخاب کنید.</p><div id="coachWaterWeek" class="muted">گزارش هفتگی اینجا نمایش داده می‌شود.</div>';
-      coach.appendChild(report);
-    }
-    var goalCard=$('coachWaterGoalCard'),reportCard=$('coachWaterWeekCard');
-    [goalCard,reportCard].forEach(function(card){
-      if(!card)return;
-      if(coach&&card.parentElement!==coach)coach.appendChild(card);
-      if(r==='trainee'){card.hidden=true;card.style.setProperty('display','none','important')}
-      else{card.hidden=false;card.style.removeProperty('display')}
-    });
-    if(typeof window.populateWaterJalaliMonths==='function')window.populateWaterJalaliMonths();
-    else if(typeof populateWaterJalaliMonths==='function')populateWaterJalaliMonths();
-  }
-  var oldFinish=window.finishLogin;
-  if(typeof oldFinish==='function'&&!window.__fitnessWaterRoleFinalFinish){
-    window.finishLogin=async function(){var out=await oldFinish.apply(this,arguments);ensureWaterUI();setTimeout(ensureWaterUI,250);setTimeout(ensureWaterUI,900);return out};
-    window.__fitnessWaterRoleFinalFinish=true;
-  }
-  var oldSelect=window.selectClient;
-  if(typeof oldSelect==='function'&&!window.__fitnessWaterRoleFinalSelect){
-    window.selectClient=async function(){var out=await oldSelect.apply(this,arguments);ensureWaterUI();return out};
-    window.__fitnessWaterRoleFinalSelect=true;
-  }
-  var oldShow=window.showSection;
-  if(typeof oldShow==='function'&&!window.__fitnessWaterRoleFinalShow){
-    window.showSection=function(){var out=oldShow.apply(this,arguments);ensureWaterUI();return out};
-    window.__fitnessWaterRoleFinalShow=true;
-  }
-  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',ensureWaterUI,{once:true});else ensureWaterUI();
-  setTimeout(ensureWaterUI,400);setTimeout(ensureWaterUI,1400);
-})();
-</script>
+
 </body></html>`;
     const w=window.open('','_blank');if(w){w.document.write(html);w.document.close();}
   };
@@ -7960,5 +7900,66 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
   setTimeout(restoreTraineeLogin,900);
   setTimeout(restoreTraineeLogin,2200);
   setTimeout(restoreTraineeLogin,3500);
+})();
+</script>
+<script id="FITNESS_WATER_ROLE_FINAL_FIX_20261013">
+(function(){
+  'use strict';
+  var $=function(id){return document.getElementById(id)};
+  function role(){try{return window.authProfile&&window.authProfile.role||(typeof authProfile!=='undefined'&&authProfile&&authProfile.role)||null}catch(e){return null}}
+  function ensureWaterUI(){
+    var r=role(),coach=$('coach'),client=$('client'),page=document.querySelector('.page'),nav=document.querySelector('.nav');
+    var section=$('water');
+    if(!section){
+      section=document.createElement('section');section.id='water';section.className='section';
+      section.innerHTML='<div class="card"><h2>💧 آب روزانه من</h2><p class="muted">ثبت آب روزانه و گزارش هفتگی در این بخش نمایش داده می‌شود.</p></div>';
+      if(page&&nav)page.insertBefore(section,nav.nextSibling);else document.body.appendChild(section);
+    }
+    var daily=$('studentWaterEntryCard')||($('waterAmount')&&$('waterAmount').closest('.card'));
+    if(daily){
+      if(r==='trainee'){
+        if(daily.parentElement!==section)section.appendChild(daily);
+        daily.hidden=false;daily.style.removeProperty('display');
+      }else{
+        daily.hidden=true;daily.style.setProperty('display','none','important');
+      }
+    }
+    if(coach&&!$('coachWaterGoalCard')){
+      var goal=document.createElement('div');goal.id='coachWaterGoalCard';goal.className='card water-goal-inline';
+      goal.innerHTML='<h2>🎯 هدف آب ماهانه شاگرد</h2><p class="muted">شاگرد را انتخاب کنید؛ سپس ماه شمسی و هدف روزانه آب را تعیین و ذخیره کنید.</p><div class="grid2"><div><label for="coachWaterGoalMonth">ماه هدف (شمسی)</label><select id="coachWaterGoalMonth"></select></div><div><label for="coachWaterGoal">هدف روزانه (میلی‌لیتر)</label><input id="coachWaterGoal" type="number" min="1" step="100" placeholder="مثلاً 3000"></div></div><button type="button" class="secondary" onclick="saveWaterGoal()">💾 ذخیره هدف آب ماه</button>';
+      coach.appendChild(goal);
+    }
+    if(coach&&!$('coachWaterWeekCard')){
+      var report=document.createElement('div');report.id='coachWaterWeekCard';report.className='card';
+      report.innerHTML='<h2>📅 گزارش آب هفتگی شاگرد</h2><p id="coachWaterWeekMeta" class="muted">ابتدا شاگرد را انتخاب کنید.</p><div id="coachWaterWeek" class="muted">گزارش هفتگی اینجا نمایش داده می‌شود.</div>';
+      coach.appendChild(report);
+    }
+    var goalCard=$('coachWaterGoalCard'),reportCard=$('coachWaterWeekCard');
+    [goalCard,reportCard].forEach(function(card){
+      if(!card)return;
+      if(coach&&card.parentElement!==coach)coach.appendChild(card);
+      if(r==='trainee'){card.hidden=true;card.style.setProperty('display','none','important')}
+      else{card.hidden=false;card.style.removeProperty('display')}
+    });
+    if(typeof window.populateWaterJalaliMonths==='function')window.populateWaterJalaliMonths();
+    else if(typeof populateWaterJalaliMonths==='function')populateWaterJalaliMonths();
+  }
+  var oldFinish=window.finishLogin;
+  if(typeof oldFinish==='function'&&!window.__fitnessWaterRoleFinalFinish){
+    window.finishLogin=async function(){var out=await oldFinish.apply(this,arguments);ensureWaterUI();setTimeout(ensureWaterUI,250);setTimeout(ensureWaterUI,900);return out};
+    window.__fitnessWaterRoleFinalFinish=true;
+  }
+  var oldSelect=window.selectClient;
+  if(typeof oldSelect==='function'&&!window.__fitnessWaterRoleFinalSelect){
+    window.selectClient=async function(){var out=await oldSelect.apply(this,arguments);ensureWaterUI();return out};
+    window.__fitnessWaterRoleFinalSelect=true;
+  }
+  var oldShow=window.showSection;
+  if(typeof oldShow==='function'&&!window.__fitnessWaterRoleFinalShow){
+    window.showSection=function(){var out=oldShow.apply(this,arguments);ensureWaterUI();return out};
+    window.__fitnessWaterRoleFinalShow=true;
+  }
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',ensureWaterUI,{once:true});else ensureWaterUI();
+  setTimeout(ensureWaterUI,400);setTimeout(ensureWaterUI,1400);
 })();
 </script>
