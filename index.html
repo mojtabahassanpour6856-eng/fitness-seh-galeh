@@ -1926,7 +1926,7 @@ loadExercises();
         <div class="v4-card" onclick="dashOpen('activity')"><b>🔥</b>فعالیت امروز<span id="dashActivity" class="v4-small">—</span></div>
         <div class="v4-card" onclick="dashOpen('goals')"><b>🎯</b>هدف من<span id="dashGoal" class="v4-small">ثبت و پیگیری هدف‌های شخصی</span></div>
         <div class="v4-card" onclick="dashOpen('challenges')"><b>🏆</b>چالش‌ها<span id="dashChallenges" class="v4-small">—</span></div>
-        <div class="v4-card" onclick="dashOpen('client')"><b>💳</b>عضویت<span id="dashMembership" class="v4-small">—</span></div>
+        <div class="v4-card" role="button" tabindex="0" onclick="dashOpen('membership')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();dashOpen('membership')}"><b>💳</b>عضویت<span id="dashMembership" class="v4-small">—</span></div>
         <div class="v4-card" onclick="dashOpen('client')"><b>👤</b>پروفایل من<span class="v4-small">مشاهده و ثبت اطلاعات شخصی</span></div>
       </div>`;
     const page=document.querySelector('.page');const nav=document.querySelector('.nav');page.insertBefore(sec,nav.nextSibling);
@@ -5481,6 +5481,7 @@ active('workoutMuscleFilters',wm);active('libraryMuscleFilters',lm);if(document.
   card.innerHTML='<h2>💳 عضویت و شهریه</h2><div id="traineeMembershipStatus" class="muted">در حال دریافت وضعیت عضویت…</div><div id="traineeReceiptUpload" class="receipt-item"><h3>📤 ارسال فیش واریزی</h3><p class="muted">فیش فقط برای مربی و حساب خودتان قابل مشاهده است. فرمت JPG، PNG، WEBP یا PDF تا ۵ مگابایت.</p><label>مبلغ پرداختی (تومان)</label><input id="receiptAmount" type="number" min="1" placeholder="مبلغ واریزی"><label>تاریخ واریز (شمسی)</label><input id="receiptDate" type="text" inputmode="numeric" placeholder="۱۴۰۵/۰۷/۱۸" autocomplete="off"><label>تصویر یا PDF فیش</label><input id="receiptFile" type="file" accept="image/jpeg,image/png,image/webp,application/pdf"><label>توضیح (اختیاری)</label><input id="receiptNote" placeholder="مثلاً شهریه مهر"><button id="submitPaymentReceiptBtn" type="button" onclick="submitPaymentReceipt()">📨 ارسال فیش برای مربی</button></div><div id="traineeReceiptHistory"></div>';
   loadTraineeMembership();
  }
+ window.ensureTraineeMembershipCard=function(){return replaceTraineeMembershipCard();};
  async function loadTraineeMembership(){
   if(!isTrainee()||!currentClient?.id)return;
   const id=currentClient.id;
@@ -7046,6 +7047,36 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
     window.__sehMealExportLoginHook=true;
     window.finishLogin=async function(){var result=await oldFinish.apply(this,arguments);addMealExports();return result;};
   }
+})();
+</script>
+
+<script id="SEH_MEMBERSHIP_DASHBOARD_OPEN_REPAIR_V2">
+(function(){
+ 'use strict';
+ var oldDash=window.dashOpen;
+ function findMembershipCard(){
+  var root=document.getElementById('client');if(!root)return null;
+  return root.querySelector('#traineeMembershipStatus')?.closest('.card')
+   ||root.querySelector('#subStart')?.closest('.card')
+   ||Array.from(root.querySelectorAll(':scope > .card')).find(function(c){return /عضویت باشگاه|عضویت و شهریه/.test(c.querySelector('h2')?.textContent||'')});
+ }
+ function reveal(card){
+  if(!card)return false;
+  var node=card;
+  while(node&&node!==document.body){node.hidden=false;node.removeAttribute('aria-hidden');node.classList.remove('hide');if(node.style){node.style.removeProperty('display');node.style.setProperty('display','block','important');node.style.setProperty('visibility','visible','important');}node=node.parentElement;}
+  card.style.setProperty('display','block','important');card.style.setProperty('visibility','visible','important');
+  card.scrollIntoView({behavior:'smooth',block:'start'});return true;
+ }
+ window.dashOpen=function(section){
+  if(section!=='membership')return typeof oldDash==='function'?oldDash.apply(this,arguments):undefined;
+  if(typeof window.ensureTraineeMembershipCard==='function')window.ensureTraineeMembershipCard();
+  if(typeof window.showSection==='function')window.showSection('client',null);
+  var card=findMembershipCard();
+  if(!card&&typeof window.ensureTraineeMembershipCard==='function'){window.ensureTraineeMembershipCard();card=findMembershipCard();}
+  if(card)reveal(card);
+  [150,500,1000].forEach(function(ms){setTimeout(function(){if(typeof window.ensureTraineeMembershipCard==='function')window.ensureTraineeMembershipCard();var c=findMembershipCard();if(c)reveal(c);},ms);});
+  if(!card){setTimeout(function(){var c=findMembershipCard();if(c)reveal(c);},250);}
+ };
 })();
 </script>
 </body>
