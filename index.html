@@ -408,6 +408,18 @@ body.library-room .library-inline-add button{position:relative!important;z-index
 
 <!-- CLIENT -->
 <section id="client" class="section">
+<div class="card" id="goalBox">
+<h2>🎯 هدف شاگرد و پیام مربی</h2>
+<div id="goalStructuredPreview" class="muted">پس از انتخاب شاگرد، هدف‌های او اینجا نمایش داده می‌شود.</div>
+<div class="grid2">
+<div><label for="goalWeight">وزن هدف</label><input id="goalWeight" type="number" step="0.1" placeholder="وزن هدف"></div>
+<div><label for="goalFat">درصد چربی هدف</label><input id="goalFat" type="number" step="0.1" placeholder="درصد چربی هدف"></div>
+<div><label for="goalDate">تاریخ هدف شمسی</label><input id="goalDate" type="text" inputmode="numeric" placeholder="۱۴۰۵/۰۸/۱۸" autocomplete="off"></div>
+</div>
+<label for="goalNote">پیام یا توصیه مربی</label>
+<textarea id="goalNote" placeholder="پیام یا توصیه مربی که شاگرد در پنل خود مشاهده می‌کند"></textarea>
+<button onclick="saveGoal()">💾 ذخیره هدف</button>
+</div>
 <div class="card">
 <h2>👤 پروفایل شاگرد</h2>
 <div class="grid2">
