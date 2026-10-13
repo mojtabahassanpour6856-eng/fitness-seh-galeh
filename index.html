@@ -1904,13 +1904,26 @@ loadExercises();
     }
     if(panel.parentElement!==section)section.appendChild(panel);
   }
+  function normalizeTraineeProfileCards(root){
+    const grid=root&&root.querySelector('.v4-dashboard');
+    if(!grid)return;
+    const cards=Array.from(grid.querySelectorAll('.v4-card'));
+    const profiles=cards.filter(card=>
+      card.hasAttribute('data-profile-card') ||
+      /dashOpen\\(\\s*['"]client['"]\\s*\\)/.test(card.getAttribute('onclick')||'') ||
+      /پروفایل من/.test(card.textContent||'')
+    );
+    if(!profiles.length){
+      grid.insertAdjacentHTML('beforeend',`<div class="v4-card" data-profile-card="1" onclick="dashOpen('client')"><b>👤</b>پروفایل من<span class="v4-small">مشاهده و ثبت اطلاعات شخصی</span></div>`);
+      return;
+    }
+    profiles[0].setAttribute('data-profile-card','1');
+    profiles.slice(1).forEach(card=>card.remove());
+  }
   function buildDashboard(){
     const existing=$id('traineeDashboard');
     if(existing){
-      const grid=existing.querySelector('.v4-dashboard');
-      if(grid&&!grid.querySelector('[data-profile-card="1"]')){
-        grid.insertAdjacentHTML('beforeend',`<div class="v4-card" data-profile-card="1" onclick="dashOpen('client')"><b>👤</b>پروفایل من<span class="v4-small">مشاهده و ثبت اطلاعات شخصی</span></div>`);
-      }
+      normalizeTraineeProfileCards(existing);
       moveActivityPanelToStudentDashboard();
       addTraineeWorkoutExportPanel();
       return;
@@ -1927,9 +1940,10 @@ loadExercises();
         <div class="v4-card" onclick="dashOpen('goals')"><b>🎯</b>هدف من<span id="dashGoal" class="v4-small">ثبت و پیگیری هدف‌های شخصی</span></div>
         <div class="v4-card" onclick="dashOpen('challenges')"><b>🏆</b>چالش‌ها<span id="dashChallenges" class="v4-small">—</span></div>
         <div class="v4-card" role="button" tabindex="0" onclick="dashOpen('membership')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();dashOpen('membership')}"><b>💳</b>عضویت<span id="dashMembership" class="v4-small">—</span></div>
-        <div class="v4-card" onclick="dashOpen('client')"><b>👤</b>پروفایل من<span class="v4-small">مشاهده و ثبت اطلاعات شخصی</span></div>
+        <div class="v4-card" data-profile-card="1" onclick="dashOpen('client')"><b>👤</b>پروفایل من<span class="v4-small">مشاهده و ثبت اطلاعات شخصی</span></div>
       </div>`;
     const page=document.querySelector('.page');const nav=document.querySelector('.nav');page.insertBefore(sec,nav.nextSibling);
+    normalizeTraineeProfileCards(sec);
     moveActivityPanelToStudentDashboard();
     addTraineeWorkoutExportPanel();
   }
