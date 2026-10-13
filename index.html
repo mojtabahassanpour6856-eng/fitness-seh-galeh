@@ -1927,6 +1927,34 @@ loadExercises();
       </div>`;
     const page=document.querySelector('.page');const nav=document.querySelector('.nav');page.insertBefore(sec,nav.nextSibling);
     moveActivityPanelToStudentDashboard();
+    addTraineeWorkoutExportPanel();
+  }
+
+  function addTraineeWorkoutExportPanel(){
+    const dash=$id('traineeDashboard');
+    if(!dash)return;
+    let panel=$id('traineeWorkoutExportPanel');
+    if(!panel){
+      panel=document.createElement('div');
+      panel.id='traineeWorkoutExportPanel';
+      panel.className='card';
+      panel.style.marginTop='10px';
+      panel.innerHTML='<h3>📄 خروجی برنامه تمرینی من</h3><p class="muted">برنامه تمرینی کامل را مانند خروجی مربی ذخیره یا به‌صورت عکس دریافت کن.</p><div style="display:flex;flex-wrap:wrap;gap:8px"><button type="button" id="traineeWorkoutPdfExport">📄 دانلود / چاپ PDF</button><button type="button" id="traineeWorkoutImageExport">🖼️ دریافت عکس برنامه</button></div><p id="traineeWorkoutExportStatus" class="muted"></p>';
+      const grid=dash.querySelector('.v4-dashboard');
+      if(grid)grid.insertAdjacentElement('afterend',panel);else dash.appendChild(panel);
+      panel.querySelector('#traineeWorkoutPdfExport').addEventListener('click',function(){
+        if(!currentClient){alert('حساب شاگرد به پرونده متصل نیست. لطفاً دوباره وارد شوید.');return;}
+        if(typeof window.sharePlan!=='function'){alert('ابزار خروجی برنامه هنوز بارگذاری نشده است؛ صفحه را تازه‌سازی کنید.');return;}
+        window.sharePlan('workout');
+      });
+      panel.querySelector('#traineeWorkoutImageExport').addEventListener('click',function(){
+        if(!currentClient){alert('حساب شاگرد به پرونده متصل نیست. لطفاً دوباره وارد شوید.');return;}
+        if(typeof window.sharePlan!=='function'){alert('ابزار خروجی برنامه هنوز بارگذاری نشده است؛ صفحه را تازه‌سازی کنید.');return;}
+        window.sharePlan('workout');
+        const status=panel.querySelector('#traineeWorkoutExportStatus');
+        if(status)status.textContent='در صفحه خروجی برنامه، گزینه «دانلود عکس PNG» را بزنید؛ همچنین امکان چاپ یا ذخیره PDF وجود دارد.';
+      });
+    }
   }
 
   function buildTraineeAnalysisSection(){
