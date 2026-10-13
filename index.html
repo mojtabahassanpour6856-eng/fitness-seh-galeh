@@ -7729,8 +7729,8 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
       dashboard.querySelectorAll(".v4-card").forEach(function(card){
         if(/هدف من/.test(card.textContent||"")) card.style.setProperty("display",coach?"none":"",coach?"important":"");
       });
-      if(coach) dashboard.style.setProperty("display","none","important");
-      else if(trainee) dashboard.style.removeProperty("display");
+      /* داشبورد را در هیچ نقشی مخفی نکن؛ فقط کارت «هدف من» برای مربی پنهان می‌شود. */
+      if(trainee) dashboard.style.removeProperty("display");
     }
     var goalSection=document.getElementById("traineeGoalsSection");
     if(goalSection){
