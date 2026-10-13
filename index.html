@@ -7225,7 +7225,7 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
   const dayNames=['شنبه','یکشنبه','دوشنبه','سه‌شنبه','چهارشنبه','پنجشنبه','جمعه'];
   const $=id=>document.getElementById(id);
   function traineeRole(){
-    try{return window.authProfile && window.authProfile.role==='trainee';}catch(e){return false;}
+    try{return typeof authProfile!=='undefined' && authProfile && authProfile.role==='trainee';}catch(e){return false;}
   }
   function ensureTraineeSchedule(){
     const section=$('client');
@@ -7243,7 +7243,7 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
       const profile=section.querySelector(':scope > .card');
       if(profile&&profile.parentNode===section)profile.insertAdjacentElement('afterend',card);else section.prepend(card);
     }
-    const c=window.currentClient;
+    const c=typeof currentClient!=='undefined'?currentClient:null;
     if(c){
       const selected=String(c.training_days||'').split(/[،,؛;]/).map(x=>x.trim()).filter(Boolean);
       card.querySelectorAll('[data-training-day]').forEach(input=>input.checked=selected.includes(input.value));
@@ -7252,7 +7252,7 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
   }
   async function save(){
     const btn=$('traineeScheduleSaveBtn'),status=$('traineeScheduleStatus');
-    const c=window.currentClient;
+    const c=typeof currentClient!=='undefined'?currentClient:null;
     if(!traineeRole()){if(status)status.textContent='این بخش فقط برای حساب شاگرد است.';return;}
     if(!c||!c.id){if(status)status.textContent='پروفایل شاگرد پیدا نشد؛ از حساب خارج و دوباره وارد شوید.';return;}
     const days=[...document.querySelectorAll('#traineeScheduleDayChoices input:checked')].map(x=>x.value);
@@ -7264,7 +7264,7 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
       if(typeof window.sbWrite!=='function')throw new Error('اتصال ذخیره اطلاعات آماده نیست؛ صفحه را تازه‌سازی کنید.');
       await window.sbWrite('/trainees?id=eq.'+encodeURIComponent(c.id),'PATCH',{training_days:days.join('، '),training_time:time});
       c.training_days=days.join('، ');c.training_time=time;
-      if(Array.isArray(window.clients)){const found=window.clients.find(x=>String(x.id)===String(c.id));if(found){found.training_days=c.training_days;found.training_time=time;}}
+      if(typeof clients!=='undefined'&&Array.isArray(clients)){const found=clients.find(x=>String(x.id)===String(c.id));if(found){found.training_days=c.training_days;found.training_time=time;}}
       status.textContent='✅ روزها و ساعت تمرین ذخیره شد؛ مربی می‌تواند آن را در پرونده شما ببیند.';
     }catch(e){
       console.error('trainee schedule save failed',e);
