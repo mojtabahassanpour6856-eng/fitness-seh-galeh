@@ -2474,66 +2474,7 @@ window.loadDashboard = loadDashboard;
 </script>
 
 
-<script id="COACH_GOALS_DIRECT_DISPLAY_FIX">
-(function(){
- if(window.__coachGoalsDirectDisplayFix)return;
- window.__coachGoalsDirectDisplayFix=true;
- function byId(id){return document.getElementById(id);}
- function escGoal(v){return String(v==null?'':v).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});}
- function ensurePanel(){
-  var section=byId('client'); if(!section)return null;
-  var card=byId('goalBox');
-  if(!card){
-   card=document.createElement('div');card.id='goalBox';card.className='card';
-   card.innerHTML='<h2>🎯 هدف ثبت‌شده شاگرد</h2><div id="goalStructuredPreview">برای دیدن هدف‌ها، شاگرد را انتخاب کنید.</div>';
-   section.insertBefore(card,section.firstChild);
-  }
-  card.style.setProperty('display','block','important');
-  card.style.setProperty('visibility','visible','important');
-  card.removeAttribute('aria-hidden');
-  card.hidden=false;
-  return card;
- }
- async function showGoals(){
-  var card=ensurePanel(),preview=byId('goalStructuredPreview');
-  if(!card||!preview)return;
-  if(!currentClient){preview.textContent='برای دیدن هدف‌ها، ابتدا شاگرد را از فهرست مربی انتخاب کنید.';return;}
-  var traineeId=currentClient.id;
-  preview.innerHTML='<p>در حال دریافت هدف‌های ثبت‌شده…</p>';
-  try{
-   var rows=await sbGet('/trainee_goal_feedback?trainee_id=eq.'+encodeURIComponent(traineeId)+'&select=data,updated_at&limit=1');
-   if(!currentClient||String(currentClient.id)!==String(traineeId))return;
-   var data=rows&&rows[0]&&rows[0].data&&typeof rows[0].data==='object'?rows[0].data:{};
-   var goals=Array.isArray(data.goals)?data.goals:[];
-   var html=goals.length?'<b>هدف‌های انتخاب‌شده:</b><div style="display:flex;flex-wrap:wrap;gap:7px;margin:9px 0">'+goals.map(function(g){return '<span style="display:inline-block;border:1px solid #536579;border-radius:9px;padding:7px 10px">'+escGoal(g)+'</span>';}).join('')+'</div>':'<p>برای این شاگرد هدف انتخاب‌شده‌ای در جدول بازخورد پیدا نشد.</p>';
-   if(data.custom)html+='<p><b>توضیحات شاگرد:</b> '+escGoal(data.custom)+'</p>';
-   if(Array.isArray(data.ratings)&&data.ratings.length){
-    var rating=data.ratings.slice().sort(function(a,b){return String(b.month||'').localeCompare(String(a.month||''));})[0];
-    html+='<p><b>رضایت ماهانه:</b> '+escGoal(rating.score)+'٪'+(rating.month?' · '+escGoal(rating.month):'')+'</p>';
-   }
-   preview.innerHTML=html;
-  }catch(e){
-   console.error('COACH_GOALS_DIRECT_DISPLAY_FIX',e);
-   preview.innerHTML='<p style="color:#ffbd16">خواندن هدف‌های شاگرد ناموفق بود.</p><p style="direction:ltr;overflow-wrap:anywhere;font-size:11px">'+escGoal(e&&e.message||e)+'</p>';
-  }
- }
- window.showCoachGoalsDirectly=showGoals;
- var oldSelect=window.selectClient;
- if(typeof oldSelect==='function'){
-  window.selectClient=function(){
-   var result=oldSelect.apply(this,arguments);
-   Promise.resolve(result).then(function(){setTimeout(showGoals,80);});
-   return result;
-  };
- }
- document.addEventListener('click',function(e){
-  var b=e.target&&e.target.closest&&e.target.closest('button');
-  if(b&&/انتخاب شاگرد/.test(b.textContent||''))setTimeout(showGoals,250);
- });
- if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',ensurePanel,{once:true});
- else ensurePanel();
-})();
-</script>
+
 </body></html>
 </body></html>`;
     const w=window.open('','_blank');if(w){w.document.write(html);w.document.close();}
@@ -6847,6 +6788,66 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
   };
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',ensureGoalCard,{once:true});
   else ensureGoalCard();
+})();
+</script>
+<script id="COACH_GOALS_DIRECT_DISPLAY_FIX">
+(function(){
+ if(window.__coachGoalsDirectDisplayFix)return;
+ window.__coachGoalsDirectDisplayFix=true;
+ function byId(id){return document.getElementById(id);}
+ function escGoal(v){return String(v==null?'':v).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});}
+ function ensurePanel(){
+  var section=byId('client'); if(!section)return null;
+  var card=byId('goalBox');
+  if(!card){
+   card=document.createElement('div');card.id='goalBox';card.className='card';
+   card.innerHTML='<h2>🎯 هدف ثبت‌شده شاگرد</h2><div id="goalStructuredPreview">برای دیدن هدف‌ها، شاگرد را انتخاب کنید.</div>';
+   section.insertBefore(card,section.firstChild);
+  }
+  card.style.setProperty('display','block','important');
+  card.style.setProperty('visibility','visible','important');
+  card.removeAttribute('aria-hidden');
+  card.hidden=false;
+  return card;
+ }
+ async function showGoals(){
+  var card=ensurePanel(),preview=byId('goalStructuredPreview');
+  if(!card||!preview)return;
+  if(!currentClient){preview.textContent='برای دیدن هدف‌ها، ابتدا شاگرد را از فهرست مربی انتخاب کنید.';return;}
+  var traineeId=currentClient.id;
+  preview.innerHTML='<p>در حال دریافت هدف‌های ثبت‌شده…</p>';
+  try{
+   var rows=await sbGet('/trainee_goal_feedback?trainee_id=eq.'+encodeURIComponent(traineeId)+'&select=data,updated_at&limit=1');
+   if(!currentClient||String(currentClient.id)!==String(traineeId))return;
+   var data=rows&&rows[0]&&rows[0].data&&typeof rows[0].data==='object'?rows[0].data:{};
+   var goals=Array.isArray(data.goals)?data.goals:[];
+   var html=goals.length?'<b>هدف‌های انتخاب‌شده:</b><div style="display:flex;flex-wrap:wrap;gap:7px;margin:9px 0">'+goals.map(function(g){return '<span style="display:inline-block;border:1px solid #536579;border-radius:9px;padding:7px 10px">'+escGoal(g)+'</span>';}).join('')+'</div>':'<p>برای این شاگرد هدف انتخاب‌شده‌ای در جدول بازخورد پیدا نشد.</p>';
+   if(data.custom)html+='<p><b>توضیحات شاگرد:</b> '+escGoal(data.custom)+'</p>';
+   if(Array.isArray(data.ratings)&&data.ratings.length){
+    var rating=data.ratings.slice().sort(function(a,b){return String(b.month||'').localeCompare(String(a.month||''));})[0];
+    html+='<p><b>رضایت ماهانه:</b> '+escGoal(rating.score)+'٪'+(rating.month?' · '+escGoal(rating.month):'')+'</p>';
+   }
+   preview.innerHTML=html;
+  }catch(e){
+   console.error('COACH_GOALS_DIRECT_DISPLAY_FIX',e);
+   preview.innerHTML='<p style="color:#ffbd16">خواندن هدف‌های شاگرد ناموفق بود.</p><p style="direction:ltr;overflow-wrap:anywhere;font-size:11px">'+escGoal(e&&e.message||e)+'</p>';
+  }
+ }
+ window.showCoachGoalsDirectly=showGoals;
+ var oldSelect=window.selectClient;
+ if(typeof oldSelect==='function'){
+  window.selectClient=function(){
+   var result=oldSelect.apply(this,arguments);
+   Promise.resolve(result).then(function(){setTimeout(showGoals,80);});
+   return result;
+  };
+ }
+ document.addEventListener('click',function(e){
+  var b=e.target&&e.target.closest&&e.target.closest('button');
+  if(b&&/انتخاب شاگرد/.test(b.textContent||''))setTimeout(showGoals,250);
+ });
+ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',ensurePanel,{once:true});
+ else ensurePanel();
 })();
 </script>
 </body>
