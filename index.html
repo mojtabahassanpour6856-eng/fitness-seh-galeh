@@ -7547,3 +7547,176 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
 })();
 </script>
 
+
+<script id="seh-passwordless-trainee-auth">
+(function(){
+  const $=id=>document.getElementById(id);
+  const REG_KEY="seh_pending_registration_v1";
+  const LINK_KEY="seh_pending_device_link_v1";
+  let pollTimer=null, pollBusy=false;
+  function normPhone(v){
+    let p=String(v||"").trim().replace(/[\s()-]/g,"").replace(/[۰-۹]/g,d=>String("۰۱۲۳۴۵۶۷۸۹".indexOf(d)));
+    if(/^09\d{9}$/.test(p))p="+98"+p.slice(1);else if(/^989\d{9}$/.test(p))p="+"+p;else if(/^00989\d{9}$/.test(p))p="+"+p.slice(2);
+    return p;
+  }
+  function secret(){const a=crypto.getRandomValues(new Uint8Array(32));return Array.from(a).map(x=>x.toString(16).padStart(2,"0")).join("");}
+  function read(key){try{return JSON.parse(localStorage.getItem(key)||"null")}catch(e){return null}}
+  function save(key,v){try{localStorage.setItem(key,JSON.stringify(v))}catch(e){}}
+  function clear(key){try{localStorage.removeItem(key)}catch(e){}}
+  function message(id,text,ok=false){const e=$(id);if(e){e.textContent=text;e.style.color=ok?"#9be2b0":"#ffd28a";}}
+  function authReady(){return !!window.AUTH_SUPABASE?.auth;}
+  async function enterWithTemporaryPassword(data,storeKey,statusId){
+    if(!data?.phone||!data?.temporary_password)throw new Error("اطلاعات ورود امن کامل دریافت نشد.");
+    const {data:auth,error}=await AUTH_SUPABASE.auth.signInWithPassword({phone:data.phone,password:data.temporary_password});
+    if(error)throw error;
+    clear(storeKey);message(statusId,"ورود موفق بود؛ در حال بازکردن حساب شما…",true);
+    if(typeof window.finishLogin==="function")await window.finishLogin(auth.user);
+  }
+  async function pollRegistration(){
+    if(pollBusy)return;const p=read(REG_KEY);if(!p?.id||!p?.secret||!authReady())return;
+    pollBusy=true;
+    try{
+      const {data,error}=await AUTH_SUPABASE.functions.invoke("trainee-registration-login",{body:{request_id:p.id,request_secret:p.secret}});
+      if(error)throw error;
+      if(data?.status==="pending"){message("sehRegistrationLoginStatus","درخواست شما ثبت شده و منتظر تأیید مربی است. این صفحه را باز نگه دارید یا بعداً دوباره وارد شوید.");return;}
+      if(data?.status==="rejected"||data?.status==="expired"||data?.status==="unavailable"||data?.status==="claimed"){
+        clear(REG_KEY);message("sehRegistrationLoginStatus",data.message||"این درخواست دیگر فعال نیست. با مربی هماهنگ کنید.");return;
+      }
+      if(data?.success&&data?.temporary_password){
+        try{await enterWithTemporaryPassword(data,REG_KEY,"sehRegistrationLoginStatus");}
+        catch(e){clear(REG_KEY);message("sehRegistrationLoginStatus","تأیید انجام شده اما ورود خودکار کامل نشد. برای اتصال دوباره با مربی هماهنگ کنید. "+(e?.message||""));}
+      }
+    }catch(e){console.warn("registration status check",e);message("sehRegistrationLoginStatus","بررسی وضعیت انجام نشد؛ اتصال اینترنت را بررسی می‌کنیم و دوباره تلاش می‌کنیم.");}
+    finally{pollBusy=false;}
+  }
+  async function pollDeviceLink(){
+    if(pollBusy)return;const p=read(LINK_KEY);if(!p?.id||!p?.secret||!authReady())return;
+    pollBusy=true;
+    try{
+      const {data,error}=await AUTH_SUPABASE.functions.invoke("trainee-device-link",{body:{action:"claim",request_id:p.id,request_secret:p.secret}});
+      if(error)throw error;
+      if(data?.status==="pending"){message("sehDeviceLinkStatus","درخواست اتصال ارسال شده و منتظر تأیید مربی است.");return;}
+      if(data?.status==="rejected"||data?.status==="expired"||data?.status==="claimed"){
+        clear(LINK_KEY);message("sehDeviceLinkStatus",data.message||"این درخواست دیگر فعال نیست. در صورت نیاز درخواست تازه بفرستید.");return;
+      }
+      if(data?.success&&data?.temporary_password){
+        try{await enterWithTemporaryPassword(data,LINK_KEY,"sehDeviceLinkStatus");}
+        catch(e){clear(LINK_KEY);message("sehDeviceLinkStatus","مربی تأیید کرد، اما ورود خودکار کامل نشد. لطفاً درخواست اتصال تازه‌ای بفرستید. "+(e?.message||""));}
+      }
+    }catch(e){console.warn("device link status check",e);message("sehDeviceLinkStatus","بررسی وضعیت اتصال انجام نشد؛ دوباره تلاش می‌کنیم.");}
+    finally{pollBusy=false;}
+  }
+  function startPolling(){
+    if(pollTimer)clearInterval(pollTimer);
+    pollTimer=setInterval(()=>{if(read(REG_KEY))pollRegistration();else if(read(LINK_KEY))pollDeviceLink();else{clearInterval(pollTimer);pollTimer=null;}},6500);
+    if(read(REG_KEY))pollRegistration();else if(read(LINK_KEY))pollDeviceLink();
+  }
+  function addStatus(container,id){
+    let e=$(id);if(!e){e=document.createElement("p");e.id=id;e.className="muted";e.style.cssText="font-size:12px;line-height:1.8;white-space:pre-wrap;margin:8px 0 0";container.appendChild(e);}return e;
+  }
+  function installTraineeAuth(){
+    const box=$("traineeLoginBox");if(!box||box.dataset.sehPasswordless==="1")return;
+    box.dataset.sehPasswordless="1";
+    const blocks=Array.from(box.querySelectorAll(".trainee-auth-block"));
+    const oldLogin=blocks.find(b=>(b.querySelector("h3")?.textContent||"").includes("ورود شاگرد"));
+    if(oldLogin){
+      oldLogin.innerHTML='<h3>👤 ورود شاگرد بدون رمز</h3><p class="muted">اگر قبلاً حساب دارید یا گوشی خود را عوض کرده‌اید، مشخصات حساب قبلی را وارد کنید. ورود فقط پس از تأیید مربی انجام می‌شود.</p><label>نام و نام خانوادگی ثبت‌شده</label><input id="sehDeviceLinkName" autocomplete="name" maxlength="120" placeholder="نام کامل"><label>شماره موبایل حساب قبلی</label><input id="sehDeviceLinkPhone" type="tel" inputmode="tel" autocomplete="tel" placeholder="09121234567"><button type="button" id="sehDeviceLinkSubmit">🔗 درخواست اتصال به حساب قبلی</button>';
+      addStatus(oldLogin,"sehDeviceLinkStatus");
+    }
+    const reg=blocks.find(b=>(b.querySelector("h3")?.textContent||"").includes("درخواست ثبت‌نام"));
+    if(reg){
+      const btn=reg.querySelector('button[onclick*="registerTraineePhone"]');
+      if(btn)btn.textContent="📨 ارسال درخواست عضویت";
+      let p=addStatus(reg,"sehRegistrationLoginStatus");
+      p.textContent="پس از تأیید مربی، ورود به‌صورت خودکار انجام می‌شود؛ رمز و پیامک لازم نیست.";
+      const para=reg.querySelector("p.muted");
+      if(para)para.textContent="درخواست عضویت را یک‌بار ثبت کنید. پس از تأیید مربی، همین دستگاه به‌صورت خودکار وارد حساب شما می‌شود؛ رمز و پیامک لازم نیست.";
+    }
+    const style=document.createElement("style");style.id="sehPasswordlessStyle";style.textContent='#authScreen #sehDeviceLinkSubmit{width:100%;min-height:42px;margin-top:8px}#authScreen #sehDeviceLinkName,#authScreen #sehDeviceLinkPhone{box-sizing:border-box;width:100%;min-height:40px;padding:9px;border-radius:9px;margin:4px 0 7px}#authScreen #sehDeviceLinkStatus,#authScreen #sehRegistrationLoginStatus{font-size:12px;line-height:1.8;white-space:pre-wrap}';document.head.appendChild(style);
+    $("sehDeviceLinkSubmit")?.addEventListener("click",async()=>{
+      const name=$("sehDeviceLinkName")?.value.trim()||"",phone=normPhone($("sehDeviceLinkPhone")?.value||"");
+      if(name.length<2){message("sehDeviceLinkStatus","نام کامل را وارد کنید.");return;}
+      if(!/^\+989\d{9}$/.test(phone)){message("sehDeviceLinkStatus","شماره موبایل معتبر نیست؛ مانند 09121234567 وارد کنید.");return;}
+      if(read(LINK_KEY)){message("sehDeviceLinkStatus","درخواست قبلی شما هنوز در حال بررسی است.");startPolling();return;}
+      const btn=$("sehDeviceLinkSubmit");if(btn){btn.disabled=true;btn.textContent="⏳ در حال ارسال درخواست…";}
+      try{
+        const sec=secret();
+        const {data,error}=await AUTH_SUPABASE.functions.invoke("trainee-device-link",{body:{action:"request",full_name:name,phone,request_secret:sec}});
+        if(error)throw error;if(data?.error)throw new Error(data.error);
+        if(!data?.request_id)throw new Error("شناسه درخواست دریافت نشد.");
+        save(LINK_KEY,{id:data.request_id,secret:sec,phone});
+        message("sehDeviceLinkStatus","درخواست اتصال ثبت شد. پس از تأیید مربی، همین گوشی به حساب قبلی متصل می‌شود.",true);
+        startPolling();
+      }catch(e){message("sehDeviceLinkStatus","ارسال درخواست انجام نشد: "+(e?.message||String(e)));}
+      finally{if(btn){btn.disabled=false;btn.textContent="🔗 درخواست اتصال به حساب قبلی";}}
+    });
+    // Remove remembered trainee identity-only shortcuts: passwordless sessions are restored by Supabase itself.
+    try{const a=JSON.parse(localStorage.getItem("seh_saved_accounts_v1")||"[]");if(Array.isArray(a)){const keep=a.filter(x=>x.type!=="trainee");localStorage.setItem("seh_saved_accounts_v1",JSON.stringify(keep));}}catch(e){}
+  }
+  window.registerTraineePhone=async function(){
+    const name=$("traineeRegName")?.value.trim()||"",phone=normPhone($("traineeRegPhone")?.value||"");
+    const weekly_sessions=Number($("traineeRegSessions")?.value||0),training_days=$("traineeRegDays")?.value.trim()||"",training_time=$("traineeRegTime")?.value||"";
+    if(name.length<2){message("sehRegistrationLoginStatus","نام و نام خانوادگی را وارد کنید.");return;}
+    if(!/^\+989\d{9}$/.test(phone)){message("sehRegistrationLoginStatus","شماره موبایل معتبر نیست؛ مانند 09121234567 وارد کنید.");return;}
+    if(!Number.isInteger(weekly_sessions)||weekly_sessions<1||weekly_sessions>7||!training_days||!training_time){message("sehRegistrationLoginStatus","تعداد جلسات، روزها و ساعت تمرین را کامل کنید.");return;}
+    if(read(REG_KEY)){message("sehRegistrationLoginStatus","درخواست قبلی شما هنوز در حال بررسی است.");startPolling();return;}
+    const btn=$("traineeLoginBox")?.querySelector('.trainee-auth-block button[onclick*="registerTraineePhone"]');
+    if(btn){btn.disabled=true;btn.textContent="⏳ در حال ارسال…";}
+    try{
+      const sec=secret();
+      const {data,error}=await AUTH_SUPABASE.functions.invoke("trainee-registration-request",{body:{full_name:name,phone,weekly_sessions,training_days,training_time,request_secret:sec}});
+      if(error)throw error;if(data?.error)throw new Error(data.error);
+      if(!data?.request_id)throw new Error("درخواست ثبت شد اما شناسه ورود امن دریافت نشد. لطفاً صفحه را تازه‌سازی و با مربی هماهنگ کنید.");
+      save(REG_KEY,{id:data.request_id,secret:sec,phone});
+      ["traineeRegName","traineeRegPhone","traineeRegSessions","traineeRegDays","traineeRegTime"].forEach(id=>{if($(id))$(id).value="";});
+      message("sehRegistrationLoginStatus","درخواست عضویت ثبت شد. منتظر تأیید مربی بمانید؛ پس از تأیید، ورود خودکار انجام می‌شود.",true);
+      startPolling();
+    }catch(e){message("sehRegistrationLoginStatus","ارسال درخواست انجام نشد: "+(e?.message||String(e)));}
+    finally{if(btn){btn.disabled=false;btn.textContent="📨 ارسال درخواست عضویت";}}
+  };
+
+  async function loadDeviceLinkRequests(){
+    const panel=$("deviceLinkRequestsPanel"),box=$("deviceLinkRequests");if(!panel||!box)return;
+    const isCoach=/\|\s*مربی\s*$/.test(($("authUserText")?.textContent||"").trim());
+    panel.style.display=isCoach?"block":"none";if(!isCoach)return;
+    box.innerHTML='<p class="muted">در حال دریافت درخواست‌ها…</p>';
+    try{
+      const {data,error}=await AUTH_SUPABASE.functions.invoke("review-trainee-device-link",{body:{action:"list"}});
+      if(error)throw error;if(data?.error)throw new Error(data.error);
+      const rows=data?.requests||[];
+      if(!rows.length){box.innerHTML='<p class="muted">در حال حاضر درخواست اتصال گوشی جدید وجود ندارد.</p>';return;}
+      const esc=v=>typeof window.esc==="function"?window.esc(String(v??"")):String(v??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m]));
+      box.innerHTML='<div class="v4-table"><table><thead><tr><th>شاگرد</th><th>شماره</th><th>درخواست‌دهنده</th><th>تاریخ</th><th>تصمیم مربی</th></tr></thead><tbody>'+rows.map(r=>'<tr><td>'+esc(r.trainee?.full_name||"پرونده شاگرد")+'</td><td>'+esc(r.phone_normalized||"—")+'</td><td>'+esc(r.requested_name||"—")+'</td><td>'+esc(new Date(r.requested_at).toLocaleDateString("fa-IR"))+'</td><td><button class="mini" onclick="reviewDeviceLinkRequest(\''+r.id+'\',\'approve\')">✅ تأیید اتصال</button> <button class="mini danger" onclick="reviewDeviceLinkRequest(\''+r.id+'\',\'reject\')">رد</button></td></tr>').join("")+'</tbody></table></div>';
+    }catch(e){console.error("load device link requests",e);box.innerHTML='<p class="v4-danger">دریافت درخواست‌های اتصال انجام نشد: '+String(e?.message||e)+'</p>';}
+  }
+  window.loadDeviceLinkRequests=loadDeviceLinkRequests;
+  window.reviewDeviceLinkRequest=async function(id,decision){
+    if(!confirm(decision==="approve"?"اتصال این گوشی به حساب قبلی شاگرد تأیید شود؟ پس از تأیید، گوشی جدید وارد همان حساب می‌شود.":"درخواست اتصال این گوشی رد شود؟"))return;
+    try{
+      const {data,error}=await AUTH_SUPABASE.functions.invoke("review-trainee-device-link",{body:{request_id:id,decision}});
+      if(error)throw error;if(data?.error)throw new Error(data.error);
+      alert(decision==="approve"?"اتصال تأیید شد. گوشی جدید پس از چند ثانیه به همان حساب قبلی وارد می‌شود.":"درخواست اتصال رد شد.");
+      await loadDeviceLinkRequests();
+    }catch(e){alert("بررسی درخواست انجام نشد: "+(e?.message||String(e)));}
+  };
+  function ensureDevicePanel(){
+    const reg=$("registrationRequestsPanel");if(!reg||$("deviceLinkRequestsPanel"))return;
+    const panel=document.createElement("div");panel.id="deviceLinkRequestsPanel";panel.className="card";panel.style.marginTop="12px";
+    panel.innerHTML='<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap"><h3 style="margin:0">📱 درخواست‌های اتصال گوشی جدید</h3><button type="button" class="secondary mini" id="refreshDeviceLinkRequests">🔄 تازه‌سازی</button></div><p class="muted">فقط با تأیید مربی، گوشی جدید به همان حساب قبلی متصل می‌شود؛ سوابق شاگرد حفظ خواهد شد.</p><div id="deviceLinkRequests"><p class="muted">در حال دریافت درخواست‌ها…</p></div>';
+    reg.insertAdjacentElement("afterend",panel);$("refreshDeviceLinkRequests")?.addEventListener("click",loadDeviceLinkRequests);
+  }
+  const oldLoadClients=window.loadClients;
+  if(typeof oldLoadClients==="function"&&!window.__sehDeviceLinkCoachWrap){
+    window.loadClients=async function(){const r=await oldLoadClients.apply(this,arguments);ensureDevicePanel();await loadDeviceLinkRequests();return r;};
+    window.__sehDeviceLinkCoachWrap=true;
+  }
+  const oldFinish=window.finishLogin;
+  if(typeof oldFinish==="function"&&!window.__sehPasswordlessFinishWrap){
+    window.finishLogin=async function(){const r=await oldFinish.apply(this,arguments);setTimeout(()=>{ensureDevicePanel();loadDeviceLinkRequests();},250);return r;};
+    window.__sehPasswordlessFinishWrap=true;
+  }
+  if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",()=>{installTraineeAuth();if(read(REG_KEY)||read(LINK_KEY))startPolling();});
+  else {installTraineeAuth();if(read(REG_KEY)||read(LINK_KEY))startPolling();}
+  setTimeout(()=>{installTraineeAuth();ensureDevicePanel();},800);
+})();
+</script>
