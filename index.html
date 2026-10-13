@@ -1939,7 +1939,7 @@ loadExercises();
     });
     const section=$id('workout');
     if(!section)return;
-    const trainee=typeof isTrainee==='function'&&isTrainee();
+    const trainee=typeof authProfile!=="undefined"&&authProfile?.role==="trainee";
     /* For trainees, place export controls in the visible card that actually contains the rendered workout list,
        not in the coach-only plan editor form. */
     const card=trainee
