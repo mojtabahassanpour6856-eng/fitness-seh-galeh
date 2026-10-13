@@ -1849,13 +1849,17 @@ if(profileError) throw profileError;
       }
     }
     authProfile=rows[0];document.body.classList.remove('locked');$('authScreen').style.display='none';$('authUserBar').style.display='block';$('authUserText').textContent=`${authProfile.full_name||user.email} | ${authProfile.role==='coach'?'مربی':'شاگرد'}`;
-    // Reload the food catalog after authentication so RLS sees the active session.
-    await loadFoods();
+    // Show the correct dashboard immediately after authentication.
+    // The food catalog can load in the background; waiting for it here delayed
+    // the first paint and made the app appear to jump when the coach panel opened.
     if(authProfile.role==='trainee'){
       document.querySelectorAll('.nav button').forEach(b=>b.style.display='none');
       [document.querySelectorAll('.nav button')[2],document.querySelectorAll('.nav button')[3],document.querySelectorAll('.nav button')[4]].forEach(b=>{if(b)b.style.display='block';});
       showSection('client');
     }else{showSection('coach',document.querySelectorAll('.nav button')[2]);}
+    // Keep the authenticated Supabase session before requesting foods (RLS).
+    // loadFoods refreshes nutrition selectors once the catalog arrives.
+    loadFoods().catch(e=>console.error('Background food catalog load failed',e));
   }catch(e){console.error(e);showAuthError('بررسی پروفایل انجام نشد. '+(e.message||''));}
 }
 async function logoutApp(){await AUTH_SUPABASE.auth.signOut();location.reload();}
