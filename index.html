@@ -2524,7 +2524,7 @@ window.loadDashboard = loadDashboard;
     const w=$id('workout')?.querySelector('.card');if(w&&!$id('printWorkoutBtn')){const b=document.createElement('button');b.id='printWorkoutBtn';b.className='secondary';b.textContent='📄 چاپ / ذخیره PDF برنامه تمرینی';b.onclick=()=>printPlan('workout');w.appendChild(b)}
   }
 
-  const oldFinish2=window.finishLogin;window.finishLogin=async function(user){await oldFinish2(user);addWaterGoal();addStyle();buildDashboard();addNavDashboard();buildWorkoutControls();addScheduleUI();addPrintButtons();await fixLibraryUse();if(authProfile?.role==='coach'){await window.loadClients();await window.loadRegistrationRequests();}else if(authProfile?.role==='trainee'){await setupTraineeAuth(user);}};
+  const oldFinish2=window.finishLogin;window.finishLogin=async function(user){await oldFinish2(user);addWaterGoal();addStyle();buildDashboard();addNavDashboard();buildWorkoutControls();addScheduleUI();addPrintButtons();await fixLibraryUse();if(authProfile?.role==='coach'){await window.loadClients();await window.loadRegistrationRequests();}/* Trainee setup is already completed by oldFinish2's wrapped finishLogin; do not run setupTraineeAuth twice because it switches sections and reloads every dashboard panel. */};
   function addRegistrationFields(){
     const form=$id('ctype')?.parentElement?.parentElement;if(!form||$id('ctrainingDays'))return;
     const days=document.createElement('div');days.innerHTML='<div><label>روزهای تمرین</label><input id="ctrainingDays" placeholder="شنبه، دوشنبه، چهارشنبه"></div><div><label>ساعت تمرین</label><input id="ctrainingTime" type="time"></div>';
@@ -3300,7 +3300,7 @@ window.toggleExerciseFavorite=async function(id,value){try{await sbWrite(`/train
    window.__coachMessageSelectWrapped=true;
   }
   const oldFinish=window.finishLogin;
-  window.finishLogin=async function(user){await oldFinish(user);addFinalStyle();addShareButtons();addCoachStatusFilters();wireFinalBadges();addGoalHistory();if(authProfile?.role==='coach'){await window.loadClients();}else if(authProfile?.role==='trainee'){await selectClient(currentClient?.id);await loadDashboard();if(typeof window.refreshTraineeCoachMessage==="function")await window.refreshTraineeCoachMessage();}await applyFastingRole();};
+  window.finishLogin=async function(user){await oldFinish(user);addFinalStyle();addShareButtons();addCoachStatusFilters();wireFinalBadges();addGoalHistory();/* Client loading and trainee dashboard selection are handled once by the earlier login pipeline. Repeating them here caused section changes and visible dashboard jumps. */if(authProfile?.role==='trainee'&&typeof window.refreshTraineeCoachMessage==="function")await window.refreshTraineeCoachMessage();await applyFastingRole();};
 
   // Re-run UI helpers after dynamic sections appear.
   const oldShow=window.showSection;
