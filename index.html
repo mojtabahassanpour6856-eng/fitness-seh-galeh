@@ -8148,3 +8148,61 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
   setTimeout(ensureStudentWater,500);
 })();
 </script>
+
+
+<!-- FITNESS_WATER_RESTORE_EXISTING_DASHBOARD_CARD_20261013 -->
+<script id="FITNESS_WATER_RESTORE_EXISTING_DASHBOARD_CARD_20261013">
+(function(){
+  'use strict';
+  function restoreExistingWaterCard(){
+    var nav=document.querySelector('.nav');
+    var extraNav=document.getElementById('navWaterMe');
+    if(extraNav)extraNav.remove();
+    var intro=document.getElementById('studentWaterIntro');
+    if(intro)intro.remove();
+    var waterSection=document.getElementById('water');
+    var daily=document.getElementById('studentWaterEntryCard') ||
+      (document.getElementById('waterAmount') && document.getElementById('waterAmount').closest('.card'));
+    // Return the original card to the existing student nutrition/dashboard view.
+    var original=document.getElementById('mealStudentView');
+    if(daily && original && daily.parentElement!==original){
+      var list=document.getElementById('studentMealList');
+      if(list && list.parentElement===original) list.insertAdjacentElement('afterend',daily);
+      else original.appendChild(daily);
+    }
+    if(daily){
+      daily.hidden=false;
+      daily.style.removeProperty('display');
+    }
+    // Remove only the empty section created for the unwanted duplicate navigation.
+    if(waterSection){
+      if(daily && waterSection.contains(daily) && original) original.appendChild(daily);
+      waterSection.remove();
+    }
+    // Keep the existing daily-water card, target display and weekly report intact.
+  }
+  function scheduleRestore(){
+    [0,250,900,1800,3200].forEach(function(ms){setTimeout(restoreExistingWaterCard,ms);});
+  }
+  var previousFinish=window.finishLogin;
+  if(typeof previousFinish==='function'&&!window.__restoreExistingWaterCardLogin){
+    window.finishLogin=async function(){
+      var result=await previousFinish.apply(this,arguments);
+      scheduleRestore();
+      return result;
+    };
+    window.__restoreExistingWaterCardLogin=true;
+  }
+  var previousSelect=window.selectClient;
+  if(typeof previousSelect==='function'&&!window.__restoreExistingWaterCardSelect){
+    window.selectClient=async function(){
+      var result=await previousSelect.apply(this,arguments);
+      scheduleRestore();
+      return result;
+    };
+    window.__restoreExistingWaterCardSelect=true;
+  }
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',scheduleRestore,{once:true});
+  else scheduleRestore();
+})();
+</script>
