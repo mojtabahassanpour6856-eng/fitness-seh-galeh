@@ -7183,26 +7183,35 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
    }).catch(function(err){console.warn('فیش‌های شاگرد در کارت عضویت بارگذاری نشدند.',err);});
   }
  }
+ window.openTraineeProfile=function(){
+  var profile=document.getElementById('client');
+  if(!profile){console.error('بخش پروفایل شاگرد (#client) پیدا نشد');return;}
+  // مسیر مستقیم: از زنجیره چندباره dashOpen/showSection عبور نمی‌کنیم تا
+  // کنترل دسترسی نقش شاگرد نتواند بازشدن پروفایل را دوباره مختل کند.
+  document.querySelectorAll('.section').forEach(function(s){s.classList.remove('active');});
+  profile.hidden=false;profile.removeAttribute('hidden');profile.classList.remove('hide');profile.classList.add('active');
+  profile.style.setProperty('display','block','important');
+  profile.style.setProperty('visibility','visible','important');
+  var goal=document.getElementById('goalBox');
+  if(goal){goal.style.setProperty('display','none','important');goal.hidden=true;}
+  var cards=Array.from(profile.querySelectorAll(':scope > .card'));
+  var personal=cards.find(function(card){return /پروفایل شاگرد|پروفایل شخصی/.test(card.querySelector('h2')?.textContent||'');});
+  if(personal){personal.hidden=false;personal.classList.remove('hide');personal.style.setProperty('display','block','important');personal.style.setProperty('visibility','visible','important');}
+  if(typeof window.addProfileBasicFields==='function'){try{window.addProfileBasicFields();}catch(e){console.warn(e);}}
+  if(typeof window.loadProfileBasic==='function'){try{window.loadProfileBasic();}catch(e){console.warn(e);}}
+  profile.scrollIntoView({behavior:'smooth',block:'start'});
+  if(personal)personal.scrollIntoView({behavior:'smooth',block:'start'});
+ };
  window.dashOpen=function(section){
   if(section==='membership'){openMembership(0);return;}
-  if(section==='client'){
-   var result=typeof oldDash==='function'?oldDash.apply(this,arguments):undefined;
-   var openProfile=function(){
-    var profile=document.getElementById('client');
-    if(profile){
-     if(typeof window.showSection==='function')window.showSection('client',null);
-     profile.hidden=false;profile.classList.remove('hide');profile.style.setProperty('display','block','important');profile.style.setProperty('visibility','visible','important');
-     if(typeof window.addProfileBasicFields==='function')window.addProfileBasicFields();
-     if(typeof window.loadProfileBasic==='function')window.loadProfileBasic();
-     if(typeof window.applyFeatureUI==='function')window.applyFeatureUI();
-     profile.scrollIntoView({behavior:'smooth',block:'start'});
-    }
-   };
-   Promise.resolve(result).then(function(){setTimeout(openProfile,60);});
-   return result;
-  }
+  if(section==='client'){window.openTraineeProfile();return;}
   return typeof oldDash==='function'?oldDash.apply(this,arguments):undefined;
  };
+ // پشتیبان برای کارت پروفایل داشبورد
+ document.addEventListener('click',function(e){
+  var card=e.target&&e.target.closest&&e.target.closest('[data-profile-card]');
+  if(card){e.preventDefault();e.stopPropagation();window.openTraineeProfile();}
+ },true);
  window.closeTraineeMembershipCard=closeMembership;
 })();
 </script>
