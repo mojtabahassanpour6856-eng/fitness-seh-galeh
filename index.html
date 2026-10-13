@@ -8159,3 +8159,50 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
 
 
 
+
+
+<!-- FITNESS_FOOD_SELECTOR_RECOVERY_20261013 -->
+<script id="FITNESS_FOOD_SELECTOR_RECOVERY_20261013">
+(function(){
+  'use strict';
+  let refreshPromise=null;
+  async function refreshFoodSelectors(){
+    if(refreshPromise)return refreshPromise;
+    refreshPromise=(async function(){
+      try{
+        if(typeof loadFoods!=='function')throw new Error('بارگذار بانک غذا در دسترس نیست.');
+        await loadFoods();
+        if(typeof fillMealFoodSelect==='function')fillMealFoodSelect();
+        const dietType=document.getElementById('dietTypeSelect');
+        if(dietType)dietType.dispatchEvent(new Event('change',{bubbles:true}));
+        const status=document.getElementById('dietMealPlannerStatus');
+        if(status&&typeof foods!=='undefined'&&Array.isArray(foods)&&foods.length)
+          status.textContent='بانک غذا به‌روز شد؛ '+foods.length.toLocaleString('fa-IR')+' غذا برای انتخاب آماده است.';
+      }catch(e){
+        console.error('Food selector recovery failed:',e);
+        const status=document.getElementById('dietMealPlannerStatus');
+        if(status)status.textContent='بارگذاری غذاها انجام نشد. اتصال حساب مربی را بررسی کنید و دوباره تلاش کنید.';
+      }finally{refreshPromise=null;}
+    })();
+    return refreshPromise;
+  }
+  const previousShowSection=window.showSection;
+  if(typeof previousShowSection==='function'&&!window.__fitnessFoodSelectorRecovery){
+    window.showSection=function(id,btn){
+      const result=previousShowSection.apply(this,arguments);
+      if(id==='meal')setTimeout(refreshFoodSelectors,0);
+      return result;
+    };
+    window.__fitnessFoodSelectorRecovery=true;
+  }
+  document.addEventListener('focusin',function(e){
+    const t=e.target;
+    if(t&&(t.id==='mealFoodSelect'||(t.tagName==='SELECT'&&t.closest('#dietMealPlanner')))){
+      if((t.options&&t.options.length<=1)||(typeof foods!=='undefined'&&(!Array.isArray(foods)||!foods.length)))refreshFoodSelectors();
+    }
+  },true);
+  document.addEventListener('change',function(e){
+    if(e.target&&e.target.id==='dietTypeSelect'&&(typeof foods==='undefined'||!Array.isArray(foods)||!foods.length))refreshFoodSelectors();
+  },true);
+})();
+</script>
