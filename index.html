@@ -1909,6 +1909,7 @@ loadExercises();
         grid.insertAdjacentHTML('beforeend',`<div class="v4-card" data-profile-card="1" onclick="dashOpen('client')"><b>👤</b>پروفایل من<span class="v4-small">مشاهده و ثبت اطلاعات شخصی</span></div>`);
       }
       moveActivityPanelToStudentDashboard();
+      addTraineeWorkoutExportPanel();
       return;
     }
     const sec=document.createElement('section');sec.id='traineeDashboard';sec.className='section';sec.innerHTML=`
