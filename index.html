@@ -2578,7 +2578,7 @@ window.loadDashboard = loadDashboard;
     if(studentCard&&!$id('studentWaterGoal')){const goal=document.createElement('div');goal.id='studentWaterGoal';goal.className='muted';goal.style.cssText='margin:0 0 10px;padding:9px 11px;border:1px solid #c7a34b;border-radius:10px;background:#111f2b;line-height:1.8';goal.textContent='هدف آب تعیین‌شده توسط مربی: در حال دریافت…';const heading=studentCard.querySelector('h2');if(heading)heading.insertAdjacentElement('afterend',goal);else studentCard.insertBefore(goal,studentCard.firstChild);}
     if(studentCard&&!$id('studentWaterWeek')){const week=document.createElement('div');week.id='studentWaterWeek';week.className='muted';week.style.cssText='margin-top:10px;padding-top:10px;border-top:1px solid #26384a;line-height:1.9';week.innerHTML='<b>📅 گزارش آب ۷ روز اخیر</b><div>در انتظار ثبت اطلاعات…</div>';studentCard.appendChild(week);}
     const coachSec=$id('coach');
-    if(coachSec&&!$id('coachWaterGoalCard')){const card=document.createElement('div');card.className='card water-goal-inline';card.id='coachWaterGoalCard';card.innerHTML='<h2>🎯 هدف آب ماهانه شاگرد</h2><p class="muted">ابتدا شاگرد را از فهرست شاگردان انتخاب کنید؛ سپس ماه شمسی و مقدار هدف روزانه آب را تعیین و ذخیره کنید.</p><div class="grid2"><div><label for="coachWaterGoalMonth">ماه هدف (شمسی)</label><select id="coachWaterGoalMonth"></select></div><div><label for="coachWaterGoal">هدف روزانه (میلی‌لیتر)</label><input id="coachWaterGoal" type="number" min="1" step="100" placeholder="مثلاً 3000"></div></div><button type="button" class="secondary" onclick="saveWaterGoal()">💾 ذخیره هدف آب ماه</button>';coachSec.appendChild(card);}
+    if(waterSection&&!$id('coachWaterGoalCard')){const card=document.createElement('div');card.className='card water-goal-inline';card.id='coachWaterGoalCard';card.innerHTML='<h2>🎯 هدف آب ماهانه شاگرد</h2><p class="muted">ابتدا شاگرد را از فهرست شاگردان انتخاب کنید؛ سپس ماه شمسی و مقدار هدف روزانه آب را تعیین و ذخیره کنید.</p><div class="grid2"><div><label for="coachWaterGoalMonth">ماه هدف (شمسی)</label><select id="coachWaterGoalMonth"></select></div><div><label for="coachWaterGoal">هدف روزانه (میلی‌لیتر)</label><input id="coachWaterGoal" type="number" min="1" step="100" placeholder="مثلاً 3000"></div></div><button type="button" class="secondary" onclick="saveWaterGoal()">💾 ذخیره هدف آب ماه</button>';waterSection.appendChild(card);}
     if(coachSec&&!$id('coachWaterWeekCard')){const card=document.createElement('div');card.className='card';card.id='coachWaterWeekCard';card.innerHTML='<h2>📅 گزارش آب هفتگی شاگرد</h2><p id="coachWaterWeekMeta" class="muted">ابتدا شاگرد را انتخاب کنید.</p><div id="coachWaterWeek" class="muted">گزارش هفتگی اینجا نمایش داده می‌شود.</div>';coachSec.appendChild(card);}
     populateWaterJalaliMonths();
     if($id('coachWaterGoalCard')){if(trainee){$id('coachWaterGoalCard').hidden=true;$id('coachWaterGoalCard').style.setProperty('display','none','important');}else{$id('coachWaterGoalCard').hidden=false;$id('coachWaterGoalCard').style.removeProperty('display');}}
@@ -7953,7 +7953,6 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
     if(coach&&!$('coachWaterGoalCard')){
       var goal=document.createElement('div');goal.id='coachWaterGoalCard';goal.className='card water-goal-inline';
       goal.innerHTML='<h2>🎯 هدف آب ماهانه شاگرد</h2><p class="muted">شاگرد را انتخاب کنید؛ سپس ماه شمسی و هدف روزانه آب را تعیین و ذخیره کنید.</p><div class="grid2"><div><label for="coachWaterGoalMonth">ماه هدف (شمسی)</label><select id="coachWaterGoalMonth"></select></div><div><label for="coachWaterGoal">هدف روزانه (میلی‌لیتر)</label><input id="coachWaterGoal" type="number" min="1" step="100" placeholder="مثلاً 3000"></div></div><button type="button" class="secondary" onclick="saveWaterGoal()">💾 ذخیره هدف آب ماه</button>';
-      coach.appendChild(goal);
     }
     if(coach&&!$('coachWaterWeekCard')){
       var report=document.createElement('div');report.id='coachWaterWeekCard';report.className='card';
@@ -7961,12 +7960,8 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
       coach.appendChild(report);
     }
     var goalCard=$('coachWaterGoalCard'),reportCard=$('coachWaterWeekCard');
-    [goalCard,reportCard].forEach(function(card){
-      if(!card)return;
-      if(coach&&card.parentElement!==coach)coach.appendChild(card);
-      if(r==='trainee'){card.hidden=true;card.style.setProperty('display','none','important')}
-      else{card.hidden=false;card.style.removeProperty('display')}
-    });
+    if(goalCard){var waterHost=$('water');if(waterHost&&goalCard.parentElement!==waterHost)waterHost.appendChild(goalCard);if(r==='trainee'){goalCard.hidden=true;goalCard.style.setProperty('display','none','important')}else{goalCard.hidden=false;goalCard.style.setProperty('display','block','important');goalCard.style.setProperty('visibility','visible','important')}}
+    if(reportCard){if(coach&&reportCard.parentElement!==coach)coach.appendChild(reportCard);if(r==='trainee'){reportCard.hidden=true;reportCard.style.setProperty('display','none','important')}else{reportCard.hidden=false;reportCard.style.removeProperty('display')}}
     if(typeof window.populateWaterJalaliMonths==='function')window.populateWaterJalaliMonths();
     else if(typeof populateWaterJalaliMonths==='function')populateWaterJalaliMonths();
   }
@@ -8012,15 +8007,12 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
       report=document.createElement('div');report.id='coachWaterWeekCard';report.className='card';
       report.innerHTML='<h2>📅 گزارش آب هفتگی شاگرد</h2><p id="coachWaterWeekMeta" class="muted">ابتدا شاگرد را انتخاب کنید.</p><div id="coachWaterWeek" class="muted">گزارش آب هفتگی در این بخش نمایش داده می‌شود.</div>';
     }
-    if(goal.parentElement!==coach) coach.insertBefore(goal,coach.children[1]||null);
-    if(report.parentElement!==coach) coach.insertBefore(report,goal.nextSibling);
-    else if(report.previousElementSibling!==goal) coach.insertBefore(report,goal.nextSibling);
-    [goal,report].forEach(function(el){
-      el.hidden=false;el.removeAttribute('aria-hidden');
-      el.style.setProperty('display','block','important');
-      el.style.setProperty('visibility','visible','important');
-      el.style.setProperty('opacity','1','important');
-    });
+    var waterSection=document.getElementById('water');
+    if(!waterSection){waterSection=document.createElement('section');waterSection.id='water';waterSection.className='section';waterSection.innerHTML='<div class="card"><h2>💧 آب امروز من</h2><p class="muted">هدف آب ماهانه شاگرد را از این بخش تنظیم کنید.</p></div>';var page=document.querySelector('.page'),nav=document.querySelector('.nav');if(page&&nav)page.insertBefore(waterSection,nav.nextSibling);else document.body.appendChild(waterSection);}
+    if(goal.parentElement!==waterSection)waterSection.appendChild(goal);
+    if(report.parentElement!==coach)coach.appendChild(report);
+    goal.hidden=(r==='trainee');goal.removeAttribute('aria-hidden');goal.style.setProperty('display',r==='trainee'?'none':'block','important');goal.style.setProperty('visibility','visible','important');goal.style.setProperty('opacity','1','important');
+    report.hidden=(r==='trainee');report.removeAttribute('aria-hidden');report.style.setProperty('display',r==='trainee'?'none':'block','important');report.style.setProperty('visibility','visible','important');report.style.setProperty('opacity','1','important');
     if(r==='coach'){
       coach.classList.add('active');coach.hidden=false;
       coach.style.setProperty('display','block','important');
