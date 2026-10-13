@@ -7151,12 +7151,21 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
   card.style.removeProperty('display');card.style.removeProperty('visibility');card.style.width='100%';card.style.boxSizing='border-box';
   document.body.appendChild(overlay);
   if(typeof window.ensureTraineeMembershipCard==='function')window.ensureTraineeMembershipCard();
-  // Coach receipts must be shown inside the membership dialog, not left behind in the hidden client section.
-  if(typeof isTrainee==='function'&&!isTrainee()&&typeof window.loadCoachReceipts==='function'){
+  // Refresh receipt data whenever the membership modal opens. The role helper is scoped
+  // inside another closure, so checking a local isTrainee symbol here silently skipped this block.
+  if(typeof window.loadCoachReceipts==='function'){
    Promise.resolve(window.loadCoachReceipts()).then(function(){
     var receiptBox=document.getElementById('coachReceiptReview');
     var modalContent=document.getElementById(contentId);
-    if(receiptBox&&modalContent&&document.getElementById(overlayId)){var membershipCard=modalContent.querySelector("#subStart")?.closest(".card")||modalContent.querySelector("#traineeMembershipStatus")?.closest(".card")||modalContent.querySelector(".card");(membershipCard||modalContent).appendChild(receiptBox);}
+    if(receiptBox&&modalContent&&document.getElementById(overlayId)){
+     var membershipCard=modalContent.querySelector("#subStart")?.closest(".card")||modalContent.querySelector("#traineeMembershipStatus")?.closest(".card")||modalContent.querySelector(".card");
+     (membershipCard||modalContent).appendChild(receiptBox);
+     receiptBox.hidden=false;receiptBox.style.setProperty('display','block','important');receiptBox.style.setProperty('visibility','visible','important');
+    }else if(modalContent&&document.getElementById(overlayId)){
+     var fallback=modalContent.querySelector(".card")||modalContent;
+     var msg=document.createElement('div');msg.className='receipt-item';msg.innerHTML='<h3>📥 فیش واریزی شاگرد</h3><p>برای نمایش فیش‌ها، ابتدا از پنل مربی یک شاگرد را انتخاب کنید؛ سپس کارت عضویت او را باز کنید.</p>';
+     fallback.appendChild(msg);
+    }
    }).catch(function(err){console.warn('فیش‌های شاگرد در کارت عضویت بارگذاری نشدند.',err);});
   }
  }
