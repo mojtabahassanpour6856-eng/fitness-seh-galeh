@@ -1850,7 +1850,8 @@ async function initAuth(){
 
 if($("prDate"))$("prDate").value=today();if($("anDate"))$("anDate").value=today();if($("actDate"))$("actDate").value=today();if($("mealStart"))$("mealStart").value=today();
 ["mealCalories","mealProtein","mealCarbs","mealFat"].forEach(id=>{if($(id))$(id).addEventListener("input",updateMealTargets);});
-initAuth();
+/* Session restoration runs once, after the login wrappers and trainee dashboard setup are installed below.
+   Calling initAuth() here as well caused two overlapping finishLogin flows and visible section/dashboard jumps. */
 loadFoods();
 loadExercises();
 
