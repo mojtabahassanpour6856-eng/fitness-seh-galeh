@@ -6572,6 +6572,7 @@ active('workoutMuscleFilters',wm);active('libraryMuscleFilters',lm);if(document.
   function role(){try{return typeof authProfile!=='undefined'?authProfile?.role:null;}catch(e){return window.authProfile?.role||null;}}
   function trainee(){try{return typeof currentClient!=='undefined'?currentClient:(window.currentClient||null);}catch(e){return window.currentClient||null;}}
   function isoToday(){try{return String(typeof today==='function'?today():new Date().toISOString().slice(0,10)).slice(0,10);}catch(e){return new Date().toISOString().slice(0,10);}}
+  function waterCurrentMonth(){return new Date().toISOString().slice(0,7);}
   function dateFa(v){try{return new Date(String(v).slice(0,10)+'T12:00:00').toLocaleDateString('fa-IR');}catch(e){return String(v||'—');}}
   function weekRange(){
     const end=isoToday(), d=new Date(end+'T00:00:00Z');
