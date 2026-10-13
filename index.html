@@ -4870,13 +4870,38 @@ body.workout-output .empty-cell{display:none!important}
               setImportant(el,'overflow','visible');setImportant(el,'break-inside','avoid');
             });
           }
-          /* Wait for the expanded source layout to settle, then measure the FULL content height. */
-          await new Promise(resolve=>popup.requestAnimationFrame(()=>popup.requestAnimationFrame(resolve)));
+          /* html2canvas builds a cloned viewport from windowWidth/windowHeight.
+             Measure only AFTER the source document has the same width as the clone; measuring
+             at phone width and widening only the clone can mismatch grid row heights and clip
+             the bottom of a workout session in the exported PNG. */
           const captureWidth=Math.max(900,Math.ceil(target.getBoundingClientRect().width),target.scrollWidth,doc.documentElement.scrollWidth);
+          setImportant(doc.documentElement,'width',captureWidth+'px');
+          setImportant(doc.documentElement,'height','auto');
+          setImportant(target,'width',captureWidth+'px');
+          setImportant(target,'max-width','none');
+          setImportant(target,'margin','0');
+          setImportant(target,'box-sizing','border-box');
+          setImportant(target,'display','flex');
+          setImportant(target,'flex-direction','column');
+          if(kind!=='meal'){
+            const sourceGrid=doc.querySelector('.session-grid');
+            setImportant(sourceGrid,'grid-template-columns','repeat(2,minmax(0,1fr))');
+            setImportant(sourceGrid,'grid-template-rows','none');
+            setImportant(sourceGrid,'grid-auto-flow','row');
+            setImportant(sourceGrid,'grid-auto-rows','auto');
+            setImportant(sourceGrid,'align-content','start');
+            setImportant(sourceGrid,'align-items','stretch');
+            setImportant(sourceGrid,'height','auto');
+            setImportant(sourceGrid,'min-height','0');
+            setImportant(sourceGrid,'max-height','none');
+            setImportant(sourceGrid,'flex','0 0 auto');
+            setImportant(sourceGrid,'overflow','visible');
+          }
+          await new Promise(resolve=>popup.requestAnimationFrame(()=>popup.requestAnimationFrame(resolve)));
           const captureHeight=Math.max(
             Math.ceil(target.getBoundingClientRect().height),target.scrollHeight,target.offsetHeight,
             doc.documentElement.scrollHeight,doc.documentElement.offsetHeight
-          );
+          )+24;
           const canvas=await popup.html2canvas(target,{
             scale:2, backgroundColor:'#ffffff', useCORS:true, logging:false,
             width:captureWidth,
@@ -4889,6 +4914,8 @@ body.workout-output .empty-cell{display:none!important}
               clonedDoc.documentElement.style.height='auto';
               clonedDoc.documentElement.style.minHeight='0';
               clonedDoc.documentElement.style.overflow='visible';
+              clonedDoc.documentElement.style.width=captureWidth+'px';
+              clonedDoc.documentElement.style.maxWidth='none';
               clonedBody.style.width=captureWidth+'px';
               clonedBody.style.maxWidth='none';
               clonedBody.style.margin='0';
@@ -4904,7 +4931,7 @@ body.workout-output .empty-cell{display:none!important}
               const gym=clonedDoc.querySelector('.gym-name');if(gym){gym.style.fontSize='36px';gym.style.fontWeight='1000';gym.style.lineHeight='1.4';gym.style.color='#3d2806';}
               const coach=clonedDoc.querySelector('.coach-name');if(coach){coach.style.fontSize='19px';coach.style.fontWeight='900';}
               const date=clonedDoc.querySelector('.plan-date');if(date){date.style.fontSize='16px';date.style.fontWeight='900';date.style.padding='6px 9px';date.style.borderWidth='2px';}
-              const grid=clonedDoc.querySelector('.session-grid');if(grid){grid.style.minHeight='0';grid.style.height='auto';grid.style.flex='0 0 auto';grid.style.gridTemplateRows='none';grid.style.gridAutoRows='auto';grid.style.overflow='visible';}
+              const grid=clonedDoc.querySelector('.session-grid');if(grid){grid.style.setProperty('display','grid','important');grid.style.setProperty('grid-template-columns','repeat(2,minmax(0,1fr))','important');grid.style.setProperty('grid-template-rows','none','important');grid.style.setProperty('grid-auto-flow','row','important');grid.style.setProperty('grid-auto-rows','auto','important');grid.style.setProperty('align-content','start','important');grid.style.setProperty('align-items','stretch','important');grid.style.setProperty('min-height','0','important');grid.style.setProperty('height','auto','important');grid.style.setProperty('max-height','none','important');grid.style.setProperty('flex','0 0 auto','important');grid.style.setProperty('overflow','visible','important');}
               clonedDoc.querySelectorAll('.session-cell').forEach(function(cell){cell.style.height='auto';cell.style.minHeight='0';cell.style.maxHeight='none';cell.style.overflow='visible';cell.style.breakInside='avoid';});
               clonedDoc.querySelectorAll('.session-exercises').forEach(function(list){list.style.height='auto';list.style.minHeight='0';list.style.maxHeight='none';list.style.flex='0 0 auto';list.style.overflow='visible';list.style.justifyContent='flex-start';});
               clonedDoc.querySelectorAll('.exercise-card,.exercise-unit').forEach(function(card){card.style.height='auto';card.style.minHeight='0';card.style.maxHeight='none';card.style.flex='0 0 auto';card.style.overflow='visible';card.style.breakInside='avoid';});
