@@ -7713,3 +7713,60 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
   setTimeout(()=>{installTraineeAuth();ensureDevicePanel();},800);
 })();
 </script>
+
+
+<!-- COACH TRAINEE-GOAL VISIBILITY GUARD 2026-10-13 -->
+<script id="COACH_TRAINEE_GOAL_VISIBILITY_GUARD">
+(function(){
+  function role(){
+    try { if(typeof authProfile!=="undefined" && authProfile) return authProfile.role||null; } catch(e) {}
+    return window.authProfile&&window.authProfile.role||null;
+  }
+  function apply(){
+    var r=role(), coach=r==="coach", trainee=r==="trainee";
+    var dashboard=document.getElementById("traineeDashboard");
+    if(dashboard){
+      dashboard.querySelectorAll(".v4-card").forEach(function(card){
+        if(/هدف من/.test(card.textContent||"")) card.style.setProperty("display",coach?"none":"",coach?"important":"");
+      });
+      if(coach) dashboard.style.setProperty("display","none","important");
+      else if(trainee) dashboard.style.removeProperty("display");
+    }
+    var goalSection=document.getElementById("traineeGoalsSection");
+    if(goalSection){
+      if(coach){goalSection.hidden=true;goalSection.style.setProperty("display","none","important");}
+      else if(trainee){goalSection.hidden=false;goalSection.style.removeProperty("display");}
+    }
+  }
+  var oldDash=window.dashOpen;
+  window.dashOpen=function(section){
+    if(section==="goals" && role()==="coach"){
+      alert("در پنل مربی، فقط هدف ثبت‌شده توسط شاگرد نمایش داده می‌شود.");
+      return;
+    }
+    if(typeof oldDash==="function") return oldDash.apply(this,arguments);
+  };
+  var oldShow=window.showSection;
+  if(typeof oldShow==="function"){
+    window.showSection=function(id){
+      if(id==="traineeGoalsSection" && role()==="coach"){
+        apply();
+        alert("بخش «هدف من» مخصوص شاگرد است. برای مشاهده هدف شاگرد، پرونده او را در پنل مربی باز کنید.");
+        return;
+      }
+      var out=oldShow.apply(this,arguments);apply();return out;
+    };
+  }
+  var oldFinish=window.finishLogin;
+  if(typeof oldFinish==="function"){
+    window.finishLogin=async function(){
+      var out=await oldFinish.apply(this,arguments);apply();return out;
+    };
+  }
+  if(typeof MutationObserver!=="undefined"){
+    new MutationObserver(apply).observe(document.body,{childList:true,subtree:true});
+  }
+  document.addEventListener("DOMContentLoaded",apply);
+  setTimeout(apply,300);setTimeout(apply,1000);setTimeout(apply,2500);
+})();
+</script>
