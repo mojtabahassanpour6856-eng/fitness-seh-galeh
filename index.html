@@ -370,6 +370,21 @@ body.library-room .library-inline-add button{position:relative!important;z-index
 <div class="badge"><b id="alertCount">۰</b>نیازمند پیگیری</div>
 </div>
 </div>
+
+<div class="card water-goal-inline" id="coachWaterGoalCard">
+  <h2>🎯 هدف آب ماهانه شاگرد</h2>
+  <p class="muted">شاگرد را از فهرست انتخاب کنید؛ سپس ماه شمسی و هدف روزانه آب را تعیین کنید. مثلاً ۳۰۰۰ میلی‌لیتر در روز.</p>
+  <div class="grid2">
+    <div><label for="coachWaterGoalMonth">ماه هدف (شمسی)</label><select id="coachWaterGoalMonth"></select></div>
+    <div><label for="coachWaterGoal">هدف روزانه (میلی‌لیتر)</label><input id="coachWaterGoal" type="number" min="1" step="100" placeholder="مثلاً 3000"></div>
+  </div>
+  <button type="button" class="secondary" onclick="saveWaterGoal()">💾 ذخیره هدف آب ماه</button>
+</div>
+<div class="card" id="coachWaterWeekCard">
+  <h2>📅 گزارش آب هفتگی شاگرد</h2>
+  <p id="coachWaterWeekMeta" class="muted">ابتدا شاگرد را انتخاب کنید.</p>
+  <div id="coachWaterWeek" class="muted">گزارش آب ثبت‌شده شاگرد در این بخش نمایش داده می‌شود.</div>
+</div>
 <div id="registrationRequestsPanel" class="card registration-requests-card">
   <div class="registration-requests-heading">
     <div>
@@ -406,20 +421,7 @@ body.library-room .library-inline-add button{position:relative!important;z-index
 <button onclick="addClient()">ذخیره شاگرد در دیتابیس</button>
 </div>
 
-<div class="card water-goal-inline" id="coachWaterGoalCard">
-  <h2>🎯 هدف آب ماهانه شاگرد</h2>
-  <p class="muted">شاگرد را از فهرست انتخاب کنید؛ سپس ماه شمسی و هدف روزانه آب را تعیین کنید. مثلاً ۳۰۰۰ میلی‌لیتر در روز.</p>
-  <div class="grid2">
-    <div><label for="coachWaterGoalMonth">ماه هدف (شمسی)</label><select id="coachWaterGoalMonth"></select></div>
-    <div><label for="coachWaterGoal">هدف روزانه (میلی‌لیتر)</label><input id="coachWaterGoal" type="number" min="1" step="100" placeholder="مثلاً 3000"></div>
-  </div>
-  <button type="button" class="secondary" onclick="saveWaterGoal()">💾 ذخیره هدف آب ماه</button>
-</div>
-<div class="card" id="coachWaterWeekCard">
-  <h2>📅 گزارش آب هفتگی شاگرد</h2>
-  <p id="coachWaterWeekMeta" class="muted">ابتدا شاگرد را انتخاب کنید.</p>
-  <div id="coachWaterWeek" class="muted">گزارش آب ثبت‌شده شاگرد در این بخش نمایش داده می‌شود.</div>
-</div>
+
 </section>
 
 <!-- CLIENT -->
@@ -1852,7 +1854,7 @@ if(profileError) throw profileError;
       document.querySelectorAll('.nav button').forEach(b=>b.style.display='none');
       [document.querySelectorAll('.nav button')[2],document.querySelectorAll('.nav button')[3],document.querySelectorAll('.nav button')[4]].forEach(b=>{if(b)b.style.display='block';});
       showSection('client');
-    }else{showSection('food',document.querySelector('.nav button'));}
+    }else{showSection('coach',document.querySelectorAll('.nav button')[2]);}
   }catch(e){console.error(e);showAuthError('بررسی پروفایل انجام نشد. '+(e.message||''));}
 }
 async function logoutApp(){await AUTH_SUPABASE.auth.signOut();location.reload();}
