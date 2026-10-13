@@ -5471,10 +5471,18 @@ active('workoutMuscleFilters',wm);active('libraryMuscleFilters',lm);if(document.
   if(!isTrainee())return;
   const sec=$("client");if(!sec)return;
   const cards=[...sec.querySelectorAll(":scope > .card")];
-  const card=cards.find(c=>c.querySelector("#subStart")||c.querySelector(".role-readonly-message"));
-  if(!card||card.dataset.receiptUi==="1")return;
+  // Prefer the real membership card; some UI patches remove #subStart before this runs.
+  let card=cards.find(c=>c.querySelector("#subStart"));
+  if(!card)card=cards.find(c=>/عضویت باشگاه|عضویت و شهریه/.test(c.querySelector("h2")?.textContent||"")&&!c.querySelector("#traineeMembershipStatus"));
+  if(!card)card=cards.find(c=>c.querySelector(".role-readonly-message")&&!c.querySelector("#traineeMembershipStatus"));
+  if(!card){
+   const existing=sec.querySelector("#traineeMembershipStatus");
+   if(existing){loadTraineeMembership();return;}
+   return;
+  }
+  if(card.dataset.receiptUi==="1"){loadTraineeMembership();return;}
   card.dataset.receiptUi="1";
-  card.innerHTML='<h2>💳 عضویت و شهریه</h2><div id="traineeMembershipStatus" class="muted">در حال دریافت وضعیت عضویت…</div><div id="traineeReceiptUpload" class="receipt-item"><h3>📤 ارسال فیش واریزی</h3><p class="muted">فیش فقط برای مربی و حساب خودتان قابل مشاهده است. فرمت JPG، PNG، WEBP یا PDF تا ۵ مگابایت.</p><label>مبلغ پرداختی (تومان)</label><input id="receiptAmount" type="number" min="1" placeholder="مبلغ واریزی"><label>تاریخ واریز (شمسی)</label><input id="receiptDate" type="text" inputmode="numeric" placeholder="۱۴۰۵/۰۷/۱۸"><label>تصویر یا PDF فیش</label><input id="receiptFile" type="file" accept="image/jpeg,image/png,image/webp,application/pdf"><label>توضیح (اختیاری)</label><input id="receiptNote" placeholder="مثلاً شهریه مهر"><button type="button" onclick="submitPaymentReceipt()">📨 ارسال فیش برای مربی</button></div><div id="traineeReceiptHistory"></div>';
+  card.innerHTML='<h2>💳 عضویت و شهریه</h2><div id="traineeMembershipStatus" class="muted">در حال دریافت وضعیت عضویت…</div><div id="traineeReceiptUpload" class="receipt-item"><h3>📤 ارسال فیش واریزی</h3><p class="muted">فیش فقط برای مربی و حساب خودتان قابل مشاهده است. فرمت JPG، PNG، WEBP یا PDF تا ۵ مگابایت.</p><label>مبلغ پرداختی (تومان)</label><input id="receiptAmount" type="number" min="1" placeholder="مبلغ واریزی"><label>تاریخ واریز (شمسی)</label><input id="receiptDate" type="text" inputmode="numeric" placeholder="۱۴۰۵/۰۷/۱۸" autocomplete="off"><label>تصویر یا PDF فیش</label><input id="receiptFile" type="file" accept="image/jpeg,image/png,image/webp,application/pdf"><label>توضیح (اختیاری)</label><input id="receiptNote" placeholder="مثلاً شهریه مهر"><button id="submitPaymentReceiptBtn" type="button" onclick="submitPaymentReceipt()">📨 ارسال فیش برای مربی</button></div><div id="traineeReceiptHistory"></div>';
   loadTraineeMembership();
  }
  async function loadTraineeMembership(){
@@ -5494,11 +5502,17 @@ active('workoutMuscleFilters',wm);active('libraryMuscleFilters',lm);if(document.
     const status={pending:"در انتظار بررسی مربی",approved:"تأیید شده",rejected:"رد شده"};
     box.innerHTML='<h3>📑 فیش‌های ارسالی من</h3>'+(receipts.length?receipts.map(x=>'<div class="receipt-item"><b>'+safe(Number(x.amount||0).toLocaleString("fa-IR"))+' تومان</b><br>تاریخ: '+safe(fmtDate(x.payment_date)||"—")+'<br>وضعیت: '+safe(status[x.review_status]||x.review_status)+'<br>'+safe(x.note||"")+'</div>').join(""):'<p class="muted">هنوز فیشی ارسال نکرده‌اید.</p>');
    }
-  }catch(e){$("traineeMembershipStatus").textContent="دریافت وضعیت عضویت انجام نشد؛ دوباره تلاش کنید.";}
+  }catch(e){
+   console.error("loadTraineeMembership failed",e);
+   const status=$("traineeMembershipStatus");
+   if(status)status.innerHTML='<div class="receipt-item"><b>دریافت وضعیت عضویت ناموفق بود.</b><p>'+safe(e?.message||String(e))+'</p><button type="button" onclick="window.retryTraineeMembership()">🔄 تلاش دوباره</button></div>';
+  }
  }
+ window.retryTraineeMembership=function(){return loadTraineeMembership();};
  window.submitPaymentReceipt=async function(){
-  if(!isTrainee()||!currentClient?.id)return alert("این امکان فقط برای حساب شاگرد فعال است.");
+  if(!isTrainee()||!currentClient?.id)return alert("حساب شاگرد هنوز بارگذاری نشده است؛ یک بار صفحه را تازه‌سازی کنید و دوباره تلاش کنید.");
   const file=$("receiptFile")?.files?.[0],amount=Number($("receiptAmount")?.value||0),rawDate=$("receiptDate")?.value||"",date=isoDate(rawDate);
+  const submitBtn=$("submitPaymentReceiptBtn");if(submitBtn){submitBtn.disabled=true;submitBtn.textContent="⏳ در حال ارسال فیش…";}
   if(!file)return alert("لطفاً تصویر یا PDF فیش را انتخاب کنید.");
   if(file.size>5*1024*1024)return alert("حجم فایل باید کمتر از ۵ مگابایت باشد.");
   if(!["image/jpeg","image/png","image/webp","application/pdf"].includes(file.type))return alert("فقط JPG، PNG، WEBP یا PDF مجاز است.");
@@ -5516,7 +5530,8 @@ active('workoutMuscleFilters',wm);active('libraryMuscleFilters',lm);if(document.
    $("receiptFile").value="";$("receiptAmount").value="";$("receiptNote").value="";
    alert("فیش با موفقیت برای بررسی مربی ارسال شد؛ وضعیت شهریه پس از تأیید مربی تغییر می‌کند.");
    await loadTraineeMembership();
-  }catch(e){alert("ارسال فیش انجام نشد. "+(e.message||String(e)));}
+  }catch(e){console.error("submitPaymentReceipt failed",e);alert("ارسال فیش انجام نشد. "+(e.message||String(e)));}
+  finally{const b=$("submitPaymentReceiptBtn");if(b){b.disabled=false;b.textContent="📨 ارسال فیش برای مربی";}}
  };
 
  async function loadCoachReceipts(){
