@@ -4588,7 +4588,10 @@ window.useLibraryExercise=async function(id){
       let mealPlanTitle = '';
       let workoutPlanTitle = '';
       if(kind === 'meal') {
-        const p = (await sbGet('/nutrition_plans?trainee_id=eq.'+encodeURIComponent(trainee.id)+'&select=*&order=created_at.desc&limit=1'))[0];
+        const exportPlanId = (typeof currentPlanId !== 'undefined' && currentPlanId) ? currentPlanId : null;
+        let p = exportPlanId ? (await sbGet('/nutrition_plans?id=eq.'+encodeURIComponent(exportPlanId)+'&trainee_id=eq.'+encodeURIComponent(trainee.id)+'&select=*&limit=1'))[0] : null;
+        // Prefer the exact plan currently selected/edited in the coach panel; never silently export a different plan when that ID is valid.
+        if(!p && !exportPlanId) p = (await sbGet('/nutrition_plans?trainee_id=eq.'+encodeURIComponent(trainee.id)+'&select=*&order=created_at.desc&limit=1'))[0];
         if(!p) throw new Error('برنامه غذایی ذخیره‌شده‌ای برای این شاگرد پیدا نشد.');
         mealPlanTitle = esc(p.title||title);
         const meals = await sbGet('/nutrition_meals?plan_id=eq.'+encodeURIComponent(p.id)+'&select=*&order=meal_order.asc');
