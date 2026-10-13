@@ -6935,47 +6935,63 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
 <script id="SEH_TRAINEE_WORKOUT_EXPORT_ALWAYS_V3">
 (function(){
   'use strict';
+  function runExport(isImage){
+    if(typeof window.sharePlan==='function'){
+      window.sharePlan('workout');
+      if(isImage){
+        var msg=document.getElementById('sehWorkoutExportMsg');
+        if(msg)msg.textContent='در پنجره خروجی، گزینه «دانلود عکس PNG» را انتخاب کن.';
+      }
+    }else if(typeof window.printPlan==='function'){
+      window.printPlan('workout');
+    }else{
+      alert('ابزار خروجی هنوز بارگذاری نشده است؛ صفحه را تازه‌سازی کنید.');
+    }
+  }
+  function makeButtons(id,compact){
+    var box=document.createElement('div');
+    box.id=id;
+    box.className='seh-workout-export-controls';
+    box.style.cssText='display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin-top:10px;position:relative;z-index:5';
+    box.innerHTML='<button type="button" class="seh-export-pdf" style="font-size:'+(compact?'11px':'13px')+';padding:7px 9px">📄 دانلود / چاپ PDF</button><button type="button" class="seh-export-image secondary" style="font-size:'+(compact?'11px':'13px')+';padding:7px 9px">🖼️ دریافت عکس برنامه</button>';
+    box.addEventListener('click',function(e){
+      var b=e.target.closest('button');
+      if(!b)return;
+      e.preventDefault();e.stopPropagation();
+      if(e.stopImmediatePropagation)e.stopImmediatePropagation();
+      runExport(b.classList.contains('seh-export-image'));
+    },true);
+    return box;
+  }
   function addExports(){
-    var section=document.getElementById('workout');
-    if(!section)return;
-    var mainCard=section.querySelector(':scope > .card');
-    if(!mainCard)return;
+    /* Put export buttons directly inside the trainee dashboard's workout tile. */
+    var dash=document.getElementById('traineeDashboard');
+    var grid=dash&&dash.querySelector('.v4-dashboard');
+    var workoutTile=grid&&Array.from(grid.querySelectorAll('.v4-card')).find(function(c){
+      var onclick=c.getAttribute('onclick')||'';
+      return onclick.indexOf("dashOpen('workout')")>=0 || onclick.indexOf('dashOpen("workout")')>=0;
+    });
+    if(workoutTile&&!workoutTile.querySelector('#sehWorkoutDashboardExport')){
+      workoutTile.appendChild(makeButtons('sehWorkoutDashboardExport',true));
+    }
 
-    /* Remove previous export panels that were placed outside the workout card. */
+    /* Also place the same controls inside the actual workout section's first/main card. */
+    var section=document.getElementById('workout');
+    var mainCard=section&&Array.from(section.children).find(function(el){return el.classList&&el.classList.contains('card');});
+    if(mainCard&&!mainCard.querySelector('#sehWorkoutSectionExport')){
+      var controls=makeButtons('sehWorkoutSectionExport',false);
+      controls.querySelector('.seh-export-pdf').id='sehWorkoutExportPdf';
+      controls.querySelector('.seh-export-image').id='sehWorkoutExportImage';
+      mainCard.appendChild(controls);
+      var msg=document.createElement('span');msg.id='sehWorkoutExportMsg';msg.className='muted';msg.style.cssText='font-size:11px;display:block;margin-top:5px';
+      controls.appendChild(msg);
+    }
+
+    /* Remove the obsolete standalone export panels, so buttons are only inside the relevant cards. */
     ['sehTraineeWorkoutExportInSection','traineeWorkoutExportInWorkout','traineeWorkoutExportPanel'].forEach(function(id){
       var old=document.getElementById(id);
-      if(old && old!==mainCard && !mainCard.contains(old)) old.remove();
+      if(old)old.remove();
     });
-
-    /* Remove export controls from the dashboard shortcut card; they belong in the actual workout card. */
-    var dash=document.getElementById('traineeDashboard');
-    if(dash){
-      dash.querySelectorAll('.seh-dash-workout-export').forEach(function(el){el.remove();});
-    }
-
-    var box=mainCard.querySelector('#sehWorkoutExportControls');
-    if(!box){
-      box=document.createElement('div');
-      box.id='sehWorkoutExportControls';
-      box.style.cssText='display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-top:12px;padding-top:10px;border-top:1px solid #2b4053';
-      box.innerHTML='<button type="button" id="sehWorkoutExportPdf">📄 دانلود / چاپ PDF</button><button type="button" id="sehWorkoutExportImage" class="secondary">🖼️ دریافت عکس برنامه</button><span id="sehWorkoutExportMsg" class="muted" style="font-size:11px"></span>';
-      mainCard.appendChild(box);
-      function run(isImage){
-        if(typeof window.sharePlan==='function'){
-          window.sharePlan('workout');
-          var msg=document.getElementById('sehWorkoutExportMsg');
-          if(isImage&&msg)msg.textContent='در پنجره خروجی، گزینه «دانلود عکس PNG» را انتخاب کن.';
-        }else if(typeof window.printPlan==='function'){
-          window.printPlan('workout');
-          var msg2=document.getElementById('sehWorkoutExportMsg');
-          if(isImage&&msg2)msg2.textContent='پنجره چاپ باز شد؛ اگر گزینه عکس نمایش داده شد، دانلود PNG را انتخاب کن.';
-        }else{
-          alert('ابزار خروجی هنوز بارگذاری نشده است؛ صفحه را تازه‌سازی کنید.');
-        }
-      }
-      document.getElementById('sehWorkoutExportPdf').addEventListener('click',function(e){e.preventDefault();e.stopPropagation();run(false);});
-      document.getElementById('sehWorkoutExportImage').addEventListener('click',function(e){e.preventDefault();e.stopPropagation();run(true);});
-    }
   }
   function init(){
     addExports();
