@@ -8301,3 +8301,77 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init,{once:true});else init();
 })();
 </script>
+
+
+<!-- SEH_EXPORT_BUTTON_RELIABILITY_FIX_V1 -->
+<script id="SEH_EXPORT_BUTTON_RELIABILITY_FIX_V1">
+(function(){
+  'use strict';
+  function ensureExportClient(){
+    try {
+      if(typeof currentClient!=='undefined' && currentClient && currentClient.id) return currentClient;
+    } catch(e) {}
+    var profile = null;
+    try { profile = typeof authProfile!=='undefined' ? authProfile : window.authProfile; } catch(e) { profile=window.authProfile||null; }
+    if(profile && profile.role==='trainee' && profile.trainee_id && Array.isArray(clients)){
+      var found=clients.find(function(c){return String(c.id)===String(profile.trainee_id);});
+      if(found){
+        try { currentClient=found; } catch(e) {}
+        window.currentClient=found;
+        return found;
+      }
+    }
+    if(window.currentClient && window.currentClient.id) return window.currentClient;
+    return null;
+  }
+  window.__sehEnsureExportClient=ensureExportClient;
+  function wrapExportFunctions(){
+    if(typeof window.sharePlan==='function' && !window.sharePlan.__sehClientGuard){
+      var originalShare=window.sharePlan;
+      var wrappedShare=function(kind){
+        var client=ensureExportClient();
+        if(!client || !client.id){
+          alert('پرونده شاگرد برای خروجی پیدا نشد. یک‌بار از حساب خارج شوید و دوباره وارد شوید.');
+          return;
+        }
+        return originalShare.apply(this,arguments);
+      };
+      wrappedShare.__sehClientGuard=true;
+      window.sharePlan=wrappedShare;
+    }
+    if(typeof window.printPlan==='function' && !window.printPlan.__sehClientGuard){
+      var originalPrint=window.printPlan;
+      var wrappedPrint=function(kind){
+        ensureExportClient();
+        if(typeof window.sharePlan==='function') return window.sharePlan(kind);
+        return originalPrint.apply(this,arguments);
+      };
+      wrappedPrint.__sehClientGuard=true;
+      window.printPlan=wrappedPrint;
+    }
+  }
+  function bindDashboardButtons(){
+    var pairs=[
+      ['sehDashMealImageBtn','meal'],
+      ['sehDashWorkoutImageBtn','workout']
+    ];
+    pairs.forEach(function(pair){
+      var btn=document.getElementById(pair[0]);
+      if(!btn || btn.dataset.sehExportReliable==='1')return;
+      btn.dataset.sehExportReliable='1';
+      btn.addEventListener('click',function(e){
+        e.preventDefault();e.stopPropagation();
+        var client=ensureExportClient();
+        if(!client || !client.id){alert('پرونده شاگرد برای خروجی پیدا نشد. دوباره وارد حساب شاگرد شوید.');return;}
+        wrapExportFunctions();
+        if(typeof window.sharePlan==='function') window.sharePlan(pair[1]);
+        else alert('ابزار خروجی برنامه بارگذاری نشده است. صفحه را تازه‌سازی کنید.');
+      },true);
+    });
+  }
+  function run(){wrapExportFunctions();bindDashboardButtons();}
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',run,{once:true});else run();
+  if(window.MutationObserver && document.body) new MutationObserver(run).observe(document.body,{childList:true,subtree:true});
+  [300,900,1800,3500].forEach(function(t){setTimeout(run,t);});
+})();
+</script>
