@@ -7712,7 +7712,7 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
   }
   const oldFinish=window.finishLogin;
   if(typeof oldFinish==="function"&&!window.__sehPasswordlessFinishWrap){
-    window.finishLogin=async function(){const r=await oldFinish.apply(this,arguments);setTimeout(()=>{ensureDevicePanel();loadDeviceLinkRequests();},250);return r;};
+    window.finishLogin=async function(){const r=await oldFinish.apply(this,arguments);setTimeout(()=>{ensureDevicePanel();loadDeviceLinkRequests();const coach=/\\|\\s*مربی\\s*$/.test(($("authUserText")?.textContent||"").trim());const sw=$("sehSwitchAccountBtn");if(sw)sw.style.display=coach?"":"none";},250);return r;};
     window.__sehPasswordlessFinishWrap=true;
   }
   if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",()=>{installTraineeAuth();if(read(REG_KEY)||read(LINK_KEY))startPolling();});
