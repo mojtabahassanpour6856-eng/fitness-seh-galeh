@@ -7727,9 +7727,11 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
     var dashboard=document.getElementById("traineeDashboard");
     if(dashboard){
       dashboard.querySelectorAll(".v4-card").forEach(function(card){
-        if(/هدف من/.test(card.textContent||"")) card.style.setProperty("display",coach?"none":"",coach?"important":"");
+        if(/هدف من/.test(card.textContent||"")){
+          if(coach) card.style.setProperty("display","none","important");
+          else {card.style.removeProperty("display");}
+        }
       });
-      /* داشبورد را در هیچ نقشی مخفی نکن؛ فقط کارت «هدف من» برای مربی پنهان می‌شود. */
       if(trainee) dashboard.style.removeProperty("display");
     }
     var goalSection=document.getElementById("traineeGoalsSection");
@@ -7737,36 +7739,51 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
       if(coach){goalSection.hidden=true;goalSection.style.setProperty("display","none","important");}
       else if(trainee){goalSection.hidden=false;goalSection.style.removeProperty("display");}
     }
+    /* نقش مربی باید همیشه به بخش و نوار ناوبری خودش دسترسی داشته باشد. */
+    if(coach){
+      var coachSection=document.getElementById("coach");
+      if(coachSection) coachSection.style.removeProperty("display");
+      document.querySelectorAll(".nav button").forEach(function(b){b.style.removeProperty("display");});
+    }
   }
   var oldDash=window.dashOpen;
   window.dashOpen=function(section){
-    if(section==="goals" && role()==="coach"){
-      alert("در پنل مربی، فقط هدف ثبت‌شده توسط شاگرد نمایش داده می‌شود.");
-      return;
-    }
+    if(section==="goals" && role()==="coach") return;
     if(typeof oldDash==="function") return oldDash.apply(this,arguments);
   };
   var oldShow=window.showSection;
-  if(typeof oldShow==="function"){
-    window.showSection=function(id){
-      if(id==="traineeGoalsSection" && role()==="coach"){
-        apply();
-        alert("بخش «هدف من» مخصوص شاگرد است. برای مشاهده هدف شاگرد، پرونده او را در پنل مربی باز کنید.");
-        return;
-      }
-      var out=oldShow.apply(this,arguments);apply();return out;
-    };
-  }
+  window.showSection=function(id,btn){
+    if(role()==="coach" && id==="coach"){
+      document.querySelectorAll(".section").forEach(function(s){s.classList.remove("active");s.style.removeProperty("display");});
+      var section=document.getElementById("coach");
+      if(section) section.classList.add("active");
+      document.querySelectorAll(".nav button").forEach(function(b){b.classList.remove("active");b.style.removeProperty("display");});
+      if(btn){btn.classList.add("active");}
+      apply();
+      return;
+    }
+    if(id==="traineeGoalsSection" && role()==="coach"){apply();return;}
+    var out=typeof oldShow==="function"?oldShow.apply(this,arguments):undefined;
+    apply();
+    return out;
+  };
   var oldFinish=window.finishLogin;
   if(typeof oldFinish==="function"){
     window.finishLogin=async function(){
-      var out=await oldFinish.apply(this,arguments);apply();return out;
+      var out=await oldFinish.apply(this,arguments);
+      apply();
+      if(role()==="coach"){
+        var section=document.getElementById("coach");
+        if(section) section.style.removeProperty("display");
+      }
+      return out;
     };
   }
-  if(typeof MutationObserver!=="undefined"){
+  if(typeof MutationObserver!=="undefined" && document.body){
     new MutationObserver(apply).observe(document.body,{childList:true,subtree:true});
   }
-  document.addEventListener("DOMContentLoaded",apply);
+  if(document.readyState==="loading") document.addEventListener("DOMContentLoaded",apply);
+  else apply();
   setTimeout(apply,300);setTimeout(apply,1000);setTimeout(apply,2500);
 })();
 </script>
