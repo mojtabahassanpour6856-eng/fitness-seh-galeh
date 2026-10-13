@@ -5534,9 +5534,7 @@ active('workoutMuscleFilters',wm);active('libraryMuscleFilters',lm);if(document.
  async function loadCoachReceipts(){
   if(isTrainee()||!currentClient?.id)return;
   const traineeId=currentClient.id;
-  let box=$("coachReceiptReview");if(!box){
-   const sec=$("client");if(!sec)return;const cards=[...sec.querySelectorAll(":scope > .card")];let card=cards.find(c=>c.querySelector("#subStart"))||cards.find(c=>/عضویت باشگاه|عضویت و شهریه|شهریه/.test(c.querySelector("h2")?.textContent||""));box=document.createElement("div");box.id="coachReceiptReview";box.className="card receipt-item";box.innerHTML="<h3>📥 فیش‌های واریزی شاگرد</h3><div id=\"coachReceiptList\">در حال دریافت فیش‌ها…</div>";if(card)card.appendChild(box);else sec.appendChild(box);
-  }
+  const sec=$("client");if(!sec)return;let box=$("coachReceiptReview");if(!box){box=document.createElement("div");box.id="coachReceiptReview";box.className="card receipt-item";box.innerHTML="<h2>📥 فیش‌های واریزی شاگرد</h2><div id=\\"coachReceiptList\\">در حال دریافت فیش‌ها…</div>";}if(box.parentElement!==sec)sec.appendChild(box);box.style.setProperty("display","block","important");box.style.setProperty("visibility","visible","important");box.style.setProperty("opacity","1","important");box.hidden=false;box.removeAttribute("aria-hidden");
   try{
    const rows=await sbGet("/trainee_payment_receipts?trainee_id=eq."+encodeURIComponent(traineeId)+"&select=*&order=created_at.desc");
    if(!currentClient||String(currentClient.id)!==String(traineeId))return;
@@ -5548,6 +5546,7 @@ active('workoutMuscleFilters',wm);active('libraryMuscleFilters',lm);if(document.
    $("coachReceiptList").innerHTML=items.join("")||'<p class="muted">فیشی ارسال نشده است.</p>';
   }catch(e){$("coachReceiptList").textContent="دریافت فیش‌ها ناموفق بود: "+(e.message||String(e));}
  }
+ window.loadCoachReceipts=loadCoachReceipts;
  window.reviewPaymentReceipt=async function(id,decision){
   if(isTrainee()||!currentClient?.id)return alert("فقط مربی می‌تواند فیش را بررسی کند.");
   const traineeId=currentClient.id;
