@@ -2192,6 +2192,7 @@ window.loadDashboard = loadDashboard;
   function buildAuthTabs(){
     const card=document.querySelector('#authScreen .auth-card');if(!card||$id('authTabs'))return;
     card.innerHTML=`<div class="auth-logo">🏋️</div><h2>باشگاه فیتنس سه‌قلعه</h2><p class="muted" style="text-align:center">سامانه مربی مجتبی</p>
+      <button type="button" id="sehAddTraineeRequestLoginOpen" class="seh-add-trainee-login-open" onclick="window.openAddTraineeRequest()">👤＋ ثبت‌نام فرد جدید</button>
       <div id="authTabs" class="meal-tabs"><button class="active" id="authCoachTab" onclick="authMode('coach')">👨‍🏫 مربی</button><button id="authTraineeTab" onclick="authMode('trainee')">👤 شاگرد</button></div>
       <div id="coachLoginBox"><label>ایمیل</label><input id="loginEmail" type="email" autocomplete="username" placeholder="ایمیل مربی"><label>رمز عبور</label><input id="loginPassword" type="password" autocomplete="current-password" placeholder="رمز عبور"><button onclick="loginApp()">🔐 ورود مربی</button></div>
       <div id="traineeLoginBox" class="hide">
@@ -7362,6 +7363,7 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
 
 <style id="seh-add-trainee-request-style">
 .hero{position:relative}
+.seh-add-trainee-login-open{display:block;width:100%;margin:12px 0 14px!important;border:1px solid #c99b32!important;background:linear-gradient(135deg,#fff5cf,#d9ad48)!important;color:#30230a!important;border-radius:12px!important;padding:11px 12px!important;font-weight:800;box-shadow:0 3px 10px #0002}
 .seh-add-trainee-open{position:absolute;left:12px;top:12px;border:1px solid #c99b32!important;background:linear-gradient(135deg,#fff5cf,#d9ad48)!important;color:#30230a!important;border-radius:12px!important;padding:9px 12px!important;font-weight:800;box-shadow:0 3px 10px #0002;z-index:5}
 #sehAddTraineeModal{position:fixed;inset:0;z-index:10050;background:#050a11c9;display:none;align-items:center;justify-content:center;padding:14px}
 #sehAddTraineeModal .seh-add-trainee-panel{width:min(460px,100%);max-height:90vh;overflow:auto;background:#0d1722;color:#f4f6f8;border:1px solid #b58a35;border-radius:18px;padding:18px;box-shadow:0 18px 55px #0008}
@@ -7391,19 +7393,22 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
 <script id="seh-add-trainee-request-js">
 (function(){
   const byId=id=>document.getElementById(id);
-  const modal=byId('sehAddTraineeModal'), openBtn=byId('sehAddTraineeRequestOpen'), form=byId('sehAddTraineeForm');
-  if(!modal||!openBtn||!form||window.__sehAddTraineeRequestInstalled)return;
+  const modal=byId('sehAddTraineeModal'), openBtn=byId('sehAddTraineeRequestOpen'), loginOpenBtn=byId('sehAddTraineeRequestLoginOpen'), form=byId('sehAddTraineeForm');
+  if(!modal||!openBtn||!loginOpenBtn||!form||window.__sehAddTraineeRequestInstalled)return;
   window.__sehAddTraineeRequestInstalled=true;
   function updateVisibility(){
     const text=(byId('authUserText')?.textContent||'').trim();
     const loggedIn=document.body.classList.contains('locked')===false && text.length>0;
     const isTrainee=/شاگرد/.test(text);
+    const authScreen=byId('authScreen');
+    const loginVisible=!!authScreen && getComputedStyle(authScreen).display!=='none' && document.body.classList.contains('locked');
+    loginOpenBtn.style.display=loginVisible?'block':'none';
     openBtn.style.display=(loggedIn&&isTrainee)?'inline-flex':'none';
-    if(!isTrainee&&modal.style.display==='flex')modal.style.display='none';
+    if(loggedIn&&!isTrainee&&modal.style.display==='flex')modal.style.display='none';
   }
   window.openAddTraineeRequest=function(){
     updateVisibility();
-    if(openBtn.style.display==='none'){alert('برای ارسال درخواست جدید ابتدا با حساب شاگرد وارد شوید.');return;}
+    if(openBtn.style.display==='none'&&loginOpenBtn.style.display==='none'){alert('برای ثبت درخواست، صفحه ورود را باز کنید یا با حساب شاگرد وارد شوید.');return;}
     modal.style.display='flex';byId('sehAddTraineeMessage').textContent='';
     byId('sehAddTraineeName').focus();
   };
@@ -7411,8 +7416,9 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
   modal.addEventListener('click',e=>{if(e.target===modal)window.closeAddTraineeRequest();});
   document.addEventListener('keydown',e=>{if(e.key==='Escape'&&modal.style.display==='flex')window.closeAddTraineeRequest();});
   const observer=new MutationObserver(updateVisibility);
-  observer.observe(byId('authUserText'),{childList:true,subtree:true,characterData:true});
+  if(byId('authUserText'))observer.observe(byId('authUserText'),{childList:true,subtree:true,characterData:true});
   observer.observe(document.body,{attributes:true,attributeFilter:['class']});
+  const authScreen=byId('authScreen');if(authScreen)observer.observe(authScreen,{attributes:true,attributeFilter:['style','class']});
   updateVisibility();
   form.addEventListener('submit',async function(e){
     e.preventDefault();
