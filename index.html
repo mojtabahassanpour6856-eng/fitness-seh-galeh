@@ -7980,3 +7980,75 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
   setTimeout(ensureWaterUI,400);setTimeout(ensureWaterUI,1400);
 })();
 </script>
+
+<!-- FITNESS_WATER_VISIBLE_FINAL_OVERRIDE_20261013 -->
+<script id="FITNESS_WATER_VISIBLE_FINAL_OVERRIDE_20261013">
+(function(){
+  'use strict';
+  function role(){
+    try { if(window.authProfile && window.authProfile.role) return window.authProfile.role; } catch(e){}
+    try { if(typeof authProfile!=='undefined' && authProfile && authProfile.role) return authProfile.role; } catch(e){}
+    return null;
+  }
+  function showCoachWater(){
+    var r=role(), coach=document.getElementById('coach');
+    if(!coach) return;
+    var goal=document.getElementById('coachWaterGoalCard');
+    var report=document.getElementById('coachWaterWeekCard');
+    if(!goal){
+      goal=document.createElement('div');goal.id='coachWaterGoalCard';goal.className='card';
+      goal.innerHTML='<h2>🎯 هدف آب ماهانه شاگرد</h2><p class="muted">شاگرد را از فهرست انتخاب کنید؛ سپس هدف روزانه را تعیین و ذخیره کنید.</p><div class="grid2"><div><label for="coachWaterGoalMonth">ماه شمسی</label><select id="coachWaterGoalMonth"></select></div><div><label for="coachWaterGoal">هدف روزانه آب (میلی‌لیتر)</label><input id="coachWaterGoal" type="number" min="1" step="100" placeholder="مثلاً 3000"></div></div><button type="button" onclick="saveWaterGoal()">💾 ذخیره هدف آب</button>';
+    }
+    if(!report){
+      report=document.createElement('div');report.id='coachWaterWeekCard';report.className='card';
+      report.innerHTML='<h2>📅 گزارش آب هفتگی شاگرد</h2><p id="coachWaterWeekMeta" class="muted">ابتدا شاگرد را انتخاب کنید.</p><div id="coachWaterWeek" class="muted">گزارش آب هفتگی در این بخش نمایش داده می‌شود.</div>';
+    }
+    if(goal.parentElement!==coach) coach.insertBefore(goal,coach.children[1]||null);
+    if(report.parentElement!==coach) coach.insertBefore(report,goal.nextSibling);
+    else if(report.previousElementSibling!==goal) coach.insertBefore(report,goal.nextSibling);
+    [goal,report].forEach(function(el){
+      el.hidden=false;el.removeAttribute('aria-hidden');
+      el.style.setProperty('display','block','important');
+      el.style.setProperty('visibility','visible','important');
+      el.style.setProperty('opacity','1','important');
+    });
+    if(r==='coach'){
+      coach.classList.add('active');coach.hidden=false;
+      coach.style.setProperty('display','block','important');
+      coach.style.setProperty('visibility','visible','important');
+      coach.style.setProperty('opacity','1','important');
+      document.querySelectorAll('.section').forEach(function(el){if(el!==coach){el.classList.remove('active');}});
+      var navBtn=document.querySelector('.nav button[onclick*="coach"]');
+      document.querySelectorAll('.nav button').forEach(function(b){b.classList.toggle('active',b===navBtn);b.style.removeProperty('display');});
+    } else if(r==='trainee'){
+      goal.hidden=true;report.hidden=true;
+      goal.style.setProperty('display','none','important');report.style.setProperty('display','none','important');
+    }
+    if(typeof window.populateWaterJalaliMonths==='function') window.populateWaterJalaliMonths();
+  }
+  var oldFinish=window.finishLogin;
+  if(typeof oldFinish==='function'&&!window.__waterVisibleFinalLoginOverride){
+    window.finishLogin=async function(){
+      var result=await oldFinish.apply(this,arguments);
+      showCoachWater();setTimeout(showCoachWater,250);setTimeout(showCoachWater,900);
+      return result;
+    };
+    window.__waterVisibleFinalLoginOverride=true;
+  }
+  var oldSelect=window.selectClient;
+  if(typeof oldSelect==='function'&&!window.__waterVisibleFinalSelectOverride){
+    window.selectClient=function(){
+      var result=oldSelect.apply(this,arguments);
+      showCoachWater();setTimeout(showCoachWater,250);
+      return result;
+    };
+    window.__waterVisibleFinalSelectOverride=true;
+  }
+  document.addEventListener('click',function(e){
+    var b=e.target&&e.target.closest?e.target.closest('.nav button'):null;
+    if(b && (String(b.getAttribute('onclick')||'').indexOf("'coach'")>=0 || String(b.getAttribute('onclick')||'').indexOf('"coach"')>=0)) setTimeout(showCoachWater,0);
+  },true);
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',function(){showCoachWater();setTimeout(showCoachWater,800);},{once:true});
+  else {showCoachWater();setTimeout(showCoachWater,800);}
+})();
+</script>
