@@ -6927,7 +6927,9 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
   function addExports(){
     var section=document.getElementById('workout');
     if(!section)return;
-    var traineeMode=(typeof isTrainee==='function'&&isTrainee());
+    /* isTrainee may be scoped inside another script; read the authenticated role directly. */
+    var traineeMode=(typeof authProfile!=='undefined'&&authProfile&&authProfile.role==='trainee')
+      ||(window.authProfile&&window.authProfile.role==='trainee');
     var list=document.getElementById('workoutList');
     var card=traineeMode&&list?list.closest('.card'):Array.from(section.children).find(function(el){
       return el.classList&&el.classList.contains('card')&&el.querySelector('#workoutTitle');
@@ -6960,8 +6962,14 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
     addExports();
     if(document.body&&typeof MutationObserver==='function'){
       var mo=new MutationObserver(function(){addExports();});
-      mo.observe(document.body,{childList:true,subtree:true});
+      mo.observe(document.body,{childList:true,subtree:true,attributes:true,attributeFilter:['style','class','hidden']});
     }
+    /* Retry after authentication and after the trainee workout section becomes visible. */
+    [250,700,1400,2500].forEach(function(ms){setTimeout(addExports,ms);});
+    document.addEventListener('click',function(e){
+      var target=e.target&&e.target.closest&&e.target.closest('button');
+      if(target&&(/برنامه تمرینی|داشبورد|🏠/.test(target.textContent||'')))setTimeout(addExports,120);
+    },true);
   }
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init,{once:true});else init();
   var oldFinish=window.finishLogin;
