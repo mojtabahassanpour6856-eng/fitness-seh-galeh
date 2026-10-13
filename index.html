@@ -3981,19 +3981,29 @@ window.toggleExerciseFavorite=async function(id,value){try{await sbWrite(`/train
 
 <style id="coach-mobile-fix">
 #clientList .v4-table{display:none!important}
-#clientList .coach-card-grid{display:grid;grid-template-columns:1fr;gap:9px;margin-top:10px}
-#clientList .coach-trainee-card{background:#101e2d;border:1px solid #34495c;border-radius:13px;padding:12px;min-width:0}
-#clientList .coach-trainee-head{display:flex;justify-content:space-between;align-items:flex-start;gap:8px}
-#clientList .coach-trainee-name{font-size:14px;font-weight:bold;overflow-wrap:anywhere}
-#clientList .coach-trainee-meta{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-top:10px}
-#clientList .coach-trainee-meta div{background:#0a1420;border-radius:8px;padding:7px;font-size:11px;overflow-wrap:anywhere}
-#clientList .coach-trainee-meta small{display:block;color:#aeb9c4;margin-bottom:3px}
-#clientList .coach-card-actions{display:flex;gap:7px;margin-top:9px}
-#clientList .coach-card-actions button{margin:0;padding:9px;font-size:12px}
-#clientList .coach-filter-row{display:flex;gap:6px;overflow-x:auto;padding:4px 0}
-#clientList .coach-filter-row button{white-space:nowrap;min-width:max-content;width:auto;margin:0;padding:8px 12px;font-size:12px}
+#clientList .coach-card-grid{display:grid;grid-template-columns:1fr;gap:7px;margin-top:8px}
+#clientList .coach-trainee-card{background:linear-gradient(145deg,#132638,#101b29);border:1px solid #30485b;border-radius:12px;padding:10px 11px;min-width:0;box-shadow:0 3px 10px #00000012}
+#clientList .coach-trainee-head{display:flex;justify-content:space-between;align-items:center;gap:8px}
+#clientList .coach-trainee-name{font-size:13px;font-weight:800;overflow-wrap:anywhere;line-height:1.7}
+#clientList .coach-trainee-head .pill{font-size:10px;padding:3px 7px;white-space:nowrap}
+#clientList .coach-trainee-quick{display:flex;align-items:center;gap:6px 12px;flex-wrap:wrap;margin-top:5px;font-size:11px;color:#d6e2ec}
+#clientList .coach-trainee-quick span{white-space:normal}
+#clientList .coach-trainee-quick b{color:#f5c451;font-weight:700}
+#clientList .coach-trainee-more{margin-top:7px;border-top:1px solid #2a4052;padding-top:6px}
+#clientList .coach-trainee-more summary{cursor:pointer;color:#a9c4d8;font-size:11px;list-style:none;display:flex;align-items:center;justify-content:space-between;gap:8px}
+#clientList .coach-trainee-more summary::-webkit-details-marker{display:none}
+#clientList .coach-trainee-more summary:after{content:'＋';font-size:15px;color:#f5c451}
+#clientList .coach-trainee-more[open] summary:after{content:'−'}
+#clientList .coach-trainee-meta{display:grid;grid-template-columns:1fr 1fr;gap:5px;margin-top:7px}
+#clientList .coach-trainee-meta div{background:#0a1420;border-radius:7px;padding:6px;font-size:10px;overflow-wrap:anywhere;line-height:1.7}
+#clientList .coach-trainee-meta small{display:block;color:#9eb0bf;margin-bottom:1px;font-size:10px}
+#clientList .coach-card-actions{display:flex;gap:6px;margin-top:8px}
+#clientList .coach-card-actions button{margin:0;padding:7px 10px;font-size:11px;min-height:34px}
+#clientList .coach-filter-row{display:flex;gap:6px;overflow-x:auto;padding:4px 0 7px;scrollbar-width:thin}
+#clientList .coach-filter-row button{white-space:nowrap;min-width:max-content;width:auto;margin:0;padding:7px 10px;font-size:11px;border-radius:9px}
 #clientList .coach-filter-row button.active{background:#ffbd16;color:#111}
-@media(min-width:650px){#clientList .coach-card-grid{grid-template-columns:1fr 1fr}}
+@media(min-width:650px){#clientList .coach-card-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}}
+@media(min-width:1000px){#clientList .coach-card-grid{grid-template-columns:repeat(3,minmax(0,1fr))}}
 </style>
 <script>
 /* FINAL COACH LIST FIX: load trainees independently of optional membership/plan tables,
@@ -4024,11 +4034,12 @@ window.toggleExerciseFavorite=async function(id,value){try{await sbWrite(`/train
       const type=c.training_type==='home'?'🏠 تمرین منزل':c.training_type==='online'?'📱 آنلاین':'🏋️ باشگاه';
       const active=c.membershipStatus==='منقضی'?'منقضی':c.membershipStatus==='در انتظار پرداخت'?'در انتظار پرداخت':c.membershipStatus==='وضعیت نامشخص'?'وضعیت عضویت نامشخص':'فعال';
       return `<article class="coach-trainee-card"><div class="coach-trainee-head"><div class="coach-trainee-name">${esc(c.name||'بدون نام')}</div><span class="pill">${type}</span></div>
+      <div class="coach-trainee-quick"><span>🎯 <b>هدف:</b> ${esc(c.goal||'ثبت نشده')}</span><span>⚖️ <b>وزن:</b> ${c.weight?esc(c.weight)+' کیلو':'—'}</span></div>
+      <details class="coach-trainee-more"><summary>جزئیات شاگرد <span>${c.plans?'📋 برنامه دارد':'📋 بدون برنامه'}</span></summary>
       <div class="coach-trainee-meta">
-      <div><small>موبایل</small>${esc(c.phone||'ثبت نشده')}</div><div><small>وزن</small>${c.weight?esc(c.weight)+' کیلو':'ثبت نشده'}</div>
-      <div><small>هدف</small>${esc(c.goal||'ثبت نشده')}</div><div><small>روز / ساعت تمرین</small>${esc(c.training_days||'—')} ${esc(c.training_time||'')}</div>
-      <div><small>برنامه</small>${c.plans?'برنامه دارد':'برنامه ثبت نشده'}</div><div><small>عضویت</small>${active}</div></div>
-      <div class="coach-card-actions"><button type="button" class="secondary" onclick="selectClient('${String(c.id).replace(/'/g,'')}')">ورود به پروفایل</button></div></article>`;
+      <div><small>موبایل</small>${esc(c.phone||'ثبت نشده')}</div><div><small>وضعیت عضویت</small>${active}</div>
+      <div><small>روزهای تمرین</small>${esc(c.training_days||'ثبت نشده')}</div><div><small>ساعت تمرین</small>${esc(c.training_time||'ثبت نشده')}</div></div>
+      <div class="coach-card-actions"><button type="button" class="secondary" onclick="selectClient('${String(c.id).replace(/'/g,'')}')">ورود به پروفایل ←</button></div></details></article>`;
     }).join(''):(clients.length===0?'<div style="padding:12px;border:1px solid #8b6b2b;border-radius:10px;margin-top:10px"><strong>هنوز شاگردی برای این حساب نمایش داده نمی‌شود.</strong><p>ورود مربی انجام شده، اما درخواست فهرست شاگردان ردیفی برنگردانده است. این حالت معمولاً به پیوند رکورد در جدول trainees با شناسه مربی یا سیاست‌های RLS مربوط است؛ از این پیام به‌تنهایی نمی‌توان علت قطعی را تعیین کرد.</p><p>برای بررسی دقیق، شناسه حساب ورود و مقدار coach_user_id رکوردهای جدول trainees باید در همان پروژه Supabase مقایسه شوند.</p><button type="button" onclick="showTraineeDiagnostic()">نمایش شناسه حساب و وضعیت اتصال</button> <button type="button" onclick="loadClients()">تلاش دوباره</button></div>':'<div class="muted" style="padding:12px">شاگردی با این جستجو یا فیلتر پیدا نشد.</div>');
     if(typeof window.updateStats==='function')window.updateStats();
   };
