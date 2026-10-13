@@ -7054,29 +7054,51 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
 (function(){
  'use strict';
  var oldDash=window.dashOpen;
+ var overlayId='sehMembershipOverlay';
+ var placeholderId='sehMembershipPlaceholder';
  function findMembershipCard(){
   var root=document.getElementById('client');if(!root)return null;
   return root.querySelector('#traineeMembershipStatus')?.closest('.card')
    ||root.querySelector('#subStart')?.closest('.card')
    ||Array.from(root.querySelectorAll(':scope > .card')).find(function(c){return /عضویت باشگاه|عضویت و شهریه/.test(c.querySelector('h2')?.textContent||'')});
  }
- function reveal(card){
-  if(!card)return false;
-  var node=card;
-  while(node&&node!==document.body){node.hidden=false;node.removeAttribute('aria-hidden');node.classList.remove('hide');if(node.style&&window.getComputedStyle(node).display==='none'){node.style.setProperty('display','block','important');}node=node.parentElement;}
-  card.style.setProperty('display','block','important');card.style.setProperty('visibility','visible','important');
-  card.scrollIntoView({behavior:'smooth',block:'start'});return true;
+ function closeMembership(){
+  var overlay=document.getElementById(overlayId),card=findMembershipCard(),placeholder=document.getElementById(placeholderId);
+  if(card&&placeholder&&placeholder.parentNode)placeholder.parentNode.insertBefore(card,placeholder);
+  if(placeholder)placeholder.remove();
+  if(overlay)overlay.remove();
+  var dash=document.getElementById('traineeDashboard');
+  if(dash&&typeof window.showSection==='function')window.showSection('traineeDashboard',document.getElementById('navDash'));
+ }
+ function openMembership(){
+  if(typeof window.ensureTraineeMembershipCard==='function')window.ensureTraineeMembershipCard();
+  var card=findMembershipCard();
+  if(!card){setTimeout(openMembership,200);return;}
+  var existing=document.getElementById(overlayId);if(existing)existing.remove();
+  var overlay=document.createElement('div');overlay.id=overlayId;
+  overlay.style.cssText='position:fixed;inset:0;z-index:99999;background:rgba(3,10,18,.82);display:flex;align-items:flex-start;justify-content:center;overflow-y:auto;padding:14px;box-sizing:border-box';
+  var dialog=document.createElement('div');dialog.setAttribute('role','dialog');dialog.setAttribute('aria-modal','true');dialog.setAttribute('aria-label','عضویت و شهریه');
+  dialog.style.cssText='width:100%;max-width:680px;margin:auto;background:var(--panel,#101e2d);border:1px solid #c8a34d;border-radius:16px;padding:12px;box-sizing:border-box;box-shadow:0 18px 60px rgba(0,0,0,.45)';
+  var top=document.createElement('div');top.style.cssText='display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:10px';
+  var title=document.createElement('b');title.textContent='💳 عضویت و شهریه';title.style.cssText='font-size:16px';
+  var close=document.createElement('button');close.type='button';close.textContent='✕ بستن';close.style.cssText='flex-shrink:0';close.addEventListener('click',closeMembership);
+  top.append(title,close);
+  var content=document.createElement('div');content.id='sehMembershipModalContent';
+  dialog.append(top,content);overlay.appendChild(dialog);
+  overlay.addEventListener('click',function(e){if(e.target===overlay)closeMembership();});
+  document.addEventListener('keydown',function escHandler(e){if(e.key==='Escape'&&document.getElementById(overlayId)){closeMembership();document.removeEventListener('keydown',escHandler);}});
+  var placeholder=document.createElement('span');placeholder.id=placeholderId;placeholder.hidden=true;
+  card.parentNode.insertBefore(placeholder,card);content.appendChild(card);
+  card.hidden=false;card.classList.remove('hide');card.removeAttribute('aria-hidden');
+  card.style.removeProperty('display');card.style.removeProperty('visibility');card.style.width='100%';card.style.boxSizing='border-box';
+  document.body.appendChild(overlay);
+  if(typeof window.ensureTraineeMembershipCard==='function')window.ensureTraineeMembershipCard();
  }
  window.dashOpen=function(section){
-  if(section!=='membership')return typeof oldDash==='function'?oldDash.apply(this,arguments):undefined;
-  if(typeof window.ensureTraineeMembershipCard==='function')window.ensureTraineeMembershipCard();
-  if(typeof window.showSection==='function')window.showSection('client',null);
-  var card=findMembershipCard();
-  if(!card&&typeof window.ensureTraineeMembershipCard==='function'){window.ensureTraineeMembershipCard();card=findMembershipCard();}
-  if(card)reveal(card);
-  [150,500,1000].forEach(function(ms){setTimeout(function(){if(typeof window.ensureTraineeMembershipCard==='function')window.ensureTraineeMembershipCard();var c=findMembershipCard();if(c)reveal(c);},ms);});
-  if(!card){setTimeout(function(){var c=findMembershipCard();if(c)reveal(c);},250);}
+  if(section==='membership'){openMembership();return;}
+  return typeof oldDash==='function'?oldDash.apply(this,arguments):undefined;
  };
+ window.closeTraineeMembershipCard=closeMembership;
 })();
 </script>
 </body>
