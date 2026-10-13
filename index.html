@@ -5272,7 +5272,7 @@ active('workoutMuscleFilters',wm);active('libraryMuscleFilters',lm);if(document.
   const training_days=($( "traineeRegDays")?.value||"").trim();
   const training_time=$( "traineeRegTime")?.value||"";
   if(name.length<2){showAuthError("نام و نام خانوادگی را وارد کنید.");return;}
-  if(!/^\\+989\\d{9}$/.test(phone)){showAuthError("شماره موبایل معتبر نیست؛ مانند 09121234567 وارد کنید.");return;}
+  if(!/^\+989\d{9}$/.test(phone)){showAuthError("شماره موبایل معتبر نیست؛ مانند 09121234567 وارد کنید.");return;}
   if(!Number.isInteger(weekly_sessions)||weekly_sessions<1||weekly_sessions>7){showAuthError("تعداد جلسات تمرین در هفته را انتخاب کنید.");return;}
   if(!training_days){showAuthError("روزهای تمرین را وارد کنید.");return;}
   if(!training_time){showAuthError("ساعت تمرین را انتخاب کنید.");return;}
