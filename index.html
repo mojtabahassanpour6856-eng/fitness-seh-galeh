@@ -4838,22 +4838,27 @@ body.workout-output .empty-cell{display:none!important}
           if(doc.fonts && doc.fonts.ready) await doc.fonts.ready;
           await new Promise(resolve=>popup.requestAnimationFrame(()=>popup.requestAnimationFrame(resolve)));
           const captureWidth=Math.max(900,Math.ceil(target.getBoundingClientRect().width),target.scrollWidth,doc.documentElement.scrollWidth);
-          const captureHeight=Math.max(target.scrollHeight,doc.documentElement.scrollHeight);
+          /* Do not freeze the PNG canvas height before cloned styles/layout are applied:
+             workout sessions with many exercises can grow taller during capture, and a stale
+             height clips the bottom of session one (or its last exercise) from the exported image. */
           const canvas=await popup.html2canvas(target,{
             scale:2, backgroundColor:'#ffffff', useCORS:true, logging:false,
             width:captureWidth,
             windowWidth:captureWidth,
-            height:captureHeight,
-            windowHeight:captureHeight,
             scrollX:0,scrollY:0,
             onclone:function(clonedDoc){
               const clonedBody=clonedDoc.body;
+              clonedDoc.documentElement.style.height='auto';
+              clonedDoc.documentElement.style.minHeight='0';
+              clonedDoc.documentElement.style.overflow='visible';
               clonedBody.style.width=captureWidth+'px';
               clonedBody.style.maxWidth='none';
               clonedBody.style.margin='0';
               clonedBody.style.display='flex';
               clonedBody.style.flexDirection='column';
-              clonedBody.style.minHeight=Math.max(captureHeight,1066)+'px';
+              clonedBody.style.height='auto';
+              clonedBody.style.minHeight=kind==='meal'?'282mm':'0';
+              clonedBody.style.overflow='visible';
               clonedBody.style.boxSizing='border-box';
               const meta=clonedDoc.querySelector('.plan-meta');
               if(meta){meta.style.display='grid';meta.style.gridTemplateColumns='minmax(0,1fr) minmax(0,1fr) minmax(0,1.35fr)';meta.style.gridTemplateRows='auto';meta.style.gridAutoFlow='column';meta.style.direction='rtl';meta.style.width='100%';meta.style.fontSize='15px';meta.style.gap='6px 12px';meta.style.overflow='hidden';Array.from(meta.children).forEach(function(item){item.style.display='block';item.style.width='100%';item.style.minWidth='0';item.style.whiteSpace='nowrap';item.style.overflow='hidden';item.style.textOverflow='ellipsis';item.style.overflowWrap='normal';item.style.wordBreak='keep-all';item.style.border='0';});}
@@ -4861,7 +4866,10 @@ body.workout-output .empty-cell{display:none!important}
               const gym=clonedDoc.querySelector('.gym-name');if(gym){gym.style.fontSize='36px';gym.style.fontWeight='1000';gym.style.lineHeight='1.4';gym.style.color='#3d2806';}
               const coach=clonedDoc.querySelector('.coach-name');if(coach){coach.style.fontSize='19px';coach.style.fontWeight='900';}
               const date=clonedDoc.querySelector('.plan-date');if(date){date.style.fontSize='16px';date.style.fontWeight='900';date.style.padding='6px 9px';date.style.borderWidth='2px';}
-              const grid=clonedDoc.querySelector('.session-grid');if(grid){grid.style.minHeight='960px';grid.style.flex='1 0 auto';}
+              const grid=clonedDoc.querySelector('.session-grid');if(grid){grid.style.minHeight='0';grid.style.height='auto';grid.style.flex='0 0 auto';grid.style.gridTemplateRows='none';grid.style.gridAutoRows='auto';grid.style.overflow='visible';}
+              clonedDoc.querySelectorAll('.session-cell').forEach(function(cell){cell.style.height='auto';cell.style.minHeight='0';cell.style.maxHeight='none';cell.style.overflow='visible';cell.style.breakInside='avoid';});
+              clonedDoc.querySelectorAll('.session-exercises').forEach(function(list){list.style.height='auto';list.style.minHeight='0';list.style.maxHeight='none';list.style.flex='0 0 auto';list.style.overflow='visible';list.style.justifyContent='flex-start';});
+              clonedDoc.querySelectorAll('.exercise-card,.exercise-unit').forEach(function(card){card.style.height='auto';card.style.minHeight='0';card.style.maxHeight='none';card.style.flex='0 0 auto';card.style.overflow='visible';card.style.breakInside='avoid';});
               const notes=clonedDoc.querySelector('.system-notes');if(notes){notes.style.marginTop='auto';notes.style.display='flex';notes.style.flexDirection='row';notes.style.flexWrap='wrap';notes.style.alignItems='center';notes.style.gap='6px 14px';notes.style.fontSize='14px';notes.style.lineHeight='1.7';notes.style.padding='9px 11px';Array.from(notes.children).forEach(function(item){item.style.display='inline-block';item.style.flex='0 1 auto';item.style.margin='0';});}
             }
           });
