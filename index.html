@@ -7339,7 +7339,7 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
     let card=$('traineeHealthReportCard');
     if(!card){
       card=document.createElement('div');card.id='traineeHealthReportCard';card.className='card';
-      card.innerHTML='<h2>🩺 گزارش بیماری و وضعیت سلامت</h2><p class="muted" style="line-height:1.8">بیماری خاص، مشکلات گوارشی، حساسیت‌ها، داروهای مصرفی یا هر نکته‌ای که روی تمرین و تغذیه اثر دارد را برای مربی بنویسید. اطلاعات فقط برای آگاهی مربی و تنظیم ایمن‌تر برنامه است و جایگزین نظر پزشک نیست.</p><div class="grid2"><div><label for="healthReportType">نوع گزارش</label><select id="healthReportType"><option value="بیماری یا وضعیت پزشکی">بیماری یا وضعیت پزشکی</option><option value="مشکل گوارشی">مشکل گوارشی</option><option value="حساسیت">حساسیت غذایی یا دارویی</option><option value="داروهای مصرفی">داروهای مصرفی</option><option value="آسیب یا محدودیت تمرین">آسیب یا محدودیت تمرین</option><option value="سایر">سایر موارد</option></select></div><div><label for="healthReportDate">تاریخ گزارش</label><input id="healthReportDate" type="date"></div></div><label for="healthReportDetails">شرح وضعیت / علائم / محدودیت‌ها</label><textarea id="healthReportDetails" rows="3" placeholder="توضیحات را دقیق بنویسید؛ اگر موردی ندارید، نیازی به ارسال نیست."></textarea><button type="button" id="submitHealthReportBtn" onclick="submitTraineeHealthReport()">📨 ارسال گزارش سلامت به مربی</button><hr style="border-color:#26384a;margin:16px 0"><h3>📄 آپلود آزمایش یا مدرک پزشکی</h3><p class="muted">فقط PDF یا تصویر خوانا؛ حداکثر ۱۰ مگابایت. فایل برای مشاهده مربی ارسال می‌شود.</p><input id="healthReportFile" type="file" accept="application/pdf,image/jpeg,image/png,image/webp"><label for="healthFileNote">توضیح کوتاه (اختیاری)</label><input id="healthFileNote" placeholder="مثلاً آزمایش خون مهرماه"><button type="button" id="uploadHealthReportBtn" class="secondary" onclick="uploadTraineeHealthReport()">📤 ارسال آزمایش برای مربی</button><div id="traineeHealthReportStatus" class="muted" style="margin-top:10px"></div>';
+      card.innerHTML='<h2>🩺 گزارش بیماری و وضعیت سلامت</h2><p class="muted" style="line-height:1.8">بیماری خاص، مشکلات گوارشی، حساسیت‌ها، داروهای مصرفی یا هر نکته‌ای که روی تمرین و تغذیه اثر دارد را برای مربی بنویسید. اطلاعات فقط برای آگاهی مربی و تنظیم ایمن‌تر برنامه است و جایگزین نظر پزشک نیست.</p><div class="grid2"><div><label for="healthReportType">نوع گزارش</label><select id="healthReportType"><option value="بیماری یا وضعیت پزشکی">بیماری یا وضعیت پزشکی</option><option value="مشکل گوارشی">مشکل گوارشی</option><option value="حساسیت">حساسیت غذایی یا دارویی</option><option value="داروهای مصرفی">داروهای مصرفی</option><option value="آسیب یا محدودیت تمرین">آسیب یا محدودیت تمرین</option><option value="سایر">سایر موارد</option></select></div><div><label for="healthReportDate">تاریخ گزارش</label><input id="healthReportDate" type="date"></div></div><label for="healthReportDetails">شرح وضعیت / علائم / محدودیت‌ها</label><textarea id="healthReportDetails" rows="3" placeholder="توضیحات را دقیق بنویسید؛ اگر موردی ندارید، نیازی به ارسال نیست."></textarea><button type="button" id="submitHealthReportBtn" onclick="submitTraineeHealthReport()">📨 ارسال گزارش سلامت به مربی</button><hr style="border-color:#26384a;margin:16px 0"><h3>📄 آپلود آزمایش یا مدرک پزشکی</h3><p class="muted">فقط PDF یا تصویر خوانا؛ حداکثر ۱۰ مگابایت. فایل برای مشاهده مربی ارسال می‌شود.</p><input id="healthReportFile" type="file" accept="application/pdf,image/jpeg,image/png,image/webp"><label for="healthFileNote">توضیح کوتاه (اختیاری)</label><input id="healthFileNote" placeholder="مثلاً آزمایش خون مهرماه"><button type="button" id="uploadHealthReportBtn" class="secondary" onclick="uploadTraineeHealthReport()">📤 ارسال آزمایش برای مربی</button><div id="traineeHealthReportStatus" class="muted" style="margin-top:10px"></div><div id="traineeHealthReportHistory" style="margin-top:10px;display:grid;gap:6px"></div>';
       const injuryCard=section.querySelector('#injType')?.closest('.card')||Array.from(section.querySelectorAll('.card')).find(el=>/گزارش آسیب|آسیب\s*\/\s*محدودیت تمرینی|آسیب و محدودیت/.test(el.querySelector('h2,h3')?.textContent||''));
       const profile=section.querySelector('#traineeProfileExtraFields')?.closest('.card')||section.querySelector(':scope > .card');
       const anchor=injuryCard||profile;
@@ -7405,13 +7405,29 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
   };
   async function loadTraineeHealthReports(){
     if(!traineeRole())return;
-    const box=$('traineeHealthReportStatus');if(!box)return;
+    const box=$('traineeHealthReportStatus'),history=$('traineeHealthReportHistory');if(!box)return;
     try{
       const rows=await healthReportRows();const c=client();if(!c?.id)return;
-      const own=rows.filter(x=>String(x.trainee_id)===String(c.id));
+      const own=rows.filter(x=>String(x.trainee_id)===String(c.id)&&(
+        String(x.body_area||'')==='گزارش سلامت شاگرد'||
+        String(x.problem_type||'').includes('آزمایش یا مدرک پزشکی')
+      ));
+      const fmtDate=v=>{if(!v)return 'تاریخ نامشخص';try{return new Intl.DateTimeFormat('fa-IR-u-ca-persian',{year:'numeric',month:'short',day:'numeric'}).format(new Date(String(v).slice(0,10)+'T12:00:00'));}catch(_){return String(v).slice(0,10);}};
+      if(history){
+        history.innerHTML=own.length?own.map(x=>{
+          const detail=String(x.movement_limit||'');
+          const isFile=detail.startsWith('HEALTH_REPORT_FILE::');
+          let meta={};if(isFile){try{meta=JSON.parse(detail.slice('HEALTH_REPORT_FILE::'.length));}catch(_){}}
+          const title=String(x.problem_type||'گزارش سلامت');
+          const date=fmtDate(x.record_date||x.created_at);
+          const body=isFile?(String(meta.name||'فایل آزمایش')+(meta.note?' — '+String(meta.note):'')):detail;
+          return '<div style="border:1px solid #304457;border-radius:10px;background:#111d29;padding:8px 10px;font-size:12px;line-height:1.7;min-width:0;overflow-wrap:anywhere"><div style="display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap"><b>'+escapeHtml(title)+'</b><span class="muted">'+escapeHtml(date)+'</span></div><div style="white-space:pre-wrap;margin-top:3px">'+escapeHtml(body)+'</div>'+(isFile&&meta.path?'<button type="button" class="mini secondary" data-health-path="'+escapeHtml(meta.path)+'" style="margin-top:5px">📎 مشاهده فایل ارسالی</button>':'')+'</div>';
+        }).join(''):'<div class="muted" style="font-size:12px;border:1px dashed #304457;border-radius:9px;padding:8px">هنوز گزارشی از بیماری یا آزمایش ارسال نکرده‌اید.</div>';
+        history.querySelectorAll('[data-health-path]').forEach(btn=>btn.addEventListener('click',()=>window.openTraineeHealthFile(btn.getAttribute('data-health-path'))));
+      }
       const count=own.filter(x=>String(x.problem_type||'').includes('آزمایش یا مدرک پزشکی')).length;
-      if(!box.textContent)box.textContent=count?'تعداد فایل‌های آزمایش ثبت‌شده: '+count.toLocaleString('fa-IR'):'گزارش‌های ارسال‌شده در پرونده شما ثبت می‌شوند.';
-    }catch(e){console.warn('health report list unavailable',e);}
+      box.textContent='گزارش‌های شما در همین صفحه ذخیره می‌شوند؛ فایل آزمایش: '+count.toLocaleString('fa-IR');
+    }catch(e){console.warn('health report list unavailable',e);if(history)history.innerHTML='<div class="muted" style="font-size:12px">نمایش سوابق فعلاً انجام نشد.</div>';}
   }
   const priorFinish=window.finishLogin;
   if(typeof priorFinish==='function'&&!window.__traineeHealthReportFinish){
