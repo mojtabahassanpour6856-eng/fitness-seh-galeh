@@ -1089,7 +1089,8 @@ async function saveProfile(){
 async function saveProfileExtras(){if(!currentClient)return alert('اول شاگرد را انتخاب کنید.');try{await sbWrite(`/trainees?id=eq.${encodeURIComponent(currentClient.id)}`,'PATCH',{training_type:$('ptype2').value,home_equipment:$('pequipment2').value.trim()||null,limitations:$('plimit').value.trim()||null});alert('اطلاعات تکمیلی ذخیره شد.');await loadClients();}catch(e){alert('ذخیره اطلاعات تکمیلی انجام نشد.\n'+e.message);}}
 async function saveSupplement(){if(!currentClient)return alert('اول شاگرد را انتخاب کنید.');const selected=$('suppName').value;const name=(selected==='__custom__'?$('suppCustomName').value:selected).trim();if(!name)return alert('یک ویتامین یا مکمل انتخاب کنید یا نام مورد دلخواه را وارد کنید.');try{await sbWrite('/trainee_supplements','POST',{trainee_id:currentClient.id,name,dose:$('suppDose').value.trim()||null,timing:$('suppTiming').value.trim()||null,frequency:$('suppFrequency').value.trim()||null,days:$('suppDays').value.trim()||null,duration:$('suppDuration').value.trim()||null,coach_note:$('suppNote').value.trim()||null,status:'active'});await loadSupplements();['suppName','suppDose','suppTiming','suppFrequency','suppDays','suppDuration','suppNote','suppCustomName'].forEach(id=>{if($(id))$(id).value='';});$('suppCustomWrap').style.display='none';}catch(e){alert('ثبت مکمل انجام نشد.'+String.fromCharCode(10)+e.message);}}async function loadSupplements(){if(!currentClient||!$('suppList'))return;try{const rows=await sbGet(`/trainee_supplements?trainee_id=eq.${encodeURIComponent(currentClient.id)}&order=created_at.desc`);$('suppList').innerHTML=rows.map(x=>`<div class="report-row"><span>💊 ${esc(x.name)} — ${esc(x.dose||'')}</span><b>${esc(x.timing||'')} ${esc(x.status||'')}</b></div>`).join('')||'مکملی ثبت نشده است.';}catch(e){$('suppList').textContent='برای فعال شدن مکمل‌ها، SQL جدید را اجرا کنید.';}}
 async function saveInjury(){if(!currentClient)return alert('اول شاگرد را انتخاب کنید.');const type=$('injType').value.trim();if(!type)return alert('نوع مشکل را وارد کنید.');try{await sbWrite('/trainee_injuries','POST',{trainee_id:currentClient.id,problem_type:type,body_area:$('injArea').value.trim()||null,severity:$('injSeverity').value.trim()||null,record_date:$('injDate').value||today(),movement_limit:$('injLimit').value.trim()||null,coach_note:$('injNote').value.trim()||null,status:$('injStatus').value});await loadInjuries();}catch(e){alert('ثبت محدودیت انجام نشد.\n'+e.message);}}
-async function loadInjuries(){if(!currentClient||!$('injList'))return;try{const rows=await sbGet(`/trainee_injuries?trainee_id=eq.${encodeURIComponent(currentClient.id)}&order=created_at.desc`);$('injList').innerHTML=rows.map(x=>`<div class="report-row"><span>⚠️ ${esc(x.problem_type)} | ${esc(x.body_area||'')}</span><b>${esc(x.status||'')}</b></div>`).join('')||'موردی ثبت نشده است.';}catch(e){$('injList').textContent='برای فعال شدن این بخش، SQL جدید را اجرا کنید.';}}
+async function loadInjuries(){if(!currentClient||!$('injList'))return;try{const rows=await sbGet(`/trainee_injuries?trainee_id=eq.${encodeURIComponent(currentClient.id)}&order=created_at.desc`);$('injList').innerHTML=rows.map(x=>{const note=String(x.coach_note||'');let extra='';if(note.startsWith('HEALTH_REPORT_FILE::')){let meta={};try{meta=JSON.parse(note.slice('HEALTH_REPORT_FILE::'.length));}catch(e){}const safePath=String(meta.path||'');const safeName=String(meta.name||'فایل آزمایش');extra='<div style="margin-top:6px">📎 '+esc(safeName)+(meta.note?' — '+esc(meta.note):'')+' <button type="button" class="mini secondary" onclick="openTraineeHealthFile(\''+esc(safePath).replace(/'/g,'&#39;')+'\')">🔎 مشاهده فایل</button></div>';}else if(note){extra='<div class="muted" style="margin-top:6px;white-space:pre-wrap">'+esc(note)+'</div>';}return '<div class="report-row" style="display:block;padding:10px 0;border-bottom:1px solid #293b4b"><div style="display:flex;justify-content:space-between;gap:8px"><span>⚠️ '+esc(x.problem_type)+' | '+esc(x.body_area||'')+'</span><b>'+esc(x.status||'')+'</b></div>'+(x.severity?'<div class="muted">وضعیت: '+esc(x.severity)+'</div>':'')+(x.movement_limit?'<div class="muted">محدودیت: '+esc(x.movement_limit)+'</div>':'')+extra+'</div>';}).join('')||'موردی ثبت نشده است.';}catch(e){$('injList').textContent='برای فعال شدن این بخش، SQL جدید را اجرا کنید.';}}
+window.openTraineeHealthFile=async function(path){if(!path||!AUTH_SUPABASE?.storage)return alert('مسیر فایل معتبر نیست.');try{const {data,error}=await AUTH_SUPABASE.storage.from('trainee-health-reports').createSignedUrl(path,300);if(error)throw error;if(!data?.signedUrl)throw new Error('لینک امن فایل ساخته نشد.');window.open(data.signedUrl,'_blank','noopener');}catch(e){alert('نمایش فایل انجام نشد؛ مجوز مشاهده مربی و فضای ذخیره‌سازی را بررسی کنید. '+(e?.message||String(e)));}};
 
 let fastingMealRows=[];
 function updateFastingWindowSummary(){
@@ -7303,6 +7304,108 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
 })();
 </script>
 
+
+
+<!-- TRAINEE HEALTH REPORT + LAB UPLOAD -->
+<script id="TRAINEE_HEALTH_REPORT_V1">
+(function(){
+  'use strict';
+  const $=id=>document.getElementById(id);
+  const traineeRole=()=>{try{return (window.authProfile||authProfile)?.role==='trainee'}catch(e){return false}};
+  const client=()=>{try{return typeof currentClient!=='undefined'?currentClient:window.currentClient||null}catch(e){return window.currentClient||null}};
+  const escapeHtml=v=>String(v??'').replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
+  function ensureHealthCard(){
+    if(!traineeRole())return;
+    const section=$('client');if(!section)return;
+    let card=$('traineeHealthReportCard');
+    if(!card){
+      card=document.createElement('div');card.id='traineeHealthReportCard';card.className='card';
+      card.innerHTML='<h2>🩺 گزارش بیماری و وضعیت سلامت</h2><p class="muted" style="line-height:1.8">بیماری خاص، مشکلات گوارشی، حساسیت‌ها، داروهای مصرفی یا هر نکته‌ای که روی تمرین و تغذیه اثر دارد را برای مربی بنویسید. اطلاعات فقط برای آگاهی مربی و تنظیم ایمن‌تر برنامه است و جایگزین نظر پزشک نیست.</p><div class="grid2"><div><label for="healthReportType">نوع گزارش</label><select id="healthReportType"><option value="بیماری یا وضعیت پزشکی">بیماری یا وضعیت پزشکی</option><option value="مشکل گوارشی">مشکل گوارشی</option><option value="حساسیت">حساسیت غذایی یا دارویی</option><option value="داروهای مصرفی">داروهای مصرفی</option><option value="آسیب یا محدودیت تمرین">آسیب یا محدودیت تمرین</option><option value="سایر">سایر موارد</option></select></div><div><label for="healthReportDate">تاریخ گزارش</label><input id="healthReportDate" type="date"></div></div><label for="healthReportDetails">شرح وضعیت / علائم / محدودیت‌ها</label><textarea id="healthReportDetails" rows="3" placeholder="توضیحات را دقیق بنویسید؛ اگر موردی ندارید، نیازی به ارسال نیست."></textarea><button type="button" id="submitHealthReportBtn" onclick="submitTraineeHealthReport()">📨 ارسال گزارش سلامت به مربی</button><hr style="border-color:#26384a;margin:16px 0"><h3>📄 آپلود آزمایش یا مدرک پزشکی</h3><p class="muted">فقط PDF یا تصویر خوانا؛ حداکثر ۱۰ مگابایت. فایل برای مشاهده مربی ارسال می‌شود.</p><input id="healthReportFile" type="file" accept="application/pdf,image/jpeg,image/png,image/webp"><label for="healthFileNote">توضیح کوتاه (اختیاری)</label><input id="healthFileNote" placeholder="مثلاً آزمایش خون مهرماه"><button type="button" id="uploadHealthReportBtn" class="secondary" onclick="uploadTraineeHealthReport()">📤 ارسال آزمایش برای مربی</button><div id="traineeHealthReportStatus" class="muted" style="margin-top:10px"></div>';
+      const profile=section.querySelector('#traineeProfileExtraFields')?.closest('.card')||section.querySelector(':scope > .card');
+      if(profile)profile.insertAdjacentElement('afterend',card);else section.appendChild(card);
+    }
+    if($('healthReportDate')&&!$('healthReportDate').value){$('healthReportDate').value=typeof today==='function'?today():new Date().toISOString().slice(0,10);}
+    loadTraineeHealthReports();
+  }
+  function healthReportRows(){
+    const c=client();if(!c?.id)return Promise.resolve([]);
+    return sbGet('/trainee_injuries?trainee_id=eq.'+encodeURIComponent(c.id)+'&order=created_at.desc');
+  }
+  window.submitTraineeHealthReport=async function(){
+    if(!traineeRole())return alert('این فرم مخصوص حساب شاگرد است.');
+    const c=client();if(!c?.id)return alert('پروفایل شاگرد بارگذاری نشده است؛ صفحه را تازه‌سازی کنید.');
+    const details=$('healthReportDetails')?.value.trim()||'';
+    if(!details)return alert('شرح بیماری یا وضعیت سلامت را وارد کنید.');
+    const type=$('healthReportType')?.value||'بیماری یا وضعیت پزشکی';
+    const date=$('healthReportDate')?.value||(typeof today==='function'?today():new Date().toISOString().slice(0,10));
+    const btn=$('submitHealthReportBtn');if(btn){btn.disabled=true;btn.textContent='⏳ در حال ارسال…';}
+    try{
+      await sbWrite('/trainee_injuries','POST',{trainee_id:c.id,problem_type:type,body_area:'گزارش سلامت شاگرد',severity:'اعلام‌شده توسط شاگرد',record_date:date,movement_limit:null,coach_note:details,status:'active'});
+      $('healthReportDetails').value='';
+      if($('traineeHealthReportStatus'))$('traineeHealthReportStatus').textContent='گزارش سلامت با موفقیت ارسال شد و در پرونده مربی قرار گرفت.';
+      alert('گزارش سلامت برای مربی ارسال شد.');
+      await loadTraineeHealthReports();
+    }catch(e){console.error('submit health report',e);alert('ارسال گزارش سلامت انجام نشد. '+(e?.message||String(e)));}
+    finally{if(btn){btn.disabled=false;btn.textContent='📨 ارسال گزارش سلامت به مربی';}}
+  };
+  window.uploadTraineeHealthReport=async function(){
+    if(!traineeRole())return alert('این گزینه مخصوص حساب شاگرد است.');
+    const c=client(),file=$('healthReportFile')?.files?.[0];
+    if(!c?.id)return alert('پروفایل شاگرد بارگذاری نشده است؛ صفحه را تازه‌سازی کنید.');
+    if(!file)return alert('ابتدا فایل آزمایش یا مدرک پزشکی را انتخاب کنید.');
+    if(file.size>10*1024*1024)return alert('حجم فایل باید حداکثر ۱۰ مگابایت باشد.');
+    if(!['application/pdf','image/jpeg','image/png','image/webp'].includes(file.type))return alert('فقط PDF، JPG، PNG یا WEBP مجاز است.');
+    const btn=$('uploadHealthReportBtn');if(btn){btn.disabled=true;btn.textContent='⏳ در حال آپلود…';}
+    let path=null;
+    try{
+      const {data:{user},error:userError}=await AUTH_SUPABASE.auth.getUser();
+      if(userError||!user)throw new Error('نشست حساب شاگرد معتبر نیست.');
+      const clean=file.name.replace(/[^a-zA-Z0-9._-]/g,'_').slice(-80)||'lab-report';
+      path=user.id+'/'+c.id+'/health_'+Date.now()+'_'+clean;
+      const {error:uploadError}=await AUTH_SUPABASE.storage.from('trainee-health-reports').upload(path,file,{upsert:false,contentType:file.type});
+      if(uploadError)throw uploadError;
+      const note='HEALTH_REPORT_FILE::'+JSON.stringify({path,name:file.name,type:file.type,note:$('healthFileNote')?.value.trim()||''});
+      try{
+        await sbWrite('/trainee_injuries','POST',{trainee_id:c.id,problem_type:'آزمایش یا مدرک پزشکی',body_area:'فایل ارسالی شاگرد',severity:'در انتظار بررسی مربی',record_date:typeof today==='function'?today():new Date().toISOString().slice(0,10),movement_limit:null,coach_note:note,status:'active'});
+      }catch(dbError){
+        try{await AUTH_SUPABASE.storage.from('trainee-health-reports').remove([path]);}catch(_){}
+        throw dbError;
+      }
+      $('healthReportFile').value='';if($('healthFileNote'))$('healthFileNote').value='';
+      if($('traineeHealthReportStatus'))$('traineeHealthReportStatus').textContent='فایل آپلود شد و برای مربی ارسال شد.';
+      alert('فایل با موفقیت برای مربی ارسال شد.');
+      await loadTraineeHealthReports();
+    }catch(e){
+      console.error('upload health report',e);
+      const msg=String(e?.message||e);
+      if(msg.includes('trainee-health-reports')||msg.toLowerCase().includes('bucket'))alert('آپلود انجام نشد؛ فضای ذخیره‌سازی خصوصی trainee-health-reports یا دسترسی آن هنوز در Supabase تنظیم نشده است. '+msg);
+      else alert('ارسال فایل انجام نشد. '+msg);
+    }finally{if(btn){btn.disabled=false;btn.textContent='📤 ارسال آزمایش برای مربی';}}
+  };
+  async function loadTraineeHealthReports(){
+    if(!traineeRole())return;
+    const box=$('traineeHealthReportStatus');if(!box)return;
+    try{
+      const rows=await healthReportRows();const c=client();if(!c?.id)return;
+      const own=rows.filter(x=>String(x.trainee_id)===String(c.id));
+      const count=own.filter(x=>String(x.problem_type||'').includes('آزمایش یا مدرک پزشکی')).length;
+      if(!box.textContent)box.textContent=count?'تعداد فایل‌های آزمایش ثبت‌شده: '+count.toLocaleString('fa-IR'):'گزارش‌های ارسال‌شده در پرونده شما ثبت می‌شوند.';
+    }catch(e){console.warn('health report list unavailable',e);}
+  }
+  const priorFinish=window.finishLogin;
+  if(typeof priorFinish==='function'&&!window.__traineeHealthReportFinish){
+    window.finishLogin=async function(){const r=await priorFinish.apply(this,arguments);setTimeout(ensureHealthCard,80);setTimeout(ensureHealthCard,500);return r;};
+    window.__traineeHealthReportFinish=true;
+  }
+  const priorShow=window.showSection;
+  if(typeof priorShow==='function'&&!window.__traineeHealthReportShow){
+    window.showSection=function(){const r=priorShow.apply(this,arguments);setTimeout(ensureHealthCard,60);return r;};
+    window.__traineeHealthReportShow=true;
+  }
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>setTimeout(ensureHealthCard,500));
+  else setTimeout(ensureHealthCard,500);
+})();
+</script>
 
 <!-- TRAINEE PROFILE CONSOLIDATION PATCH 2026-10-13 -->
 <script>
