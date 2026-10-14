@@ -4639,9 +4639,11 @@ window.useLibraryExercise=async function(id){
       let mealPlanTitle = '';
       let workoutPlanTitle = '';
       let workoutNotes = '';
+      /* Keep the selected plan record in the enclosing export scope for shared render steps. */
+      let p = null;
       if(kind === 'meal') {
         const exportPlanId = (typeof currentPlanId !== 'undefined' && currentPlanId) ? currentPlanId : null;
-        let p = exportPlanId ? (await sbGet('/nutrition_plans?id=eq.'+encodeURIComponent(exportPlanId)+'&trainee_id=eq.'+encodeURIComponent(trainee.id)+'&select=*&limit=1'))[0] : null;
+        p = exportPlanId ? (await sbGet('/nutrition_plans?id=eq.'+encodeURIComponent(exportPlanId)+'&trainee_id=eq.'+encodeURIComponent(trainee.id)+'&select=*&limit=1'))[0] : null;
         // Prefer the exact plan currently selected/edited in the coach panel; never silently export a different plan when that ID is valid.
         if(!p && !exportPlanId) p = (await sbGet('/nutrition_plans?trainee_id=eq.'+encodeURIComponent(trainee.id)+'&select=*&order=created_at.desc&limit=1'))[0];
         if(!p) throw new Error('برنامه غذایی ذخیره‌شده‌ای برای این شاگرد پیدا نشد.');
@@ -4744,7 +4746,7 @@ window.useLibraryExercise=async function(id){
         body+='<div class="meal-bottom-grid">'+nutritionSummaryHtml+supplementHtml+'</div>';
       } else {
         const allPlans = await sbGet('/trainee_workout_plans?trainee_id=eq.'+encodeURIComponent(trainee.id)+'&select=*&order=created_at.desc');
-        const p = (allPlans||[])[0];
+        p = (allPlans||[])[0];
         if(!p) throw new Error('برنامه تمرینی ذخیره‌شده‌ای برای این شاگرد پیدا نشد.');
         workoutPlanTitle = esc(p.title||title);
         workoutNotes = String(p.notes||'').trim();
