@@ -7352,6 +7352,51 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
  window.closeTraineeMembershipCard=closeMembership;
 })();
 </script>
+
+<script>
+/* FASTING_FOOD_BANK_RETRY_V1
+   Recover the fasting planner when it renders before the food catalog finishes loading.
+   Keep the existing planner and food-bank logic intact. */
+(function(){
+  if(window.__fastingFoodBankRetryV1) return;
+  window.__fastingFoodBankRetryV1 = true;
+  const originalRender = window.renderFastingMealPlanner;
+  let retrying = false;
+  window.retryFastingFoodBank = async function(){
+    const host = document.getElementById("fastMealPlanner");
+    if(retrying) return;
+    if(!host) return;
+    retrying = true;
+    host.innerHTML = '<p class="muted">در حال دریافت بانک غذا از پایگاه داده…</p>';
+    try {
+      if(typeof window.loadFoods !== "function") throw new Error("تابع بارگذاری بانک غذا در این نسخه در دسترس نیست.");
+      await window.loadFoods();
+      if(!Array.isArray(window.foods) || !window.foods.length) {
+        host.innerHTML = '<p class="warning-text">بانک غذا دریافت نشد. اتصال حساب و دسترسی بانک غذا را بررسی کن، سپس دوباره تلاش کن.</p><button type="button" class="secondary" onclick="window.retryFastingFoodBank()">🔄 تلاش دوباره برای دریافت غذاها</button>';
+        return;
+      }
+      if(typeof originalRender === "function") originalRender();
+    } catch(err) {
+      console.error("Fasting food bank retry failed", err);
+      host.innerHTML = '<p class="warning-text">دریافت بانک غذا ناموفق بود. اتصال اینترنت را بررسی کن و دوباره تلاش کن.</p><button type="button" class="secondary" onclick="window.retryFastingFoodBank()">🔄 تلاش دوباره</button>';
+    } finally {
+      retrying = false;
+    }
+  };
+  if(typeof originalRender === "function") {
+    window.renderFastingMealPlanner = function(){
+      const host = document.getElementById("fastMealPlanner");
+      if(!host) return;
+      if(!Array.isArray(window.foods) || !window.foods.length) {
+        host.innerHTML = '<p class="muted">در حال بارگذاری بانک غذا…</p>';
+        if(!retrying) setTimeout(function(){ window.retryFastingFoodBank(); }, 0);
+        return;
+      }
+      return originalRender.apply(this, arguments);
+    };
+  }
+})();
+</script>
 </body>
 </html>
 
