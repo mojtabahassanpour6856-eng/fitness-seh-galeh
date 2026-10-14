@@ -9532,7 +9532,7 @@ body.workout-output.workout-compact{
 
 <script id="RECIPE_DISPLAY_TITLE_V1">
 (function(){
-  function recipeName(x){const note=String(x&&x.notes||''),m=note.match(/\\[دستور ترکیبی:\\s*([^\\]]+)\\]/);return m?m[1].trim():'';}
+  function recipeName(x){const note=String(x&&x.notes||''),m=note.match(/\[دستور ترکیبی:\s*([^\]]+)\]/);return m?m[1].trim():'';}
   window.groupNutritionRecipeItems=function(items){const out=[],map=new Map();for(const x of (items||[])){const name=recipeName(x);if(!name){out.push({recipe:false,items:[x]});continue;}const key=name+'|'+String(x.notes||'').split(' | ')[0];let g=map.get(key);if(!g){g={recipe:true,name,items:[]};map.set(key,g);out.push(g);}g.items.push(x);}return out;};
   function componentText(x){return String(x.amount??'')+' '+String(x.unit||'گرم')+' '+String((x.food||{}).name||'ماده');}
   window.formatNutritionFoodItems=function(items,byId,escFn){const hydrated=(items||[]).map(x=>({...x,food:byId[String(x.food_id)]||{}}));return window.groupNutritionRecipeItems(hydrated).map(g=>{if(!g.recipe){const x=g.items[0],f=x.food||{};if(!f.name)return '';return '<span style="display:inline-block;margin:1px 2px;white-space:normal"><b>'+escFn(f.name)+'</b> <span style="color:#6b5a39;font-weight:700">'+escFn(x.amount)+' '+escFn(x.unit||'گرم')+'</span></span>';}return '<span style="display:inline-block;margin:1px 2px;white-space:normal"><b>'+escFn(g.name)+'</b> ('+g.items.map(x=>escFn(componentText(x))).join(' + ')+')</span>';}).filter(Boolean).join('<span style="color:#bd861c;font-weight:900;padding:0 3px"> + </span>');};
