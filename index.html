@@ -5819,6 +5819,29 @@ else loadCoachExerciseListsWhenReady();
     if(input){input.checked=checked;input.disabled=false;input.setAttribute("data-meal-log-day",day);}
    });
    const summary=$("studentMealTitle");if(summary&&!summary.dataset.mealCompletionBound){summary.dataset.mealCompletionBound="1";}
+   // گزارش هفت‌روزه شاگرد؛ همان خلاصه‌ای که مربی می‌بیند، در انتهای برنامه غذایی نمایش داده می‌شود.
+   try{
+    const weekStartDate=new Date();weekStartDate.setHours(0,0,0,0);weekStartDate.setDate(weekStartDate.getDate()-6);
+    const weekStartKey=weekStartDate.getFullYear()+"-"+String(weekStartDate.getMonth()+1).padStart(2,"0")+"-"+String(weekStartDate.getDate()).padStart(2,"0");
+    const rows=await sbGet("/nutrition_meal_completions?trainee_id=eq."+encodeURIComponent(traineeId)+"&log_date=gte."+encodeURIComponent(weekStartKey)+"&log_date=lte."+encodeURIComponent(day)+"&select=log_date,meal_id,is_completed");
+    if(!currentClient||String(currentClient.id)!==String(traineeId)||dayNow()!==day)return;
+    let report=$("studentMealWeeklyAdherence");
+    if(!report){report=document.createElement("div");report.id="studentMealWeeklyAdherence";report.className="card";const host=$("studentMealList");if(host?.parentNode)host.parentNode.insertBefore(report,host.nextSibling);else return;}
+    const totalMeals=meals.length;
+    const days=[];let completedTotal=0,expectedTotal=totalMeals*7;
+    for(let offset=6;offset>=0;offset--){
+     const d=new Date();d.setHours(0,0,0,0);d.setDate(d.getDate()-offset);
+     const key=d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");
+     const complete=new Set(rows.filter(x=>x.log_date===key&&x.is_completed).map(x=>String(x.meal_id))).size;
+     completedTotal+=complete;
+     const pct=totalMeals?Math.min(100,Math.round(complete/totalMeals*100)):0;
+     const shortDate=String(fmtDate(key)).split("/").slice(-2).join("/");
+     days.push('<span style="display:inline-block;padding:4px 7px;border-radius:8px;background:var(--soft,#f3f4f6);font-size:12px;white-space:nowrap">'+shortDate+' <b>'+pct+'٪</b></span>');
+    }
+    const overallPct=expectedTotal?Math.min(100,Math.round(completedTotal/expectedTotal*100)):0;
+    report.style.cssText="padding:10px 12px;margin:12px 0;border-radius:12px";
+    report.innerHTML='<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap"><b style="font-size:14px">📊 پایبندی هفتگی من</b><strong style="font-size:17px">'+overallPct+'٪</strong></div><div class="muted" style="font-size:12px;margin:3px 0 8px">ثبت‌شده: '+completedTotal+' از '+expectedTotal+' وعده در ۷ روز اخیر</div><div style="display:flex;gap:5px;flex-wrap:wrap">'+days.join("")+'</div>';
+   }catch(e){console.warn("student weekly meal adherence",e);}
   }catch(e){console.warn("meal completion fetch",e);}
  }
  const oldStudentMeals=window.renderStudentMeals;
