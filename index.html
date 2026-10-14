@@ -9149,7 +9149,7 @@ body.workout-output.workout-compact .system-notes{font-size:11px!important;line-
     try{return (window.authProfile&&window.authProfile.role)||(typeof authProfile!=='undefined'&&authProfile&&authProfile.role)||null;}
     catch(e){return null;}
   }
-  function showTraineePlans(section){
+  function showTraineePlans(section,loadIfNeeded){
     if(role()!=='trainee')return;
     try{
       if(typeof window.showSection==='function')window.showSection(section,null);
@@ -9161,7 +9161,7 @@ body.workout-output.workout-compact .system-notes{font-size:11px!important;line-
         if(report){report.style.setProperty('display','none','important');report.setAttribute('aria-hidden','true');}
         if(student){student.classList.remove('hide');student.hidden=false;student.style.setProperty('display','block','important');student.removeAttribute('aria-hidden');}
         if(typeof window.mealTab==='function')window.mealTab('student');
-        if(typeof window.loadNutritionForClient==='function')window.loadNutritionForClient();
+        if(loadIfNeeded&&typeof window.loadNutritionForClient==='function')window.loadNutritionForClient();
       }else if(section==='workout'){
         var workout=document.getElementById('workout');
         var list=document.getElementById('workoutList');
@@ -9171,7 +9171,7 @@ body.workout-output.workout-compact .system-notes{font-size:11px!important;line-
           if(card){card.hidden=false;card.classList.remove('hide');card.style.setProperty('display','block','important');}
           list.hidden=false;list.classList.remove('hide');list.style.removeProperty('display');
         }
-        if(typeof window.loadWorkoutForClient==='function')window.loadWorkoutForClient();
+        if(loadIfNeeded&&typeof window.loadWorkoutForClient==='function')window.loadWorkoutForClient();
       }
     }catch(e){console.error('Trainee plan visibility recovery failed:',e);}
   }
@@ -9179,7 +9179,7 @@ body.workout-output.workout-compact .system-notes{font-size:11px!important;line-
   if(typeof previousDash==='function'&&!window.__fitnessPlanVisibilityDashWrapped){
     window.dashOpen=function(section){
       var result=previousDash.apply(this,arguments);
-      if(section==='meal'||section==='workout')setTimeout(function(){showTraineePlans(section);},0);
+      if(section==='meal'||section==='workout')setTimeout(function(){showTraineePlans(section,typeof previousDash!=='function');},0);
       return result;
     };
     window.__fitnessPlanVisibilityDashWrapped=true;
