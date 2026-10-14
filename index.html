@@ -5125,32 +5125,22 @@ body.workout-output .empty-cell{display:none!important}
               body.style.setProperty('max-width','none','important');
               body.style.setProperty('overflow','visible','important');
               body.style.setProperty('box-sizing','border-box','important');
-              /* Shabnam is applied ONLY to the downloaded workout PNG.
-                 Load its webfont inside html2canvas's cloned document and wait
-                 for the regular/bold faces before rendering. Other views/exports stay untouched. */
+              /* Vazirmatn is applied ONLY to the downloaded workout PNG.
+                 Use the font already bundled/referenced by this page, and wait for its
+                 faces in the cloned document before html2canvas renders. */
               if(forceDownload && kind!=='meal'){
-                const shabnamLink=clonedDoc.createElement('link');
-                shabnamLink.rel='stylesheet';
-                shabnamLink.href='https://cdnjs.cloudflare.com/ajax/libs/shabnam-font/5.0.1/font-face.css';
-                clonedDoc.head.appendChild(shabnamLink);
-                await new Promise(resolve=>{
-                  if(shabnamLink.sheet) resolve();
-                  else {
-                    shabnamLink.onload=resolve;
-                    shabnamLink.onerror=resolve;
-                    setTimeout(resolve,2500);
-                  }
-                });
-                const shabnamStyle=clonedDoc.createElement('style');
-                shabnamStyle.textContent=`
-                  body.workout-output,body.workout-output *{font-family:'Shabnam',Tahoma,sans-serif!important}
+                const vazirStyle=clonedDoc.createElement('style');
+                vazirStyle.textContent=`
+                  body.workout-output,body.workout-output *{font-family:'Vazirmatn',Tahoma,Arial,sans-serif!important}
                 `;
-                clonedDoc.head.appendChild(shabnamStyle);
+                clonedDoc.head.appendChild(vazirStyle);
                 if(clonedDoc.fonts && clonedDoc.fonts.load){
                   await Promise.all([
-                    clonedDoc.fonts.load('400 16px Shabnam'),
-                    clonedDoc.fonts.load('500 16px Shabnam'),
-                    clonedDoc.fonts.load('700 16px Shabnam'),
+                    clonedDoc.fonts.load('400 16px Vazirmatn'),
+                    clonedDoc.fonts.load('500 16px Vazirmatn'),
+                    clonedDoc.fonts.load('700 16px Vazirmatn'),
+                    clonedDoc.fonts.load('800 16px Vazirmatn'),
+                    clonedDoc.fonts.load('900 16px Vazirmatn'),
                     clonedDoc.fonts.ready
                   ]).catch(()=>{});
                 }
