@@ -5065,77 +5065,37 @@ body.workout-output .empty-cell{display:none!important}
             windowHeight:captureHeight,
             scrollX:0,scrollY:0,
             onclone:function(clonedDoc){
-              const clonedBody=clonedDoc.body;
-              clonedDoc.documentElement.style.height='auto';
-              clonedDoc.documentElement.style.minHeight='0';
-              clonedDoc.documentElement.style.overflow='visible';
-              clonedDoc.documentElement.style.width=captureWidth+'px';
-              clonedDoc.documentElement.style.maxWidth='none';
-              clonedBody.style.width=captureWidth+'px';
-              clonedBody.style.maxWidth='none';
-              clonedBody.style.margin='0';
-              clonedBody.style.display='flex';
-              clonedBody.style.flexDirection='column';
-              clonedBody.style.height='auto';
-              clonedBody.style.minHeight=kind==='meal'?'282mm':'0';
-              clonedBody.style.overflow='visible';
-              clonedBody.style.boxSizing='border-box';
-              const meta=clonedDoc.querySelector('.plan-meta');
-              if(meta){meta.style.setProperty('visibility','visible','important');meta.style.setProperty('opacity','1','important');meta.style.setProperty('color','#241b0c','important');meta.style.display='grid';meta.style.gridTemplateColumns='minmax(0,1fr) minmax(0,1fr) minmax(0,1.35fr)';meta.style.gridTemplateRows='auto';meta.style.gridAutoFlow='row';meta.style.direction='rtl';meta.style.width='100%';meta.style.maxWidth='100%';meta.style.boxSizing='border-box';meta.style.fontSize='15px';meta.style.lineHeight='1.6';meta.style.gap='8px 12px';meta.style.padding='10px 12px';meta.style.margin='10px 0';meta.style.overflow='visible';meta.style.minHeight='0';meta.style.height='auto';meta.style.maxHeight='none';Array.from(meta.children).forEach(function(item){item.style.display='block';item.style.width='100%';item.style.minWidth='0';item.style.whiteSpace='normal';item.style.overflow='visible';item.style.textOverflow='clip';item.style.overflowWrap='anywhere';item.style.wordBreak='normal';item.style.color='#241b0c';item.style.visibility='visible';item.style.opacity='1';item.style.border='0';});}
-              const header=clonedDoc.querySelector('h1');if(header){header.style.padding='26px 92px 20px 92px';header.style.fontSize='32px';}
-              const gym=clonedDoc.querySelector('.gym-name');if(gym){gym.style.fontSize='36px';gym.style.fontWeight='1000';gym.style.lineHeight='1.4';gym.style.color='#3d2806';}
-              const coach=clonedDoc.querySelector('.coach-name');if(coach){coach.style.setProperty('display','block','important');coach.style.setProperty('visibility','visible','important');coach.style.setProperty('opacity','1','important');coach.style.setProperty('color','#51401e','important');coach.style.setProperty('font-size','19px','important');coach.style.setProperty('font-weight','900','important');}const brandFooter=Array.from(clonedDoc.querySelectorAll('p')).find(el=>el.textContent.includes('باشگاه فیتنس سه‌قلعه')&&el.textContent.includes('مربی مجتبی'));if(brandFooter){brandFooter.style.setProperty('display','block','important');brandFooter.style.setProperty('visibility','visible','important');brandFooter.style.setProperty('opacity','1','important');brandFooter.style.setProperty('color','#241b0c','important');brandFooter.style.setProperty('font-size','14px','important');brandFooter.style.setProperty('font-weight','900','important');brandFooter.style.setProperty('text-align','center','important');brandFooter.style.setProperty('margin','12px 0 0','important');}
-              const date=clonedDoc.querySelector('.plan-date');if(date){date.style.fontSize='16px';date.style.fontWeight='900';date.style.padding='6px 9px';date.style.borderWidth='2px';}
-              const grid=clonedDoc.querySelector('.session-grid');if(grid){grid.style.setProperty('display','grid','important');grid.style.setProperty('grid-template-columns','repeat(2,minmax(0,1fr))','important');grid.style.setProperty('grid-template-rows','none','important');grid.style.setProperty('grid-auto-flow','row','important');grid.style.setProperty('grid-auto-rows','auto','important');grid.style.setProperty('align-content','start','important');grid.style.setProperty('align-items','stretch','important');grid.style.setProperty('min-height','0','important');grid.style.setProperty('height','auto','important');grid.style.setProperty('max-height','none','important');grid.style.setProperty('flex','0 0 auto','important');grid.style.setProperty('overflow','visible','important');}
-              clonedDoc.querySelectorAll('.session-cell').forEach(function(cell){cell.style.height='auto';cell.style.minHeight='0';cell.style.maxHeight='none';cell.style.overflow='visible';cell.style.breakInside='avoid';});
-              clonedDoc.querySelectorAll('.session-exercises').forEach(function(list){
-                /* Use natural block flow in the export. A flex column with space-evenly and
-                   a constrained grid row can hide earlier movements while leaving the last
-                   items visible, especially in the first session on mobile-sized source pages. */
-                list.style.setProperty('display','block','important');
-                list.style.setProperty('height','auto','important');
-                list.style.setProperty('min-height','0','important');
-                list.style.setProperty('max-height','none','important');
-                list.style.setProperty('flex','0 0 auto','important');
-                list.style.setProperty('overflow','visible','important');
-                list.style.setProperty('justify-content','normal','important');
-              });
-              clonedDoc.querySelectorAll('.exercise-card,.exercise-unit').forEach(function(card){card.style.height='auto';card.style.minHeight='0';card.style.maxHeight='none';card.style.flex='0 0 auto';card.style.overflow='visible';card.style.breakInside='avoid';});
-              const notes=clonedDoc.querySelector('.system-notes');if(notes){notes.style.setProperty('visibility','visible','important');notes.style.setProperty('opacity','1','important');notes.style.setProperty('color','#493815','important');notes.style.marginTop='auto';notes.style.display='flex';notes.style.flexDirection='row';notes.style.flexWrap='wrap';notes.style.alignItems='center';notes.style.gap='6px 14px';notes.style.fontSize='14px';notes.style.lineHeight='1.7';notes.style.padding='9px 11px';Array.from(notes.children).forEach(function(item){item.style.display='inline-block';item.style.flex='0 1 auto';item.style.margin='0';});}
-              /* Keep the full A4 frame, top accent rule, description, system notes and bottom footer
-                 visible in the final PNG. Explicitly restore these after export normalization. */
+              /* Keep the already-prepared source layout intact. The previous callback
+                 repeatedly rewrote header/meta/footer styles and rebuilt the session grid;
+                 those clone-only overrides caused visible preview/export differences. */
+              const root=clonedDoc.documentElement;
+              const body=clonedDoc.body;
+              root.style.setProperty('width',captureWidth+'px','important');
+              root.style.setProperty('height','auto','important');
+              root.style.setProperty('min-height','0','important');
+              root.style.setProperty('overflow','visible','important');
+              body.style.setProperty('width',captureWidth+'px','important');
+              body.style.setProperty('height','auto','important');
+              body.style.setProperty('min-height',kind==='meal'?'282mm':'1720px','important');
+              body.style.setProperty('max-height','none','important');
+              body.style.setProperty('max-width','none','important');
+              body.style.setProperty('overflow','visible','important');
+              body.style.setProperty('box-sizing','border-box','important');
               if(kind!=='meal'){
-                const frameStyle=clonedDoc.createElement('style');
-                frameStyle.id='seh-workout-export-frame-final';
-                frameStyle.textContent='body.workout-output{box-sizing:border-box!important;border:2px solid #d4b15c!important;padding:24px 24px 30px!important;overflow:visible!important}body.workout-output:before{content:""!important;display:block!important;height:7px!important;min-height:7px!important;flex:0 0 7px!important;margin:0 0 10px!important;border-radius:5px!important;background:linear-gradient(90deg,#171717 0%,#b88728 25%,#f4d77d 50%,#b88728 75%,#171717 100%)!important}body.workout-output:after{content:"FITNESS SEH GALEH  •  TRAIN HARD • STAY STRONG"!important;display:block!important;flex:0 0 auto!important;text-align:center!important;margin-top:16px!important;padding:9px 4px 4px!important;border-top:2px solid #c69b43!important;color:#7c5b19!important;font-size:11px!important;font-weight:900!important;letter-spacing:1px!important}.workout-plan-description{display:block!important;visibility:visible!important;overflow:visible!important;break-inside:avoid!important}.system-notes{display:flex!important;visibility:visible!important;overflow:visible!important;break-inside:avoid!important;margin-top:16px!important;padding:9px 11px!important}.session-grid,.session-cell,.session-exercises{overflow:visible!important}body.workout-output .plan-header,body.workout-output .plan-header *,body.workout-output .plan-meta,body.workout-output .plan-meta *,body.workout-output .workout-plan-description,body.workout-output .workout-plan-description *,body.workout-output .system-notes,body.workout-output .system-notes *,body.workout-output .coach-name,body.workout-output .gym-name,body.workout-output>p{visibility:visible!important;opacity:1!important;color:#241b0c!important;-webkit-text-fill-color:#241b0c!important;text-shadow:none!important}body.workout-output .gym-name{color:#714800!important;-webkit-text-fill-color:#714800!important}body.workout-output .coach-name{display:block!important;color:#51401e!important;-webkit-text-fill-color:#51401e!important;font-size:19px!important;font-weight:900!important}body.workout-output .plan-meta{display:grid!important;overflow:visible!important;grid-template-columns:repeat(3,minmax(0,1fr))!important;grid-auto-flow:row!important;height:auto!important;min-height:0!important}body.workout-output .plan-meta>div{display:block!important;white-space:normal!important;overflow:visible!important;text-overflow:clip!important;overflow-wrap:anywhere!important;word-break:normal!important;color:#241b0c!important;-webkit-text-fill-color:#241b0c!important;font-size:15px!important;line-height:1.6!important}body.workout-output .plan-meta b{color:#76500c!important;-webkit-text-fill-color:#76500c!important}body.workout-output .system-notes>div,body.workout-output .system-notes>div *{display:inline-block!important;visibility:visible!important;opacity:1!important;color:#493815!important;-webkit-text-fill-color:#493815!important;font-size:14px!important;line-height:1.7!important}body.workout-output>p{display:block!important;flex:0 0 auto!important;text-align:center!important;margin:12px 0 0!important;padding:8px!important;border-top:2px solid #c69b43!important;font-size:15px!important;font-weight:900!important;color:#241b0c!important;-webkit-text-fill-color:#241b0c!important}';
-                clonedDoc.head.appendChild(frameStyle);
-              }
-              /* Re-apply large-page layout after generic export normalisation above;
-                 this is the actual cloned document captured by html2canvas. */
-              if(kind!=='meal'){
-                const body=clonedDoc.body;
-                const finalGrid=clonedDoc.querySelector('.session-grid');
-                const count=clonedDoc.querySelectorAll('.session-grid .session-cell').length;
-                const rows=Math.max(1,Math.ceil(count/2));
-                body.style.setProperty('min-height','1720px','important');
-                body.style.setProperty('padding','24px','important');
-                if(finalGrid){
-                  finalGrid.style.setProperty('display','grid','important');
-                  finalGrid.style.setProperty('grid-template-columns','repeat(2,minmax(0,1fr))','important');
-                  finalGrid.style.setProperty('grid-template-rows',`repeat(${rows},minmax(300px,1fr))`,'important');
-                  finalGrid.style.setProperty('grid-auto-rows','minmax(300px,auto)','important');
-                  finalGrid.style.setProperty('min-height',Math.max(960,rows*320)+'px','important');
-                  finalGrid.style.setProperty('height','auto','important');
-                  finalGrid.style.setProperty('max-height','none','important');
-                  finalGrid.style.setProperty('align-content','stretch','important');
-                  finalGrid.style.setProperty('align-items','stretch','important');
-                  finalGrid.style.setProperty('overflow','visible','important');
+                const grid=clonedDoc.querySelector('.session-grid');
+                if(grid){
+                  grid.style.setProperty('height','auto','important');
+                  grid.style.setProperty('max-height','none','important');
+                  grid.style.setProperty('overflow','visible','important');
+                  grid.style.setProperty('grid-template-columns','repeat(2,minmax(0,1fr))','important');
+                  grid.style.setProperty('grid-auto-flow','row','important');
                 }
-                clonedDoc.querySelectorAll('.session-cell').forEach(function(el){el.style.setProperty('min-height','300px','important');el.style.setProperty('height','auto','important');el.style.setProperty('padding','12px','important');el.style.setProperty('overflow','visible','important');});
-                clonedDoc.querySelectorAll('.session-heading').forEach(function(el){el.style.setProperty('font-size','18px','important');el.style.setProperty('padding','8px 6px','important');});
-                clonedDoc.querySelectorAll('.exercise-card,.exercise-unit').forEach(function(el){el.style.setProperty('font-size','16px','important');el.style.setProperty('line-height','1.55','important');el.style.setProperty('padding','7px 5px','important');});
-                clonedDoc.querySelectorAll('.exercise-name').forEach(function(el){el.style.setProperty('font-size','16px','important');});
-                clonedDoc.querySelectorAll('.exercise-details').forEach(function(el){el.style.setProperty('font-size','14px','important');});
+                clonedDoc.querySelectorAll('.plan-meta,.workout-plan-description,.system-notes,.coach-name,.gym-name,.plan-date').forEach(el=>{
+                  el.style.setProperty('visibility','visible','important');
+                  el.style.setProperty('opacity','1','important');
+                  el.style.setProperty('max-height','none','important');
+                  el.style.setProperty('overflow','visible','important');
+                });
               }
             }
           });
@@ -5148,13 +5108,11 @@ body.workout-output .empty-cell{display:none!important}
             if(!ctx)throw new Error('ساخت صفحه A4 ممکن نشد.');
             ctx.fillStyle='#ffffff';ctx.fillRect(0,0,page.width,page.height);
             const sourceW=Math.max(1,canvas.width),sourceH=Math.max(1,canvas.height);
-            /* Fill the A4 page edge-to-edge. The former uniform "contain" scale added
-               wide side gutters whenever the captured HTML was taller than A4, making the
-               actual PNG look different from the preview. Draw the complete capture into the
-               A4 canvas dimensions so the entire source (header through footer) stays inside
-               the output and no extra horizontal gutters are introduced. */
+            /* Preserve proportions while fitting the complete capture on A4. */
+            const scale=Math.min(page.width/sourceW,page.height/sourceH);
+            const drawW=Math.max(1,Math.round(sourceW*scale)),drawH=Math.max(1,Math.round(sourceH*scale));
             ctx.imageSmoothingEnabled=true;ctx.imageSmoothingQuality='high';
-            ctx.drawImage(canvas,0,0,page.width,page.height);
+            ctx.drawImage(canvas,Math.round((page.width-drawW)/2),0,drawW,drawH);
             finalCanvas=page;
           }
           const png=await new Promise((resolve,reject)=>{
