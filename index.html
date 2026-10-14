@@ -10130,10 +10130,11 @@ body.workout-output.workout-compact{
  }
  function addEntryCard(){
   if(mode==='trainee'){
-   const grid=document.querySelector('#traineeDashboard .v4-dashboard');
+   const dashboard=$('traineeDashboard');
+   const grid=dashboard&&(dashboard.querySelector('.v4-grid')||dashboard.querySelector('.v4-dashboard')||dashboard);
    if(grid&&!$('sehChatEntryCard')){
     const card=document.createElement('div');card.id='sehChatEntryCard';card.className='v4-card';
-    card.innerHTML='<b>💬</b>گفت‌وگو با مربی<span class="v4-small" id="sehChatEntryStatus">ارسال پیام به مربی</span><span class="seh-chat-unread" id="sehChatEntryUnread" style="display:none">۰</span>';
+    card.innerHTML='<b style="display:block;font-size:24px;margin-bottom:8px">💬</b><strong>گفت‌وگو با مربی</strong><span class="v4-small" id="sehChatEntryStatus">ارسال پیام به مربی</span><span class="seh-chat-unread" id="sehChatEntryUnread" style="display:none">۰</span>';
     card.addEventListener('click',()=>openChat('trainee'));grid.appendChild(card);
    }
   }else{
