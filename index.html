@@ -9309,154 +9309,7 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
    if(mode==='print'){
      const popup=window.open('','_blank');if(!popup){if(status)status.textContent='پنجره چاپ مسدود شد؛ اجازه بازشدن پنجره را بدهید.';return;}
      const css=Array.from(document.querySelectorAll('style')).map(x=>x.textContent).join('\n');
-     popup.document.open();popup.document.write('<!doctype html><html lang="fa" dir="rtl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>برنامه غذایی - فیتنس سه‌قلعه</title><style>'+css+'body{padding:12px;background:#fff}@media print{body{padding:0}@page{size:A4 portrait;margin:8mm}}</style></head><body>
-<style id="FITNESS_COACH_CHAT_V1_STYLE">
-#sehChatEntryCard{position:relative;cursor:pointer;border:1px solid #d6e8df}
-#sehChatEntryCard .seh-chat-unread{display:inline-flex;align-items:center;justify-content:center;min-width:22px;height:22px;border-radius:20px;background:#c62828;color:#fff;font-size:12px;padding:0 6px;margin-right:7px}
-#sehChatSection .seh-chat-layout{display:grid;grid-template-columns:minmax(0,1fr);gap:12px}
-#sehChatSection .seh-chat-conversations{display:flex;flex-direction:column;gap:7px;max-height:34vh;overflow:auto}
-#sehChatSection .seh-chat-person{width:100%;text-align:right;background:#f7faf9;color:#17372b;border:1px solid #dce9e3;display:flex;justify-content:space-between;align-items:center;gap:8px}
-#sehChatSection .seh-chat-person.active{background:#e3f3eb;border-color:#5ca982}
-#sehChatSection .seh-chat-window{display:flex;flex-direction:column;min-height:52vh;border:1px solid #e0e8e4;border-radius:16px;overflow:hidden;background:#f7faf9}
-#sehChatSection .seh-chat-top{padding:12px;background:#fff;border-bottom:1px solid #e0e8e4;font-weight:700}
-#sehChatSection .seh-chat-messages{flex:1;min-height:32vh;max-height:52vh;overflow:auto;padding:12px;display:flex;flex-direction:column;gap:9px}
-#sehChatSection .seh-chat-bubble{max-width:88%;padding:10px 12px;border-radius:14px;white-space:pre-wrap;overflow-wrap:anywhere;line-height:1.7;font-size:14px}
-#sehChatSection .seh-chat-bubble.mine{align-self:flex-start;background:#dff3e7;border-bottom-right-radius:4px}
-#sehChatSection .seh-chat-bubble.theirs{align-self:flex-end;background:#fff;border:1px solid #e2e8e4;border-bottom-left-radius:4px}
-#sehChatSection .seh-chat-time{display:block;font-size:10px;opacity:.65;margin-top:4px}
-#sehChatSection .seh-chat-compose{display:flex;gap:8px;padding:10px;background:#fff;border-top:1px solid #e0e8e4;align-items:flex-end}
-#sehChatSection .seh-chat-compose textarea{flex:1;min-width:0;resize:vertical;min-height:44px;max-height:120px;border:1px solid #d3ded8;border-radius:12px;padding:10px;font:inherit}
-#sehChatSection .seh-chat-compose button{width:auto;min-width:72px;margin:0}
-#sehChatSection .seh-chat-muted{color:#6d7c74;font-size:13px;padding:12px;text-align:center}
-#sehChatSection .seh-chat-back{width:auto;margin:0 0 10px}
-@media(min-width:700px){#sehChatSection .seh-chat-layout.coach-mode{grid-template-columns:minmax(210px, .8fr) minmax(0,1.7fr)}#sehChatSection .seh-chat-conversations{max-height:62vh}#sehChatSection .seh-chat-window{min-height:64vh}#sehChatSection .seh-chat-messages{max-height:64vh}}
-</style>
-<script id="FITNESS_COACH_CHAT_V1">
-(function(){
- 'use strict';
- if(window.__fitnessCoachChatV1)return;window.__fitnessCoachChatV1=true;
- const $=id=>document.getElementById(id);
- const esc=v=>String(v??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
- const faNum=n=>Number(n||0).toLocaleString('fa-IR');
- let mode='', trainee=null, selected=null, conversations=[], pollTimer=null, loading=false, lastMessageId=null;
- function activeUser(){return window.AUTH_SUPABASE?.auth?.getUser?.()}
- function ensureSection(){
-  let sec=$('sehChatSection');if(sec)return sec;
-  sec=document.createElement('section');sec.id='sehChatSection';sec.className='section';
-  sec.innerHTML='<button type="button" class="secondary seh-chat-back" id="sehChatBack">↩ بازگشت</button><div class="card"><h2>💬 گفت‌وگو با مربی</h2><p class="muted" id="sehChatHint">پیام‌ها خصوصی هستند و فقط شما و مربی به آن‌ها دسترسی دارید.</p><div class="seh-chat-layout" id="sehChatLayout"><div id="sehChatConversationCard" class="card" style="margin:0;padding:10px"><h3 style="margin-top:0">گفت‌وگوها</h3><div class="seh-chat-conversations" id="sehChatConversations"></div></div><div class="seh-chat-window"><div class="seh-chat-top" id="sehChatTitle">یک گفت‌وگو انتخاب کنید</div><div class="seh-chat-messages" id="sehChatMessages"><div class="seh-chat-muted">برای شروع، یک گفت‌وگو را انتخاب کنید.</div></div><form class="seh-chat-compose" id="sehChatForm"><textarea id="sehChatInput" maxlength="4000" placeholder="پیام خود را بنویسید…" aria-label="متن پیام"></textarea><button type="submit" id="sehChatSend">ارسال</button></form></div></div></div>';
-  const coach=$('coach');if(coach)coach.parentNode.insertBefore(sec,coach.nextSibling);else document.querySelector('.page')?.appendChild(sec);
-  $('sehChatBack').addEventListener('click',()=>{stopPolling();if(mode==='coach')window.showSection('coach');else window.showSection('traineeDashboard');});
-  $('sehChatForm').addEventListener('submit',sendMessage);
-  return sec;
- }
- function addEntryCard(){
-  if(mode==='trainee'){
-   const grid=document.querySelector('#traineeDashboard .v4-dashboard');
-   if(grid&&!$('sehChatEntryCard')){
-    const card=document.createElement('div');card.id='sehChatEntryCard';card.className='v4-card';
-    card.innerHTML='<b>💬</b>گفت‌وگو با مربی<span class="v4-small" id="sehChatEntryStatus">ارسال پیام به مربی</span><span class="seh-chat-unread" id="sehChatEntryUnread" style="display:none">۰</span>';
-    card.addEventListener('click',()=>openChat('trainee'));grid.appendChild(card);
-   }
-  }else{
-   const coach=$('coach');if(coach&&!$('sehChatCoachCard')){
-    const card=document.createElement('div');card.id='sehChatCoachCard';card.className='card';
-    card.innerHTML='<h2>💬 پیام‌های شاگردان <span class="seh-chat-unread" id="sehChatCoachUnread" style="display:none">۰</span></h2><p class="muted">گفت‌وگوهای خصوصی شاگردان را از اینجا باز کنید.</p><button type="button" onclick="window.sehOpenCoachChat()">باز کردن پیام‌ها</button>';
-    const first=coach.querySelector('.card');if(first)first.insertAdjacentElement('afterend',card);else coach.prepend(card);
-   }
-  }
- }
- async function currentAuthUser(){const r=await window.AUTH_SUPABASE.auth.getUser();if(r.error)throw r.error;if(!r.data?.user)throw new Error('نشست ورود معتبر نیست؛ دوباره وارد شوید.');return r.data.user}
- async function fetchTraineeForUser(user){
-  const r=await window.AUTH_SUPABASE.from('trainees').select('id,full_name,coach_user_id,auth_user_id').eq('auth_user_id',user.id).limit(2);
-  if(r.error)throw r.error;if(!r.data?.length)throw new Error('پرونده شاگرد به این حساب متصل نیست؛ گفت‌وگو فعلاً در دسترس نیست.');
-  return r.data[0];
- }
- async function loadCoachConversations(user){
-  const r=await window.AUTH_SUPABASE.from('trainees').select('id,full_name,coach_user_id,auth_user_id').eq('coach_user_id',user.id).order('full_name',{ascending:true});
-  if(r.error)throw r.error;conversations=r.data||[];
-  const ids=conversations.map(x=>x.id);let unread={};
-  if(ids.length){const q=await window.AUTH_SUPABASE.from('coach_chat_messages').select('trainee_id,id').in('trainee_id',ids).is('read_at',null).neq('sender_id',user.id).limit(1000);if(!q.error)(q.data||[]).forEach(m=>unread[m.trainee_id]=(unread[m.trainee_id]||0)+1);}
-  const total=Object.values(unread).reduce((a,b)=>a+b,0);const badge=$('sehChatCoachUnread');if(badge){badge.textContent=faNum(total);badge.style.display=total?'inline-flex':'none';}
-  const box=$('sehChatConversations');if(!box)return;
-  if(!conversations.length){box.innerHTML='<div class="seh-chat-muted">شاگرد متصل به این حساب پیدا نشد.</div>';return;}
-  box.innerHTML=conversations.map(t=>'<button type="button" class="seh-chat-person '+(selected?.id===t.id?'active':'')+'" data-trainee="'+esc(t.id)+'"><span>'+esc(t.full_name||'شاگرد بدون نام')+'</span>'+(unread[t.id]?'<span class="seh-chat-unread">'+faNum(unread[t.id])+'</span>':'')+'</button>').join('');
-  box.querySelectorAll('[data-trainee]').forEach(b=>b.addEventListener('click',()=>{const t=conversations.find(x=>x.id===b.dataset.trainee);if(t)selectConversation(t)}));
- }
- async function selectConversation(t){selected=t;const title=$('sehChatTitle');if(title)title.textContent=t.full_name||'گفت‌وگو با شاگرد';document.querySelectorAll('#sehChatConversations [data-trainee]').forEach(b=>b.classList.toggle('active',b.dataset.trainee===t.id));await loadMessages(true);if(mode==='coach')await loadCoachConversations(await currentAuthUser());}
- async function loadMessages(scrollBottom){
-  if(!selected||loading)return;loading=true;
-  try{
-   const user=await currentAuthUser();
-   const r=await window.AUTH_SUPABASE.from('coach_chat_messages').select('id,trainee_id,sender_id,body,created_at,read_at').eq('trainee_id',selected.id).order('created_at',{ascending:true}).limit(250);
-   if(r.error)throw r.error;
-   const rows=r.data||[];const box=$('sehChatMessages');
-   if(!rows.length)box.innerHTML='<div class="seh-chat-muted">هنوز پیامی وجود ندارد. اولین پیام را شما بفرستید.</div>';
-   else box.innerHTML=rows.map(m=>'<div class="seh-chat-bubble '+(m.sender_id===user.id?'mine':'theirs')+'">'+esc(m.body)+'<span class="seh-chat-time">'+esc(new Date(m.created_at).toLocaleString('fa-IR',{dateStyle:'short',timeStyle:'short'}))+(m.sender_id===user.id?'':(m.read_at?' · خوانده شد':''))+'</span></div>').join('');
-   const unread=rows.filter(m=>m.sender_id!==user.id&&!m.read_at);
-   if(unread.length){const upd=await window.AUTH_SUPABASE.from('coach_chat_messages').update({read_at:new Date().toISOString()}).in('id',unread.map(m=>m.id));if(upd.error)console.warn('Chat read state update:',upd.error);}
-   if(scrollBottom||rows.at(-1)?.id!==lastMessageId)box.scrollTop=box.scrollHeight;
-   lastMessageId=rows.at(-1)?.id||null;
-  }catch(e){console.error('Chat load failed',e);const box=$('sehChatMessages');if(box)box.innerHTML='<div class="seh-chat-muted">دریافت پیام‌ها انجام نشد: '+esc(e.message||'خطای نامشخص')+'</div>';}
-  finally{loading=false;}
- }
- async function sendMessage(e){
-  e.preventDefault();const input=$('sehChatInput'),button=$('sehChatSend');const body=String(input?.value||'').trim();
-  if(!body||!selected)return;
-  if(body.length>4000){alert('پیام نباید بیشتر از ۴۰۰۰ نویسه باشد.');return;}
-  button.disabled=true;
-  try{
-   const user=await currentAuthUser();
-   const r=await window.AUTH_SUPABASE.from('coach_chat_messages').insert({trainee_id:selected.id,sender_id:user.id,body}).select('id').single();
-   if(r.error)throw r.error;input.value='';await loadMessages(true);if(mode==='coach')await loadCoachConversations(user);
-  }catch(err){console.error('Chat send failed',err);alert('ارسال پیام انجام نشد. '+(err.message||''));}
-  finally{button.disabled=false;input.focus();}
- }
- function stopPolling(){if(pollTimer)clearInterval(pollTimer);pollTimer=null;}
- async function openChat(who){
-  mode=who;selected=null;lastMessageId=null;ensureSection();addEntryCard();
-  const sec=$('sehChatSection');const layout=$('sehChatLayout');const convCard=$('sehChatConversationCard');
-  layout?.classList.toggle('coach-mode',who==='coach');if(convCard)convCard.style.display=who==='coach'?'block':'none';
-  $('sehChatHint').textContent=who==='coach'?'گفت‌وگوها فقط برای مربی و شاگرد مربوطه قابل مشاهده‌اند.':'این گفت‌وگو فقط بین شما و مربی است.';
-  $('sehChatConversations').innerHTML='';$('sehChatMessages').innerHTML='<div class="seh-chat-muted">در حال بارگذاری…</div>';$('sehChatTitle').textContent=who==='coach'?'یک شاگرد انتخاب کنید':'گفت‌وگو با مربی';
-  window.showSection('sehChatSection');
-  try{
-   const user=await currentAuthUser();
-   if(who==='trainee'){
-    trainee=await fetchTraineeForUser(user);selected=trainee;
-    if(!trainee.coach_user_id)throw new Error('برای این پرونده هنوز مربی مشخص نشده است.');
-    await loadMessages(true);
-   }else{
-    await loadCoachConversations(user);
-    if(conversations.length)await selectConversation(conversations[0]);
-   }
-   stopPolling();pollTimer=setInterval(async()=>{if(document.visibilityState==='visible'&&$('sehChatSection')?.classList.contains('active')){if(mode==='coach'){const u=await currentAuthUser().catch(()=>null);if(u)await loadCoachConversations(u);}if(selected)await loadMessages(false);}},5000);
-  }catch(e){console.error('Chat open failed',e);$('sehChatMessages').innerHTML='<div class="seh-chat-muted">'+esc(e.message||'بازکردن گفت‌وگو انجام نشد.')+'</div>';}
- }
- window.sehOpenCoachChat=()=>openChat('coach');
- function refreshEntry(){
-  const profile=(typeof authProfile!=='undefined'&&authProfile)?authProfile:window.authProfile;
-  if(!profile)return;
-  mode=profile.role==='coach'?'coach':'trainee';addEntryCard();
- }
- function install(){
-  ensureSection();refreshEntry();
-  const oldFinish=window.finishLogin;
-  if(typeof oldFinish==='function'&&!oldFinish.__sehChatWrapped){
-   const wrapped=async function(){const r=await oldFinish.apply(this,arguments);setTimeout(refreshEntry,300);return r;};
-   wrapped.__sehChatWrapped=true;window.finishLogin=wrapped;
-  }
-  const oldShow=window.showSection;
-  if(typeof oldShow==='function'&&!oldShow.__sehChatWrapped){
-   const wrappedShow=function(id){if(id!=='sehChatSection')stopPolling();return oldShow.apply(this,arguments)};
-   wrappedShow.__sehChatWrapped=true;window.showSection=wrappedShow;
-  }
- }
- if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',install,{once:true});else install();
- [600,1400,2800,5000].forEach(ms=>setTimeout(install,ms));
-})();
-</script>
-
-</body></html>');
+     popup.document.open();popup.document.write('<!doctype html><html lang="fa" dir="rtl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>برنامه غذایی - فیتنس سه‌قلعه</title><style>'+css+'body{padding:12px;background:#fff}@media print{body{padding:0}@page{size:A4 portrait;margin:8mm}}</style></head><body></body></html>');
      popup.document.body.appendChild(clone);popup.document.close();setTimeout(()=>popup.print(),500);if(status)status.textContent='برای ذخیره PDF، گزینه «ذخیره به‌صورت PDF» را انتخاب کنید.';return;
    }
    const button=$('sdppDownload');
@@ -10235,3 +10088,151 @@ body.workout-output.workout-compact{
  window.addEventListener('focus',function(){schedule(true);});
 })();
 </script>
+
+<style id="FITNESS_COACH_CHAT_V1_STYLE">
+#sehChatEntryCard{position:relative;cursor:pointer;border:1px solid #d6e8df}
+#sehChatEntryCard .seh-chat-unread{display:inline-flex;align-items:center;justify-content:center;min-width:22px;height:22px;border-radius:20px;background:#c62828;color:#fff;font-size:12px;padding:0 6px;margin-right:7px}
+#sehChatSection .seh-chat-layout{display:grid;grid-template-columns:minmax(0,1fr);gap:12px}
+#sehChatSection .seh-chat-conversations{display:flex;flex-direction:column;gap:7px;max-height:34vh;overflow:auto}
+#sehChatSection .seh-chat-person{width:100%;text-align:right;background:#f7faf9;color:#17372b;border:1px solid #dce9e3;display:flex;justify-content:space-between;align-items:center;gap:8px}
+#sehChatSection .seh-chat-person.active{background:#e3f3eb;border-color:#5ca982}
+#sehChatSection .seh-chat-window{display:flex;flex-direction:column;min-height:52vh;border:1px solid #e0e8e4;border-radius:16px;overflow:hidden;background:#f7faf9}
+#sehChatSection .seh-chat-top{padding:12px;background:#fff;border-bottom:1px solid #e0e8e4;font-weight:700}
+#sehChatSection .seh-chat-messages{flex:1;min-height:32vh;max-height:52vh;overflow:auto;padding:12px;display:flex;flex-direction:column;gap:9px}
+#sehChatSection .seh-chat-bubble{max-width:88%;padding:10px 12px;border-radius:14px;white-space:pre-wrap;overflow-wrap:anywhere;line-height:1.7;font-size:14px}
+#sehChatSection .seh-chat-bubble.mine{align-self:flex-start;background:#dff3e7;border-bottom-right-radius:4px}
+#sehChatSection .seh-chat-bubble.theirs{align-self:flex-end;background:#fff;border:1px solid #e2e8e4;border-bottom-left-radius:4px}
+#sehChatSection .seh-chat-time{display:block;font-size:10px;opacity:.65;margin-top:4px}
+#sehChatSection .seh-chat-compose{display:flex;gap:8px;padding:10px;background:#fff;border-top:1px solid #e0e8e4;align-items:flex-end}
+#sehChatSection .seh-chat-compose textarea{flex:1;min-width:0;resize:vertical;min-height:44px;max-height:120px;border:1px solid #d3ded8;border-radius:12px;padding:10px;font:inherit}
+#sehChatSection .seh-chat-compose button{width:auto;min-width:72px;margin:0}
+#sehChatSection .seh-chat-muted{color:#6d7c74;font-size:13px;padding:12px;text-align:center}
+#sehChatSection .seh-chat-back{width:auto;margin:0 0 10px}
+@media(min-width:700px){#sehChatSection .seh-chat-layout.coach-mode{grid-template-columns:minmax(210px, .8fr) minmax(0,1.7fr)}#sehChatSection .seh-chat-conversations{max-height:62vh}#sehChatSection .seh-chat-window{min-height:64vh}#sehChatSection .seh-chat-messages{max-height:64vh}}
+</style>
+<script id="FITNESS_COACH_CHAT_V1">
+(function(){
+ 'use strict';
+ if(window.__fitnessCoachChatV1)return;window.__fitnessCoachChatV1=true;
+ const $=id=>document.getElementById(id);
+ const esc=v=>String(v??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+ const faNum=n=>Number(n||0).toLocaleString('fa-IR');
+ let mode='', trainee=null, selected=null, conversations=[], pollTimer=null, loading=false, lastMessageId=null;
+ function activeUser(){return window.AUTH_SUPABASE?.auth?.getUser?.()}
+ function ensureSection(){
+  let sec=$('sehChatSection');if(sec)return sec;
+  sec=document.createElement('section');sec.id='sehChatSection';sec.className='section';
+  sec.innerHTML='<button type="button" class="secondary seh-chat-back" id="sehChatBack">↩ بازگشت</button><div class="card"><h2>💬 گفت‌وگو با مربی</h2><p class="muted" id="sehChatHint">پیام‌ها خصوصی هستند و فقط شما و مربی به آن‌ها دسترسی دارید.</p><div class="seh-chat-layout" id="sehChatLayout"><div id="sehChatConversationCard" class="card" style="margin:0;padding:10px"><h3 style="margin-top:0">گفت‌وگوها</h3><div class="seh-chat-conversations" id="sehChatConversations"></div></div><div class="seh-chat-window"><div class="seh-chat-top" id="sehChatTitle">یک گفت‌وگو انتخاب کنید</div><div class="seh-chat-messages" id="sehChatMessages"><div class="seh-chat-muted">برای شروع، یک گفت‌وگو را انتخاب کنید.</div></div><form class="seh-chat-compose" id="sehChatForm"><textarea id="sehChatInput" maxlength="4000" placeholder="پیام خود را بنویسید…" aria-label="متن پیام"></textarea><button type="submit" id="sehChatSend">ارسال</button></form></div></div></div>';
+  const coach=$('coach');if(coach)coach.parentNode.insertBefore(sec,coach.nextSibling);else document.querySelector('.page')?.appendChild(sec);
+  $('sehChatBack').addEventListener('click',()=>{stopPolling();if(mode==='coach')window.showSection('coach');else window.showSection('traineeDashboard');});
+  $('sehChatForm').addEventListener('submit',sendMessage);
+  return sec;
+ }
+ function addEntryCard(){
+  if(mode==='trainee'){
+   const grid=document.querySelector('#traineeDashboard .v4-dashboard');
+   if(grid&&!$('sehChatEntryCard')){
+    const card=document.createElement('div');card.id='sehChatEntryCard';card.className='v4-card';
+    card.innerHTML='<b>💬</b>گفت‌وگو با مربی<span class="v4-small" id="sehChatEntryStatus">ارسال پیام به مربی</span><span class="seh-chat-unread" id="sehChatEntryUnread" style="display:none">۰</span>';
+    card.addEventListener('click',()=>openChat('trainee'));grid.appendChild(card);
+   }
+  }else{
+   const coach=$('coach');if(coach&&!$('sehChatCoachCard')){
+    const card=document.createElement('div');card.id='sehChatCoachCard';card.className='card';
+    card.innerHTML='<h2>💬 پیام‌های شاگردان <span class="seh-chat-unread" id="sehChatCoachUnread" style="display:none">۰</span></h2><p class="muted">گفت‌وگوهای خصوصی شاگردان را از اینجا باز کنید.</p><button type="button" onclick="window.sehOpenCoachChat()">باز کردن پیام‌ها</button>';
+    const first=coach.querySelector('.card');if(first)first.insertAdjacentElement('afterend',card);else coach.prepend(card);
+   }
+  }
+ }
+ async function currentAuthUser(){const r=await window.AUTH_SUPABASE.auth.getUser();if(r.error)throw r.error;if(!r.data?.user)throw new Error('نشست ورود معتبر نیست؛ دوباره وارد شوید.');return r.data.user}
+ async function fetchTraineeForUser(user){
+  const r=await window.AUTH_SUPABASE.from('trainees').select('id,full_name,coach_user_id,auth_user_id').eq('auth_user_id',user.id).limit(2);
+  if(r.error)throw r.error;if(!r.data?.length)throw new Error('پرونده شاگرد به این حساب متصل نیست؛ گفت‌وگو فعلاً در دسترس نیست.');
+  return r.data[0];
+ }
+ async function loadCoachConversations(user){
+  const r=await window.AUTH_SUPABASE.from('trainees').select('id,full_name,coach_user_id,auth_user_id').eq('coach_user_id',user.id).order('full_name',{ascending:true});
+  if(r.error)throw r.error;conversations=r.data||[];
+  const ids=conversations.map(x=>x.id);let unread={};
+  if(ids.length){const q=await window.AUTH_SUPABASE.from('coach_chat_messages').select('trainee_id,id').in('trainee_id',ids).is('read_at',null).neq('sender_id',user.id).limit(1000);if(!q.error)(q.data||[]).forEach(m=>unread[m.trainee_id]=(unread[m.trainee_id]||0)+1);}
+  const total=Object.values(unread).reduce((a,b)=>a+b,0);const badge=$('sehChatCoachUnread');if(badge){badge.textContent=faNum(total);badge.style.display=total?'inline-flex':'none';}
+  const box=$('sehChatConversations');if(!box)return;
+  if(!conversations.length){box.innerHTML='<div class="seh-chat-muted">شاگرد متصل به این حساب پیدا نشد.</div>';return;}
+  box.innerHTML=conversations.map(t=>'<button type="button" class="seh-chat-person '+(selected?.id===t.id?'active':'')+'" data-trainee="'+esc(t.id)+'"><span>'+esc(t.full_name||'شاگرد بدون نام')+'</span>'+(unread[t.id]?'<span class="seh-chat-unread">'+faNum(unread[t.id])+'</span>':'')+'</button>').join('');
+  box.querySelectorAll('[data-trainee]').forEach(b=>b.addEventListener('click',()=>{const t=conversations.find(x=>x.id===b.dataset.trainee);if(t)selectConversation(t)}));
+ }
+ async function selectConversation(t){selected=t;const title=$('sehChatTitle');if(title)title.textContent=t.full_name||'گفت‌وگو با شاگرد';document.querySelectorAll('#sehChatConversations [data-trainee]').forEach(b=>b.classList.toggle('active',b.dataset.trainee===t.id));await loadMessages(true);if(mode==='coach')await loadCoachConversations(await currentAuthUser());}
+ async function loadMessages(scrollBottom){
+  if(!selected||loading)return;loading=true;
+  try{
+   const user=await currentAuthUser();
+   const r=await window.AUTH_SUPABASE.from('coach_chat_messages').select('id,trainee_id,sender_id,body,created_at,read_at').eq('trainee_id',selected.id).order('created_at',{ascending:true}).limit(250);
+   if(r.error)throw r.error;
+   const rows=r.data||[];const box=$('sehChatMessages');
+   if(!rows.length)box.innerHTML='<div class="seh-chat-muted">هنوز پیامی وجود ندارد. اولین پیام را شما بفرستید.</div>';
+   else box.innerHTML=rows.map(m=>'<div class="seh-chat-bubble '+(m.sender_id===user.id?'mine':'theirs')+'">'+esc(m.body)+'<span class="seh-chat-time">'+esc(new Date(m.created_at).toLocaleString('fa-IR',{dateStyle:'short',timeStyle:'short'}))+(m.sender_id===user.id?'':(m.read_at?' · خوانده شد':''))+'</span></div>').join('');
+   const unread=rows.filter(m=>m.sender_id!==user.id&&!m.read_at);
+   if(unread.length){const upd=await window.AUTH_SUPABASE.from('coach_chat_messages').update({read_at:new Date().toISOString()}).in('id',unread.map(m=>m.id));if(upd.error)console.warn('Chat read state update:',upd.error);}
+   if(scrollBottom||rows.at(-1)?.id!==lastMessageId)box.scrollTop=box.scrollHeight;
+   lastMessageId=rows.at(-1)?.id||null;
+  }catch(e){console.error('Chat load failed',e);const box=$('sehChatMessages');if(box)box.innerHTML='<div class="seh-chat-muted">دریافت پیام‌ها انجام نشد: '+esc(e.message||'خطای نامشخص')+'</div>';}
+  finally{loading=false;}
+ }
+ async function sendMessage(e){
+  e.preventDefault();const input=$('sehChatInput'),button=$('sehChatSend');const body=String(input?.value||'').trim();
+  if(!body||!selected)return;
+  if(body.length>4000){alert('پیام نباید بیشتر از ۴۰۰۰ نویسه باشد.');return;}
+  button.disabled=true;
+  try{
+   const user=await currentAuthUser();
+   const r=await window.AUTH_SUPABASE.from('coach_chat_messages').insert({trainee_id:selected.id,sender_id:user.id,body}).select('id').single();
+   if(r.error)throw r.error;input.value='';await loadMessages(true);if(mode==='coach')await loadCoachConversations(user);
+  }catch(err){console.error('Chat send failed',err);alert('ارسال پیام انجام نشد. '+(err.message||''));}
+  finally{button.disabled=false;input.focus();}
+ }
+ function stopPolling(){if(pollTimer)clearInterval(pollTimer);pollTimer=null;}
+ async function openChat(who){
+  mode=who;selected=null;lastMessageId=null;ensureSection();addEntryCard();
+  const sec=$('sehChatSection');const layout=$('sehChatLayout');const convCard=$('sehChatConversationCard');
+  layout?.classList.toggle('coach-mode',who==='coach');if(convCard)convCard.style.display=who==='coach'?'block':'none';
+  $('sehChatHint').textContent=who==='coach'?'گفت‌وگوها فقط برای مربی و شاگرد مربوطه قابل مشاهده‌اند.':'این گفت‌وگو فقط بین شما و مربی است.';
+  $('sehChatConversations').innerHTML='';$('sehChatMessages').innerHTML='<div class="seh-chat-muted">در حال بارگذاری…</div>';$('sehChatTitle').textContent=who==='coach'?'یک شاگرد انتخاب کنید':'گفت‌وگو با مربی';
+  window.showSection('sehChatSection');
+  try{
+   const user=await currentAuthUser();
+   if(who==='trainee'){
+    trainee=await fetchTraineeForUser(user);selected=trainee;
+    if(!trainee.coach_user_id)throw new Error('برای این پرونده هنوز مربی مشخص نشده است.');
+    await loadMessages(true);
+   }else{
+    await loadCoachConversations(user);
+    if(conversations.length)await selectConversation(conversations[0]);
+   }
+   stopPolling();pollTimer=setInterval(async()=>{if(document.visibilityState==='visible'&&$('sehChatSection')?.classList.contains('active')){if(mode==='coach'){const u=await currentAuthUser().catch(()=>null);if(u)await loadCoachConversations(u);}if(selected)await loadMessages(false);}},5000);
+  }catch(e){console.error('Chat open failed',e);$('sehChatMessages').innerHTML='<div class="seh-chat-muted">'+esc(e.message||'بازکردن گفت‌وگو انجام نشد.')+'</div>';}
+ }
+ window.sehOpenCoachChat=()=>openChat('coach');
+ function refreshEntry(){
+  const profile=(typeof authProfile!=='undefined'&&authProfile)?authProfile:window.authProfile;
+  if(!profile)return;
+  mode=profile.role==='coach'?'coach':'trainee';addEntryCard();
+ }
+ function install(){
+  ensureSection();refreshEntry();
+  const oldFinish=window.finishLogin;
+  if(typeof oldFinish==='function'&&!oldFinish.__sehChatWrapped){
+   const wrapped=async function(){const r=await oldFinish.apply(this,arguments);setTimeout(refreshEntry,300);return r;};
+   wrapped.__sehChatWrapped=true;window.finishLogin=wrapped;
+  }
+  const oldShow=window.showSection;
+  if(typeof oldShow==='function'&&!oldShow.__sehChatWrapped){
+   const wrappedShow=function(id){if(id!=='sehChatSection')stopPolling();return oldShow.apply(this,arguments)};
+   wrappedShow.__sehChatWrapped=true;window.showSection=wrappedShow;
+  }
+ }
+ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',install,{once:true});else install();
+ [600,1400,2800,5000].forEach(ms=>setTimeout(install,ms));
+})();
+</script>
+</body></html>
+
