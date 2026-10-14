@@ -4962,7 +4962,7 @@ body.workout-output .empty-cell{display:none!important}
             const exportGrid=doc.querySelector('.session-grid');
             const sessionCount=doc.querySelectorAll('.session-grid .session-cell').length;
             const rows=Math.max(1,Math.ceil(sessionCount/2));
-            setImportant(target,'min-height','1555px');
+            setImportant(target,'min-height','1720px');
             setImportant(target,'padding','24px');
             setImportant(exportGrid,'min-height',Math.max(960,rows*320)+'px');
             setImportant(exportGrid,'grid-template-columns','repeat(2,minmax(0,1fr))');
@@ -5074,7 +5074,7 @@ body.workout-output .empty-cell{display:none!important}
                 const finalGrid=clonedDoc.querySelector('.session-grid');
                 const count=clonedDoc.querySelectorAll('.session-grid .session-cell').length;
                 const rows=Math.max(1,Math.ceil(count/2));
-                body.style.setProperty('min-height','1555px','important');
+                body.style.setProperty('min-height','1720px','important');
                 body.style.setProperty('padding','24px','important');
                 if(finalGrid){
                   finalGrid.style.setProperty('display','grid','important');
@@ -5105,10 +5105,14 @@ body.workout-output .empty-cell{display:none!important}
             if(!ctx)throw new Error('ساخت صفحه A4 ممکن نشد.');
             ctx.fillStyle='#ffffff';ctx.fillRect(0,0,page.width,page.height);
             const sourceW=Math.max(1,canvas.width),sourceH=Math.max(1,canvas.height);
+            /* Fit the complete capture to the A4 width, then scale it down only if its
+               full height would exceed the page. Anchor at the top so the header and
+               trainee details are not displaced; the source layout is expanded to use
+               the page height before capture, which also reduces the blank lower area. */
             const scale=Math.min(page.width/sourceW,page.height/sourceH);
             const drawW=Math.max(1,Math.round(sourceW*scale)),drawH=Math.max(1,Math.round(sourceH*scale));
             ctx.imageSmoothingEnabled=true;ctx.imageSmoothingQuality='high';
-            ctx.drawImage(canvas,Math.round((page.width-drawW)/2),Math.round((page.height-drawH)/2),drawW,drawH);
+            ctx.drawImage(canvas,Math.round((page.width-drawW)/2),0,drawW,drawH);
             finalCanvas=page;
           }
           const png=await new Promise((resolve,reject)=>{
