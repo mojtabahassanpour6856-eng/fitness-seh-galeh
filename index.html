@@ -4972,10 +4972,10 @@ body.workout-output .empty-cell{display:none!important}
             setImportant(target,'width',captureWidth+'px');
             setImportant(target,'min-width',captureWidth+'px');
             setImportant(target,'max-width','none');
-            setImportant(target,'padding','0');
+            setImportant(target,'padding','0 12px 10px');
             setImportant(target,'margin','0');
             setImportant(target,'box-sizing','border-box');
-            setImportant(target,'border','0');
+            setImportant(target,'border','2px solid #d4b15c');
             const exportGrid=doc.querySelector('.session-grid');
             setImportant(exportGrid,'width','100%');
             setImportant(exportGrid,'min-width','100%');
@@ -4986,7 +4986,7 @@ body.workout-output .empty-cell{display:none!important}
             const sessionCount=doc.querySelectorAll('.session-grid .session-cell').length;
             const rows=Math.max(1,Math.ceil(sessionCount/2));
             setImportant(target,'min-height',Math.max(1066,rows*330+350)+'px');
-            setImportant(target,'padding','0px');
+            setImportant(target,'padding','0 12px 10px');
             setImportant(exportGrid,'min-height',Math.max(700,rows*330)+'px');
             setImportant(exportGrid,'grid-template-columns','repeat(2,minmax(0,1fr))');
             setImportant(exportGrid,'grid-template-rows',`repeat(${rows},minmax(300px,1fr))`);
@@ -5151,9 +5151,9 @@ body.workout-output .empty-cell{display:none!important}
               body.style.setProperty('overflow','visible','important');
               body.style.setProperty('box-sizing','border-box','important');
               if(kind!=='meal'){
-                body.style.setProperty('padding','0px','important');
+                body.style.setProperty('padding','0 12px 10px','important');
                 body.style.setProperty('margin','0px','important');
-                body.style.setProperty('border-width','2px','important');
+                body.style.setProperty('border','2px solid #d4b15c','important');
               }
               /* Vazirmatn is applied ONLY to the downloaded workout PNG.
                  Use the font already bundled/referenced by this page, and wait for its
@@ -5182,7 +5182,7 @@ body.workout-output .empty-cell{display:none!important}
                   el.style.setProperty('width',captureWidth+'px','important');
                   el.style.setProperty('min-width',captureWidth+'px','important');
                   el.style.setProperty('max-width','none','important');
-                  el.style.setProperty('padding','0','important');
+                  el.style.setProperty('padding',el===body?'0 12px 10px':'0','important');
                   el.style.setProperty('margin','0','important');
                   el.style.setProperty('box-sizing','border-box','important');
                   el.style.setProperty('overflow','visible','important');
