@@ -5959,6 +5959,8 @@ else loadCoachExerciseListsWhenReady();
   finally{dayCompletionBusy.delete(lock);}
  }
  window.markWorkoutDayDone=markWorkoutDayDone;
+ window.__sehAttachWorkoutMissions=attachWorkoutMissions;
+ window.__sehAttachCoachWorkoutProgress=attachCoachWorkoutProgress;
 
  async function attachWorkoutMissions(){
   const list=$("workoutList"),traineeId=currentClient?.id,planId=currentWorkoutPlanId;
@@ -9840,5 +9842,47 @@ body.workout-output.workout-compact{
 })();
 </script>
 
-
+<script id="FITNESS_WORKOUT_MISSION_FINAL_HOOK_V2">
+/* Keep workout completion controls and the four-week report attached even when a later UI renderer replaces renderWorkoutList. */
+(function(){
+  'use strict';
+  if(window.__sehWorkoutMissionFinalHookV2)return;
+  window.__sehWorkoutMissionFinalHookV2=true;
+  function trainee(){return !!(window.authProfile&&window.authProfile.role==='trainee');}
+  function coach(){return !!(window.authProfile&&window.authProfile.role==='coach');}
+  function attach(){
+    try{
+      if(trainee()&&typeof window.__sehAttachWorkoutMissions==='function')window.__sehAttachWorkoutMissions();
+      else if(coach()&&typeof window.__sehAttachCoachWorkoutProgress==='function')window.__sehAttachCoachWorkoutProgress();
+    }catch(e){console.warn('Workout mission final hook:',e);}
+  }
+  function wrap(name){
+    var old=window[name];
+    if(typeof old!=='function'||old.__sehMissionFinalWrapped)return;
+    var wrapped=function(){
+      var result=old.apply(this,arguments);
+      if(result&&typeof result.then==='function'){
+        result.then(function(){setTimeout(attach,80);}).catch(function(){});
+      }else setTimeout(attach,80);
+      return result;
+    };
+    wrapped.__sehMissionFinalWrapped=true;
+    window[name]=wrapped;
+  }
+  wrap('renderWorkoutList');
+  wrap('loadWorkoutForClient');
+  var list=document.getElementById('workoutList');
+  if(list&&window.MutationObserver){
+    var queued=false;
+    new MutationObserver(function(){
+      if(queued)return;
+      queued=true;
+      setTimeout(function(){queued=false;attach();},120);
+    }).observe(list,{childList:true,subtree:true});
+  }
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',function(){setTimeout(attach,400);});
+  else setTimeout(attach,400);
+  [1200,2600,4500].forEach(function(ms){setTimeout(attach,ms);});
+})();
+</script>
 
