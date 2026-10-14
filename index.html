@@ -4917,7 +4917,23 @@ body.workout-output .empty-cell{display:none!important}
              Previously these rules existed only in onclone, so html2canvas measured the
              compressed original grid first and then captured the expanded clone into a
              canvas sized for the old layout. That clipped session one despite its rows existing. */
-          if(doc.fonts && doc.fonts.ready) await doc.fonts.ready;
+          /* Wait for the actual Persian font faces used by the export before measuring any
+             text. On Android, document.fonts.ready can resolve before a late CSS font request;
+             explicitly request the export family's common weights and wait for layout to settle. */
+          if(doc.fonts){
+            try{
+              await Promise.race([
+                Promise.all([
+                  doc.fonts.load('900 16px Tahoma'),
+                  doc.fonts.load('800 15px Tahoma'),
+                  doc.fonts.load('700 14px Tahoma'),
+                  doc.fonts.ready
+                ]),
+                new Promise(resolve=>setTimeout(resolve,2500))
+              ]);
+            }catch(fontError){console.warn('Export font readiness check:',fontError);}
+          }
+          await new Promise(resolve=>popup.requestAnimationFrame(()=>popup.requestAnimationFrame(resolve)));
           const setImportant=(el,prop,value)=>{if(el)el.style.setProperty(prop,value,'important');};
           if(kind!=='meal'){
             setImportant(target,'height','auto');
@@ -5008,7 +5024,26 @@ body.workout-output .empty-cell{display:none!important}
             setImportant(sourceGrid,'flex','0 0 auto');
             setImportant(sourceGrid,'overflow','visible');
           }
+          /* Restore visibility and natural flow after the final export layout is applied. */
+          if(kind!=='meal'){
+            ['.plan-header','.plan-meta','.workout-plan-description','.system-notes','.coach-name','.gym-name'].forEach(selector=>{
+              doc.querySelectorAll(selector).forEach(el=>{
+                setImportant(el,'visibility','visible');setImportant(el,'opacity','1');
+                setImportant(el,'max-height','none');setImportant(el,'height','auto');
+                setImportant(el,'overflow','visible');
+                setImportant(el,'-webkit-text-fill-color','currentColor');
+              });
+            });
+            const meta=doc.querySelector('.plan-meta');
+            if(meta){
+              setImportant(meta,'display','grid');
+              setImportant(meta,'grid-template-columns','repeat(3,minmax(0,1fr))');
+              setImportant(meta,'grid-auto-flow','row');
+              setImportant(meta,'grid-template-rows','auto');
+            }
+          }
           await new Promise(resolve=>popup.requestAnimationFrame(()=>popup.requestAnimationFrame(resolve)));
+          if(doc.fonts && doc.fonts.ready) await doc.fonts.ready;
           /* Let html2canvas derive the captured element height from the fully laid-out body.
              A manually fixed height measured before clone styling can crop text/footer in the PNG
              even though the export preview itself looks complete on mobile. */
