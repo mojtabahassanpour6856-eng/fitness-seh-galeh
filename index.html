@@ -9434,8 +9434,9 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
  }
  window.sehOpenCoachChat=()=>openChat('coach');
  function refreshEntry(){
-  if(!window.authProfile)return;
-  mode=window.authProfile.role==='coach'?'coach':'trainee';addEntryCard();
+  const profile=(typeof authProfile!=='undefined'&&authProfile)?authProfile:window.authProfile;
+  if(!profile)return;
+  mode=profile.role==='coach'?'coach':'trainee';addEntryCard();
  }
  function install(){
   ensureSection();refreshEntry();
