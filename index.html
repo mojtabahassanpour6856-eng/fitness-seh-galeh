@@ -1429,6 +1429,7 @@ async function loadNutritionForClient(){
  const requestedTraineeId=currentClient?.id;
  if(!requestedTraineeId)return;
  const sameTrainee=()=>!!currentClient&&String(currentClient.id)===String(requestedTraineeId);
+ let nutritionLoadStage="خواندن برنامه از جدول nutrition_plans";
  try{
   const r=await sbGet(`/nutrition_plans?trainee_id=eq.${encodeURIComponent(requestedTraineeId)}&select=*&order=created_at.desc&limit=1`);
   if(!sameTrainee())return; // Discard stale response; another trainee was selected.
@@ -1442,6 +1443,7 @@ async function loadNutritionForClient(){
   }
   $("mealTitle").value=p.title||"";$("mealStart").value=p.start_date||today();$("mealEnd").value=p.end_date||"";
   $("mealCalories").value=p.daily_calories||"";$("mealProtein").value=p.protein_target||"";$("mealCarbs").value=p.carbs_target||"";$("mealFat").value=p.fat_target||"";$("mealNotes").value=p.notes||"";$("mealActive").value=String(p.is_active!==false);
+  nutritionLoadStage="خواندن وعده‌ها از جدول nutrition_meals";
   let meals=await sbGet(`/nutrition_meals?plan_id=eq.${encodeURIComponent(requestedPlanId)}&select=*&order=meal_order.asc`);
   if(!sameTrainee()||String(currentPlanId)!==String(requestedPlanId))return;
   // Coaches get a real sixth database meal, not merely a recipe-category label.
@@ -1454,11 +1456,12 @@ async function loadNutritionForClient(){
     meals=await sbGet(`/nutrition_meals?plan_id=eq.${encodeURIComponent(requestedPlanId)}&select=*&order=meal_order.asc`);
    }catch(addMealError){console.warn("افزودن وعده‌های استاندارد انجام نشد؛ دکمه افزودن دستی نمایش داده می‌شود.",addMealError);}
   }
+  nutritionLoadStage="خواندن غذاهای ثبت‌شده در وعده‌ها از جدول nutrition_meal_foods";
   const ids=meals.map(x=>x.id);let foodsBy={};
   if(ids.length){const mf=await sbGet(`/nutrition_meal_foods?meal_id=in.(${ids.map(encodeURIComponent).join(",")})&select=*&order=created_at.asc`);
    if(!sameTrainee()||String(currentPlanId)!==String(requestedPlanId))return;
    const foodIds=[...new Set(mf.map(x=>x.food_id).filter(Boolean))];
-   if(foodIds.length){const fd=await sbGet(`/foods?id=in.(${foodIds.map(encodeURIComponent).join(",")})&select=*`);if(!sameTrainee()||String(currentPlanId)!==String(requestedPlanId))return;fd.forEach(f=>foodsBy[f.id]=f);}
+   if(foodIds.length){nutritionLoadStage="خواندن مشخصات غذاها از جدول foods";const fd=await sbGet(`/foods?id=in.(${foodIds.map(encodeURIComponent).join(",")})&select=*`);if(!sameTrainee()||String(currentPlanId)!==String(requestedPlanId))return;fd.forEach(f=>foodsBy[f.id]=f);}
    meals.forEach(m=>m.foods=mf.filter(x=>String(x.meal_id)===String(m.id)).map(x=>({...x,food:foodsBy[x.food_id]})));
   }
   if(!sameTrainee()||String(currentPlanId)!==String(requestedPlanId))return;
@@ -1466,7 +1469,7 @@ async function loadNutritionForClient(){
   // شاگرد و گزارش فقط وعده‌هایی را ببینند که دست‌کم یک غذای معتبر با مقدار مثبت دارند؛ فهرست مربی برای ویرایش خالی‌ها کامل می‌ماند.
   const visibleStudentMeals=meals.filter(m=>(m.foods||[]).some(x=>x.food_id&&x.food&&x.amount!==null&&x.amount!==undefined&&String(x.amount).trim()!==''&&Number(x.amount)>0));
   renderStudentMeals(visibleStudentMeals,p);renderMealReport(visibleStudentMeals,p);
- }catch(e){console.error(e);if(sameTrainee())alert("دریافت برنامه غذایی از Supabase انجام نشد.\n"+e.message);}
+ }catch(e){console.error("Nutrition load failed at: "+nutritionLoadStage,e);if(sameTrainee())alert("دریافت برنامه غذایی از Supabase انجام نشد.\nمرحله خطا: "+nutritionLoadStage+"\n"+(e?.message||String(e)));}
 }
 async function sbApiHeaders(extra={}){
  const headers={"apikey":SUPABASE_KEY,"Content-Type":"application/json",...extra};
