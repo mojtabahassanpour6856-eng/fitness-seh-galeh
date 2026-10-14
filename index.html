@@ -9584,8 +9584,8 @@ body.workout-output.workout-compact{
 </script>
 
 
-<script id="STUDENT_FASTING_PLAN_IMAGE_V2">
-/* Render the coach-assigned fasting/diet plan inside the existing student nutrition image and export it with the same PNG button. */
+<script id="STUDENT_FASTING_PLAN_IMAGE_V3">
+/* Combine ordinary nutrition meals with all coach-assigned diet and fasting plans in the same downloadable student nutrition image. */
 (function(){
  'use strict';
  const $=id=>document.getElementById(id);
@@ -9599,85 +9599,90 @@ body.workout-output.workout-compact{
    return null;
   }catch(e){return null;}
  }
- async function getPlan(){
-  const id=traineeId();if(!id||typeof sbGet!=='function')return null;
-  const rows=await sbGet('/fasting_logs?trainee_id=eq.'+encodeURIComponent(id)+'&order=created_at.desc&limit=80');
-  if(id!==traineeId())return null;
-  for(const row of (Array.isArray(rows)?rows:[])){
+ async function getPlans(){
+  const id=traineeId();if(!id||typeof sbGet!=='function')return {diet:null,fasting:null};
+  const rows=await sbGet('/fasting_logs?trainee_id=eq.'+encodeURIComponent(id)+'&order=created_at.desc&limit=100');
+  if(id!==traineeId())return {diet:null,fasting:null};
+  const list=Array.isArray(rows)?rows:[];
+  let diet=null,fasting=null;
+  for(const row of list){
    const d=String(row.description||'');
    if(d.startsWith('STUDENT_DIET_REQUEST:')||d.startsWith('DIET_CONFIG:'))continue;
-   if(d.startsWith(PREFIX)){
-    try{
-     const data=JSON.parse(d.slice(PREFIX.length));
-     const meals=String(data.mealPlanText||'').trim();
-     const details=[data.type?'نوع رژیم: '+data.type:'',data.settings?'تنظیمات: '+data.settings:'',meals?'برنامه غذایی:\n'+meals:'',data.notes?'توضیحات مربی: '+data.notes:''].filter(Boolean).join('\n');
-     if(details)return {kind:'diet',title:'🥗 رژیم غذایی ثبت‌شده توسط مربی',description:details};
-    }catch(e){}
-    continue;
-   }
-   if(/^نوع\s/.test(d)){
-    const bits=d.split(/\nبرنامه غذایی فستینگ:\n?/);
-    const title='⏳ برنامه فستینگ ثبت‌شده توسط مربی';
-    const details=[bits[0].replace(/^نوع\s*/,'').trim(),row.start_time?'شروع فست: '+String(row.start_time).slice(0,5):'',row.end_time?'پایان فست: '+String(row.end_time).slice(0,5):'',bits.length>1?bits.slice(1).join('\n').trim():''].filter(Boolean).join('\n');
-    if(details)return {kind:'fasting',title,description:details};
-   }
+   if(!diet&&d.startsWith(PREFIX)){try{diet=JSON.parse(d.slice(PREFIX.length));}catch(e){}}
+   else if(!fasting&&/^نوع\s/.test(d)){fasting=row;}
+   if(diet&&fasting)break;
   }
-  return null;
+  return {diet,fasting};
  }
- function markup(plan){
-  if(!plan||!plan.description)return '';
-  const lines=String(plan.description).split(/\r?\n/).map(x=>x.trim()).filter(Boolean);
-  return '<div id="smppFastingSection" class="smpp-meal"><div class="smpp-meal-title">'+esc(plan.title)+'</div><div class="smpp-meal-body">'+lines.map(line=>'<div class="smpp-item"><span>'+esc(line)+'</span></div>').join('')+'</div></div>';
+ function dietSection(data){
+  if(!data)return '';
+  const lines=[];
+  if(data.type)lines.push('<div class="smpp-item"><span>نوع رژیم</span><b>'+esc(data.type)+'</b></div>');
+  if(data.settings)lines.push('<div class="smpp-item"><span>تنظیمات رژیم</span><b>'+esc(data.settings)+'</b></div>');
+  const foodList=(typeof foods!=='undefined'&&Array.isArray(foods))?foods:[];
+  const meals=Array.isArray(data.meals)?data.meals:[];
+  let rendered=0;
+  meals.forEach((meal,index)=>{
+   const items=(Array.isArray(meal&&meal.items)?meal.items:[]).filter(item=>item&&item.foodIndex!==''&&foodList[Number(item.foodIndex)]);
+   if(!items.length)return;
+   rendered++;
+   lines.push('<div class="smpp-meal-title" style="margin-top:8px">'+esc(meal.name||('وعده '+(index+1)))+(meal.time?' — '+esc(meal.time):'')+'</div>');
+   items.forEach(item=>lines.push('<div class="smpp-item"><span>'+esc(foodList[Number(item.foodIndex)][0])+'</span><b>'+esc(Number(item.amount)||0)+' گرم</b></div>'));
+  });
+  if(!rendered&&data.mealPlanText)String(data.mealPlanText).split(/\r?\n+/).map(x=>x.trim()).filter(Boolean).forEach(line=>lines.push('<div class="smpp-item"><span>'+esc(line)+'</span></div>'));
+  if(!rendered&&!data.mealPlanText)lines.push('<div class="smpp-item"><span>نوع رژیم ثبت شده است؛ جزئیات وعده‌ها در این برنامه وجود ندارد.</span></div>');
+  if(data.notes)lines.push('<div class="smpp-note"><b>💬 توضیحات مربی:</b><br>'+esc(data.notes)+'</div>');
+  if(data.updatedAt)lines.push('<div class="smpp-note"><b>آخرین ثبت:</b> '+esc(new Date(data.updatedAt).toLocaleDateString('fa-IR'))+'</div>');
+  return '<div id="smppDietSection" class="smpp-meal"><div class="smpp-meal-title">🥗 رژیم غذایی ثبت‌شده توسط مربی</div><div class="smpp-meal-body">'+lines.join('')+'</div></div>';
  }
- async function attachPlan(allowPlanOnly){
-  const seq=++requestNo;
-  const id=traineeId();if(!id)return;
-  const card=$('studentMealPrintablePlan'),body=$('smppBody');
-  if(!card||!body)return;
+ function fastingSection(row){
+  if(!row)return '';
+  const d=String(row.description||''),parts=d.split(/\nبرنامه غذایی فستینگ:\n?/),lines=[];
+  const heading=parts[0].replace(/^نوع\s*/,'').trim();
+  if(heading)lines.push('<div class="smpp-item"><span>الگوی فستینگ</span><b>'+esc(heading)+'</b></div>');
+  if(row.start_time)lines.push('<div class="smpp-item"><span>شروع فست</span><b>'+esc(String(row.start_time).slice(0,5))+'</b></div>');
+  if(row.end_time)lines.push('<div class="smpp-item"><span>پایان فست</span><b>'+esc(String(row.end_time).slice(0,5))+'</b></div>');
+  const text=parts.length>1?parts.slice(1).join('\nبرنامه غذایی فستینگ:\n').trim():'';
+  if(text)text.split(/\r?\n/).map(x=>x.trim()).filter(Boolean).forEach(line=>lines.push('<div class="smpp-item"><span>'+esc(line)+'</span></div>'));
+  if(!lines.length)return '';
+  return '<div id="smppFastingSection" class="smpp-meal"><div class="smpp-meal-title">⏳ برنامه فستینگ ثبت‌شده توسط مربی</div><div class="smpp-meal-body">'+lines.join('')+'</div></div>';
+ }
+ async function attachPlans(allowPlanOnly){
+  const seq=++requestNo,id=traineeId();if(!id)return;
+  const card=$('studentMealPrintablePlan'),body=$('smppBody');if(!card||!body)return;
   try{
-   const plan=await getPlan();
+   const plans=await getPlans();
    if(seq!==requestNo||id!==traineeId())return;
-   body.querySelector('#smppFastingSection')?.remove();
-   const section=markup(plan);
-   if(section){
+   body.querySelector('#smppDietSection')?.remove();body.querySelector('#smppFastingSection')?.remove();
+   const diet=dietSection(plans.diet),fasting=fastingSection(plans.fasting);
+   if(diet||fasting){
     if(!card.dataset.loaded||!body.innerHTML.trim()){
      const date=new Intl.DateTimeFormat('fa-IR-u-ca-persian',{year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());
      let name='شاگرد';try{name=currentClient.name||currentClient.full_name||currentClient.fullName||name;}catch(e){}
-     body.innerHTML='<div class="smpp-meta"><div class="smpp-chip"><b>👤 شاگرد:</b> '+esc(name)+'</div><div class="smpp-chip"><b>📅 تاریخ:</b> '+esc(date)+'</div><div class="smpp-chip"><b>🎯 عنوان برنامه:</b> برنامه غذایی اختصاصی</div></div>'+section;
-    }else{
-     body.insertAdjacentHTML('beforeend',section);
+     if(!body.querySelector('.smpp-meta'))body.insertAdjacentHTML('afterbegin','<div class="smpp-meta"><div class="smpp-chip"><b>👤 شاگرد:</b> '+esc(name)+'</div><div class="smpp-chip"><b>📅 تاریخ:</b> '+esc(date)+'</div><div class="smpp-chip"><b>🎯 عنوان برنامه:</b> برنامه غذایی اختصاصی</div></div>');
     }
+    if(diet)body.insertAdjacentHTML('beforeend',diet);
+    if(fasting)body.insertAdjacentHTML('beforeend',fasting);
     card.style.display='block';card.dataset.loaded='1';
-   }else if(allowPlanOnly&&!(body.textContent||'').trim()){
-    card.style.display='none';card.dataset.loaded='';
-   }
-  }catch(e){console.warn('Could not render coach diet/fasting plan in student nutrition image',e);}
+   }else if(allowPlanOnly&&!(body.textContent||'').trim()){card.style.display='none';card.dataset.loaded='';}
+  }catch(e){console.warn('Could not render coach diet/fasting plans in student nutrition image',e);}
  }
  const oldMeals=window.renderStudentMeals;
- if(typeof oldMeals==='function'&&!window.__studentDietPlanImageV2Wrapped){
-  window.renderStudentMeals=async function(meals,p){
-   const result=await oldMeals.apply(this,arguments);
-   await attachPlan(false);
-   return result;
-  };
-  window.__studentDietPlanImageV2Wrapped=true;
+ if(typeof oldMeals==='function'&&!window.__studentDietPlanImageV3Wrapped){
+  window.renderStudentMeals=async function(meals,p){const result=await oldMeals.apply(this,arguments);await attachPlans(false);return result;};
+  window.__studentDietPlanImageV3Wrapped=true;
  }
  const oldEmpty=window.renderStudentEmpty;
- if(typeof oldEmpty==='function'&&!window.__studentDietPlanEmptyImageV2Wrapped){
+ if(typeof oldEmpty==='function'&&!window.__studentDietPlanEmptyImageV3Wrapped){
   window.renderStudentEmpty=function(){
-   const result=oldEmpty.apply(this,arguments);
-   const card=$('studentMealPrintablePlan'),body=$('smppBody');
+   const result=oldEmpty.apply(this,arguments),card=$('studentMealPrintablePlan'),body=$('smppBody');
    if(card&&body){body.innerHTML='';card.style.display='none';card.dataset.loaded='';}
-   setTimeout(()=>attachPlan(true),100);
-   return result;
+   setTimeout(()=>attachPlans(true),150);return result;
   };
-  window.__studentDietPlanEmptyImageV2Wrapped=true;
+  window.__studentDietPlanEmptyImageV3Wrapped=true;
  }
- function retry(){
-  if(traineeId())attachPlan(true);
- }
- if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>setTimeout(retry,500));
- else setTimeout(retry,500);
+ function retry(){if(traineeId())attachPlans(true);}
+ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>setTimeout(retry,500));else setTimeout(retry,500);
  [1400,3000,5000].forEach(t=>setTimeout(retry,t));
 })();
 </script>
