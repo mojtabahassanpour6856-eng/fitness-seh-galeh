@@ -5041,6 +5041,45 @@ body.workout-output .empty-cell{display:none!important}
               setImportant(el,'font-weight','600');
               setImportant(el,'margin-top','5px');
             });
+
+            /* Five-session plans use the same A4 template and 2-column/3-row grid,
+               with slightly tighter typography and card spacing so the complete plan
+               remains balanced on one page without changing 3- or 4-session exports. */
+            const realSessionCount=doc.querySelectorAll('.session-grid .session-cell:not(.empty-cell)').length;
+            if(realSessionCount===5){
+              doc.querySelectorAll('.session-cell').forEach(el=>{
+                setImportant(el,'padding','8px');
+                setImportant(el,'border-radius','8px');
+              });
+              doc.querySelectorAll('.session-heading').forEach(el=>{
+                setImportant(el,'font-size','19px');
+                setImportant(el,'line-height','1.35');
+                setImportant(el,'padding','6px 4px');
+              });
+              doc.querySelectorAll('.exercise-card,.exercise-unit').forEach(el=>{
+                setImportant(el,'font-size','18px');
+                setImportant(el,'line-height','1.35');
+                setImportant(el,'padding','5px 3px');
+              });
+              doc.querySelectorAll('.exercise-name').forEach(el=>setImportant(el,'font-size','18px'));
+              doc.querySelectorAll('.exercise-details').forEach(el=>{
+                setImportant(el,'font-size','16px');
+                setImportant(el,'line-height','1.4');
+                setImportant(el,'gap','3px 6px');
+              });
+              doc.querySelectorAll('.exercise-details .rx').forEach(el=>{
+                setImportant(el,'font-size','20px');
+                setImportant(el,'padding','2px 6px');
+              });
+              doc.querySelectorAll('.exercise-details .rest,.exercise-details .sys').forEach(el=>{
+                setImportant(el,'font-size','16px');
+              });
+              doc.querySelectorAll('.plan-meta,.plan-meta *, .workout-plan-description, .system-notes, .system-notes *, .exercise-extra').forEach(el=>{
+                setImportant(el,'font-size','15px');
+                setImportant(el,'line-height','1.4');
+              });
+              doc.querySelectorAll('.exercise-extra').forEach(el=>setImportant(el,'margin-top','3px'));
+            }
           }
           setImportant(doc.documentElement,'width',captureWidth+'px');
           setImportant(doc.documentElement,'height','auto');
