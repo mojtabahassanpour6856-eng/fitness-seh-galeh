@@ -142,7 +142,7 @@ body.locked{overflow:hidden}
 }
 </style>
 
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
 <style id="FITNESS_LIBRARY_DETAIL_VIEW_STYLE">
 #libraryList{display:grid;grid-template-columns:repeat(auto-fit,minmax(145px,1fr));gap:10px}
 .library-muscle-entry{display:flex;align-items:center;gap:9px;width:100%;min-height:78px;padding:13px;text-align:right;border:1px solid #455467;border-radius:14px;background:linear-gradient(145deg,#202a36,#151b24);color:inherit;cursor:pointer}
@@ -1815,6 +1815,9 @@ async function loadActivityToday(){
 
 function esc(s){return String(s).replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[m]));}
 
+</script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2" onerror="this.onerror=null;this.src='https://unpkg.com/@supabase/supabase-js@2'"></script>
+<script>
 window.AUTH_SUPABASE=window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
 const AUTH_SUPABASE=window.AUTH_SUPABASE;const ORIGINAL_FETCH=window.fetch;
 
