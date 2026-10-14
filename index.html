@@ -5148,14 +5148,13 @@ body.workout-output .empty-cell{display:none!important}
             if(!ctx)throw new Error('ساخت صفحه A4 ممکن نشد.');
             ctx.fillStyle='#ffffff';ctx.fillRect(0,0,page.width,page.height);
             const sourceW=Math.max(1,canvas.width),sourceH=Math.max(1,canvas.height);
-            /* Fit the complete capture to the A4 width, then scale it down only if its
-               full height would exceed the page. Anchor at the top so the header and
-               trainee details are not displaced; the source layout is expanded to use
-               the page height before capture, which also reduces the blank lower area. */
-            const scale=Math.min(page.width/sourceW,page.height/sourceH);
-            const drawW=Math.max(1,Math.round(sourceW*scale)),drawH=Math.max(1,Math.round(sourceH*scale));
+            /* Fill the A4 page edge-to-edge. The former uniform "contain" scale added
+               wide side gutters whenever the captured HTML was taller than A4, making the
+               actual PNG look different from the preview. Draw the complete capture into the
+               A4 canvas dimensions so the entire source (header through footer) stays inside
+               the output and no extra horizontal gutters are introduced. */
             ctx.imageSmoothingEnabled=true;ctx.imageSmoothingQuality='high';
-            ctx.drawImage(canvas,Math.round((page.width-drawW)/2),0,drawW,drawH);
+            ctx.drawImage(canvas,0,0,page.width,page.height);
             finalCanvas=page;
           }
           const png=await new Promise((resolve,reject)=>{
