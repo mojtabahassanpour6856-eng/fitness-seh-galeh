@@ -5125,32 +5125,28 @@ body.workout-output .empty-cell{display:none!important}
               body.style.setProperty('max-width','none','important');
               body.style.setProperty('overflow','visible','important');
               body.style.setProperty('box-sizing','border-box','important');
-              /* IRANSans is used ONLY for a downloaded workout PNG. Keep preview,
-                 print/PDF, and nutrition exports completely unchanged. Wait for each
-                 stylesheet before asking the browser to load the font faces; otherwise
-                 html2canvas can capture the fallback font on the first attempt. */
+              /* Shabnam is applied ONLY to the downloaded workout PNG.
+                 Preview, print/PDF, and all nutrition exports remain unchanged. */
               if(forceDownload && kind!=='meal'){
-                const iranCssFiles=['400.css','500.css','700.css','900.css'];
-                await Promise.all(iranCssFiles.map(file=>new Promise(resolve=>{
-                  const link=clonedDoc.createElement('link');
-                  link.rel='stylesheet';
-                  link.href='https://cdn.jsdelivr.net/npm/@akiarostami/iransans@latest/'+file;
-                  link.onload=()=>resolve(true);
-                  link.onerror=()=>resolve(false);
-                  clonedDoc.head.appendChild(link);
-                  setTimeout(()=>resolve(false),3500);
-                })));
-                const iranSansStyle=clonedDoc.createElement('style');
-                iranSansStyle.textContent='html body,html body *:not(.workout-group-plus){font-family:IRANSans,Tahoma,Arial,sans-serif!important}';
-                clonedDoc.head.appendChild(iranSansStyle);
+                const shabnamCss=clonedDoc.createElement('link');
+                shabnamCss.rel='stylesheet';
+                shabnamCss.href='https://cdnjs.cloudflare.com/ajax/libs/shabnam-font/5.0.1/font-face.min.css';
+                await new Promise(resolve=>{
+                  shabnamCss.onload=()=>resolve(true);
+                  shabnamCss.onerror=()=>resolve(false);
+                  clonedDoc.head.appendChild(shabnamCss);
+                  setTimeout(()=>resolve(false),5000);
+                });
+                const shabnamStyle=clonedDoc.createElement('style');
+                shabnamStyle.textContent='html body,html body *:not(.workout-group-plus){font-family:Shabnam,Tahoma,Arial,sans-serif!important}';
+                clonedDoc.head.appendChild(shabnamStyle);
                 try{
                   if(clonedDoc.fonts){
                     await Promise.race([
                       Promise.all([
-                        clonedDoc.fonts.load('400 16px IRANSans'),
-                        clonedDoc.fonts.load('500 16px IRANSans'),
-                        clonedDoc.fonts.load('700 16px IRANSans'),
-                        clonedDoc.fonts.load('900 16px IRANSans'),
+                        clonedDoc.fonts.load('400 16px Shabnam'),
+                        clonedDoc.fonts.load('500 16px Shabnam'),
+                        clonedDoc.fonts.load('700 16px Shabnam'),
                         clonedDoc.fonts.ready
                       ]),
                       new Promise(resolve=>setTimeout(resolve,5000))
@@ -5158,7 +5154,7 @@ body.workout-output .empty-cell{display:none!important}
                   }else{
                     await new Promise(resolve=>setTimeout(resolve,1200));
                   }
-                }catch(fontError){console.warn('IRANSans PNG font loading skipped:',fontError);}
+                }catch(fontError){console.warn('Shabnam PNG font loading skipped:',fontError);}
               }
               if(kind!=='meal'){
                 const grid=clonedDoc.querySelector('.session-grid');
