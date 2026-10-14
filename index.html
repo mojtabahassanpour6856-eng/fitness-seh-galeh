@@ -10058,17 +10058,17 @@ body.workout-output.workout-compact{
  }
  async function completeSession(day,button){
    if(busy)return;
-   var p=profile();if(!p||p.role!=='trainee'||!p.id)return;
+   var p=profile(),tid=p&&(p.trainee_id||p.id);if(!p||p.role!=='trainee'||!tid)return;
    busy=true;button.disabled=true;
    try{
-     var plans=await getApi('/trainee_workout_plans?trainee_id=eq.'+encodeURIComponent(p.id)+'&select=id,plan_date,created_at&order=created_at.desc&limit=1');
+     var plans=await getApi('/trainee_workout_plans?trainee_id=eq.'+encodeURIComponent(tid)+'&select=id,plan_date,created_at&order=created_at.desc&limit=1');
      var plan=plans&&plans[0];if(!plan)throw new Error('برنامه تمرینی پیدا نشد.');
      var cycle=weekFor(plan);if(cycle.week<1||cycle.week>4)throw new Error('دوره چهار هفته‌ای این برنامه به پایان رسیده است.');
      var dayKey=dateKey();
-     var path='/trainee_workout_day_logs?trainee_id=eq.'+encodeURIComponent(p.id)+'&workout_plan_id=eq.'+encodeURIComponent(plan.id)+'&workout_day=eq.'+encodeURIComponent(day)+'&completed_date=eq.'+encodeURIComponent(dayKey)+'&select=id';
+     var path='/trainee_workout_day_logs?trainee_id=eq.'+encodeURIComponent(tid)+'&workout_plan_id=eq.'+encodeURIComponent(plan.id)+'&workout_day=eq.'+encodeURIComponent(day)+'&completed_date=eq.'+encodeURIComponent(dayKey)+'&select=id';
      var existing=await getApi(path);
      if(existing&&existing.length)await writeApi('/trainee_workout_day_logs?id=eq.'+encodeURIComponent(existing[0].id),'PATCH',{is_completed:true,cycle_week:cycle.week,completed_at:new Date().toISOString()});
-     else await writeApi('/trainee_workout_day_logs','POST',{trainee_id:p.id,workout_plan_id:plan.id,workout_day:day,completed_date:dayKey,cycle_week:cycle.week,is_completed:true,completed_at:new Date().toISOString()});
+     else await writeApi('/trainee_workout_day_logs','POST',{trainee_id:tid,workout_plan_id:plan.id,workout_day:day,completed_date:dayKey,cycle_week:cycle.week,is_completed:true,completed_at:new Date().toISOString()});
      lastSignature='';busy=false;await refresh();
    }catch(e){alert('ثبت مأموریت انجام نشد: '+(e&&e.message||String(e)));button.disabled=false;}
    finally{busy=false;}
@@ -10077,14 +10077,14 @@ body.workout-output.workout-compact{
    if(role()!=='trainee')return;
    var host=getHost();if(!host||!host.card)return;
    var box=ensureShell(host.card);
-   var p=profile();if(!p||!p.id){box.innerHTML='<h3>📊 گزارش هفتگی برنامه تمرینی</h3><p class="muted">برای نمایش گزارش، دوباره وارد حساب شاگرد شوید.</p>';return;}
+   var p=profile(),tid=p&&(p.trainee_id||p.id);if(!p||!tid){box.innerHTML='<h3>📊 گزارش هفتگی برنامه تمرینی</h3><p class="muted">برای نمایش گزارش، دوباره وارد حساب شاگرد شوید.</p>';return;}
    if(busy)return;
    try{
-     var plans=await getApi('/trainee_workout_plans?trainee_id=eq.'+encodeURIComponent(p.id)+'&select=id,plan_date,created_at&order=created_at.desc&limit=1');
+     var plans=await getApi('/trainee_workout_plans?trainee_id=eq.'+encodeURIComponent(tid)+'&select=id,plan_date,created_at&order=created_at.desc&limit=1');
      var plan=plans&&plans[0];
      if(!plan){box.innerHTML='<h3>📊 گزارش هفتگی برنامه تمرینی</h3><div class="grid2">'+[1,2,3,4].map(function(w){return '<div class="receipt-item"><b>هفته '+w+'</b><br>۰ جلسه ثبت‌شده</div>';}).join('')+'</div><p class="muted">هنوز برنامه تمرینی برای حساب شما ثبت نشده است.</p>';return;}
      var pair=await Promise.all([
-       getApi('/trainee_workout_day_logs?trainee_id=eq.'+encodeURIComponent(p.id)+'&workout_plan_id=eq.'+encodeURIComponent(plan.id)+'&select=workout_day,completed_date,is_completed,cycle_week&order=completed_date.desc'),
+       getApi('/trainee_workout_day_logs?trainee_id=eq.'+encodeURIComponent(tid)+'&workout_plan_id=eq.'+encodeURIComponent(plan.id)+'&select=workout_day,completed_date,is_completed,cycle_week&order=completed_date.desc'),
        getApi('/trainee_workout_exercises?workout_plan_id=eq.'+encodeURIComponent(plan.id)+'&select=training_day&order=sort_order.asc,created_at.asc')
      ]);
      var logs=pair[0]||[],rows=pair[1]||[];
