@@ -5020,6 +5020,33 @@ body.workout-output .empty-cell{display:none!important}
               });
               clonedDoc.querySelectorAll('.exercise-card,.exercise-unit').forEach(function(card){card.style.height='auto';card.style.minHeight='0';card.style.maxHeight='none';card.style.flex='0 0 auto';card.style.overflow='visible';card.style.breakInside='avoid';});
               const notes=clonedDoc.querySelector('.system-notes');if(notes){notes.style.marginTop='auto';notes.style.display='flex';notes.style.flexDirection='row';notes.style.flexWrap='wrap';notes.style.alignItems='center';notes.style.gap='6px 14px';notes.style.fontSize='14px';notes.style.lineHeight='1.7';notes.style.padding='9px 11px';Array.from(notes.children).forEach(function(item){item.style.display='inline-block';item.style.flex='0 1 auto';item.style.margin='0';});}
+              /* Re-apply large-page layout after generic export normalisation above;
+                 this is the actual cloned document captured by html2canvas. */
+              if(kind!=='meal'){
+                const body=clonedDoc.body;
+                const finalGrid=clonedDoc.querySelector('.session-grid');
+                const count=clonedDoc.querySelectorAll('.session-grid .session-cell').length;
+                const rows=Math.max(1,Math.ceil(count/2));
+                body.style.setProperty('min-height','1555px','important');
+                body.style.setProperty('padding','24px','important');
+                if(finalGrid){
+                  finalGrid.style.setProperty('display','grid','important');
+                  finalGrid.style.setProperty('grid-template-columns','repeat(2,minmax(0,1fr))','important');
+                  finalGrid.style.setProperty('grid-template-rows',`repeat(${rows},minmax(300px,1fr))`,'important');
+                  finalGrid.style.setProperty('grid-auto-rows','minmax(300px,auto)','important');
+                  finalGrid.style.setProperty('min-height',Math.max(960,rows*320)+'px','important');
+                  finalGrid.style.setProperty('height','auto','important');
+                  finalGrid.style.setProperty('max-height','none','important');
+                  finalGrid.style.setProperty('align-content','stretch','important');
+                  finalGrid.style.setProperty('align-items','stretch','important');
+                  finalGrid.style.setProperty('overflow','visible','important');
+                }
+                clonedDoc.querySelectorAll('.session-cell').forEach(function(el){el.style.setProperty('min-height','300px','important');el.style.setProperty('height','auto','important');el.style.setProperty('padding','12px','important');el.style.setProperty('overflow','visible','important');});
+                clonedDoc.querySelectorAll('.session-heading').forEach(function(el){el.style.setProperty('font-size','18px','important');el.style.setProperty('padding','8px 6px','important');});
+                clonedDoc.querySelectorAll('.exercise-card,.exercise-unit').forEach(function(el){el.style.setProperty('font-size','16px','important');el.style.setProperty('line-height','1.55','important');el.style.setProperty('padding','7px 5px','important');});
+                clonedDoc.querySelectorAll('.exercise-name').forEach(function(el){el.style.setProperty('font-size','16px','important');});
+                clonedDoc.querySelectorAll('.exercise-details').forEach(function(el){el.style.setProperty('font-size','14px','important');});
+              }
             }
           });
           const png=await new Promise((resolve,reject)=>{
