@@ -9886,234 +9886,119 @@ body.workout-output.workout-compact{
 })();
 </script>
 
-<script id="FITNESS_WORKOUT_WEEKLY_REPORT_BOTTOM_V1">
-/* Additive-only layout guard: keep the existing four-week workout report visible at the very bottom of the trainee workout card. */
-(function(){
-  'use strict';
-  if(window.__sehWorkoutWeeklyBottomV1)return;
-  window.__sehWorkoutWeeklyBottomV1=true;
-  function traineeRole(){
-    try{return !!(window.authProfile&&window.authProfile.role==='trainee');}
-    catch(e){return false;}
-  }
-  function keepReportAtBottom(){
-    if(!traineeRole())return;
-    var list=document.getElementById('workoutList');
-    if(!list)return;
-    var card=list.closest('.card');
-    if(!card)return;
-    var report=document.getElementById('workoutFourWeekSummary');
-    if(!report&&typeof window.__sehAttachWorkoutMissions==='function'){
-      try{window.__sehAttachWorkoutMissions();}catch(e){console.warn('Weekly workout report attach:',e);}
-      report=document.getElementById('workoutFourWeekSummary');
-    }
-    if(!report)return;
-    if(report.parentElement!==card||card.lastElementChild!==report)card.appendChild(report);
-    report.hidden=false;
-    report.removeAttribute('aria-hidden');
-    report.classList.remove('hide');
-    report.style.setProperty('display','block','important');
-    report.style.setProperty('visibility','visible','important');
-    report.style.setProperty('opacity','1','important');
-    report.style.setProperty('width','100%','important');
-    report.style.setProperty('margin-top','14px','important');
-    report.style.setProperty('clear','both','important');
-    report.style.setProperty('position','relative','important');
-    report.style.setProperty('z-index','1','important');
-  }
-  var queued=false;
-  function schedule(){
-    if(queued)return;
-    queued=true;
-    setTimeout(function(){queued=false;keepReportAtBottom();},180);
-  }
-  function observe(){
-    var list=document.getElementById('workoutList');
-    if(list&&window.MutationObserver&&!list.__sehWeeklyBottomObserver){
-      list.__sehWeeklyBottomObserver=true;
-      new MutationObserver(schedule).observe(list,{childList:true,subtree:true});
-    }
-    schedule();
-  }
-  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',observe,{once:true});
-  else observe();
-  [500,1200,2500,4500].forEach(function(ms){setTimeout(observe,ms);});
-  window.addEventListener('focus',schedule);
-})();
-</script>
-
-
-
-<script id="FITNESS_WORKOUT_WEEKLY_REPORT_BOTTOM_V2">
-/* Reliable trainee weekly report mount: uses lexical/global auth state, creates a visible fallback, then lets the existing loader replace it with database totals. */
-(function(){
-  'use strict';
-  if(window.__sehWorkoutWeeklyBottomV2)return;
-  window.__sehWorkoutWeeklyBottomV2=true;
-  function isTrainee(){
-    try{if(typeof authProfile!=='undefined'&&authProfile&&authProfile.role==='trainee')return true;}catch(e){}
-    return !!(window.authProfile&&window.authProfile.role==='trainee');
-  }
-  function mount(){
-    if(!isTrainee())return;
-    var list=document.getElementById('workoutList');
-    if(!list)return;
-    var card=list.closest('.card');
-    if(!card)return;
-    var report=document.getElementById('workoutFourWeekSummary');
-    if(!report){
-      report=document.createElement('section');
-      report.id='workoutFourWeekSummary';
-      report.className='card';
-      report.innerHTML='<h3>📊 گزارش هفتگی برنامه تمرینی</h3><p class="muted">گزارش چهار هفته‌ای برنامه تمرینی</p><div class="grid2">'+[1,2,3,4].map(function(w){return '<div class="receipt-item"><b>هفته '+w+'</b><br>در حال دریافت گزارش…</div>';}).join('')+'</div><p class="muted">پس از بارگذاری برنامه، آمار ثبت‌شده نمایش داده می‌شود.</p>';
-    }
-    if(report.parentElement!==card||card.lastElementChild!==report)card.appendChild(report);
-    report.hidden=false;
-    report.removeAttribute('aria-hidden');
-    report.classList.remove('hide');
-    report.style.setProperty('display','block','important');
-    report.style.setProperty('visibility','visible','important');
-    report.style.setProperty('opacity','1','important');
-    report.style.setProperty('width','100%','important');
-    report.style.setProperty('box-sizing','border-box','important');
-    report.style.setProperty('margin','14px 0 0','important');
-    report.style.setProperty('clear','both','important');
-    report.style.setProperty('position','relative','important');
-    report.style.setProperty('z-index','1','important');
-    if(typeof window.__sehAttachWorkoutMissions==='function'){
-      try{
-        var result=window.__sehAttachWorkoutMissions();
-        if(result&&typeof result.then==='function')result.then(function(){
-          var refreshed=document.getElementById('workoutFourWeekSummary');
-          if(refreshed&&refreshed.parentElement!==card)card.appendChild(refreshed);
-          if(refreshed){refreshed.hidden=false;refreshed.style.setProperty('display','block','important');}
-        }).catch(function(e){console.warn('Weekly workout report refresh:',e);});
-      }catch(e){console.warn('Weekly workout report refresh:',e);}
-    }
-  }
-  var queued=false;
-  function schedule(){
-    if(queued)return;
-    queued=true;
-    setTimeout(function(){queued=false;mount();},250);
-  }
-  function observe(){
-    var list=document.getElementById('workoutList');
-    if(list&&window.MutationObserver&&!list.__sehWeeklyBottomObserverV2){
-      list.__sehWeeklyBottomObserverV2=true;
-      new MutationObserver(schedule).observe(list,{childList:true,subtree:true});
-    }
-    schedule();
-  }
-  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',observe,{once:true});
-  else observe();
-  [700,1500,3000,5000,8000].forEach(function(ms){setTimeout(observe,ms);});
-  if(window.MutationObserver){
-    new MutationObserver(schedule).observe(document.body,{childList:true,subtree:true});
-  }
-  window.addEventListener('focus',schedule);
-})();
-</script>
-
-<script id="FITNESS_WORKOUT_WEEKLY_REPORT_DIRECT_V3">
-/* Independent trainee weekly report: uses the signed-in profile ID, not the coach-side currentClient state. */
+<script id="FITNESS_WORKOUT_WEEKLY_REPORT_STABLE_V4">
+/* Single stable weekly report. No body-wide observers and no competing report cards, preventing workout-section jumping. */
 (function(){
  'use strict';
- if(window.__sehWorkoutWeeklyDirectV3)return;
- window.__sehWorkoutWeeklyDirectV3=true;
- var busy=false,timer=null,lastSignature='';
- function role(){try{if(typeof authProfile!=='undefined'&&authProfile)return authProfile.role;}catch(e){}return window.authProfile&&window.authProfile.role;}
- function profile(){try{if(typeof authProfile!=='undefined'&&authProfile)return authProfile;}catch(e){}return window.authProfile||null;}
+ if(window.__sehWeeklyWorkoutStableV4)return;
+ window.__sehWeeklyWorkoutStableV4=true;
+ var timer=null,loading=false,lastPlanId=null;
+ function profile(){
+   try{if(typeof authProfile!=='undefined'&&authProfile)return authProfile;}catch(e){}
+   return window.authProfile||null;
+ }
+ function getRole(){var p=profile();return p&&p.role||null;}
+ function traineeId(){var p=profile();return p&&(p.trainee_id||p.id)||null;}
+ function apiGet(path){if(typeof sbGet==='function')return sbGet(path);return Promise.reject(new Error('اتصال پایگاه داده آماده نیست'));}
+ function apiWrite(path,method,body){if(typeof sbWrite==='function')return sbWrite(path,method,body);return Promise.reject(new Error('ثبت اطلاعات آماده نیست'));}
  function esc(v){return String(v==null?'':v).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});}
- function dateKey(){var d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
- function weekFor(plan){var start=String(plan.plan_date||plan.created_at||dateKey()).slice(0,10);var a=new Date(start+'T00:00:00Z'),b=new Date(dateKey()+'T00:00:00Z');var diff=Math.floor((b-a)/86400000);return {start:start,week:Math.floor(diff/7)+1};}
- function getApi(path){if(typeof sbGet==='function')return sbGet(path);return Promise.reject(new Error('دریافت اطلاعات پایگاه داده در دسترس نیست'));}
- function writeApi(path,method,body){if(typeof sbWrite==='function')return sbWrite(path,method,body);return Promise.reject(new Error('ثبت اطلاعات پایگاه داده در دسترس نیست'));}
- function getHost(){
+ function today(){var d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
+ function getCycle(plan){
+   var raw=String(plan.plan_date||plan.created_at||today()).slice(0,10);
+   var start=new Date(raw+'T00:00:00Z'),now=new Date(today()+'T00:00:00Z');
+   var diff=Math.floor((now-start)/86400000);
+   return {week:Math.floor(diff/7)+1};
+ }
+ function host(){
    var list=document.getElementById('workoutList');
    if(!list)return null;
-   return {list:list,card:list.closest('.card')};
+   var card=list.closest('.card');
+   return card?{list:list,card:card}:null;
  }
- function ensureShell(card){
-   var box=document.getElementById('sehTraineeWeeklyWorkoutReportV3');
-   if(!box){box=document.createElement('section');box.id='sehTraineeWeeklyWorkoutReportV3';box.className='card';}
-   if(box.parentElement!==card||card.lastElementChild!==box)card.appendChild(box);
+ function ensureReport(card){
+   var box=document.getElementById('workoutFourWeekSummary');
+   if(!box){box=document.createElement('section');box.id='workoutFourWeekSummary';box.className='card';}
+   if(box.parentElement!==card)card.appendChild(box);
    box.hidden=false;box.removeAttribute('aria-hidden');box.classList.remove('hide');
-   box.style.setProperty('display','block','important');box.style.setProperty('visibility','visible','important');
-   box.style.setProperty('opacity','1','important');box.style.setProperty('width','100%','important');
-   box.style.setProperty('box-sizing','border-box','important');box.style.setProperty('margin','14px 0 0','important');
-   box.style.setProperty('clear','both','important');box.style.setProperty('position','relative','important');box.style.setProperty('z-index','2','important');
+   box.style.setProperty('display','block','important');
+   box.style.setProperty('visibility','visible','important');
+   box.style.setProperty('opacity','1','important');
+   box.style.setProperty('width','100%','important');
+   box.style.setProperty('box-sizing','border-box','important');
+   box.style.setProperty('margin','14px 0 0','important');
+   box.style.setProperty('clear','both','important');
    return box;
  }
- function render(box,plan,logs,sessions){
-   var cycle=weekFor(plan);
+ function initial(box){
+   box.innerHTML='<h3>📊 گزارش هفتگی برنامه تمرینی</h3><div class="grid2">'+[1,2,3,4].map(function(w){return '<div class="receipt-item"><b>هفته '+w+'</b><br>در حال دریافت گزارش…</div>';}).join('')+'</div>';
+ }
+ async function markDone(day,button){
+   if(loading)return;
+   var tid=traineeId();if(getRole()!=='trainee'||!tid)return;
+   loading=true;button.disabled=true;
+   try{
+     var plans=await apiGet('/trainee_workout_plans?trainee_id=eq.'+encodeURIComponent(tid)+'&select=id,plan_date,created_at&order=created_at.desc&limit=1');
+     var plan=plans&&plans[0];if(!plan)throw new Error('برای حساب شما برنامه تمرینی پیدا نشد.');
+     var cycle=getCycle(plan);if(cycle.week<1||cycle.week>4)throw new Error('دوره چهار هفته‌ای این برنامه تمام شده است.');
+     var d=today();
+     var path='/trainee_workout_day_logs?trainee_id=eq.'+encodeURIComponent(tid)+'&workout_plan_id=eq.'+encodeURIComponent(plan.id)+'&workout_day=eq.'+encodeURIComponent(day)+'&completed_date=eq.'+encodeURIComponent(d)+'&select=id';
+     var found=await apiGet(path);
+     if(found&&found.length)await apiWrite('/trainee_workout_day_logs?id=eq.'+encodeURIComponent(found[0].id),'PATCH',{is_completed:true,cycle_week:cycle.week,completed_at:new Date().toISOString()});
+     else await apiWrite('/trainee_workout_day_logs','POST',{trainee_id:tid,workout_plan_id:plan.id,workout_day:day,completed_date:d,cycle_week:cycle.week,is_completed:true,completed_at:new Date().toISOString()});
+     await refresh(true);
+   }catch(e){alert('ثبت انجام جلسه ناموفق بود: '+(e&&e.message||String(e)));button.disabled=false;}
+   finally{loading=false;}
+ }
+ function paint(box,plan,logs,rows){
+   var cycle=getCycle(plan);
    var counts=[1,2,3,4].map(function(w){return new Set(logs.filter(function(x){return Number(x.cycle_week)===w&&x.is_completed===true;}).map(function(x){return String(x.workout_day);})).size;});
+   var sessions=Array.from(new Set(rows.map(function(x){return String(x.training_day||'').trim();}).filter(Boolean)));
    var controls=sessions.length?sessions.map(function(day){
-     var done=logs.some(function(x){return String(x.workout_day)===day&&x.completed_date===dateKey()&&x.is_completed===true;});
+     var done=logs.some(function(x){return String(x.workout_day)===day&&x.completed_date===today()&&x.is_completed===true;});
      var disabled=cycle.week<1||cycle.week>4||done;
-     return '<div class="receipt-item" style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-top:8px"><div><b>'+esc(day)+'</b><div class="muted" style="font-size:12px">'+(done?'✅ مأموریت امروز انجام شد':'ثبت انجام جلسه پس از تمرین')+'</div></div><button type="button" '+(disabled?'disabled':'')+' data-seh-weekly-done="'+esc(day)+'">'+(done?'✅ انجام شد':'مأموریت انجام شد')+'</button></div>';
+     return '<div class="receipt-item" style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-top:8px"><div><b>'+esc(day)+'</b><div class="muted" style="font-size:12px">'+(done?'✅ مأموریت امروز انجام شد':'پس از پایان این جلسه ثبت کن')+'</div></div><button type="button" '+(disabled?'disabled':'')+' data-seh-weekly-session="'+esc(day)+'">'+(done?'✅ انجام شد':'مأموریت انجام شد')+'</button></div>';
    }).join(''):'<p class="muted">هنوز جلسه‌ای در برنامه تمرینی ثبت نشده است.</p>';
-   box.innerHTML='<h3>📊 گزارش هفتگی برنامه تمرینی</h3><p class="muted" style="margin:4px 0 8px">برای ثبت پیشرفت، پس از پایان هر جلسه فقط یک بار «مأموریت انجام شد» را بزن؛ نیازی به ثبت تک‌تک حرکات نیست.</p><div class="grid2">'+counts.map(function(n,i){return '<div class="receipt-item"><b>هفته '+(i+1)+'</b><br>'+n+' جلسه ثبت‌شده</div>';}).join('')+'</div><p class="muted">'+(cycle.week>=1&&cycle.week<=4?'اکنون هفته '+cycle.week+' از ۴ است.':(cycle.week<1?'دوره هنوز شروع نشده است.':'دوره چهار هفته‌ای تمام شده است.'))+'</p><div class="seh-weekly-session-controls">'+controls+'</div>';
-   box.querySelectorAll('button[data-seh-weekly-done]').forEach(function(btn){btn.addEventListener('click',function(){completeSession(btn.getAttribute('data-seh-weekly-done'),btn);});});
+   box.innerHTML='<h3>📊 گزارش هفتگی برنامه تمرینی</h3><p class="muted" style="margin:4px 0 8px">برای ثبت پیشرفت، پس از پایان هر جلسه فقط یک بار دکمه همان جلسه را بزن؛ نیازی به ثبت تک‌تک حرکات نیست.</p><div class="grid2">'+counts.map(function(n,i){return '<div class="receipt-item"><b>هفته '+(i+1)+'</b><br>'+n+' جلسه ثبت‌شده</div>';}).join('')+'</div><p class="muted">'+(cycle.week>=1&&cycle.week<=4?'اکنون هفته '+cycle.week+' از ۴ است.':(cycle.week<1?'دوره هنوز شروع نشده است.':'دوره چهار هفته‌ای تمام شده است.'))+'</p><div class="seh-weekly-session-controls">'+controls+'</div>';
+   box.querySelectorAll('button[data-seh-weekly-session]').forEach(function(btn){btn.addEventListener('click',function(){markDone(btn.getAttribute('data-seh-weekly-session'),btn);});});
  }
- async function completeSession(day,button){
-   if(busy)return;
-   var p=profile(),tid=p&&(p.trainee_id||p.id);if(!p||p.role!=='trainee'||!tid)return;
-   busy=true;button.disabled=true;
+ async function refresh(force){
+   if(getRole()!=='trainee'||loading)return;
+   var h=host();if(!h)return;
+   var box=ensureReport(h.card);
+   var tid=traineeId();
+   if(!tid){initial(box);box.insertAdjacentHTML('beforeend','<p class="muted">برای نمایش گزارش، دوباره وارد حساب شاگرد شوید.</p>');return;}
    try{
-     var plans=await getApi('/trainee_workout_plans?trainee_id=eq.'+encodeURIComponent(tid)+'&select=id,plan_date,created_at&order=created_at.desc&limit=1');
-     var plan=plans&&plans[0];if(!plan)throw new Error('برنامه تمرینی پیدا نشد.');
-     var cycle=weekFor(plan);if(cycle.week<1||cycle.week>4)throw new Error('دوره چهار هفته‌ای این برنامه به پایان رسیده است.');
-     var dayKey=dateKey();
-     var path='/trainee_workout_day_logs?trainee_id=eq.'+encodeURIComponent(tid)+'&workout_plan_id=eq.'+encodeURIComponent(plan.id)+'&workout_day=eq.'+encodeURIComponent(day)+'&completed_date=eq.'+encodeURIComponent(dayKey)+'&select=id';
-     var existing=await getApi(path);
-     if(existing&&existing.length)await writeApi('/trainee_workout_day_logs?id=eq.'+encodeURIComponent(existing[0].id),'PATCH',{is_completed:true,cycle_week:cycle.week,completed_at:new Date().toISOString()});
-     else await writeApi('/trainee_workout_day_logs','POST',{trainee_id:tid,workout_plan_id:plan.id,workout_day:day,completed_date:dayKey,cycle_week:cycle.week,is_completed:true,completed_at:new Date().toISOString()});
-     lastSignature='';busy=false;await refresh();
-   }catch(e){alert('ثبت مأموریت انجام نشد: '+(e&&e.message||String(e)));button.disabled=false;}
-   finally{busy=false;}
- }
- async function refresh(){
-   if(role()!=='trainee')return;
-   var host=getHost();if(!host||!host.card)return;
-   var box=ensureShell(host.card);
-   var p=profile(),tid=p&&(p.trainee_id||p.id);if(!p||!tid){box.innerHTML='<h3>📊 گزارش هفتگی برنامه تمرینی</h3><p class="muted">برای نمایش گزارش، دوباره وارد حساب شاگرد شوید.</p>';return;}
-   if(busy)return;
-   try{
-     var plans=await getApi('/trainee_workout_plans?trainee_id=eq.'+encodeURIComponent(tid)+'&select=id,plan_date,created_at&order=created_at.desc&limit=1');
+     var plans=await apiGet('/trainee_workout_plans?trainee_id=eq.'+encodeURIComponent(tid)+'&select=id,plan_date,created_at&order=created_at.desc&limit=1');
      var plan=plans&&plans[0];
-     if(!plan){box.innerHTML='<h3>📊 گزارش هفتگی برنامه تمرینی</h3><div class="grid2">'+[1,2,3,4].map(function(w){return '<div class="receipt-item"><b>هفته '+w+'</b><br>۰ جلسه ثبت‌شده</div>';}).join('')+'</div><p class="muted">هنوز برنامه تمرینی برای حساب شما ثبت نشده است.</p>';return;}
-     var pair=await Promise.all([
-       getApi('/trainee_workout_day_logs?trainee_id=eq.'+encodeURIComponent(tid)+'&workout_plan_id=eq.'+encodeURIComponent(plan.id)+'&select=workout_day,completed_date,is_completed,cycle_week&order=completed_date.desc'),
-       getApi('/trainee_workout_exercises?workout_plan_id=eq.'+encodeURIComponent(plan.id)+'&select=training_day&order=sort_order.asc,created_at.asc')
+     if(!plan){box.innerHTML='<h3>📊 گزارش هفتگی برنامه تمرینی</h3><div class="grid2">'+[1,2,3,4].map(function(w){return '<div class="receipt-item"><b>هفته '+w+'</b><br>۰ جلسه ثبت‌شده</div>';}).join('')+'</div><p class="muted">هنوز برنامه تمرینی برای این حساب ثبت نشده است.</p>';return;}
+     if(!force&&lastPlanId===String(plan.id)&&box.querySelector('[data-seh-weekly-session]'))return;
+     var results=await Promise.all([
+       apiGet('/trainee_workout_day_logs?trainee_id=eq.'+encodeURIComponent(tid)+'&workout_plan_id=eq.'+encodeURIComponent(plan.id)+'&select=workout_day,completed_date,is_completed,cycle_week&order=completed_date.desc'),
+       apiGet('/trainee_workout_exercises?workout_plan_id=eq.'+encodeURIComponent(plan.id)+'&select=training_day&order=sort_order.asc,created_at.asc')
      ]);
-     var logs=pair[0]||[],rows=pair[1]||[];
-     var sessions=Array.from(new Set(rows.map(function(x){return String(x.training_day||'').trim();}).filter(Boolean)));
-     var sig=String(plan.id)+'|'+logs.length+'|'+rows.length+'|'+dateKey()+'|'+sessions.join(',');
-     if(sig!==lastSignature||!document.getElementById('sehTraineeWeeklyWorkoutReportV3')?.querySelector('h3')){render(box,plan,logs,sessions);lastSignature=sig;}
-     if(box.parentElement!==host.card||host.card.lastElementChild!==box)host.card.appendChild(box);
+     paint(box,plan,results[0]||[],results[1]||[]);
+     lastPlanId=String(plan.id);
    }catch(e){
-     console.warn('Student weekly workout report failed:',e);
-     box.innerHTML='<h3>📊 گزارش هفتگی برنامه تمرینی</h3><p class="muted">گزارش در دسترس نیست؛ اتصال را بررسی کنید و دوباره تلاش کنید.</p>';
+     console.warn('Weekly workout report:',e);
+     box.innerHTML='<h3>📊 گزارش هفتگی برنامه تمرینی</h3><p class="muted">بخش گزارش نمایش داده شده، اما آمار از پایگاه داده دریافت نشد. اتصال یا دسترسی حساب را بررسی کنید.</p>';
    }
  }
- function schedule(){if(timer)clearTimeout(timer);timer=setTimeout(function(){timer=null;refresh();},350);}
- function install(){
-   var host=getHost();
-   if(host&&host.list&&!host.list.__sehWeeklyReportDirectV3Observer&&window.MutationObserver){
-     host.list.__sehWeeklyReportDirectV3Observer=true;
-     new MutationObserver(schedule).observe(host.list,{childList:true,subtree:true});
-   }
-   schedule();
+ function schedule(force){if(timer)clearTimeout(timer);timer=setTimeout(function(){timer=null;refresh(!!force);},250);}
+ function install(){if(getRole()==='trainee'){var h=host();if(h){ensureReport(h.card);schedule(false);}}}
+ /* Disable the legacy competing report renderer; the coach's separate progress report remains intact. */
+ window.__sehAttachWorkoutMissions=function(){return Promise.resolve();};
+ var oldDash=window.dashOpen;
+ if(typeof oldDash==='function'&&!window.__sehStableWeeklyDashV4){
+   window.dashOpen=function(section){var result=oldDash.apply(this,arguments);if(section==='workout')setTimeout(install,180);return result;};
+   window.__sehStableWeeklyDashV4=true;
+ }
+ var oldFinish=window.finishLogin;
+ if(typeof oldFinish==='function'&&!window.__sehStableWeeklyLoginV4){
+   window.finishLogin=async function(){var result=await oldFinish.apply(this,arguments);setTimeout(install,220);return result;};
+   window.__sehStableWeeklyLoginV4=true;
  }
  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',install,{once:true});else install();
- [600,1400,2600,4500,8000].forEach(function(ms){setTimeout(install,ms);});
- if(window.MutationObserver)new MutationObserver(schedule).observe(document.body,{childList:true,subtree:true});
- window.addEventListener('focus',schedule);
- var oldDash=window.dashOpen;
- if(typeof oldDash==='function'&&!window.__sehWeeklyReportDashWrappedV3){
-   window.dashOpen=function(section){var result=oldDash.apply(this,arguments);if(section==='workout')setTimeout(install,120);return result;};
-   window.__sehWeeklyReportDashWrappedV3=true;
- }
+ [800,1800,3500,6500].forEach(function(ms){setTimeout(install,ms);});
+ window.addEventListener('focus',function(){schedule(true);});
 })();
 </script>
