@@ -5098,8 +5098,23 @@ body.workout-output .empty-cell{display:none!important}
               }
             }
           });
+          /* A4 portrait export: contain the full rendered plan in a fixed A4-ratio canvas so the final exercises and footer are never cropped. */
+          let finalCanvas=canvas;
+          if(kind!=='meal'){
+            const page=doc.createElement('canvas');
+            page.width=1240; page.height=1754;
+            const ctx=page.getContext('2d');
+            if(!ctx)throw new Error('ساخت صفحه A4 ممکن نشد.');
+            ctx.fillStyle='#ffffff';ctx.fillRect(0,0,page.width,page.height);
+            const sourceW=Math.max(1,canvas.width),sourceH=Math.max(1,canvas.height);
+            const scale=Math.min(page.width/sourceW,page.height/sourceH);
+            const drawW=Math.max(1,Math.round(sourceW*scale)),drawH=Math.max(1,Math.round(sourceH*scale));
+            ctx.imageSmoothingEnabled=true;ctx.imageSmoothingQuality='high';
+            ctx.drawImage(canvas,Math.round((page.width-drawW)/2),Math.round((page.height-drawH)/2),drawW,drawH);
+            finalCanvas=page;
+          }
           const png=await new Promise((resolve,reject)=>{
-            canvas.toBlob(blob=>blob?resolve(blob):reject(new Error('مرورگر نتوانست تصویر PNG بسازد.')),'image/png');
+            finalCanvas.toBlob(blob=>blob?resolve(blob):reject(new Error('مرورگر نتوانست تصویر PNG بسازد.')),'image/png');
           });
           const safeName=String(trainee.name||'شاگرد').replace(/[\\/:*?"<>|]/g,'_');
           const imageFile=new File([png],(kind==='meal'?'برنامه_غذایی_':'برنامه_تمرینی_')+safeName+'.png',{type:'image/png'});
