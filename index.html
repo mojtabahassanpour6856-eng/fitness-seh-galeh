@@ -9539,3 +9539,57 @@ body.workout-output.workout-compact{
   window.renderRecipeFoodLines=function(items){return window.groupNutritionRecipeItems(items).map(g=>{if(!g.recipe)return g.items.map(x=>foodLine(x)).join('');const totals=g.items.reduce((a,x)=>{const m=foodMetrics(x.food||{},x.amount,x.unit);if(m.valid){a.cal+=m.cal;a.pro+=m.pro;a.carb+=m.carb;a.fat+=m.fat;a.count++;}return a;},{cal:0,pro:0,carb:0,fat:0,count:0});const parts=g.items.map(x=>'<span>'+esc(String(x.amount??''))+' '+esc(x.unit||'گرم')+' '+esc((x.food||{}).name||'ماده')+'</span>').join(' <b>+</b> ');const deletes=g.items.map(x=>'<button type="button" class="mini danger" title="حذف '+esc((x.food||{}).name||'ماده')+'" onclick="deleteMealFood(\''+String(x.id)+'\')">حذف '+esc((x.food||{}).name||'ماده')+'</button>').join(' ');return '<div class="food-line"><div style="min-width:0;flex:1"><div class="food-name">'+esc(g.name)+' ('+parts+')</div><div class="food-meta">'+(totals.count===g.items.length?'🔥 '+totals.cal.toFixed(0)+' kcal | P '+totals.pro.toFixed(1)+' | C '+totals.carb.toFixed(1)+' | F '+totals.fat.toFixed(1):'⚠️ اطلاعات تغذیه‌ای یک یا چند ماده ناقص است')+'</div><div class="row" style="flex-wrap:wrap;gap:4px;margin-top:5px">'+deletes+'</div></div></div>';}).join('');};
 })();
 </script>
+
+
+<script id="STUDENT_MEAL_INTERACTIVE_ORDER_V1">
+/* Reorder only the trainee's checkable meal list; keep the printable meal card and coach/database order untouched. */
+(function(){
+ 'use strict';
+ function norm(v){
+  return String(v||'').replace(/[يى]/g,'ی').replace(/ك/g,'ک').replace(/[\u064B-\u065F\u0670]/g,'').replace(/[\u200c\u200f\u202a-\u202e]/g,'').replace(/\s+/g,' ').trim().toLowerCase();
+ }
+ function ordinal(name){
+  const n=norm(name);
+  if(/(?:سوم|سومین|ثالث|\b3\b|۳|٣)/.test(n))return 3;
+  if(/(?:دوم|دومین|ثانی|\b2\b|۲|٢)/.test(n))return 2;
+  if(/(?:اول|اولین|یکم|\b1\b|۱|١)/.test(n))return 1;
+  return 1;
+ }
+ function rank(name,index){
+  const n=norm(name),ord=ordinal(n);
+  if(/صبحانه/.test(n))return [10,ord,index];
+  if(/میان وعده|میان‌وعده|میان‌وعده/.test(n)){
+   if(/عصر|بعدازظهر/.test(n))return [40,ord,index];
+   if(/صبح|صبحگاهی/.test(n))return [20,ord,index];
+   return [20,ord,index];
+  }
+  if(/ناشتا/.test(n))return [5,ord,index];
+  if(/ناهار|ظهر/.test(n))return [30,ord,index];
+  if(/عصرانه|میان وعده عصر|میان‌وعده عصر/.test(n))return [40,ord,index];
+  if(/شام|شامگاه/.test(n))return [50,ord,index];
+  if(/قبل خواب|پیش از خواب|شبانه|پیشخواب/.test(n))return [60,ord,index];
+  return [70,index,index];
+ }
+ const old=window.renderStudentMeals;
+ if(typeof old!=='function'||window.__studentMealInteractiveOrderWrapped)return;
+ window.renderStudentMeals=async function(meals,p){
+  const result=await old.apply(this,arguments);
+  try{
+   const list=document.getElementById('studentMealList');
+   const input=Array.isArray(meals)?meals:[];
+   if(!list||!input.length)return result;
+   const cards=Array.from(list.querySelectorAll(':scope > .student-meal'));
+   if(cards.length!==input.length)return result;
+   const ids=Array.isArray(window.__sehMealIds)?window.__sehMealIds.slice():input.map(m=>m.id);
+   const data=Array.isArray(window.__sehMealData)?window.__sehMealData.slice():input.slice();
+   const order=input.map((m,i)=>({i,name:m.meal_name||'',card:cards[i]}))
+     .sort((a,b)=>{const x=rank(a.name,a.i),y=rank(b.name,b.i);return x[0]-y[0]||x[1]-y[1]||x[2]-y[2];});
+   order.forEach(x=>list.appendChild(x.card));
+   if(ids.length===input.length)window.__sehMealIds=order.map(x=>ids[x.i]);
+   if(data.length===input.length)window.__sehMealData=order.map(x=>data[x.i]);
+  }catch(e){console.warn('ترتیب وعده‌های تعاملی شاگرد اصلاح نشد:',e);}
+  return result;
+ };
+ window.__studentMealInteractiveOrderWrapped=true;
+})();
+</script>
