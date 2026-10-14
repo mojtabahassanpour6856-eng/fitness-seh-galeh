@@ -5253,16 +5253,18 @@ body.workout-output .empty-cell{display:none!important}
                 }
               }catch(cropError){console.warn('PNG whitespace trim skipped:',cropError);}
             }
-            /* Fit width first so the workout table reaches both sides of the A4 printable
-               area. If its content is taller than the page, preserve the top and bottom by
-               using contain; otherwise use the page width and keep the typography undistorted. */
+            /* Fill the A4 width even when a long 5- or 6-session plan must be fitted
+               by height. The old contain logic scaled both dimensions equally in that case,
+               leaving wide blank gutters. Keep the height-based fit to preserve every exercise
+               and footer, but use the full page width; shorter plans are width-fitted normally. */
             const widthScale=page.width/cropW;
             const heightAtWidth=cropH*widthScale;
-            const scale=heightAtWidth<=page.height ? widthScale : page.height/cropH;
-            const drawW=Math.max(1,Math.round(cropW*scale));
+            const fitByHeight=heightAtWidth>page.height;
+            const scale=fitByHeight ? page.height/cropH : widthScale;
+            const drawW=page.width;
             const drawH=Math.max(1,Math.round(cropH*scale));
             ctx.imageSmoothingEnabled=true;ctx.imageSmoothingQuality='high';
-            ctx.drawImage(canvas,cropX,cropY,cropW,cropH,Math.round((page.width-drawW)/2),Math.round((page.height-drawH)/2),drawW,drawH);
+            ctx.drawImage(canvas,cropX,cropY,cropW,cropH,0,Math.round((page.height-drawH)/2),drawW,drawH);
             finalCanvas=page;
           }
           const png=await new Promise((resolve,reject)=>{
