@@ -5126,19 +5126,16 @@ body.workout-output .empty-cell{display:none!important}
               body.style.setProperty('overflow','visible','important');
               body.style.setProperty('box-sizing','border-box','important');
               /* Shabnam is applied ONLY to the downloaded workout PNG.
-                 Preview, print/PDF, and all nutrition exports remain unchanged. */
+                 Use explicit absolute font URLs so html2canvas can load the font
+                 inside its cloned document; all other outputs stay untouched. */
               if(forceDownload && kind!=='meal'){
-                const shabnamCss=clonedDoc.createElement('link');
-                shabnamCss.rel='stylesheet';
-                shabnamCss.href='https://cdnjs.cloudflare.com/ajax/libs/shabnam-font/5.0.1/font-face.min.css';
-                await new Promise(resolve=>{
-                  shabnamCss.onload=()=>resolve(true);
-                  shabnamCss.onerror=()=>resolve(false);
-                  clonedDoc.head.appendChild(shabnamCss);
-                  setTimeout(()=>resolve(false),5000);
-                });
                 const shabnamStyle=clonedDoc.createElement('style');
-                shabnamStyle.textContent='html body,html body *:not(.workout-group-plus){font-family:Shabnam,Tahoma,Arial,sans-serif!important}';
+                shabnamStyle.textContent=`
+                  @font-face{font-family:'Shabnam';src:url('https://cdnjs.cloudflare.com/ajax/libs/shabnam-font/5.0.1/Shabnam.woff2') format('woff2');font-weight:400;font-style:normal;font-display:swap}
+                  @font-face{font-family:'Shabnam';src:url('https://cdnjs.cloudflare.com/ajax/libs/shabnam-font/5.0.1/Shabnam-Medium.woff2') format('woff2');font-weight:500;font-style:normal;font-display:swap}
+                  @font-face{font-family:'Shabnam';src:url('https://cdnjs.cloudflare.com/ajax/libs/shabnam-font/5.0.1/Shabnam-Bold.woff2') format('woff2');font-weight:700;font-style:normal;font-display:swap}
+                  html body,html body *:not(.workout-group-plus){font-family:'Shabnam',Tahoma,Arial,sans-serif!important}
+                `;
                 clonedDoc.head.appendChild(shabnamStyle);
                 try{
                   if(clonedDoc.fonts){
@@ -5149,10 +5146,10 @@ body.workout-output .empty-cell{display:none!important}
                         clonedDoc.fonts.load('700 16px Shabnam'),
                         clonedDoc.fonts.ready
                       ]),
-                      new Promise(resolve=>setTimeout(resolve,5000))
+                      new Promise(resolve=>setTimeout(resolve,8000))
                     ]);
                   }else{
-                    await new Promise(resolve=>setTimeout(resolve,1200));
+                    await new Promise(resolve=>setTimeout(resolve,1800));
                   }
                 }catch(fontError){console.warn('Shabnam PNG font loading skipped:',fontError);}
               }
