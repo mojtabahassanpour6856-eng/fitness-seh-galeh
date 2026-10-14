@@ -9715,7 +9715,7 @@ body.workout-output.workout-compact{
       standalone.id=id;
       standalone.className='smpp-standalone-plan';
       standalone.innerHTML='<div class="smpp-head"><div class="smpp-brand">باشگاه فیتنس سه‌قلعه</div><div class="smpp-coach">مربی مجتبی</div><div class="smpp-title">'+title+'</div></div><div class="smpp-content"><div class="smpp-standalone-body"></div></div><div class="smpp-actions"><button type="button" class="smpp-standalone-download">'+buttonLabel+'</button><p class="smpp-status smpp-standalone-status"></p></div>';
-      card.insertAdjacentElement('afterend',standalone);
+      const insertAfter=(id==='smppFastingPrintablePlan'&&document.getElementById('smppDietPrintablePlan'))?document.getElementById('smppDietPrintablePlan'):card;insertAfter.insertAdjacentElement('afterend',standalone);
       standalone.querySelector('button').addEventListener('click',()=>downloadStandaloneImage(standalone,fileName,buttonLabel));
      }
      const target=standalone.querySelector('.smpp-standalone-body');
