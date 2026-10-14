@@ -5046,39 +5046,45 @@ body.workout-output .empty-cell{display:none!important}
                with slightly tighter typography and card spacing so the complete plan
                remains balanced on one page without changing 3- or 4-session exports. */
             const realSessionCount=doc.querySelectorAll('.session-grid .session-cell:not(.empty-cell)').length;
-            if(realSessionCount===5){
+            if(realSessionCount===5 || realSessionCount===6){
+              /* Five/six-session plans need a more compact vertical layout so the entire
+                 content fits A4 at its natural proportions. Only inner spacing/card sizing
+                 changes; header, outer frame, session order and footer remain untouched. */
+              const isSixSessionPlan=realSessionCount===6;
               doc.querySelectorAll('.session-cell').forEach(el=>{
-                setImportant(el,'padding','8px');
+                setImportant(el,'padding',isSixSessionPlan?'6px':'8px');
                 setImportant(el,'border-radius','8px');
+                setImportant(el,'min-height',isSixSessionPlan?'230px':'245px');
               });
+              setImportant(doc.querySelector('.session-grid'),'min-height',isSixSessionPlan?'720px':'760px');
               doc.querySelectorAll('.session-heading').forEach(el=>{
-                setImportant(el,'font-size','19px');
-                setImportant(el,'line-height','1.35');
-                setImportant(el,'padding','6px 4px');
+                setImportant(el,'font-size',isSixSessionPlan?'17px':'19px');
+                setImportant(el,'line-height','1.3');
+                setImportant(el,'padding',isSixSessionPlan?'5px 3px':'6px 4px');
               });
               doc.querySelectorAll('.exercise-card,.exercise-unit').forEach(el=>{
-                setImportant(el,'font-size','18px');
-                setImportant(el,'line-height','1.35');
-                setImportant(el,'padding','5px 3px');
+                setImportant(el,'font-size',isSixSessionPlan?'16px':'18px');
+                setImportant(el,'line-height','1.3');
+                setImportant(el,'padding',isSixSessionPlan?'4px 2px':'5px 3px');
               });
-              doc.querySelectorAll('.exercise-name').forEach(el=>setImportant(el,'font-size','18px'));
+              doc.querySelectorAll('.exercise-name').forEach(el=>setImportant(el,'font-size',isSixSessionPlan?'16px':'18px'));
               doc.querySelectorAll('.exercise-details').forEach(el=>{
-                setImportant(el,'font-size','16px');
-                setImportant(el,'line-height','1.4');
-                setImportant(el,'gap','3px 6px');
+                setImportant(el,'font-size',isSixSessionPlan?'14px':'16px');
+                setImportant(el,'line-height','1.3');
+                setImportant(el,'gap','3px 5px');
               });
               doc.querySelectorAll('.exercise-details .rx').forEach(el=>{
-                setImportant(el,'font-size','20px');
-                setImportant(el,'padding','2px 6px');
+                setImportant(el,'font-size',isSixSessionPlan?'17px':'20px');
+                setImportant(el,'padding','2px 5px');
               });
               doc.querySelectorAll('.exercise-details .rest,.exercise-details .sys').forEach(el=>{
-                setImportant(el,'font-size','16px');
+                setImportant(el,'font-size',isSixSessionPlan?'14px':'16px');
               });
               doc.querySelectorAll('.plan-meta,.plan-meta *, .workout-plan-description, .system-notes, .system-notes *, .exercise-extra').forEach(el=>{
-                setImportant(el,'font-size','15px');
-                setImportant(el,'line-height','1.4');
+                setImportant(el,'font-size',isSixSessionPlan?'13px':'15px');
+                setImportant(el,'line-height','1.3');
               });
-              doc.querySelectorAll('.exercise-extra').forEach(el=>setImportant(el,'margin-top','3px'));
+              doc.querySelectorAll('.exercise-extra').forEach(el=>setImportant(el,'margin-top','2px'));
             }
           }
           setImportant(doc.documentElement,'width',captureWidth+'px');
@@ -5292,18 +5298,16 @@ body.workout-output .empty-cell{display:none!important}
                 }
               }catch(cropError){console.warn('PNG whitespace trim skipped:',cropError);}
             }
-            /* Fill the A4 width even when a long 5- or 6-session plan must be fitted
-               by height. The old contain logic scaled both dimensions equally in that case,
-               leaving wide blank gutters. Keep the height-based fit to preserve every exercise
-               and footer, but use the full page width; shorter plans are width-fitted normally. */
-            const widthScale=page.width/cropW;
-            const heightAtWidth=cropH*widthScale;
-            const fitByHeight=heightAtWidth>page.height;
-            const scale=fitByHeight ? page.height/cropH : widthScale;
-            const drawW=page.width;
+            /* Preserve the natural aspect ratio of the captured text and cards.
+               Long plans are compacted in the export layout before capture; never stretch
+               the finished bitmap horizontally to fill A4, because that distorts Persian glyphs. */
+            const scale=Math.min(page.width/cropW,page.height/cropH);
+            const drawW=Math.max(1,Math.round(cropW*scale));
             const drawH=Math.max(1,Math.round(cropH*scale));
+            const drawX=Math.round((page.width-drawW)/2);
+            const drawY=Math.round((page.height-drawH)/2);
             ctx.imageSmoothingEnabled=true;ctx.imageSmoothingQuality='high';
-            ctx.drawImage(canvas,cropX,cropY,cropW,cropH,0,Math.round((page.height-drawH)/2),drawW,drawH);
+            ctx.drawImage(canvas,cropX,cropY,cropW,cropH,drawX,drawY,drawW,drawH);
             finalCanvas=page;
           }
           const png=await new Promise((resolve,reject)=>{
