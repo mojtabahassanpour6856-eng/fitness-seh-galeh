@@ -5126,12 +5126,6 @@ body.workout-output .empty-cell{display:none!important}
               body.style.setProperty('overflow','visible','important');
               body.style.setProperty('box-sizing','border-box','important');
               if(kind!=='meal'){
-                /* Enlarge the superset/triset plus sign only in the cloned PNG capture,
-                   leaving the export preview and print/PDF layout at the normal text size. */
-                clonedDoc.querySelectorAll('.workout-group-plus').forEach(el=>{
-                  el.style.setProperty('font-size','2.5em','important');
-                  el.style.setProperty('min-width','1.5em','important');
-                });
                 const grid=clonedDoc.querySelector('.session-grid');
                 if(grid){
                   grid.style.setProperty('height','auto','important');
