@@ -5973,7 +5973,7 @@ else loadCoachExerciseListsWhenReady();
    const rows=Array.isArray(workoutExercisesCache)?workoutExercisesCache:[];
    const sessionMap=new Map();
    rows.forEach((row,index)=>{
-    const day=String(row.training_day||"").trim()||"جلسه "+(index+1);
+    const day=String(row.training_day||"").trim()||"جلسه بدون نام";
     if(!sessionMap.has(day))sessionMap.set(day,[]);
     sessionMap.get(day).push(row);
    });
