@@ -2212,12 +2212,32 @@ window.loadDashboard = loadDashboard;
     const authPhone=phoneNorm(user.phone||'');
     let rows=[];
     try{rows=await sbGet(`/trainees?auth_user_id=eq.${encodeURIComponent(user.id)}&select=*&limit=1`);}catch(e){console.warn('auth_user_id lookup failed',e);}
-    if(!rows.length && authPhone){
-      try{rows=await sbGet(`/trainees?phone_normalized=eq.${encodeURIComponent(authPhone)}&select=*&limit=2`);}catch(e){console.warn('phone_normalized lookup failed',e);}
-    }
+    // Support legacy phone formats and records saved before phone_normalized existed.
     if(!rows.length && authPhone){
       const localPhone=authPhone.startsWith('+98')?'0'+authPhone.slice(3):authPhone;
-      try{rows=await sbGet(`/trainees?phone=eq.${encodeURIComponent(localPhone)}&select=*&limit=2`);}catch(e){console.warn('phone lookup failed',e);}
+      const digits=authPhone.replace(/\D/g,'');
+      const candidates=[...new Set([authPhone,localPhone,digits,digits.startsWith('98')?'0'+digits.slice(2):'',digits.startsWith('98')?'+'+digits:'',digits.startsWith('98')?'00'+digits:'',localPhone.replace(/^0/,'+98'),localPhone.replace(/^0/,'98'),localPhone.replace(/^0/,'0098')].filter(Boolean))];
+      const found=new Map();
+      for(const candidate of candidates){
+        for(const column of ['phone_normalized','phone']){
+          try{
+            const matches=await sbGet(`/trainees?${column}=eq.${encodeURIComponent(candidate)}&select=*&limit=3`);
+            for(const row of (matches||[]))if(row && row.id)found.set(String(row.id),row);
+          }catch(e){console.warn(column+' lookup failed',e);}
+        }
+        if(found.size>1)break;
+      }
+      const normDigits=v=>String(v||'').replace(/[۰-۹]/g,d=>'۰۱۲۳۴۵۶۷۸۹'.indexOf(d)).replace(/[٠-٩]/g,d=>'٠١٢٣٤٥٦٧٨٩'.indexOf(d)).replace(/\D/g,'').replace(/^0098/,'98');
+      const target=normDigits(authPhone);
+      const exact=[...found.values()].filter(row=>{
+        return [row.phone_normalized,row.phone].filter(Boolean).some(v=>{
+          const n=normDigits(v);
+          const a=n.startsWith('98')?n.slice(2):n.replace(/^0/,'');
+          const b=target.startsWith('98')?target.slice(2):target.replace(/^0/,'');
+          return n===target || a===b;
+        });
+      });
+      rows=exact.length?exact:[...found.values()];
     }
     if(rows.length>1){showAuthError('این شماره موبایل برای بیش از یک شاگرد ثبت شده است. ابتدا شماره‌های تکراری را در پنل مربی اصلاح کنید.');await AUTH_SUPABASE.auth.signOut();return;}
     if(!rows.length){showAuthError('این شماره موبایل به هیچ شاگردی متصل نیست. ابتدا شماره شاگرد را در پنل مربی ثبت کنید.');await AUTH_SUPABASE.auth.signOut();return;}
