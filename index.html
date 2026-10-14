@@ -8752,3 +8752,117 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
  [300,900,1800,3500,7000].forEach(t=>setTimeout(run,t));
 })();
 </script>
+
+<style id="STUDENT_DIET_PRINTABLE_MEAL_PLAN_STYLE_V1">
+#studentDietPrintablePlan{margin:14px 0;border:2px solid #c69b43;border-radius:16px;overflow:hidden;background:#fffdf7;color:#302719;box-shadow:0 5px 18px #00000018}
+#studentDietPrintablePlan .sdpp-head{position:relative;text-align:center;padding:18px 14px 14px;background:linear-gradient(130deg,#fff8e4,#ffe6a0 52%,#fffaf0);border-bottom:2px solid #c69b43}
+#studentDietPrintablePlan .sdpp-brand{font-size:20px;font-weight:1000;color:#714800;line-height:1.7}
+#studentDietPrintablePlan .sdpp-coach{font-size:13px;font-weight:800;color:#51401e}
+#studentDietPrintablePlan .sdpp-title{display:inline-block;margin-top:9px;padding:7px 16px;border-radius:9px;background:linear-gradient(110deg,#272727,#57482a,#b88728);color:#ffe39a;font-size:16px;font-weight:900}
+#studentDietPrintablePlan .sdpp-content{padding:12px}
+#studentDietPrintablePlan .sdpp-meta{display:flex;flex-wrap:wrap;gap:7px;margin-bottom:10px}
+#studentDietPrintablePlan .sdpp-chip{flex:1 1 120px;padding:8px;border:1px solid #d8bd76;border-radius:8px;background:#fff8e7;font-size:12px;line-height:1.8}
+#studentDietPrintablePlan .sdpp-meal{margin:10px 0;border:1.5px solid #b88728;border-radius:10px;overflow:hidden;background:#fff}
+#studentDietPrintablePlan .sdpp-meal-title{padding:9px 11px;background:linear-gradient(100deg,#272727,#4b412d 58%,#b88728);color:#ffe39a;font-weight:900;font-size:15px}
+#studentDietPrintablePlan .sdpp-meal-body{padding:9px 11px;line-height:2;font-size:14px;white-space:pre-wrap;overflow-wrap:anywhere}
+#studentDietPrintablePlan .sdpp-item{display:flex;justify-content:space-between;gap:10px;padding:7px 2px;border-bottom:1px solid #eee2c5}
+#studentDietPrintablePlan .sdpp-item:last-child{border-bottom:0}
+#studentDietPrintablePlan .sdpp-note{margin-top:10px;padding:10px;border:1px solid #d8bd76;border-radius:9px;background:#fffaf0;white-space:pre-wrap;line-height:1.9;font-size:13px}
+#studentDietPrintablePlan .sdpp-actions{display:flex;flex-wrap:wrap;gap:8px;padding:0 12px 12px}
+#studentDietPrintablePlan .sdpp-actions button{flex:1 1 150px;margin:0}
+#studentDietPrintablePlan .sdpp-status{width:100%;margin:0;font-size:12px;line-height:1.8}
+#studentDietPrintablePlan .sdpp-empty{padding:14px;text-align:center;line-height:1.9;color:#65542e}
+</style>
+<script id="STUDENT_DIET_PRINTABLE_MEAL_PLAN_V1">
+(function(){
+ 'use strict';
+ const $=id=>document.getElementById(id);
+ const PREFIX='رژیم‌غذایی::';
+ let lastLoadedId='',loading=false;
+ const esc=v=>String(v==null?'':v).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+ function traineeMode(){try{return typeof authProfile!=='undefined'&&authProfile&&authProfile.role==='trainee';}catch(e){return false;}}
+ function trainee(){try{return typeof currentClient!=='undefined'&&currentClient?currentClient:null;}catch(e){return null;}}
+ function mount(){
+   const host=$('mealStudentView');if(!host||$('studentDietPrintablePlan'))return;
+   const card=document.createElement('section');card.id='studentDietPrintablePlan';card.setAttribute('aria-live','polite');
+   card.innerHTML='<div class="sdpp-head"><div class="sdpp-brand">باشگاه فیتنس سه‌قلعه</div><div class="sdpp-coach">مربی مجتبی</div><div class="sdpp-title">🥗 برنامه غذایی اختصاصی من</div></div><div class="sdpp-content"><div class="sdpp-status" id="sdppStatus">برای دریافت برنامه غذایی، کمی صبر کنید…</div><div id="sdppBody"></div></div><div class="sdpp-actions"><button type="button" id="sdppDownload">🖼️ دانلود عکس برنامه غذایی</button><button type="button" class="secondary" id="sdppPrint">🖨️ چاپ / ذخیره PDF</button><button type="button" class="secondary" id="sdppRefresh">🔄 به‌روزرسانی</button><p id="sdppActionStatus" class="sdpp-status"></p></div>';
+   const first=host.querySelector('.card');if(first)first.insertAdjacentElement('afterend',card);else host.insertBefore(card,host.firstChild);
+   $('sdppRefresh').addEventListener('click',()=>load(true));
+   $('sdppDownload').addEventListener('click',()=>exportPlan('image'));
+   $('sdppPrint').addEventListener('click',()=>exportPlan('print'));
+ }
+ function renderEmpty(message){const st=$('sdppStatus'),body=$('sdppBody');if(st)st.textContent=message;if(body)body.innerHTML='<div class="sdpp-empty">هر زمان مربی مجتبی رژیم یا برنامه فستینگ شما را ذخیره کند، برگه مرتب و قابل دانلود آن در همین قسمت نمایش داده می‌شود.</div>';}
+ function render(data,fastingRow){
+   const status=$('sdppStatus'),body=$('sdppBody');if(!status||!body)return;
+   const t=trainee()||{}, name=t.name||t.full_name||'شاگرد';
+   let html='<div class="sdpp-meta"><div class="sdpp-chip"><b>👤 شاگرد:</b> '+esc(name)+'</div><div class="sdpp-chip"><b>📅 تاریخ:</b> '+esc(new Intl.DateTimeFormat('fa-IR-u-ca-persian',{year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date()))+'</div></div>';
+   if(data){
+     html+='<div class="sdpp-meta"><div class="sdpp-chip"><b>نوع رژیم</b><br>'+esc(data.type||'رژیم اختصاصی')+'</div>';
+     if(data.settings)html+='<div class="sdpp-chip"><b>تنظیمات رژیم</b><br>'+esc(data.settings)+'</div>';
+     html+='</div>';
+     const meals=Array.isArray(data.meals)?data.meals:[];
+     const foodsList=(typeof foods!=='undefined'&&Array.isArray(foods))?foods:[];
+     let rendered=0;
+     meals.forEach((meal,index)=>{
+       const items=(Array.isArray(meal.items)?meal.items:[]).filter(item=>item&&item.foodIndex!==''&&foodsList[Number(item.foodIndex)]);
+       if(!items.length)return;
+       rendered++;
+       html+='<div class="sdpp-meal"><div class="sdpp-meal-title">'+esc(meal.name||('وعده '+(index+1)))+' <span style="float:left;direction:ltr">'+esc(meal.time||'')+'</span></div><div class="sdpp-meal-body">'+items.map(item=>'<div class="sdpp-item"><span>'+esc(foodsList[Number(item.foodIndex)][0])+'</span><b>'+esc(Number(item.amount)||0)+' گرم</b></div>').join('')+'</div></div>';
+     });
+     if(!rendered&&data.mealPlanText){
+       String(data.mealPlanText).split(/\n+/).filter(Boolean).forEach((line,index)=>{
+         const split=line.split(/\s*[—:]\s*/);html+='<div class="sdpp-meal"><div class="sdpp-meal-title">'+esc(split.shift()||('وعده '+(index+1)))+'</div><div class="sdpp-meal-body">'+esc(split.join(' — ')||line)+'</div></div>';
+       });
+     }
+     if(!rendered&&!data.mealPlanText)html+='<div class="sdpp-empty">نوع رژیم ثبت شده، اما فهرست وعده‌ها در این برنامه خالی است.</div>';
+     if(data.notes)html+='<div class="sdpp-note"><b>💬 پیام مربی:</b><br>'+esc(data.notes)+'</div>';
+     if(data.updatedAt)html+='<div class="sdpp-note"><b>آخرین ثبت:</b> '+esc(new Date(data.updatedAt).toLocaleDateString('fa-IR'))+'</div>';
+   } else if(fastingRow){
+     let desc=String(fastingRow.description||'').replace(/^نوع\s*/,'');
+     const bits=desc.split(/\n+/).filter(Boolean);
+     html+='<div class="sdpp-meta"><div class="sdpp-chip"><b>نوع برنامه</b><br>فستینگ / روزه‌داری متناوب</div>';
+     if(fastingRow.start_time)html+='<div class="sdpp-chip"><b>شروع فست</b><br>'+esc(String(fastingRow.start_time).slice(0,5))+'</div>';
+     if(fastingRow.end_time)html+='<div class="sdpp-chip"><b>پایان فست</b><br>'+esc(String(fastingRow.end_time).slice(0,5))+'</div>';
+     html+='</div>';
+     const mealText=bits.filter(x=>!/^شروع فست:|^پایان فست:/.test(x)).join('\n');
+     html+='<div class="sdpp-meal"><div class="sdpp-meal-title">⏳ برنامه فستینگ و وعده‌ها</div><div class="sdpp-meal-body">'+esc(mealText||desc)+'</div></div>';
+   }
+   body.innerHTML=html;status.textContent='✅ برنامه غذایی ثبت‌شده توسط مربی';
+ }
+ async function load(force){
+   mount();const card=$('studentDietPrintablePlan');if(!card)return;
+   if(!traineeMode()){card.style.display='none';return;}card.style.display='';
+   const t=trainee(),id=t&&t.id;if(!id){renderEmpty('حساب شاگرد هنوز به پرونده متصل نشده است.');return;}
+   if(loading)return;if(!force&&lastLoadedId===String(id)&&card.dataset.loaded==='1')return;
+   loading=true;lastLoadedId=String(id);
+   const status=$('sdppStatus'),body=$('sdppBody');if(status)status.textContent='در حال دریافت رژیم ثبت‌شده توسط مربی…';if(body)body.innerHTML='';
+   try{
+     if(typeof sbGet!=='function')throw new Error('اتصال پایگاه داده آماده نیست.');
+     const rows=await sbGet('/fasting_logs?trainee_id=eq.'+encodeURIComponent(id)+'&order=created_at.desc&limit=60');
+     const list=Array.isArray(rows)?rows:[];
+     let data=null;for(const row of list){const raw=String(row.description||'');if(raw.startsWith(PREFIX)){try{data=JSON.parse(raw.slice(PREFIX.length));break;}catch(e){}}}
+     const fasting=list.find(row=>{const d=String(row.description||'');return !d.startsWith(PREFIX)&&!d.startsWith('STUDENT_DIET_REQUEST:')&&!d.startsWith('DIET_CONFIG:')&&/^نوع\s/.test(d);});
+     if(!data&&!fasting)renderEmpty('هنوز رژیم یا برنامه فستینگ برای شما ثبت نشده است.');
+     else render(data,fasting);
+     card.dataset.loaded='1';
+   }catch(e){console.error('load printable student diet',e);renderEmpty('دریافت رژیم انجام نشد؛ اتصال اینترنت را بررسی و به‌روزرسانی را بزنید.');}
+   finally{loading=false;}
+ }
+ function exportPlan(mode){
+   const card=$('studentDietPrintablePlan'),status=$('sdppActionStatus'),body=$('sdppBody');
+   if(!card||!body||!body.textContent.trim()||!card.dataset.loaded){if(status)status.textContent='ابتدا برنامه غذایی را دریافت کنید.';return;}
+   const popup=window.open('','_blank');if(!popup){if(status)status.textContent='پنجره خروجی مسدود شد؛ اجازه بازشدن پنجره جدید را بدهید.';return;}
+   const clone=card.cloneNode(true);clone.id='sdppExportCanvas';clone.querySelector('.sdpp-actions')?.remove();clone.querySelector('#sdppActionStatus')?.remove();
+   const html='<!doctype html><html lang="fa" dir="rtl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>برنامه غذایی - فیتنس سه‌قلعه</title><style>body{margin:0;padding:14px;background:#fff;font-family:Tahoma,Arial,sans-serif;color:#302719}#sdppExportCanvas{max-width:780px;margin:0 auto;border:2px solid #c69b43;border-radius:16px;overflow:hidden;background:#fffdf7;color:#302719} .sdpp-head{text-align:center;padding:18px 14px 14px;background:linear-gradient(130deg,#fff8e4,#ffe6a0 52%,#fffaf0);border-bottom:2px solid #c69b43}.sdpp-brand{font-size:24px;font-weight:1000;color:#714800;line-height:1.7}.sdpp-coach{font-size:15px;font-weight:800;color:#51401e}.sdpp-title{display:inline-block;margin-top:9px;padding:7px 16px;border-radius:9px;background:linear-gradient(110deg,#272727,#57482a,#b88728);color:#ffe39a;font-size:18px;font-weight:900}.sdpp-content{padding:12px}.sdpp-meta{display:flex;flex-wrap:wrap;gap:7px;margin-bottom:10px}.sdpp-chip{flex:1 1 120px;padding:8px;border:1px solid #d8bd76;border-radius:8px;background:#fff8e7;font-size:13px;line-height:1.8}.sdpp-meal{margin:10px 0;border:1.5px solid #b88728;border-radius:10px;overflow:hidden;background:#fff}.sdpp-meal-title{padding:9px 11px;background:linear-gradient(100deg,#272727,#4b412d 58%,#b88728);color:#ffe39a;font-weight:900;font-size:16px}.sdpp-meal-body{padding:9px 11px;line-height:2;font-size:14px;white-space:pre-wrap;overflow-wrap:anywhere}.sdpp-item{display:flex;justify-content:space-between;gap:10px;padding:7px 2px;border-bottom:1px solid #eee2c5}.sdpp-item:last-child{border-bottom:0}.sdpp-note{margin-top:10px;padding:10px;border:1px solid #d8bd76;border-radius:9px;background:#fffaf0;white-space:pre-wrap;line-height:1.9;font-size:13px}.sdpp-empty{padding:14px;text-align:center;line-height:1.9;color:#65542e}@media print{body{padding:0}#sdppExportCanvas{max-width:none;border-radius:0;box-shadow:none;break-inside:auto}@page{size:A4 portrait;margin:8mm}}</style></head><body><div class="sdpp-actions" style="max-width:780px;margin:0 auto 12px;display:flex;gap:8px;flex-wrap:wrap"><button id="sdppDoImage">💾 دانلود عکس PNG</button><button id="sdppDoPrint">🖨️ چاپ / ذخیره PDF</button></div>'+clone.outerHTML+'<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"><\/script><script>document.getElementById("sdppDoPrint").onclick=()=>window.print();document.getElementById("sdppDoImage").onclick=async function(){const b=this;b.disabled=true;b.textContent="در حال ساخت عکس…";try{if(!window.html2canvas)throw new Error("ابزار ساخت عکس بارگذاری نشد. اتصال اینترنت را بررسی کنید.");const canvas=await html2canvas(document.getElementById("sdppExportCanvas"),{scale:2,backgroundColor:"#fffdf7",useCORS:true,logging:false});const a=document.createElement("a");a.download="برنامه-غذایی-فیتنس-سه-قلعه.png";a.href=canvas.toDataURL("image/png");a.click();b.textContent="✅ عکس دانلود شد";}catch(e){alert("ساخت عکس انجام نشد: "+e.message+"\\nمی‌توانید از چاپ / ذخیره PDF استفاده کنید.");b.disabled=false;b.textContent="💾 دانلود عکس PNG";}};<\/script></body></html>';
+   popup.document.open();popup.document.write(html);popup.document.close();
+   if(status)status.textContent=mode==='image'?'برگه خروجی باز شد؛ در آنجا «دانلود عکس PNG» را بزنید.':'برگه خروجی باز شد؛ «چاپ / ذخیره PDF» را بزنید.';
+ }
+ const originalShow=window.showSection;
+ if(typeof originalShow==='function'&&!window.__studentDietPlanShowWrapped){window.showSection=function(id){const out=originalShow.apply(this,arguments);if(id==='meal'||id==='nutrition')setTimeout(()=>load(false),120);return out;};window.__studentDietPlanShowWrapped=true;}
+ const originalFinish=window.finishLogin;
+ if(typeof originalFinish==='function'&&!window.__studentDietPlanLoginWrapped){window.finishLogin=async function(){const out=await originalFinish.apply(this,arguments);setTimeout(()=>load(true),350);return out;};window.__studentDietPlanLoginWrapped=true;}
+ function boot(){mount();if(traineeMode())load(false);}
+ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot);else boot();
+ [500,1400,3000].forEach(t=>setTimeout(()=>{mount();if(traineeMode())load(false);},t));
+})();
+</script>
