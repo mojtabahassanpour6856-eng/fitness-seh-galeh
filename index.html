@@ -1896,11 +1896,9 @@ async function initAuth(){
 
 if($("prDate"))$("prDate").value=today();if($("anDate"))$("anDate").value=today();if($("actDate"))$("actDate").value=today();if($("mealStart"))$("mealStart").value=today();
 ["mealCalories","mealProtein","mealCarbs","mealFat"].forEach(id=>{if($(id))$(id).addEventListener("input",updateMealTargets);});
-/* Session restoration runs once, after the login wrappers and trainee dashboard setup are installed below.
-   Calling initAuth() here as well caused two overlapping finishLogin flows and visible section/dashboard jumps.
-   Do not load foods before authentication: Supabase RLS may reject the anonymous request and show a false first-load error.
-   finishLogin() loads the food catalog after the authenticated session is ready. */
-loadExercises();
+/* Session restoration runs once after all wrappers are installed. Do not fetch the exercise catalog here:
+   it was being requested before authentication and again by multiple DOMContentLoaded/login handlers.
+   The authenticated coach flow loads the selector when needed. */
 
 /* ===== FITNESS SEH GALEH — V4 INTEGRATION LAYER ===== */
 (function(){
@@ -4144,15 +4142,19 @@ window.toggleExerciseFavorite=async function(id,value){try{await sbWrite(`/train
       ['clientCount','activeCount','planCount','alertCount'].forEach(id=>{if(el(id))el(id).textContent='—';});
     }
   };
-  // Ensure coach login always refreshes the visible list using the final loader.
+  // The authenticated finishLogin flow already loads the final trainee list. Do not fetch it
+  // a second time immediately after login; this duplicate request delayed the coach dashboard.
   const oldFinish=window.finishLogin;
   if(typeof oldFinish==='function'){
     window.finishLogin=async function(user){
       await oldFinish(user);
-      if(typeof authProfile!=='undefined'&&authProfile?.role==='coach')await window.loadClients();
     };
   }
-  document.addEventListener('DOMContentLoaded',()=>{if(document.body.classList.contains('locked')===false&&typeof authProfile!=='undefined'&&authProfile?.role==='coach')window.loadClients();});
+  // Session restoration may already have loaded the list; only repair the visible list if empty.
+  document.addEventListener('DOMContentLoaded',()=>{
+    if(document.body.classList.contains('locked')===false&&typeof authProfile!=='undefined'&&authProfile?.role==='coach'&&
+       Array.isArray(window.clients)&&window.clients.length===0) window.loadClients();
+  });
 })();
 </script>
 
@@ -5300,7 +5302,19 @@ window.loadLibraryExercises=async function(){
  }catch(x){console.error(x);box.textContent='دریافت بانک حرکات انجام نشد؛ اتصال یا مجوز بانک را بررسی کنید.';}
 }
 window.toggleExerciseFavorite=async function(id,value){try{await sbWrite('/trainer_exercises?id=eq.'+encodeURIComponent(id),'PATCH',{is_favorite:!value});await window.loadLibraryExercises();await window.loadExercises();}catch(x){alert('تغییر علاقه‌مندی انجام نشد.\n'+(x.message||String(x)));}};
-active('workoutMuscleFilters',wm);active('libraryMuscleFilters',lm);if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>{window.loadExercises();window.loadLibraryExercises();});else{window.loadExercises();window.loadLibraryExercises();}
+active('workoutMuscleFilters',wm);
+active('libraryMuscleFilters',lm);
+/* Do not hit Supabase while the auth screen is still locked. The coach login flow and
+   the relevant library/workout panels load these lists after authentication. */
+function loadCoachExerciseListsWhenReady(){
+ if(document.body.classList.contains('locked')) return;
+ if(typeof authProfile!=='undefined'&&authProfile?.role==='coach'){
+   if(typeof window.loadExercises==='function'&&(!document.getElementById('workoutExercise')?.options?.length||document.getElementById('workoutExercise').options.length<=1))window.loadExercises();
+   if(typeof window.loadLibraryExercises==='function'&&!document.querySelector('.library-muscle-entry'))window.loadLibraryExercises();
+ }
+}
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',loadCoachExerciseListsWhenReady,{once:true});
+else loadCoachExerciseListsWhenReady();
 })();
 </script>
 
@@ -6322,11 +6336,8 @@ active('workoutMuscleFilters',wm);active('libraryMuscleFilters',lm);if(document.
     };
   }
 
-  if(document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', () => window.loadExercises(), {once:true});
-  } else {
-    window.loadExercises();
-  }
+  /* Initial exercise loading is centralized in the authenticated coach flow above;
+     avoid a second independent startup request. */
 })();
 </script>
 
