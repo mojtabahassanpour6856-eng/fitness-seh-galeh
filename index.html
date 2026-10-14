@@ -5141,14 +5141,39 @@ body.workout-output .empty-cell{display:none!important}
             if(!ctx)throw new Error('ساخت صفحه A4 ممکن نشد.');
             ctx.fillStyle='#ffffff';ctx.fillRect(0,0,page.width,page.height);
             const sourceW=Math.max(1,canvas.width),sourceH=Math.max(1,canvas.height);
-            /* Downloaded workout PNG only: preserve the original proportions.
-               Tighten excess vertical whitespace in the export layout below so the full
-               workout fits the A4 ratio without stretching words or cropping the footer. */
-            const scale=Math.min(page.width/sourceW,page.height/sourceH);
-            const drawW=Math.max(1,Math.round(sourceW*scale));
-            const drawH=Math.max(1,Math.round(sourceH*scale));
+            /* Downloaded workout PNG only:
+               1) trim blank white margins from the captured bitmap,
+               2) preserve the real aspect ratio of all text and cards,
+               3) place the trimmed content on the A4 canvas without stretching. */
+            const pixels=canvas.getContext('2d',{willReadFrequently:true});
+            let cropX=0,cropY=0,cropW=sourceW,cropH=sourceH;
+            if(pixels){
+              try{
+                const data=pixels.getImageData(0,0,sourceW,sourceH).data;
+                let left=sourceW,top=sourceH,right=-1,bottom=-1;
+                /* The export background is white; detect visible ink, borders and cream/gold panels. */
+                for(let y=0;y<sourceH;y++){
+                  for(let x=0;x<sourceW;x++){
+                    const k=(y*sourceW+x)*4;
+                    if(data[k+3]>8 && (data[k]<248 || data[k+1]<248 || data[k+2]<248)){
+                      if(x<left)left=x;if(x>right)right=x;
+                      if(y<top)top=y;if(y>bottom)bottom=y;
+                    }
+                  }
+                }
+                if(right>=left&&bottom>=top){
+                  const pad=14;
+                  cropX=Math.max(0,left-pad);cropY=Math.max(0,top-pad);
+                  const cropRight=Math.min(sourceW-1,right+pad),cropBottom=Math.min(sourceH-1,bottom+pad);
+                  cropW=Math.max(1,cropRight-cropX+1);cropH=Math.max(1,cropBottom-cropY+1);
+                }
+              }catch(cropError){console.warn('PNG whitespace trim skipped:',cropError);}
+            }
+            const scale=Math.min(page.width/cropW,page.height/cropH);
+            const drawW=Math.max(1,Math.round(cropW*scale));
+            const drawH=Math.max(1,Math.round(cropH*scale));
             ctx.imageSmoothingEnabled=true;ctx.imageSmoothingQuality='high';
-            ctx.drawImage(canvas,Math.round((page.width-drawW)/2),Math.round((page.height-drawH)/2),drawW,drawH);
+            ctx.drawImage(canvas,cropX,cropY,cropW,cropH,Math.round((page.width-drawW)/2),Math.round((page.height-drawH)/2),drawW,drawH);
             finalCanvas=page;
           }
           const png=await new Promise((resolve,reject)=>{
