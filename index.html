@@ -5022,6 +5022,18 @@ body.workout-output .empty-cell{display:none!important}
               setImportant(el,'font-size','17px');
               setImportant(el,'font-weight','700');
             });
+            /* Enlarge plan details, coach notes and per-exercise explanations in the PNG. */
+            doc.querySelectorAll('.plan-meta,.plan-meta *, .workout-plan-description, .system-notes, .system-notes *, .exercise-extra').forEach(el=>{
+              setImportant(el,'font-size','16px');
+              setImportant(el,'line-height','1.6');
+            });
+            doc.querySelectorAll('.plan-meta,.workout-plan-description,.system-notes').forEach(el=>{
+              setImportant(el,'font-weight','700');
+            });
+            doc.querySelectorAll('.exercise-extra').forEach(el=>{
+              setImportant(el,'font-weight','600');
+              setImportant(el,'margin-top','5px');
+            });
           }
           setImportant(doc.documentElement,'width',captureWidth+'px');
           setImportant(doc.documentElement,'height','auto');
