@@ -9886,3 +9886,59 @@ body.workout-output.workout-compact{
 })();
 </script>
 
+<script id="FITNESS_WORKOUT_WEEKLY_REPORT_BOTTOM_V1">
+/* Additive-only layout guard: keep the existing four-week workout report visible at the very bottom of the trainee workout card. */
+(function(){
+  'use strict';
+  if(window.__sehWorkoutWeeklyBottomV1)return;
+  window.__sehWorkoutWeeklyBottomV1=true;
+  function traineeRole(){
+    try{return !!(window.authProfile&&window.authProfile.role==='trainee');}
+    catch(e){return false;}
+  }
+  function keepReportAtBottom(){
+    if(!traineeRole())return;
+    var list=document.getElementById('workoutList');
+    if(!list)return;
+    var card=list.closest('.card');
+    if(!card)return;
+    var report=document.getElementById('workoutFourWeekSummary');
+    if(!report&&typeof window.__sehAttachWorkoutMissions==='function'){
+      try{window.__sehAttachWorkoutMissions();}catch(e){console.warn('Weekly workout report attach:',e);}
+      report=document.getElementById('workoutFourWeekSummary');
+    }
+    if(!report)return;
+    if(report.parentElement!==card||card.lastElementChild!==report)card.appendChild(report);
+    report.hidden=false;
+    report.removeAttribute('aria-hidden');
+    report.classList.remove('hide');
+    report.style.setProperty('display','block','important');
+    report.style.setProperty('visibility','visible','important');
+    report.style.setProperty('opacity','1','important');
+    report.style.setProperty('width','100%','important');
+    report.style.setProperty('margin-top','14px','important');
+    report.style.setProperty('clear','both','important');
+    report.style.setProperty('position','relative','important');
+    report.style.setProperty('z-index','1','important');
+  }
+  var queued=false;
+  function schedule(){
+    if(queued)return;
+    queued=true;
+    setTimeout(function(){queued=false;keepReportAtBottom();},180);
+  }
+  function observe(){
+    var list=document.getElementById('workoutList');
+    if(list&&window.MutationObserver&&!list.__sehWeeklyBottomObserver){
+      list.__sehWeeklyBottomObserver=true;
+      new MutationObserver(schedule).observe(list,{childList:true,subtree:true});
+    }
+    schedule();
+  }
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',observe,{once:true});
+  else observe();
+  [500,1200,2500,4500].forEach(function(ms){setTimeout(observe,ms);});
+  window.addEventListener('focus',schedule);
+})();
+</script>
+
