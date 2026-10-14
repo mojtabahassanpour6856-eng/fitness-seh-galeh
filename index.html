@@ -5208,6 +5208,20 @@ body.workout-output .empty-cell{display:none!important}
                 clonedDoc.body.querySelectorAll('*').forEach(el=>{
                   el.style.setProperty('font-family','Tahoma,Arial,sans-serif','important');
                 });
+                /* Slightly enlarge workout text in the downloaded PNG only.
+                   Keep the decorative/header area and all table/grid dimensions untouched. */
+                const textTargets=clonedDoc.querySelectorAll(
+                  '.plan-meta,.plan-meta *,.workout-plan-description,.workout-plan-description *,'+
+                  '.plan-count,.session-grid .session-heading,.session-grid .workout-session-heading,'+
+                  '.session-grid .exercise-name,.session-grid .exercise-details,.session-grid .exercise-extra,'+
+                  '.session-grid .system-notes,.session-grid .session-exercises'
+                );
+                textTargets.forEach(el=>{
+                  const current=parseFloat(clonedDoc.defaultView.getComputedStyle(el).fontSize);
+                  if(Number.isFinite(current) && current>0){
+                    el.style.setProperty('font-size',(current*1.05)+'px','important');
+                  }
+                });
               }
               if(kind!=='meal'){
                 /* Repeat the full-width reset on html2canvas's clone: its stylesheet can
