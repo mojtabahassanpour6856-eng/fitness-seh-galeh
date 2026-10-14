@@ -9942,3 +9942,75 @@ body.workout-output.workout-compact{
 })();
 </script>
 
+
+
+<script id="FITNESS_WORKOUT_WEEKLY_REPORT_BOTTOM_V2">
+/* Reliable trainee weekly report mount: uses lexical/global auth state, creates a visible fallback, then lets the existing loader replace it with database totals. */
+(function(){
+  'use strict';
+  if(window.__sehWorkoutWeeklyBottomV2)return;
+  window.__sehWorkoutWeeklyBottomV2=true;
+  function isTrainee(){
+    try{if(typeof authProfile!=='undefined'&&authProfile&&authProfile.role==='trainee')return true;}catch(e){}
+    return !!(window.authProfile&&window.authProfile.role==='trainee');
+  }
+  function mount(){
+    if(!isTrainee())return;
+    var list=document.getElementById('workoutList');
+    if(!list)return;
+    var card=list.closest('.card');
+    if(!card)return;
+    var report=document.getElementById('workoutFourWeekSummary');
+    if(!report){
+      report=document.createElement('section');
+      report.id='workoutFourWeekSummary';
+      report.className='card';
+      report.innerHTML='<h3>📊 گزارش هفتگی برنامه تمرینی</h3><p class="muted">گزارش چهار هفته‌ای برنامه تمرینی</p><div class="grid2">'+[1,2,3,4].map(function(w){return '<div class="receipt-item"><b>هفته '+w+'</b><br>در حال دریافت گزارش…</div>';}).join('')+'</div><p class="muted">پس از بارگذاری برنامه، آمار ثبت‌شده نمایش داده می‌شود.</p>';
+    }
+    if(report.parentElement!==card||card.lastElementChild!==report)card.appendChild(report);
+    report.hidden=false;
+    report.removeAttribute('aria-hidden');
+    report.classList.remove('hide');
+    report.style.setProperty('display','block','important');
+    report.style.setProperty('visibility','visible','important');
+    report.style.setProperty('opacity','1','important');
+    report.style.setProperty('width','100%','important');
+    report.style.setProperty('box-sizing','border-box','important');
+    report.style.setProperty('margin','14px 0 0','important');
+    report.style.setProperty('clear','both','important');
+    report.style.setProperty('position','relative','important');
+    report.style.setProperty('z-index','1','important');
+    if(typeof window.__sehAttachWorkoutMissions==='function'){
+      try{
+        var result=window.__sehAttachWorkoutMissions();
+        if(result&&typeof result.then==='function')result.then(function(){
+          var refreshed=document.getElementById('workoutFourWeekSummary');
+          if(refreshed&&refreshed.parentElement!==card)card.appendChild(refreshed);
+          if(refreshed){refreshed.hidden=false;refreshed.style.setProperty('display','block','important');}
+        }).catch(function(e){console.warn('Weekly workout report refresh:',e);});
+      }catch(e){console.warn('Weekly workout report refresh:',e);}
+    }
+  }
+  var queued=false;
+  function schedule(){
+    if(queued)return;
+    queued=true;
+    setTimeout(function(){queued=false;mount();},250);
+  }
+  function observe(){
+    var list=document.getElementById('workoutList');
+    if(list&&window.MutationObserver&&!list.__sehWeeklyBottomObserverV2){
+      list.__sehWeeklyBottomObserverV2=true;
+      new MutationObserver(schedule).observe(list,{childList:true,subtree:true});
+    }
+    schedule();
+  }
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',observe,{once:true});
+  else observe();
+  [700,1500,3000,5000,8000].forEach(function(ms){setTimeout(observe,ms);});
+  if(window.MutationObserver){
+    new MutationObserver(schedule).observe(document.body,{childList:true,subtree:true});
+  }
+  window.addEventListener('focus',schedule);
+})();
+</script>
