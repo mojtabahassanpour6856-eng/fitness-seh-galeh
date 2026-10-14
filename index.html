@@ -10157,7 +10157,7 @@ body.workout-output.workout-compact{
   for(let i=0;i<raw.length;i++)out[i]=raw.charCodeAt(i);
   return out;
  }
- const SEH_VAPID_PUBLIC_KEY='BIZaqCHIQCFTMSA7unf8IfmpndeGetjlLsX4mXYOAYopEDdwfZvRKijEo1eJttObLCLz37i9IKOtdYoI4lGYl18';
+ const SEH_VAPID_PUBLIC_KEY='BK29yEJqDf0SM07faqwpylgB3b7zN5HJg9G6bHpYnAGMUcpoGGltPcV5arwNN5T5clUa9X1247Z_oOmV10vbhxk';
  async function enableCoachNotices(){
   if(!('Notification' in window)){setCoachNoticeStatus('این مرورگر اعلان را پشتیبانی نمی‌کند.');return;}
   if(!('serviceWorker' in navigator)||!('PushManager' in window)){setCoachNoticeStatus('این مرورگر اعلان پس‌زمینه را پشتیبانی نمی‌کند؛ اپ را با Chrome به‌روز باز کنید.');return;}
@@ -10172,10 +10172,16 @@ body.workout-output.workout-compact{
    const registration=await navigator.serviceWorker.register('./sw.js',{scope:'./'});
    await navigator.serviceWorker.ready;
    let subscription=await registration.pushManager.getSubscription();
+   const expectedApplicationKey=sehBase64UrlToBytes(SEH_VAPID_PUBLIC_KEY);
+   if(subscription){
+    const currentApplicationKey=subscription.options?.applicationServerKey;
+    const sameKey=currentApplicationKey&&currentApplicationKey.length===expectedApplicationKey.length&&currentApplicationKey.every((v,i)=>v===expectedApplicationKey[i]);
+    if(!sameKey){await subscription.unsubscribe();subscription=null;}
+   }
    if(!subscription){
     subscription=await registration.pushManager.subscribe({
      userVisibleOnly:true,
-     applicationServerKey:sehBase64UrlToBytes(SEH_VAPID_PUBLIC_KEY)
+     applicationServerKey:expectedApplicationKey
     });
    }
    const json=subscription.toJSON();
