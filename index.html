@@ -4985,28 +4985,50 @@ body.workout-output .empty-cell{display:none!important}
             setImportant(exportGrid,'box-sizing','border-box');
             const sessionCount=doc.querySelectorAll('.session-grid .session-cell').length;
             const rows=Math.max(1,Math.ceil(sessionCount/2));
-            setImportant(target,'min-height',Math.max(1066,rows*330+350)+'px');
-            setImportant(target,'padding','0px');
-            setImportant(exportGrid,'min-height',Math.max(700,rows*330)+'px');
+            const totalMoves=doc.querySelectorAll('.session-grid .exercise-card,.session-grid .exercise-unit').length;
+            const dense=sessionCount>=5||totalMoves>=32;
+            /* Match the supplied A4 reference: dark charcoal session bars with gold text,
+               cream paper, gold outlines and a two-column session grid. */
+            setImportant(target,'background','#fffdf7');
+            setImportant(target,'color','#241b0c');
+            setImportant(target,'border','2px solid #d4b15c');
+            setImportant(target,'padding','12px');
+            setImportant(target,'min-height',Math.max(1066,rows*(dense?255:330)+330)+'px');
+            setImportant(exportGrid,'min-height',Math.max(700,rows*(dense?245:330))+'px');
             setImportant(exportGrid,'grid-template-columns','repeat(2,minmax(0,1fr))');
-            setImportant(exportGrid,'grid-template-rows',`repeat(${rows},minmax(300px,1fr))`);
-            setImportant(exportGrid,'grid-auto-rows','minmax(300px,auto)');
+            setImportant(exportGrid,'grid-template-rows',`repeat(${rows},minmax(0,1fr))`);
+            setImportant(exportGrid,'grid-auto-rows','minmax(0,auto)');
             setImportant(exportGrid,'align-content','stretch');
             setImportant(exportGrid,'align-items','stretch');
+            setImportant(exportGrid,'gap',dense?'7px':'10px');
             doc.querySelectorAll('.session-cell').forEach(el=>{
-              setImportant(el,'min-height','300px');
-              setImportant(el,'padding','12px');
+              setImportant(el,'min-height',dense?'0':'300px');
+              setImportant(el,'padding',dense?'6px':'12px');
+              setImportant(el,'background','#fffdf7');
+              setImportant(el,'border','1.5px solid #c69b43');
+              setImportant(el,'border-radius','8px');
             });
             doc.querySelectorAll('.session-heading').forEach(el=>{
-              setImportant(el,'font-size','22px');
-              setImportant(el,'padding','8px 6px');
+              setImportant(el,'font-size',dense?'16px':'22px');
+              setImportant(el,'padding',dense?'5px 4px':'8px 6px');
+              setImportant(el,'background','linear-gradient(135deg,#252525,#444036)');
+              setImportant(el,'color','#f6d77f');
+              setImportant(el,'border','1.5px solid #b88728');
+              setImportant(el,'border-radius','5px');
             });
             doc.querySelectorAll('.exercise-card,.exercise-unit').forEach(el=>{
-              setImportant(el,'font-size','21px');
-              setImportant(el,'line-height','1.5');
-              setImportant(el,'padding','7px 5px');
+              setImportant(el,'font-size',dense?'15px':'21px');
+              setImportant(el,'line-height',dense?'1.3':'1.5');
+              setImportant(el,'padding',dense?'4px 3px':'7px 5px');
+              setImportant(el,'column-gap','6px');
+              setImportant(el,'border-bottom','1px solid #e4d3a9');
             });
-            doc.querySelectorAll('.exercise-name').forEach(el=>setImportant(el,'font-size','21px'));
+            doc.querySelectorAll('.exercise-name').forEach(el=>{
+              setImportant(el,'font-size',dense?'15px':'21px');
+              setImportant(el,'font-weight','900');
+              setImportant(el,'color','#674000');
+              setImportant(el,'line-height',dense?'1.3':'1.5');
+            });
             doc.querySelectorAll('.exercise-details').forEach(el=>{
               setImportant(el,'font-size','19px');
               setImportant(el,'line-height','1.5');
@@ -5015,19 +5037,25 @@ body.workout-output .empty-cell{display:none!important}
             /* Make the sets/reps badge and rest-time label clearly readable in the PNG,
                without changing exercise names, page layout, or session arrangement. */
             doc.querySelectorAll('.exercise-details .rx').forEach(el=>{
-              setImportant(el,'font-size','23px');
+              setImportant(el,'font-size',dense?'17px':'23px');
               setImportant(el,'font-weight','900');
-              setImportant(el,'line-height','1.35');
-              setImportant(el,'padding','3px 8px');
+              setImportant(el,'line-height','1.25');
+              setImportant(el,'padding',dense?'2px 5px':'3px 8px');
+              setImportant(el,'color','#382500');
+              setImportant(el,'background','#fff1c9');
+              setImportant(el,'border','1.5px solid #c69b43');
+              setImportant(el,'border-radius','5px');
             });
             doc.querySelectorAll('.exercise-details .rest').forEach(el=>{
-              setImportant(el,'font-size','18px');
+              setImportant(el,'font-size',dense?'12px':'18px');
               setImportant(el,'font-weight','700');
               setImportant(el,'line-height','1.4');
+              setImportant(el,'color','#777064');
             });
             doc.querySelectorAll('.exercise-details .sys').forEach(el=>{
-              setImportant(el,'font-size','18px');
+              setImportant(el,'font-size',dense?'12px':'18px');
               setImportant(el,'font-weight','700');
+              setImportant(el,'color','#706959');
             });
             /* Enlarge plan details, coach notes and per-exercise explanations in the PNG. */
             doc.querySelectorAll('.plan-meta,.plan-meta *, .workout-plan-description, .system-notes, .system-notes *, .exercise-extra').forEach(el=>{
