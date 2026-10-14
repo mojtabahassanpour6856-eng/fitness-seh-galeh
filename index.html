@@ -5009,9 +5009,9 @@ body.workout-output .empty-cell{display:none!important}
             setImportant(sourceGrid,'overflow','visible');
           }
           await new Promise(resolve=>popup.requestAnimationFrame(()=>popup.requestAnimationFrame(resolve)));
-          /* Reserve extra capture space for the decorative bottom rule/footer and system explanations.
-             The cloned layout can grow slightly after html2canvas copies styles; a tight +24px crop
-             was cutting the top/bottom frame and the last explanatory line on some phones. */
+          /* Let html2canvas derive the captured element height from the fully laid-out body.
+             A manually fixed height measured before clone styling can crop text/footer in the PNG
+             even though the export preview itself looks complete on mobile. */
           const captureHeight=Math.max(
             Math.ceil(target.getBoundingClientRect().height),target.scrollHeight,target.offsetHeight,
             doc.documentElement.scrollHeight,doc.documentElement.offsetHeight
@@ -5019,9 +5019,7 @@ body.workout-output .empty-cell{display:none!important}
           const canvas=await popup.html2canvas(target,{
             scale:2, backgroundColor:'#ffffff', useCORS:true, logging:false,
             width:captureWidth,
-            height:captureHeight,
             windowWidth:captureWidth,
-            windowHeight:captureHeight,
             scrollX:0,scrollY:0,
             onclone:function(clonedDoc){
               const clonedBody=clonedDoc.body;
