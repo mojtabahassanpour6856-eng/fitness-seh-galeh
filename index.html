@@ -10150,13 +10150,52 @@ body.workout-output.workout-compact{
  }
  async function currentAuthUser(){const r=await window.AUTH_SUPABASE.auth.getUser();if(r.error)throw r.error;if(!r.data?.user)throw new Error('نشست ورود معتبر نیست؛ دوباره وارد شوید.');return r.data.user}
  function setCoachNoticeStatus(text){const e=$('sehChatNoticeStatus');if(e)e.textContent=text;}
+ function sehBase64UrlToBytes(value){
+  const padding='='.repeat((4-value.length%4)%4);
+  const base64=(value+padding).replace(/-/g,'+').replace(/_/g,'/');
+  const raw=atob(base64);const out=new Uint8Array(raw.length);
+  for(let i=0;i<raw.length;i++)out[i]=raw.charCodeAt(i);
+  return out;
+ }
+ const SEH_VAPID_PUBLIC_KEY='BIZaqCHIQCFTMSA7unf8IfmpndeGetjlLsX4mXYOAYopEDdwfZvRKijEo1eJttObLCLz37i9IKOtdYoI4lGYl18';
  async function enableCoachNotices(){
   if(!('Notification' in window)){setCoachNoticeStatus('این مرورگر اعلان را پشتیبانی نمی‌کند.');return;}
+  if(!('serviceWorker' in navigator)||!('PushManager' in window)){setCoachNoticeStatus('این مرورگر اعلان پس‌زمینه را پشتیبانی نمی‌کند؛ اپ را با Chrome به‌روز باز کنید.');return;}
+  const button=$('sehEnableChatNotices');if(button)button.disabled=true;
   try{
+   const profile=(typeof authProfile!=='undefined'&&authProfile)?authProfile:window.authProfile;
+   if(!profile||profile.role!=='coach')throw new Error('ابتدا با حساب مربی وارد شوید.');
+   const user=await currentAuthUser();
    const permission=await Notification.requestPermission();
-   if(permission==='granted'){setCoachNoticeStatus('اجازه مرورگر ثبت شد؛ شناسایی پیام‌ها فعال است. اعلان مطمئن اندروید در مرحله بعد تکمیل می‌شود.');startCoachNoticePolling(true);}
-   else setCoachNoticeStatus('اجازه اعلان داده نشد؛ از تنظیمات مرورگر اجازه اعلان را فعال کنید.');
-  }catch(e){setCoachNoticeStatus('فعال‌سازی اعلان انجام نشد.');}
+   if(permission!=='granted')throw new Error('اجازه اعلان داده نشد؛ از تنظیمات سایت اجازه اعلان را فعال کنید.');
+   setCoachNoticeStatus('در حال ثبت امن گوشی برای دریافت اعلان…');
+   const registration=await navigator.serviceWorker.register('./sw.js',{scope:'./'});
+   await navigator.serviceWorker.ready;
+   let subscription=await registration.pushManager.getSubscription();
+   if(!subscription){
+    subscription=await registration.pushManager.subscribe({
+     userVisibleOnly:true,
+     applicationServerKey:sehBase64UrlToBytes(SEH_VAPID_PUBLIC_KEY)
+    });
+   }
+   const json=subscription.toJSON();
+   if(!json.endpoint||!json.keys?.p256dh||!json.keys?.auth)throw new Error('اطلاعات ثبت اعلان کامل دریافت نشد؛ یک‌بار دیگر تلاش کنید.');
+   const db=window.AUTH_SUPABASE;
+   const del=await db.from('coach_push_subscriptions').delete().eq('endpoint',json.endpoint);
+   if(del.error)throw del.error;
+   const saved=await db.from('coach_push_subscriptions').insert({
+    coach_user_id:user.id,
+    endpoint:json.endpoint,
+    p256dh:json.keys.p256dh,
+    auth:json.keys.auth
+   });
+   if(saved.error)throw saved.error;
+   setCoachNoticeStatus('اعلان گوشی فعال شد ✅ از این پس هنگام دریافت پیام شاگرد، اعلان با نام او نمایش داده می‌شود.');
+   startCoachNoticePolling(true);
+  }catch(e){
+   console.error('Coach push setup failed',e);
+   setCoachNoticeStatus('فعال‌سازی کامل نشد: '+(e?.message||'خطای نامشخص')+' اگر ذخیره گوشی انجام نشد، تنظیمات کلید اعلان سرور را هم تکمیل می‌کنیم.');
+  }finally{if(button)button.disabled=false;}
  }
  async function pollCoachIncomingMessages(initial){
   if(!window.AUTH_SUPABASE||document.visibilityState!=='visible')return;
