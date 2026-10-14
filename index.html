@@ -9562,7 +9562,7 @@ body.workout-output.workout-compact{
   if(/میان.?وعده/.test(n)){
    if(/عصر|بعدازظهر|عصرانه/.test(n))return [40,ord,index];
    if(/صبح|صبحگاهی/.test(n))return [20,ord,index];
-   return [20+(ord-1)*10,ord,index];
+   return [20,ord,index];
   }
   if(/ناهار|وعده ظهر|ظهر/.test(n))return [30,ord,index];
   if(/عصرانه/.test(n))return [40,ord,index];
