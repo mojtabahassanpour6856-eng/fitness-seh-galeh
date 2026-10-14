@@ -5129,29 +5129,11 @@ body.workout-output .empty-cell{display:none!important}
                  Use explicit absolute font URLs so html2canvas can load the font
                  inside its cloned document; all other outputs stay untouched. */
               if(forceDownload && kind!=='meal'){
-                const shabnamStyle=clonedDoc.createElement('style');
-                shabnamStyle.textContent=`
-                  @font-face{font-family:'Shabnam';src:url('https://cdnjs.cloudflare.com/ajax/libs/shabnam-font/5.0.1/Shabnam.woff2') format('woff2');font-weight:400;font-style:normal;font-display:swap}
-                  @font-face{font-family:'Shabnam';src:url('https://cdnjs.cloudflare.com/ajax/libs/shabnam-font/5.0.1/Shabnam-Medium.woff2') format('woff2');font-weight:500;font-style:normal;font-display:swap}
-                  @font-face{font-family:'Shabnam';src:url('https://cdnjs.cloudflare.com/ajax/libs/shabnam-font/5.0.1/Shabnam-Bold.woff2') format('woff2');font-weight:700;font-style:normal;font-display:swap}
-                  html body,html body *:not(.workout-group-plus){font-family:'Shabnam',Tahoma,Arial,sans-serif!important}
+                const tahomaStyle=clonedDoc.createElement('style');
+                tahomaStyle.textContent=`
+                  html body,html body *:not(.workout-group-plus){font-family:Tahoma,Arial,sans-serif!important}
                 `;
-                clonedDoc.head.appendChild(shabnamStyle);
-                try{
-                  if(clonedDoc.fonts){
-                    await Promise.race([
-                      Promise.all([
-                        clonedDoc.fonts.load('400 16px Shabnam'),
-                        clonedDoc.fonts.load('500 16px Shabnam'),
-                        clonedDoc.fonts.load('700 16px Shabnam'),
-                        clonedDoc.fonts.ready
-                      ]),
-                      new Promise(resolve=>setTimeout(resolve,8000))
-                    ]);
-                  }else{
-                    await new Promise(resolve=>setTimeout(resolve,1800));
-                  }
-                }catch(fontError){console.warn('Shabnam PNG font loading skipped:',fontError);}
+                clonedDoc.head.appendChild(tahomaStyle);
               }
               if(kind!=='meal'){
                 const grid=clonedDoc.querySelector('.session-grid');
