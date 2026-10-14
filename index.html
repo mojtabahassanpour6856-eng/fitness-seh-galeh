@@ -7602,17 +7602,13 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
     var box=document.createElement('div');
     box.id='sehWorkoutSectionExport';
     box.style.cssText='display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-top:12px;padding-top:10px;border-top:1px solid #26384a';
-    box.innerHTML='<button type="button" id="sehWorkoutExportPdf">📄 دانلود / چاپ PDF</button><button type="button" id="sehWorkoutExportImage" class="secondary">🖼️ دریافت عکس برنامه</button><span id="sehWorkoutExportMsg" class="muted" style="font-size:11px;width:100%"></span>';
-    function run(isImage){
+    box.innerHTML='<button type="button" id="sehWorkoutExportImage" class="secondary" style="width:100%">🖼️ دانلود عکس برنامه</button>';
+    box.querySelector('#sehWorkoutExportImage').addEventListener('click',function(e){
+      e.preventDefault();e.stopPropagation();
       if(!window.currentClient && !(typeof currentClient!=='undefined'&&currentClient)){alert('ابتدا وارد حساب شاگرد شوید و برنامه را باز کنید.');return;}
-      if(typeof window.sharePlan==='function'){
-        window.sharePlan('workout');
-        if(isImage)document.getElementById('sehWorkoutExportMsg').textContent='در پنجره خروجی، گزینه «دانلود عکس PNG» را انتخاب کن.';
-      }else if(typeof window.printPlan==='function')window.printPlan('workout');
-      else alert('ابزار خروجی هنوز بارگذاری نشده است؛ صفحه را تازه‌سازی کنید.');
-    }
-    box.querySelector('#sehWorkoutExportPdf').addEventListener('click',function(e){e.preventDefault();e.stopPropagation();run(false);});
-    box.querySelector('#sehWorkoutExportImage').addEventListener('click',function(e){e.preventDefault();e.stopPropagation();run(true);});
+      if(typeof window.sharePlan==='function')window.sharePlan('workout',true);
+      else alert('ابزار دانلود عکس هنوز بارگذاری نشده است؛ صفحه را تازه‌سازی کنید.');
+    });
     card.appendChild(box);
   }
   function init(){
