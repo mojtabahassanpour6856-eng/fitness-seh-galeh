@@ -47,6 +47,11 @@ table{width:100%;border-collapse:collapse;margin-top:13px;font-size:12px}th,td{p
 @media(max-width:600px){.meal-tabs{grid-template-columns:1fr 1fr 1fr}.food-line{grid-template-columns:1fr 70px 52px auto}.meal-summary{grid-template-columns:1fr 1fr}}
 button,.client,.meal-card,.badge{transition:transform .08s ease,opacity .08s ease}
 button:active,.client:active,.meal-card:active,.badge:active{transform:scale(.98);opacity:.9}
+
+/* Student workout mission report: one completion action per whole session. */
+.workout-session-mission-controls{display:flex;flex-direction:column;gap:7px;margin-top:10px}
+.workout-session-mission-controls button{min-height:38px;white-space:normal}
+.workout-session-mission-controls button:disabled{opacity:.72;cursor:default}
 </style>
 <style>
 #authScreen{position:fixed;inset:0;background:#050a11;z-index:999;display:flex;align-items:center;justify-content:center;padding:16px}
@@ -5900,11 +5905,6 @@ else loadCoachExerciseListsWhenReady();
  }
 
  
-/* Student workout mission report: one completion action per whole session, at the bottom of the workout card. */
-.workout-session-mission-controls{display:flex;flex-direction:column;gap:7px;margin-top:10px}
-.workout-session-mission-controls button{min-height:38px;white-space:normal}
-.workout-session-mission-controls button:disabled{opacity:.72;cursor:default}
-
 /* END PROTECTED NUTRITION COMPLETION SECTION */
  // روز جدید را حتی اگر صفحه باز مانده باشد تشخیص بده؛ سابقه دیتابیس حذف نمی‌شود.
  let mealCompletionObservedDay=dayNow(),mealCompletionRefreshBusy=false;
