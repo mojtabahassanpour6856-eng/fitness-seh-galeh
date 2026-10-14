@@ -4978,9 +4978,9 @@ body.workout-output .empty-cell{display:none!important}
             const exportGrid=doc.querySelector('.session-grid');
             const sessionCount=doc.querySelectorAll('.session-grid .session-cell').length;
             const rows=Math.max(1,Math.ceil(sessionCount/2));
-            setImportant(target,'min-height','1720px');
+            setImportant(target,'min-height','1550px');
             setImportant(target,'padding','24px');
-            setImportant(exportGrid,'min-height',Math.max(960,rows*320)+'px');
+            setImportant(exportGrid,'min-height',Math.max(900,rows*300)+'px');
             setImportant(exportGrid,'grid-template-columns','repeat(2,minmax(0,1fr))');
             setImportant(exportGrid,'grid-template-rows',`repeat(${rows},minmax(300px,1fr))`);
             setImportant(exportGrid,'grid-auto-rows','minmax(300px,auto)');
@@ -4991,18 +4991,18 @@ body.workout-output .empty-cell{display:none!important}
               setImportant(el,'padding','12px');
             });
             doc.querySelectorAll('.session-heading').forEach(el=>{
-              setImportant(el,'font-size','21px');
+              setImportant(el,'font-size','22px');
               setImportant(el,'padding','8px 6px');
             });
             doc.querySelectorAll('.exercise-card,.exercise-unit').forEach(el=>{
-              setImportant(el,'font-size','19px');
-              setImportant(el,'line-height','1.55');
+              setImportant(el,'font-size','21px');
+              setImportant(el,'line-height','1.5');
               setImportant(el,'padding','7px 5px');
             });
-            doc.querySelectorAll('.exercise-name').forEach(el=>setImportant(el,'font-size','19px'));
+            doc.querySelectorAll('.exercise-name').forEach(el=>setImportant(el,'font-size','21px'));
             doc.querySelectorAll('.exercise-details').forEach(el=>{
-              setImportant(el,'font-size','18px');
-              setImportant(el,'line-height','1.55');
+              setImportant(el,'font-size','19px');
+              setImportant(el,'line-height','1.5');
               setImportant(el,'gap','4px 8px');
             });
             /* Make the sets/reps badge and rest-time label clearly readable in the PNG,
@@ -5014,18 +5014,18 @@ body.workout-output .empty-cell{display:none!important}
               setImportant(el,'padding','3px 8px');
             });
             doc.querySelectorAll('.exercise-details .rest').forEach(el=>{
-              setImportant(el,'font-size','17px');
+              setImportant(el,'font-size','18px');
               setImportant(el,'font-weight','700');
-              setImportant(el,'line-height','1.45');
+              setImportant(el,'line-height','1.4');
             });
             doc.querySelectorAll('.exercise-details .sys').forEach(el=>{
-              setImportant(el,'font-size','17px');
+              setImportant(el,'font-size','18px');
               setImportant(el,'font-weight','700');
             });
             /* Enlarge plan details, coach notes and per-exercise explanations in the PNG. */
             doc.querySelectorAll('.plan-meta,.plan-meta *, .workout-plan-description, .system-notes, .system-notes *, .exercise-extra').forEach(el=>{
-              setImportant(el,'font-size','16px');
-              setImportant(el,'line-height','1.6');
+              setImportant(el,'font-size','17px');
+              setImportant(el,'line-height','1.5');
             });
             doc.querySelectorAll('.plan-meta,.workout-plan-description,.system-notes').forEach(el=>{
               setImportant(el,'font-weight','700');
@@ -5109,7 +5109,7 @@ body.workout-output .empty-cell{display:none!important}
               root.style.setProperty('overflow','visible','important');
               body.style.setProperty('width',captureWidth+'px','important');
               body.style.setProperty('height','auto','important');
-              body.style.setProperty('min-height',kind==='meal'?'282mm':'1720px','important');
+              body.style.setProperty('min-height',kind==='meal'?'282mm':'1550px','important');
               body.style.setProperty('max-height','none','important');
               body.style.setProperty('max-width','none','important');
               body.style.setProperty('overflow','visible','important');
@@ -5141,12 +5141,14 @@ body.workout-output .empty-cell{display:none!important}
             if(!ctx)throw new Error('ساخت صفحه A4 ممکن نشد.');
             ctx.fillStyle='#ffffff';ctx.fillRect(0,0,page.width,page.height);
             const sourceW=Math.max(1,canvas.width),sourceH=Math.max(1,canvas.height);
-            /* Downloaded workout PNG only: fill the complete A4 canvas edge-to-edge.
-               The former proportional fit centered a narrower tall capture and created
-               visible white strips on both sides. Keep every exercise and the footer;
-               change only the final PNG composition, not the preview or text styles. */
+            /* Downloaded workout PNG only: preserve the original proportions.
+               Tighten excess vertical whitespace in the export layout below so the full
+               workout fits the A4 ratio without stretching words or cropping the footer. */
+            const scale=Math.min(page.width/sourceW,page.height/sourceH);
+            const drawW=Math.max(1,Math.round(sourceW*scale));
+            const drawH=Math.max(1,Math.round(sourceH*scale));
             ctx.imageSmoothingEnabled=true;ctx.imageSmoothingQuality='high';
-            ctx.drawImage(canvas,0,0,page.width,page.height);
+            ctx.drawImage(canvas,Math.round((page.width-drawW)/2),Math.round((page.height-drawH)/2),drawW,drawH);
             finalCanvas=page;
           }
           const png=await new Promise((resolve,reject)=>{
