@@ -9653,16 +9653,24 @@ body.workout-output.workout-compact{
   try{
    const plans=await getPlans();
    if(seq!==requestNo||id!==traineeId())return;
-   body.querySelector('#smppDietSection')?.remove();body.querySelector('#smppFastingSection')?.remove();
    const diet=dietSection(plans.diet),fasting=fastingSection(plans.fasting);
+   // Keep unchanged bottom sections in place. Removing and appending them on every
+   // refresh caused a visible layout jump in the nutrition-plan card.
    if(diet||fasting){
     if(!card.dataset.loaded||!body.innerHTML.trim()){
      const date=new Intl.DateTimeFormat('fa-IR-u-ca-persian',{year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());
      let name='شاگرد';try{name=currentClient.name||currentClient.full_name||currentClient.fullName||name;}catch(e){}
      if(!body.querySelector('.smpp-meta'))body.insertAdjacentHTML('afterbegin','<div class="smpp-meta"><div class="smpp-chip"><b>👤 شاگرد:</b> '+esc(name)+'</div><div class="smpp-chip"><b>📅 تاریخ:</b> '+esc(date)+'</div><div class="smpp-chip"><b>🎯 عنوان برنامه:</b> برنامه غذایی اختصاصی</div></div>');
     }
-    if(diet)body.insertAdjacentHTML('beforeend',diet);
-    if(fasting)body.insertAdjacentHTML('beforeend',fasting);
+    const syncSection=(selector,html)=>{
+     const current=body.querySelector(selector);
+     if(current&&html&&current.outerHTML===html)return;
+     if(current&&html){const holder=document.createElement('div');holder.innerHTML=html;current.replaceWith(holder.firstElementChild);return;}
+     if(current&&!html){current.remove();return;}
+     if(!current&&html)body.insertAdjacentHTML('beforeend',html);
+    };
+    syncSection('#smppDietSection',diet);
+    syncSection('#smppFastingSection',fasting);
     card.style.display='block';card.dataset.loaded='1';
    }else if(allowPlanOnly&&!(body.textContent||'').trim()){card.style.display='none';card.dataset.loaded='';}
   }catch(e){console.warn('Could not render coach diet/fasting plans in student nutrition image',e);}
