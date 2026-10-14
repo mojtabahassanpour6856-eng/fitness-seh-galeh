@@ -1999,7 +1999,6 @@ if($("prDate"))$("prDate").value=today();if($("anDate"))$("anDate").value=today(
         <div class="v4-card" onclick="dashOpen('water')"><b>💧</b>آب امروز<span id="dashWater" class="v4-small">—</span></div>
         <div class="v4-card" onclick="dashOpen('activity')"><b>🔥</b>فعالیت امروز<span id="dashActivity" class="v4-small">—</span></div>
         <div class="v4-card" onclick="dashOpen('goals')"><b>🎯</b>هدف من<span id="dashGoal" class="v4-small">ثبت و پیگیری هدف‌های شخصی</span></div>
-        <div class="v4-card" onclick="dashOpen('challenges')"><b>🏆</b>چالش‌ها<span id="dashChallenges" class="v4-small">—</span></div>
         <div class="v4-card" role="button" tabindex="0" onclick="dashOpen('membership')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();dashOpen('membership')}"><b>💳</b>عضویت<span id="dashMembership" class="v4-small">—</span></div>
         <div class="v4-card" data-profile-card="1" onclick="dashOpen('client')"><b>👤</b>پروفایل من<span class="v4-small">مشاهده و ثبت اطلاعات شخصی</span></div>
       </div>`;
@@ -2068,7 +2067,6 @@ if($("prDate"))$("prDate").value=today();if($("anDate"))$("anDate").value=today(
   window.dashOpen=function(section){
     const btn=qsAll('.nav button').find(b=>String(b.getAttribute('onclick')||'').includes("'"+section+"'"));
     if(section==='analysis')buildTraineeAnalysisSection();
-    if(section==='challenges'&&!$id('challenges'))buildChallengesSection();
     if(section==='client'){addProfileBasicFields();if(currentClient)loadProfileBasic();}
     showSection(section==='analysis'?'traineeAnalysis':section==='activity'?'activitySection':section,btn||null);
     if(section==='activity'){if(typeof loadActivityToday==='function')loadActivityToday();if(typeof previewActivityCalories==='function')previewActivityCalories();return;}
@@ -2200,7 +2198,6 @@ if($("prDate"))$("prDate").value=today();if($("anDate"))$("anDate").value=today(
     }catch(e){try{const water=await loadWaterToday();setText('dashWater',`${fmt(water)} ml`);}catch(_){}}
     try{const a=await sbGet(`/activity_logs?trainee_id=eq.${encodeURIComponent(currentClient.id)}&activity_date=eq.${today()}&select=calories_burned`);setText('dashActivity',`${fmt(a.reduce((n,x)=>n+(+x.calories_burned||0),0))} kcal`);}catch(e){}
     try{const m=await sbGet(`/trainee_memberships?trainee_id=eq.${encodeURIComponent(currentClient.id)}&select=end_date,status&order=created_at.desc&limit=1`);setText('dashMembership',window.isoToJalaliDate(m[0]?.end_date)||'ثبت نشده');}catch(e){}
-    try{const ch=await sbGet(`/challenge_participants?trainee_id=eq.${encodeURIComponent(currentClient.id)}&select=id,status`);setText('dashChallenges',ch.length?`${ch.filter(x=>x.status==='active').length} فعال`:'—');}catch(e){setText('dashChallenges','—')}
   }
 window.loadDashboard = loadDashboard;
   function addNavDashboard(){
@@ -2517,12 +2514,6 @@ window.loadDashboard = loadDashboard;
   const oldRenderWorkoutList=window.renderWorkoutList;
   window.renderWorkoutList=function(rows,names){if(!rows.length){$id('workoutList').innerHTML="<p class='muted'>هنوز حرکتی ثبت نشده است.</p>";return;}$id('workoutList').innerHTML=rows.map((x,i)=>{const done=x.is_completed===true;return `<div class="meal-card ${done?'v4-complete':''} v4-system" data-workout-id="${x.id}"><div class="meal-head"><h3>${i+1}. ${esc2(names[x.exercise_id]||'حرکت')}</h3><button class="mini danger" onclick="deleteWorkoutExercise('${x.id}')">🗑 حذف</button></div><label class="checkfood"><input type="checkbox" ${done?'checked':''} onchange="toggleWorkoutComplete('${x.id}',this.checked)"> انجام شد</label><div class="stats"><div class="stat"><b>${esc2(x.sets??'')}</b>ست</div><div class="stat"><b>${esc2(x.reps??'')}</b>تکرار</div><div class="stat"><b>${esc2(x.rest_seconds??0)}</b>ثانیه</div><div class="stat"><b>${esc2(x.training_system||'normal')}</b>سیستم</div></div>${x.training_day?`<span class="pill">${esc2(x.training_day)}</span>`:''}${x.group_key?`<span class="pill">گروه ${esc2(x.group_key)}</span>`:''}${x.notes?`<p class="muted">${esc2(x.notes)}</p>`:''}</div>`}).join('');}
 
-  function buildChallengesSection(){
-    if($id('challenges'))return;
-    const s=document.createElement('section');s.id='challenges';s.className='section';s.innerHTML=`<div class="card"><h2>🏆 چالش‌ها</h2><p class="muted">چالش‌های ثبت‌شده و وضعیت مشارکت شاگرد.</p><div id="challengeList"></div></div>`;document.querySelector('.page').appendChild(s);loadChallenges();
-  }
-  async function loadChallenges(){if(!$id('challengeList'))return;try{const rows=await sbGet(currentClient?`/challenge_participants?trainee_id=eq.${encodeURIComponent(currentClient.id)}&select=id,status,progress,challenges(name,start_date,end_date)`:'/challenges?select=*');$id('challengeList').innerHTML=rows.length?rows.map(x=>`<div class="client"><strong>🏆 ${esc2(x.challenges?.name||x.name||'چالش')}</strong><span class="pill">${esc2(x.status||'active')}</span><span class="pill">پیشرفت ${esc2(x.progress??0)}%</span></div>`).join(''):'<p class="muted">چالشی ثبت نشده است.</p>';}catch(e){$id('challengeList').innerHTML='<p class="muted">برای فعال شدن چالش‌ها، SQL ارتقای جدید را اجرا کنید.</p>';}}
-
   async function loadProgressHistory(){
     if(!currentClient)return;let el=$id('progressHistory');if(!el){el=document.createElement('div');el.id='progressHistory';el.className='card';el.innerHTML='<h2>📈 تاریخچه پیشرفت</h2><div id="progressHistoryBody"></div>';const sec=$id('progress');if(sec)sec.appendChild(el);}try{const rows=await sbGet(`/body_analyses?trainee_id=eq.${encodeURIComponent(currentClient.id)}&select=analysis_date,weight,body_fat,muscle_mass,abdomen,waist,hip,thigh&order=analysis_date.desc`);$id('progressHistoryBody').innerHTML=rows.length?`<div class="v4-table"><table><thead><tr><th>تاریخ</th><th>وزن</th><th>چربی</th><th>عضله</th><th>شکم</th><th>کمر</th><th>باسن</th><th>ران</th></tr></thead><tbody>${rows.map(x=>`<tr><td>${esc2(x.analysis_date||'')}</td><td>${esc2(x.weight??'—')}</td><td>${esc2(x.body_fat??'—')}</td><td>${esc2(x.muscle_mass??'—')}</td><td>${esc2(x.abdomen??'—')}</td><td>${esc2(x.waist??'—')}</td><td>${esc2(x.hip??'—')}</td><td>${esc2(x.thigh??'—')}</td></tr>`).join('')}</tbody></table></div>`:'<p class="muted">هنوز رکوردی ثبت نشده است.</p>';}catch(e){}}
 
@@ -2668,14 +2659,6 @@ window.loadDashboard = loadDashboard;
     }catch(e){console.error('loadWeeklyWaterLogs',e);const msg='<span>گزارش هفتگی آب بارگذاری نشد؛ دوباره تلاش کنید.</span>';if(studentBox)studentBox.innerHTML='<b>📅 گزارش آب ۷ روز اخیر</b>'+msg;if(coachBox)coachBox.innerHTML=msg;}
   }
 
-function buildCoachChallengeManager(){
-    const sec=$id('coach');if(!sec||$id('coachChallenges'))return;
-    const card=document.createElement('div');card.className='card';card.id='coachChallenges';card.innerHTML=`<h2>🏆 مدیریت چالش‌ها</h2><div class="grid2"><input id="challengeName" placeholder="نام چالش"><input id="challengeTarget" type="number" placeholder="هدف عددی"><input id="challengeUnit" placeholder="واحد، مثلاً لیوان/روز"><input id="challengeStart" type="date"><input id="challengeEnd" type="date"></div><textarea id="challengeDesc" placeholder="توضیحات چالش"></textarea><button onclick="createChallenge()">➕ ایجاد چالش</button><div id="coachChallengeList"></div>`;sec.appendChild(card);loadCoachChallenges();
-  }
-  window.createChallenge=async function(){const name=$id('challengeName').value.trim();if(!name)return alert('نام چالش را وارد کنید.');try{await sbWrite('/challenges','POST',{name,description:$id('challengeDesc').value.trim()||null,start_date:$id('challengeStart').value||null,end_date:$id('challengeEnd').value||null,target_value:+$id('challengeTarget').value||null,unit:$id('challengeUnit').value.trim()||null,status:'active'});['challengeName','challengeTarget','challengeUnit','challengeStart','challengeEnd','challengeDesc'].forEach(x=>$id(x).value='');await loadCoachChallenges();alert('چالش ایجاد شد.');}catch(e){alert('ایجاد چالش انجام نشد.\n'+e.message)}};
-  async function loadCoachChallenges(){if(!$id('coachChallengeList'))return;try{const rows=await sbGet('/challenges?select=*&order=created_at.desc');$id('coachChallengeList').innerHTML=rows.length?rows.map(x=>`<div class="client"><strong>🏆 ${esc2(x.name)}</strong><span class="pill">${esc2(x.status||'active')}</span><button class="mini secondary" onclick="assignChallenge('${x.id}')">👥 تخصیص به شاگرد</button></div>`).join(''):'<p class="muted">هنوز چالشی ایجاد نشده است.</p>';}catch(e){$id('coachChallengeList').innerHTML='<p class="muted">برای فعال شدن چالش‌ها، SQL ارتقای V4 را اجرا کنید.</p>';}}
-  window.assignChallenge=async function(challengeId){if(!currentClient)return alert('ابتدا شاگرد را انتخاب کنید.');try{await sbWrite('/challenge_participants','POST',{challenge_id:challengeId,trainee_id:currentClient.id,progress:0,status:'active'});alert('چالش به شاگرد اختصاص داده شد.');await loadDashboard();}catch(e){alert('تخصیص چالش انجام نشد.\n'+e.message)}};
-
   window.saveProgress=async function(){
     if(!currentClient)return alert('اول شاگرد را انتخاب کنید.');
     const d=$id('prDate').value||today(),w=+$id('prWeight').value||null;
@@ -2723,7 +2706,7 @@ async function loadGoal(){
 
   const prevSelectClient=window.selectClient;window.selectClient=async function(id){await prevSelectClient(id);if(currentClient){if($id('trainingDaysEdit'))$id('trainingDaysEdit').value=currentClient.training_days||'';if($id('trainingTimeEdit'))$id('trainingTimeEdit').value=currentClient.training_time||'';await loadGoal();await loadMembershipCard();await loadWaterGoal();await loadWeeklyWaterLogs();}};
 
-  buildAuthTabs();addRegistrationFields();buildCoachChallengeManager();buildGoalBox();addLibraryGoalField();addWaterGoal();addStyle();buildDashboard();addNavDashboard();buildWorkoutControls();addScheduleUI();addPrintButtons();fixLibraryUse();
+  buildAuthTabs();addRegistrationFields();buildGoalBox();addLibraryGoalField();addWaterGoal();addStyle();buildDashboard();addNavDashboard();buildWorkoutControls();addScheduleUI();addPrintButtons();fixLibraryUse();
   AUTH_SUPABASE.auth.getSession().then(({data})=>{if(data?.session)window.finishLogin(data.session.user);}).catch(e=>console.error(e));
 })();
 
@@ -2876,7 +2859,7 @@ const plans=workoutResult.data||[], nutrition=nutritionResult.data||[];
     if(!currentClient)return;
     if($f('trainingDaysEdit'))$f('trainingDaysEdit').value=currentClient.training_days||'';
     if($f('trainingTimeEdit'))$f('trainingTimeEdit').value=currentClient.training_time||'';
-    await Promise.allSettled([loadNoteHistory(),loadMembershipHistory(),loadChallengeForCurrent(),loadProgressChart(),loadActivityWeek()]);
+    await Promise.allSettled([loadNoteHistory(),loadMembershipHistory(),loadProgressChart(),loadActivityWeek()]);
   };
 
   // -------- Workout: edit, reorder, copy and real grouped systems --------
@@ -3411,7 +3394,7 @@ window.toggleExerciseFavorite=async function(id,value){try{await sbWrite(`/train
 
   // Re-run UI helpers after dynamic sections appear.
   const oldShow=window.showSection;
-  window.showSection=function(id,btn){oldShow(id,btn);addFinalStyle();if(id==='workout')addShareButtons();if(id==='meal')addShareButtons();if(id==='challenges'&&$f('challengeList'))loadChallenges();if(id==='progress'&&currentClient){loadProgressChart();loadNoteHistory();}};
+  window.showSection=function(id,btn){oldShow(id,btn);addFinalStyle();if(id==='workout')addShareButtons();if(id==='meal')addShareButtons();if(id==='progress'&&currentClient){loadProgressChart();loadNoteHistory();}};
 
   setTimeout(()=>{addFinalStyle();addShareButtons();addCoachStatusFilters();wireFinalBadges();},700);
 })();
