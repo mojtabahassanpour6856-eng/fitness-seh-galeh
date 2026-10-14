@@ -4916,7 +4916,38 @@ body.workout-output .empty-cell{display:none!important}
              Measure only AFTER the source document has the same width as the clone; measuring
              at phone width and widening only the clone can mismatch grid row heights and clip
              the bottom of a workout session in the exported PNG. */
-          const captureWidth=Math.max(900,Math.ceil(target.getBoundingClientRect().width),target.scrollWidth,doc.documentElement.scrollWidth);
+          const captureWidth=Math.max(1100,Math.ceil(target.getBoundingClientRect().width),target.scrollWidth,doc.documentElement.scrollWidth);
+          /* Larger A4-like workout export: when there are up to six sessions, distribute
+             the session cards across the page height instead of leaving the lower page empty.
+             Use a minimum height rather than a fixed height so longer plans are never clipped. */
+          if(kind!=='meal'){
+            const exportGrid=doc.querySelector('.session-grid');
+            const sessionCount=doc.querySelectorAll('.session-grid .session-cell').length;
+            const rows=Math.max(1,Math.ceil(sessionCount/2));
+            setImportant(target,'min-height','1555px');
+            setImportant(target,'padding','24px');
+            setImportant(exportGrid,'min-height',Math.max(960,rows*320)+'px');
+            setImportant(exportGrid,'grid-template-columns','repeat(2,minmax(0,1fr))');
+            setImportant(exportGrid,'grid-template-rows',`repeat(${rows},minmax(300px,1fr))`);
+            setImportant(exportGrid,'grid-auto-rows','minmax(300px,auto)');
+            setImportant(exportGrid,'align-content','stretch');
+            setImportant(exportGrid,'align-items','stretch');
+            doc.querySelectorAll('.session-cell').forEach(el=>{
+              setImportant(el,'min-height','300px');
+              setImportant(el,'padding','12px');
+            });
+            doc.querySelectorAll('.session-heading').forEach(el=>{
+              setImportant(el,'font-size','18px');
+              setImportant(el,'padding','8px 6px');
+            });
+            doc.querySelectorAll('.exercise-card,.exercise-unit').forEach(el=>{
+              setImportant(el,'font-size','16px');
+              setImportant(el,'line-height','1.55');
+              setImportant(el,'padding','7px 5px');
+            });
+            doc.querySelectorAll('.exercise-name').forEach(el=>setImportant(el,'font-size','16px'));
+            doc.querySelectorAll('.exercise-details').forEach(el=>setImportant(el,'font-size','14px'));
+          }
           setImportant(doc.documentElement,'width',captureWidth+'px');
           setImportant(doc.documentElement,'height','auto');
           setImportant(target,'width',captureWidth+'px');
