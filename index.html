@@ -4975,7 +4975,23 @@ body.workout-output .empty-cell{display:none!important}
              the session cards across the page height instead of leaving the lower page empty.
              Use a minimum height rather than a fixed height so longer plans are never clipped. */
           if(kind!=='meal'){
+            /* The PNG target is the whole document body. Reset the compact A4 stylesheet's
+               fixed mm width/padding and make the session table itself occupy the full canvas
+               width; otherwise html2canvas can preserve a narrow inner grid with white gutters. */
+            setImportant(target,'width',captureWidth+'px');
+            setImportant(target,'min-width',captureWidth+'px');
+            setImportant(target,'max-width','none');
+            setImportant(target,'padding','0');
+            setImportant(target,'margin','0');
+            setImportant(target,'box-sizing','border-box');
+            setImportant(target,'border','0');
             const exportGrid=doc.querySelector('.session-grid');
+            setImportant(exportGrid,'width','100%');
+            setImportant(exportGrid,'min-width','100%');
+            setImportant(exportGrid,'max-width','none');
+            setImportant(exportGrid,'margin-left','0');
+            setImportant(exportGrid,'margin-right','0');
+            setImportant(exportGrid,'box-sizing','border-box');
             const sessionCount=doc.querySelectorAll('.session-grid .session-cell').length;
             const rows=Math.max(1,Math.ceil(sessionCount/2));
             setImportant(target,'min-height',Math.max(1066,rows*330+350)+'px');
@@ -5151,8 +5167,25 @@ body.workout-output .empty-cell{display:none!important}
                 }
               }
               if(kind!=='meal'){
+                /* Repeat the full-width reset on html2canvas's clone: its stylesheet can
+                   otherwise reintroduce the compact print width and leave white side gutters. */
+                [root,body].forEach(el=>{
+                  el.style.setProperty('width',captureWidth+'px','important');
+                  el.style.setProperty('min-width',captureWidth+'px','important');
+                  el.style.setProperty('max-width','none','important');
+                  el.style.setProperty('padding','0','important');
+                  el.style.setProperty('margin','0','important');
+                  el.style.setProperty('box-sizing','border-box','important');
+                  el.style.setProperty('overflow','visible','important');
+                });
                 const grid=clonedDoc.querySelector('.session-grid');
                 if(grid){
+                  grid.style.setProperty('width','100%','important');
+                  grid.style.setProperty('min-width','100%','important');
+                  grid.style.setProperty('max-width','none','important');
+                  grid.style.setProperty('margin-left','0','important');
+                  grid.style.setProperty('margin-right','0','important');
+                  grid.style.setProperty('box-sizing','border-box','important');
                   grid.style.setProperty('height','auto','important');
                   grid.style.setProperty('max-height','none','important');
                   grid.style.setProperty('overflow','visible','important');
