@@ -9187,7 +9187,7 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
       }).join("")+'</div>'+
       '<div class="grid2" style="margin-top:10px"><div><label>افزودن ماده از بانک غذا</label><select id="recipeAddFoodSelect">'+options("")+'</select></div><div style="display:flex;align-items:end"><button type="button" id="recipeAddFoodButton" class="secondary" style="width:100%">＋ افزودن ماده</button></div></div>'+
       (recipe.note?'<small>'+esc(recipe.note)+'</small>':'');
-    host.querySelectorAll("[data-recipe-amount]").forEach(el=>el.addEventListener("input",()=>{
+    host.querySelectorAll("[data-recipe-amount]").forEach(el=>el.addEventListener("change",()=>{
       const i=Number(el.dataset.recipeAmount);if(recipeDraft[i]){recipeDraft[i].amount=Number(el.value)||0;renderRecipe();}
     }));
     host.querySelectorAll("[data-recipe-unit]").forEach(el=>el.addEventListener("change",()=>{
