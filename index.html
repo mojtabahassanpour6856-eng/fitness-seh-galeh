@@ -2034,18 +2034,13 @@ if($("prDate"))$("prDate").value=today();if($("anDate"))$("anDate").value=today(
     box=document.createElement('div');
     box.id='sehWorkoutSectionExport';
     box.style.cssText='display:flex;flex-wrap:wrap;gap:8px;margin:12px 0 4px;padding-top:10px;border-top:1px solid #26384a';
-    box.innerHTML='<button type="button" class="trainee-workout-pdf">📄 دانلود / چاپ PDF برنامه</button><button type="button" class="trainee-workout-image secondary">🖼️ دانلود عکس برنامه</button><p class="muted trainee-workout-export-status" style="width:100%;margin:0"></p>';
-    const run=isImage=>{
+    box.innerHTML='<button type="button" class="trainee-workout-image secondary" style="width:100%">🖼️ دانلود عکس برنامه</button>';
+    const run=()=>{
       if(!currentClient){alert('حساب شاگرد به پرونده متصل نیست. لطفاً دوباره وارد شوید.');return;}
-      if(typeof window.sharePlan==='function'){
-        window.sharePlan('workout');
-        const status=box.querySelector('.trainee-workout-export-status');
-        if(isImage&&status)status.textContent='برگه خروجی باز شد؛ در همان برگه «دانلود عکس PNG» را بزنید.';
-      }else if(typeof window.printPlan==='function')window.printPlan('workout');
-      else alert('ابزار خروجی هنوز بارگذاری نشده است؛ صفحه را تازه‌سازی کنید.');
+      if(typeof window.sharePlan==='function')window.sharePlan('workout',true);
+      else alert('ابزار دانلود عکس هنوز بارگذاری نشده است؛ صفحه را تازه‌سازی کنید.');
     };
-    box.querySelector('.trainee-workout-pdf').addEventListener('click',e=>{e.stopPropagation();run(false);});
-    box.querySelector('.trainee-workout-image').addEventListener('click',e=>{e.stopPropagation();run(true);});
+    box.querySelector('.trainee-workout-image').addEventListener('click',e=>{e.preventDefault();e.stopPropagation();run();});
     card.appendChild(box);
   }
 
@@ -2619,7 +2614,7 @@ window.loadDashboard = loadDashboard;
 
   function addPrintButtons(){
     const m=$id('meal')?.querySelector('.card');if(m&&!$id('printMealBtn')){const b=document.createElement('button');b.id='printMealBtn';b.className='secondary';b.textContent='📄 چاپ / ذخیره PDF برنامه غذایی';b.onclick=()=>printPlan('meal');m.appendChild(b)}
-    const w=$id('workout')?.querySelector('.card');if(w&&!$id('printWorkoutBtn')){const b=document.createElement('button');b.id='printWorkoutBtn';b.className='secondary';b.textContent='📄 چاپ / ذخیره PDF برنامه تمرینی';b.onclick=()=>printPlan('workout');w.appendChild(b)}
+    /* Workout export is handled by the single direct PNG-download button. Keep the save-program action above intact. */
   }
 
   const oldFinish2=window.finishLogin;window.finishLogin=async function(user){await oldFinish2(user);addWaterGoal();addStyle();buildDashboard();addNavDashboard();buildWorkoutControls();addScheduleUI();addPrintButtons();await fixLibraryUse();if(authProfile?.role==='coach'){await window.loadClients();await window.loadRegistrationRequests();}/* Trainee setup is already completed by oldFinish2's wrapped finishLogin; do not run setupTraineeAuth twice because it switches sections and reloads every dashboard panel. */};
@@ -4628,7 +4623,7 @@ window.useLibraryExercise=async function(id){
 /* Reliable full-plan export: no nested inline script inside an HTML string. */
 (function(){
   const esc = v => String(v == null ? '' : v).replace(/[&<>"']/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
-  window.sharePlan = async function(kind){
+  window.sharePlan = async function(kind, autoDownload){
     if(!currentClient) { alert('اول شاگرد را انتخاب کنید.'); return; }
     const trainee = currentClient;
     const title = kind === 'meal' ? 'برنامه غذایی' : 'برنامه تمرینی';
@@ -5383,6 +5378,12 @@ body.workout-output .empty-cell{display:none!important}
       }
       shareButton.addEventListener('click',function(){processPlanImage(false);});
       downloadImageButton.addEventListener('click',function(){processPlanImage(true);});
+      if(kind==='workout'){
+        shareButton.style.display='none';
+        popup.document.getElementById('printFullFile').style.display='none';
+        popup.document.getElementById('downloadFullFile').style.display='none';
+      }
+      if(autoDownload===true)setTimeout(function(){processPlanImage(true);},180);
     } catch(e) {
       console.error('Full plan export failed',e);
       try { popup.document.body.innerHTML = '<p>ساخت خروجی برنامه ناموفق بود: '+esc(e.message||e)+'</p>'; } catch(_) {}
@@ -8887,17 +8888,10 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
         if(!client&&window.currentClient)client=window.currentClient;
         if(!client||!client.id){alert('ابتدا وارد حساب شاگرد شوید و برنامه را باز کنید.');return;}
         if(typeof window.sharePlan==='function'){
-          window.sharePlan(item.kind);
-          var old=card.querySelector('.seh-dash-export-status');
-          if(old)old.remove();
-          var status=document.createElement('div');status.className='muted seh-dash-export-status';
-          status.style.cssText='font-size:10px;line-height:1.7;margin-top:6px;';
-          status.textContent='برگه خروجی باز می‌شود؛ در آن گزینه «دانلود عکس PNG» را بزنید.';
-          button.insertAdjacentElement('afterend',status);
-        }else if(typeof window.printPlan==='function'){
-          window.printPlan(item.kind);
+          window.sharePlan(item.kind, true);
         }else{
           alert('ابزار دانلود عکس هنوز بارگذاری نشده است؛ صفحه را تازه‌سازی کنید.');
+        }
         }
       });
       card.appendChild(button);
