@@ -9833,3 +9833,55 @@ body.workout-output.workout-compact{
 })();
 </script>
 
+
+<script>
+/* WORKOUT PLAN ADHERENCE REPORT V1
+   Short coach/student workout-plan completion summaries.
+   Uses the existing is_completed state; does not alter the protected nutrition code or database schema. */
+(function(){
+  const $=id=>document.getElementById(id);
+  const isTrainee=()=>typeof authProfile!=="undefined"&&authProfile&&authProfile.role==="trainee";
+  const reportStyle="box-sizing:border-box;padding:10px 12px;margin:12px 0 0;border-radius:12px;border:1px solid var(--border,#dbe3ea);background:var(--card,#fff);";
+  function ensureReport(id,title){
+    let el=$(id);
+    const list=$("workoutList"),card=list&&list.closest(".card");
+    if(!list||!card)return null;
+    if(!el){el=document.createElement("div");el.id=id;el.className="card";el.style.cssText=reportStyle;el.innerHTML='<h3 style="font-size:14px;margin:0 0 7px">📊 '+title+'</h3><div class="wpar-body" style="font-size:12px;line-height:1.8">در حال محاسبه…</div>';}
+    if(el.parentElement!==card||card.lastElementChild!==el)card.appendChild(el);
+    return el;
+  }
+  function refresh(){
+    const list=$("workoutList");if(!list)return;
+    const coach=ensureReport("coachWorkoutPlanReport","گزارش کوتاه برنامه تمرینی شاگرد");
+    const student=ensureReport("studentWorkoutPlanReport","گزارش کوتاه برنامه تمرینی من");
+    if(!coach||!student)return;
+    const trainee=isTrainee();
+    coach.style.display=trainee?"none":"block";
+    student.style.display=trainee?"block":"none";
+    const boxes=[...list.querySelectorAll('input[type="checkbox"][onchange*="toggleWorkoutComplete"]')];
+    const total=boxes.length,done=boxes.filter(x=>x.checked).length;
+    const pct=total?Math.round(done/total*100):0;
+    const title=($("workoutTitle")&&$("workoutTitle").value.trim())||"برنامه تمرینی";
+    let html;
+    if(!total){
+      html='<div style="color:var(--muted,#667085)">هنوز حرکتی برای این برنامه ثبت نشده است.</div>';
+    }else{
+      html='<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:7px"><span>برنامه: <b>'+title.replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]))+'</b></span><span>انجام‌شده: <b>'+done+' از '+total حرکت</b></span><strong style="margin-inline-start:auto">'+pct+'٪</strong></div>'+
+      '<div style="height:7px;border-radius:99px;background:var(--soft,#edf0f4);overflow:hidden"><div style="height:100%;width:'+pct+'%;background:var(--primary,#16a34a);border-radius:99px;transition:width .2s"></div></div>'+
+      '<div style="font-size:11px;margin-top:5px;color:var(--muted,#667085)">این گزارش با وضعیت فعلی تیکِ حرکات به‌روز می‌شود.</div>';
+    }
+    coach.querySelector(".wpar-body").innerHTML=html;
+    student.querySelector(".wpar-body").innerHTML=html;
+  }
+  function init(){
+    refresh();
+    const list=$("workoutList");
+    if(list&&typeof MutationObserver==="function")new MutationObserver(refresh).observe(list,{childList:true,subtree:true,attributes:true,attributeFilter:["checked"]});
+    document.addEventListener("change",e=>{if(e.target&&e.target.matches('input[type="checkbox"][onchange*="toggleWorkoutComplete"]'))setTimeout(refresh,80);});
+    document.addEventListener("input",e=>{if(e.target&&e.target.id==="workoutTitle")refresh();});
+    [300,900,1800,3200].forEach(t=>setTimeout(refresh,t));
+    if(document.body&&typeof MutationObserver==="function")new MutationObserver(()=>{if($("workoutList"))refresh();}).observe(document.body,{childList:true,subtree:true});
+  }
+  if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",init);else init();
+})();
+</script>
