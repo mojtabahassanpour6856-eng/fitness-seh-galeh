@@ -9063,10 +9063,10 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
  function mount(){
    const host=$('mealStudentView');if(!host||$('studentDietPrintablePlan'))return;
    const card=document.createElement('section');card.id='studentDietPrintablePlan';card.setAttribute('aria-live','polite');
-   card.innerHTML='<div class="sdpp-head"><div class="sdpp-brand">باشگاه فیتنس سه‌قلعه</div><div class="sdpp-coach">مربی مجتبی</div><div class="sdpp-title">🥗 برنامه غذایی اختصاصی من</div></div><div class="sdpp-content"><div class="sdpp-status" id="sdppStatus">برای دریافت برنامه غذایی، کمی صبر کنید…</div><div id="sdppBody"></div></div><div class="sdpp-actions"><button type="button" id="sdppDownload">🖼️ دانلود عکس برنامه غذایی</button><button type="button" class="secondary" id="sdppPrint">🖨️ چاپ / ذخیره PDF</button><button type="button" class="secondary" id="sdppRefresh">🔄 به‌روزرسانی</button><p id="sdppActionStatus" class="sdpp-status"></p></div>';
+   card.innerHTML='<div class="sdpp-head"><div class="sdpp-brand">باشگاه فیتنس سه‌قلعه</div><div class="sdpp-coach">مربی مجتبی</div><div class="sdpp-title">🥗 برنامه غذایی اختصاصی من</div></div><div class="sdpp-content"><div class="sdpp-status" id="sdppStatus">برای دریافت برنامه غذایی، کمی صبر کنید…</div><div id="sdppBody"></div></div><div class="sdpp-actions"><button type="button" class="secondary" id="sdppPrint">🖨️ چاپ / ذخیره PDF</button><button type="button" class="secondary" id="sdppRefresh">🔄 به‌روزرسانی</button><p id="sdppActionStatus" class="sdpp-status"></p></div>';
    const first=host.querySelector('.card');if(first)first.insertAdjacentElement('afterend',card);else host.insertBefore(card,host.firstChild);
    $('sdppRefresh').addEventListener('click',()=>load(true));
-   $('sdppDownload').addEventListener('click',()=>exportPlan('image'));
+   // دانلود عکس برنامه غذایی از دکمه بالای داشبورد انجام می‌شود.
    $('sdppPrint').addEventListener('click',()=>exportPlan('print'));
  }
  function renderEmpty(message){const st=$('sdppStatus'),body=$('sdppBody');if(st)st.textContent=message;if(body)body.innerHTML='<div class="sdpp-empty">هر زمان مربی مجتبی رژیم یا برنامه فستینگ شما را ذخیره کند، برگه مرتب و قابل دانلود آن در همین قسمت نمایش داده می‌شود.</div>';}
