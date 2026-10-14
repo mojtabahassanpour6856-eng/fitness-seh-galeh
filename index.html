@@ -9211,6 +9211,22 @@ body.workout-output.workout-compact .system-notes{font-size:11px!important;line-
 }
 </style>
 
+<style id="SEH_WORKOUT_A4_SIDE_SPACE_FIX_V1">
+/* Narrow only the horizontal blank margins in workout exports; preserve typography and session layout. */
+body.workout-output.workout-compact{
+  padding-left:2.5mm!important;
+  padding-right:2.5mm!important;
+}
+@media print{
+  body.workout-output.workout-compact{
+    width:204mm!important;
+    padding-left:0!important;
+    padding-right:0!important;
+  }
+  @page{size:A4 portrait;margin:7mm 3mm!important}
+}
+</style>
+
 <script id="FITNESS_PLAN_VISIBILITY_REPAIR_V1">
 /* Final recovery for trainee-facing workout and nutrition sections. */
 (function(){
