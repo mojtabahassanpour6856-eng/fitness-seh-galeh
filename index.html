@@ -10251,7 +10251,7 @@ body.workout-output.workout-compact{
   try{
    const user=await currentAuthUser();
    const r=await window.AUTH_SUPABASE.from('coach_chat_messages').insert({trainee_id:selected.id,sender_id:user.id,body}).select('id').single();
-   if(r.error)throw r.error;input.value='';await loadMessages(true);if(mode==='coach')await loadCoachConversations(user);
+   if(r.error)throw r.error;if(mode==='trainee'){try{const pushResult=await window.AUTH_SUPABASE.functions.invoke('send-chat-push',{body:{trainee_id:selected.id}});if(pushResult.error)console.info('Chat push is not ready yet:',pushResult.error.message||pushResult.error);}catch(pushErr){console.info('Chat push is not ready yet:',pushErr);}}input.value='';await loadMessages(true);if(mode==='coach')await loadCoachConversations(user);
   }catch(err){console.error('Chat send failed',err);alert('ارسال پیام انجام نشد. '+(err.message||''));}
   finally{button.disabled=false;input.focus();}
  }
