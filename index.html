@@ -8711,7 +8711,7 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
    try{
     const rows=await sbGet('/fasting_logs?trainee_id=eq.'+encodeURIComponent(id)+'&order=created_at.desc&limit=30');
     const row=(rows||[]).find(x=>String(x.description||'').startsWith('STUDENT_DIET_REQUEST:'));
-    if(!row)return;
+    if(!row){loadCoachAssignedDiet();return;}
     const d=JSON.parse(row.description.slice('STUDENT_DIET_REQUEST:'.length));
     $('studentDietReadiness').value=d.readiness||'';$('studentDietPreference').value=d.preference||'';
     $('studentDietLimits').value=d.limits||'';$('studentDietNotes').value=d.notes||'';
