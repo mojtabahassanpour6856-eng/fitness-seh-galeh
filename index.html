@@ -8599,8 +8599,6 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
 #studentCoachDietCard .coach-diet-status{font-size:13px;line-height:1.9;color:#cbd8d3;white-space:pre-wrap}
 #studentCoachDietCard .coach-diet-refresh{width:100%;margin-top:10px}
 </style>
-#studentDietRequestCard textarea{min-height:76px}
-</style>
 <script id="STUDENT_DIET_REQUEST_ONLY_V1">
 (function(){
  'use strict';
@@ -8639,7 +8637,13 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
    const trainee=isTrainee();
    panel.style.setProperty('display',trainee?'none':'','important');
    card.style.setProperty('display',trainee?'block':'none','important');
-   if(trainee)loadMyRequest();
+   // Avoid refetching/re-rendering the entire diet card on every DOM mutation.
+   // The observer below runs often; only load when the account role actually changes.
+   const mode=trainee?'trainee':'coach';
+   if(card.dataset.studentDietMode!==mode){
+     card.dataset.studentDietMode=mode;
+     if(trainee)loadMyRequest();
+   }
  }
  function currentTraineeId(){
    try{return (typeof currentClient!=='undefined'&&currentClient&&currentClient.id)||(typeof authProfile!=='undefined'&&authProfile&&(authProfile.trainee_id||authProfile.id));}catch(e){return null;}
