@@ -8588,6 +8588,18 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
 <style>
 #studentDietRequestCard .muted{line-height:1.8}
 #studentDietRequestCard textarea{min-height:76px}
+#studentCoachDietCard{margin-top:16px;padding:0;overflow:hidden;border:1px solid #3a7b67;background:linear-gradient(145deg,#102820,#101923 72%);border-radius:18px}
+#studentCoachDietCard .coach-diet-head{padding:15px 16px;background:linear-gradient(110deg,#1c5945,#17372f);border-bottom:1px solid #3a7b67}
+#studentCoachDietCard .coach-diet-head h3{margin:0 0 5px;font-size:17px}
+#studentCoachDietCard .coach-diet-head p{margin:0;font-size:12px;opacity:.9;line-height:1.8}
+#studentCoachDietCard .coach-diet-body{padding:14px}
+#studentCoachDietCard .coach-diet-section{border:1px solid #2d4b42;background:#0b1916;border-radius:12px;padding:12px;margin:9px 0}
+#studentCoachDietCard .coach-diet-label{font-size:12px;color:#a9d9c4;margin-bottom:6px}
+#studentCoachDietCard .coach-diet-value{white-space:pre-wrap;overflow-wrap:anywhere;line-height:2;font-size:14px}
+#studentCoachDietCard .coach-diet-status{font-size:13px;line-height:1.9;color:#cbd8d3;white-space:pre-wrap}
+#studentCoachDietCard .coach-diet-refresh{width:100%;margin-top:10px}
+</style>
+#studentDietRequestCard textarea{min-height:76px}
 </style>
 <script id="STUDENT_DIET_REQUEST_ONLY_V1">
 (function(){
@@ -8612,7 +8624,15 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
       <label for="studentDietNotes">توضیحات و شرایط زندگی من</label><textarea id="studentDietNotes" placeholder="مثلاً زمان‌های آزاد برای غذا، بودجه، شیفت کاری یا سختی‌های رژیم گرفتن"></textarea>
       <button type="button" id="studentDietRequestSave">📨 ارسال درخواست برای مربی</button>
       <p id="studentDietRequestStatus" class="muted" aria-live="polite"></p>
-      <div id="studentDietRequestPrevious" class="muted"></div>`;
+      <div id="studentDietRequestPrevious" class="muted"></div>
+      <section id="studentCoachDietCard" aria-live="polite">
+       <div class="coach-diet-head"><h3>🥗 رژیم غذایی من</h3><p>برنامه‌ای که مربی مجتبی برای شما تنظیم و ثبت کرده است.</p></div>
+       <div class="coach-diet-body">
+        <div id="studentCoachDietStatus" class="coach-diet-status">در حال بررسی برنامه ثبت‌شده…</div>
+        <div id="studentCoachDietDetails"></div>
+        <button type="button" class="secondary coach-diet-refresh" id="studentCoachDietRefresh">🔄 به‌روزرسانی برنامه من</button>
+       </div>
+      </section>`;
      panel.insertAdjacentElement('afterend',card);
      $('studentDietRequestSave').addEventListener('click',saveRequest);
    }
@@ -8623,6 +8643,54 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
  }
  function currentTraineeId(){
    try{return (typeof currentClient!=='undefined'&&currentClient&&currentClient.id)||(typeof authProfile!=='undefined'&&authProfile&&(authProfile.trainee_id||authProfile.id));}catch(e){return null;}
+ }
+ async function loadCoachAssignedDiet(){
+   const status=$('studentCoachDietStatus'),details=$('studentCoachDietDetails');
+   if(!status||!details)return;
+   const id=currentTraineeId();
+   if(!id){status.textContent='برای نمایش برنامه، حساب شاگرد را دوباره وارد کنید.';details.textContent='';return;}
+   status.textContent='در حال دریافت رژیم ثبت‌شده توسط مربی…';details.innerHTML='';
+   try{
+    const rows=await sbGet('/fasting_logs?trainee_id=eq.'+encodeURIComponent(id)+'&order=created_at.desc&limit=50');
+    const list=Array.isArray(rows)?rows:[];
+    let diet=null;
+    for(const row of list){
+      const raw=String(row.description||'');
+      if(!raw.startsWith('رژیم‌غذایی::'))continue;
+      try{diet=JSON.parse(raw.slice('رژیم‌غذایی::'.length));break;}catch(e){}
+    }
+    const fastingRow=list.find(x=>{
+      const d=String(x.description||'');
+      return !d.startsWith('STUDENT_DIET_REQUEST:')&&!d.startsWith('رژیم‌غذایی::')&&!d.startsWith('DIET_CONFIG:')&&/^نوع\s/.test(d);
+    });
+    const escHtml=v=>String(v==null?'':v).replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
+    const section=(label,value)=>'<div class="coach-diet-section"><div class="coach-diet-label">'+escHtml(label)+'</div><div class="coach-diet-value">'+escHtml(value||'—')+'</div></div>';
+    let html='';
+    if(diet){
+      html+=section('نوع رژیم تعیین‌شده توسط مربی',diet.type||'رژیم اختصاصی');
+      if(diet.settings)html+=section('تنظیمات و دستورهای رژیم',diet.settings);
+      if(diet.mealPlanText)html+=section('🍽️ وعده‌ها و مقدار غذاها',diet.mealPlanText);
+      if(diet.notes)html+=section('💬 پیام مربی به شما',diet.notes);
+      if(diet.updatedAt)html+=section('📅 آخرین ثبت',new Date(diet.updatedAt).toLocaleDateString('fa-IR'));
+    }
+    if(fastingRow){
+      let fastingText=String(fastingRow.description||'').replace(/^نوع\s*/,'');
+      if(fastingRow.start_time)fastingText+='\nشروع فست: '+String(fastingRow.start_time).slice(0,5);
+      if(fastingRow.end_time)fastingText+='\nپایان فست: '+String(fastingRow.end_time).slice(0,5);
+      html+=section('⏳ برنامه فستینگ ثبت‌شده توسط مربی',fastingText);
+    }
+    if(!html){
+      status.textContent='هنوز رژیم یا برنامه فستینگ برای شما ثبت نشده است.';
+      details.innerHTML='<div class="coach-diet-section"><div class="coach-diet-value">وقتی مربی برنامه شما را ذخیره کند، نوع رژیم، وعده‌ها، مقدار غذاها و توضیحات در همین قسمت نمایش داده می‌شود.</div></div>';
+    }else{
+      status.textContent='✅ برنامه ثبت‌شده توسط مربی شما';
+      details.innerHTML=html;
+    }
+   }catch(e){
+    console.error('load coach assigned diet for trainee',e);
+    status.textContent='دریافت برنامه انجام نشد. اتصال اینترنت را بررسی کنید و دوباره به‌روزرسانی را بزنید.';
+    details.innerHTML='';
+   }
  }
  async function saveRequest(){
    const status=$('studentDietRequestStatus'),id=currentTraineeId();
@@ -8649,6 +8717,7 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
     $('studentDietLimits').value=d.limits||'';$('studentDietNotes').value=d.notes||'';
     box.textContent='آخرین درخواست ثبت‌شده: '+(d.updatedAt?new Date(d.updatedAt).toLocaleDateString('fa-IR'):'ثبت شده')+'؛ برای تغییر شرایط، فرم را ویرایش و دوباره ارسال کنید.';
    }catch(e){console.warn('load student diet request',e);}
+   loadCoachAssignedDiet();
  }
  function wrapCoachSummary(){
    if(typeof window.loadDietSummary!=='function'||window.loadDietSummary.__studentRequestWrapped)return;
@@ -8671,7 +8740,8 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
    };
    wrapped.__studentRequestWrapped=true;window.loadDietSummary=wrapped;
  }
- function run(){ensureCard();wrapCoachSummary();}
+ const bindDietRefresh=()=>{const b=$('studentCoachDietRefresh');if(b&&!b.dataset.bound){b.dataset.bound='1';b.addEventListener('click',loadCoachAssignedDiet);}};
+ function run(){ensureCard();wrapCoachSummary();bindDietRefresh();}
  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',run);
  else run();
  new MutationObserver(run).observe(document.body,{childList:true,subtree:true});
