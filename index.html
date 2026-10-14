@@ -9880,7 +9880,6 @@ body.workout-output.workout-compact{
     document.addEventListener("change",e=>{if(e.target&&e.target.matches('input[type="checkbox"][onchange*="toggleWorkoutComplete"]'))setTimeout(refresh,80);});
     document.addEventListener("input",e=>{if(e.target&&e.target.id==="workoutTitle")refresh();});
     [300,900,1800,3200].forEach(t=>setTimeout(refresh,t));
-    if(document.body&&typeof MutationObserver==="function")new MutationObserver(()=>{if($("workoutList"))refresh();}).observe(document.body,{childList:true,subtree:true});
   }
   if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",init);else init();
 })();
