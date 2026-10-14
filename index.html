@@ -5208,18 +5208,22 @@ body.workout-output .empty-cell{display:none!important}
                 clonedDoc.body.querySelectorAll('*').forEach(el=>{
                   el.style.setProperty('font-family','Tahoma,Arial,sans-serif','important');
                 });
-                /* Slightly enlarge workout text in the downloaded PNG only.
-                   Keep the decorative/header area and all table/grid dimensions untouched. */
+                /* Enlarge only the actual workout-content text in the downloaded PNG.
+                   The export markup uses .session-cell and .exercise-unit; target real selectors.
+                   Header, gym branding, borders, padding, and grid/table dimensions stay unchanged. */
                 const textTargets=clonedDoc.querySelectorAll(
                   '.plan-meta,.plan-meta *,.workout-plan-description,.workout-plan-description *,'+
-                  '.plan-count,.session-grid .session-heading,.session-grid .workout-session-heading,'+
-                  '.session-grid .exercise-name,.session-grid .exercise-details,.session-grid .exercise-extra,'+
-                  '.session-grid .system-notes,.session-grid .session-exercises'
+                  '.plan-count,.session-cell .session-heading,.session-cell h2,.session-cell h3,'+
+                  '.session-cell .exercise-name,.session-cell .exercise-details,'+
+                  '.session-cell .exercise-details span,.session-cell .exercise-extra,'+
+                  '.session-cell .rx,.session-cell .sys,.session-cell .rest,'+
+                  '.session-cell .system-notes,.session-cell .system-notes *'
                 );
                 textTargets.forEach(el=>{
+                  if(el.closest('.plan-header')) return;
                   const current=parseFloat(clonedDoc.defaultView.getComputedStyle(el).fontSize);
                   if(Number.isFinite(current) && current>0){
-                    el.style.setProperty('font-size',(current*1.05)+'px','important');
+                    el.style.setProperty('font-size',(current*1.12)+'px','important');
                   }
                 });
               }
