@@ -10143,7 +10143,7 @@ body.workout-output.workout-compact{
   }else{
    const coach=$('coach');if(coach&&!$('sehChatCoachCard')){
     const card=document.createElement('div');card.id='sehChatCoachCard';card.className='card';
-    card.innerHTML='<h2>💬 پیام‌های شاگردان <span class="seh-chat-unread" id="sehChatCoachUnread" style="display:none">۰</span></h2><p class="muted">گفت‌وگوهای خصوصی شاگردان را از اینجا باز کنید.</p><button type="button" onclick="window.sehOpenCoachChat()">باز کردن پیام‌ها</button> <button type="button" id="sehEnableChatNotices">فعال‌سازی اعلان پیام</button><small id="sehChatNoticeStatus" style="display:block;margin-top:8px;color:#587066">اعلان هنگام باز بودن اپ و اجازه مرورگر کار می‌کند.</small>';
+    card.innerHTML='<h2>💬 پیام‌های شاگردان <span class="seh-chat-unread" id="sehChatCoachUnread" style="display:none">۰</span></h2><p class="muted">گفت‌وگوهای خصوصی شاگردان را از اینجا باز کنید.</p><button type="button" onclick="window.sehOpenCoachChat()">باز کردن پیام‌ها</button> <button type="button" id="sehEnableChatNotices">فعال‌سازی اعلان پیام</button><small id="sehChatNoticeStatus" style="display:block;margin-top:8px;color:#587066">مرحله اول: شناسایی پیام جدید و نام شاگرد؛ اعلان کامل گوشی در مراحل بعد تکمیل می‌شود.</small>';
     const first=coach.querySelector('.card');if(first)first.insertAdjacentElement('afterend',card);else coach.prepend(card);
    }
   }
@@ -10154,7 +10154,7 @@ body.workout-output.workout-compact{
   if(!('Notification' in window)){setCoachNoticeStatus('این مرورگر اعلان را پشتیبانی نمی‌کند.');return;}
   try{
    const permission=await Notification.requestPermission();
-   if(permission==='granted'){setCoachNoticeStatus('اعلان پیام فعال شد؛ تا وقتی اپ باز باشد پیام‌های جدید بررسی می‌شوند.');startCoachNoticePolling(true);}
+   if(permission==='granted'){setCoachNoticeStatus('اجازه مرورگر ثبت شد؛ شناسایی پیام‌ها فعال است. اعلان مطمئن اندروید در مرحله بعد تکمیل می‌شود.');startCoachNoticePolling(true);}
    else setCoachNoticeStatus('اجازه اعلان داده نشد؛ از تنظیمات مرورگر اجازه اعلان را فعال کنید.');
   }catch(e){setCoachNoticeStatus('فعال‌سازی اعلان انجام نشد.');}
  }
@@ -10178,10 +10178,10 @@ body.workout-output.workout-compact{
    }
    for(const m of rows){
     const mid=String(m.id);if(coachNoticeSeen.has(mid))continue;coachNoticeSeen.add(mid);
+    const name=byId[String(m.trainee_id)]||'شاگرد';
+    setCoachNoticeStatus('پیام جدید از «'+name+'» شناسایی شد. برای مشاهده، گفت‌وگوها را باز کنید.');
     if('Notification' in window&&Notification.permission==='granted'&&document.visibilityState==='visible'){
-     const name=byId[String(m.trainee_id)]||'شاگرد';
-     const note=new Notification('فیتنس سه‌قلعه',{body:name+' برای شما پیام فرستاد.',tag:'seh-chat-'+mid});
-     note.onclick=()=>{window.focus();if(typeof window.sehOpenCoachChatForTrainee==='function')window.sehOpenCoachChatForTrainee(String(m.trainee_id));note.close();};
+     try{const note=new Notification('فیتنس سه‌قلعه',{body:name+' برای شما پیام فرستاد.',tag:'seh-chat-'+mid});note.onclick=()=>{window.focus();if(typeof window.sehOpenCoachChatForTrainee==='function')window.sehOpenCoachChatForTrainee(String(m.trainee_id));note.close();};}catch(noticeError){console.info('Native notification will be enabled with the service worker step.');}
     }
    }
    if(coachNoticeSeen.size>300)coachNoticeSeen=new Set(Array.from(coachNoticeSeen).slice(-150));
