@@ -5090,6 +5090,17 @@ body.workout-output .empty-cell{display:none!important}
             Math.ceil(doc.documentElement.offsetHeight||0),
             Math.ceil(target.getBoundingClientRect().height||0)
           )+32;
+          /* Apply the larger plus directly to the source DOM only for PNG capture.
+             This is more reliable than clone-only styles on mobile html2canvas builds;
+             restore every inline value immediately after capture so preview/print stay normal. */
+          const pngPlusRestore=[];
+          if(kind!=='meal'){
+            doc.querySelectorAll('.workout-group-plus').forEach(el=>{
+              pngPlusRestore.push({el,fontSize:el.style.getPropertyValue('font-size'),fontPriority:el.style.getPropertyPriority('font-size'),minWidth:el.style.getPropertyValue('min-width'),minPriority:el.style.getPropertyPriority('min-width')});
+              el.style.setProperty('font-size','1.7em','important');
+              el.style.setProperty('min-width','1.25em','important');
+            });
+          }
           const canvas=await popup.html2canvas(target,{
             scale:2, backgroundColor:'#ffffff', useCORS:true, logging:false,
             width:captureWidth,
@@ -5137,6 +5148,12 @@ body.workout-output .empty-cell{display:none!important}
                 });
               }
             }
+          });
+          pngPlusRestore.forEach(item=>{
+            if(item.fontSize)item.el.style.setProperty('font-size',item.fontSize,item.fontPriority);
+            else item.el.style.removeProperty('font-size');
+            if(item.minWidth)item.el.style.setProperty('min-width',item.minWidth,item.minPriority);
+            else item.el.style.removeProperty('min-width');
           });
           /* A4 portrait export: contain the full rendered plan in a fixed A4-ratio canvas so the final exercises and footer are never cropped. */
           let finalCanvas=canvas;
