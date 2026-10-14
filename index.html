@@ -9222,9 +9222,9 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
   const host=$('mealStudentView'),list=$('studentMealList');
   if(!host||!list||$('studentMealPrintablePlan'))return;
   const card=document.createElement('section');card.id='studentMealPrintablePlan';card.style.display='none';card.setAttribute('aria-live','polite');
-  card.innerHTML='<div class="smpp-head"><div class="smpp-brand">باشگاه فیتنس سه‌قلعه</div><div class="smpp-coach">مربی مجتبی</div><div class="smpp-title">🥗 برنامه غذایی روزانه من</div></div><div class="smpp-content"><div id="smppBody"></div></div><div class="smpp-actions"><button type="button" id="smppDownload">🖼️ دانلود عکس برنامه غذایی</button><p id="smppStatus" class="smpp-status"></p></div>';
+  card.innerHTML='<div class="smpp-head"><div class="smpp-brand">باشگاه فیتنس سه‌قلعه</div><div class="smpp-coach">مربی مجتبی</div><div class="smpp-title">🥗 برنامه غذایی روزانه من</div></div><div class="smpp-content"><div id="smppBody"></div></div>';
   const summary=host.querySelector('.card');if(summary)summary.insertAdjacentElement('afterend',card);else list.insertAdjacentElement('beforebegin',card);
-  $('smppDownload').addEventListener('click',downloadImage);
+  // دانلود برنامه غذایی از دکمه بالای صفحه انجام می‌شود؛ داخل کارت چاپی دکمه‌ای نمایش داده نمی‌شود.
  }
  function render(meals,p){
   mount();const card=$('studentMealPrintablePlan'),body=$('smppBody');if(!card||!body)return;
