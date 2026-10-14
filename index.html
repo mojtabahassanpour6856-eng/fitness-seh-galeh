@@ -5130,7 +5130,8 @@ body.workout-output .empty-cell{display:none!important}
             Math.ceil(doc.documentElement.scrollHeight||0),
             Math.ceil(doc.documentElement.offsetHeight||0),
             Math.ceil(target.getBoundingClientRect().height||0)
-          )+32;
+          )+240;
+          /* Extra bottom capture space is intentional: on Android, html2canvas can stop at the body viewport edge and clip the coach-notes/footer block even when it exists in the export DOM. The later A4 crop trims blank pixels, so this safety space does not add a blank border to the downloaded image. */
           /* For the A4 PNG, capture the workout body at the same portrait ratio as the
              final 1754x2480 page. A very tall natural-flow capture was being shrunk to fit
              the page height, which created broad blank side gutters around the table. */
@@ -5185,7 +5186,18 @@ body.workout-output .empty-cell{display:none!important}
               body.style.setProperty('overflow','visible','important');
               body.style.setProperty('box-sizing','border-box','important');
               if(kind!=='meal'){
-                body.style.setProperty('padding','0 0 10px','important');
+                body.style.setProperty('padding','0 0 28px','important');
+              const coachFooter=body.querySelector('.workout-export-footer');
+              if(coachFooter){
+                coachFooter.style.setProperty('display','block','important');
+                coachFooter.style.setProperty('visibility','visible','important');
+                coachFooter.style.setProperty('opacity','1','important');
+                coachFooter.style.setProperty('height','auto','important');
+                coachFooter.style.setProperty('max-height','none','important');
+                coachFooter.style.setProperty('overflow','visible','important');
+                coachFooter.style.setProperty('flex','0 0 auto','important');
+                coachFooter.style.setProperty('break-inside','avoid','important');
+              }
                 body.style.setProperty('margin','0px','important');
                 body.style.setProperty('border','2px solid #d4b15c','important');
               }
