@@ -5514,10 +5514,9 @@ else loadCoachExerciseListsWhenReady();
     const rank=v=>{const t=String(v||'').trim();const m=t.match(/(اول|دوم|سوم|چهارم|پنجم|ششم|هفتم|هشتم|نهم|دهم|[0-9۰-۹]+)/);const n={'اول':1,'دوم':2,'سوم':3,'چهارم':4,'پنجم':5,'ششم':6,'هفتم':7,'هشتم':8,'نهم':9,'دهم':10};if(!m)return 999;const q=n[m[1]]||Number(String(m[1]).replace(/[۰-۹]/g,d=>'۰۱۲۳۴۵۶۷۸۹'.indexOf(d)));return Number.isFinite(q)&&q>0?q:999;};
     const sessions=new Map();rows.forEach((row,index)=>{const day=String(row.training_day||'').trim()||'جلسه بدون نام';if(!sessions.has(day))sessions.set(day,[]);sessions.get(day).push({...row,_renderIndex:index});});
     const ordered=[...sessions.entries()].sort((a,b)=>{const ra=rank(a[0]),rb=rank(b[0]);return ra===rb?Math.min(...a[1].map(x=>x._renderIndex))-Math.min(...b[1].map(x=>x._renderIndex)):ra-rb;});
-    const done=rows.filter(x=>x.is_completed===true).length,pct=Math.round(done*100/rows.length);
-    const summary='<div class="card workout-total-summary"><div class="f18-kpi"><div><b>'+rows.length+'</b>حرکت کل</div><div><b>'+done+'</b>انجام‌شده</div><div><b>'+pct+'%</b>پیشرفت کل</div></div></div>';
-    const html=ordered.map(([day,items])=>{const sd=items.filter(x=>x.is_completed===true).length;const cards=items.map(x=>{const exercise=(names&&(names[String(x.exercise_id)]||names[x.exercise_id]))||'حرکت',sys=String(x.training_system||'normal');const sysLabels={normal:'عادی',superset:'سوپرست',triset:'تری‌ست',giant:'جاینت‌ست','drop-set':'دراپ‌ست',dropset:'دراپ‌ست'};return '<article class="meal-card workout-session-exercise '+(x.is_completed===true?'v4-complete':'')+'" data-workout-id="'+esc(x.id)+'"><div class="meal-head"><h3>'+esc(x._renderIndex+1)+'. '+esc(exercise)+'</h3></div><div class="workout-exercise-meta"><strong>'+esc(x.sets??'—')+' ست × '+esc(x.reps||'—')+'</strong><span>استراحت '+esc(x.rest_seconds??0)+' ثانیه</span><span>'+esc(sysLabels[sys]||sys)+'</span></div>'+(x.group_key?'<div class="muted workout-group-tag">گروه '+esc(x.group_key)+'</div>':'')+(x.notes?'<div class="muted workout-exercise-note">'+esc(x.notes)+'</div>':'')+'<div class="workout-exercise-actions"><label class="checkfood"><input type="checkbox" '+(x.is_completed===true?'checked':'')+' onchange="toggleWorkoutComplete(\''+esc(x.id)+'\',this.checked)"> انجام</label><button class="mini secondary" onclick="editWorkoutExercise(\''+esc(x.id)+'\')" title="ویرایش">✏️</button><button class="mini secondary" onclick="moveWorkoutExercise(\''+esc(x.id)+'\',-1)" title="انتقال به بالا">⬆️</button><button class="mini secondary" onclick="moveWorkoutExercise(\''+esc(x.id)+'\',1)" title="انتقال به پایین">⬇️</button><button class="mini danger" onclick="deleteWorkoutExercise(\''+esc(x.id)+'\')" title="حذف">🗑</button></div></article>';}).join('');return '<section class="workout-session-group" data-session-name="'+esc(day)+'"><header class="workout-session-heading"><strong>🏋️ '+esc(day)+'</strong><span>'+items.length+' حرکت · '+sd+' انجام‌شده</span></header><div class="workout-session-exercises">'+cards+'</div></section>';}).join('');
-    box.innerHTML=summary+html;
+    
+    const html=ordered.map(([day,items])=>{const sd=items.filter(x=>x.is_completed===true).length;const cards=items.map(x=>{const exercise=(names&&(names[String(x.exercise_id)]||names[x.exercise_id]))||'حرکت',sys=String(x.training_system||'normal');const sysLabels={normal:'عادی',superset:'سوپرست',triset:'تری‌ست',giant:'جاینت‌ست','drop-set':'دراپ‌ست',dropset:'دراپ‌ست'};return '<article class="meal-card workout-session-exercise '+(x.is_completed===true?'v4-complete':'')+'" data-workout-id="'+esc(x.id)+'"><div class="meal-head"><h3>'+esc(x._renderIndex+1)+'. '+esc(exercise)+'</h3></div><div class="workout-exercise-meta"><strong>'+esc(x.sets??'—')+' ست × '+esc(x.reps||'—')+'</strong><span>استراحت '+esc(x.rest_seconds??0)+' ثانیه</span><span>'+esc(sysLabels[sys]||sys)+'</span></div>'+(x.group_key?'<div class="muted workout-group-tag">گروه '+esc(x.group_key)+'</div>':'')+(x.notes?'<div class="muted workout-exercise-note">'+esc(x.notes)+'</div>':'')+'<div class="workout-exercise-actions"><button class="mini secondary" onclick="editWorkoutExercise(\''+esc(x.id)+'\')" title="ویرایش">✏️</button><button class="mini secondary" onclick="moveWorkoutExercise(\''+esc(x.id)+'\',-1)" title="انتقال به بالا">⬆️</button><button class="mini secondary" onclick="moveWorkoutExercise(\''+esc(x.id)+'\',1)" title="انتقال به پایین">⬇️</button><button class="mini danger" onclick="deleteWorkoutExercise(\''+esc(x.id)+'\')" title="حذف">🗑</button></div></article>';}).join('');return '<section class="workout-session-group" data-session-name="'+esc(day)+'"><header class="workout-session-heading"><strong>🏋️ '+esc(day)+'</strong><span>'+items.length+' حرکت</span></header><div class="workout-session-exercises">'+cards+'</div></section>';}).join('');
+    box.innerHTML=html;
   };
 })();
 
@@ -5930,7 +5929,7 @@ else loadCoachExerciseListsWhenReady();
    const rows=await sbGet("/trainee_workout_day_logs?trainee_id=eq."+encodeURIComponent(traineeId)+"&workout_plan_id=eq."+encodeURIComponent(planId)+"&select=workout_day,completed_date,cycle_week,is_completed&order=completed_date.desc");
    if(!currentClient||String(currentClient.id)!==String(traineeId))return;
    let box=$("coachWorkoutMissionReport");
-   if(!box){box=document.createElement("div");box.id="coachWorkoutMissionReport";box.className="card";const list=$("workoutList");if(list?.parentNode)list.parentNode.insertBefore(box,list);}
+   if(!box){box=document.createElement("div");box.id="coachWorkoutMissionReport";box.className="card";}const list=$("workoutList");const workoutCard=list?.closest(".card");if(workoutCard&&box.parentElement!==workoutCard)workoutCard.appendChild(box);
    const weeks=[1,2,3,4].map(w=>{const r=rows.filter(x=>Number(x.cycle_week)===w&&x.is_completed);return '<div class="receipt-item"><b>هفته '+w+'</b><br>'+r.length+' ثبت تمرین'+(r.length?'<p class="muted">'+r.map(x=>safe(x.workout_day)+' · '+safe(fmtDate(x.completed_date))).join('<br>')+'</p>':'')+'</div>';}).join("");
    box.innerHTML="<h3>📊 پیگیری مأموریت‌های تمرین شاگرد</h3><div class=\"grid2\">"+weeks+"</div>";
   }catch(e){console.warn("coach workout mission report",e);}
@@ -5982,7 +5981,7 @@ else loadCoachExerciseListsWhenReady();
    });
    const doneByWeek=[1,2,3,4].map(w=>new Set(logs.filter(x=>Number(x.cycle_week)===w&&x.is_completed).map(x=>x.workout_day)).size);
    let summary=$("workoutFourWeekSummary");
-   if(!summary){summary=document.createElement("div");summary.id="workoutFourWeekSummary";summary.className="card";list.parentNode.insertBefore(summary,list);}
+   if(!summary){summary=document.createElement("div");summary.id="workoutFourWeekSummary";summary.className="card";}const workoutCard=list.closest(".card");if(workoutCard&&summary.parentElement!==workoutCard)workoutCard.appendChild(summary);
    summary.innerHTML='<h3>📅 پیگیری چهار هفته برنامه</h3><div class="grid2">'+doneByWeek.map((n,i)=>'<div class="receipt-item"><b>هفته '+(i+1)+'</b><br>'+n+' جلسه ثبت‌شده</div>').join("")+'</div><p class="muted">'+(cycle.week>=1&&cycle.week<=4?"اکنون هفته "+cycle.week+" از ۴ است.":"دوره چهار هفته‌ای تمام شده؛ برای دوره بعدی با مربی هماهنگ کنید.")+'</p>';
   }catch(e){console.warn("workout mission load",e);}
  }
@@ -9834,53 +9833,4 @@ body.workout-output.workout-compact{
 </script>
 
 
-<script>
-/* WORKOUT PLAN ADHERENCE REPORT V1
-   Short coach/student workout-plan completion summaries.
-   Uses the existing is_completed state; does not alter the protected nutrition code or database schema. */
-(function(){
-  const $=id=>document.getElementById(id);
-  const isTrainee=()=>typeof authProfile!=="undefined"&&authProfile&&authProfile.role==="trainee";
-  const reportStyle="box-sizing:border-box;padding:10px 12px;margin:12px 0 0;border-radius:12px;border:1px solid var(--border,#dbe3ea);background:var(--card,#fff);";
-  function ensureReport(id,title){
-    let el=$(id);
-    const list=$("workoutList"),card=list&&list.closest(".card");
-    if(!list||!card)return null;
-    if(!el){el=document.createElement("div");el.id=id;el.className="card";el.style.cssText=reportStyle;el.innerHTML='<h3 style="font-size:14px;margin:0 0 7px">📊 '+title+'</h3><div class="wpar-body" style="font-size:12px;line-height:1.8">در حال محاسبه…</div>';}
-    if(el.parentElement!==card)card.appendChild(el);
-    return el;
-  }
-  function refresh(){
-    const list=$("workoutList");if(!list)return;
-    const coach=ensureReport("coachWorkoutPlanReport","گزارش کوتاه برنامه تمرینی شاگرد");
-    const student=ensureReport("studentWorkoutPlanReport","گزارش کوتاه برنامه تمرینی من");
-    if(!coach||!student)return;
-    const trainee=isTrainee();
-    coach.style.display=trainee?"none":"block";
-    student.style.display=trainee?"block":"none";
-    const boxes=[...list.querySelectorAll('input[type="checkbox"][onchange*="toggleWorkoutComplete"]')];
-    const total=boxes.length,done=boxes.filter(x=>x.checked).length;
-    const pct=total?Math.round(done/total*100):0;
-    const title=($("workoutTitle")&&$("workoutTitle").value.trim())||"برنامه تمرینی";
-    let html;
-    if(!total){
-      html='<div style="color:var(--muted,#667085)">هنوز حرکتی برای این برنامه ثبت نشده است.</div>';
-    }else{
-      html='<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:7px"><span>برنامه: <b>'+title.replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]))+'</b></span><span>انجام‌شده: <b>'+done+' از '+total حرکت</b></span><strong style="margin-inline-start:auto">'+pct+'٪</strong></div>'+
-      '<div style="height:7px;border-radius:99px;background:var(--soft,#edf0f4);overflow:hidden"><div style="height:100%;width:'+pct+'%;background:var(--primary,#16a34a);border-radius:99px;transition:width .2s"></div></div>'+
-      '<div style="font-size:11px;margin-top:5px;color:var(--muted,#667085)">این گزارش با وضعیت فعلی تیکِ حرکات به‌روز می‌شود.</div>';
-    }
-    coach.querySelector(".wpar-body").innerHTML=html;
-    student.querySelector(".wpar-body").innerHTML=html;
-  }
-  function init(){
-    refresh();
-    const list=$("workoutList");
-    if(list&&typeof MutationObserver==="function")new MutationObserver(refresh).observe(list,{childList:true,subtree:true,attributes:true,attributeFilter:["checked"]});
-    document.addEventListener("change",e=>{if(e.target&&e.target.matches('input[type="checkbox"][onchange*="toggleWorkoutComplete"]'))setTimeout(refresh,80);});
-    document.addEventListener("input",e=>{if(e.target&&e.target.id==="workoutTitle")refresh();});
-    [300,900,1800,3200].forEach(t=>setTimeout(refresh,t));
-  }
-  if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",init);else init();
-})();
-</script>
+
