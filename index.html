@@ -1169,16 +1169,42 @@ function buildFastingMealPlanText(){
 window.loadFastingSummary=async function(){
  const box=$("fastingSavedSummary");if(!box)return;
  if(authProfile?.role!=="coach"||!currentClient?.id){box.style.display="none";return;}
- box.style.display="block";box.textContent="در حال بارگذاری فستینگ ثبت‌شده…";
+ box.style.display="block";box.textContent="در حال بارگذاری اطلاعات رژیم و فستینگ شاگرد…";
  try{
-  const rows=await sbGet("/fasting_logs?trainee_id=eq."+encodeURIComponent(currentClient.id)+"&order=created_at.desc&limit=30");
-  const x=(rows||[]).find(row=>!String(row.description||"").startsWith("رژیم‌غذایی::"));
-  if(!x){box.textContent="هنوز فستینگی برای این شاگرد ثبت نشده است.";return;}
-  const d=String(x.description||"").replace(/^نوع\s*/,"");
-  box.textContent="✅ فستینگ ثبت‌شده | "+d+
-   (x.start_time?"\nشروع فست: "+String(x.start_time).slice(0,5):"")+
-   (x.end_time?"  •  پایان فست: "+String(x.end_time).slice(0,5):"");
- }catch(e){box.textContent="نمایش فستینگ ثبت‌شده ممکن نیست؛ اتصال را بررسی کنید.";}
+  const rows=await sbGet("/fasting_logs?trainee_id=eq."+encodeURIComponent(currentClient.id)+"&order=created_at.desc&limit=50");
+  const requestRow=(rows||[]).find(row=>String(row.description||"").startsWith("STUDENT_DIET_REQUEST:"));
+  const fastingRow=(rows||[]).find(row=>{
+   const desc=String(row.description||"");
+   return !desc.startsWith("STUDENT_DIET_REQUEST:")&&!desc.startsWith("رژیم‌غذایی::")&&!desc.startsWith("DIET_CONFIG:");
+  });
+  const lines=[];
+  if(requestRow){
+   try{
+    const d=JSON.parse(String(requestRow.description).slice("STUDENT_DIET_REQUEST:".length));
+    lines.push("📨 درخواست رژیم ثبت‌شده توسط شاگرد");
+    lines.push("آمادگی فعلی: "+(d.readiness||"—"));
+    lines.push("سبک موردنظر شاگرد: "+(d.preference||"—"));
+    lines.push("محدودیت‌ها و موارد قابل توجه: "+(d.limits||"—"));
+    lines.push("توضیحات شاگرد: "+(d.notes||"—"));
+    lines.push("تاریخ درخواست: "+(d.updatedAt?new Date(d.updatedAt).toLocaleDateString("fa-IR"):"ثبت شده"));
+    lines.push("— — —");
+   }catch(parseError){lines.push("📨 درخواست رژیم شاگرد ثبت شده، اما خواندن جزئیات آن ممکن نشد.");}
+  }else{
+   lines.push("📨 شاگرد هنوز درخواست رژیم غذایی ثبت نکرده است.");
+   lines.push("— — —");
+  }
+  if(fastingRow){
+   lines.push("⏳ فستینگ ثبت‌شده: "+String(fastingRow.description||"").replace(/^نوع\s*/,""));
+   if(fastingRow.start_time)lines.push("شروع فست: "+String(fastingRow.start_time).slice(0,5));
+   if(fastingRow.end_time)lines.push("پایان فست: "+String(fastingRow.end_time).slice(0,5));
+  }else{
+   lines.push("هنوز برنامه فستینگ برای این شاگرد ذخیره نشده است.");
+  }
+  box.textContent=lines.join("\n");
+ }catch(e){
+  console.error("loadFastingSummary",e);
+  box.textContent="نمایش درخواست رژیم و فستینگ ممکن نشد؛ اتصال یا دسترسی اطلاعات شاگرد را بررسی کنید.";
+ }
 }
 window.saveFasting=async function(){
  if(authProfile?.role!=="coach"){alert("تعیین و تغییر برنامه فستینگ فقط در دسترس مربی است.");return;}
