@@ -5015,11 +5015,13 @@ body.workout-output .empty-cell{display:none!important}
           const captureHeight=Math.max(
             Math.ceil(target.getBoundingClientRect().height),target.scrollHeight,target.offsetHeight,
             doc.documentElement.scrollHeight,doc.documentElement.offsetHeight
-          )+140;
+          )+180;
           const canvas=await popup.html2canvas(target,{
             scale:2, backgroundColor:'#ffffff', useCORS:true, logging:false,
             width:captureWidth,
+            height:captureHeight,
             windowWidth:captureWidth,
+            windowHeight:captureHeight,
             scrollX:0,scrollY:0,
             onclone:function(clonedDoc){
               const clonedBody=clonedDoc.body;
@@ -5038,7 +5040,7 @@ body.workout-output .empty-cell{display:none!important}
               clonedBody.style.overflow='visible';
               clonedBody.style.boxSizing='border-box';
               const meta=clonedDoc.querySelector('.plan-meta');
-              if(meta){meta.style.setProperty('visibility','visible','important');meta.style.setProperty('opacity','1','important');meta.style.setProperty('color','#241b0c','important');meta.style.display='grid';meta.style.gridTemplateColumns='minmax(0,1fr) minmax(0,1fr) minmax(0,1.35fr)';meta.style.gridTemplateRows='auto';meta.style.gridAutoFlow='column';meta.style.direction='rtl';meta.style.width='100%';meta.style.fontSize='15px';meta.style.gap='6px 12px';meta.style.overflow='hidden';Array.from(meta.children).forEach(function(item){item.style.display='block';item.style.width='100%';item.style.minWidth='0';item.style.whiteSpace='normal';item.style.overflow='visible';item.style.textOverflow='clip';item.style.overflowWrap='anywhere';item.style.wordBreak='normal';item.style.color='#241b0c';item.style.visibility='visible';item.style.opacity='1';item.style.border='0';});}
+              if(meta){meta.style.setProperty('visibility','visible','important');meta.style.setProperty('opacity','1','important');meta.style.setProperty('color','#241b0c','important');meta.style.display='grid';meta.style.gridTemplateColumns='minmax(0,1fr) minmax(0,1fr) minmax(0,1.35fr)';meta.style.gridTemplateRows='auto';meta.style.gridAutoFlow='column';meta.style.direction='rtl';meta.style.width='100%';meta.style.fontSize='15px';meta.style.gap='6px 12px';meta.style.overflow='visible';meta.style.minHeight='0';meta.style.height='auto';Array.from(meta.children).forEach(function(item){item.style.display='block';item.style.width='100%';item.style.minWidth='0';item.style.whiteSpace='normal';item.style.overflow='visible';item.style.textOverflow='clip';item.style.overflowWrap='anywhere';item.style.wordBreak='normal';item.style.color='#241b0c';item.style.visibility='visible';item.style.opacity='1';item.style.border='0';});}
               const header=clonedDoc.querySelector('h1');if(header){header.style.padding='26px 92px 20px 92px';header.style.fontSize='32px';}
               const gym=clonedDoc.querySelector('.gym-name');if(gym){gym.style.fontSize='36px';gym.style.fontWeight='1000';gym.style.lineHeight='1.4';gym.style.color='#3d2806';}
               const coach=clonedDoc.querySelector('.coach-name');if(coach){coach.style.setProperty('display','block','important');coach.style.setProperty('visibility','visible','important');coach.style.setProperty('opacity','1','important');coach.style.setProperty('color','#51401e','important');coach.style.setProperty('font-size','19px','important');coach.style.setProperty('font-weight','900','important');}const brandFooter=Array.from(clonedDoc.querySelectorAll('p')).find(el=>el.textContent.includes('باشگاه فیتنس سه‌قلعه')&&el.textContent.includes('مربی مجتبی'));if(brandFooter){brandFooter.style.setProperty('display','block','important');brandFooter.style.setProperty('visibility','visible','important');brandFooter.style.setProperty('opacity','1','important');brandFooter.style.setProperty('color','#241b0c','important');brandFooter.style.setProperty('font-size','14px','important');brandFooter.style.setProperty('font-weight','900','important');brandFooter.style.setProperty('text-align','center','important');brandFooter.style.setProperty('margin','12px 0 0','important');}
@@ -5100,7 +5102,7 @@ body.workout-output .empty-cell{display:none!important}
           let finalCanvas=canvas;
           if(kind!=='meal'){
             const page=doc.createElement('canvas');
-            page.width=1240; page.height=1754;
+            page.width=1754; page.height=2480;
             const ctx=page.getContext('2d');
             if(!ctx)throw new Error('ساخت صفحه A4 ممکن نشد.');
             ctx.fillStyle='#ffffff';ctx.fillRect(0,0,page.width,page.height);
