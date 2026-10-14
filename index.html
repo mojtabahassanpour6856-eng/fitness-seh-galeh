@@ -10148,9 +10148,19 @@ body.workout-output.workout-compact{
  }
  async function currentAuthUser(){const r=await window.AUTH_SUPABASE.auth.getUser();if(r.error)throw r.error;if(!r.data?.user)throw new Error('نشست ورود معتبر نیست؛ دوباره وارد شوید.');return r.data.user}
  async function fetchTraineeForUser(user){
-  const r=await window.AUTH_SUPABASE.from('trainees').select('id,full_name,coach_user_id,auth_user_id').eq('auth_user_id',user.id).limit(2);
-  if(r.error)throw r.error;if(!r.data?.length)throw new Error('پرونده شاگرد به این حساب متصل نیست؛ گفت‌وگو فعلاً در دسترس نیست.');
-  return r.data[0];
+  const profile=(typeof authProfile!=='undefined'&&authProfile)?authProfile:window.authProfile;
+  const knownId=profile?.role==='trainee'?(profile.trainee_id||profile.id):(null);
+  let r=null;
+  // The main login flow already resolves the approved trainee record by account/phone.
+  // Reuse that exact trainee ID first so chat doesn't depend on a second auth_user_id lookup.
+  if(knownId){
+   r=await window.AUTH_SUPABASE.from('trainees').select('id,full_name,coach_user_id,auth_user_id').eq('id',knownId).limit(1);
+   if(!r.error&&r.data?.length)return r.data[0];
+  }
+  r=await window.AUTH_SUPABASE.from('trainees').select('id,full_name,coach_user_id,auth_user_id').eq('auth_user_id',user.id).limit(2);
+  if(r.error)throw r.error;
+  if(r.data?.length)return r.data[0];
+  throw new Error('پرونده شاگرد این حساب در سامانه چت پیدا نشد. یک بار از حساب شاگرد خارج شوید و دوباره وارد شوید؛ اگر ادامه داشت، باید اتصال پرونده در پایگاه داده بررسی شود.');
  }
  async function loadCoachConversations(user){
   const r=await window.AUTH_SUPABASE.from('trainees').select('id,full_name,coach_user_id,auth_user_id').eq('coach_user_id',user.id).order('full_name',{ascending:true});
