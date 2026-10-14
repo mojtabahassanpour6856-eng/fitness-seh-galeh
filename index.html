@@ -10069,7 +10069,7 @@ body.workout-output.workout-compact{
      var existing=await getApi(path);
      if(existing&&existing.length)await writeApi('/trainee_workout_day_logs?id=eq.'+encodeURIComponent(existing[0].id),'PATCH',{is_completed:true,cycle_week:cycle.week,completed_at:new Date().toISOString()});
      else await writeApi('/trainee_workout_day_logs','POST',{trainee_id:p.id,workout_plan_id:plan.id,workout_day:day,completed_date:dayKey,cycle_week:cycle.week,is_completed:true,completed_at:new Date().toISOString()});
-     lastSignature='';await refresh();
+     lastSignature='';busy=false;await refresh();
    }catch(e){alert('ثبت مأموریت انجام نشد: '+(e&&e.message||String(e)));button.disabled=false;}
    finally{busy=false;}
  }
