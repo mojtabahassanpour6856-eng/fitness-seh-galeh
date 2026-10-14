@@ -5850,15 +5850,19 @@ else loadCoachExerciseListsWhenReady();
     let report=$("coachMealWeeklyAdherence");
     if(!report){report=document.createElement("div");report.id="coachMealWeeklyAdherence";report.className="card";const host=$("mealList");if(host?.parentNode)host.parentNode.insertBefore(report,host.nextSibling);else return;}
     const totalMeals=(meals||[]).length;
-    const days=[];
+    const days=[];let completedTotal=0,expectedTotal=totalMeals*7;
     for(let offset=6;offset>=0;offset--){
      const d=new Date();d.setHours(0,0,0,0);d.setDate(d.getDate()-offset);
      const key=d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");
      const complete=new Set(rows.filter(x=>x.log_date===key&&x.is_completed).map(x=>String(x.meal_id))).size;
-     const pct=totalMeals?Math.round(complete/totalMeals*100):0;
-     days.push('<div class="receipt-item"><b>'+esc(fmtDate(key))+'</b><br>'+complete+' از '+totalMeals+' وعده · '+pct+'٪</div>');
+     completedTotal+=complete;
+     const pct=totalMeals?Math.min(100,Math.round(complete/totalMeals*100)):0;
+     const shortDate=String(fmtDate(key)).split("/").slice(-2).join("/");
+     days.push('<span style="display:inline-block;padding:4px 7px;border-radius:8px;background:var(--soft,#f3f4f6);font-size:12px;white-space:nowrap">'+shortDate+' <b>'+pct+'٪</b></span>');
     }
-    report.innerHTML='<h3>📅 پایبندی هفت‌روزه به برنامه غذایی</h3><p class="muted">ثبت وعده‌ها به تفکیک هر روز؛ تیک‌های امروز با شروع روز بعد خالی می‌شوند و سابقه باقی می‌ماند.</p><div class="grid2">'+days.join("")+'</div>';
+    const overallPct=expectedTotal?Math.min(100,Math.round(completedTotal/expectedTotal*100)):0;
+    report.style.cssText="padding:10px 12px;margin:12px 0 0;border-radius:12px";
+    report.innerHTML='<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap"><b style="font-size:14px">📊 پایبندی هفتگی</b><strong style="font-size:17px">'+overallPct+'٪</strong></div><div class="muted" style="font-size:12px;margin:3px 0 8px">ثبت‌شده: '+completedTotal+' از '+expectedTotal+' وعده در ۷ روز اخیر</div><div style="display:flex;gap:5px;flex-wrap:wrap">'+days.join("")+'</div>';
    }).catch(e=>console.warn("weekly meal adherence",e));
    return result;
   };window.__sehCoachMealRendererWrapped=true;
