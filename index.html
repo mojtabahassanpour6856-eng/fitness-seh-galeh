@@ -4978,9 +4978,9 @@ body.workout-output .empty-cell{display:none!important}
             const exportGrid=doc.querySelector('.session-grid');
             const sessionCount=doc.querySelectorAll('.session-grid .session-cell').length;
             const rows=Math.max(1,Math.ceil(sessionCount/2));
-            setImportant(target,'min-height','1550px');
-            setImportant(target,'padding','24px');
-            setImportant(exportGrid,'min-height',Math.max(900,rows*300)+'px');
+            setImportant(target,'min-height',Math.max(1066,rows*330+350)+'px');
+            setImportant(target,'padding','8px');
+            setImportant(exportGrid,'min-height',Math.max(700,rows*330)+'px');
             setImportant(exportGrid,'grid-template-columns','repeat(2,minmax(0,1fr))');
             setImportant(exportGrid,'grid-template-rows',`repeat(${rows},minmax(300px,1fr))`);
             setImportant(exportGrid,'grid-auto-rows','minmax(300px,auto)');
