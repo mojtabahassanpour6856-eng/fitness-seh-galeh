@@ -6475,9 +6475,18 @@ const oldWorkoutRenderer=window.renderWorkoutList;
     try { frame.contentWindow.focus(); } catch(e) {}
     return frame.contentWindow;
   }
-  window.sharePlan = function(kind){
+  function createSilentDownloadFrame(){
+    const frame=document.createElement('iframe');
+    frame.title='';
+    frame.setAttribute('aria-hidden','true');
+    frame.style.cssText='position:fixed;left:-10000px;top:0;width:900px;height:1200px;border:0;pointer-events:none;z-index:-1;background:#fff;';
+    document.body.appendChild(frame);
+    setTimeout(function(){try{frame.remove();}catch(e){}},90000);
+    return frame.contentWindow;
+  }
+  window.sharePlan = function(kind, autoDownload){
     let exportWindow;
-    try { exportWindow = createExportFrame(); }
+    try { exportWindow = (kind==='workout' && autoDownload===true) ? createSilentDownloadFrame() : createExportFrame(); }
     catch(error) {
       console.error('Could not create in-app export frame:', error);
       alert('برگه خروجی باز نشد. صفحه را تازه‌سازی کنید و دوباره تلاش کنید.');
@@ -8972,7 +8981,7 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
         var client=ensureExportClient();
         if(!client || !client.id){alert('پرونده شاگرد برای خروجی پیدا نشد. دوباره وارد حساب شاگرد شوید.');return;}
         wrapExportFunctions();
-        if(typeof window.sharePlan==='function') window.sharePlan(pair[1]);
+        if(typeof window.sharePlan==='function') window.sharePlan(pair[1], pair[1]==='workout');
         else alert('ابزار خروجی برنامه بارگذاری نشده است. صفحه را تازه‌سازی کنید.');
       },true);
     });
