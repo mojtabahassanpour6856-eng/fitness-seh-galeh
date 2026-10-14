@@ -5899,7 +5899,13 @@ else loadCoachExerciseListsWhenReady();
   };window.__sehCoachMealRendererWrapped=true;
  }
 
- /* END PROTECTED NUTRITION COMPLETION SECTION */
+ 
+/* Student workout mission report: one completion action per whole session, at the bottom of the workout card. */
+.workout-session-mission-controls{display:flex;flex-direction:column;gap:7px;margin-top:10px}
+.workout-session-mission-controls button{min-height:38px;white-space:normal}
+.workout-session-mission-controls button:disabled{opacity:.72;cursor:default}
+
+/* END PROTECTED NUTRITION COMPLETION SECTION */
  // روز جدید را حتی اگر صفحه باز مانده باشد تشخیص بده؛ سابقه دیتابیس حذف نمی‌شود.
  let mealCompletionObservedDay=dayNow(),mealCompletionRefreshBusy=false;
  async function refreshMealCompletionOnDayChange(){
@@ -5956,36 +5962,39 @@ else loadCoachExerciseListsWhenReady();
 
  async function attachWorkoutMissions(){
   const list=$("workoutList"),traineeId=currentClient?.id,planId=currentWorkoutPlanId;
-  if(!list||!traineeId||!planId)return;
+  if(!list||!traineeId||!planId||!isTrainee())return;
   window.__sehWorkoutPlanId=planId;
   try{
    const p=await sbGet("/trainee_workout_plans?id=eq."+encodeURIComponent(planId)+"&trainee_id=eq."+encodeURIComponent(traineeId)+"&select=id,plan_date,created_at&limit=1");
    if(!p[0])return;
    const cycle=weekForPlan(p[0]);
-   const logs=await sbGet("/trainee_workout_day_logs?trainee_id=eq."+encodeURIComponent(traineeId)+"&workout_plan_id=eq."+encodeURIComponent(planId)+"&cycle_week=gte.1&select=workout_day,completed_date,is_completed,cycle_week");
-   if(!currentClient||String(currentClient.id)!==String(traineeId))return;
-   const weekLogs=logs.filter(x=>Number(x.cycle_week)===cycle.week&&x.completed_date>=cycle.start&&x.completed_date<=dayNow()&&x.is_completed);
-   const groups=[...list.querySelectorAll(".workout-session-group")];
-   groups.forEach(group=>{
-    if(group.querySelector(".daily-mission"))return;
-    const day=group.getAttribute("data-session-name")||group.querySelector("header strong")?.textContent?.replace(/^🏋️\s*/,"")||"جلسه";
-    const completed=weekLogs.some(x=>x.workout_day===day&&x.completed_date===dayNow());
-    const mission=document.createElement("div");mission.className="daily-mission";
-    const label=document.createElement("span");label.className=completed?"done":"";
-    label.textContent=completed?"✅ مأموریت امروز انجام شد":"🎯 مأموریت امروز: تمرین این جلسه را انجام دادم";
-    const btn=document.createElement("button");btn.type="button";btn.className=completed?"secondary":"";
-    btn.textContent=completed?"ثبت شده":"✅ تمرین امروز انجام شد";
-    btn.disabled=completed||cycle.week<1||cycle.week>4;
-    btn.onclick=()=>markWorkoutDayDone(day,btn);
-    mission.append(label,btn);group.appendChild(mission);
+   const logs=await sbGet("/trainee_workout_day_logs?trainee_id=eq."+encodeURIComponent(traineeId)+"&workout_plan_id=eq."+encodeURIComponent(planId)+"&select=workout_day,completed_date,is_completed,cycle_week&order=completed_date.desc");
+   if(!currentClient||String(currentClient.id)!==String(traineeId)||String(currentWorkoutPlanId)!==String(planId))return;
+   const rows=Array.isArray(workoutExercisesCache)?workoutExercisesCache:[];
+   const sessionMap=new Map();
+   rows.forEach((row,index)=>{
+    const day=String(row.training_day||"").trim()||"جلسه "+(index+1);
+    if(!sessionMap.has(day))sessionMap.set(day,[]);
+    sessionMap.get(day).push(row);
    });
-   const doneByWeek=[1,2,3,4].map(w=>new Set(logs.filter(x=>Number(x.cycle_week)===w&&x.is_completed).map(x=>x.workout_day)).size);
+   const sessions=[...sessionMap.keys()];
+   const safe=v=>typeof escf==="function"?escf(v):String(v??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m]));
+   const doneByWeek=[1,2,3,4].map(w=>new Set(logs.filter(x=>Number(x.cycle_week)===w&&x.is_completed).map(x=>String(x.workout_day))).size);
    let summary=$("workoutFourWeekSummary");
-   if(!summary){summary=document.createElement("div");summary.id="workoutFourWeekSummary";summary.className="card";}const workoutCard=list.closest(".card");if(workoutCard&&summary.parentElement!==workoutCard)workoutCard.appendChild(summary);
-   summary.innerHTML='<h3>📅 پیگیری چهار هفته برنامه</h3><div class="grid2">'+doneByWeek.map((n,i)=>'<div class="receipt-item"><b>هفته '+(i+1)+'</b><br>'+n+' جلسه ثبت‌شده</div>').join("")+'</div><p class="muted">'+(cycle.week>=1&&cycle.week<=4?"اکنون هفته "+cycle.week+" از ۴ است.":"دوره چهار هفته‌ای تمام شده؛ برای دوره بعدی با مربی هماهنگ کنید.")+'</p>';
-  }catch(e){console.warn("workout mission load",e);}
+   if(!summary){summary=document.createElement("div");summary.id="workoutFourWeekSummary";summary.className="card";}
+   const workoutCard=list.closest(".card");
+   if(workoutCard&&summary.parentElement!==workoutCard)workoutCard.appendChild(summary);
+   const sessionControls=sessions.length?sessions.map(day=>{
+    const todayLog=logs.some(x=>String(x.workout_day)===day&&x.completed_date===dayNow()&&x.is_completed===true);
+    const completedEver=logs.some(x=>String(x.workout_day)===day&&x.is_completed===true);
+    const disabled=cycle.week<1||cycle.week>4||todayLog;
+    return '<div class="receipt-item" style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-top:8px"><div><b>'+safe(day)+'</b><div class="muted" style="font-size:12px">'+(todayLog?'✅ مأموریت امروز انجام شد':completedEver?'سابقه انجام دارد؛ برای امروز قابل ثبت است':'هنوز برای امروز ثبت نشده')+'</div></div><button type="button" class="'+(todayLog?'secondary':'')+'" '+(disabled?'disabled':'')+' data-workout-mission="'+safe(day)+'">'+(todayLog?'✅ انجام شد':'ثبت انجام این جلسه')+'</button></div>';
+   }).join(""):'<p class="muted">پس از ثبت حرکات و نام‌گذاری جلسه‌ها، دکمه ثبت انجام جلسه در این قسمت نمایش داده می‌شود.</p>';
+   summary.innerHTML='<h3>📊 گزارش انجام جلسات تمرینی</h3><p class="muted" style="margin:4px 0 8px">پس از انجام هر جلسه، فقط یک بار همان جلسه را ثبت کن؛ نیازی به علامت‌زدن تک‌تک حرکات نیست.</p><div class="grid2">'+doneByWeek.map((n,i)=>'<div class="receipt-item"><b>هفته '+(i+1)+'</b><br>'+n+' جلسه ثبت‌شده</div>').join("")+'</div><p class="muted">'+(cycle.week>=1&&cycle.week<=4?"اکنون هفته "+cycle.week+" از ۴ است.":"دوره چهار هفته‌ای تمام شده؛ برای دوره بعدی با مربی هماهنگ کنید.")+'</p><div class="workout-session-mission-controls">'+sessionControls+'</div>';
+   summary.querySelectorAll("button[data-workout-mission]").forEach(button=>button.addEventListener("click",()=>markWorkoutDayDone(button.getAttribute("data-workout-mission"),button)));
+  }catch(e){console.warn("workout mission load",e);let summary=$("workoutFourWeekSummary");if(summary){const warning=document.createElement("p");warning.className="muted";warning.textContent="گزارش انجام جلسه بارگذاری نشد؛ اتصال را بررسی و صفحه را تازه‌سازی کنید.";summary.appendChild(warning);}}
  }
- const oldWorkoutRenderer=window.renderWorkoutList;
+const oldWorkoutRenderer=window.renderWorkoutList;
  if(typeof oldWorkoutRenderer==="function"&&!window.__sehWorkoutRendererWrapped){
   window.renderWorkoutList=function(rows,names){
    const out=oldWorkoutRenderer.apply(this,arguments);
