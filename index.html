@@ -1818,27 +1818,34 @@ function esc(s){return String(s).replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",
 window.AUTH_SUPABASE=window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
 const AUTH_SUPABASE=window.AUTH_SUPABASE;const ORIGINAL_FETCH=window.fetch;
 
+/* Cache the auth session briefly: previously every single REST request waited
+   for auth.getSession(), multiplying latency when several dashboard cards load together. */
+let __fitnessApiSession=null,__fitnessApiSessionAt=0,__fitnessApiSessionPromise=null;
+async function __fitnessGetApiSession(){
+  const now=Date.now();
+  if(__fitnessApiSession && __fitnessApiSessionAt && now-__fitnessApiSessionAt<12000) return __fitnessApiSession;
+  if(__fitnessApiSessionPromise) return __fitnessApiSessionPromise;
+  __fitnessApiSessionPromise=AUTH_SUPABASE.auth.getSession().then(({data})=>{
+    __fitnessApiSession=data?.session||null;
+    __fitnessApiSessionAt=Date.now();
+    return __fitnessApiSession;
+  }).catch(error=>{console.warn('Session lookup for API request failed:',error);return __fitnessApiSession;})
+    .finally(()=>{__fitnessApiSessionPromise=null;});
+  return __fitnessApiSessionPromise;
+}
+AUTH_SUPABASE.auth.onAuthStateChange((_event,session)=>{
+  __fitnessApiSession=session||null;
+  __fitnessApiSessionAt=Date.now();
+});
 window.fetch=async function(input,init={}){
-  const url=typeof input==="string"?input:input.url;
-
+  const url=typeof input==="string"?input:input?.url;
   if(url && url.startsWith(SUPABASE_URL+"/rest/v1/")){
-    const {data:{session}}=await AUTH_SUPABASE.auth.getSession();
-
-    const headers=new Headers(
-      init.headers || (typeof input!=="string"?input.headers:{}) || {}
-    );
-
+    const session=await __fitnessGetApiSession();
+    const headers=new Headers(init.headers || (typeof input!=="string"?input.headers:{}) || {});
     headers.set("apikey",SUPABASE_KEY);
-
-    if(session?.access_token){
-      headers.set("Authorization","Bearer "+session.access_token);
-    }else{
-      headers.set("Authorization","Bearer "+SUPABASE_KEY);
-    }
-
+    headers.set("Authorization","Bearer "+(session?.access_token||SUPABASE_KEY));
     init={...init,headers};
   }
-
   return ORIGINAL_FETCH(input,init);
 };
 let authProfile=null;
