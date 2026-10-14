@@ -5012,16 +5012,12 @@ body.workout-output .empty-cell{display:none!important}
           /* Let html2canvas derive the captured element height from the fully laid-out body.
              A manually fixed height measured before clone styling can crop text/footer in the PNG
              even though the export preview itself looks complete on mobile. */
-          const captureHeight=Math.max(
-            Math.ceil(target.getBoundingClientRect().height),target.scrollHeight,target.offsetHeight,
-            doc.documentElement.scrollHeight,doc.documentElement.offsetHeight
-          )+180;
+          /* Avoid a fixed height measured before clone styling: the clone restores metadata,
+             description and footer, which can make the final layout taller than the measured body. */
           const canvas=await popup.html2canvas(target,{
             scale:2, backgroundColor:'#ffffff', useCORS:true, logging:false,
             width:captureWidth,
-            height:captureHeight,
             windowWidth:captureWidth,
-            windowHeight:captureHeight,
             scrollX:0,scrollY:0,
             onclone:function(clonedDoc){
               const clonedBody=clonedDoc.body;
