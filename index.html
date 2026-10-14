@@ -9582,3 +9582,85 @@ body.workout-output.workout-compact{
  window.__studentMealInteractiveOrderV2Wrapped=true;
 })();
 </script>
+
+
+<script id="STUDENT_FASTING_PLAN_IMAGE_V1">
+/* Include the coach-assigned fasting schedule in the student's existing downloadable nutrition-plan image. */
+(function(){
+ 'use strict';
+ const $=id=>document.getElementById(id);
+ const esc=v=>String(v==null?'':v).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+ let requestNo=0;
+ function trainee(){try{return authProfile&&authProfile.role==='trainee'&&currentClient&&currentClient.id!=null;}catch(e){return false;}}
+ async function getFasting(){
+  if(!trainee()||typeof sbGet!=='function')return null;
+  const id=String(currentClient.id),rows=await sbGet('/fasting_logs?trainee_id=eq.'+encodeURIComponent(id)+'&order=created_at.desc&limit=50');
+  if(!trainee()||String(currentClient.id)!==id)return null;
+  return (Array.isArray(rows)?rows:[]).find(row=>{
+   const d=String(row.description||'');
+   return /^نوع\s/.test(d)&&!d.startsWith('STUDENT_DIET_REQUEST:')&&!d.startsWith('رژیم‌غذایی::')&&!d.startsWith('DIET_CONFIG:');
+  })||null;
+ }
+ function fastingMarkup(row){
+  if(!row)return '';
+  const desc=String(row.description||'');
+  const parts=desc.split(/\nبرنامه غذایی فستینگ:\n?/);
+  const heading=parts[0].replace(/^نوع\s*/,'').trim();
+  const lines=[];
+  if(heading)lines.push('<div class="smpp-item"><span>⏱️ الگوی فستینگ</span><b>'+esc(heading)+'</b></div>');
+  if(row.start_time)lines.push('<div class="smpp-item"><span>شروع فست</span><b>'+esc(String(row.start_time).slice(0,5))+'</b></div>');
+  if(row.end_time)lines.push('<div class="smpp-item"><span>پایان فست</span><b>'+esc(String(row.end_time).slice(0,5))+'</b></div>');
+  const mealText=parts.length>1?parts.slice(1).join('\nبرنامه غذایی فستینگ:\n').trim():'';
+  if(mealText){
+   mealText.split(/\r?\n/).map(x=>x.trim()).filter(Boolean).forEach(line=>{
+    lines.push('<div class="smpp-item"><span>'+esc(line)+'</span></div>');
+   });
+  }
+  if(!lines.length)return '';
+  return '<div id="smppFastingSection" class="smpp-meal"><div class="smpp-meal-title">⏳ برنامه فستینگ ثبت‌شده توسط مربی</div><div class="smpp-meal-body">'+lines.join('')+'</div></div>';
+ }
+ async function attachFasting(allowFastingOnly){
+  const seq=++requestNo;
+  if(!trainee())return;
+  const card=$('studentMealPrintablePlan'),body=$('smppBody');
+  if(!card||!body)return;
+  try{
+   const row=await getFasting();
+   if(seq!==requestNo||!trainee())return;
+   body.querySelector('#smppFastingSection')?.remove();
+   const markup=fastingMarkup(row);
+   if(markup){
+    if(!card.dataset.loaded||!body.innerHTML.trim()){
+     const date=new Intl.DateTimeFormat('fa-IR-u-ca-persian',{year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());
+     const name=currentClient.name||currentClient.full_name||currentClient.fullName||'شاگرد';
+     body.innerHTML='<div class="smpp-meta"><div class="smpp-chip"><b>👤 شاگرد:</b> '+esc(name)+'</div><div class="smpp-chip"><b>📅 تاریخ:</b> '+esc(date)+'</div><div class="smpp-chip"><b>🎯 عنوان برنامه:</b> برنامه غذایی و فستینگ</div></div>'+markup;
+    }else body.insertAdjacentHTML('beforeend',markup);
+    card.style.display='block';card.dataset.loaded='1';
+   }else if(allowFastingOnly&&!(body.textContent||'').trim()){
+    card.style.display='none';card.dataset.loaded='';
+   }
+  }catch(e){console.warn('Could not add fasting plan to downloadable nutrition image',e);}
+ }
+ const oldMeals=window.renderStudentMeals;
+ if(typeof oldMeals==='function'&&!window.__studentFastingPlanImageWrapped){
+  window.renderStudentMeals=async function(meals,p){
+   const result=await oldMeals.apply(this,arguments);
+   await attachFasting(false);
+   return result;
+  };
+  window.__studentFastingPlanImageWrapped=true;
+ }
+ const oldEmpty=window.renderStudentEmpty;
+ if(typeof oldEmpty==='function'&&!window.__studentFastingEmptyImageWrapped){
+  window.renderStudentEmpty=function(){
+   const result=oldEmpty.apply(this,arguments);
+   const card=$('studentMealPrintablePlan'),body=$('smppBody');
+   if(card&&body){body.innerHTML='';card.style.display='none';card.dataset.loaded='';}
+   setTimeout(()=>attachFasting(true),0);
+   return result;
+  };
+  window.__studentFastingEmptyImageWrapped=true;
+ }
+})();
+</script>
+
