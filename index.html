@@ -9847,7 +9847,7 @@ body.workout-output.workout-compact{
     const list=$("workoutList"),card=list&&list.closest(".card");
     if(!list||!card)return null;
     if(!el){el=document.createElement("div");el.id=id;el.className="card";el.style.cssText=reportStyle;el.innerHTML='<h3 style="font-size:14px;margin:0 0 7px">📊 '+title+'</h3><div class="wpar-body" style="font-size:12px;line-height:1.8">در حال محاسبه…</div>';}
-    if(el.parentElement!==card||card.lastElementChild!==el)card.appendChild(el);
+    if(el.parentElement!==card)card.appendChild(el);
     return el;
   }
   function refresh(){
