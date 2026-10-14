@@ -4763,17 +4763,23 @@ window.useLibraryExercise=async function(id){
               /* Keep every movement in a superset/triset visible with its OWN prescription.
                  The old renderer joined all movement names but showed sets/reps/rest only for
                  the first movement, making sessions look incomplete in PNG/PDF exports. */
-              const movementHtml=arr.map((x,idx)=>{
-                const movementName=esc(names[String(x.exercise_id)]||'حرکت ثبت‌شده');
-                const nameLength=String(names[String(x.exercise_id)]||'حرکت ثبت‌شده').length;
-                const detail='<span class="rx">'+esc(x.reps||'—')+'×'+esc(x.sets??'—')+'</span>'+(sys!=='normal'?'<span class="sys">'+esc(systems[sys]||sys)+'</span>':'')+'<span class="rest">S'+esc(x.rest_seconds??0)+'</span>';
-                const note=x.notes?'<div class="exercise-extra" style="grid-column:1/-1">'+esc(x.notes)+'</div>':'';
-                if(isGroup){
-                  const plus=idx?'<span class="group-plus" style="display:inline-block;padding:0 5px;color:#9b6b0c;font-size:17px;font-weight:900;vertical-align:middle">+</span>':'';
-                  return plus+'<div class="exercise-unit grouped-unit" style="display:inline-grid;grid-template-columns:minmax(0,1fr) max-content;align-items:center;column-gap:5px;vertical-align:middle;max-width:100%;padding:4px 2px;border-bottom:1px solid #e4d3a9;break-inside:avoid"><div class="exercise-name" style="--name-length:'+nameLength+'">'+movementName+'</div><div class="exercise-details">'+detail+'</div>'+note+'</div>';
-                }
-                return '<div class="exercise-unit" style="display:grid;grid-template-columns:minmax(0,1fr) max-content;align-items:center;column-gap:8px;width:100%;padding:5px 2px;border-bottom:1px solid #e4d3a9;break-inside:avoid"><div class="exercise-name" style="--name-length:'+nameLength+'">'+movementName+'</div><div class="exercise-details">'+detail+'</div>'+note+'</div>';
-              }).join('');
+              let movementHtml='';
+              if(isGroup){
+                const groupNames=arr.map(x=>esc(names[String(x.exercise_id)]||'حرکت ثبت‌شده')).join(' <span style="color:#9b6b0c;font-weight:1000;font-size:15px"> + </span> ');
+                const first=arr[0];
+                const groupDetail='<span class="rx">'+esc(first.reps||'—')+'×'+esc(first.sets??'—')+'</span>'+'<span class="sys">'+esc(systems[sys]||sys)+'</span>'+'<span class="rest">S'+esc(first.rest_seconds??0)+'</span>';
+                const groupNotes=arr.map(x=>x.notes?esc(x.notes):'').filter(Boolean);
+                const note=groupNotes.length?'<div class="exercise-extra" style="grid-column:1/-1">'+groupNotes.join(' | ')+'</div>':'';
+                movementHtml='<div class="exercise-unit grouped-unit" style="display:grid;grid-template-columns:minmax(0,1fr) max-content;align-items:center;column-gap:8px;width:100%;padding:5px 2px;border-bottom:1px solid #e4d3a9;break-inside:avoid"><div class="exercise-name" style="overflow-wrap:anywhere">'+groupNames+'</div><div class="exercise-details">'+groupDetail+'</div>'+note+'</div>';
+              }else{
+                movementHtml=arr.map(x=>{
+                  const movementName=esc(names[String(x.exercise_id)]||'حرکت ثبت‌شده');
+                  const nameLength=String(names[String(x.exercise_id)]||'حرکت ثبت‌شده').length;
+                  const detail='<span class="rx">'+esc(x.reps||'—')+'×'+esc(x.sets??'—')+'</span>'+'<span class="rest">S'+esc(x.rest_seconds??0)+'</span>';
+                  const note=x.notes?'<div class="exercise-extra" style="grid-column:1/-1">'+esc(x.notes)+'</div>':'';
+                  return '<div class="exercise-unit" style="display:grid;grid-template-columns:minmax(0,1fr) max-content;align-items:center;column-gap:8px;width:100%;padding:5px 2px;border-bottom:1px solid #e4d3a9;break-inside:avoid"><div class="exercise-name" style="--name-length:'+nameLength+'">'+movementName+'</div><div class="exercise-details">'+detail+'</div>'+note+'</div>';
+                }).join('');
+              }
               return '<div class="exercise-card" style="display:block;flex:0 0 auto;min-height:0;padding:3px 2px">'+movementHtml+'</div>';
             }).join('')+'</div></section>';
           };
