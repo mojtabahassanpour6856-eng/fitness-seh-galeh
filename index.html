@@ -8898,7 +8898,7 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
 </script>
 
 <style id="STUDENT_STANDARD_MEAL_IMAGE_V1">
-#studentMealPrintablePlan{display:none;margin:14px 0;border:1px solid #d7bd7b;border-radius:16px;overflow:hidden;background:#fffdf7;color:#342b1d;box-shadow:0 5px 18px rgba(92,67,20,.09)}
+#studentMealPrintablePlan{display:block;margin:14px 0;border:1px solid #d7bd7b;border-radius:16px;overflow:hidden;background:#fffdf7;color:#342b1d;box-shadow:0 5px 18px rgba(92,67,20,.09)}
 #studentMealPrintablePlan .smpp-head{padding:17px 14px;text-align:center;background:linear-gradient(135deg,#f7edcf,#fffaf0);border-bottom:2px solid #d5b86c}
 #studentMealPrintablePlan .smpp-brand{font-size:13px;font-weight:800;color:#80631d}
 #studentMealPrintablePlan .smpp-coach{font-size:12px;margin-top:4px;color:#6d5b34}
@@ -8926,7 +8926,7 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
  function mount(){
   const host=$('mealStudentView'),list=$('studentMealList');
   if(!host||!list||$('studentMealPrintablePlan'))return;
-  const card=document.createElement('section');card.id='studentMealPrintablePlan';card.setAttribute('aria-live','polite');
+  const card=document.createElement('section');card.id='studentMealPrintablePlan';card.style.display='none';card.setAttribute('aria-live','polite');
   card.innerHTML='<div class="smpp-head"><div class="smpp-brand">باشگاه فیتنس سه‌قلعه</div><div class="smpp-coach">مربی مجتبی</div><div class="smpp-title">🥗 برنامه غذایی روزانه من</div></div><div class="smpp-content"><div id="smppBody"></div></div><div class="smpp-actions"><button type="button" id="smppDownload">🖼️ دانلود عکس برنامه غذایی</button><p id="smppStatus" class="smpp-status"></p></div>';
   const summary=host.querySelector('.card');if(summary)summary.insertAdjacentElement('afterend',card);else list.insertAdjacentElement('beforebegin',card);
   $('smppDownload').addEventListener('click',downloadImage);
@@ -8953,7 +8953,7 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
   });
   if(!count)html+='<div class="smpp-empty">برای این برنامه هنوز وعده و غذای قابل نمایش ثبت نشده است.</div>';
   html+='<div class="smpp-note"><b>یادآوری:</b><br>این برگه برای مشاهده و ذخیره عکس است. تیک‌زدن وعده‌ها و ثبت مصرف همچنان در فهرست تعاملی برنامه غذایی پایین صفحه انجام می‌شود.</div>';
-  body.innerHTML=html;card.style.display='';card.dataset.loaded='1';
+  body.innerHTML=html;card.style.display='block';card.dataset.loaded='1';
  }
  async function downloadImage(){
   const card=$('studentMealPrintablePlan'),status=$('smppStatus'),button=$('smppDownload'),body=$('smppBody');
