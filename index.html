@@ -5099,13 +5099,19 @@ body.workout-output .empty-cell{display:none!important}
           /* Measure only after export width, grid layout, fonts and the final animation frames
              have settled. Explicitly capture that full scroll height: body bounding-box height on
              mobile can represent only the visible viewport, hiding the trainee name/footer in PNG. */
-          const captureHeight=Math.max(
+          const measuredCaptureHeight=Math.max(
             Math.ceil(target.scrollHeight||0),
             Math.ceil(target.offsetHeight||0),
             Math.ceil(doc.documentElement.scrollHeight||0),
             Math.ceil(doc.documentElement.offsetHeight||0),
             Math.ceil(target.getBoundingClientRect().height||0)
           )+32;
+          /* For the A4 PNG, capture the workout body at the same portrait ratio as the
+             final 1754x2480 page. A very tall natural-flow capture was being shrunk to fit
+             the page height, which created broad blank side gutters around the table. */
+          const captureHeight=kind!=='meal'
+            ? Math.max(measuredCaptureHeight,Math.ceil(captureWidth*(2480/1754)))
+            : measuredCaptureHeight;
           /* Apply the larger plus directly to the source DOM only for PNG capture.
              This is more reliable than clone-only styles on mobile html2canvas builds;
              restore every inline value immediately after capture so preview/print stay normal. */
@@ -5244,7 +5250,12 @@ body.workout-output .empty-cell{display:none!important}
                 }
               }catch(cropError){console.warn('PNG whitespace trim skipped:',cropError);}
             }
-            const scale=Math.min(page.width/cropW,page.height/cropH);
+            /* Fit width first so the workout table reaches both sides of the A4 printable
+               area. If its content is taller than the page, preserve the top and bottom by
+               using contain; otherwise use the page width and keep the typography undistorted. */
+            const widthScale=page.width/cropW;
+            const heightAtWidth=cropH*widthScale;
+            const scale=heightAtWidth<=page.height ? widthScale : page.height/cropH;
             const drawW=Math.max(1,Math.round(cropW*scale));
             const drawH=Math.max(1,Math.round(cropH*scale));
             ctx.imageSmoothingEnabled=true;ctx.imageSmoothingQuality='high';
