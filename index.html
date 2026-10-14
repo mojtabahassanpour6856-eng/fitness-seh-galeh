@@ -5108,7 +5108,7 @@ body.workout-output .empty-cell{display:none!important}
             windowWidth:captureWidth,
             windowHeight:captureHeight,
             scrollX:0,scrollY:0,
-            onclone:function(clonedDoc){
+            onclone:async function(clonedDoc){
               /* Keep the already-prepared source layout intact. The previous callback
                  repeatedly rewrote header/meta/footer styles and rebuilt the session grid;
                  those clone-only overrides caused visible preview/export differences. */
@@ -5125,6 +5125,27 @@ body.workout-output .empty-cell{display:none!important}
               body.style.setProperty('max-width','none','important');
               body.style.setProperty('overflow','visible','important');
               body.style.setProperty('box-sizing','border-box','important');
+              /* IRANSans is applied only to the downloaded workout PNG capture.
+                 Preview, printing/PDF, and nutrition exports keep their existing fonts. */
+              if(forceDownload && kind!=='meal'){
+                ['400.css','500.css','700.css','900.css'].forEach(file=>{
+                  const link=clonedDoc.createElement('link');
+                  link.rel='stylesheet';
+                  link.href='https://cdn.jsdelivr.net/npm/@akiarostami/iransans@latest/'+file;
+                  clonedDoc.head.appendChild(link);
+                });
+                const iranSansStyle=clonedDoc.createElement('style');
+                iranSansStyle.textContent='*:not(.workout-group-plus){font-family:IRANSans,Tahoma,Arial,sans-serif!important}';
+                clonedDoc.head.appendChild(iranSansStyle);
+                try{
+                  if(clonedDoc.fonts){
+                    await Promise.race([
+                      Promise.all([clonedDoc.fonts.load('400 16px IRANSans'),clonedDoc.fonts.load('700 16px IRANSans'),clonedDoc.fonts.ready]),
+                      new Promise(resolve=>setTimeout(resolve,1800))
+                    ]);
+                  }
+                }catch(fontError){console.warn('IRANSans PNG font loading skipped:',fontError);}
+              }
               if(kind!=='meal'){
                 const grid=clonedDoc.querySelector('.session-grid');
                 if(grid){
