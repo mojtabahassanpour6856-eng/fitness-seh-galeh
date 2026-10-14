@@ -5211,9 +5211,13 @@ body.workout-output .empty-cell{display:none!important}
                 /* Enlarge only the actual workout-content text in the downloaded PNG.
                    The export markup uses .session-cell and .exercise-unit; target real selectors.
                    Header, gym branding, borders, padding, and grid/table dimensions stay unchanged. */
+                /* Apply a visible, explicit size increase to the real export text nodes.
+                   A percentage-only increase was too subtle on compact 5/6-session layouts.
+                   Do not alter the title/header, table geometry, spacing, or non-PNG views. */
                 const textTargets=clonedDoc.querySelectorAll(
                   '.plan-meta,.plan-meta *,.workout-plan-description,.workout-plan-description *,'+
                   '.plan-count,.session-cell .session-heading,.session-cell h2,.session-cell h3,'+
+                  '.session-cell .exercise-card,.session-cell .exercise-unit,'+
                   '.session-cell .exercise-name,.session-cell .exercise-details,'+
                   '.session-cell .exercise-details span,.session-cell .exercise-extra,'+
                   '.session-cell .rx,.session-cell .sys,.session-cell .rest,'+
@@ -5222,9 +5226,10 @@ body.workout-output .empty-cell{display:none!important}
                 textTargets.forEach(el=>{
                   if(el.closest('.plan-header')) return;
                   const current=parseFloat(clonedDoc.defaultView.getComputedStyle(el).fontSize);
-                  if(Number.isFinite(current) && current>0){
-                    el.style.setProperty('font-size',(current*1.12)+'px','important');
-                  }
+                  if(!Number.isFinite(current) || current<=0) return;
+                  let next=current*1.25;
+                  if(el.matches('.exercise-name,.exercise-details,.exercise-extra,.session-heading,.plan-meta,.plan-count')) next=Math.max(next,current+2);
+                  el.style.setProperty('font-size',next+'px','important');
                 });
               }
               if(kind!=='meal'){
