@@ -1978,10 +1978,16 @@ if($("prDate"))$("prDate").value=today();if($("anDate"))$("anDate").value=today(
   function buildDashboard(){
     const existing=$id('traineeDashboard');
     if(existing){
-      normalizeTraineeProfileCards(existing);
-      moveActivityPanelToStudentDashboard();
-      addTraineeWorkoutExportPanel();
-      return;
+      const grid=existing.querySelector('.v4-dashboard');
+      const planCards=grid?Array.from(grid.querySelectorAll('.v4-card')).filter(card=>/برنامه تمرینی|برنامه غذایی/.test(card.textContent||'')):[];
+      /* Rebuild an incomplete dashboard shell rather than permanently skipping plan cards. */
+      if(!grid||planCards.length<2) existing.remove();
+      else {
+        normalizeTraineeProfileCards(existing);
+        moveActivityPanelToStudentDashboard();
+        addTraineeWorkoutExportPanel();
+        return;
+      }
     }
     const sec=document.createElement('section');sec.id='traineeDashboard';sec.className='section';sec.innerHTML=`
       <div class="card"><h2>👤 داشبورد من</h2><p id="dashWelcome" class="muted"></p></div>
@@ -9134,3 +9140,77 @@ body.workout-output.workout-compact .system-notes{font-size:11px!important;line-
  @page{size:A4 portrait;margin:7mm}
 }
 </style>
+
+<script id="FITNESS_PLAN_VISIBILITY_REPAIR_V1">
+/* Final recovery for trainee-facing workout and nutrition sections. */
+(function(){
+  'use strict';
+  function role(){
+    try{return (window.authProfile&&window.authProfile.role)||(typeof authProfile!=='undefined'&&authProfile&&authProfile.role)||null;}
+    catch(e){return null;}
+  }
+  function showTraineePlans(section){
+    if(role()!=='trainee')return;
+    try{
+      if(typeof window.showSection==='function')window.showSection(section,null);
+      if(section==='meal'){
+        var coach=document.getElementById('mealCoachView');
+        var student=document.getElementById('mealStudentView');
+        var report=document.getElementById('mealReportView');
+        if(coach){coach.style.setProperty('display','none','important');coach.setAttribute('aria-hidden','true');}
+        if(report){report.style.setProperty('display','none','important');report.setAttribute('aria-hidden','true');}
+        if(student){student.classList.remove('hide');student.hidden=false;student.style.setProperty('display','block','important');student.removeAttribute('aria-hidden');}
+        if(typeof window.mealTab==='function')window.mealTab('student');
+        if(typeof window.loadNutritionForClient==='function')window.loadNutritionForClient();
+      }else if(section==='workout'){
+        var workout=document.getElementById('workout');
+        var list=document.getElementById('workoutList');
+        if(workout)workout.style.display='block';
+        if(list){
+          var card=list.closest('.card');
+          if(card){card.hidden=false;card.classList.remove('hide');card.style.setProperty('display','block','important');}
+          list.hidden=false;list.classList.remove('hide');list.style.removeProperty('display');
+        }
+        if(typeof window.loadWorkoutForClient==='function')window.loadWorkoutForClient();
+      }
+    }catch(e){console.error('Trainee plan visibility recovery failed:',e);}
+  }
+  var previousDash=window.dashOpen;
+  if(typeof previousDash==='function'&&!window.__fitnessPlanVisibilityDashWrapped){
+    window.dashOpen=function(section){
+      var result=previousDash.apply(this,arguments);
+      if(section==='meal'||section==='workout')setTimeout(function(){showTraineePlans(section);},0);
+      return result;
+    };
+    window.__fitnessPlanVisibilityDashWrapped=true;
+  }
+  var previousFinish=window.finishLogin;
+  if(typeof previousFinish==='function'&&!window.__fitnessPlanVisibilityLoginWrapped){
+    window.finishLogin=async function(){
+      var result=await previousFinish.apply(this,arguments);
+      if(role()==='trainee'){
+        setTimeout(function(){
+          if(typeof window.loadDashboard==='function')window.loadDashboard();
+          if(typeof window.showSection==='function')window.showSection('traineeDashboard',document.getElementById('navDash'));
+        },80);
+      }else if(role()==='coach'){
+        ['meal','workout'].forEach(function(id){
+          var button=Array.from(document.querySelectorAll('.nav button')).find(function(b){return String(b.getAttribute('onclick')||'').indexOf("'"+id+"'")>=0;});
+          if(button){button.hidden=false;button.style.removeProperty('display');}
+        });
+      }
+      return result;
+    };
+    window.__fitnessPlanVisibilityLoginWrapped=true;
+  }
+  function repair(){
+    if(role()==='trainee'){
+      if(typeof window.loadDashboard==='function')window.loadDashboard();
+      var dash=document.getElementById('navDash');
+      if(dash)dash.style.removeProperty('display');
+    }
+  }
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',function(){setTimeout(repair,500);});
+  else setTimeout(repair,500);
+})();
+</script>
