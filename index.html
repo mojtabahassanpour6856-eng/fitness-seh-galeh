@@ -4913,17 +4913,6 @@ body.workout-output .empty-cell{display:none!important}
           if(actions){actionsDisplay=actions.style.display;actions.style.display='none';}
           button.textContent='در حال ساخت تصویر PNG…';
           const target=doc.body;
-          /* Downloaded workout PNG only: override the high-specificity Vazirmatn rule
-             in both source and html2canvas clone. Keep preview, print, PDF and meal output unchanged. */
-          if(forceDownload && kind!=='meal'){
-            let tahomaPngStyle=doc.getElementById('workout-png-tahoma-only');
-            if(!tahomaPngStyle){
-              tahomaPngStyle=doc.createElement('style');
-              tahomaPngStyle.id='workout-png-tahoma-only';
-              tahomaPngStyle.textContent='body.workout-output,body.workout-output *{font-family:Tahoma,Arial,sans-serif!important}';
-              doc.head.appendChild(tahomaPngStyle);
-            }
-          }
           /* Apply the export layout to the SOURCE document before measuring it.
              Previously these rules existed only in onclone, so html2canvas measured the
              compressed original grid first and then captured the expanded clone into a
