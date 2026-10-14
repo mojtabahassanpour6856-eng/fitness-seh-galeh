@@ -2009,6 +2009,7 @@ if($("prDate"))$("prDate").value=today();if($("anDate"))$("anDate").value=today(
         <div class="v4-card" onclick="dashOpen('goals')"><b>🎯</b>هدف من<span id="dashGoal" class="v4-small">ثبت و پیگیری هدف‌های شخصی</span></div>
         <div class="v4-card" role="button" tabindex="0" onclick="dashOpen('membership')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();dashOpen('membership')}"><b>💳</b>عضویت<span id="dashMembership" class="v4-small">—</span></div>
         <div class="v4-card" data-profile-card="1" onclick="dashOpen('client')"><b>👤</b>پروفایل من<span class="v4-small">مشاهده و ثبت اطلاعات شخصی</span></div>
+        <div class="v4-card" id="sehChatEntryCard" role="button" tabindex="0" onclick="window.sehOpenTraineeChat&&window.sehOpenTraineeChat()" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();window.sehOpenTraineeChat&&window.sehOpenTraineeChat()}"><b style="display:block;font-size:24px;margin-bottom:8px">💬</b><strong>گفت‌وگو با مربی</strong><span class="v4-small">ارسال پیام به مربی</span></div>
       </div>`;
     const page=document.querySelector('.page');const nav=document.querySelector('.nav');page.insertBefore(sec,nav.nextSibling);
     normalizeTraineeProfileCards(sec);
@@ -10132,10 +10133,10 @@ body.workout-output.workout-compact{
   if(mode==='trainee'){
    const dashboard=$('traineeDashboard');
    const grid=dashboard&&(dashboard.querySelector('.v4-grid')||dashboard.querySelector('.v4-dashboard')||dashboard);
-   if(grid&&!$('sehChatEntryCard')){
-    const card=document.createElement('div');card.id='sehChatEntryCard';card.className='v4-card';
-    card.innerHTML='<b style="display:block;font-size:24px;margin-bottom:8px">💬</b><strong>گفت‌وگو با مربی</strong><span class="v4-small" id="sehChatEntryStatus">ارسال پیام به مربی</span><span class="seh-chat-unread" id="sehChatEntryUnread" style="display:none">۰</span>';
-    card.addEventListener('click',()=>openChat('trainee'));grid.appendChild(card);
+   if(grid){
+    let card=$('sehChatEntryCard');
+    if(!card){card=document.createElement('div');card.id='sehChatEntryCard';card.className='v4-card';card.innerHTML='<b style="display:block;font-size:24px;margin-bottom:8px">💬</b><strong>گفت‌وگو با مربی</strong><span class="v4-small" id="sehChatEntryStatus">ارسال پیام به مربی</span><span class="seh-chat-unread" id="sehChatEntryUnread" style="display:none">۰</span>';grid.appendChild(card);}
+    if(!card.__sehChatBound){card.__sehChatBound=true;card.addEventListener('click',()=>openChat('trainee'));card.setAttribute('role','button');card.setAttribute('tabindex','0');}
    }
   }else{
    const coach=$('coach');if(coach&&!$('sehChatCoachCard')){
@@ -10213,6 +10214,7 @@ body.workout-output.workout-compact{
   }catch(e){console.error('Chat open failed',e);$('sehChatMessages').innerHTML='<div class="seh-chat-muted">'+esc(e.message||'بازکردن گفت‌وگو انجام نشد.')+'</div>';}
  }
  window.sehOpenCoachChat=()=>openChat('coach');
+ window.sehOpenTraineeChat=()=>openChat('trainee');
  function refreshEntry(){
   const profile=(typeof authProfile!=='undefined'&&authProfile)?authProfile:window.authProfile;
   if(!profile)return;
