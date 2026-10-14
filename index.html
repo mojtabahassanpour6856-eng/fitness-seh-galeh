@@ -5194,25 +5194,14 @@ body.workout-output .empty-cell{display:none!important}
                 body.style.setProperty('margin','0px','important');
                 body.style.setProperty('border','2px solid #d4b15c','important');
               }
-              /* Vazirmatn is applied ONLY to the downloaded workout PNG.
-                 Use the font already bundled/referenced by this page, and wait for its
-                 faces in the cloned document before html2canvas renders. */
+              /* Tahoma is applied ONLY to the downloaded workout PNG.
+                 Keep print/PDF and every other app section on their existing fonts. */
               if(forceDownload && kind!=='meal'){
-                const vazirStyle=clonedDoc.createElement('style');
-                vazirStyle.textContent=`
-                  body.workout-output,body.workout-output *{font-family:'Vazirmatn',Tahoma,Arial,sans-serif!important}
+                const tahomaStyle=clonedDoc.createElement('style');
+                tahomaStyle.textContent=`
+                  body.workout-output,body.workout-output *{font-family:Tahoma,Arial,sans-serif!important}
                 `;
-                clonedDoc.head.appendChild(vazirStyle);
-                if(clonedDoc.fonts && clonedDoc.fonts.load){
-                  await Promise.all([
-                    clonedDoc.fonts.load('400 16px Vazirmatn'),
-                    clonedDoc.fonts.load('500 16px Vazirmatn'),
-                    clonedDoc.fonts.load('700 16px Vazirmatn'),
-                    clonedDoc.fonts.load('800 16px Vazirmatn'),
-                    clonedDoc.fonts.load('900 16px Vazirmatn'),
-                    clonedDoc.fonts.ready
-                  ]).catch(()=>{});
-                }
+                clonedDoc.head.appendChild(tahomaStyle);
               }
               if(kind!=='meal'){
                 /* Repeat the full-width reset on html2canvas's clone: its stylesheet can
