@@ -10120,6 +10120,7 @@ body.workout-output.workout-compact{
  const esc=v=>String(v??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
  const faNum=n=>Number(n||0).toLocaleString('fa-IR');
  let mode='', trainee=null, selected=null, conversations=[], pollTimer=null, loading=false, lastMessageId=null;
+ let coachNoticeTimer=null, coachNoticeStarted=false, coachNoticeSeen=new Set();
  function activeUser(){return window.AUTH_SUPABASE?.auth?.getUser?.()}
  function ensureSection(){
   let sec=$('sehChatSection');if(sec)return sec;
@@ -10142,12 +10143,56 @@ body.workout-output.workout-compact{
   }else{
    const coach=$('coach');if(coach&&!$('sehChatCoachCard')){
     const card=document.createElement('div');card.id='sehChatCoachCard';card.className='card';
-    card.innerHTML='<h2>💬 پیام‌های شاگردان <span class="seh-chat-unread" id="sehChatCoachUnread" style="display:none">۰</span></h2><p class="muted">گفت‌وگوهای خصوصی شاگردان را از اینجا باز کنید.</p><button type="button" onclick="window.sehOpenCoachChat()">باز کردن پیام‌ها</button>';
+    card.innerHTML='<h2>💬 پیام‌های شاگردان <span class="seh-chat-unread" id="sehChatCoachUnread" style="display:none">۰</span></h2><p class="muted">گفت‌وگوهای خصوصی شاگردان را از اینجا باز کنید.</p><button type="button" onclick="window.sehOpenCoachChat()">باز کردن پیام‌ها</button> <button type="button" id="sehEnableChatNotices">فعال‌سازی اعلان پیام</button><small id="sehChatNoticeStatus" style="display:block;margin-top:8px;color:#587066">اعلان هنگام باز بودن اپ و اجازه مرورگر کار می‌کند.</small>';
     const first=coach.querySelector('.card');if(first)first.insertAdjacentElement('afterend',card);else coach.prepend(card);
    }
   }
  }
  async function currentAuthUser(){const r=await window.AUTH_SUPABASE.auth.getUser();if(r.error)throw r.error;if(!r.data?.user)throw new Error('نشست ورود معتبر نیست؛ دوباره وارد شوید.');return r.data.user}
+ function setCoachNoticeStatus(text){const e=$('sehChatNoticeStatus');if(e)e.textContent=text;}
+ async function enableCoachNotices(){
+  if(!('Notification' in window)){setCoachNoticeStatus('این مرورگر اعلان را پشتیبانی نمی‌کند.');return;}
+  try{
+   const permission=await Notification.requestPermission();
+   if(permission==='granted'){setCoachNoticeStatus('اعلان پیام فعال شد؛ تا وقتی اپ باز باشد پیام‌های جدید بررسی می‌شوند.');startCoachNoticePolling(true);}
+   else setCoachNoticeStatus('اجازه اعلان داده نشد؛ از تنظیمات مرورگر اجازه اعلان را فعال کنید.');
+  }catch(e){setCoachNoticeStatus('فعال‌سازی اعلان انجام نشد.');}
+ }
+ async function pollCoachIncomingMessages(initial){
+  if(!window.AUTH_SUPABASE||document.visibilityState!=='visible')return;
+  const profile=(typeof authProfile!=='undefined'&&authProfile)?authProfile:window.authProfile;
+  if(!profile||profile.role!=='coach')return;
+  try{
+   const user=await currentAuthUser();
+   const tr=await window.AUTH_SUPABASE.from('trainees').select('id,full_name').eq('coach_user_id',user.id);
+   if(tr.error||!tr.data?.length)return;
+   const byId={};tr.data.forEach(t=>byId[String(t.id)]=t.full_name||'شاگرد');
+   const ids=Object.keys(byId);
+   const q=await window.AUTH_SUPABASE.from('coach_chat_messages').select('id,trainee_id,sender_id,created_at').in('trainee_id',ids).neq('sender_id',user.id).order('created_at',{ascending:false}).limit(50);
+   if(q.error)return;
+   const rows=(q.data||[]).reverse();
+   if(!coachNoticeStarted||initial){
+    rows.forEach(m=>coachNoticeSeen.add(String(m.id)));
+    if(coachNoticeSeen.size>300)coachNoticeSeen=new Set(Array.from(coachNoticeSeen).slice(-150));
+    coachNoticeStarted=true;return;
+   }
+   for(const m of rows){
+    const mid=String(m.id);if(coachNoticeSeen.has(mid))continue;coachNoticeSeen.add(mid);
+    if('Notification' in window&&Notification.permission==='granted'&&document.visibilityState==='visible'){
+     const name=byId[String(m.trainee_id)]||'شاگرد';
+     const note=new Notification('فیتنس سه‌قلعه',{body:name+' برای شما پیام فرستاد.',tag:'seh-chat-'+mid});
+     note.onclick=()=>{window.focus();if(typeof window.sehOpenCoachChatForTrainee==='function')window.sehOpenCoachChatForTrainee(String(m.trainee_id));note.close();};
+    }
+   }
+   if(coachNoticeSeen.size>300)coachNoticeSeen=new Set(Array.from(coachNoticeSeen).slice(-150));
+  }catch(e){console.warn('Coach message notification check failed',e);}
+ }
+ function startCoachNoticePolling(reset){
+  if(coachNoticeTimer)clearInterval(coachNoticeTimer);
+  if(reset){coachNoticeStarted=false;coachNoticeSeen=new Set();}
+  pollCoachIncomingMessages(!coachNoticeStarted);
+  coachNoticeTimer=setInterval(()=>pollCoachIncomingMessages(false),10000);
+ }
  async function fetchTraineeForUser(user){
   const profile=(typeof authProfile!=='undefined'&&authProfile)?authProfile:window.authProfile;
   // Use the same trainee record already loaded by the main app. The auth profile's
@@ -10232,6 +10277,7 @@ body.workout-output.workout-compact{
   }catch(e){console.error('Chat open failed',e);$('sehChatMessages').innerHTML='<div class="seh-chat-muted">'+esc(e.message||'بازکردن گفت‌وگو انجام نشد.')+'</div>';}
  }
  window.sehOpenCoachChat=()=>openChat('coach');
+ window.sehOpenCoachChatForTrainee=async id=>{await openChat('coach');const t=conversations.find(x=>String(x.id)===String(id));if(t)await selectConversation(t);};
  window.sehOpenTraineeChat=()=>openChat('trainee');
  function refreshEntry(){
   const profile=(typeof authProfile!=='undefined'&&authProfile)?authProfile:window.authProfile;
@@ -10240,6 +10286,9 @@ body.workout-output.workout-compact{
  }
  function install(){
   ensureSection();refreshEntry();
+  const noticeButton=$('sehEnableChatNotices');if(noticeButton&&!noticeButton.dataset.bound){noticeButton.dataset.bound='1';noticeButton.addEventListener('click',enableCoachNotices);}
+  const profile=(typeof authProfile!=='undefined'&&authProfile)?authProfile:window.authProfile;
+  if(profile?.role==='coach'&&!coachNoticeTimer)startCoachNoticePolling(false);
   const oldFinish=window.finishLogin;
   if(typeof oldFinish==='function'&&!oldFinish.__sehChatWrapped){
    const wrapped=async function(){const r=await oldFinish.apply(this,arguments);[100,400,900,1800].forEach(ms=>setTimeout(refreshEntry,ms));return r;};
