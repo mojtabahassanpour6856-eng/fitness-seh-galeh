@@ -5776,6 +5776,11 @@ else loadCoachExerciseListsWhenReady();
   catch(e){alert("ذخیره تاریخ ثبت‌نام ناموفق بود. "+(e.message||String(e)));}
  };
 
+ /* BEGIN PROTECTED NUTRITION COMPLETION SECTION
+  این بخش قفل قراردادی است: تیک وعده‌ها، ذخیره روزانه، گزارش هفتگی مربی و شاگرد.
+  بدون درخواست صریح کاربر هیچ تغییری در این بخش ندهید.
+  هنگام تغییر بخش‌های دیگر، این محدوده را دست‌نخورده بگذارید و پس از ویرایش، صحت وجود هر دو نشانگر را بررسی کنید.
+ */
  async function toggleMealDone(mealId,checked){
   const traineeId=currentClient?.id;if(!traineeId)return alert("شاگرد مشخص نیست.");
   const day=dayNow(),key=String(traineeId)+"|"+String(mealId)+"|"+day;
@@ -5895,6 +5900,7 @@ else loadCoachExerciseListsWhenReady();
   };window.__sehCoachMealRendererWrapped=true;
  }
 
+ /* END PROTECTED NUTRITION COMPLETION SECTION */
  // روز جدید را حتی اگر صفحه باز مانده باشد تشخیص بده؛ سابقه دیتابیس حذف نمی‌شود.
  let mealCompletionObservedDay=dayNow(),mealCompletionRefreshBusy=false;
  async function refreshMealCompletionOnDayChange(){
