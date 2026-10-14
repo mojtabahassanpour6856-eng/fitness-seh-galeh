@@ -10149,18 +10149,25 @@ body.workout-output.workout-compact{
  async function currentAuthUser(){const r=await window.AUTH_SUPABASE.auth.getUser();if(r.error)throw r.error;if(!r.data?.user)throw new Error('نشست ورود معتبر نیست؛ دوباره وارد شوید.');return r.data.user}
  async function fetchTraineeForUser(user){
   const profile=(typeof authProfile!=='undefined'&&authProfile)?authProfile:window.authProfile;
-  const knownId=profile?.role==='trainee'?(profile.trainee_id||profile.id):(null);
-  let r=null;
-  // The main login flow already resolves the approved trainee record by account/phone.
-  // Reuse that exact trainee ID first so chat doesn't depend on a second auth_user_id lookup.
-  if(knownId){
-   r=await window.AUTH_SUPABASE.from('trainees').select('id,full_name,coach_user_id,auth_user_id').eq('id',knownId).limit(1);
-   if(!r.error&&r.data?.length)return r.data[0];
+  // Use the same trainee record already loaded by the main app. The auth profile's
+  // id can be the Supabase user id, so it must not be assumed to be a trainee id.
+  const candidateIds=[];
+  const addId=v=>{if(v!==null&&v!==undefined&&String(v).trim()&&!candidateIds.includes(String(v)))candidateIds.push(String(v));};
+  if(profile?.role==='trainee')addId(profile.trainee_id);
+  if(typeof currentClient!=='undefined'&&currentClient)addId(currentClient.id);
+  if(typeof clients!=='undefined'&&Array.isArray(clients)&&clients.length===1)addId(clients[0]?.id);
+  let lastQueryError=null;
+  for(const id of candidateIds){
+   const r=await window.AUTH_SUPABASE.from('trainees').select('id,full_name,coach_user_id,auth_user_id').eq('id',id).limit(1);
+   if(r.error){lastQueryError=r.error;continue;}
+   if(r.data?.length)return r.data[0];
   }
-  r=await window.AUTH_SUPABASE.from('trainees').select('id,full_name,coach_user_id,auth_user_id').eq('auth_user_id',user.id).limit(2);
+  const r=await window.AUTH_SUPABASE.from('trainees').select('id,full_name,coach_user_id,auth_user_id').eq('auth_user_id',user.id).limit(2);
   if(r.error)throw r.error;
-  if(r.data?.length)return r.data[0];
-  throw new Error('پرونده شاگرد این حساب در سامانه چت پیدا نشد. یک بار از حساب شاگرد خارج شوید و دوباره وارد شوید؛ اگر ادامه داشت، باید اتصال پرونده در پایگاه داده بررسی شود.');
+  if(r.data?.length===1)return r.data[0];
+  if(r.data?.length>1)throw new Error('بیش از یک پرونده به این حساب متصل است؛ برای جلوگیری از نمایش گفت‌وگوی اشتباه، اتصال باید بررسی شود.');
+  if(lastQueryError)throw new Error('خواندن پرونده شاگرد برای گفت‌وگو با خطا مواجه شد: '+lastQueryError.message);
+  throw new Error('برنامه اطلاعات شاگرد را نمایش می‌دهد، اما بخش گفت‌وگو نتوانست همان پرونده را پیدا کند. لطفاً صفحه را یک‌بار تازه‌سازی کنید؛ اگر خطا ماند، اتصال چت را دقیق‌تر بررسی می‌کنم.');
  }
  async function loadCoachConversations(user){
   const r=await window.AUTH_SUPABASE.from('trainees').select('id,full_name,coach_user_id,auth_user_id').eq('coach_user_id',user.id).order('full_name',{ascending:true});
