@@ -5141,11 +5141,12 @@ body.workout-output .empty-cell{display:none!important}
             if(!ctx)throw new Error('ساخت صفحه A4 ممکن نشد.');
             ctx.fillStyle='#ffffff';ctx.fillRect(0,0,page.width,page.height);
             const sourceW=Math.max(1,canvas.width),sourceH=Math.max(1,canvas.height);
-            /* Preserve proportions while fitting the complete capture on A4. */
-            const scale=Math.min(page.width/sourceW,page.height/sourceH);
-            const drawW=Math.max(1,Math.round(sourceW*scale)),drawH=Math.max(1,Math.round(sourceH*scale));
+            /* Downloaded workout PNG only: fill the complete A4 canvas edge-to-edge.
+               The former proportional fit centered a narrower tall capture and created
+               visible white strips on both sides. Keep every exercise and the footer;
+               change only the final PNG composition, not the preview or text styles. */
             ctx.imageSmoothingEnabled=true;ctx.imageSmoothingQuality='high';
-            ctx.drawImage(canvas,Math.round((page.width-drawW)/2),0,drawW,drawH);
+            ctx.drawImage(canvas,0,0,page.width,page.height);
             finalCanvas=page;
           }
           const png=await new Promise((resolve,reject)=>{
