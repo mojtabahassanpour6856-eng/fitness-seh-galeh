@@ -9131,137 +9131,6 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
      const popup=window.open('','_blank');if(!popup){if(status)status.textContent='پنجره چاپ مسدود شد؛ اجازه بازشدن پنجره را بدهید.';return;}
      const css=Array.from(document.querySelectorAll('style')).map(x=>x.textContent).join('\n');
      popup.document.open();popup.document.write('<!doctype html><html lang="fa" dir="rtl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>برنامه غذایی - فیتنس سه‌قلعه</title><style>'+css+'body{padding:12px;background:#fff}@media print{body{padding:0}@page{size:A4 portrait;margin:8mm}}</style></head><body>
-<script>
-/* RECIPE_INGREDIENT_EDITOR_V1 — editable recipe ingredients with live macro totals */
-(function(){
-  let draftRecipeIndex = null;
-  let recipeDraft = [];
-  let recipeSaveBusy = false;
-  const units = ["گرم","میلی‌لیتر","عدد","قاشق غذاخوری","لیوان","کف دست","پیمانه"];
-  const same = (a,b)=>String(a??"")===String(b??"");
-  const getRecipe = ()=> {
-    const el=document.getElementById("mealRecipeSelect");
-    return el && MEAL_RECIPES[Number(el.value)];
-  };
-  const getFoodById = id => (foods||[]).find(f=>same(f[5],id));
-  const foodForMetrics = f => ({name:f?.[0],calories:f?.[1],protein:f?.[2],carbs:f?.[3],fat:f?.[4]});
-  function resetDraftIfRecipeChanged(){
-    const el=document.getElementById("mealRecipeSelect");
-    if(!el)return null;
-    const idx=Number(el.value), recipe=MEAL_RECIPES[idx];
-    if(!recipe)return null;
-    if(draftRecipeIndex!==idx){
-      draftRecipeIndex=idx;
-      recipeDraft=(recipe.ingredients||[]).map(([name,amount,unit])=>{
-        const f=(foods||[]).find(x=>String(x[0])===String(name));
-        return {foodId:f?f[5]:"",amount:Number(amount)||1,unit:unit||"گرم"};
-      });
-    }
-    return recipe;
-  }
-  function metric(row){
-    const f=getFoodById(row.foodId);
-    if(!f)return {valid:false,cal:0,pro:0,carb:0,fat:0};
-    return foodMetrics(foodForMetrics(f),row.amount,row.unit);
-  }
-  function renderRecipe(){
-    const recipe=resetDraftIfRecipeChanged();
-    const host=document.getElementById("mealRecipeIngredients");
-    const preview=document.getElementById("mealFoodPreview");
-    if(!recipe||!host)return;
-    const totals=recipeDraft.reduce((a,row)=>{
-      const m=metric(row);
-      if(m.valid){a.cal+=m.cal;a.pro+=m.pro;a.carb+=m.carb;a.fat+=m.fat;}
-      return a;
-    },{cal:0,pro:0,carb:0,fat:0});
-    const options=(selected)=> (foods||[]).map(f=>'<option value="'+esc(String(f[5]??""))+'" '+(same(f[5],selected)?"selected":"")+'>'+esc(f[0])+'</option>').join("");
-    host.innerHTML='<b>مواد دستور — مقدار هر ماده را جداگانه تغییر بده:</b>'+
-      '<div style="display:grid;gap:9px;margin-top:10px">'+recipeDraft.map((row,i)=>{
-        const f=getFoodById(row.foodId),m=metric(row);
-        return '<div class="card" style="padding:10px;margin:0;border:1px solid #d8e2ed">'+
-          '<label>ماده '+(i+1)+'</label><select data-recipe-food="'+i+'">'+options(row.foodId)+'</select>'+
-          '<div class="grid2" style="margin-top:7px"><div><label>مقدار</label><input type="number" min="0.1" step="0.1" value="'+esc(String(row.amount))+'" data-recipe-amount="'+i+'"></div>'+
-          '<div><label>واحد</label><select data-recipe-unit="'+i+'">'+units.map(u=>'<option value="'+u+'" '+(row.unit===u?"selected":"")+'>'+u+'</option>').join("")+'</select></div></div>'+
-          '<div class="muted" style="margin-top:5px">'+(f&&m.valid?('🔥 '+m.cal.toFixed(0)+' kcal · پروتئین '+m.pro.toFixed(1)+'g · کربوهیدرات '+m.carb.toFixed(1)+'g · چربی '+m.fat.toFixed(1)+'g'):'⚠️ این ماده در بانک غذا موجود نیست یا مقدار/واحد آن قابل محاسبه نیست.')+'</div>'+
-          '<button type="button" class="mini danger" data-recipe-remove="'+i+'" style="margin-top:6px">حذف این ماده از دستور</button></div>';
-      }).join("")+'</div>'+
-      '<div class="grid2" style="margin-top:10px"><div><label>افزودن ماده از بانک غذا</label><select id="recipeAddFoodSelect">'+options("")+'</select></div><div style="display:flex;align-items:end"><button type="button" id="recipeAddFoodButton" class="secondary" style="width:100%">＋ افزودن ماده</button></div></div>'+
-      (recipe.note?'<small>'+esc(recipe.note)+'</small>':'');
-    host.querySelectorAll("[data-recipe-amount]").forEach(el=>el.addEventListener("change",()=>{
-      const i=Number(el.dataset.recipeAmount);if(recipeDraft[i]){recipeDraft[i].amount=Number(el.value)||0;renderRecipe();}
-    }));
-    host.querySelectorAll("[data-recipe-unit]").forEach(el=>el.addEventListener("change",()=>{
-      const i=Number(el.dataset.recipeUnit);if(recipeDraft[i]){recipeDraft[i].unit=el.value;renderRecipe();}
-    }));
-    host.querySelectorAll("[data-recipe-food]").forEach(el=>el.addEventListener("change",()=>{
-      const i=Number(el.dataset.recipeFood);if(recipeDraft[i]){recipeDraft[i].foodId=el.value;renderRecipe();}
-    }));
-    host.querySelectorAll("[data-recipe-remove]").forEach(el=>el.addEventListener("click",()=>{
-      recipeDraft.splice(Number(el.dataset.recipeRemove),1);renderRecipe();
-    }));
-    const add=document.getElementById("recipeAddFoodButton");
-    if(add)add.addEventListener("click",()=>{
-      const sel=document.getElementById("recipeAddFoodSelect"),f=getFoodById(sel?.value);
-      if(!f){alert("ابتدا یک ماده از بانک غذا انتخاب کن.");return;}
-      recipeDraft.push({foodId:f[5],amount:100,unit:/شیر|دوغ|آب|نوشیدنی|قهوه|چای/.test(f[0])?"میلی‌لیتر":"گرم"});
-      renderRecipe();
-    });
-    if(preview)preview.innerHTML='<b>مجموع فعلی دستور:</b> 🔥 '+totals.cal.toFixed(0)+' kcal | پروتئین '+totals.pro.toFixed(1)+'g | کربوهیدرات '+totals.carb.toFixed(1)+'g | چربی '+totals.fat.toFixed(1)+'g'+
-      (recipeDraft.some(r=>!metric(r).valid)?'<br><span class="warning-text">یک یا چند ماده قابل محاسبه نیست؛ پیش از ثبت اصلاحشان کن.</span>':'')+
-      '<br><small>تغییر مقدارها، افزودن یا حذف ماده بلافاصله در جمع محاسبه می‌شود.</small>';
-  }
-  window.previewMealRecipe=function(){renderRecipe();};
-  window.saveMealFood=async function(){
-    if(recipeSaveBusy)return;
-    const mealId=currentMealId,traineeId=currentClient&&currentClient.id,planId=currentPlanId;
-    if(!mealId){alert("ابتدا وعده را انتخاب کن.");return;}
-    recipeSaveBusy=true;
-    try{
-      if(document.getElementById("mealFoodMode").value==="recipe"){
-        const recipe=getRecipe();
-        if(!recipe||!recipeDraft.length){throw new Error("دستور معتبر نیست یا هیچ ماده‌ای ندارد.");}
-        const rows=recipeDraft.map(row=>({row,f:getFoodById(row.foodId),metrics:metric(row)}));
-        if(rows.some(x=>!x.f||!Number.isFinite(Number(x.row.amount))||Number(x.row.amount)<=0||!x.metrics.valid))
-          throw new Error("همه مواد باید غذا، مقدار و واحد معتبر داشته باشند.");
-        if(!currentClient||!same(currentClient.id,traineeId)||!same(currentPlanId,planId)||!same(currentMealId,mealId))
-          throw new Error("شاگرد یا وعده تغییر کرده است؛ ثبت لغو شد.");
-        const meals=await sbGet("/nutrition_meals?id=eq."+encodeURIComponent(mealId)+"&select=id,plan_id&limit=1");
-        if(!meals?.[0]||!same(meals[0].plan_id,planId))throw new Error("این وعده متعلق به برنامه غذایی فعلی نیست.");
-        const plans=await sbGet("/nutrition_plans?id=eq."+encodeURIComponent(planId)+"&select=id,trainee_id&limit=1");
-        if(!plans?.[0]||!same(plans[0].trainee_id,traineeId))throw new Error("اجازه تغییر برنامه شاگرد دیگری را ندارید.");
-        const label="[دستور ترکیبی: "+recipe.name+"]";
-        const extra=document.getElementById("mealFoodNote").value.trim();
-        const payload=rows.map(({row,f})=>({meal_id:mealId,food_id:f[5],amount:Number(row.amount),unit:row.unit,notes:[label,extra].filter(Boolean).join(" | ")||null}));
-        await sbWrite("/nutrition_meal_foods","POST",payload);
-        if(!currentClient||!same(currentClient.id,traineeId)||!same(currentPlanId,planId))throw new Error("مواد ثبت شدند؛ برای مشاهده، برنامه شاگرد را دوباره باز کن.");
-        closeMealModal();
-        await loadNutritionForClient();
-        return;
-      }
-      const f=foods[+document.getElementById("mealFoodSelect").value];
-      const amount=+document.getElementById("mealFoodAmount").value;
-      const unit=document.getElementById("mealFoodUnit").value;
-      if(!f||!Number.isFinite(amount)||amount<=0)throw new Error("غذا و مقدار معتبر انتخاب کن.");
-      if(!currentClient||!same(currentClient.id,traineeId)||!same(currentPlanId,planId)||!same(currentMealId,mealId))throw new Error("شاگرد یا وعده تغییر کرده است؛ ثبت لغو شد.");
-      const meals=await sbGet("/nutrition_meals?id=eq."+encodeURIComponent(mealId)+"&select=id,plan_id&limit=1");
-      if(!meals?.[0]||!same(meals[0].plan_id,planId))throw new Error("این وعده متعلق به برنامه غذایی فعلی نیست.");
-      const plans=await sbGet("/nutrition_plans?id=eq."+encodeURIComponent(planId)+"&select=id,trainee_id&limit=1");
-      if(!plans?.[0]||!same(plans[0].trainee_id,traineeId))throw new Error("اجازه تغییر برنامه شاگرد دیگری را ندارید.");
-      const m=foodMetrics(foodForMetrics(f),amount,unit);
-      if(!m.valid)throw new Error("اطلاعات کالری غذا ناقص است یا واحد قابل محاسبه نیست.");
-      await sbWrite("/nutrition_meal_foods","POST",{meal_id:mealId,food_id:f[5],amount,unit,notes:document.getElementById("mealFoodNote").value.trim()||null});
-      closeMealModal();await loadNutritionForClient();
-    }catch(e){alert("ثبت غذا انجام نشد.\n"+(e.message||String(e)));}
-    finally{recipeSaveBusy=false;}
-  };
-  const originalOpen=window.openMealFoodModal;
-  window.openMealFoodModal=async function(mealId){
-    if(typeof originalOpen==="function")await originalOpen(mealId);
-    draftRecipeIndex=null;recipeDraft=[];
-    if(document.getElementById("mealFoodMode")?.value==="recipe")renderRecipe();
-  };
-})();
-</script>
 </body></html>');
      popup.document.body.appendChild(clone);popup.document.close();setTimeout(()=>popup.print(),500);if(status)status.textContent='برای ذخیره PDF، گزینه «ذخیره به‌صورت PDF» را انتخاب کنید.';return;
    }
@@ -9527,5 +9396,136 @@ body.workout-output.workout-compact{
   }
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',function(){setTimeout(repair,500);});
   else setTimeout(repair,500);
+})();
+</script>
+<script>
+/* RECIPE_INGREDIENT_EDITOR_V1 — editable recipe ingredients with live macro totals */
+(function(){
+  let draftRecipeIndex = null;
+  let recipeDraft = [];
+  let recipeSaveBusy = false;
+  const units = ["گرم","میلی‌لیتر","عدد","قاشق غذاخوری","لیوان","کف دست","پیمانه"];
+  const same = (a,b)=>String(a??"")===String(b??"");
+  const getRecipe = ()=> {
+    const el=document.getElementById("mealRecipeSelect");
+    return el && MEAL_RECIPES[Number(el.value)];
+  };
+  const getFoodById = id => (foods||[]).find(f=>same(f[5],id));
+  const foodForMetrics = f => ({name:f?.[0],calories:f?.[1],protein:f?.[2],carbs:f?.[3],fat:f?.[4]});
+  function resetDraftIfRecipeChanged(){
+    const el=document.getElementById("mealRecipeSelect");
+    if(!el)return null;
+    const idx=Number(el.value), recipe=MEAL_RECIPES[idx];
+    if(!recipe)return null;
+    if(draftRecipeIndex!==idx){
+      draftRecipeIndex=idx;
+      recipeDraft=(recipe.ingredients||[]).map(([name,amount,unit])=>{
+        const f=(foods||[]).find(x=>String(x[0])===String(name));
+        return {foodId:f?f[5]:"",amount:Number(amount)||1,unit:unit||"گرم"};
+      });
+    }
+    return recipe;
+  }
+  function metric(row){
+    const f=getFoodById(row.foodId);
+    if(!f)return {valid:false,cal:0,pro:0,carb:0,fat:0};
+    return foodMetrics(foodForMetrics(f),row.amount,row.unit);
+  }
+  function renderRecipe(){
+    const recipe=resetDraftIfRecipeChanged();
+    const host=document.getElementById("mealRecipeIngredients");
+    const preview=document.getElementById("mealFoodPreview");
+    if(!recipe||!host)return;
+    const totals=recipeDraft.reduce((a,row)=>{
+      const m=metric(row);
+      if(m.valid){a.cal+=m.cal;a.pro+=m.pro;a.carb+=m.carb;a.fat+=m.fat;}
+      return a;
+    },{cal:0,pro:0,carb:0,fat:0});
+    const options=(selected)=> (foods||[]).map(f=>'<option value="'+esc(String(f[5]??""))+'" '+(same(f[5],selected)?"selected":"")+'>'+esc(f[0])+'</option>').join("");
+    host.innerHTML='<b>مواد دستور — مقدار هر ماده را جداگانه تغییر بده:</b>'+
+      '<div style="display:grid;gap:9px;margin-top:10px">'+recipeDraft.map((row,i)=>{
+        const f=getFoodById(row.foodId),m=metric(row);
+        return '<div class="card" style="padding:10px;margin:0;border:1px solid #d8e2ed">'+
+          '<label>ماده '+(i+1)+'</label><select data-recipe-food="'+i+'">'+options(row.foodId)+'</select>'+
+          '<div class="grid2" style="margin-top:7px"><div><label>مقدار</label><input type="number" min="0.1" step="0.1" value="'+esc(String(row.amount))+'" data-recipe-amount="'+i+'"></div>'+
+          '<div><label>واحد</label><select data-recipe-unit="'+i+'">'+units.map(u=>'<option value="'+u+'" '+(row.unit===u?"selected":"")+'>'+u+'</option>').join("")+'</select></div></div>'+
+          '<div class="muted" style="margin-top:5px">'+(f&&m.valid?('🔥 '+m.cal.toFixed(0)+' kcal · پروتئین '+m.pro.toFixed(1)+'g · کربوهیدرات '+m.carb.toFixed(1)+'g · چربی '+m.fat.toFixed(1)+'g'):'⚠️ این ماده در بانک غذا موجود نیست یا مقدار/واحد آن قابل محاسبه نیست.')+'</div>'+
+          '<button type="button" class="mini danger" data-recipe-remove="'+i+'" style="margin-top:6px">حذف این ماده از دستور</button></div>';
+      }).join("")+'</div>'+
+      '<div class="grid2" style="margin-top:10px"><div><label>افزودن ماده از بانک غذا</label><select id="recipeAddFoodSelect">'+options("")+'</select></div><div style="display:flex;align-items:end"><button type="button" id="recipeAddFoodButton" class="secondary" style="width:100%">＋ افزودن ماده</button></div></div>'+
+      (recipe.note?'<small>'+esc(recipe.note)+'</small>':'');
+    host.querySelectorAll("[data-recipe-amount]").forEach(el=>el.addEventListener("change",()=>{
+      const i=Number(el.dataset.recipeAmount);if(recipeDraft[i]){recipeDraft[i].amount=Number(el.value)||0;renderRecipe();}
+    }));
+    host.querySelectorAll("[data-recipe-unit]").forEach(el=>el.addEventListener("change",()=>{
+      const i=Number(el.dataset.recipeUnit);if(recipeDraft[i]){recipeDraft[i].unit=el.value;renderRecipe();}
+    }));
+    host.querySelectorAll("[data-recipe-food]").forEach(el=>el.addEventListener("change",()=>{
+      const i=Number(el.dataset.recipeFood);if(recipeDraft[i]){recipeDraft[i].foodId=el.value;renderRecipe();}
+    }));
+    host.querySelectorAll("[data-recipe-remove]").forEach(el=>el.addEventListener("click",()=>{
+      recipeDraft.splice(Number(el.dataset.recipeRemove),1);renderRecipe();
+    }));
+    const add=document.getElementById("recipeAddFoodButton");
+    if(add)add.addEventListener("click",()=>{
+      const sel=document.getElementById("recipeAddFoodSelect"),f=getFoodById(sel?.value);
+      if(!f){alert("ابتدا یک ماده از بانک غذا انتخاب کن.");return;}
+      recipeDraft.push({foodId:f[5],amount:100,unit:/شیر|دوغ|آب|نوشیدنی|قهوه|چای/.test(f[0])?"میلی‌لیتر":"گرم"});
+      renderRecipe();
+    });
+    if(preview)preview.innerHTML='<b>مجموع فعلی دستور:</b> 🔥 '+totals.cal.toFixed(0)+' kcal | پروتئین '+totals.pro.toFixed(1)+'g | کربوهیدرات '+totals.carb.toFixed(1)+'g | چربی '+totals.fat.toFixed(1)+'g'+
+      (recipeDraft.some(r=>!metric(r).valid)?'<br><span class="warning-text">یک یا چند ماده قابل محاسبه نیست؛ پیش از ثبت اصلاحشان کن.</span>':'')+
+      '<br><small>تغییر مقدارها، افزودن یا حذف ماده بلافاصله در جمع محاسبه می‌شود.</small>';
+  }
+  window.previewMealRecipe=function(){renderRecipe();};
+  window.saveMealFood=async function(){
+    if(recipeSaveBusy)return;
+    const mealId=currentMealId,traineeId=currentClient&&currentClient.id,planId=currentPlanId;
+    if(!mealId){alert("ابتدا وعده را انتخاب کن.");return;}
+    recipeSaveBusy=true;
+    try{
+      if(document.getElementById("mealFoodMode").value==="recipe"){
+        const recipe=getRecipe();
+        if(!recipe||!recipeDraft.length){throw new Error("دستور معتبر نیست یا هیچ ماده‌ای ندارد.");}
+        const rows=recipeDraft.map(row=>({row,f:getFoodById(row.foodId),metrics:metric(row)}));
+        if(rows.some(x=>!x.f||!Number.isFinite(Number(x.row.amount))||Number(x.row.amount)<=0||!x.metrics.valid))
+          throw new Error("همه مواد باید غذا، مقدار و واحد معتبر داشته باشند.");
+        if(!currentClient||!same(currentClient.id,traineeId)||!same(currentPlanId,planId)||!same(currentMealId,mealId))
+          throw new Error("شاگرد یا وعده تغییر کرده است؛ ثبت لغو شد.");
+        const meals=await sbGet("/nutrition_meals?id=eq."+encodeURIComponent(mealId)+"&select=id,plan_id&limit=1");
+        if(!meals?.[0]||!same(meals[0].plan_id,planId))throw new Error("این وعده متعلق به برنامه غذایی فعلی نیست.");
+        const plans=await sbGet("/nutrition_plans?id=eq."+encodeURIComponent(planId)+"&select=id,trainee_id&limit=1");
+        if(!plans?.[0]||!same(plans[0].trainee_id,traineeId))throw new Error("اجازه تغییر برنامه شاگرد دیگری را ندارید.");
+        const label="[دستور ترکیبی: "+recipe.name+"]";
+        const extra=document.getElementById("mealFoodNote").value.trim();
+        const payload=rows.map(({row,f})=>({meal_id:mealId,food_id:f[5],amount:Number(row.amount),unit:row.unit,notes:[label,extra].filter(Boolean).join(" | ")||null}));
+        await sbWrite("/nutrition_meal_foods","POST",payload);
+        if(!currentClient||!same(currentClient.id,traineeId)||!same(currentPlanId,planId))throw new Error("مواد ثبت شدند؛ برای مشاهده، برنامه شاگرد را دوباره باز کن.");
+        closeMealModal();
+        await loadNutritionForClient();
+        return;
+      }
+      const f=foods[+document.getElementById("mealFoodSelect").value];
+      const amount=+document.getElementById("mealFoodAmount").value;
+      const unit=document.getElementById("mealFoodUnit").value;
+      if(!f||!Number.isFinite(amount)||amount<=0)throw new Error("غذا و مقدار معتبر انتخاب کن.");
+      if(!currentClient||!same(currentClient.id,traineeId)||!same(currentPlanId,planId)||!same(currentMealId,mealId))throw new Error("شاگرد یا وعده تغییر کرده است؛ ثبت لغو شد.");
+      const meals=await sbGet("/nutrition_meals?id=eq."+encodeURIComponent(mealId)+"&select=id,plan_id&limit=1");
+      if(!meals?.[0]||!same(meals[0].plan_id,planId))throw new Error("این وعده متعلق به برنامه غذایی فعلی نیست.");
+      const plans=await sbGet("/nutrition_plans?id=eq."+encodeURIComponent(planId)+"&select=id,trainee_id&limit=1");
+      if(!plans?.[0]||!same(plans[0].trainee_id,traineeId))throw new Error("اجازه تغییر برنامه شاگرد دیگری را ندارید.");
+      const m=foodMetrics(foodForMetrics(f),amount,unit);
+      if(!m.valid)throw new Error("اطلاعات کالری غذا ناقص است یا واحد قابل محاسبه نیست.");
+      await sbWrite("/nutrition_meal_foods","POST",{meal_id:mealId,food_id:f[5],amount,unit,notes:document.getElementById("mealFoodNote").value.trim()||null});
+      closeMealModal();await loadNutritionForClient();
+    }catch(e){alert("ثبت غذا انجام نشد.\n"+(e.message||String(e)));}
+    finally{recipeSaveBusy=false;}
+  };
+  const originalOpen=window.openMealFoodModal;
+  window.openMealFoodModal=async function(mealId){
+    if(typeof originalOpen==="function")await originalOpen(mealId);
+    draftRecipeIndex=null;recipeDraft=[];
+    if(document.getElementById("mealFoodMode")?.value==="recipe")renderRecipe();
+  };
 })();
 </script>
