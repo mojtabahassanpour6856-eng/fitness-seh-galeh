@@ -10786,18 +10786,27 @@ body.workout-output.workout-compact{
       host=document.createElement('section');
       host.id='activitySection';
       host.className='section';
-      var page=document.querySelector('.page'),nav=document.querySelector('.nav');
-      if(page&&nav)page.insertBefore(host,nav.nextSibling);else document.body.appendChild(host);
     }
+    // فعالیت را از پروفایل و داشبورد جدا نگه دار؛ این بخش باید فقط یک کارت داشته باشد.
+    if(host.parentElement!==document.body)document.body.appendChild(host);
     if(panel.parentElement!==host)host.appendChild(panel);
     Array.from(host.children).forEach(function(child){if(child!==panel)child.remove();});
     document.querySelectorAll('.section').forEach(function(sec){
-      sec.classList.remove('active');
-      sec.style.setProperty('display','none','important');
+      if(sec!==host){
+        sec.classList.remove('active');
+        sec.style.setProperty('display','none','important');
+      }
+    });
+    // کارت‌های پروفایل/هدف نباید به‌صورت شناور روی صفحه فعالیت باقی بمانند.
+    ['goalBox','coachActivityTodayPanel'].forEach(function(id){
+      var el=document.getElementById(id);
+      if(el&&!host.contains(el))el.style.setProperty('display','none','important');
     });
     host.classList.add('active');
     host.style.setProperty('display','block','important');
+    host.style.setProperty('visibility','visible','important');
     panel.style.setProperty('display','block','important');
+    panel.style.setProperty('visibility','visible','important');
     document.querySelectorAll('.nav button').forEach(function(btn){btn.classList.remove('active');});
     var navButton=document.getElementById('navDash');
     if(navButton)navButton.classList.add('active');
