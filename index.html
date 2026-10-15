@@ -4276,22 +4276,56 @@ window.toggleExerciseFavorite=async function(id,value){try{await sbWrite(`/train
   };
   window.updateStats=async function(){
     const total=Array.isArray(clients)?clients.length:0;
-    const active=clients.filter(c=>c.active!==false).length;
-    let planCount=0;
+    const active=(Array.isArray(clients)?clients:[]).filter(c=>c.active!==false).length;
+    let workoutRows=[],nutritionRows=[];
+    /* Query each table independently so a nutrition-table/RLS error cannot disable workout renewal alerts. */
     try{
-      const [w,n]=await Promise.all([
-        window.sbGet('/trainee_workout_plans?select=id,trainee_id,plan_date,created_at'),
-        window.sbGet('/nutrition_plans?select=id,trainee_id')
-      ]);
-      const ids=new Set([...(w||[]),...(n||[])].map(x=>String(x.trainee_id)));
-      planCount=ids.size;
-      const todayKey=workoutLocalDateKey(),todayMs=Date.parse(todayKey+'T00:00:00Z');
-      const dueIds=new Set((w||[]).filter(p=>{const start=String(p.plan_date||p.created_at||'').slice(0,10);if(!start)return false;const startMs=Date.parse(start+'T00:00:00Z');if(!Number.isFinite(startMs))return false;return Math.floor((todayMs-startMs)/86400000)>=25;}).map(p=>String(p.trainee_id)));
-      window.__sehWorkoutRenewalDueIds=dueIds;
-      clients.forEach(c=>c.plans=ids.has(String(c.id))?1:0);
-      document.querySelectorAll('#coachMobileCards .coach-name-cell[data-trainee-id]').forEach(btn=>{const id=btn.getAttribute('data-trainee-id'),due=dueIds.has(String(id)),client=clients.find(c=>String(c.id)===String(id));btn.classList.toggle('workout-renewal-due',due);btn.innerHTML=(due?'<span class="workout-renewal-dot" aria-hidden="true">🔴</span>':'')+((client&&client.name)||'بدون نام').replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));if(client)btn.setAttribute('aria-label','انتخاب شاگرد '+client.name+(due?'؛ تمدید برنامه تمرینی':''));});
-    }catch(e){console.warn('آمار برنامه‌ها بارگذاری نشد:',e);}
-    const alerts=new Set([...clients.filter(c=>!c.weight||!c.goal||!c.phone||c.membershipStatus==='منقضی').map(c=>String(c.id)),...((window.__sehWorkoutRenewalDueIds instanceof Set)?Array.from(window.__sehWorkoutRenewalDueIds):[])]).size;
+      workoutRows=await window.sbGet('/trainee_workout_plans?select=id,trainee_id,plan_date,created_at&order=created_at.desc');
+      if(!Array.isArray(workoutRows))workoutRows=[];
+    }catch(e){
+      console.warn('خواندن تاریخ‌های برنامه تمرینی ناموفق بود؛ تلاش با تاریخ ثبت:',e);
+      try{
+        workoutRows=await window.sbGet('/trainee_workout_plans?select=id,trainee_id,created_at&order=created_at.desc');
+        if(!Array.isArray(workoutRows))workoutRows=[];
+      }catch(e2){console.warn('برنامه‌های تمرینی برای هشدار تمدید در دسترس نیستند:',e2);workoutRows=[];}
+    }
+    try{
+      nutritionRows=await window.sbGet('/nutrition_plans?select=id,trainee_id');
+      if(!Array.isArray(nutritionRows))nutritionRows=[];
+    }catch(e){console.warn('فهرست برنامه‌های غذایی در شمارش برنامه‌ها در دسترس نیست:',e);}
+    const ids=new Set([...workoutRows,...nutritionRows].filter(x=>x&&x.trainee_id!=null).map(x=>String(x.trainee_id)));
+    const planCount=ids.size;
+    const todayKey=workoutLocalDateKey(),todayMs=Date.parse(todayKey+'T00:00:00Z');
+    /* Evaluate only the newest saved workout plan per trainee to avoid old duplicate plans triggering false alerts. */
+    const newestByTrainee=new Map();
+    workoutRows.slice().sort((a,b)=>String(b.created_at||'').localeCompare(String(a.created_at||''))).forEach(p=>{
+      const id=String(p.trainee_id??'');
+      if(id&&!newestByTrainee.has(id))newestByTrainee.set(id,p);
+    });
+    const dueIds=new Set();
+    newestByTrainee.forEach((p,id)=>{
+      const start=String(p.plan_date||p.created_at||'').slice(0,10);
+      if(!start)return;
+      const startMs=Date.parse(start+'T00:00:00Z');
+      if(!Number.isFinite(startMs))return;
+      if(Math.floor((todayMs-startMs)/86400000)>=25)dueIds.add(id);
+    });
+    window.__sehWorkoutRenewalDueIds=dueIds;
+    (Array.isArray(clients)?clients:[]).forEach(c=>c.plans=ids.has(String(c.id))?1:0);
+    /* Reapply badges after every asynchronous refresh, even if the list rendered before the query completed. */
+    document.querySelectorAll('#coachMobileCards .coach-name-cell[data-trainee-id]').forEach(btn=>{
+      const id=String(btn.getAttribute('data-trainee-id')||'');
+      const due=dueIds.has(id);
+      const client=(Array.isArray(clients)?clients:[]).find(c=>String(c.id)===id);
+      const name=(client&&client.name)||btn.textContent.replace('🔴','').trim()||'بدون نام';
+      btn.classList.toggle('workout-renewal-due',due);
+      btn.innerHTML=(due?'<span class="workout-renewal-dot" aria-hidden="true">🔴</span>':'')+String(name).replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
+      btn.setAttribute('aria-label','انتخاب شاگرد '+name+(due?'؛ تمدید برنامه تمرینی':''));
+    });
+    const alerts=new Set([
+      ...(Array.isArray(clients)?clients:[]).filter(c=>!c.weight||!c.goal||!c.phone||c.membershipStatus==='منقضی').map(c=>String(c.id)),
+      ...Array.from(dueIds)
+    ]).size;
     if(el('clientCount'))el('clientCount').textContent=fa(total);
     if(el('activeCount'))el('activeCount').textContent=fa(active);
     if(el('planCount'))el('planCount').textContent=fa(planCount);
