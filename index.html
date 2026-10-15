@@ -348,59 +348,6 @@ body.locked{overflow:hidden!important}
     if(event.stopImmediatePropagation)event.stopImmediatePropagation();
     runLogin(button);
   },true);
-
-  // Early coach-login fallback if the main dashboard script fails during startup.
-  window.__fitnessEarlyCoachLogin = async function(button){
-    var email=(document.getElementById('loginEmail')&&document.getElementById('loginEmail').value||'').trim();
-    var password=(document.getElementById('loginPassword')&&document.getElementById('loginPassword').value||'');
-    if(!email||!password){show('ایمیل و رمز عبور مربی را وارد کنید.');return;}
-    if(button){button.disabled=true;button.textContent='⏳ در حال ورود…';}
-    try{
-      var tries=0;
-      while((!window.supabase||typeof window.supabase.createClient!=='function')&&tries<2){
-        await new Promise(function(resolve){setTimeout(resolve,700);});tries++;
-      }
-      if(!window.supabase||typeof window.supabase.createClient!=='function'){
-        await new Promise(function(resolve,reject){
-          var script=document.createElement('script');script.src='https://unpkg.com/@supabase/supabase-js@2';
-          script.onload=resolve;script.onerror=function(){reject(new Error('کتابخانه اتصال بارگذاری نشد؛ اینترنت یا دسترسی به سرویس اتصال را بررسی کنید.'));};
-          document.head.appendChild(script);
-        });
-      }
-      var client=window.AUTH_SUPABASE;
-      if(!client||!client.auth){
-        client=window.supabase.createClient('https://qfakyudgidsumeuoqoot.supabase.co','sb_publishable_Z7-iwP8A1QQOlXpWIVtE2g_twXL-WNZ');
-        window.AUTH_SUPABASE=client;
-      }
-      var result=await client.auth.signInWithPassword({email:email,password:password});
-      if(result.error)throw result.error;
-      if(!result.data||!result.data.user)throw new Error('حساب مربی دریافت نشد.');
-      if(typeof window.finishLogin==='function'){
-        try{await window.finishLogin(result.data.user);return;}catch(finishError){console.warn('Standard finishLogin failed; trying early fallback',finishError);}
-      }
-      var profile=await client.from('profiles').select('*').eq('id',result.data.user.id).maybeSingle();
-      if(profile.error)throw profile.error;
-      if(!profile.data)throw new Error('ورود انجام شد اما پروفایل حساب پیدا نشد.');
-      document.body.classList.remove('locked');
-      var auth=document.getElementById('authScreen');if(auth)auth.style.display='none';
-      var bar=document.getElementById('authUserBar');if(bar)bar.style.display='block';
-      var userText=document.getElementById('authUserText');if(userText)userText.textContent=(profile.data.full_name||result.data.user.email)+' | '+(profile.data.role==='coach'?'مربی':'شاگرد');
-      var coach=document.getElementById('coach');if(coach)coach.classList.add('active');
-      document.querySelectorAll('.section').forEach(function(el){if(el.id!=='coach')el.classList.remove('active');});
-      if(typeof window.loadClients==='function')await window.loadClients();
-      if(typeof window.loadDashboard==='function')await window.loadDashboard();
-    }catch(e){
-      console.error('Early coach login fallback:',e);
-      show('ورود مربی انجام نشد: '+(e&&e.message||e));
-    }finally{if(button){button.disabled=false;button.textContent='🔐 ورود مربی';}}
-  };
-  document.addEventListener('click',function(event){
-    var button=event.target&&event.target.closest?event.target.closest('#coachLoginBox button, #authScreen button'):null;
-    if(!button||!/ورود مربی/.test(button.textContent||''))return;
-    if(typeof window.loginApp==='function')return;
-    event.preventDefault();event.stopPropagation();if(event.stopImmediatePropagation)event.stopImmediatePropagation();
-    window.__fitnessEarlyCoachLogin(button);
-  },true);
 })();
 </script>
 </head>
@@ -417,7 +364,7 @@ body.locked{overflow:hidden!important}
     <div id="coachLoginBox">
       <label>ایمیل</label><input id="loginEmail" type="email" autocomplete="username" placeholder="ایمیل مربی">
       <label>رمز عبور</label><input id="loginPassword" type="password" autocomplete="current-password" placeholder="رمز عبور">
-      <button type="button" onclick="if(typeof window.__fitnessEarlyCoachLogin==='function')window.__fitnessEarlyCoachLogin(this);else if(typeof window.loginApp==='function')window.loginApp();else {const e=document.getElementById('authError');const x=window.__fitnessLastScriptError;e.textContent='کد ورود مربی اجرا نشده است'+(x?': '+x.message+' | خط '+(x.line||'?'):'؛ خطای اسکریپت اولیه ثبت نشده است');e.style.display='block';}">🔐 ورود مربی</button>
+      <button type="button" onclick="if(typeof window.loginApp==='function')window.loginApp();else {const e=document.getElementById('authError');e.textContent='بخش ورود مربی بارگذاری نشده است؛ صفحه را تازه‌سازی کنید.';e.style.display='block';}">🔐 ورود مربی</button>
     </div>
     <div id="traineeLoginBox" class="hide">
       <div class="trainee-auth-block">
@@ -455,7 +402,7 @@ body.locked{overflow:hidden!important}
 </div>
 
 <div class="nav">
-  <button class="active" onclick="showSection('food',this)">🧮 کارت محاسبه کالری شاگرد</button>
+  <button class="active" onclick="showSection('food',this)">🍽️ غذا</button>
   <button onclick="showSection('foodBank',this)">🥗 بانک غذا</button>
   <button onclick="showSection('coach',this)">👨‍🏫 پنل مربی</button>
   <button onclick="showSection('client',this)">👤 شاگرد</button>
@@ -464,37 +411,12 @@ body.locked{overflow:hidden!important}
   <button onclick="showSection('progress',this)">📊 پیشرفت</button>
 </div>
 
-<!-- CALORIE CALCULATOR -->
+<!-- FOOD -->
 <section id="food" class="section active">
 <div class="card">
-<h2>🧮 کارت محاسبه کالری شاگرد</h2>
-<p class="muted">اطلاعات شاگرد ثبت‌شده را انتخاب کن یا مشخصات را دستی وارد کن. نتیجه یک برآورد برای کمک به تنظیم برنامه غذایی است، نه نسخه پزشکی.</p>
-<div class="grid2">
- <div><label for="ccTrainee">انتخاب شاگرد ثبت‌شده (اختیاری)</label><select id="ccTrainee" onchange="ccLoadSelectedTrainee()"><option value="">ورود دستی / محاسبه آزمایشی</option></select></div>
- <div><label for="ccGender">جنسیت</label><select id="ccGender"><option value="male">مرد</option><option value="female">زن</option></select></div>
- <div><label for="ccAge">سن (سال)</label><input id="ccAge" type="number" min="15" max="100" step="1" placeholder="مثلاً 28"></div>
- <div><label for="ccWeight">وزن فعلی (کیلوگرم)</label><input id="ccWeight" type="number" min="25" max="350" step="0.1" placeholder="مثلاً 72"></div>
- <div><label for="ccHeight">قد (سانتی‌متر)</label><input id="ccHeight" type="number" min="100" max="250" step="0.5" placeholder="مثلاً 168"></div>
- <div><label for="ccGoal">هدف</label><select id="ccGoal"><option value="lose">کاهش وزن</option><option value="maintain">حفظ وزن</option><option value="gain">افزایش وزن</option></select></div>
- <div><label for="ccChange">مقدار تغییر وزن هدف (کیلوگرم)</label><input id="ccChange" type="number" min="0" max="20" step="0.1" value="2"></div>
- <div><label for="ccDays">بازه زمانی هدف (روز)</label><input id="ccDays" type="number" min="7" max="365" step="1" value="30"></div>
- <div><label for="ccActivity">فعالیت روزانه و تمرین</label><select id="ccActivity">
-  <option value="1.2">کم‌تحرک؛ کار نشسته و تمرین کم</option>
-  <option value="1.375">فعالیت سبک؛ تمرین سبک ۱ تا ۳ روز در هفته</option>
-  <option value="1.55" selected>فعالیت متوسط؛ بدنسازی حدود ۳ تا ۵ روز در هفته</option>
-  <option value="1.725">فعالیت زیاد؛ تمرین سخت ۶ تا ۷ روز در هفته</option>
-  <option value="1.9">فعالیت بسیار زیاد؛ تمرین سنگین و کار بدنی</option>
- </select></div>
- <div><label for="ccTrainingDays">روز تمرین در هفته</label><select id="ccTrainingDays"><option value="0">۰ روز</option><option value="1">۱ روز</option><option value="2">۲ روز</option><option value="3">۳ روز</option><option value="4">۴ روز</option><option value="5" selected>۵ روز</option><option value="6">۶ روز</option><option value="7">۷ روز</option></select></div>
- <div><label for="ccTrainingMinutes">مدت هر جلسه تمرین (دقیقه)</label><input id="ccTrainingMinutes" type="number" min="0" max="300" step="5" value="60"></div>
-</div>
-<div class="muted" style="margin:10px 0">نکته: ضریب فعالیت باید مجموع تحرک روزانه و تمرین را منعکس کند؛ مدت تمرین جداگانه دوباره به کالری اضافه نمی‌شود تا کالری تمرین دوبار شمرده نشود.</div>
-<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:14px">
- <button type="button" onclick="ccCalculate()">📊 محاسبه کالری روزانه</button>
- <button type="button" class="secondary" onclick="ccReset()">پاک کردن فرم</button>
- <button type="button" class="secondary" onclick="ccCopyReport()">📋 کپی گزارش</button>
-</div>
-<div id="ccResult" aria-live="polite" style="margin-top:16px"></div>
+<h2>🍽️ مدیریت غذاها</h2>
+<p class="muted">محاسبه‌گر جایگزین غذایی از پنل مربی حذف شده است. برای جست‌وجو، افزودن و ویرایش مواد غذایی از بانک غذا استفاده کنید.</p>
+<button type="button" onclick="showSection('foodBank',document.querySelectorAll('.nav button')[1])">🥗 رفتن به بانک غذا</button>
 </div>
 </section>
 
@@ -1198,7 +1120,6 @@ async function loadClients(){
     }));
 
     renderClients();
-    if(typeof window.ccRenderTrainees==='function')window.ccRenderTrainees();
 
   }catch(e){
     console.error(e);
@@ -2731,110 +2652,9 @@ window.loadDashboard = loadDashboard;
     if(!currentClient)return alert('اول شاگرد را انتخاب کنید.');
     const title=kind==='meal'?'برنامه غذایی':'برنامه تمرینی';let body='';
     if(kind==='meal'){const rows=await sbGet(`/nutrition_plans?trainee_id=eq.${encodeURIComponent(currentClient.id)}&select=*&order=created_at.desc&limit=1`);body=`<h2>${esc2(rows[0]?.title||title)}</h2><p>کالری هدف: ${esc2(rows[0]?.daily_calories||'—')}</p>`;}else{const rows=await sbGet(`/trainee_workout_plans?trainee_id=eq.${encodeURIComponent(currentClient.id)}&select=*&order=created_at.desc&limit=1`);body=`<h2>${esc2(rows[0]?.title||title)}</h2><p>${esc2(rows[0]?.goal||'')}</p>`;}
-    const html=`<!doctype html><html lang="fa" dir="rtl"><head><meta charset="utf-8"><title>${title}</title><style>body{font-family:Tahoma;padding:30px;color:#111}h1{font-size:22px}h2{margin-top:24px}table{width:100%;border-collapse:collapse}td,th{border:1px solid #aaa;padding:8px}</style></head><body><h1>باشگاه فیتنس سه‌قلعه | مربی مجتبی</h1><p>شاگرد: ${esc2(currentClient.name||'')}</p><p>تاریخ: ${today()}</p>${body}</body></html>`;
-    const printWindow=window.open('','_blank');
-    if(!printWindow){alert('اجازه باز شدن پنجره چاپ را فعال کنید.');return;}
-    printWindow.document.open();printWindow.document.write(html);printWindow.document.close();
-  };
-})();
-</script>
+    const html=`<!doctype html><html lang="fa" dir="rtl"><head><meta charset="utf-8"><title>${title}</title><style>body{font-family:Tahoma;padding:30px;color:#111}h1{font-size:22px}h2{margin-top:24px}table{width:100%;border-collapse:collapse}td,th{border:1px solid #aaa;padding:8px}</style></head><body><h1>باشگاه فیتنس سه‌قلعه | مربی مجتبی</h1><p>شاگرد: ${esc2(currentClient.name||'')}</p><p>تاریخ: ${today()}</p>${body}
 
-<script id="SEH_CALORIE_CALCULATOR_V1">
-(function(){
- 'use strict';
- function el(id){return document.getElementById(id);}
- function num(id){return Number(el(id).value);}
- function set(id,v){if(el(id))el(id).value=v==null?'':String(v);}
- function fmt(v){return Math.round(v).toLocaleString('fa-IR');}
- function getClientAge(c){
-   if(c && Number(c.age)>0)return Math.round(Number(c.age));
-   if(c && c.birth_date && typeof calcAge==='function'){
-     var a=calcAge(c.birth_date);if(Number(a)>0)return Number(a);
-   }
-   return '';
- }
- window.ccRenderTrainees=function(){
-   var select=el('ccTrainee');if(!select)return;
-   var keep=select.value;
-   var list=Array.isArray(window.clients)?window.clients:(typeof clients!=='undefined'?clients:[]);
-   select.innerHTML='<option value="">ورود دستی / محاسبه آزمایشی</option>'+list.map(function(c){
-     return '<option value="'+String(c.id).replace(/&/g,'&amp;').replace(/"/g,'&quot;')+'">'+String(c.name||'بدون نام').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')+'</option>';
-   }).join('');
-   if(keep)select.value=keep;
- };
- window.ccLoadSelectedTrainee=function(){
-   var select=el('ccTrainee'),id=select&&select.value;
-   var list=Array.isArray(window.clients)?window.clients:(typeof clients!=='undefined'?clients:[]);
-   var c=list.find(function(x){return String(x.id)===String(id);});
-   if(!c)return;
-   if(c.gender){var g=String(c.gender).toLowerCase();set('ccGender',(/زن|female|woman/.test(g)?'female':'male'));}
-   var age=getClientAge(c);if(age)set('ccAge',age);
-   if(Number(c.weight)>0)set('ccWeight',c.weight);
-   if(Number(c.height)>0)set('ccHeight',c.height);
-   var goal=String(c.goal||'');
-   if(/افزایش|عضله.?سازی|gain/i.test(goal))set('ccGoal','gain');
-   else if(/کاهش|چربی.?سوزی|lose/i.test(goal))set('ccGoal','lose');
-   el('ccResult').innerHTML='';
- };
- window.ccCalculate=function(){
-   var age=num('ccAge'),weight=num('ccWeight'),height=num('ccHeight'),days=num('ccDays'),change=num('ccChange');
-   var gender=el('ccGender').value,goal=el('ccGoal').value,activity=num('ccActivity');
-   var trainingDays=num('ccTrainingDays'),minutes=num('ccTrainingMinutes');
-   var box=el('ccResult');
-   if(!Number.isFinite(age)||age<15||age>100||!Number.isFinite(weight)||weight<25||weight>350||!Number.isFinite(height)||height<100||height>250){
-     box.innerHTML='<div class="receipt-item" style="border:1px solid #c77;border-radius:10px;padding:12px">لطفاً سن (۱۵ تا ۱۰۰ سال)، وزن (۲۵ تا ۳۵۰ کیلوگرم) و قد (۱۰۰ تا ۲۵۰ سانتی‌متر) معتبر وارد کن.</div>';return;
-   }
-   if(!Number.isFinite(days)||days<7||days>365||!Number.isFinite(change)||change<0||change>20){
-     box.innerHTML='<div class="receipt-item" style="border:1px solid #c77;border-radius:10px;padding:12px">مقدار تغییر وزن باید بین صفر تا ۲۰ کیلو و بازه زمانی بین ۷ تا ۳۶۵ روز باشد.</div>';return;
-   }
-   var bmr=10*weight+6.25*height-5*age+(gender==='male'?5:-161);
-   var maintenance=bmr*activity;
-   var dailyAdjustment=goal==='maintain'?0:(change*7700/days)*(goal==='lose'?-1:1);
-   var target=maintenance+dailyAdjustment;
-   var warnings=[];
-   if(goal!=='maintain'&&change===0)warnings.push('مقدار تغییر وزن صفر است؛ هدف را بررسی کن.');
-   if(goal==='lose'&&change>0&&change/days*7>1)warnings.push('سرعت کاهش وزن انتخابی بیش از حدود ۱ کیلو در هفته است؛ هدف را بازبینی کن.');
-   if(goal==='gain'&&change/days*7>0.5)warnings.push('سرعت افزایش وزن انتخابی زیاد است؛ هدف را بازبینی کن.');
-   if(target<1200)warnings.push('کالری محاسبه‌شده بسیار پایین است؛ بدون ارزیابی تخصصی از این عدد به‌عنوان نسخه غذایی استفاده نکن.');
-   if(target<bmr)warnings.push('کالری هدف از سوخت‌وساز پایه کمتر شده است؛ بهتر است هدف و بازه زمانی بازبینی شود.');
-   if(target>maintenance+1000)warnings.push('مازاد کالری بسیار زیاد است؛ هدف را بازبینی کن.');
-   var protein=weight*1.8,fat=weight*0.8,carbs=Math.max(0,(target-protein*4-fat*9)/4);
-   var goalLabel=goal==='lose'?'کاهش وزن':goal==='gain'?'افزایش وزن':'حفظ وزن';
-   var report='کارت محاسبه کالری شاگرد\n'+
-     'شاگرد: '+(el('ccTrainee').selectedOptions[0]?.textContent||'ورود دستی')+'\n'+
-     'جنسیت: '+(gender==='male'?'مرد':'زن')+' | سن: '+age+' سال | وزن: '+weight+' کیلو | قد: '+height+' سانتی‌متر\n'+
-     'هدف: '+goalLabel+(goal==='maintain'?'':' '+change+' کیلو در '+days+' روز')+'\n'+
-     'سوخت‌وساز پایه (BMR): '+Math.round(bmr)+' کیلوکالری در روز\n'+
-     'کالری نگهدارنده تخمینی: '+Math.round(maintenance)+' کیلوکالری در روز\n'+
-     'کالری هدف تخمینی: '+Math.round(target)+' کیلوکالری در روز\n'+
-     'پروتئین پیشنهادی: '+Math.round(protein)+' گرم | چربی پیشنهادی: '+Math.round(fat)+' گرم | کربوهیدرات تقریبی: '+Math.round(carbs)+' گرم\n'+
-     'تمرین: '+trainingDays+' روز در هفته، '+minutes+' دقیقه در هر جلسه. ضریب فعالیت انتخاب‌شده شامل تمرین است.';
-   window.__ccLastReport=report;
-   var warnHtml=warnings.length?'<div style="margin-top:12px;border:1px solid #c88b39;border-radius:10px;padding:10px;background:#fff7e8;color:#684510"><b>⚠️ بررسی هدف</b><ul style="margin:6px 0;padding-right:22px">'+warnings.map(function(w){return '<li>'+w+'</li>';}).join('')+'</ul></div>':'';
-   box.innerHTML='<div class="receipt-item" style="border:1px solid #c8a34d;border-radius:12px;padding:14px;background:#fffdf7;color:#29251b">'+
-    '<h3 style="margin:0 0 10px">نتیجه تخمینی روزانه</h3>'+
-    '<div class="grid2">'+
-    '<div style="padding:10px;border-radius:8px;background:#f6efdc"><small>سوخت‌وساز پایه (BMR)</small><div style="font-size:22px;font-weight:bold">'+fmt(bmr)+' <small>کیلوکالری</small></div></div>'+
-    '<div style="padding:10px;border-radius:8px;background:#f6efdc"><small>کالری نگهدارنده</small><div style="font-size:22px;font-weight:bold">'+fmt(maintenance)+' <small>کیلوکالری</small></div></div>'+
-    '<div style="padding:10px;border-radius:8px;background:#f6efdc"><small>هدف روزانه برای '+goalLabel+'</small><div style="font-size:25px;font-weight:bold">'+fmt(target)+' <small>کیلوکالری</small></div></div>'+
-    '<div style="padding:10px;border-radius:8px;background:#f6efdc"><small>سرعت هدف انتخابی</small><div style="font-size:18px;font-weight:bold">'+(goal==='maintain'?'حفظ وزن':fmt(change/days*7)+' کیلو در هفته')+'</div></div></div>'+
-    '<h3 style="margin:14px 0 8px">درشت‌مغذی‌های پیشنهادی برای شروع</h3>'+
-    '<div>پروتئین: <b>'+fmt(protein)+' گرم</b> در روز · چربی: <b>'+fmt(fat)+' گرم</b> در روز · کربوهیدرات: <b>'+fmt(carbs)+' گرم</b> در روز</div>'+
-    '<p class="muted" style="margin:10px 0 0">این مقادیر تقریبی‌اند و باید با شرایط، سابقه، ترجیحات و روند تغییر وزن شاگرد تنظیم شوند.</p>'+warnHtml+'</div>';
- };
- window.ccCopyReport=async function(){
-   if(!window.__ccLastReport){alert('ابتدا محاسبه کالری را انجام بده.');return;}
-   try{await navigator.clipboard.writeText(window.__ccLastReport);alert('گزارش محاسبه کپی شد.');}
-   catch(e){window.prompt('گزارش را کپی کن:',window.__ccLastReport);}
- };
- window.ccReset=function(){
-   ['ccTrainee','ccAge','ccWeight','ccHeight'].forEach(function(id){set(id,'');});
-   set('ccGender','male');set('ccGoal','lose');set('ccChange',2);set('ccDays',30);set('ccActivity',1.55);set('ccTrainingDays',5);set('ccTrainingMinutes',60);
-   el('ccResult').innerHTML='';window.__ccLastReport='';
- };
- document.addEventListener('DOMContentLoaded',function(){window.ccRenderTrainees();});
-})();
-<\/script>
+
 </body></html>`;
     const w=window.open('','_blank');if(w){w.document.write(html);w.document.close();}
   };
@@ -3027,7 +2847,7 @@ async function loadGoal(){
   if(!card||document.getElementById('authTabs'))return;
   card.innerHTML=`<div class="auth-logo">🏋️</div><h2>باشگاه فیتنس سه‌قلعه</h2><p class="muted" style="text-align:center">ورود به سامانه مربی مجتبی</p>
     <div id="authTabs" class="meal-tabs"><button type="button" class="active" id="authCoachTab" onclick="fallbackAuthMode('coach')">👨‍🏫 مربی</button><button type="button" id="authTraineeTab" onclick="fallbackAuthMode('trainee')">👤 شاگرد</button></div>
-    <div id="coachLoginBox"><label>ایمیل</label><input id="loginEmail" type="email" autocomplete="username" placeholder="ایمیل مربی"><label>رمز عبور</label><input id="loginPassword" type="password" autocomplete="current-password" placeholder="رمز عبور"><button type="button" onclick="if(typeof window.__fitnessEarlyCoachLogin==='function')window.__fitnessEarlyCoachLogin(this);else if(typeof window.loginApp==='function')window.loginApp();else {const e=document.getElementById('authError');const x=window.__fitnessLastScriptError;e.textContent='کد ورود مربی اجرا نشده است'+(x?': '+x.message+' | خط '+(x.line||'?'):'؛ خطای اسکریپت اولیه ثبت نشده است');e.style.display='block';}">🔐 ورود مربی</button></div>
+    <div id="coachLoginBox"><label>ایمیل</label><input id="loginEmail" type="email" autocomplete="username" placeholder="ایمیل مربی"><label>رمز عبور</label><input id="loginPassword" type="password" autocomplete="current-password" placeholder="رمز عبور"><button type="button" onclick="if(typeof window.loginApp==='function')window.loginApp();else {const e=document.getElementById('authError');e.textContent='کد ورود مربی بارگذاری نشده است؛ بخشی از اسکریپت ورود اجرا نشده. صفحه را تازه‌سازی کنید و اگر تکرار شد از صفحه عکس بفرستید.';e.style.display='block';}">🔐 ورود مربی</button></div>
     <div id="traineeLoginBox" class="hide"><div class="trainee-auth-block"><h3>🔐 ورود شاگرد</h3><label>شماره موبایل</label><input id="traineePhoneLogin" type="tel" inputmode="tel" autocomplete="username" placeholder="09121234567"><label>رمز عبور</label><input id="traineeLoginPassword" type="password" autocomplete="current-password" placeholder="رمز اولیه یا رمز شخصی"><button type="button" onclick="if(typeof window.loginTraineePhone==='function')window.loginTraineePhone();else {const e=document.getElementById('authError');e.textContent='کد ورود شاگرد بارگذاری نشده است؛ بخشی از اسکریپت ورود اجرا نشده. صفحه را تازه‌سازی کنید و اگر تکرار شد از صفحه عکس بفرستید.';e.style.display='block';}">ورود شاگرد</button><p class="muted">ورود پس از تأیید درخواست ثبت‌نام توسط مربی امکان‌پذیر است.</p></div></div>
     <div id="authError" class="auth-error"></div>`;
   const diag=window.__fitnessLastScriptError;
@@ -11174,53 +10994,6 @@ body.workout-output.workout-compact{
  if(typeof MutationObserver!=='undefined'&&document.body){
   new MutationObserver(function(){isolate();}).observe(document.body,{childList:true,subtree:true});
  }
-})();
-</script>
-
-<!-- COACH DASHBOARD RESTORE -->
-<script id="SEH_COACH_DASHBOARD_RESTORE_20261015">
-(function(){
- 'use strict';
- function coachRole(){try{return typeof authProfile!=='undefined'&&authProfile&&authProfile.role==='coach';}catch(e){return false;}}
- function ensureCoachDashboard(){
-  var nav=document.querySelector('.nav'),page=document.querySelector('.page');if(!nav||!page)return;
-  var btn=document.getElementById('navCoachDashboard');
-  if(!btn){btn=document.createElement('button');btn.id='navCoachDashboard';btn.type='button';btn.textContent='🏠 داشبورد';btn.addEventListener('click',openCoachDashboard);nav.insertBefore(btn,nav.firstChild);}
-  var sec=document.getElementById('coachDashboard');
-  if(!sec){
-   sec=document.createElement('section');sec.id='coachDashboard';sec.className='section';
-   sec.innerHTML='<div class="card"><h2>🏠 داشبورد مربی</h2><p class="muted">دسترسی سریع به بخش‌های اصلی سامانه</p><div class="v4-grid v4-dashboard">'+
-    '<button type="button" class="v4-card" data-coach-dash="progress"><b>📈</b>پیشرفت<span class="v4-small">گزارش و روند پیشرفت شاگرد</span></button>'+
-    '<button type="button" class="v4-card" data-coach-dash="analysis"><b>📊</b>آنالیز بدن<span class="v4-small">ثبت و مشاهده آنالیز</span></button>'+
-    '<button type="button" class="v4-card" data-coach-dash="meal"><b>🍎</b>برنامه غذایی<span class="v4-small">تنظیم برنامه غذایی شاگرد</span></button>'+
-    '<button type="button" class="v4-card" data-coach-dash="workout"><b>🏋️</b>برنامه تمرینی<span class="v4-small">تنظیم برنامه تمرینی شاگرد</span></button>'+
-    '<button type="button" class="v4-card" data-coach-dash="water"><b>💧</b>آب<span class="v4-small">هدف ماهانه و گزارش آب</span></button>'+
-    '<button type="button" class="v4-card" data-coach-dash="client"><b>👤</b>پروفایل من / شاگرد<span class="v4-small">باز کردن پرونده شاگرد</span></button>'+
-    '<button type="button" class="v4-card" data-coach-dash="chat"><b>💬</b>گفت‌وگو<span class="v4-small">پیام‌های خصوصی شاگردان</span></button>'+
-    '</div></div>';
-   page.insertBefore(sec,nav.nextSibling);
-   sec.querySelectorAll('[data-coach-dash]').forEach(function(card){card.addEventListener('click',function(){handleCoachCard(card.getAttribute('data-coach-dash'));});});
-  }
- }
- function showCoachSection(id,btn){if(typeof window.showSection==='function')window.showSection(id,btn||null);else document.querySelectorAll('.section').forEach(function(s){s.classList.toggle('active',s.id===id);});}
- function openCoachDashboard(){ensureCoachDashboard();showCoachSection('coachDashboard',document.getElementById('navCoachDashboard'));var b=document.getElementById('navCoachDashboard');if(b)b.classList.add('active');}
- function handleCoachCard(key){
-  if(key==='chat'){if(typeof window.sehOpenCoachChat==='function'){window.sehOpenCoachChat();return;}alert('بخش گفت‌وگو هنوز بارگذاری نشده است. صفحه را تازه‌سازی کنید.');return;}
-  if(key==='water'){showCoachSection('coach',null);setTimeout(function(){var el=document.getElementById('coachWaterGoalCard');if(el)el.scrollIntoView({behavior:'smooth',block:'start'});},80);return;}
-  if(key==='analysis'||key==='progress'){showCoachSection('progress',null);setTimeout(function(){var el=document.getElementById(key==='analysis'?'bodyAnalysisEntryPanel':'progressEntryPanel');if(el)el.scrollIntoView({behavior:'smooth',block:'start'});},100);return;}
-  if(key==='client'||key==='meal'||key==='workout'){
-   var hasClient=false;try{hasClient=typeof currentClient!=='undefined'&&!!currentClient;}catch(e){}
-   if(!hasClient){if(key==='client'){showCoachSection('coach',null);setTimeout(function(){var el=document.getElementById('clientList');if(el)el.scrollIntoView({behavior:'smooth',block:'start'});},100);return;}alert('ابتدا از پنل مربی، شاگرد موردنظر را از فهرست انتخاب کنید.');showCoachSection('coach',null);return;}
-   showCoachSection(key==='client'?'client':key,null);
-  }
- }
- var oldFinish=window.finishLogin;
- if(typeof oldFinish==='function'&&!oldFinish.__sehCoachDashWrapped){var wrapped=async function(user){var result=await oldFinish.apply(this,arguments);setTimeout(function(){if(coachRole())ensureCoachDashboard();},0);return result;};wrapped.__sehCoachDashWrapped=true;window.finishLogin=wrapped;}
- var oldLogin=window.loginApp;
- if(typeof oldLogin==='function'&&!oldLogin.__sehCoachDashLoginWrapped){var loginWrapped=async function(){var result=await oldLogin.apply(this,arguments);[0,150,500,1000].forEach(function(ms){setTimeout(function(){if(coachRole())ensureCoachDashboard();},ms);});return result;};loginWrapped.__sehCoachDashLoginWrapped=true;window.loginApp=loginWrapped;}
- if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',function(){setTimeout(function(){if(coachRole())ensureCoachDashboard();},0);});
- else if(coachRole())ensureCoachDashboard();
- window.__sehOpenCoachDashboard=openCoachDashboard;
 })();
 </script>
 </body></html>
