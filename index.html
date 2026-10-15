@@ -425,14 +425,8 @@ body.locked{overflow:hidden!important}
 <section id="calorieCalculatorCard" class="section">
   <div class="card" id="sehCalorieCalcRoot">
     <h2>🧮 کارت محاسبه‌گر کالری شاگرد</h2>
-    <p class="muted">شاگرد را انتخاب کن تا اطلاعات ثبت‌شده‌اش خودکار وارد شود؛ همه فیلدها پس از آن قابل تغییر دستی هستند. اگر شاگرد انتخاب نکنی، اطلاعات را دستی وارد کن. این ابزار تخمینی است و جایگزین ارزیابی تخصصی نیست.</p>
-    <div style="margin:12px 0">
-      <label for="sehCalClientSelect">انتخاب از فهرست شاگردان</label>
-      <select id="sehCalClientSelect" onchange="sehUseCalorieTrainee(this.value)">
-        <option value="">انتخاب شاگرد…</option>
-      </select>
-      <p id="sehCalClientStatus" class="muted" style="font-size:12px;margin:5px 0 0">با انتخاب شاگرد، نام، جنسیت، سن، قد، وزن و هدف او وارد می‌شود؛ می‌توانی هرکدام را دستی اصلاح کنی.</p>
-    </div>
+    <p class="muted">اطلاعات این بخش به‌صورت خودکار از شاگردی وارد می‌شود که در پنل مربی باز کرده‌ای. فیلدها را می‌توانی فقط برای همین محاسبه دستی تغییر بدهی؛ پروفایل اصلی شاگرد تغییر نمی‌کند. این ابزار تخمینی است و جایگزین ارزیابی تخصصی نیست.</p>
+    <p id="sehCalClientStatus" class="muted" style="font-size:12px;margin:5px 0 12px">ابتدا از پنل مربی یک شاگرد را باز کن تا اطلاعاتش اینجا نمایش داده شود.</p>
     <div class="grid2">
       <div><label for="sehCalName">نام شاگرد (اختیاری)</label><input id="sehCalName" type="text" maxlength="80" placeholder="نام شاگرد"></div>
       <div><label for="sehCalSex">جنسیت</label><select id="sehCalSex"><option value="male">مرد</option><option value="female">زن</option></select></div>
@@ -11077,10 +11071,13 @@ body.workout-output.workout-compact{
     else if(typeof currentClient!=='undefined'&&currentClient&&list.some(function(c){return String(c.id)===String(currentClient.id);}))select.value=String(currentClient.id);
   };
   window.sehUseCalorieTrainee=function(id){
-    if(!id){if(el('sehCalClientStatus'))el('sehCalClientStatus').textContent='شاگردی انتخاب نشده؛ اطلاعات را دستی وارد کن.';return;}
-    var list=Array.isArray(window.clients)?window.clients:[];
-    var c=list.find(function(x){return String(x.id)===String(id);});
-    if(!c&&typeof currentClient!=='undefined'&&currentClient&&String(currentClient.id)===String(id))c=currentClient;
+    if(!id){if(el('sehCalClientStatus'))el('sehCalClientStatus').textContent='ابتدا از پنل مربی یک شاگرد را باز کن.';return;}
+    var c=null;
+    if(typeof currentClient!=='undefined'&&currentClient&&String(currentClient.id)===String(id))c=currentClient;
+    if(!c){
+      var list=(typeof clients!=='undefined'&&Array.isArray(clients))?clients:[];
+      c=list.find(function(x){return String(x.id)===String(id);});
+    }
     if(!c)return;
     el('sehCalName').value=c.name||'';
     el('sehCalSex').value=(String(c.gender||'').indexOf('زن')>=0||String(c.gender||'').toLowerCase()==='female')?'female':'male';
@@ -11096,6 +11093,23 @@ body.workout-output.workout-compact{
     showGoalFields();
     if(el('sehCalClientStatus'))el('sehCalClientStatus').textContent='اطلاعات «'+(c.name||'شاگرد انتخاب‌شده')+'» وارد شد. می‌توانی فیلدها را دستی تغییر بدهی؛ تغییرات فقط برای همین محاسبه است و پروفایل شاگرد را تغییر نمی‌دهد.';
   };
+  // Isolated integration: when the coach opens a trainee, refresh only this calculator.
+  if(typeof window.selectClient==='function'&&!window.__sehCalorieSelectHooked){
+    var originalSelectClient=window.selectClient;
+    window.selectClient=async function(id){
+      var result=await originalSelectClient.apply(this,arguments);
+      try{
+        if(typeof currentClient!=='undefined'&&currentClient&&typeof window.sehUseCalorieTrainee==='function'){
+          window.sehUseCalorieTrainee(currentClient.id);
+        }
+      }catch(e){console.warn('Calorie calculator sync:',e);}
+      return result;
+    };
+    window.__sehCalorieSelectHooked=true;
+  }
+  if(typeof currentClient!=='undefined'&&currentClient&&typeof window.sehUseCalorieTrainee==='function'){
+    window.sehUseCalorieTrainee(currentClient.id);
+  }
   function showGoalFields(){var goal=el('sehCalGoal').value;el('sehCalTargetWrap').style.display=goal==='maintain'?'none':'block';el('sehCalWeeksWrap').style.display=goal==='maintain'?'none':'block';}
   el('sehCalGoal').addEventListener('change',showGoalFields);showGoalFields();
   if(typeof window.sehSyncCalorieTrainees==='function')window.sehSyncCalorieTrainees();
