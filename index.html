@@ -2725,61 +2725,7 @@ window.loadDashboard = loadDashboard;
 
 
 
-<script id="SEH_TRAINEE_DASHBOARD_CLEANUP_V1">
-(function(){
- 'use strict';
- if(window.__sehTraineeDashboardCleanupV1)return;
- window.__sehTraineeDashboardCleanupV1=true;
- function isTrainee(){
-  try{return typeof authProfile!=='undefined'&&authProfile&&authProfile.role==='trainee';}
-  catch(e){return false;}
- }
- function cleanup(){
-  if(!isTrainee())return;
-  var workout=document.getElementById('workout');
-  // گزارش و محتوای تمرین فقط در کارت برنامه تمرینی شاگرد باقی بماند.
-  document.querySelectorAll('#workoutFourWeekSummary,#workoutMissionReport,#coachWorkoutMissionReport').forEach(function(el){
-   if(!workout||!workout.contains(el))el.remove();
-  });
-  document.querySelectorAll('.card,section').forEach(function(card){
-   if(workout&&workout.contains(card))return;
-   var heading=card.querySelector(':scope > h2,:scope > h3');
-   var title=String(heading&&heading.textContent||'').trim();
-   if(/گزارش هفتگی برنامه تمرینی|پیگیری مأموریت‌های تمرین شاگرد/.test(title)){card.remove();return;}
-   if(card.querySelector('#workoutList')||card.querySelector('#workoutFourWeekSummary')){card.remove();return;}
-   if(/حرکات برنامه تمرینی/.test(title)){card.remove();return;}
-   if(/یادداشت مربی/.test(title)){
-    card.style.setProperty('display','none','important');card.hidden=true;return;
-   }
-   if(/فیش واریزی شاگرد/.test(title)&&/برای نمایش فیش‌ها، ابتدا از پنل مربی/.test(card.textContent||'')){card.remove();return;}
-  });
-  document.querySelectorAll('#coachReceiptReview').forEach(function(el){el.remove();});
-  var profile=document.getElementById('client');
-  if(profile){
-   profile.querySelectorAll(':scope > .card').forEach(function(card){
-    var h=card.querySelector(':scope > h2,:scope > h3');
-    if(/یادداشت مربی|فیش واریزی شاگرد/.test(String(h&&h.textContent||''))){card.style.setProperty('display','none','important');card.hidden=true;}
-   });
-  }
- }
- var oldShow=window.showSection;
- if(typeof oldShow==='function'&&!window.__sehTraineeCleanupShowWrapped){
-  window.showSection=function(){var result=oldShow.apply(this,arguments);setTimeout(cleanup,0);return result;};
-  window.__sehTraineeCleanupShowWrapped=true;
- }
- var oldDash=window.dashOpen;
- if(typeof oldDash==='function'&&!window.__sehTraineeCleanupDashWrapped){
-  window.dashOpen=function(){var result=oldDash.apply(this,arguments);setTimeout(cleanup,50);return result;};
-  window.__sehTraineeCleanupDashWrapped=true;
- }
- if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',function(){setTimeout(cleanup,100);},{once:true});
- else setTimeout(cleanup,100);
- if(typeof MutationObserver!=='undefined'){
-  var observer=new MutationObserver(function(){if(isTrainee())cleanup();});
-  if(document.body)observer.observe(document.body,{childList:true,subtree:true});
- }
-})();
-</script>
+
 </body></html>`;
     const w=window.open('','_blank');if(w){w.document.write(html);w.document.close();}
   };
@@ -10753,5 +10699,60 @@ body.workout-output.workout-compact{
 })();
 </script>
 
+<script id="SEH_TRAINEE_DASHBOARD_CLEANUP_V1">
+(function(){
+ 'use strict';
+ if(window.__sehTraineeDashboardCleanupV1)return;
+ window.__sehTraineeDashboardCleanupV1=true;
+ function isTrainee(){
+  try{return typeof authProfile!=='undefined'&&authProfile&&authProfile.role==='trainee';}
+  catch(e){return false;}
+ }
+ function cleanup(){
+  if(!isTrainee())return;
+  var workout=document.getElementById('workout');
+  // گزارش و محتوای تمرین فقط در کارت برنامه تمرینی شاگرد باقی بماند.
+  document.querySelectorAll('#workoutFourWeekSummary,#workoutMissionReport,#coachWorkoutMissionReport').forEach(function(el){
+   if(!workout||!workout.contains(el))el.remove();
+  });
+  document.querySelectorAll('.card,section').forEach(function(card){
+   if(workout&&workout.contains(card))return;
+   var heading=card.querySelector(':scope > h2,:scope > h3');
+   var title=String(heading&&heading.textContent||'').trim();
+   if(/گزارش هفتگی برنامه تمرینی|پیگیری مأموریت‌های تمرین شاگرد/.test(title)){card.remove();return;}
+   if(card.querySelector('#workoutList')||card.querySelector('#workoutFourWeekSummary')){card.remove();return;}
+   if(/حرکات برنامه تمرینی/.test(title)){card.remove();return;}
+   if(/یادداشت مربی/.test(title)){
+    card.style.setProperty('display','none','important');card.hidden=true;return;
+   }
+   if(/فیش واریزی شاگرد/.test(title)&&/برای نمایش فیش‌ها، ابتدا از پنل مربی/.test(card.textContent||'')){card.remove();return;}
+  });
+  document.querySelectorAll('#coachReceiptReview').forEach(function(el){el.remove();});
+  var profile=document.getElementById('client');
+  if(profile){
+   profile.querySelectorAll(':scope > .card').forEach(function(card){
+    var h=card.querySelector(':scope > h2,:scope > h3');
+    if(/یادداشت مربی|فیش واریزی شاگرد/.test(String(h&&h.textContent||''))){card.style.setProperty('display','none','important');card.hidden=true;}
+   });
+  }
+ }
+ var oldShow=window.showSection;
+ if(typeof oldShow==='function'&&!window.__sehTraineeCleanupShowWrapped){
+  window.showSection=function(){var result=oldShow.apply(this,arguments);setTimeout(cleanup,0);return result;};
+  window.__sehTraineeCleanupShowWrapped=true;
+ }
+ var oldDash=window.dashOpen;
+ if(typeof oldDash==='function'&&!window.__sehTraineeCleanupDashWrapped){
+  window.dashOpen=function(){var result=oldDash.apply(this,arguments);setTimeout(cleanup,50);return result;};
+  window.__sehTraineeCleanupDashWrapped=true;
+ }
+ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',function(){setTimeout(cleanup,100);},{once:true});
+ else setTimeout(cleanup,100);
+ if(typeof MutationObserver!=='undefined'){
+  var observer=new MutationObserver(function(){if(isTrainee())cleanup();});
+  if(document.body)observer.observe(document.body,{childList:true,subtree:true});
+ }
+})();
+</script>
 </body></html>
 
