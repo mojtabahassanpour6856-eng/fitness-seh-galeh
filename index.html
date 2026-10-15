@@ -348,6 +348,59 @@ body.locked{overflow:hidden!important}
     if(event.stopImmediatePropagation)event.stopImmediatePropagation();
     runLogin(button);
   },true);
+
+  // Early coach-login fallback if the main dashboard script fails during startup.
+  window.__fitnessEarlyCoachLogin = async function(button){
+    var email=(document.getElementById('loginEmail')&&document.getElementById('loginEmail').value||'').trim();
+    var password=(document.getElementById('loginPassword')&&document.getElementById('loginPassword').value||'');
+    if(!email||!password){show('ایمیل و رمز عبور مربی را وارد کنید.');return;}
+    if(button){button.disabled=true;button.textContent='⏳ در حال ورود…';}
+    try{
+      var tries=0;
+      while((!window.supabase||typeof window.supabase.createClient!=='function')&&tries<2){
+        await new Promise(function(resolve){setTimeout(resolve,700);});tries++;
+      }
+      if(!window.supabase||typeof window.supabase.createClient!=='function'){
+        await new Promise(function(resolve,reject){
+          var script=document.createElement('script');script.src='https://unpkg.com/@supabase/supabase-js@2';
+          script.onload=resolve;script.onerror=function(){reject(new Error('کتابخانه اتصال بارگذاری نشد؛ اینترنت یا دسترسی به سرویس اتصال را بررسی کنید.'));};
+          document.head.appendChild(script);
+        });
+      }
+      var client=window.AUTH_SUPABASE;
+      if(!client||!client.auth){
+        client=window.supabase.createClient('https://qfakyudgidsumeuoqoot.supabase.co','sb_publishable_Z7-iwP8A1QQOlXpWIVtE2g_twXL-WNZ');
+        window.AUTH_SUPABASE=client;
+      }
+      var result=await client.auth.signInWithPassword({email:email,password:password});
+      if(result.error)throw result.error;
+      if(!result.data||!result.data.user)throw new Error('حساب مربی دریافت نشد.');
+      if(typeof window.finishLogin==='function'){
+        try{await window.finishLogin(result.data.user);return;}catch(finishError){console.warn('Standard finishLogin failed; trying early fallback',finishError);}
+      }
+      var profile=await client.from('profiles').select('*').eq('id',result.data.user.id).maybeSingle();
+      if(profile.error)throw profile.error;
+      if(!profile.data)throw new Error('ورود انجام شد اما پروفایل حساب پیدا نشد.');
+      document.body.classList.remove('locked');
+      var auth=document.getElementById('authScreen');if(auth)auth.style.display='none';
+      var bar=document.getElementById('authUserBar');if(bar)bar.style.display='block';
+      var userText=document.getElementById('authUserText');if(userText)userText.textContent=(profile.data.full_name||result.data.user.email)+' | '+(profile.data.role==='coach'?'مربی':'شاگرد');
+      var coach=document.getElementById('coach');if(coach)coach.classList.add('active');
+      document.querySelectorAll('.section').forEach(function(el){if(el.id!=='coach')el.classList.remove('active');});
+      if(typeof window.loadClients==='function')await window.loadClients();
+      if(typeof window.loadDashboard==='function')await window.loadDashboard();
+    }catch(e){
+      console.error('Early coach login fallback:',e);
+      show('ورود مربی انجام نشد: '+(e&&e.message||e));
+    }finally{if(button){button.disabled=false;button.textContent='🔐 ورود مربی';}}
+  };
+  document.addEventListener('click',function(event){
+    var button=event.target&&event.target.closest?event.target.closest('#coachLoginBox button, #authScreen button'):null;
+    if(!button||!/ورود مربی/.test(button.textContent||''))return;
+    if(typeof window.loginApp==='function')return;
+    event.preventDefault();event.stopPropagation();if(event.stopImmediatePropagation)event.stopImmediatePropagation();
+    window.__fitnessEarlyCoachLogin(button);
+  },true);
 })();
 </script>
 </head>
