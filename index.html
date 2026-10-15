@@ -11176,4 +11176,49 @@ body.workout-output.workout-compact{
  }
 })();
 </script>
+
+<!-- COACH DASHBOARD RESTORE -->
+<script id="SEH_COACH_DASHBOARD_RESTORE_20261015">
+(function(){
+ 'use strict';
+ function coachRole(){try{return typeof authProfile!=='undefined'&&authProfile&&authProfile.role==='coach';}catch(e){return false;}}
+ function ensureCoachDashboard(){
+  var nav=document.querySelector('.nav'),page=document.querySelector('.page');if(!nav||!page)return;
+  var btn=document.getElementById('navCoachDashboard');
+  if(!btn){btn=document.createElement('button');btn.id='navCoachDashboard';btn.type='button';btn.textContent='🏠 داشبورد';btn.addEventListener('click',openCoachDashboard);nav.insertBefore(btn,nav.firstChild);}
+  var sec=document.getElementById('coachDashboard');
+  if(!sec){
+   sec=document.createElement('section');sec.id='coachDashboard';sec.className='section';
+   sec.innerHTML='<div class="card"><h2>🏠 داشبورد مربی</h2><p class="muted">دسترسی سریع به بخش‌های اصلی سامانه</p><div class="v4-grid v4-dashboard">'+
+    '<button type="button" class="v4-card" data-coach-dash="progress"><b>📈</b>پیشرفت<span class="v4-small">گزارش و روند پیشرفت شاگرد</span></button>'+
+    '<button type="button" class="v4-card" data-coach-dash="analysis"><b>📊</b>آنالیز بدن<span class="v4-small">ثبت و مشاهده آنالیز</span></button>'+
+    '<button type="button" class="v4-card" data-coach-dash="meal"><b>🍎</b>برنامه غذایی<span class="v4-small">تنظیم برنامه غذایی شاگرد</span></button>'+
+    '<button type="button" class="v4-card" data-coach-dash="workout"><b>🏋️</b>برنامه تمرینی<span class="v4-small">تنظیم برنامه تمرینی شاگرد</span></button>'+
+    '<button type="button" class="v4-card" data-coach-dash="water"><b>💧</b>آب<span class="v4-small">هدف ماهانه و گزارش آب</span></button>'+
+    '<button type="button" class="v4-card" data-coach-dash="client"><b>👤</b>پروفایل من / شاگرد<span class="v4-small">باز کردن پرونده شاگرد</span></button>'+
+    '<button type="button" class="v4-card" data-coach-dash="chat"><b>💬</b>گفت‌وگو<span class="v4-small">پیام‌های خصوصی شاگردان</span></button>'+
+    '</div></div>';
+   page.insertBefore(sec,nav.nextSibling);
+   sec.querySelectorAll('[data-coach-dash]').forEach(function(card){card.addEventListener('click',function(){handleCoachCard(card.getAttribute('data-coach-dash'));});});
+  }
+ }
+ function showCoachSection(id,btn){if(typeof window.showSection==='function')window.showSection(id,btn||null);else document.querySelectorAll('.section').forEach(function(s){s.classList.toggle('active',s.id===id);});}
+ function openCoachDashboard(){ensureCoachDashboard();showCoachSection('coachDashboard',document.getElementById('navCoachDashboard'));var b=document.getElementById('navCoachDashboard');if(b)b.classList.add('active');}
+ function handleCoachCard(key){
+  if(key==='chat'){if(typeof window.sehOpenCoachChat==='function'){window.sehOpenCoachChat();return;}alert('بخش گفت‌وگو هنوز بارگذاری نشده است. صفحه را تازه‌سازی کنید.');return;}
+  if(key==='water'){showCoachSection('coach',null);setTimeout(function(){var el=document.getElementById('coachWaterGoalCard');if(el)el.scrollIntoView({behavior:'smooth',block:'start'});},80);return;}
+  if(key==='analysis'||key==='progress'){showCoachSection('progress',null);setTimeout(function(){var el=document.getElementById(key==='analysis'?'bodyAnalysisEntryPanel':'progressEntryPanel');if(el)el.scrollIntoView({behavior:'smooth',block:'start'});},100);return;}
+  if(key==='client'||key==='meal'||key==='workout'){
+   var hasClient=false;try{hasClient=typeof currentClient!=='undefined'&&!!currentClient;}catch(e){}
+   if(!hasClient){if(key==='client'){showCoachSection('coach',null);setTimeout(function(){var el=document.getElementById('clientList');if(el)el.scrollIntoView({behavior:'smooth',block:'start'});},100);return;}alert('ابتدا از پنل مربی، شاگرد موردنظر را از فهرست انتخاب کنید.');showCoachSection('coach',null);return;}
+   showCoachSection(key==='client'?'client':key,null);
+  }
+ }
+ var oldFinish=window.finishLogin;
+ if(typeof oldFinish==='function'&&!oldFinish.__sehCoachDashWrapped){var wrapped=async function(user){var result=await oldFinish.apply(this,arguments);setTimeout(function(){if(coachRole())ensureCoachDashboard();},0);return result;};wrapped.__sehCoachDashWrapped=true;window.finishLogin=wrapped;}
+ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',function(){setTimeout(function(){if(coachRole())ensureCoachDashboard();},0);});
+ else if(coachRole())ensureCoachDashboard();
+ window.__sehOpenCoachDashboard=openCoachDashboard;
+})();
+</script>
 </body></html>
