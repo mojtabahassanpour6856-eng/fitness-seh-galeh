@@ -1396,7 +1396,7 @@ let currentPlanId=null,currentMealId=null,currentMealFoods=[];
 // مقادیر بانک غذا برای هر ۱۰۰ گرم هستند؛ تبدیل واحدهای خانگی تقریبی است و فقط برای غذاهای شناخته‌شده فعال می‌شود.
 function mealFoodUnitInfo(name){
  const n=String(name||"").replace(/ي/g,"ی").replace(/ك/g,"ک");
- const units=[["گرم","گرم"],["مشت","مشت (تقریبی؛ برای مغزها حدود ۲۵ گرم)"],["عدد","عدد (وزن تقریبی؛ بسته به غذا)"],["بشقاب","بشقاب (حدود ۲۵۰ گرم)"]];
+ const units=[["مشت","مشت (تقریبی؛ برای مغزها حدود ۲۵ گرم)"],["عدد","عدد (وزن تقریبی؛ بسته به غذا)"],["بشقاب","بشقاب (حدود ۲۵۰ گرم)"]];
  let defaultUnit="گرم",defaultAmount=100;
  if(/تخم\s*مرغ|تخممرغ/.test(n)){defaultUnit="عدد";defaultAmount=2;}
  else if(/عسل/.test(n)){units.push(["قاشق غذاخوری","قاشق غذاخوری (حدود ۲۱ گرم)"]);defaultUnit="قاشق غذاخوری";defaultAmount=1;}
