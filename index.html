@@ -4250,18 +4250,13 @@ window.toggleExerciseFavorite=async function(id,value){try{await sbWrite(`/train
   }
   window.renderClients=function(){
     const grid=ensureList(); if(!grid)return;
-    const q=(el('clientSearch')?.value||'').trim().toLocaleLowerCase();
-    const arr=(Array.isArray(clients)?clients:[]).filter(c=>(filter==='all'||(c.training_type||'gym')===filter)&&((c.name||'').toLocaleLowerCase().includes(q)||(c.phone||'').includes(q)));
+    const q=(el('clientSearch')?.value||'').trim().toLocaleLowerCase('fa');
+    const arr=(Array.isArray(clients)?clients:[])
+      .filter(c=>(filter==='all'||(c.training_type||'gym')===filter)&&((c.name||'').toLocaleLowerCase('fa').includes(q)||(c.phone||'').includes(q)))
+      .sort((a,b)=>(a.name||'').localeCompare((b.name||''),'fa',{sensitivity:'base'}));
     grid.innerHTML=arr.length?arr.map(c=>{
-      const type=c.training_type==='home'?'🏠 تمرین منزل':c.training_type==='online'?'📱 آنلاین':'🏋️ باشگاه';
-      const active=c.membershipStatus==='منقضی'?'منقضی':c.membershipStatus==='در انتظار پرداخت'?'در انتظار پرداخت':c.membershipStatus==='وضعیت نامشخص'?'وضعیت عضویت نامشخص':'فعال';
-      return `<article class="coach-trainee-card"><div class="coach-trainee-head"><div class="coach-trainee-name">${esc(c.name||'بدون نام')}</div><span class="pill">${type}</span></div>
-      <div class="coach-trainee-quick"><span>🎯 <b>هدف:</b> ${esc(c.goal||'ثبت نشده')}</span><span>⚖️ <b>وزن:</b> ${c.weight?esc(c.weight)+' کیلو':'—'}</span></div>
-      <details class="coach-trainee-more"><summary>جزئیات شاگرد <span>${c.plans?'📋 برنامه دارد':'📋 بدون برنامه'}</span></summary>
-      <div class="coach-trainee-meta">
-      <div><small>موبایل</small>${esc(c.phone||'ثبت نشده')}</div><div><small>وضعیت عضویت</small>${active}</div>
-      <div><small>روزهای تمرین</small>${esc(c.training_days||'ثبت نشده')}</div><div><small>ساعت تمرین</small>${esc(c.training_time||'ثبت نشده')}</div></div>
-      <div class="coach-card-actions"><button type="button" class="secondary" onclick="selectClient('${String(c.id).replace(/'/g,'')}')">ورود به پروفایل ←</button></div></details></article>`;
+      const selected=typeof currentClient!=='undefined'&&currentClient&&String(currentClient.id)===String(c.id);
+      return `<button type="button" class="coach-name-cell${selected?' selected':''}" onclick="selectClient('${String(c.id).replace(/'/g,'')}');document.querySelectorAll('#coachMobileCards .coach-name-cell').forEach(x=>x.classList.toggle('selected',x===this))" aria-label="انتخاب شاگرد ${esc(c.name||'بدون نام')}">${esc(c.name||'بدون نام')}</button>`;
     }).join(''):(clients.length===0?'<div style="padding:12px;border:1px solid #8b6b2b;border-radius:10px;margin-top:10px"><strong>هنوز شاگردی برای این حساب نمایش داده نمی‌شود.</strong><p>ورود مربی انجام شده، اما درخواست فهرست شاگردان ردیفی برنگردانده است. این حالت معمولاً به پیوند رکورد در جدول trainees با شناسه مربی یا سیاست‌های RLS مربوط است؛ از این پیام به‌تنهایی نمی‌توان علت قطعی را تعیین کرد.</p><p>برای بررسی دقیق، شناسه حساب ورود و مقدار coach_user_id رکوردهای جدول trainees باید در همان پروژه Supabase مقایسه شوند.</p><button type="button" onclick="showTraineeDiagnostic()">نمایش شناسه حساب و وضعیت اتصال</button> <button type="button" onclick="loadClients()">تلاش دوباره</button></div>':'<div class="muted" style="padding:12px">شاگردی با این جستجو یا فیلتر پیدا نشد.</div>');
     if(typeof window.updateStats==='function')window.updateStats();
   };
@@ -11168,4 +11163,12 @@ body.workout-output.workout-compact{
 })();
 </script>
 
+
+<style id="coach-trainee-name-grid">
+/* Scoped only to the trainee list; all other cards and components remain unchanged. */
+#clientList #coachMobileCards.coach-card-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:7px;margin-top:8px}
+#clientList .coach-name-cell{display:flex;align-items:center;justify-content:center;min-width:0;min-height:48px;padding:7px 4px;border:1px solid #d7bd78;border-radius:10px;background:#fffaf0;color:#4c3b16;font:700 12px/1.6 inherit;text-align:center;white-space:normal;overflow-wrap:anywhere;word-break:normal;cursor:pointer;box-shadow:0 1px 3px #0000000a}
+#clientList .coach-name-cell.selected{background:#f2dfaa;border-color:#a98228;box-shadow:inset 0 0 0 1px #a98228}
+#clientList .coach-name-cell:focus-visible{outline:2px solid #a98228;outline-offset:2px}
+</style>
 </body></html>
