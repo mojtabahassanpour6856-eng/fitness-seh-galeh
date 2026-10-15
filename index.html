@@ -11539,6 +11539,12 @@ body.workout-output.workout-compact{
     }finally{clients=all;}
     ensureControls();
     var grid=el('coachMobileCards');if(!grid)return;
+    if(mode==='archived'&&!all.some(function(c){return !!c.archivedAt;})){
+      grid.innerHTML='<div style="padding:14px;border:1px solid #8b6b2b;border-radius:10px;margin-top:10px"><strong>هنوز شاگردی بایگانی نشده است.</strong><p>در حال حاضر همه شاگردان در فهرست فعال هستند. برای انتقال شاگرد به این بخش، به «شاگردان فعال» برگرد و کنار نام او «📦 بایگانی» را بزن.</p></div>';
+      if(typeof window.updateStats==='function')window.updateStats();
+      var emptyHint=el('traineeArchiveHint');if(emptyHint)emptyHint.textContent='فهرست بایگانی فعلاً خالی است؛ هیچ شاگردی حذف نشده.';
+      return;
+    }
     Array.from(grid.querySelectorAll('.coach-name-cell')).forEach(function(btn){
       if(btn.parentElement&&btn.parentElement.classList.contains('trainee-archive-row'))return;
       var id=btn.getAttribute('data-trainee-id');
