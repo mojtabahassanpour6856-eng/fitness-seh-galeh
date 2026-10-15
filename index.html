@@ -10543,18 +10543,10 @@ body.workout-output.workout-compact{
   }
  };
  function ensureCoachProfileChatCard(){
-  const profile=(typeof authProfile!=='undefined'&&authProfile)?authProfile:window.authProfile;
-  const section=$('client');
-  if(!section||!profile||profile.role!=='coach')return;
-  let card=$('sehChatProfileCard');
-  if(!card){
-   card=document.createElement('div');card.id='sehChatProfileCard';card.className='card';
-   card.innerHTML='<h2>💬 گفت‌وگو با این شاگرد</h2><p class="muted">پیام‌های همین شاگرد را بدون خروج از پرونده‌اش باز کنید.</p><button type="button" id="sehChatOpenProfileConversation">باز کردن گفت‌وگو</button>';
-   const first=section.querySelector('.card');
-   if(first)first.insertAdjacentElement('beforebegin',card);else section.prepend(card);
-  }
-  const button=$('sehChatOpenProfileConversation');
-  if(button&&!button.dataset.bound){button.dataset.bound='1';button.addEventListener('click',()=>{if(currentClient?.id)window.sehOpenCoachChatForTrainee(String(currentClient.id));else alert('ابتدا یک شاگرد را انتخاب کنید.');});}
+  // گفتگو از کارت مستقل «پیام‌ها» در داشبورد باز می‌شود؛
+  // آن را داخل صفحه پروفایل قرار نده تا با اطلاعات شاگرد اشتباه نشود.
+  const card=$('sehChatProfileCard');
+  if(card)card.remove();
  }
  // Handle a notification click while this app page is already open.
  if('serviceWorker' in navigator&&!window.sehChatNotificationMessageBound){
