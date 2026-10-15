@@ -403,6 +403,7 @@ body.locked{overflow:hidden!important}
 
 <div class="nav">
   <button class="active" onclick="showSection('food',this)">🍽️ غذا</button>
+  <button type="button" onclick="showSection('calorieCalculatorCard',this)">🧮 کارت محاسبه‌گر کالری</button>
   <button onclick="showSection('foodBank',this)">🥗 بانک غذا</button>
   <button onclick="showSection('coach',this)">👨‍🏫 پنل مربی</button>
   <button onclick="showSection('client',this)">👤 شاگرد</button>
@@ -418,6 +419,14 @@ body.locked{overflow:hidden!important}
 <p class="muted">محاسبه‌گر جایگزین غذایی از پنل مربی حذف شده است. برای جست‌وجو، افزودن و ویرایش مواد غذایی از بانک غذا استفاده کنید.</p>
 <button type="button" onclick="showSection('foodBank',document.querySelectorAll('.nav button')[1])">🥗 رفتن به بانک غذا</button>
 </div>
+</section>
+
+<!-- CALORIE CALCULATOR CARD: isolated placeholder only; existing sections unchanged -->
+<section id="calorieCalculatorCard" class="section">
+  <div class="card">
+    <h2>🧮 کارت محاسبه‌گر کالری</h2>
+    <p class="muted">این کارت به‌صورت مستقل اضافه شده است. فرم و محاسبات در مرحله بعد و پس از تأیید سالم بودن بخش‌های فعلی اضافه می‌شوند.</p>
+  </div>
 </section>
 
 <!-- FOOD BANK -->
