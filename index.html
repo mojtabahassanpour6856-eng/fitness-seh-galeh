@@ -3938,7 +3938,7 @@ window.toggleExerciseFavorite=async function(id,value){try{await sbWrite(`/train
       currentWorkoutPlanId=null;workoutPlanOwnerId=null;workoutExercisesCache=[];
     }
     try{
-      const plans=await sbGet(`/trainee_workout_plans?trainee_id=eq.${encodeURIComponent(traineeId)}&select=*&order=created_at.desc`);
+      const plans=await sbGet(`/trainee_workout_plans?trainee_id=eq.${encodeURIComponent(traineeId)}&select=*&order=plan_date.desc.nullslast,created_at.desc`);
       if(requestId!==workoutRequestSeq||!same(currentTraineeId(),traineeId))return;
       const plan=plans[0]||null;
       if(!plan){
@@ -3961,6 +3961,7 @@ window.toggleExerciseFavorite=async function(id,value){try{await sbWrite(`/train
       const names=Object.fromEntries(exercises.map(x=>[String(x.id),x.name]));
       currentWorkoutPlanId=plan.id;workoutPlanOwnerId=traineeId;workoutExercisesCache=rows;
       if(byId('workoutTitle'))byId('workoutTitle').value=plan.title||'';
+      if(byId('workoutStartDate')){byId('workoutStartDate').value=String(plan.plan_date||plan.created_at||'').slice(0,10);if(typeof window.updateWorkoutStartDateFa==='function')window.updateWorkoutStartDateFa();}
       if(byId('workoutGoal'))byId('workoutGoal').value=plan.goal||'';
       if(byId('workoutNotes'))byId('workoutNotes').value=plan.notes||'';
       if(typeof window.renderWorkoutList==='function')window.renderWorkoutList(rows,names);
@@ -3985,13 +3986,16 @@ window.toggleExerciseFavorite=async function(id,value){try{await sbWrite(`/train
     const traineeId=currentTraineeId();
     if(!traineeId){alert('اول یک شاگرد را انتخاب کنید.');return;}
     const ownedPlanId=same(workoutPlanOwnerId,traineeId)?currentWorkoutPlanId:null;
-    const body={trainee_id:traineeId,title:(byId('workoutTitle')?.value||'').trim()||'برنامه تمرینی',goal:(byId('workoutGoal')?.value||'').trim()||null,notes:(byId('workoutNotes')?.value||'').trim()||null};
+    const dateInput=byId('workoutStartDate');
+    const startDate=String(dateInput?.value||'').trim();
+    if(!/^\\d{4}-\\d{2}-\\d{2}$/.test(startDate)||!Number.isFinite(Date.parse(startDate+'T00:00:00Z'))){alert('تاریخ شروع برنامه معتبر نیست؛ لطفاً تاریخ را دوباره انتخاب کنید.');return;}
+    const body={trainee_id:traineeId,title:(byId('workoutTitle')?.value||'').trim()||'برنامه تمرینی',plan_date:startDate,goal:(byId('workoutGoal')?.value||'').trim()||null,notes:(byId('workoutNotes')?.value||'').trim()||null};
     try{
       let savedId=ownedPlanId;
       if(ownedPlanId){
         const check=await sbGet(`/trainee_workout_plans?id=eq.${encodeURIComponent(ownedPlanId)}&select=id,trainee_id&limit=1`);
         if(!check[0]||!same(check[0].trainee_id,traineeId))throw new Error('مالکیت برنامه با شاگرد انتخاب‌شده تطبیق ندارد؛ ذخیره متوقف شد.');
-        await sbWrite(`/trainee_workout_plans?id=eq.${encodeURIComponent(ownedPlanId)}`,'PATCH',body);
+        await sbWrite(`/trainee_workout_plans?id=eq.${encodeURIComponent(ownedPlanId)}&trainee_id=eq.${encodeURIComponent(traineeId)}`,'PATCH',body);
       }else{
         const inserted=await sbWrite('/trainee_workout_plans','POST',body);
         savedId=inserted?.[0]?.id;
@@ -4000,7 +4004,11 @@ window.toggleExerciseFavorite=async function(id,value){try{await sbWrite(`/train
       if(same(currentTraineeId(),traineeId)){
         currentWorkoutPlanId=savedId;workoutPlanOwnerId=traineeId;
         await window.loadWorkoutForClient();
-        if(same(currentTraineeId(),traineeId))alert('برنامه تمرینی با موفقیت ذخیره شد.');
+        const verified=await sbGet(`/trainee_workout_plans?id=eq.${encodeURIComponent(savedId)}&trainee_id=eq.${encodeURIComponent(traineeId)}&select=id,plan_date&limit=1`);
+        if(!verified[0]||String(verified[0].plan_date||'').slice(0,10)!==startDate)throw new Error('تاریخ انتخابی در پایگاه داده تأیید نشد؛ لطفاً دوباره ذخیره نکنید و نتیجه را اطلاع دهید.');
+        if(byId('workoutStartDate'))byId('workoutStartDate').value=String(verified[0].plan_date).slice(0,10);
+        if(typeof window.updateWorkoutStartDateFa==='function')window.updateWorkoutStartDateFa();
+        if(same(currentTraineeId(),traineeId))alert('برنامه تمرینی و تاریخ شروع با موفقیت ذخیره و از پایگاه داده تأیید شد.');
       }
     }catch(e){alert('ذخیره برنامه تمرینی انجام نشد.\n'+(e.message||String(e)));}
   };
