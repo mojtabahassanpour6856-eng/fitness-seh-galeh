@@ -10816,5 +10816,69 @@ body.workout-output.workout-compact{
   };
 })();
 </script>
-</body></html>
 
+<script id="SEH_ACTIVITY_CARD_ISOLATION_FIX_V2">
+(function(){
+ 'use strict';
+ function role(){
+  try{if(typeof authProfile!=='undefined'&&authProfile&&authProfile.role)return String(authProfile.role).toLowerCase();}catch(e){}
+  try{if(window.authProfile&&window.authProfile.role)return String(window.authProfile.role).toLowerCase();}catch(e){}
+  var label=document.getElementById('authUserText');
+  if(label&&/شاگرد/.test(label.textContent||''))return 'trainee';
+  return null;
+ }
+ var activityView=false, busy=false;
+ function isolate(){
+  if(!activityView||busy||role()!=='trainee')return;
+  var panel=document.getElementById('activityDailyPanel');
+  if(!panel)return;
+  busy=true;
+  try{
+   var host=document.getElementById('activitySection');
+   if(!host){host=document.createElement('section');host.id='activitySection';host.className='section';}
+   if(host.parentElement!==document.body)document.body.appendChild(host);
+   if(panel.parentElement!==host)host.appendChild(panel);
+   Array.from(host.children).forEach(function(node){if(node!==panel)node.remove();});
+   document.querySelectorAll('.section').forEach(function(sec){
+    if(sec!==host){sec.classList.remove('active');sec.style.setProperty('display','none','important');sec.style.setProperty('visibility','hidden','important');}
+   });
+   ['goalBox','goalStructuredPreview','coachActivityTodayPanel'].forEach(function(id){
+    var el=document.getElementById(id);
+    if(el&&!panel.contains(el)){el.style.setProperty('display','none','important');el.style.setProperty('visibility','hidden','important');el.hidden=true;}
+   });
+   // Ensure the activity panel contains only the activity form and its daily activity results.
+   panel.querySelectorAll(':scope > .card').forEach(function(card){
+    var heading=card.querySelector(':scope > h2,:scope > h3');
+    if(heading&&!/فعالیت و کالری روزانه من|فعالیت امروز من/.test(heading.textContent||''))card.remove();
+   });
+   host.classList.add('active');host.hidden=false;
+   host.style.setProperty('display','block','important');host.style.setProperty('visibility','visible','important');
+   panel.hidden=false;panel.style.setProperty('display','block','important');panel.style.setProperty('visibility','visible','important');
+   document.querySelectorAll('.nav button').forEach(function(b){b.classList.remove('active');});
+   var nav=document.getElementById('navDash');if(nav)nav.classList.add('active');
+  } finally {busy=false;}
+ }
+ var oldDash=window.dashOpen;
+ window.dashOpen=function(section){
+  if(section==='activity'&&role()==='trainee'){
+   activityView=true;isolate();
+   [0,80,250,700].forEach(function(ms){setTimeout(isolate,ms);});
+   if(typeof window.previewActivityCalories==='function')window.previewActivityCalories();
+   if(typeof window.loadActivityToday==='function')setTimeout(window.loadActivityToday,0);
+   var host=document.getElementById('activitySection');if(host)host.scrollIntoView({behavior:'smooth',block:'start'});
+   return;
+  }
+  if(section!=='activity')activityView=false;
+  return typeof oldDash==='function'?oldDash.apply(this,arguments):undefined;
+ };
+ document.addEventListener('click',function(e){
+  var node=e.target&&e.target.closest&&e.target.closest('[onclick*="dashOpen(\'activity\')"],[onclick*="dashOpen(\"activity\")"]');
+  if(node&&role()==='trainee'){activityView=true;[0,80,250,700].forEach(function(ms){setTimeout(isolate,ms);});}
+ },true);
+ if(typeof MutationObserver!=='undefined'&&document.body){
+  new MutationObserver(function(){if(activityView&&role()==='trainee')setTimeout(isolate,0);}).observe(document.body,{childList:true,subtree:true});
+ }
+})();
+</script>
+
+</body></html>
