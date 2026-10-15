@@ -4604,10 +4604,10 @@ window.toggleExerciseFavorite=async function(id,value){try{await sbWrite(`/train
         let memberships=await window.sbGet('/trainee_memberships?select=id,trainee_id,start_date,end_date,status,created_at&order=created_at.desc');
         const latest={};(memberships||[]).forEach(m=>{if(!latest[m.trainee_id])latest[m.trainee_id]=m;});
         clients.forEach(c=>{
-          const m=latest[c.id];if(!m){c.membershipStatus='بدون عضویت';c.active=true;return;}
+          const m=latest[c.id];if(!m){c.membershipStatus='بدون عضویت';c.active=!c.archivedAt;return;}
           const expired=m.end_date&&m.end_date<new Date().toISOString().slice(0,10);
           c.membershipStatus=expired?'منقضی':m.status==='pending'?'در انتظار پرداخت':'فعال';
-          c.active=!expired&&m.status!=='pending';
+          c.active=!c.archivedAt&&!expired&&m.status!=='pending';
         });
       }catch(e){console.warn('جدول عضویت در دسترس نیست؛ فهرست شاگردان بدون آن نمایش داده می‌شود.',e);}
       ensureList();
