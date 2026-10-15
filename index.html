@@ -2727,77 +2727,7 @@ window.loadDashboard = loadDashboard;
 
 
 
-<script id="SEH_TRAINEE_DASHBOARD_CLEANUP_V2">
-(function(){
- 'use strict';
- if(window.__sehTraineeDashboardCleanupV2)return;
- window.__sehTraineeDashboardCleanupV2=true;
- function trainee(){
-  try{return !!(window.authProfile&&window.authProfile.role==='trainee');}
-  catch(e){return false;}
- }
- function clean(){
-  if(!trainee())return;
-  var workout=document.getElementById('workout');
-  // محتوای تمرین و گزارش آن فقط داخل بخش اختصاصی برنامه تمرینی باقی بماند.
-  var selectors=['#workoutList','#workoutFourWeekSummary','#workoutMissionReport','#coachWorkoutMissionReport'];
-  document.querySelectorAll(selectors.join(',')).forEach(function(el){
-   if(workout&&workout.contains(el))return;
-   var card=el.closest('.card');
-   if(card)card.remove();else el.remove();
-  });
-  document.querySelectorAll('.card,section,[role="dialog"],.modal-content').forEach(function(el){
-   if(workout&&workout.contains(el))return;
-   var text=String(el.innerText||el.textContent||'').replace(/\s+/g,' ').trim();
-   var h=el.querySelector(':scope > h2,:scope > h3,:scope > header h2,:scope > header h3');
-   var title=String(h&&h.textContent||'').trim();
-   if(/^(?:📊\s*)?گزارش هفتگی برنامه تمرینی$|پیگیری مأموریت‌های تمرین شاگرد/.test(title)||
-      /حرکات برنامه تمرینی/.test(title)){
-    // حذف فقط کارت تکراری، نه کل بخش اصلی داشبورد.
-    if(el.classList.contains('card'))el.remove();
-    else {var c=el.querySelector(':scope > .card');if(c)c.remove();}
-    return;
-   }
-   if(/یادداشت مربی/.test(title)||(/یادداشت مربی/.test(text)&&el.querySelector('#coachNote'))){
-    if(el.classList.contains('card'))el.remove();
-    else {var note=el.querySelector('#coachNote');if(note){var c=note.closest('.card');if(c)c.remove();}}
-    return;
-   }
-   if(/فیش واریزی شاگرد/.test(text)&&/برای نمایش فیش‌ها، ابتدا از پنل مربی/.test(text)){
-    if(el.classList.contains('card'))el.remove();
-    else {var c=el.querySelector('.card');if(c)c.remove();}
-   }
-  });
-  // باکس اختصاصی بررسی فیش‌ها فقط در پنل مربی است.
-  document.querySelectorAll('#coachReceiptReview').forEach(function(el){el.remove();});
-  // اگر پیام راهنمای فیش در کارت عضویت یا پروفایل تکرار شده باشد، همان کارت فرعی حذف شود.
-  document.querySelectorAll('body *').forEach(function(el){
-   if(el.children.length>0)return;
-   var t=String(el.textContent||'').replace(/\s+/g,' ').trim();
-   if(t==='فیش واریزی شاگرد'||t==='📥 فیش واریزی شاگرد') {
-    var c=el.closest('.card');
-    if(c&&!((workout)&&workout.contains(c)))c.remove();
-   }
-  });
- }
- var queued=false;
- function schedule(){if(queued)return;queued=true;setTimeout(function(){queued=false;clean();},80);}
- var oldShow=window.showSection;
- if(typeof oldShow==='function'&&!window.__sehCleanupV2Show){
-  window.showSection=function(){var r=oldShow.apply(this,arguments);schedule();return r;};
-  window.__sehCleanupV2Show=true;
- }
- var oldDash=window.dashOpen;
- if(typeof oldDash==='function'&&!window.__sehCleanupV2Dash){
-  window.dashOpen=function(){var r=oldDash.apply(this,arguments);schedule();return r;};
-  window.__sehCleanupV2Dash=true;
- }
- if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',schedule,{once:true});else schedule();
- if(typeof MutationObserver!=='undefined'&&document.body){
-  new MutationObserver(function(){if(trainee())schedule();}).observe(document.body,{childList:true,subtree:true});
- }
-})();
-</script>
+
 </body></html>`;
     const w=window.open('','_blank');if(w){w.document.write(html);w.document.close();}
   };
