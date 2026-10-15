@@ -10250,7 +10250,26 @@ body.workout-output.workout-compact{
    }
   }
  }
- async function currentAuthUser(){const r=await window.AUTH_SUPABASE.auth.getUser();if(r.error)throw r.error;if(!r.data?.user)throw new Error('نشست ورود معتبر نیست؛ دوباره وارد شوید.');return r.data.user}
+ async function currentAuthUser(){
+  const auth=window.AUTH_SUPABASE?.auth;
+  if(!auth)throw new Error('سامانه ورود آماده نیست؛ صفحه را تازه‌سازی کنید.');
+  // Read the persisted Supabase session first to avoid racing app startup.
+  // Chat database policies still validate the access token on every request.
+  let result=await auth.getSession();
+  if(result.error)throw result.error;
+  let session=result.data?.session||null;
+  if(!session){
+    await new Promise(resolve=>setTimeout(resolve,700));
+    result=await auth.getSession();
+    if(result.error)throw result.error;
+    session=result.data?.session||null;
+  }
+  if(session?.user)return session.user;
+  const userResult=await auth.getUser();
+  if(userResult.error)throw userResult.error;
+  if(userResult.data?.user)return userResult.data.user;
+  throw new Error('نشست ورود این گوشی پیدا نشد. صفحه را یک‌بار تازه‌سازی کنید؛ اگر خطا ماند، ورود این گوشی باید دوباره برقرار شود.');
+}
  function setCoachNoticeStatus(text){const e=$('sehChatNoticeStatus');if(e)e.textContent=text;}
  function sehBase64UrlToBytes(value){
   const padding='='.repeat((4-value.length%4)%4);
