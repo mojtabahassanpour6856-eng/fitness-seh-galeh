@@ -10357,7 +10357,7 @@ body.workout-output.workout-compact{
     const name=byId[String(m.trainee_id)]||'شاگرد';
     setCoachNoticeStatus('پیام جدید از «'+name+'» شناسایی شد. برای مشاهده، گفت‌وگوها را باز کنید.');
     if('Notification' in window&&Notification.permission==='granted'&&document.visibilityState==='visible'){
-     try{const note=new Notification('فیتنس سه‌قلعه',{body:name+' برای شما پیام فرستاد.',tag:'seh-chat-'+mid});note.onclick=()=>{window.focus();if(typeof window.sehOpenCoachChatForTrainee==='function')window.sehOpenCoachChatForTrainee(String(m.trainee_id));note.close();};}catch(noticeError){console.info('Native notification will be enabled with the service worker step.');}
+     try{const note=new Notification('فیتنس سه‌قلعه',{body:name+' برای شما پیام فرستاد.',tag:'seh-chat-'+String(m.trainee_id),renotify:false,data:{trainee_id:String(m.trainee_id)}});note.onclick=()=>{window.focus();if(typeof window.sehOpenCoachChatForTrainee==='function')window.sehOpenCoachChatForTrainee(String(m.trainee_id));note.close();};}catch(noticeError){console.info('Native notification will be enabled with the service worker step.');}
     }
    }
    if(coachNoticeSeen.size>300)coachNoticeSeen=new Set(Array.from(coachNoticeSeen).slice(-150));
@@ -10411,7 +10411,7 @@ body.workout-output.workout-compact{
    if(r.error)throw r.error;
    const rows=r.data||[];const box=$('sehChatMessages');
    if(!rows.length)box.innerHTML='<div class="seh-chat-muted">هنوز پیامی وجود ندارد. اولین پیام را شما بفرستید.</div>';
-   else box.innerHTML=rows.map(m=>'<div class="seh-chat-bubble '+(m.sender_id===user.id?'mine':'theirs')+'">'+esc(m.body)+'<span class="seh-chat-time">'+esc(new Date(m.created_at).toLocaleString('fa-IR',{dateStyle:'short',timeStyle:'short'}))+(m.sender_id===user.id?'':(m.read_at?' · خوانده شد':''))+'</span></div>').join('');
+   else box.innerHTML=rows.map(m=>'<div class="seh-chat-bubble '+(m.sender_id===user.id?'mine':'theirs')+'">'+esc(m.body)+'<span class="seh-chat-time">'+esc(new Date(m.created_at).toLocaleString('fa-IR',{dateStyle:'short',timeStyle:'short'}))+(m.sender_id===user.id&&m.read_at?' · خوانده شد':'')+'</span></div>').join('');
    const unread=rows.filter(m=>m.sender_id!==user.id&&!m.read_at);
    if(unread.length){const upd=await window.AUTH_SUPABASE.from('coach_chat_messages').update({read_at:new Date().toISOString()}).in('id',unread.map(m=>m.id)).select('id');if(upd.error)console.warn('Chat read state update:',upd.error);else if((upd.data||[]).length<unread.length)console.warn('Chat read state update affected fewer rows than expected:',{expected:unread.length,updated:(upd.data||[]).length,traineeId:selected.id});}
    if(scrollBottom||rows.at(-1)?.id!==lastMessageId)box.scrollTop=box.scrollHeight;
