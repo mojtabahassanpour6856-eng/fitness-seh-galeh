@@ -1117,21 +1117,12 @@ async function addClient(){
 }
 
 async function loadClients(){
-  
   try{
-    const r=await fetch(
-      SUPABASE_URL+"/rest/v1/trainees?select=id,full_name,phone,gender,birth_date,current_weight,height,goal,training_level,training_history,limitations,training_type,home_equipment,created_at&order=created_at.desc",
-      {
-        headers:{
-          "apikey":SUPABASE_KEY,
-          "Authorization":"Bearer "+SUPABASE_KEY
-        }
-      }
-    );
-
-    if(!r.ok) throw new Error(await r.text());
-
-    const data=await r.json();
+    // Read with the signed-in user's access token so RLS, not the public key,
+    // decides which trainee records this coach is allowed to see.
+    if(typeof window.sbGet!=="function")throw new Error("اتصال امن اطلاعات شاگردان هنوز آماده نیست؛ صفحه را تازه‌سازی کنید.");
+    const data=await window.sbGet("/trainees?select=id,full_name,phone,gender,birth_date,current_weight,height,goal,training_level,training_history,limitations,training_type,home_equipment,created_at&order=created_at.desc");
+    if(!Array.isArray(data))throw new Error("پاسخ فهرست شاگردان معتبر نیست.");
 
     clients=data.map(c=>({
       id:c.id,
@@ -1145,20 +1136,26 @@ async function loadClients(){
       goal:c.goal,
       level:c.training_level,
       history:c.training_history,
-      limitations:c.limitations,training_type:c.training_type||"gym",home_equipment:c.home_equipment||"",
+      limitations:c.limitations,
+      training_type:c.training_type||"gym",
+      home_equipment:c.home_equipment||"",
       createdAt:c.created_at,
       active:true,
       plans:0
     }));
 
-    // Update the four coach summary counts before rendering the full trainee list.
+    // Keep the selected trainee bound to the refreshed database row by ID.
+    if(currentClient){
+      const refreshed=clients.find(c=>String(c.id)===String(currentClient.id));
+      if(refreshed)currentClient=refreshed;
+    }
     updateStats();
     renderClients();
     if(typeof window.sehSyncCalorieTrainees==="function")window.sehSyncCalorieTrainees();
-
   }catch(e){
-    console.error(e);
-    $("clientList").innerHTML="خطا در دریافت شاگردان از Supabase.";
+    console.error("loadClients failed:",e);
+    const list=$("clientList");
+    if(list)list.innerHTML="خطا در دریافت شاگردان از پایگاه داده. اطلاعات قبلی پاک نشد؛ اتصال را بررسی و دوباره تلاش کنید.";
   }
 }
 function calcAge(birth){
@@ -1212,17 +1209,33 @@ function selectClient(id){
 
 async function saveProfile(){
   if(!currentClient){alert("اول یک شاگرد را از پنل مربی انتخاب کنید.");return;}
+  // Capture the target ID before any asynchronous operation; never redirect
+  // an in-flight save to whichever trainee happens to be selected later.
+  const traineeId=currentClient.id;
   const payload={full_name:$("pn").value.trim(),current_weight:+$("pweight").value||null,
     height:+$("pheight").value||null,goal:$("pgoal").value||null,training_level:$("plevel").value||null,training_type:$("ptype").value||null,home_equipment:$("pequipment").value.trim()||null};
   if(!payload.full_name){alert("نام شاگرد را وارد کنید.");return;}
   try{
-    // Use the authenticated REST wrapper so RLS sees the real signed-in user.
-    const traineeId=currentClient.id;
-    await sbWrite("/trainees?id=eq."+encodeURIComponent(traineeId),"PATCH",payload);
+    if(typeof window.sbWrite!=="function")throw new Error("اتصال امن ذخیره‌سازی آماده نیست؛ صفحه را تازه‌سازی کنید.");
+    const rows=await window.sbWrite("/trainees?id=eq."+encodeURIComponent(traineeId),"PATCH",payload);
+    // Require the database to return the exact row and accepted values.
+    if(!Array.isArray(rows)||!rows.some(row=>String(row.id)===String(traineeId)&&
+      row.full_name===payload.full_name&&
+      (row.current_weight==null?payload.current_weight===null:Number(row.current_weight)===payload.current_weight)&&
+      (row.height==null?payload.height===null:Number(row.height)===payload.height)&&
+      (row.goal??null)===payload.goal&&
+      (row.training_level??null)===payload.training_level&&
+      (row.training_type??null)===payload.training_type&&
+      (row.home_equipment??null)===payload.home_equipment)){
+      throw new Error("ذخیره در پایگاه داده تأیید نشد؛ صفحه را تازه‌سازی کنید و دوباره بررسی کنید.");
+    }
     await loadClients();
-    currentClient=clients.find(x=>String(x.id)===String(traineeId))||currentClient;
-    alert("پروفایل شاگرد در دیتابیس به‌روزرسانی شد.");
-  }catch(e){console.error(e);alert("ذخیره پروفایل انجام نشد.\n"+(e.message||String(e)));}
+    // Do not switch the user's active selection if they changed trainees mid-save.
+    if(currentClient&&String(currentClient.id)===String(traineeId)){
+      currentClient=clients.find(x=>String(x.id)===String(traineeId))||currentClient;
+    }
+    alert("پروفایل شاگرد ذخیره شد و پاسخ پایگاه داده هم تأیید شد.");
+  }catch(e){console.error(e);alert("ذخیره پروفایل تأیید نشد.\n"+(e.message||String(e)));}
 }
 
 async function saveProfileExtras(){if(!currentClient)return alert('اول شاگرد را انتخاب کنید.');try{await sbWrite(`/trainees?id=eq.${encodeURIComponent(currentClient.id)}`,'PATCH',{training_type:$('ptype2').value,home_equipment:$('pequipment2').value.trim()||null,limitations:$('plimit').value.trim()||null});alert('اطلاعات تکمیلی ذخیره شد.');await loadClients();}catch(e){alert('ذخیره اطلاعات تکمیلی انجام نشد.\n'+e.message);}}
