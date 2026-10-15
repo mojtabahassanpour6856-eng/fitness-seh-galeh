@@ -11505,21 +11505,27 @@ body.workout-output.workout-compact{
     }
   }
   async function deleteArchived(id,name){
-    if(!window.confirm('هشدار مهم: پرونده «'+name+'» و تمام سوابق مرتبط با آن از پایگاه داده برای همیشه حذف می‌شود. این کار قابل بازگشت نیست. ادامه می‌دهید؟'))return;
+    if(!window.confirm('هشدار مهم: پرونده «'+name+'»، سوابق وابسته و فایل‌های ثبت‌شده برای همیشه حذف می‌شوند. این کار قابل بازگشت نیست. ادامه می‌دهید؟'))return;
     var typed=window.prompt('برای تأیید حذف دائمی، نام شاگرد را دقیقاً وارد کنید:\\n'+name);
     if(typed===null||typed.trim()!==String(name).trim()){
       alert('نام دقیق مطابقت نداشت؛ حذف انجام نشد.');
       return;
     }
     try{
-      if(typeof window.sbWrite!=='function')throw new Error('اتصال امن دیتابیس آماده نیست؛ دوباره وارد پنل مربی شوید.');
-      var result=await window.sbWrite('/trainees?id=eq.'+encodeURIComponent(id)+'&archived_at=not.is.null','DELETE',null);
-      if(!Array.isArray(result)||!result.length)throw new Error('سرور حذف پرونده را تأیید نکرد؛ ممکن است شاگرد بایگانی نشده باشد یا مجوز کافی وجود نداشته باشد.');
+      var auth=window.AUTH_SUPABASE;
+      if(!auth||!auth.functions||typeof auth.functions.invoke!=='function')throw new Error('اتصال امن حذف آماده نیست؛ صفحه را تازه کنید و دوباره وارد پنل مربی شوید.');
+      var result=await auth.functions.invoke('delete-archived-trainee',{body:{trainee_id:String(id)}});
+      if(result.error)throw result.error;
+      if(!result.data||!result.data.success)throw new Error(result.data&&result.data.error?result.data.error:'سرور حذف دائمی را تأیید نکرد.');
       if(typeof window.loadClients==='function')await window.loadClients();
-      alert('پرونده شاگرد و سوابق مرتبط با آن از پایگاه داده حذف شد.');
+      alert('پرونده شاگرد، سوابق وابسته، فایل‌های ثبت‌شده و حساب ورود او حذف شدند.');
     }catch(e){
       console.error('Permanent trainee deletion failed:',e);
-      alert('حذف دائمی انجام نشد.\\n'+(e&&e.message?e.message:String(e)));
+      var msg=e&&e.message?e.message:String(e);
+      if(e&&e.context&&typeof e.context.json==='function'){
+        try{var detail=await e.context.json();if(detail&&detail.error)msg=detail.error+(detail.detail?'\\n'+detail.detail:'');}catch(_){}
+      }
+      alert('حذف دائمی انجام نشد.\\n'+msg);
     }
   }
   var originalRender=window.renderClients;
