@@ -9363,7 +9363,58 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
    if(mode==='print'){
      const popup=window.open('','_blank');if(!popup){if(status)status.textContent='پنجره چاپ مسدود شد؛ اجازه بازشدن پنجره را بدهید.';return;}
      const css=Array.from(document.querySelectorAll('style')).map(x=>x.textContent).join('\n');
-     popup.document.open();popup.document.write('<!doctype html><html lang="fa" dir="rtl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>برنامه غذایی - فیتنس سه‌قلعه</title><style>'+css+'body{padding:12px;background:#fff}@media print{body{padding:0}@page{size:A4 portrait;margin:8mm}}</style></head><body></body></html>');
+     popup.document.open();popup.document.write('<!doctype html><html lang="fa" dir="rtl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>برنامه غذایی - فیتنس سه‌قلعه</title><style>'+css+'body{padding:12px;background:#fff}@media print{body{padding:0}@page{size:A4 portrait;margin:8mm}}</style>
+<!-- EARLY TRAINEE LOGIN CLICK ROUTER -->
+<script>
+(function(){
+  function show(msg){
+    var e=document.getElementById('authError');
+    if(e){e.textContent=msg;e.style.display='block';}
+  }
+  function normalize(value){
+    var p=String(value||'').trim()
+      .replace(/[۰-۹]/g,function(d){return '۰۱۲۳۴۵۶۷۸۹'.indexOf(d);})
+      .replace(/[٠-٩]/g,function(d){return '٠١٢٣٤٥٦٧٨٩'.indexOf(d);})
+      .replace(/[\s()-]/g,'');
+    if(p.indexOf('0098')===0)p='+98'+p.slice(4);
+    else if(p.indexOf('98')===0)p='+'+p;
+    else if(p.indexOf('0')===0)p='+98'+p.slice(1);
+    else if(p.indexOf('9')===0)p='+98'+p;
+    return p;
+  }
+  async function runLogin(button){
+    if(typeof window.loginTraineePhone==='function'){
+      try { await window.loginTraineePhone(); }
+      catch(e){ show('ورود انجام نشد: '+(e&&e.message||e)); }
+      return;
+    }
+    var phone=normalize(document.getElementById('traineePhoneLogin')&&document.getElementById('traineePhoneLogin').value);
+    var password=(document.getElementById('traineeLoginPassword')&&document.getElementById('traineeLoginPassword').value)||'';
+    if(!/^\+989\d{9}$/.test(phone)||!password){show('شماره موبایل معتبر و رمز عبور را وارد کنید. نمونه: 09121234567');return;}
+    if(!window.AUTH_SUPABASE||!window.AUTH_SUPABASE.auth){show('اتصال ورود شاگرد هنوز آماده نشده است. '+(window.__fitnessLastScriptError&&window.__fitnessLastScriptError.message||'لطفاً چند ثانیه صبر کنید و دوباره تلاش کنید.'));return;}
+    if(typeof window.finishLogin!=='function'){show('بخش تکمیل ورود بارگذاری نشده است. '+(window.__fitnessLastScriptError&&window.__fitnessLastScriptError.message||'خطای اجرای اسکریپت اصلی را بررسی می‌کنم.'));return;}
+    if(button){button.disabled=true;button.textContent='⏳ در حال ورود…';}
+    try{
+      var result=await window.AUTH_SUPABASE.auth.signInWithPassword({phone:phone,password:password});
+      if(result.error)throw result.error;
+      if(!result.data||!result.data.user)throw new Error('حساب شاگرد دریافت نشد.');
+      await window.finishLogin(result.data.user);
+    }catch(e){console.error('Trainee login router:',e);show('ورود انجام نشد: '+(e&&e.message||e));}
+    finally{if(button){button.disabled=false;button.textContent='ورود شاگرد';}}
+  }
+  document.addEventListener('click',function(event){
+    var button=event.target&&event.target.closest?event.target.closest('button'):null;
+    if(!button)return;
+    var box=button.closest('#traineeLoginBox');
+    if(!box||!/ورود شاگرد/.test(button.textContent||''))return;
+    event.preventDefault();
+    event.stopPropagation();
+    if(event.stopImmediatePropagation)event.stopImmediatePropagation();
+    runLogin(button);
+  },true);
+})();
+</script>
+</head><body></body></html>');
      popup.document.body.appendChild(clone);popup.document.close();setTimeout(()=>popup.print(),500);if(status)status.textContent='برای ذخیره PDF، گزینه «ذخیره به‌صورت PDF» را انتخاب کنید.';return;
    }
    const button=$('sdppDownload');
