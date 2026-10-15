@@ -7542,9 +7542,31 @@ window.loadCoachActivityReport=async function(){if(role()!=='coach')return;const
       return;
     }
     if(role()==='coach'){
-      showSection('client',null);
+      // Coach activity report must live in its own section, not inside #client,
+      // because #client also contains the trainee profile and goal cards.
       const panel=coachPanel();
-      if(panel){panel.style.display='';panel.scrollIntoView({behavior:'smooth',block:'start'});}
+      if(!panel)return;
+      let host=$('coachActivitySection');
+      const clientSection=$('client');
+      if(!host){
+        host=document.createElement('section');
+        host.id='coachActivitySection';
+        host.className='section';
+        if(clientSection&&clientSection.parentElement){
+          clientSection.insertAdjacentElement('afterend',host);
+        }else{
+          document.body.appendChild(host);
+        }
+      }
+      if(panel.parentElement!==host)host.appendChild(panel);
+      showSection('coachActivitySection',null);
+      host.hidden=false;
+      host.style.setProperty('display','block','important');
+      host.style.setProperty('visibility','visible','important');
+      panel.hidden=false;
+      panel.style.setProperty('display','block','important');
+      panel.style.setProperty('visibility','visible','important');
+      panel.scrollIntoView({behavior:'smooth',block:'start'});
       if(typeof window.loadCoachActivityReport==='function')window.loadCoachActivityReport();
       return;
     }
