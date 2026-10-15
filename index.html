@@ -4378,6 +4378,24 @@ window.toggleExerciseFavorite=async function(id,value){try{await sbWrite(`/train
       if(!Number.isFinite(startMs))return;
       if(Math.floor((todayMs-startMs)/86400000)>=25)dueIds.add(id);
     });
+    /* Safety fallback: if the bulk list misses a trainee's dated plan (for example due to a partial/RLS-limited response),
+       ask for that trainee's own most recent dated plan before deciding there is no renewal alert. */
+    if(Array.isArray(clients)&&clients.length){
+      const missing=clients.filter(c=>c&&c.id!=null&&!dueIds.has(String(c.id)));
+      for(let i=0;i<missing.length;i+=4){
+        await Promise.all(missing.slice(i,i+4).map(async c=>{
+          try{
+            const rows=await window.sbGet('/trainee_workout_plans?trainee_id=eq.'+encodeURIComponent(String(c.id))+'&select=id,trainee_id,plan_date,created_at&order=plan_date.desc.nullslast,created_at.desc&limit=10');
+            if(!Array.isArray(rows)||!rows.length)return;
+            const dated=rows.filter(p=>explicitPlanDate(p)).sort((a,b)=>explicitPlanDate(b).localeCompare(explicitPlanDate(a)));
+            const p=dated[0]||rows.slice().sort((a,b)=>String(b.created_at||'').localeCompare(String(a.created_at||'')))[0];
+            const start=explicitPlanDate(p)||String(p?.created_at||'').slice(0,10);
+            const startMs=Date.parse(start+'T00:00:00Z');
+            if(Number.isFinite(startMs)&&Math.floor((todayMs-startMs)/86400000)>=25)dueIds.add(String(c.id));
+          }catch(e){console.warn('بررسی جداگانه تاریخ تمدید برنامه ناموفق بود:',c.id,e);}
+        }));
+      }
+    }
     window.__sehWorkoutRenewalDueIds=dueIds;
     (Array.isArray(clients)?clients:[]).forEach(c=>c.plans=ids.has(String(c.id))?1:0);
     /* Reapply badges after every asynchronous refresh, even if the list rendered before the query completed. */
