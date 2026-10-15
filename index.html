@@ -11059,16 +11059,11 @@ body.workout-output.workout-compact{
     }catch(e){}
     return '';
   }
+  // No trainee picker belongs inside this calculator; it follows the active coach profile.
   window.sehSyncCalorieTrainees=function(){
-    var select=el('sehCalClientSelect');if(!select)return;
-    var previous=select.value;
-    var list=(typeof clients!=='undefined'&&Array.isArray(clients))?clients:[];
-    select.innerHTML='<option value="">انتخاب شاگرد…</option>'+list.map(function(c){
-      var name=String(c.name||'بدون نام').replace(/[&<>"]/g,function(ch){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[ch];});
-      return '<option value="'+String(c.id).replace(/"/g,'&quot;')+'">'+name+'</option>';
-    }).join('');
-    if(previous&&list.some(function(c){return String(c.id)===String(previous);}))select.value=previous;
-    else if(typeof currentClient!=='undefined'&&currentClient&&list.some(function(c){return String(c.id)===String(currentClient.id);}))select.value=String(currentClient.id);
+    var picker=el('sehCalClientSelect');
+    if(picker){var wrap=picker.closest('div[style*="margin:12px 0"]');if(wrap)wrap.remove();else picker.remove();}
+    if(typeof currentClient!=='undefined'&&currentClient)window.sehUseCalorieTrainee(currentClient.id);
   };
   window.sehUseCalorieTrainee=function(id){
     if(!id){if(el('sehCalClientStatus'))el('sehCalClientStatus').textContent='ابتدا از پنل مربی یک شاگرد را باز کن.';return;}
@@ -11091,21 +11086,39 @@ body.workout-output.workout-compact{
     else el('sehCalWeeks').value='12';
     el('sehCalcResult').innerHTML='';
     showGoalFields();
-    if(el('sehCalClientStatus'))el('sehCalClientStatus').textContent='اطلاعات «'+(c.name||'شاگرد انتخاب‌شده')+'» وارد شد. می‌توانی فیلدها را دستی تغییر بدهی؛ تغییرات فقط برای همین محاسبه است و پروفایل شاگرد را تغییر نمی‌دهد.';
+    if(el('sehCalClientStatus'))el('sehCalClientStatus').textContent='اطلاعات «'+(c.name||'شاگرد انتخاب‌شده')+'» وارد شد. محاسبه به‌صورت خودکار انجام می‌شود؛ تغییرات دستی فقط برای همین محاسبه است و پروفایل شاگرد را تغییر نمی‌دهد.';
+    // Calculate after all trainee fields have been populated.
+    setTimeout(function(){if(typeof window.sehCalcCalories==='function')window.sehCalcCalories();},0);
   };
-  // Isolated integration: when the coach opens a trainee, refresh only this calculator.
+  // Isolated integration: sync after the final selection handler and when the calculator is opened.
+  function refreshFromActiveTrainee(){
+    try{
+      if(typeof currentClient!=='undefined'&&currentClient&&typeof window.sehUseCalorieTrainee==='function'){
+        window.sehUseCalorieTrainee(currentClient.id);
+      }
+    }catch(e){console.warn('Calorie calculator sync:',e);}
+  }
   if(typeof window.selectClient==='function'&&!window.__sehCalorieSelectHooked){
     var originalSelectClient=window.selectClient;
-    window.selectClient=async function(id){
+    window.selectClient=async function(){
       var result=await originalSelectClient.apply(this,arguments);
-      try{
-        if(typeof currentClient!=='undefined'&&currentClient&&typeof window.sehUseCalorieTrainee==='function'){
-          window.sehUseCalorieTrainee(currentClient.id);
-        }
-      }catch(e){console.warn('Calorie calculator sync:',e);}
+      setTimeout(refreshFromActiveTrainee,0);
       return result;
     };
     window.__sehCalorieSelectHooked=true;
+  }
+  document.addEventListener('click',function(event){
+    var button=event.target&&event.target.closest?event.target.closest('button'):null;
+    if(button&&/selectClient\s*\(/.test(button.getAttribute('onclick')||''))setTimeout(refreshFromActiveTrainee,150);
+  },true);
+  var priorShowSection=window.showSection;
+  if(typeof priorShowSection==='function'&&!window.__sehCalorieShowHooked){
+    window.showSection=function(){
+      var result=priorShowSection.apply(this,arguments);
+      if(arguments[0]==='calorieCalculatorCard')setTimeout(refreshFromActiveTrainee,0);
+      return result;
+    };
+    window.__sehCalorieShowHooked=true;
   }
   if(typeof currentClient!=='undefined'&&currentClient&&typeof window.sehUseCalorieTrainee==='function'){
     window.sehUseCalorieTrainee(currentClient.id);
@@ -11119,17 +11132,18 @@ body.workout-output.workout-compact{
   };
   window.sehCalcCalories=function(){
     var sex=el('sehCalSex').value,age=num('sehCalAge'),height=num('sehCalHeight'),weight=num('sehCalWeight'),goal=el('sehCalGoal').value;
-    var target=goal==='maintain'?weight:num('sehCalTarget'),weeks=goal==='maintain'?0:num('sehCalWeeks'),activity=num('sehCalActivity'),sessions=num('sehCalSessions'),duration=num('sehCalDuration');
+    var targetRaw=String(el('sehCalTarget').value||'').trim(),target=goal==='maintain'?weight:(targetRaw===''?null:Number(targetRaw)),weeks=goal==='maintain'?0:num('sehCalWeeks'),activity=num('sehCalActivity'),sessions=num('sehCalSessions'),duration=num('sehCalDuration');
     var errors=[];
     if(!Number.isFinite(age)||age<18||age>100)errors.push('سن باید بین ۱۸ تا ۱۰۰ سال باشد.');
     if(!Number.isFinite(height)||height<120||height>230)errors.push('قد معتبر را به سانتی‌متر وارد کن.');
     if(!Number.isFinite(weight)||weight<30||weight>350)errors.push('وزن فعلی معتبر را وارد کن.');
-    if(goal!=='maintain'&&(!Number.isFinite(target)||target<30||target>350))errors.push('وزن هدف معتبر را وارد کن.');
+    if(goal!=='maintain'&&target!==null&&(!Number.isFinite(target)||target<30||target>350))errors.push('وزن هدف معتبر را وارد کن.');
     if(goal!=='maintain'&&(!Number.isFinite(weeks)||weeks<1||weeks>104))errors.push('مدت هدف باید بین ۱ تا ۱۰۴ هفته باشد.');
     if(errors.length){el('sehCalcResult').innerHTML='<div style="padding:12px;border-radius:10px;background:#fff1e8;color:#7b2d12">'+errors.join('<br>')+'</div>';return;}
-    var bmr=10*weight+6.25*height-5*age+(sex==='male'?5:-161),maintenance=bmr*activity,change=target-weight,weekly=weeks?Math.abs(change)/weeks:0,pct=weight?weekly/weight*100:0,adjustment=0,warnings=[];
-    if(goal==='lose')adjustment=-(Math.abs(change)*7700/(weeks*7));
-    if(goal==='gain')adjustment=(Math.abs(change)*7700/(weeks*7));
+    var bmr=10*weight+6.25*height-5*age+(sex==='male'?5:-161),maintenance=bmr*activity,change=target===null?0:target-weight,weekly=weeks?Math.abs(change)/weeks:0,pct=weight?weekly/weight*100:0,adjustment=0,warnings=[];
+    // If no target weight is recorded in the trainee profile, use a modest default goal adjustment.
+    if(goal==='lose')adjustment=target===null?-300:-(Math.abs(change)*7700/(weeks*7));
+    if(goal==='gain')adjustment=target===null?200:(Math.abs(change)*7700/(weeks*7));
     if(goal==='lose'&&target>weight)warnings.push('وزن هدف از وزن فعلی بیشتر است؛ هدف را بررسی کن.');
     if(goal==='gain'&&target<weight)warnings.push('وزن هدف از وزن فعلی کمتر است؛ هدف را بررسی کن.');
     if(goal!=='maintain'&&Math.abs(change)<0.01)warnings.push('وزن هدف با وزن فعلی برابر است؛ مقدار هدف را بررسی کن.');
@@ -11138,7 +11152,7 @@ body.workout-output.workout-compact{
     if(goal!=='maintain'&&Math.abs(adjustment)>1000)warnings.push('برای رسیدن به هدف، کسری/مازاد محاسباتی بسیار زیاد است؛ زمان بیشتری انتخاب کن.');
     var applied=Math.max(-750,Math.min(500,adjustment)),calories=Math.round((maintenance+applied)/50)*50,minCal=sex==='female'?1200:1500;
     if(calories<minCal){warnings.push('کالری پیشنهادی از حد احتیاطی '+minCal+' کیلوکالری کمتر است؛ بدون ارزیابی تخصصی از این مقدار استفاده نکن.');calories=minCal;}
-    var macroWeight=goal==='gain'?Math.max(weight,target):weight,protein=Math.round(macroWeight*1.8),fat=Math.round(macroWeight*0.8),carbs=Math.max(0,Math.round((calories-protein*4-fat*9)/4));
+    var macroWeight=goal==='gain'&&target!==null?Math.max(weight,target):weight,protein=Math.round(macroWeight*1.8),fat=Math.round(macroWeight*0.8),carbs=Math.max(0,Math.round((calories-protein*4-fat*9)/4));
     var name=el('sehCalName').value.trim(),safeName=name.replace(/[&<>"]/g,function(ch){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[ch];});
     var html=name?'<h3 style="margin:0 0 10px">نتیجه محاسبه: '+safeName+'</h3>':'<h3 style="margin:0 0 10px">نتیجه محاسبه</h3>';
     var cards=[['سوخت‌وساز پایه (BMR)',Math.round(bmr)+' کیلوکالری'],['کالری نگهدارنده تخمینی',Math.round(maintenance)+' کیلوکالری'],['هدف کالری روزانه',calories+' کیلوکالری'],['پروتئین روزانه',protein+' گرم'],['چربی روزانه',fat+' گرم'],['کربوهیدرات روزانه',carbs+' گرم']];
