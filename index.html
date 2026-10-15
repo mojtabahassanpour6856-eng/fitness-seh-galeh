@@ -327,7 +327,7 @@ body.locked{overflow:hidden!important}
     var phone=normalize(document.getElementById('traineePhoneLogin')&&document.getElementById('traineePhoneLogin').value);
     var password=(document.getElementById('traineeLoginPassword')&&document.getElementById('traineeLoginPassword').value)||'';
     if(!/^\+989\d{9}$/.test(phone)||!password){show('شماره موبایل معتبر و رمز عبور را وارد کنید. نمونه: 09121234567');return;}
-    if(!window.AUTH_SUPABASE||!window.AUTH_SUPABASE.auth){show('اتصال ورود شاگرد هنوز آماده نشده است. '+(window.__fitnessLastScriptError&&window.__fitnessLastScriptError.message||'لطفاً چند ثانیه صبر کنید و دوباره تلاش کنید.'));return;}
+    if(!window.AUTH_SUPABASE||!window.AUTH_SUPABASE.auth){var se=window.__fitnessLastScriptError;var detail=se?(se.message+' | فایل: '+(se.source||'نامشخص').split('/').pop()+' | خط: '+(se.line||'?')+' | ستون: '+(se.column||'?')):'خطای جاوااسکریپت ثبت نشده است';show('اتصال ورود شاگرد هنوز آماده نشده است. '+detail);return;}
     if(typeof window.finishLogin!=='function'){show('بخش تکمیل ورود بارگذاری نشده است. '+(window.__fitnessLastScriptError&&window.__fitnessLastScriptError.message||'خطای اجرای اسکریپت اصلی را بررسی می‌کنم.'));return;}
     if(button){button.disabled=true;button.textContent='⏳ در حال ورود…';}
     try{
