@@ -506,6 +506,7 @@ body.locked{overflow:hidden!important}
 <div class="badge"><b id="planCount">۰</b>برنامه</div>
 <div class="badge"><b id="alertCount">۰</b>نیازمند پیگیری</div>
 </div>
+<div style="margin-top:8px"><button type="button" class="secondary mini" onclick="diagnoseWorkoutRenewal()">بررسی علت نمایش‌ندادن هشدار تمدید</button></div>
 </div>
 
 <div class="card water-goal-inline" id="coachWaterGoalCard">
@@ -2689,6 +2690,38 @@ window.loadDashboard = loadDashboard;
     const html=`<!doctype html><html lang="fa" dir="rtl"><head><meta charset="utf-8"><title>${title}</title><style>body{font-family:Tahoma;padding:30px;color:#111}h1{font-size:22px}h2{margin-top:24px}table{width:100%;border-collapse:collapse}td,th{border:1px solid #aaa;padding:8px}</style></head><body><h1>باشگاه فیتنس سه‌قلعه | مربی مجتبی</h1><p>شاگرد: ${esc2(currentClient.name||'')}</p><p>تاریخ: ${today()}</p>${body}
 
 
+
+<script id="workout-renewal-diagnostic">
+window.diagnoseWorkoutRenewal=async function(){
+  var c=window.currentClient||currentClient;
+  if(!c||c.id==null){alert('ابتدا از فهرست، همان شاگردی را انتخاب کنید که تاریخ شروع برنامه‌اش را تنظیم کرده‌اید؛ سپس دوباره بررسی کنید.');return;}
+  var today=new Date(),todayKey=today.getFullYear()+'-'+String(today.getMonth()+1).padStart(2,'0')+'-'+String(today.getDate()).padStart(2,'0');
+  var todayMs=Date.parse(todayKey+'T00:00:00Z');
+  var lines=['گزارش بررسی هشدار تمدید','شاگرد: '+(c.name||'بدون نام'),'شناسه شاگرد: '+c.id,'تاریخ امروز دستگاه: '+todayKey];
+  try{
+    var rows=await window.sbGet('/trainee_workout_plans?trainee_id=eq.'+encodeURIComponent(c.id)+'&select=id,trainee_id,plan_date,created_at&order=created_at.desc');
+    lines.push('تعداد برنامه‌های قابل‌خواندن: '+(Array.isArray(rows)?rows.length:'پاسخ غیرمنتظره'));
+    if(!Array.isArray(rows))throw new Error('پاسخ دیتابیس آرایه نیست.');
+    if(!rows.length)lines.push('نتیجه: برای این شاگرد برنامه‌ای از جدول trainee_workout_plans دریافت نشد.');
+    rows.slice(0,3).forEach(function(p,i){
+      var start=String(p.plan_date||p.created_at||'').slice(0,10);
+      var ms=Date.parse(start+'T00:00:00Z');
+      var days=Number.isFinite(ms)?Math.floor((todayMs-ms)/86400000):'نامعتبر';
+      lines.push('برنامه '+(i+1)+': plan_date='+(p.plan_date||'خالی')+'؛ created_at='+(p.created_at||'خالی')+'؛ شروع محاسبه='+start+'؛ روزهای گذشته='+days);
+    });
+    var latest=rows.slice().sort(function(a,b){return String(b.created_at||'').localeCompare(String(a.created_at||''));})[0];
+    var latestStart=latest?String(latest.plan_date||latest.created_at||'').slice(0,10):'';
+    var latestMs=Date.parse(latestStart+'T00:00:00Z');
+    var age=Number.isFinite(latestMs)?Math.floor((todayMs-latestMs)/86400000):NaN;
+    lines.push('محاسبه آخرین برنامه: '+(Number.isFinite(age)?(age>=25?'باید هشدار بدهد ('+age+' روز گذشته)':'هنوز موعد هشدار نیست ('+age+' روز گذشته)'):'تاریخ قابل محاسبه نیست'));
+    var due=window.__sehWorkoutRenewalDueIds;
+    lines.push('شناسه در فهرست هشدارهای محاسبه‌شده: '+(due instanceof Set&&due.has(String(c.id))?'بله':'خیر'));
+    var btn=Array.from(document.querySelectorAll('#coachMobileCards .coach-name-cell[data-trainee-id]')).find(function(b){return String(b.getAttribute('data-trainee-id'))===String(c.id);});
+    lines.push('دکمه نام شاگرد در فهرست: '+(btn?'پیدا شد':'پیدا نشد')+(btn?'؛ متن فعلی: '+btn.textContent:''));
+  }catch(e){lines.push('خطای دریافت برنامه از دیتابیس: '+(e&&e.message||String(e)));}
+  alert(lines.join('\n'));
+};
+</script>
 </body></html>`;
     const w=window.open('','_blank');if(w){w.document.write(html);w.document.close();}
   };
