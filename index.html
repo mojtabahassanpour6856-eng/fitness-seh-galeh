@@ -2444,7 +2444,11 @@ window.loadDashboard = loadDashboard;
     try{
       const {data,error}=await AUTH_SUPABASE.auth.signInWithPassword({phone,password});
       if(error)throw error;
-      if(!data?.user)throw new Error('حساب شاگرد دریافت نشد.');
+      if(!data?.user||!data?.session?.access_token||!data?.session?.refresh_token)throw new Error('ورود انجام شد اما نشست امن شاگرد ساخته نشد؛ دوباره تلاش کنید.');
+      const savedSession=await AUTH_SUPABASE.auth.setSession({access_token:data.session.access_token,refresh_token:data.session.refresh_token});
+      if(savedSession.error)throw savedSession.error;
+      const verifiedSession=await AUTH_SUPABASE.auth.getSession();
+      if(verifiedSession.error||verifiedSession.data?.session?.user?.id!==data.user.id)throw new Error('نشست ورود شاگرد ذخیره نشد؛ صفحه را تازه‌سازی و دوباره وارد شوید.');
       await window.finishLogin(data.user);
     }catch(e){console.error('trainee phone login failed',e);showAuthError('ورود انجام نشد. اگر درخواست هنوز تأیید نشده، منتظر تأیید مربی بمانید؛ در غیر این صورت شماره یا رمز را بررسی کنید. جزئیات: '+(e?.message||String(e)));}
     finally{if(btn){btn.disabled=false;btn.textContent='ورود شاگرد';}}
@@ -8487,6 +8491,11 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
     if(!data?.phone||!data?.temporary_password)throw new Error("اطلاعات ورود امن کامل دریافت نشد.");
     const {data:auth,error}=await AUTH_SUPABASE.auth.signInWithPassword({phone:data.phone,password:data.temporary_password});
     if(error)throw error;
+    if(!auth?.user||!auth?.session?.access_token||!auth?.session?.refresh_token)throw new Error("ورود انجام شد اما نشست امن حساب شاگرد ساخته نشد.");
+    const saved=await AUTH_SUPABASE.auth.setSession({access_token:auth.session.access_token,refresh_token:auth.session.refresh_token});
+    if(saved.error)throw saved.error;
+    const verified=await AUTH_SUPABASE.auth.getSession();
+    if(verified.error||verified.data?.session?.user?.id!==auth.user.id)throw new Error("نشست ورود ذخیره نشد؛ درخواست اتصال را دوباره بررسی کنید.");
     clear(storeKey);message(statusId,"ورود موفق بود؛ در حال بازکردن حساب شما…",true);
     if(typeof window.finishLogin==="function")await window.finishLogin(auth.user);
   }
@@ -10531,7 +10540,11 @@ body.workout-output.workout-compact{
     try{
       const {data,error}=await window.AUTH_SUPABASE.auth.signInWithPassword({phone,password});
       if(error)throw error;
-      if(!data?.user)throw new Error('حساب شاگرد از سامانه دریافت نشد.');
+      if(!data?.user||!data?.session?.access_token||!data?.session?.refresh_token)throw new Error('ورود انجام شد اما نشست امن شاگرد ساخته نشد.');
+      const saved=await window.AUTH_SUPABASE.auth.setSession({access_token:data.session.access_token,refresh_token:data.session.refresh_token});
+      if(saved.error)throw saved.error;
+      const verified=await window.AUTH_SUPABASE.auth.getSession();
+      if(verified.error||verified.data?.session?.user?.id!==data.user.id)throw new Error('نشست ورود ذخیره نشد؛ صفحه را تازه‌سازی و دوباره وارد شوید.');
       await window.finishLogin(data.user);
     }catch(e){
       console.error('Recovered trainee login failed:',e);
