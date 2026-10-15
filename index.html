@@ -9017,7 +9017,6 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
         }else{
           alert('ابزار دانلود عکس هنوز بارگذاری نشده است؛ صفحه را تازه‌سازی کنید.');
         }
-        }
       });
       card.appendChild(button);
     });
@@ -9413,9 +9412,7 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
    if(mode==='print'){
      const popup=window.open('','_blank');if(!popup){if(status)status.textContent='پنجره چاپ مسدود شد؛ اجازه بازشدن پنجره را بدهید.';return;}
      const css=Array.from(document.querySelectorAll('style')).map(x=>x.textContent).join('\n');
-     popup.document.open();popup.document.write('<!doctype html><html lang="fa" dir="rtl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>برنامه غذایی - فیتنس سه‌قلعه</title><style>'+css+'body{padding:12px;background:#fff}@media print{body{padding:0}@page{size:A4 portrait;margin:8mm}}</style>
-
-</head><body></body></html>');
+     popup.document.open();popup.document.write('<!doctype html><html lang="fa" dir="rtl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>برنامه غذایی - فیتنس سه‌قلعه</title><style>'+css+'body{padding:12px;background:#fff}@media print{body{padding:0}@page{size:A4 portrait;margin:8mm}}</style></head><body></body></html>');
      popup.document.body.appendChild(clone);popup.document.close();setTimeout(()=>popup.print(),500);if(status)status.textContent='برای ذخیره PDF، گزینه «ذخیره به‌صورت PDF» را انتخاب کنید.';return;
    }
    const button=$('sdppDownload');
