@@ -10207,7 +10207,8 @@ body.workout-output.workout-compact{
 #sehChatSection .seh-chat-layout{display:grid;grid-template-columns:minmax(0,1fr);gap:12px}
 #sehChatSection .seh-chat-conversations{display:flex;flex-direction:column;gap:7px;max-height:34vh;overflow:auto}
 #sehChatSection .seh-chat-person{width:100%;text-align:right;background:#f7faf9;color:#17372b;border:1px solid #dce9e3;display:flex;justify-content:space-between;align-items:center;gap:8px}
-#sehChatSection .seh-chat-person.active{background:#e3f3eb;border-color:#5ca982}
+#sehChatSection .seh-chat-person.active{background:#eef2ef;border-color:#aabbb1;box-shadow:none}
+#sehChatSection .seh-chat-person.unread{background:#edf8f0;border-color:#80c89b;box-shadow:0 0 0 2px rgba(77,180,112,.14)}
 #sehChatSection .seh-chat-window{display:flex;flex-direction:column;min-height:52vh;border:1px solid #e0e8e4;border-radius:16px;overflow:hidden;background:#f7faf9}
 #sehChatSection .seh-chat-top{padding:12px;background:#fff;border-bottom:1px solid #e0e8e4;font-weight:700}
 #sehChatSection .seh-chat-messages{flex:1;min-height:32vh;max-height:52vh;overflow:auto;padding:12px;display:flex;flex-direction:column;gap:9px}
@@ -10398,7 +10399,7 @@ body.workout-output.workout-compact{
   const total=Object.values(unread).reduce((a,b)=>a+b,0);const badge=$('sehChatCoachUnread');if(badge){badge.textContent=faNum(total);badge.style.display=total?'inline-flex':'none';}
   const box=$('sehChatConversations');if(!box)return;
   if(!conversations.length){box.innerHTML='<div class="seh-chat-muted">شاگرد متصل به این حساب پیدا نشد.</div>';return;}
-  box.innerHTML=conversations.map(t=>'<button type="button" class="seh-chat-person '+(selected?.id===t.id?'active':'')+'" data-trainee="'+esc(t.id)+'"><span>'+esc(t.full_name||'شاگرد بدون نام')+'</span>'+(unread[t.id]?'<span class="seh-chat-unread">'+faNum(unread[t.id])+'</span>':'')+'</button>').join('');
+  box.innerHTML=conversations.map(t=>'<button type="button" class="seh-chat-person '+(selected?.id===t.id?'active ':'')+(unread[t.id]?'unread':'')+'" data-trainee="'+esc(t.id)+'"><span>'+esc(t.full_name||'شاگرد بدون نام')+'</span>'+(unread[t.id]?'<span class="seh-chat-unread">'+faNum(unread[t.id])+'</span>':'')+'</button>').join('');
   box.querySelectorAll('[data-trainee]').forEach(b=>b.addEventListener('click',()=>{const t=conversations.find(x=>x.id===b.dataset.trainee);if(t)selectConversation(t)}));
  }
  async function selectConversation(t){selected=t;const title=$('sehChatTitle');if(title)title.textContent=t.full_name||'گفت‌وگو با شاگرد';document.querySelectorAll('#sehChatConversations [data-trainee]').forEach(b=>b.classList.toggle('active',b.dataset.trainee===t.id));await loadMessages(true);if(mode==='coach')await loadCoachConversations(await currentAuthUser());}
