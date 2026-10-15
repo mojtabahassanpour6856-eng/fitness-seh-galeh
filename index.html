@@ -11216,6 +11216,8 @@ body.workout-output.workout-compact{
  }
  var oldFinish=window.finishLogin;
  if(typeof oldFinish==='function'&&!oldFinish.__sehCoachDashWrapped){var wrapped=async function(user){var result=await oldFinish.apply(this,arguments);setTimeout(function(){if(coachRole())ensureCoachDashboard();},0);return result;};wrapped.__sehCoachDashWrapped=true;window.finishLogin=wrapped;}
+ var oldLogin=window.loginApp;
+ if(typeof oldLogin==='function'&&!oldLogin.__sehCoachDashLoginWrapped){var loginWrapped=async function(){var result=await oldLogin.apply(this,arguments);[0,150,500,1000].forEach(function(ms){setTimeout(function(){if(coachRole())ensureCoachDashboard();},ms);});return result;};loginWrapped.__sehCoachDashLoginWrapped=true;window.loginApp=loginWrapped;}
  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',function(){setTimeout(function(){if(coachRole())ensureCoachDashboard();},0);});
  else if(coachRole())ensureCoachDashboard();
  window.__sehOpenCoachDashboard=openCoachDashboard;
