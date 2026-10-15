@@ -37,12 +37,21 @@ self.addEventListener('notificationclick', function (event) {
 
     const clientList = await clients.matchAll({ type: 'window', includeUncontrolled: true });
     for (const client of clientList) {
-      if (new URL(client.url).origin === self.location.origin && 'focus' in client) {
-        if ('navigate' in client && client.url !== targetUrl.href) {
-          try { await client.navigate(targetUrl.href); } catch (error) {}
-        }
-        return client.focus();
+      if (new URL(client.url).origin !== self.location.origin || !('focus' in client)) continue;
+
+      // If the app is already open, ask that page to open the exact trainee chat.
+      // Keep the URL-based route as a fallback for older pages without the listener.
+      if (traineeId && /^[0-9a-f-]{36}$/i.test(String(traineeId)) && 'postMessage' in client) {
+        try {
+          client.postMessage({ type: 'OPEN_CHAT_TRAINEE', trainee_id: String(traineeId) });
+          return client.focus();
+        } catch (error) {}
       }
+
+      if ('navigate' in client && client.url !== targetUrl.href) {
+        try { await client.navigate(targetUrl.href); } catch (error) {}
+      }
+      return client.focus();
     }
     return clients.openWindow(targetUrl.href);
   })());
