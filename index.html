@@ -10842,11 +10842,18 @@ body.workout-output.workout-compact{
    document.querySelectorAll('.section').forEach(function(sec){
     if(sec!==host){sec.classList.remove('active');sec.style.setProperty('display','none','important');sec.style.setProperty('visibility','hidden','important');}
    });
-   ['goalBox','goalStructuredPreview','coachActivityTodayPanel'].forEach(function(id){
+   ['goalBox','coachActivityTodayPanel'].forEach(function(id){
     var el=document.getElementById(id);
-    if(el&&!panel.contains(el)){el.style.setProperty('display','none','important');el.style.setProperty('visibility','hidden','important');el.hidden=true;}
+    if(el&&panel.contains(el))el.remove();
+    else if(el){el.style.setProperty('display','none','important');el.style.setProperty('visibility','hidden','important');el.hidden=true;}
    });
-   // Ensure the activity panel contains only the activity form and its daily activity results.
+   var preview=document.getElementById('goalStructuredPreview');
+   if(preview&&panel.contains(preview)){var goalCard=preview.closest('.card');if(goalCard)goalCard.remove();else preview.remove();}
+   // Remove profile/goal cards even when nested inside intermediate containers.
+   panel.querySelectorAll('.card').forEach(function(card){
+    var heading=card.querySelector('h2,h3');
+    if(heading&&/پروفایل شاگرد|پروفایل شخصی|هدف ثبت.?شده شاگرد/.test(heading.textContent||''))card.remove();
+   });
    panel.querySelectorAll(':scope > .card').forEach(function(card){
     var heading=card.querySelector(':scope > h2,:scope > h3');
     if(heading&&!/فعالیت و کالری روزانه من|فعالیت امروز من/.test(heading.textContent||''))card.remove();
