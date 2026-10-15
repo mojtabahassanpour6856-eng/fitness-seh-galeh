@@ -742,7 +742,7 @@ body.locked{overflow:hidden!important}
 </div>
 <div id="mealRecipeFields" class="hide">
  <label>دسته وعده</label><select id="mealRecipeCategory" onchange="filterMealRecipes()"><option value="all">همه دستورها</option><option value="breakfast">صبحانه</option><option value="lunch">ناهار</option><option value="dinner">شام</option><option value="snack">میان‌وعده</option><option value="bedtime">قبل خواب</option><option value="preworkout">قبل تمرین</option><option value="postworkout">بعد تمرین</option></select>
-<label>انتخاب دستور ترکیبی</label><select id="mealRecipeSelect" onchange="previewMealRecipe()"></select>
+<label>انتخاب دستور ترکیبی</label><select id="mealRecipeSelect" onchange="resetMealRecipeDraft();previewMealRecipe()"></select>
 <div id="mealRecipeIngredients" class="sub-result"></div>
 </div>
 <label>یادداشت</label><input id="mealFoodNote" placeholder="اختیاری">
@@ -1481,7 +1481,10 @@ const MEAL_RECIPES=[
  {name:"کیک خانگی بدون شکر افزوده",category:"snack",ingredients:[["جو دوسر",80,"گرم"],["تخم مرغ کامل",2,"عدد"],["موز",1,"عدد"],["شیر کم چرب",60,"میلی‌لیتر"],["ماست یونانی ساده کم‌چرب",50,"گرم"],["دارچین آسیاب‌شده",1,"گرم"]],note:"همه مواد را مخلوط کن و در قالب کوچکِ نچسب بریز؛ در فر از قبل گرم‌شده با دمای ۱۸۰ درجه حدود ۲۵ تا ۳۵ دقیقه بپز و با خلال دندان بررسی کن. شکر، عسل یا شیره اضافه نمی‌شود؛ شیرینی از موز است. زمان پخت به فر و اندازه قالب بستگی دارد."},
  {name:"وعده قبل خواب؛ ماست یونانی و شیر",category:"bedtime",ingredients:[["ماست یونانی ساده کم‌چرب",150,"گرم"],["شیر کم چرب",150,"میلی‌لیتر"],["تخم چیا",5,"گرم"]],note:"یک گزینه سبک برای قبل خواب؛ مقدار و تناسب آن با هدف کالری و پروتئین شاگرد تنظیم شود."},
   {name:"قبل تمرین؛ موز و ماست",category:"preworkout",ingredients:[["موز",1,"عدد"],["ماست یونانی ساده کم‌چرب",100,"گرم"]],note:"گزینه پیشنهادی و اختیاری؛ زمان و مقدار با فاصله تا تمرین و تحمل گوارشی شاگرد تنظیم شود."},
-  {name:"بعد تمرین؛ مرغ و برنج",category:"postworkout",ingredients:[["سینه مرغ پخته",100,"گرم"],["برنج پخته",150,"گرم"]],note:"گزینه پیشنهادی و اختیاری؛ مقدار بر اساس هدف روزانه و برنامه شاگرد تنظیم شود."}
+  {name:"بعد تمرین؛ مرغ و برنج",category:"postworkout",ingredients:[["سینه مرغ پخته",100,"گرم"],["برنج پخته",150,"گرم"]],note:"گزینه پیشنهادی و اختیاری؛ مقدار بر اساس هدف روزانه و برنامه شاگرد تنظیم شود."},
+ {name:"املت گوجه‌فرنگی",category:"breakfast",ingredients:[["تخم مرغ کامل",2,"عدد"],["گوجه‌فرنگی",150,"گرم"],["روغن زیتون",5,"گرم"]],note:"مقدار روغن را متناسب با روش پخت تغییر بده."},
+ {name:"کوکو سیب‌زمینی",category:"dinner",ingredients:[["تخم مرغ کامل",2,"عدد"],["سیب زمینی پخته",200,"گرم"],["روغن زیتون",5,"گرم"]],note:"مواد قابل ویرایش‌اند؛ مقدار روغن مصرفی را دقیق وارد کن."},
+ {name:"کوکو سبزی",category:"dinner",ingredients:[["تخم مرغ کامل",2,"عدد"],["سبزی",150,"گرم"],["روغن زیتون",5,"گرم"]],note:"در صورت موجود نبودن نوع دقیق سبزی در بانک، آن را با گزینه مناسب جایگزین کن."}
 ];
 function switchMealFoodMode(){
  const recipe=$("mealFoodMode").value==="recipe";
@@ -1550,12 +1553,57 @@ function previewMealFood(){
 function mealRecipeRows(recipe){
  return recipe.ingredients.map(([name,amount,unit])=>{const f=foods.find(x=>x[0]===name);if(!f)return {missing:name};return {f,amount,unit,metrics:foodMetrics({name:f[0],calories:f[1],protein:f[2],carbs:f[3],fat:f[4]},amount,unit)};});
 }
+let mealRecipeDraftKey="",mealRecipeDraft=[];
+function resetMealRecipeDraft(){
+ const key=String($("mealRecipeSelect")?.value??"");mealRecipeDraftKey=key;
+ const recipe=MEAL_RECIPES[Number(key)];mealRecipeDraft=recipe?recipe.ingredients.map(x=>({name:x[0],amount:x[1],unit:x[2]})):[];
+}
+function ensureMealRecipeDraft(){
+ const key=String($("mealRecipeSelect")?.value??"");
+ if(key!==mealRecipeDraftKey)resetMealRecipeDraft();
+ return MEAL_RECIPES[Number(key)];
+}
+function changeMealRecipeIngredient(i,field,value){
+ if(!mealRecipeDraft[i])return;
+ if(field==="food"){const f=foods[Number(value)];if(f)mealRecipeDraft[i].name=f[0];}
+ else if(field==="amount")mealRecipeDraft[i].amount=value;
+ else if(field==="unit")mealRecipeDraft[i].unit=value;
+ previewMealRecipe();
+}
+function removeMealRecipeIngredient(i){mealRecipeDraft.splice(i,1);previewMealRecipe();}
+function addMealRecipeIngredient(){
+ const s=$("mealRecipeAddFood"),a=$("mealRecipeAddAmount"),u=$("mealRecipeAddUnit");
+ const f=foods[Number(s?.value)],amount=Number(a?.value);
+ if(!f||!Number.isFinite(amount)||amount<=0){alert("ماده غذایی و مقدار معتبر انتخاب کن.");return;}
+ mealRecipeDraft.push({name:f[0],amount,unit:u?.value||"گرم"});
+ a.value="100";previewMealRecipe();
+}
 function previewMealRecipe(){
- const recipe=MEAL_RECIPES[+$("mealRecipeSelect")?.value||0];if(!recipe)return;
- const rows=mealRecipeRows(recipe),missing=rows.filter(x=>x.missing),valid=rows.filter(x=>x.f&&x.metrics.valid);
+ const recipe=ensureMealRecipeDraft();if(!recipe)return;
+ const rows=mealRecipeDraft.map((item,i)=>{
+  const f=foods.find(x=>x[0]===item.name);
+  const metrics=f?foodMetrics({name:f[0],calories:f[1],protein:f[2],carbs:f[3],fat:f[4]},Number(item.amount),item.unit):{valid:false,cal:0,pro:0,carb:0,fat:0};
+  return {item,i,f,metrics};
+ });
+ const valid=rows.filter(x=>x.f&&x.metrics.valid);
  const total=valid.reduce((a,x)=>[a[0]+x.metrics.cal,a[1]+x.metrics.pro,a[2]+x.metrics.carb,a[3]+x.metrics.fat],[0,0,0,0]);
- $("mealRecipeIngredients").innerHTML="<b>مواد لازم:</b><ul>"+rows.map(x=>x.missing?`<li class="warning-text">${esc(x.missing)} — در بانک غذا پیدا نشد</li>`:`<li>${esc(x.f[0])}: ${x.amount} ${esc(x.unit)}</li>`).join("")+"</ul>"+(recipe.note?`<small>${esc(recipe.note)}</small><br>`:"")+`<b>مجموع کل دستور:</b> 🔥 ${total[0].toFixed(0)} kcal | پروتئین ${total[1].toFixed(1)}g | کربوهیدرات ${total[2].toFixed(1)}g | چربی ${total[3].toFixed(1)}g`+(missing.length?'<br><span class="warning-text">برای ثبت، ابتدا مواد جاافتاده را به بانک غذا اضافه کن.</span>':"");
- $("mealFoodPreview").innerHTML="مقدارها برای یک نوبت تهیه دستور هستند. پس از افزودن، هر ماده جداگانه در برنامه غذایی ثبت می‌شود تا مقدار و محاسبات آن شفاف بماند.";
+ const foodOptions=foods.map((f,i)=>'<option value="'+i+'">'+esc(f[0])+'</option>').join("");
+ const units=["گرم","عدد","قاشق غذاخوری","لیوان","میلی‌لیتر","مشت","بشقاب","پیمانه"];
+ let html="<b>مواد دستور (قابل ویرایش):</b>";
+ if(rows.length){
+  html+=rows.map(x=>{
+   const selectedIndex=x.f?foods.indexOf(x.f):-1;
+   const options=foods.map((f,i)=>'<option value="'+i+'" '+(i===selectedIndex?'selected':'')+'>'+esc(f[0])+'</option>').join("");
+   const amount='<input aria-label="مقدار ماده" type="number" min="0.1" step="0.1" value="'+esc(String(x.item.amount))+'" style="width:90px" oninput="changeMealRecipeIngredient('+x.i+',\'amount\',this.value)">';
+   const unit='<select aria-label="واحد ماده" onchange="changeMealRecipeIngredient('+x.i+',\'unit\',this.value)">'+units.map(u=>'<option value="'+u+'" '+(u===x.item.unit?'selected':'')+'>'+u+'</option>').join("")+'</select>';
+   return '<div class="grid2" style="align-items:center;margin:8px 0;padding:8px;border:1px solid #e7dcc6;border-radius:10px"><select aria-label="ماده غذایی" onchange="changeMealRecipeIngredient('+x.i+',\'food\',this.value)">'+options+'</select>'+amount+unit+'<button type="button" class="secondary" onclick="removeMealRecipeIngredient('+x.i+')">حذف</button>'+(x.f&&x.metrics.valid?'<small>🔥 '+x.metrics.cal.toFixed(0)+' kcal | پروتئین '+x.metrics.pro.toFixed(1)+'g</small>':'<small class="warning-text">این ماده در بانک پیدا نشد یا مقدار/واحد قابل محاسبه نیست.</small>')+'</div>';
+  }).join("");
+ }else html+="<p>هنوز ماده‌ای اضافه نشده است.</p>";
+ html+='<div class="grid2" style="margin-top:12px"><select id="mealRecipeAddFood">'+foodOptions+'</select><input id="mealRecipeAddAmount" type="number" min="0.1" step="0.1" value="100" aria-label="مقدار ماده جدید"><select id="mealRecipeAddUnit">'+units.map(u=>'<option value="'+u+'" '+(u==="گرم"?'selected':'')+'>'+u+'</option>').join("")+'</select><button type="button" onclick="addMealRecipeIngredient()">➕ افزودن ماده</button></div>';
+ if(recipe.note)html+='<small>'+esc(recipe.note)+'</small><br>';
+ html+='<b>مجموع مواد قابل محاسبه:</b> 🔥 '+total[0].toFixed(0)+' kcal | پروتئین '+total[1].toFixed(1)+'g | کربوهیدرات '+total[2].toFixed(1)+'g | چربی '+total[3].toFixed(1)+'g';
+ $("mealRecipeIngredients").innerHTML=html;
+ $("mealFoodPreview").innerHTML="مقدار مواد را تغییر بده، هر ماده را حذف کن یا از بانک غذا ماده دیگری اضافه کن. پس از افزودن، مواد به‌صورت ردیف‌های جداگانه در وعده ثبت می‌شوند؛ بانک غذای اصلی شلوغ نمی‌شود.";
 }
 async function loadNutritionForClient(){
  const requestedTraineeId=currentClient?.id;
@@ -1836,11 +1884,12 @@ async function saveMealFood(){
  if(!currentMealId)return;
  try{
   if($("mealFoodMode").value==="recipe"){
-   const recipe=MEAL_RECIPES[+$("mealRecipeSelect").value],rows=recipe?mealRecipeRows(recipe):[];
-   if(!recipe||!rows.length||rows.some(x=>!x.f||!x.metrics.valid)){alert("یکی از مواد دستور در بانک غذا موجود نیست یا مقدار آن قابل محاسبه نیست.");return;}
+   const recipe=ensureMealRecipeDraft();
+   const rows=mealRecipeDraft.map(item=>{const f=foods.find(x=>x[0]===item.name);return {item,f,metrics:f?foodMetrics({name:f[0],calories:f[1],protein:f[2],carbs:f[3],fat:f[4]},Number(item.amount),item.unit):{valid:false}};});
+   if(!recipe||!rows.length||rows.some(x=>!x.f||!x.metrics.valid||!Number.isFinite(Number(x.item.amount))||Number(x.item.amount)<=0)){alert("همه مواد باید از بانک غذا انتخاب شده و مقدار و واحد قابل محاسبه داشته باشند. مواد نامعتبر را اصلاح یا حذف کن.");return;}
    const label="[دستور ترکیبی: "+recipe.name+"]";
    const extra=$("mealFoodNote").value.trim();
-   const payload=rows.map(x=>({meal_id:currentMealId,food_id:x.f[5],amount:x.amount,unit:x.unit,notes:[label,extra].filter(Boolean).join(" | ")||null}));
+   const payload=rows.map(x=>({meal_id:currentMealId,food_id:x.f[5],amount:Number(x.item.amount),unit:x.item.unit,notes:[label,extra].filter(Boolean).join(" | ")||null}));
    await sbWrite("/nutrition_meal_foods","POST",payload);
   }else{
    const f=foods[+$("mealFoodSelect").value],amount=+$("mealFoodAmount").value,unit=$("mealFoodUnit").value;
