@@ -10357,7 +10357,7 @@ body.workout-output.workout-compact{
     const name=byId[String(m.trainee_id)]||'شاگرد';
     setCoachNoticeStatus('پیام جدید از «'+name+'» شناسایی شد. برای مشاهده، گفت‌وگوها را باز کنید.');
     if('Notification' in window&&Notification.permission==='granted'&&document.visibilityState==='visible'){
-     try{const note=new Notification('فیتنس سه‌قلعه',{body:name+' برای شما پیام فرستاد.',tag:'seh-chat-'+String(m.trainee_id),renotify:false,data:{trainee_id:String(m.trainee_id)}});note.onclick=()=>{window.focus();if(typeof window.sehOpenCoachChatForTrainee==='function')window.sehOpenCoachChatForTrainee(String(m.trainee_id));note.close();};}catch(noticeError){console.info('Native notification will be enabled with the service worker step.');}
+     try{const note=new Notification('فیتنس سه‌قلعه',{body:name+' برای شما پیام فرستاد.',tag:'seh-chat-'+String(m.trainee_id),renotify:false,data:{trainee_id:String(m.trainee_id)}});note.onclick=()=>{window.focus();if(typeof window.sehOpenCoachTraineeProfile==='function')window.sehOpenCoachTraineeProfile(String(m.trainee_id));note.close();};}catch(noticeError){console.info('Native notification will be enabled with the service worker step.');}
     }
    }
    if(coachNoticeSeen.size>300)coachNoticeSeen=new Set(Array.from(coachNoticeSeen).slice(-150));
@@ -10457,20 +10457,59 @@ body.workout-output.workout-compact{
  }
  window.sehOpenCoachChat=()=>openChat('coach');
  window.sehOpenCoachChatForTrainee=async id=>{
-  // Open the requested trainee first instead of loading another conversation before it.
+  // Explicit chat-card action: open the conversation for the selected trainee.
   await openChat('coach',String(id));
  };
+ window.sehOpenCoachTraineeProfile=async id=>{
+  const targetId=String(id||'');
+  if(!/^[0-9a-f-]{36}$/i.test(targetId))return;
+  const profile=(typeof authProfile!=='undefined'&&authProfile)?authProfile:window.authProfile;
+  if(!profile||profile.role!=='coach')return;
+  try{
+   const user=await currentAuthUser();
+   const check=await window.AUTH_SUPABASE.from('trainees').select('id,coach_user_id').eq('id',targetId).eq('coach_user_id',user.id).maybeSingle();
+   if(check.error)throw check.error;
+   if(!check.data)throw new Error('این پرونده به حساب مربی فعلی متصل نیست یا دسترسی آن مجاز نیست.');
+   if(typeof window.loadClients==='function')await window.loadClients();
+   let record=Array.isArray(clients)?clients.find(x=>String(x.id)===targetId):null;
+   if(!record){
+    await new Promise(resolve=>setTimeout(resolve,350));
+    record=Array.isArray(clients)?clients.find(x=>String(x.id)===targetId):null;
+   }
+   if(!record||typeof window.selectClient!=='function')throw new Error('پرونده شاگرد بارگذاری نشد. فهرست شاگردان را بررسی و دوباره تلاش کنید.');
+   await window.selectClient(targetId);
+   ensureCoachProfileChatCard();
+  }catch(e){
+   console.error('Open trainee profile from notification failed',e);
+   setCoachNoticeStatus('بازکردن پرونده شاگرد انجام نشد: '+(e.message||'خطای نامشخص'));
+   window.showSection('coach');
+  }
+ };
+ function ensureCoachProfileChatCard(){
+  const profile=(typeof authProfile!=='undefined'&&authProfile)?authProfile:window.authProfile;
+  const section=$('client');
+  if(!section||!profile||profile.role!=='coach')return;
+  let card=$('sehChatProfileCard');
+  if(!card){
+   card=document.createElement('div');card.id='sehChatProfileCard';card.className='card';
+   card.innerHTML='<h2>💬 گفت‌وگو با این شاگرد</h2><p class="muted">پیام‌های همین شاگرد را بدون خروج از پرونده‌اش باز کنید.</p><button type="button" id="sehChatOpenProfileConversation">باز کردن گفت‌وگو</button>';
+   const first=section.querySelector('.card');
+   if(first)first.insertAdjacentElement('beforebegin',card);else section.prepend(card);
+  }
+  const button=$('sehChatOpenProfileConversation');
+  if(button&&!button.dataset.bound){button.dataset.bound='1';button.addEventListener('click',()=>{if(currentClient?.id)window.sehOpenCoachChatForTrainee(String(currentClient.id));else alert('ابتدا یک شاگرد را انتخاب کنید.');});}
+ }
  // Handle a notification click while this app page is already open.
  if('serviceWorker' in navigator&&!window.sehChatNotificationMessageBound){
   window.sehChatNotificationMessageBound=true;
   navigator.serviceWorker.addEventListener('message',event=>{
    const data=event.data||{};
    if(data.type==='OPEN_CHAT_TRAINEE'&&/^[0-9a-f-]{36}$/i.test(String(data.trainee_id||''))){
-    window.sehOpenCoachChatForTrainee(String(data.trainee_id));
+    window.sehOpenCoachTraineeProfile(String(data.trainee_id));
    }
   });
  }
- // Open the requested trainee conversation after login when launched from a push notification.
+ // Open the requested trainee's full profile after login when launched from a push notification.
  (function handleChatNotificationRoute(){
   let requestedId='';
   try{requestedId=new URL(window.location.href).searchParams.get('openChatTrainee')||'';}catch(e){}
@@ -10479,13 +10518,13 @@ body.workout-output.workout-compact{
   const timer=setInterval(async function(){
    attempts++;
    const profile=(typeof authProfile!=='undefined'&&authProfile)?authProfile:window.authProfile;
-   if(profile&&profile.role==='coach'&&typeof window.sehOpenCoachChatForTrainee==='function'){
+   if(profile&&profile.role==='coach'&&typeof window.sehOpenCoachTraineeProfile==='function'){
     clearInterval(timer);
     try{
      const url=new URL(window.location.href);url.searchParams.delete('openChatTrainee');
      window.history.replaceState({},'',url.pathname+url.search+url.hash);
     }catch(e){}
-    await window.sehOpenCoachChatForTrainee(requestedId);
+    await window.sehOpenCoachTraineeProfile(requestedId);
    }else if(attempts>=60){clearInterval(timer);}
   },500);
  })();
@@ -10496,7 +10535,7 @@ body.workout-output.workout-compact{
   mode=profile.role==='coach'?'coach':'trainee';addEntryCard();
  }
  function install(){
-  ensureSection();refreshEntry();
+  ensureSection();refreshEntry();ensureCoachProfileChatCard();
   const noticeButton=$('sehEnableChatNotices');if(noticeButton&&!noticeButton.dataset.bound){noticeButton.dataset.bound='1';noticeButton.addEventListener('click',enableCoachNotices);}
   const profile=(typeof authProfile!=='undefined'&&authProfile)?authProfile:window.authProfile;
   if(profile?.role==='coach'&&!coachNoticeTimer)startCoachNoticePolling(false);
