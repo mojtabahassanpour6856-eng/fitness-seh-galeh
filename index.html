@@ -11298,4 +11298,62 @@ body.workout-output.workout-compact{
 #clientList .coach-name-cell.selected{background:#f2dfaa;border-color:#a98228;box-shadow:inset 0 0 0 1px #a98228}
 #clientList .coach-name-cell:focus-visible{outline:2px solid #a98228;outline-offset:2px}
 </style>
+<!-- FINAL COACH LOGIN RECOVERY: isolated from optional dashboard scripts -->
+<script id="seh-coach-login-recovery-20261015">
+(function(){
+  function showError(message){
+    var el=document.getElementById('authError');
+    if(el){el.textContent=message||'ورود انجام نشد.';el.style.display='block';}
+    console.error('[coach-login-recovery]',message);
+  }
+  window.loginApp=async function(){
+    var emailEl=document.getElementById('loginEmail'),passEl=document.getElementById('loginPassword');
+    var email=(emailEl&&emailEl.value||'').trim(),password=passEl&&passEl.value||'';
+    if(!email||!password){showError('ایمیل و رمز عبور را وارد کنید.');return;}
+    var btn=document.querySelector('#coachLoginBox button');
+    var oldText=btn&&btn.textContent;
+    if(btn){btn.disabled=true;btn.textContent='در حال ورود…';}
+    try{
+      var client=window.AUTH_SUPABASE;
+      if(!client||!client.auth){
+        if(!window.supabase||typeof window.supabase.createClient!=='function')throw new Error('کتابخانه اتصال بارگذاری نشده است. اینترنت را بررسی و صفحه را دوباره باز کنید.');
+        if(typeof SUPABASE_URL==='undefined'||typeof SUPABASE_KEY==='undefined')throw new Error('تنظیمات اتصال پایگاه داده بارگذاری نشده است.');
+        client=window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
+        window.AUTH_SUPABASE=client;
+      }
+      var signed=await client.auth.signInWithPassword({email:email,password:password});
+      if(signed.error)throw signed.error;
+      var user=signed.data&&signed.data.user;
+      if(!user)throw new Error('ورود تأیید شد اما اطلاعات حساب دریافت نشد.');
+      var profileResult=await client.from('profiles').select('*').eq('id',user.id).limit(1);
+      if(profileResult.error)throw profileResult.error;
+      var profile=profileResult.data&&profileResult.data[0];
+      if(!profile)throw new Error('حساب وارد شد اما پروفایل مربی در جدول profiles پیدا نشد. شناسه حساب: '+user.id);
+      if(profile.role==='trainee'){
+        if(typeof window.setupTraineeAuth==='function'){await window.setupTraineeAuth(user);return;}
+        throw new Error('این حساب نقش شاگرد دارد؛ مسیر ورود شاگرد هنوز آماده نیست.');
+      }
+      document.body.classList.remove('locked');
+      var screen=document.getElementById('authScreen');if(screen)screen.style.display='none';
+      var bar=document.getElementById('authUserBar');if(bar)bar.style.display='block';
+      var userText=document.getElementById('authUserText');if(userText)userText.textContent=(profile.full_name||user.email||email)+' | مربی';
+      document.querySelectorAll('.nav button').forEach(function(b){b.style.display='block';});
+      if(typeof window.showSection==='function'){
+        var nav=Array.from(document.querySelectorAll('.nav button')).find(function(b){return String(b.getAttribute('onclick')||'').includes("'coach'");});
+        window.showSection('coach',nav||null);
+      }
+      if(typeof window.loadClients==='function')await window.loadClients();
+      else throw new Error('ورود انجام شد، اما تابع بارگذاری فهرست شاگردان آماده نیست.');
+      if(typeof window.loadExercises==='function')try{await window.loadExercises();}catch(e){console.warn('بارگذاری حرکات انجام نشد',e);}
+      if(typeof window.loadLibraryExercises==='function')try{await window.loadLibraryExercises();}catch(e){console.warn('بارگذاری بانک حرکات انجام نشد',e);}
+      var err=document.getElementById('authError');if(err)err.style.display='none';
+    }catch(e){
+      console.error(e);
+      showError(e&&e.message?e.message:String(e));
+    }finally{
+      if(btn){btn.disabled=false;btn.textContent=oldText||'🔐 ورود مربی';}
+    }
+  };
+})();
+</script>
 </body></html>
