@@ -11507,7 +11507,25 @@ body.workout-output.workout-compact{
       alert(archived?'شاگرد با موفقیت بایگانی شد؛ اطلاعاتش حذف نشده است.':'شاگرد با موفقیت به فهرست فعال برگشت.');
     }catch(e){
       console.error('Trainee archive action failed:',e);
-      alert((archived?'بایگانی شاگرد':'بازگردانی شاگرد')+' انجام نشد.\n'+(e&&e.message?e.message:String(e)));
+      alert((archived?'بایگانی شاگرد':'بازگردانی شاگرد')+' انجام نشد.\\n'+(e&&e.message?e.message:String(e)));
+    }
+  }
+  async function deleteArchived(id,name){
+    if(!window.confirm('هشدار مهم: پرونده «'+name+'» و تمام سوابق مرتبط با آن از پایگاه داده برای همیشه حذف می‌شود. این کار قابل بازگشت نیست. ادامه می‌دهید؟'))return;
+    var typed=window.prompt('برای تأیید حذف دائمی، نام شاگرد را دقیقاً وارد کنید:\\n'+name);
+    if(typed===null||typed.trim()!==String(name).trim()){
+      alert('نام دقیق مطابقت نداشت؛ حذف انجام نشد.');
+      return;
+    }
+    try{
+      if(typeof window.sbWrite!=='function')throw new Error('اتصال امن دیتابیس آماده نیست؛ دوباره وارد پنل مربی شوید.');
+      var result=await window.sbWrite('/trainees?id=eq.'+encodeURIComponent(id)+'&archived_at=not.is.null','DELETE',null);
+      if(!Array.isArray(result)||!result.length)throw new Error('سرور حذف پرونده را تأیید نکرد؛ ممکن است شاگرد بایگانی نشده باشد یا مجوز کافی وجود نداشته باشد.');
+      if(typeof window.loadClients==='function')await window.loadClients();
+      alert('پرونده شاگرد و سوابق مرتبط با آن از پایگاه داده حذف شد.');
+    }catch(e){
+      console.error('Permanent trainee deletion failed:',e);
+      alert('حذف دائمی انجام نشد.\\n'+(e&&e.message?e.message:String(e)));
     }
   }
   var originalRender=window.renderClients;
@@ -11529,15 +11547,26 @@ body.workout-output.workout-compact{
       var row=document.createElement('div');row.className='trainee-archive-row';
       row.style.cssText='display:flex;align-items:stretch;gap:6px;width:100%;min-width:0;';
       btn.style.cssText+=';flex:1;min-width:0;text-align:right;';
-      var action=document.createElement('button');action.type='button';action.className='secondary';
-      action.style.cssText='flex:0 0 auto;max-width:112px;padding:7px 9px;font-size:11px;white-space:normal;';
-      action.textContent=mode==='archived'?'↩️ بازگردانی':'📦 بایگانی';
-      action.setAttribute('aria-label',(mode==='archived'?'بازگردانی ':'بایگانی ')+(c.name||'شاگرد'));
-      action.addEventListener('click',function(ev){ev.preventDefault();ev.stopPropagation();setArchived(id,mode!=='archived',c.name||'بدون نام');});
-      btn.parentNode.replaceChild(row,btn);row.appendChild(btn);row.appendChild(action);
+      var actions=document.createElement('div');
+      actions.style.cssText='display:flex;flex-wrap:wrap;align-items:center;gap:5px;flex:0 0 auto;';
+      function makeAction(label,aria,handler,danger){
+        var action=document.createElement('button');action.type='button';action.className='secondary';
+        action.style.cssText='padding:7px 8px;font-size:11px;white-space:normal;'+(danger?'background:#b91c1c!important;color:#fff!important;border-color:#b91c1c!important;':'');
+        action.textContent=label;action.setAttribute('aria-label',aria);
+        action.addEventListener('click',function(ev){ev.preventDefault();ev.stopPropagation();handler();});
+        actions.appendChild(action);
+      }
+      var traineeName=c.name||'بدون نام';
+      if(mode==='archived'){
+        makeAction('↩️ بازگردانی','بازگردانی '+traineeName,function(){setArchived(id,false,traineeName);},false);
+        makeAction('🗑️ حذف دائمی','حذف دائمی '+traineeName,function(){deleteArchived(id,traineeName);},true);
+      }else{
+        makeAction('📦 بایگانی','بایگانی '+traineeName,function(){setArchived(id,true,traineeName);},false);
+      }
+      btn.parentNode.replaceChild(row,btn);row.appendChild(btn);row.appendChild(actions);
     });
     var hint=el('traineeArchiveHint');
-    if(hint)hint.textContent=mode==='archived'?'فقط شاگردان بایگانی‌شده؛ برای بازگشت، «بازگردانی» را بزن.':'شاگرد را بایگانی کن تا از فهرست فعال خارج شود؛ اطلاعات حذف نمی‌شود.';
+    if(hint)hint.textContent=mode==='archived'?'بازگردانی، شاگرد را فعال می‌کند؛ حذف دائمی، پرونده و سوابق دیتابیس را پاک می‌کند.':'شاگرد را بایگانی کن تا از فهرست فعال خارج شود؛ اطلاعات حذف نمی‌شود.';
   };
   var style=document.createElement('style');style.textContent='#clientList #coachMobileCards .trainee-archive-row{grid-column:1/-1}#traineeArchiveControls button.active{background:#ffbd16!important;color:#111!important;border-color:#ffbd16!important}';document.head.appendChild(style);
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',ensureControls);else ensureControls();
