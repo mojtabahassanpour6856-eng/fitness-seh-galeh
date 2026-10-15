@@ -10768,5 +10768,44 @@ body.workout-output.workout-compact{
  }
 })();
 </script>
+<script id="SEH_ACTIVITY_CARD_ISOLATION_FIX">
+(function(){
+  function currentRole(){
+    try{if(typeof authProfile!=='undefined'&&authProfile)return authProfile.role||null;}catch(e){}
+    return window.authProfile&&window.authProfile.role||null;
+  }
+  var previousDash=window.dashOpen;
+  window.dashOpen=function(section){
+    if(section!=='activity'||currentRole()!=='trainee'){
+      return typeof previousDash==='function'?previousDash.apply(this,arguments):undefined;
+    }
+    var panel=document.getElementById('activityDailyPanel');
+    if(!panel)return;
+    var host=document.getElementById('activitySection');
+    if(!host){
+      host=document.createElement('section');
+      host.id='activitySection';
+      host.className='section';
+      var page=document.querySelector('.page'),nav=document.querySelector('.nav');
+      if(page&&nav)page.insertBefore(host,nav.nextSibling);else document.body.appendChild(host);
+    }
+    if(panel.parentElement!==host)host.appendChild(panel);
+    Array.from(host.children).forEach(function(child){if(child!==panel)child.remove();});
+    document.querySelectorAll('.section').forEach(function(sec){
+      sec.classList.remove('active');
+      sec.style.setProperty('display','none','important');
+    });
+    host.classList.add('active');
+    host.style.setProperty('display','block','important');
+    panel.style.setProperty('display','block','important');
+    document.querySelectorAll('.nav button').forEach(function(btn){btn.classList.remove('active');});
+    var navButton=document.getElementById('navDash');
+    if(navButton)navButton.classList.add('active');
+    if(typeof window.previewActivityCalories==='function')window.previewActivityCalories();
+    if(typeof window.loadActivityToday==='function')window.loadActivityToday();
+    host.scrollIntoView({behavior:'smooth',block:'start'});
+  };
+})();
+</script>
 </body></html>
 
