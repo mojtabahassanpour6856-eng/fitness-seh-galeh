@@ -2297,7 +2297,7 @@ if($("prDate"))$("prDate").value=today();if($("anDate"))$("anDate").value=today(
         const description=String(row.description||'');
         return description.startsWith('رژیم‌غذایی::')||
           (!description.startsWith('STUDENT_DIET_REQUEST:')&&
-           !description.startsWith('DIET_CONFIG:')&&/^نوع\\s/.test(description));
+           !description.startsWith('DIET_CONFIG:')&&/^نوع\s/.test(description));
       });
       setText('dashMeal',hasNutritionPlan||hasAssignedDiet?'برنامه فعال':'ثبت نشده');
     }catch(e){setText('dashMeal','وضعیت در دسترس نیست');}
