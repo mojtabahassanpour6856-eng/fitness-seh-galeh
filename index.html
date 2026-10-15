@@ -276,6 +276,30 @@ body.library-room .library-inline-add button{position:relative!important;z-index
  #workoutList>.meal-card .meal-head h3{font-size:11px!important}
 }
 </style>
+
+<style id="seh-auth-mobile-scroll-fix">
+/* MOBILE AUTH SCROLL FIX: keep the whole login form scrollable on short phone screens */
+html:has(#authScreen:not([style*="display: none"])){min-height:100%;overflow:hidden!important}
+body.locked{overflow:hidden!important}
+#authScreen{
+  position:fixed!important;inset:0!important;
+  display:flex;flex-direction:column;align-items:center!important;justify-content:flex-start!important;
+  overflow-x:hidden!important;overflow-y:auto!important;
+  height:100vh;height:100dvh;max-height:100vh;max-height:100dvh;
+  box-sizing:border-box!important;padding:12px 12px 28px!important;
+  -webkit-overflow-scrolling:touch!important;overscroll-behavior-y:contain!important;
+  touch-action:pan-y!important;pointer-events:auto!important;
+}
+#authScreen .auth-card{
+  flex:0 0 auto!important;width:min(430px,100%)!important;max-width:100%!important;
+  max-height:none!important;height:auto!important;overflow:visible!important;
+  margin:0 auto 12px!important;box-sizing:border-box!important;
+  touch-action:pan-y!important;pointer-events:auto!important;
+}
+#authScreen .auth-card *{touch-action:pan-y}
+#authScreen input,#authScreen select,#authScreen button{touch-action:manipulation!important}
+#authScreen .trainee-auth-block{flex:0 0 auto!important}
+</style>
 </head>
 <body class="locked">
 <div id="authScreen">
