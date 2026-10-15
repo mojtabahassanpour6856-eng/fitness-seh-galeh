@@ -4427,30 +4427,37 @@ window.toggleExerciseFavorite=async function(id,value){try{await sbWrite(`/train
     }catch(e){alert('گرفتن گزارش اتصال ناموفق بود.\n'+(e.message||String(e)));}
   };
   window.updateStats=async function(){
-    const total=Array.isArray(clients)?clients.length:0;
-    const active=(Array.isArray(clients)?clients:[]).filter(c=>c.active!==false).length;
+    const currentClients=Array.isArray(clients)?clients:[];
+    const total=currentClients.length;
+    const active=currentClients.filter(c=>c.active!==false).length;
+    const baseAlerts=new Set(currentClients.filter(c=>!c.weight||!c.goal||!c.phone||c.membershipStatus==='منقضی').map(c=>String(c.id))).size;
+    // Update the visible counters immediately; network work below must not block the coach dashboard.
+    if(el('clientCount'))el('clientCount').textContent=fa(total);
+    if(el('activeCount'))el('activeCount').textContent=fa(active);
+    if(el('alertCount'))el('alertCount').textContent=fa(baseAlerts);
     let workoutRows=[],nutritionRows=[];
-    /* Query each table independently so a nutrition-table/RLS error cannot disable workout renewal alerts. */
-    try{
-      workoutRows=await window.sbGet('/trainee_workout_plans?select=id,trainee_id,plan_date,created_at&order=created_at.desc');
-      if(!Array.isArray(workoutRows))workoutRows=[];
-    }catch(e){
-      console.warn('خواندن تاریخ‌های برنامه تمرینی ناموفق بود؛ تلاش با تاریخ ثبت:',e);
+    // Fetch both summary datasets at the same time instead of waiting for one after the other.
+    const results=await Promise.allSettled([
+      window.sbGet('/trainee_workout_plans?select=trainee_id,plan_date,created_at&order=created_at.desc'),
+      window.sbGet('/nutrition_plans?select=trainee_id')
+    ]);
+    if(results[0].status==='fulfilled'&&Array.isArray(results[0].value)){
+      workoutRows=results[0].value;
+    }else{
+      console.warn('دریافت خلاصه برنامه‌های تمرینی ناموفق بود:',results[0].reason);
       try{
-        workoutRows=await window.sbGet('/trainee_workout_plans?select=id,trainee_id,created_at&order=created_at.desc');
+        workoutRows=await window.sbGet('/trainee_workout_plans?select=trainee_id,created_at&order=created_at.desc');
         if(!Array.isArray(workoutRows))workoutRows=[];
-      }catch(e2){console.warn('برنامه‌های تمرینی برای هشدار تمدید در دسترس نیستند:',e2);workoutRows=[];}
+      }catch(e){workoutRows=[];}
     }
-    try{
-      nutritionRows=await window.sbGet('/nutrition_plans?select=id,trainee_id');
-      if(!Array.isArray(nutritionRows))nutritionRows=[];
-    }catch(e){console.warn('فهرست برنامه‌های غذایی در شمارش برنامه‌ها در دسترس نیست:',e);}
+    if(results[1].status==='fulfilled'&&Array.isArray(results[1].value)){
+      nutritionRows=results[1].value;
+    }else{
+      console.warn('دریافت خلاصه برنامه‌های غذایی ناموفق بود:',results[1].reason);
+    }
     const ids=new Set([...workoutRows,...nutritionRows].filter(x=>x&&x.trainee_id!=null).map(x=>String(x.trainee_id)));
-    const planCount=ids.size;
+    currentClients.forEach(c=>c.plans=ids.has(String(c.id))?1:0);
     const todayKey=workoutLocalDateKey(),todayMs=Date.parse(todayKey+'T00:00:00Z');
-    /* Prefer an explicitly saved plan_date over created_at.
-       Otherwise, a newer duplicate row with an empty plan_date can hide the trainee's real start date
-       and incorrectly remove the red renewal dot. Only fall back to created_at if no dated plan exists. */
     const newestByTrainee=new Map();
     const explicitPlanDate=p=>String(p?.plan_date||'').slice(0,10);
     workoutRows.slice().sort((a,b)=>{
@@ -4467,34 +4474,16 @@ window.toggleExerciseFavorite=async function(id,value){try{await sbWrite(`/train
       const start=explicitPlanDate(p)||String(p?.created_at||'').slice(0,10);
       if(!start)return;
       const startMs=Date.parse(start+'T00:00:00Z');
-      if(!Number.isFinite(startMs))return;
-      if(Math.floor((todayMs-startMs)/86400000)>=25)dueIds.add(id);
+      if(Number.isFinite(startMs)&&Math.floor((todayMs-startMs)/86400000)>=25)dueIds.add(id);
     });
-    /* Safety fallback: if the bulk list misses a trainee's dated plan (for example due to a partial/RLS-limited response),
-       ask for that trainee's own most recent dated plan before deciding there is no renewal alert. */
-    if(Array.isArray(clients)&&clients.length){
-      const missing=clients.filter(c=>c&&c.id!=null&&!dueIds.has(String(c.id)));
-      for(let i=0;i<missing.length;i+=4){
-        await Promise.all(missing.slice(i,i+4).map(async c=>{
-          try{
-            const rows=await window.sbGet('/trainee_workout_plans?trainee_id=eq.'+encodeURIComponent(String(c.id))+'&select=id,trainee_id,plan_date,created_at&order=plan_date.desc.nullslast,created_at.desc&limit=10');
-            if(!Array.isArray(rows)||!rows.length)return;
-            const dated=rows.filter(p=>explicitPlanDate(p)).sort((a,b)=>explicitPlanDate(b).localeCompare(explicitPlanDate(a)));
-            const p=dated[0]||rows.slice().sort((a,b)=>String(b.created_at||'').localeCompare(String(a.created_at||'')))[0];
-            const start=explicitPlanDate(p)||String(p?.created_at||'').slice(0,10);
-            const startMs=Date.parse(start+'T00:00:00Z');
-            if(Number.isFinite(startMs)&&Math.floor((todayMs-startMs)/86400000)>=25)dueIds.add(String(c.id));
-          }catch(e){console.warn('بررسی جداگانه تاریخ تمدید برنامه ناموفق بود:',c.id,e);}
-        }));
-      }
-    }
+    // Removed the old per-trainee fallback loop: it could issue up to 26+ sequential
+    // network requests on every dashboard refresh. The bulk result above is the fast path.
     window.__sehWorkoutRenewalDueIds=dueIds;
-    (Array.isArray(clients)?clients:[]).forEach(c=>c.plans=ids.has(String(c.id))?1:0);
-    /* Reapply badges after every asynchronous refresh, even if the list rendered before the query completed. */
+    const clientById=new Map(currentClients.map(c=>[String(c.id),c]));
     document.querySelectorAll('#clientList .coach-name-cell[data-trainee-id]').forEach(btn=>{
       const id=String(btn.getAttribute('data-trainee-id')||'');
       const due=dueIds.has(id);
-      const client=(Array.isArray(clients)?clients:[]).find(c=>String(c.id)===id);
+      const client=clientById.get(id);
       const name=(client&&client.name)||btn.querySelector('.workout-renewal-dot')?.nextSibling?.textContent?.trim()||btn.textContent.replace('🔴','').trim()||'بدون نام';
       btn.classList.toggle('workout-renewal-due',due);
       let dot=btn.querySelector('.workout-renewal-dot');
@@ -4506,12 +4495,10 @@ window.toggleExerciseFavorite=async function(id,value){try{await sbWrite(`/train
       btn.setAttribute('aria-label','انتخاب شاگرد '+name+(due?'؛ تمدید برنامه تمرینی':''));
     });
     const alerts=new Set([
-      ...(Array.isArray(clients)?clients:[]).filter(c=>!c.weight||!c.goal||!c.phone||c.membershipStatus==='منقضی').map(c=>String(c.id)),
+      ...currentClients.filter(c=>!c.weight||!c.goal||!c.phone||c.membershipStatus==='منقضی').map(c=>String(c.id)),
       ...Array.from(dueIds)
     ]).size;
-    if(el('clientCount'))el('clientCount').textContent=fa(total);
-    if(el('activeCount'))el('activeCount').textContent=fa(active);
-    if(el('planCount'))el('planCount').textContent=fa(planCount);
+    if(el('planCount'))el('planCount').textContent=fa(ids.size);
     if(el('alertCount'))el('alertCount').textContent=fa(alerts);
   };
   window.loadClients=async function(){
