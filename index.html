@@ -10843,9 +10843,13 @@ body.workout-output.workout-compact{
    });
    ['goalBox','coachActivityTodayPanel'].forEach(function(id){
     var el=document.getElementById(id);
-    if(el&&panel.contains(el))el.remove();
-    else if(el){el.style.setProperty('display','none','important');el.style.setProperty('visibility','hidden','important');el.hidden=true;}
+    if(el&&panel.contains(el)){
+     var client=document.getElementById('client');
+     if(client&&el!==panel&&!client.contains(el))client.appendChild(el);
+     else if(el!==panel)el.classList.add('seh-activity-hidden-card');
+    }else if(el){el.style.setProperty('display','none','important');el.style.setProperty('visibility','hidden','important');el.hidden=true;}
    });
+   isolateProfileGoalCards(panel);
    var preview=document.getElementById('goalStructuredPreview');
    if(preview&&panel.contains(preview)){var goalCard=preview.closest('.card');if(goalCard)goalCard.remove();else preview.remove();}
    // Remove profile/goal cards even when nested inside intermediate containers.
@@ -10864,6 +10868,39 @@ body.workout-output.workout-compact{
    var nav=document.getElementById('navDash');if(nav)nav.classList.add('active');
   } finally {busy=false;}
  }
+ function restoreHiddenCards(){
+  document.querySelectorAll('.seh-activity-hidden-card').forEach(function(el){el.classList.remove('seh-activity-hidden-card');});
+ }
+ function isolateProfileGoalCards(panel){
+  var style=document.getElementById('sehActivityIsolationStyle');
+  if(!style){style=document.createElement('style');style.id='sehActivityIsolationStyle';style.textContent='.seh-activity-hidden-card{display:none!important;visibility:hidden!important}';document.head.appendChild(style);}
+  var client=document.getElementById('client');
+  // Return any profile/goal card accidentally nested in the activity panel to the real profile section.
+  if(panel){
+   Array.from(panel.querySelectorAll('.card')).forEach(function(card){
+    var h=card.querySelector(':scope > h2,:scope > h3')||card.querySelector('h2,h3');
+    if(h&&/پروفایل شاگرد|پروفایل شخصی|پروفایل من|هدف ثبت.?شده شاگرد/.test(h.textContent||'')){
+     if(client&&card!==panel&&!client.contains(card))client.appendChild(card);
+     else if(!client||card===panel)card.classList.add('seh-activity-hidden-card');
+    }
+   });
+   ['pn','pweight','pheight','pgoal','goalStructuredPreview'].forEach(function(id){
+    var field=document.getElementById(id);
+    if(field&&panel.contains(field)){
+     var card=field.closest('.card');
+     if(card&&card!==panel&&client&&!client.contains(card))client.appendChild(card);
+     else if(card===panel&&field.parentElement)field.parentElement.classList.add('seh-activity-hidden-card');
+    }
+   });
+  }
+  // Suppress floating/duplicate profile and goal cards while the activity view is open.
+  document.querySelectorAll('body .card, body .v4-card').forEach(function(card){
+   if(card===panel||(panel&&panel.contains(card)))return;
+   var h=card.querySelector(':scope > h2,:scope > h3')||card.querySelector('h2,h3');
+   var title=(h?h.textContent:card.textContent)||'';
+   if(/پروفایل شاگرد|پروفایل شخصی|پروفایل من|هدف ثبت.?شده شاگرد/.test(title))card.classList.add('seh-activity-hidden-card');
+  });
+ }
  var oldDash=window.dashOpen;
  window.dashOpen=function(section){
   if(section==='activity'&&role()==='trainee'){
@@ -10874,7 +10911,7 @@ body.workout-output.workout-compact{
    var host=document.getElementById('activitySection');if(host)host.scrollIntoView({behavior:'smooth',block:'start'});
    return;
   }
-  if(section!=='activity')activityView=false;
+  if(section!=='activity'){activityView=false;restoreHiddenCards();}
   return typeof oldDash==='function'?oldDash.apply(this,arguments):undefined;
  };
  document.addEventListener('click',function(e){
