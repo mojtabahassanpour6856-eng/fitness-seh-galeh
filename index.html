@@ -1571,7 +1571,7 @@ function filterMealRecipes(){
  const rs=$("mealRecipeSelect"),cat=$("mealRecipeCategory")?.value||"all";if(!rs)return;
  const previous=rs.value;
  const available=MEAL_RECIPES.map((r,i)=>({r,i})).filter(x=>cat==="all"||x.r.category===cat);
- rs.innerHTML=available.map(x=>`<option value="${x.i}">${esc(x.r.name)}</option>`).join("");
+ rs.innerHTML=available.map(x=>`<option value="${x.i}">${x.r.userSaved?"⭐ دستور من | ":""}${esc(x.r.name)}</option>`).join("");
  if(available.some(x=>String(x.i)===previous))rs.value=previous;
  previewMealRecipe();
 }
