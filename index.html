@@ -4535,6 +4535,10 @@ window.toggleExerciseFavorite=async function(id,value){try{await sbWrite(`/train
         home_equipment:c.home_equipment||'',training_days:c.training_days||'',training_time:c.training_time||'',
         createdAt:c.created_at||null,archivedAt:c.archived_at||null,active:!c.archived_at,membershipStatus:'وضعیت نامشخص',plans:0
       }));
+      // Show the trainee list immediately; membership and summary statistics are supplementary.
+      // Do not keep the main coach table waiting for these slower requests.
+      ensureList();
+      window.renderClients();
       // Membership information is supplementary; failure must not erase the trainee list.
       try{
         let memberships=await window.sbGet('/trainee_memberships?select=id,trainee_id,start_date,end_date,status,created_at&order=created_at.desc');
@@ -4546,9 +4550,8 @@ window.toggleExerciseFavorite=async function(id,value){try{await sbWrite(`/train
           c.active=!c.archivedAt&&!expired&&m.status!=='pending';
         });
       }catch(e){console.warn('جدول عضویت در دسترس نیست؛ فهرست شاگردان بدون آن نمایش داده می‌شود.',e);}
-      ensureList();
-      await window.updateStats();
-      window.renderClients();
+      // Refresh counts and renewal indicators in the background after the list is already visible.
+      Promise.resolve().then(()=>window.updateStats()).then(()=>window.renderClients()).catch(e=>console.warn('به‌روزرسانی آمار پنل مربی با تأخیر انجام شد:',e));
     }catch(e){
       console.error('بارگذاری شاگردان ناموفق بود:',e);
       if(list)list.innerHTML='<div style="padding:12px;border:1px solid #8b3535;border-radius:10px;color:#ffaaaa">دریافت شاگردان ناموفق بود:<br>'+esc(e.message||String(e))+'<br><button type="button" onclick="loadClients()">تلاش دوباره</button></div>';
