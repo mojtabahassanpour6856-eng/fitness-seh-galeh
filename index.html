@@ -3988,7 +3988,7 @@ window.toggleExerciseFavorite=async function(id,value){try{await sbWrite(`/train
     const ownedPlanId=same(workoutPlanOwnerId,traineeId)?currentWorkoutPlanId:null;
     const dateInput=byId('workoutStartDate');
     const startDate=String(dateInput?.value||'').trim();
-    if(!/^\\d{4}-\\d{2}-\\d{2}$/.test(startDate)||!Number.isFinite(Date.parse(startDate+'T00:00:00Z'))){alert('تاریخ شروع برنامه معتبر نیست؛ لطفاً تاریخ را دوباره انتخاب کنید.');return;}
+    if(!/^\d{4}-\d{2}-\d{2}$/.test(startDate)||!Number.isFinite(Date.parse(startDate+'T00:00:00Z'))){alert('تاریخ شروع برنامه معتبر نیست؛ لطفاً تاریخ را دوباره انتخاب کنید.');return;}
     const body={trainee_id:traineeId,title:(byId('workoutTitle')?.value||'').trim()||'برنامه تمرینی',plan_date:startDate,goal:(byId('workoutGoal')?.value||'').trim()||null,notes:(byId('workoutNotes')?.value||'').trim()||null};
     try{
       let savedId=ownedPlanId;
