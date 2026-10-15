@@ -4381,13 +4381,18 @@ window.toggleExerciseFavorite=async function(id,value){try{await sbWrite(`/train
     window.__sehWorkoutRenewalDueIds=dueIds;
     (Array.isArray(clients)?clients:[]).forEach(c=>c.plans=ids.has(String(c.id))?1:0);
     /* Reapply badges after every asynchronous refresh, even if the list rendered before the query completed. */
-    document.querySelectorAll('#coachMobileCards .coach-name-cell[data-trainee-id]').forEach(btn=>{
+    document.querySelectorAll('#clientList .coach-name-cell[data-trainee-id]').forEach(btn=>{
       const id=String(btn.getAttribute('data-trainee-id')||'');
       const due=dueIds.has(id);
       const client=(Array.isArray(clients)?clients:[]).find(c=>String(c.id)===id);
-      const name=(client&&client.name)||btn.textContent.replace('🔴','').trim()||'بدون نام';
+      const name=(client&&client.name)||btn.querySelector('.workout-renewal-dot')?.nextSibling?.textContent?.trim()||btn.textContent.replace('🔴','').trim()||'بدون نام';
       btn.classList.toggle('workout-renewal-due',due);
-      btn.textContent=String(name);
+      let dot=btn.querySelector('.workout-renewal-dot');
+      if(due){
+        if(!dot){dot=document.createElement('span');dot.className='workout-renewal-dot';dot.setAttribute('aria-hidden','true');dot.style.cssText='display:inline-block!important;width:9px;height:9px;min-width:9px;border-radius:50%;background:#d71920;margin-left:6px;vertical-align:middle;box-shadow:0 0 0 2px #d7192026;';btn.prepend(dot);}
+      }else if(dot){dot.remove();}
+      const textNode=Array.from(btn.childNodes).find(n=>n.nodeType===3&&n.textContent.trim());
+      if(textNode&&client?.name)textNode.textContent=String(client.name);
       btn.setAttribute('aria-label','انتخاب شاگرد '+name+(due?'؛ تمدید برنامه تمرینی':''));
     });
     const alerts=new Set([
@@ -11271,7 +11276,7 @@ body.workout-output.workout-compact{
 
 <style id="workout-renewal-alert-style">#clientList .coach-name-cell.workout-renewal-due{position:relative;border-color:#c62828!important;background:#fff0f0!important;color:#9f1717!important;box-shadow:inset 0 0 0 1px #c62828!important}#clientList .coach-name-cell.workout-renewal-due::before{content:"";display:inline-block;width:9px;height:9px;min-width:9px;border-radius:50%;background:#d71920;margin-left:5px;vertical-align:middle;box-shadow:0 0 0 2px #d7192026}#clientList .workout-renewal-dot{display:none!important}#workoutStartDateFa{display:block;margin-top:4px;font-size:12px}</style>
 <script id="workout-start-date-jalali-label">(function(){function workoutLocalDateKey(){var d=new Date();return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");}function updateWorkoutStartDateFa(){var el=document.getElementById("workoutStartDate"),out=document.getElementById("workoutStartDateFa");if(!el||!out)return;var v=el.value;if(!v){out.textContent="تاریخ شروع را انتخاب کنید.";return;}try{out.textContent="تاریخ شروع انتخاب‌شده: "+new Intl.DateTimeFormat("fa-IR-u-ca-persian",{year:"numeric",month:"long",day:"numeric",timeZone:"UTC"}).format(new Date(v+"T00:00:00Z"));}catch(e){out.textContent="تاریخ شروع: "+v;}}window.updateWorkoutStartDateFa=updateWorkoutStartDateFa;document.addEventListener("change",function(e){if(e.target&&e.target.id==="workoutStartDate")updateWorkoutStartDateFa();});document.addEventListener("DOMContentLoaded",updateWorkoutStartDateFa);})();</script>
-<script id="workout-renewal-name-badges">(function(){var original=window.renderClients;if(typeof original!=="function")return;window.renderClients=function(){var r=original.apply(this,arguments);setTimeout(function(){var due=window.__sehWorkoutRenewalDueIds instanceof Set?window.__sehWorkoutRenewalDueIds:new Set();document.querySelectorAll("#coachMobileCards .coach-name-cell[data-trainee-id]").forEach(function(btn){var id=btn.getAttribute("data-trainee-id"),name=btn.textContent.replace("🔴","").trim()||"بدون نام",isDue=due.has(String(id));btn.classList.toggle("workout-renewal-due",isDue);btn.textContent=name;btn.setAttribute("aria-label","انتخاب شاگرد "+name+(isDue?"؛ تمدید برنامه تمرینی":""));});},0);return r;};})();</script>
+<script id="workout-renewal-name-badges">(function(){var original=window.renderClients;if(typeof original!=="function")return;window.renderClients=function(){var r=original.apply(this,arguments);setTimeout(function(){var due=window.__sehWorkoutRenewalDueIds instanceof Set?window.__sehWorkoutRenewalDueIds:new Set();document.querySelectorAll("#clientList .coach-name-cell[data-trainee-id]").forEach(function(btn){var id=String(btn.getAttribute("data-trainee-id")||""),isDue=due.has(id),client=(Array.isArray(window.clients)?window.clients:[]).find(function(c){return String(c.id)===id;}),name=(client&&client.name)||btn.textContent.replace("🔴","").trim()||"بدون نام";btn.classList.toggle("workout-renewal-due",isDue);var dot=btn.querySelector(".workout-renewal-dot");if(isDue){if(!dot){dot=document.createElement("span");dot.className="workout-renewal-dot";dot.setAttribute("aria-hidden","true");dot.style.cssText="display:inline-block!important;width:9px;height:9px;min-width:9px;border-radius:50%;background:#d71920;margin-left:6px;vertical-align:middle;box-shadow:0 0 0 2px #d7192026;";btn.prepend(dot);}}else if(dot){dot.remove();}var textNode=Array.from(btn.childNodes).find(function(n){return n.nodeType===3&&n.textContent.trim();});if(textNode)textNode.textContent=String(name);btn.setAttribute("aria-label","انتخاب شاگرد "+name+(isDue?"؛ تمدید برنامه تمرینی":""));});},0);return r;};})();</script>
 <style id="coach-trainee-name-grid">
 /* Scoped only to the trainee list; all other cards and components remain unchanged. */
 #clientList #coachMobileCards.coach-card-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:7px;margin-top:8px}
