@@ -10625,5 +10625,51 @@ body.workout-output.workout-compact{
   };
 })();
 </script>
+
+<script id="SEH_CLIENT_SELECTION_LOAD_DEDUPE_V1">
+(function(){
+  'use strict';
+  if(window.__sehClientSelectionDedupeV1)return;
+  window.__sehClientSelectionDedupeV1=true;
+  const loaderNames=[
+    'loadNutritionForClient','loadWorkoutForClient','loadSupplements','loadInjuries',
+    'loadActivityToday','loadDashboard','loadProgressHistory','loadFastingSummary',
+    'loadGoal','loadMembershipCard','loadWaterGoal','loadWeeklyWaterLogs',
+    'loadNoteHistory','loadMembershipHistory','loadProgressChart','loadActivityWeek',
+    'loadCoachReceipts','loadTraineeMembership','loadDietSummary','loadProgressData',
+    'loadCoachActivityReport'
+  ];
+  let selectionBatch=null;
+  loaderNames.forEach(function(name){
+    const original=window[name];
+    if(typeof original!=='function')return;
+    window[name]=function(){
+      const batch=selectionBatch;
+      if(!batch)return original.apply(this,arguments);
+      let activeId='';
+      try{activeId=String((typeof currentClient!=='undefined'&&currentClient&&currentClient.id)||'');}catch(e){}
+      if(batch.clientId&&activeId&&batch.clientId!==activeId)return original.apply(this,arguments);
+      if(batch.seen.has(name))return batch.seen.get(name);
+      const result=original.apply(this,arguments);
+      const pending=Promise.resolve(result);
+      batch.seen.set(name,pending);
+      pending.catch(function(){if(batch.seen.get(name)===pending)batch.seen.delete(name);});
+      return pending;
+    };
+  });
+  const originalSelect=window.selectClient;
+  if(typeof originalSelect==='function'){
+    window.selectClient=async function(){
+      let clientId=String(arguments[0]??'');
+      if(!clientId){try{clientId=String((typeof currentClient!=='undefined'&&currentClient&&currentClient.id)||'');}catch(e){}}
+      const batch={seen:new Map(),clientId};
+      selectionBatch=batch;
+      try{return await originalSelect.apply(this,arguments);}
+      finally{setTimeout(function(){if(selectionBatch===batch)selectionBatch=null;},350);}
+    };
+  }
+})();
+</script>
+
 </body></html>
 
