@@ -10327,6 +10327,25 @@ body.workout-output.workout-compact{
  }
  window.sehOpenCoachChat=()=>openChat('coach');
  window.sehOpenCoachChatForTrainee=async id=>{await openChat('coach');const t=conversations.find(x=>String(x.id)===String(id));if(t)await selectConversation(t);};
+ // Open the requested trainee conversation after login when launched from a push notification.
+ (function handleChatNotificationRoute(){
+  let requestedId='';
+  try{requestedId=new URL(window.location.href).searchParams.get('openChatTrainee')||'';}catch(e){}
+  if(!requestedId||!/^[0-9a-f-]{36}$/i.test(requestedId))return;
+  let attempts=0;
+  const timer=setInterval(async function(){
+   attempts++;
+   const profile=(typeof authProfile!=='undefined'&&authProfile)?authProfile:window.authProfile;
+   if(profile&&profile.role==='coach'&&typeof window.sehOpenCoachChatForTrainee==='function'){
+    clearInterval(timer);
+    try{
+     const url=new URL(window.location.href);url.searchParams.delete('openChatTrainee');
+     window.history.replaceState({},'',url.pathname+url.search+url.hash);
+    }catch(e){}
+    await window.sehOpenCoachChatForTrainee(requestedId);
+   }else if(attempts>=60){clearInterval(timer);}
+  },500);
+ })();
  window.sehOpenTraineeChat=()=>openChat('trainee');
  function refreshEntry(){
   const profile=(typeof authProfile!=='undefined'&&authProfile)?authProfile:window.authProfile;
