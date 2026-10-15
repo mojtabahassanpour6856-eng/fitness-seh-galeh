@@ -11048,6 +11048,23 @@ body.workout-output.workout-compact{
     if(g.indexOf('افزایش')>=0||g.indexOf('عضله')>=0||g.indexOf('قدرت')>=0||g.indexOf('gain')>=0||g.indexOf('muscle')>=0)return 'gain';
     return 'maintain';
   }
+  function ageFromTrainee(c){
+    if(c.age&&Number(c.age)>0)return Number(c.age);
+    var raw=String(c.birth_date||'').trim();if(!raw)return '';
+    var persian='۰۱۲۳۴۵۶۷۸۹',arabic='٠١٢٣٤٥٦٧٨٩',normalized='';
+    for(var i=0;i<raw.length;i++){var ch=raw.charAt(i),pi=persian.indexOf(ch),ai=arabic.indexOf(ch);normalized+=pi>=0?String(pi):ai>=0?String(ai):ch;}
+    var parts=normalized.split('/');if(parts.length<3)parts=normalized.split('-');if(parts.length<3)parts=normalized.split('.');
+    parts=parts.map(Number);
+    try{
+      if(parts.length>=3&&parts[0]>=1200&&parts[0]<=1600){
+        var nowParts=new Intl.DateTimeFormat('en-u-ca-persian-nu-latn',{year:'numeric',month:'numeric',day:'numeric'}).formatToParts(new Date());
+        var now={};nowParts.forEach(function(p){if(p.type==='year'||p.type==='month'||p.type==='day')now[p.type]=Number(p.value);});
+        return now.year-parts[0]-((now.month<parts[1]||(now.month===parts[1]&&now.day<parts[2]))?1:0);
+      }
+      var d=new Date(raw);if(!Number.isNaN(d.getTime())){var age=new Date().getFullYear()-d.getFullYear();var m=new Date().getMonth()-d.getMonth();if(m<0||(m===0&&new Date().getDate()<d.getDate()))age--;return age;}
+    }catch(e){}
+    return '';
+  }
   window.sehSyncCalorieTrainees=function(){
     var select=el('sehCalClientSelect');if(!select)return;
     var previous=select.value;
@@ -11067,7 +11084,7 @@ body.workout-output.workout-compact{
     if(!c)return;
     el('sehCalName').value=c.name||'';
     el('sehCalSex').value=(String(c.gender||'').indexOf('زن')>=0||String(c.gender||'').toLowerCase()==='female')?'female':'male';
-    el('sehCalAge').value=c.age||'';
+    el('sehCalAge').value=ageFromTrainee(c);
     el('sehCalHeight').value=c.height||'';
     el('sehCalWeight').value=c.weight||'';
     el('sehCalGoal').value=mapGoal(c.goal);
