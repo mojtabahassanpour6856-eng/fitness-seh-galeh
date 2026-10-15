@@ -1117,7 +1117,7 @@ async function loadClients(){
   
   try{
     const r=await fetch(
-      SUPABASE_URL+"/rest/v1/trainees?select=*&order=created_at.desc",
+      SUPABASE_URL+"/rest/v1/trainees?select=id,full_name,phone,gender,birth_date,current_weight,height,goal,training_level,training_history,limitations,training_type,home_equipment,created_at&order=created_at.desc",
       {
         headers:{
           "apikey":SUPABASE_KEY,
@@ -1148,6 +1148,8 @@ async function loadClients(){
       plans:0
     }));
 
+    // Update the four coach summary counts before rendering the full trainee list.
+    updateStats();
     renderClients();
     if(typeof window.sehSyncCalorieTrainees==="function")window.sehSyncCalorieTrainees();
 
