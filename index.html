@@ -1594,7 +1594,7 @@ function previewMealRecipe(){
   html+=rows.map(x=>{
    const selectedIndex=x.f?foods.indexOf(x.f):-1;
    const options=foods.map((f,i)=>'<option value="'+i+'" '+(i===selectedIndex?'selected':'')+'>'+esc(f[0])+'</option>').join("");
-   const amount='<input aria-label="مقدار ماده" type="number" min="0.1" step="0.1" value="'+esc(String(x.item.amount))+'" style="width:90px" oninput="changeMealRecipeIngredient('+x.i+',\'amount\',this.value)">';
+   const amount='<input aria-label="مقدار ماده" type="number" min="0.1" step="0.1" value="'+esc(String(x.item.amount))+'" style="width:90px" onchange="changeMealRecipeIngredient('+x.i+',\'amount\',this.value)">';
    const unit='<select aria-label="واحد ماده" onchange="changeMealRecipeIngredient('+x.i+',\'unit\',this.value)">'+units.map(u=>'<option value="'+u+'" '+(u===x.item.unit?'selected':'')+'>'+u+'</option>').join("")+'</select>';
    return '<div class="grid2" style="align-items:center;margin:8px 0;padding:8px;border:1px solid #e7dcc6;border-radius:10px"><select aria-label="ماده غذایی" onchange="changeMealRecipeIngredient('+x.i+',\'food\',this.value)">'+options+'</select>'+amount+unit+'<button type="button" class="secondary" onclick="removeMealRecipeIngredient('+x.i+')">حذف</button>'+(x.f&&x.metrics.valid?'<small>🔥 '+x.metrics.cal.toFixed(0)+' kcal | پروتئین '+x.metrics.pro.toFixed(1)+'g</small>':'<small class="warning-text">این ماده در بانک پیدا نشد یا مقدار/واحد قابل محاسبه نیست.</small>')+'</div>';
   }).join("");
