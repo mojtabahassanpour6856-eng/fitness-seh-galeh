@@ -7904,8 +7904,8 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
   dialog.style.cssText='width:100%;max-width:680px;margin:auto;background:var(--panel,#101e2d);border:1px solid #c8a34d;border-radius:16px;padding:12px;box-sizing:border-box;box-shadow:0 18px 60px rgba(0,0,0,.45)';
   var top=document.createElement('div');top.style.cssText='display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:10px';
   var title=document.createElement('b');title.textContent='💳 عضویت و شهریه';title.style.cssText='font-size:16px';
-  // دکمه ضربدر از سربرگ حذف شد؛ بستن با لمس فضای بیرون یا کلید Escape همچنان فعال است.
-  top.append(title);
+  var backButton=document.createElement('button');backButton.type='button';backButton.className='secondary';backButton.textContent='⬅️ برگشت';backButton.setAttribute('aria-label','بازگشت به صفحه قبل');backButton.style.cssText='white-space:nowrap;flex-shrink:0;padding:8px 12px';backButton.addEventListener('click',function(){closeMembership();});
+  top.append(title,backButton);
   var content=document.createElement('div');content.id=contentId;
   dialog.append(top,content);overlay.appendChild(dialog);
   overlay.addEventListener('click',function(e){if(e.target===overlay)closeMembership();});
