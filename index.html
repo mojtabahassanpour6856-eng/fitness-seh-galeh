@@ -4235,6 +4235,8 @@ window.toggleExerciseFavorite=async function(id,value){try{await sbWrite(`/train
   const el=id=>document.getElementById(id);
   const esc=v=>typeof esc2==='function'?esc2(v):String(v??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m]));
   const fa=v=>Number(v||0).toLocaleString('fa-IR');
+  /* Local calendar date for workout renewal calculations; keep it inside this IIFE so updateStats can always access it. */
+  const workoutLocalDateKey=()=>{const d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');};
   let filter='all';
   function ensureList(){
     const list=el('clientList'); if(!list)return null;
