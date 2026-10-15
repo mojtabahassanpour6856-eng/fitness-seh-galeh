@@ -10541,7 +10541,7 @@ body.workout-output.workout-compact{
   if(profile?.role==='coach'&&!coachNoticeTimer)startCoachNoticePolling(false);
   const oldFinish=window.finishLogin;
   if(typeof oldFinish==='function'&&!oldFinish.__sehChatWrapped){
-   const wrapped=async function(){const r=await oldFinish.apply(this,arguments);[100,400,900,1800].forEach(ms=>setTimeout(refreshEntry,ms));return r;};
+   const wrapped=async function(){const r=await oldFinish.apply(this,arguments);[100,400,900,1800].forEach(ms=>setTimeout(()=>{refreshEntry();ensureCoachProfileChatCard();},ms));return r;};
    wrapped.__sehChatWrapped=true;window.finishLogin=wrapped;
   }
   const oldShow=window.showSection;
