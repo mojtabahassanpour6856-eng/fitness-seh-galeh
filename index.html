@@ -284,8 +284,8 @@ body.library-room .library-inline-add button{position:relative!important;z-index
     <h2>باشگاه فیتنس سه‌قلعه</h2>
     <p class="muted" style="text-align:center">ورود به سامانه مربی مجتبی</p>
     <div id="authTabs" class="meal-tabs">
-      <button type="button" class="active" id="authCoachTab" onclick="window.authMode?window.authMode('coach'):window.fallbackAuthMode('coach')">👨‍🏫 مربی</button>
-      <button type="button" id="authTraineeTab" onclick="window.authMode?window.authMode('trainee'):window.fallbackAuthMode('trainee')">👤 شاگرد</button>
+      <button type="button" class="active" id="authCoachTab" onclick="if(window.authMode){window.authMode('coach')}else{document.getElementById('coachLoginBox').classList.remove('hide');document.getElementById('traineeLoginBox').classList.add('hide');document.getElementById('authCoachTab').classList.add('active');document.getElementById('authTraineeTab').classList.remove('active');document.getElementById('authError').style.display='none'}">👨‍🏫 مربی</button>
+      <button type="button" id="authTraineeTab" onclick="if(window.authMode){window.authMode('trainee')}else{document.getElementById('coachLoginBox').classList.add('hide');document.getElementById('traineeLoginBox').classList.remove('hide');document.getElementById('authCoachTab').classList.remove('active');document.getElementById('authTraineeTab').classList.add('active');document.getElementById('authError').style.display='none'}">👤 شاگرد</button>
     </div>
     <div id="coachLoginBox">
       <label>ایمیل</label><input id="loginEmail" type="email" autocomplete="username" placeholder="ایمیل مربی">
