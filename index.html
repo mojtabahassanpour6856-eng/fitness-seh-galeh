@@ -283,9 +283,34 @@ body.library-room .library-inline-add button{position:relative!important;z-index
     <div class="auth-logo">🏋️</div>
     <h2>باشگاه فیتنس سه‌قلعه</h2>
     <p class="muted" style="text-align:center">ورود به سامانه مربی مجتبی</p>
-    <label>ایمیل</label><input id="loginEmail" type="email" autocomplete="username" placeholder="ایمیل">
-    <label>رمز عبور</label><input id="loginPassword" type="password" autocomplete="current-password" placeholder="رمز عبور">
-    <button onclick="loginApp()">🔐 ورود</button>
+    <div id="authTabs" class="meal-tabs">
+      <button type="button" class="active" id="authCoachTab" onclick="window.authMode?window.authMode('coach'):window.fallbackAuthMode('coach')">👨‍🏫 مربی</button>
+      <button type="button" id="authTraineeTab" onclick="window.authMode?window.authMode('trainee'):window.fallbackAuthMode('trainee')">👤 شاگرد</button>
+    </div>
+    <div id="coachLoginBox">
+      <label>ایمیل</label><input id="loginEmail" type="email" autocomplete="username" placeholder="ایمیل مربی">
+      <label>رمز عبور</label><input id="loginPassword" type="password" autocomplete="current-password" placeholder="رمز عبور">
+      <button type="button" onclick="if(typeof window.loginApp==='function')window.loginApp();else {const e=document.getElementById('authError');e.textContent='بخش ورود مربی بارگذاری نشده است؛ صفحه را تازه‌سازی کنید.';e.style.display='block';}">🔐 ورود مربی</button>
+    </div>
+    <div id="traineeLoginBox" class="hide">
+      <div class="trainee-auth-block">
+        <h3>🆕 درخواست ثبت‌نام شاگرد</h3>
+        <p class="muted">ثبت درخواست بدون رمز انجام می‌شود و پس از بررسی مربی فعال خواهد شد.</p>
+        <label>نام و نام خانوادگی</label><input id="traineeRegName" autocomplete="name" placeholder="نام کامل">
+        <label>شماره موبایل</label><input id="traineeRegPhone" type="tel" inputmode="tel" autocomplete="tel" placeholder="09121234567">
+        <label>تعداد جلسات تمرین در هفته</label><select id="traineeRegSessions"><option value="">انتخاب کنید</option><option value="1">۱ جلسه</option><option value="2">۲ جلسه</option><option value="3">۳ جلسه</option><option value="4">۴ جلسه</option><option value="5">۵ جلسه</option><option value="6">۶ جلسه</option><option value="7">۷ جلسه</option></select>
+        <label>روزهای تمرین</label><input id="traineeRegDays" placeholder="مثلاً شنبه، دوشنبه، چهارشنبه">
+        <label>ساعت تمرین</label><input id="traineeRegTime" type="time">
+        <button type="button" onclick="if(typeof window.registerTraineePhone==='function')window.registerTraineePhone();else {const e=document.getElementById('authError');e.textContent='فرم ثبت‌نام بارگذاری نشده است؛ صفحه را تازه‌سازی کنید.';e.style.display='block';}">📨 ارسال درخواست ثبت‌نام</button>
+      </div>
+      <div class="trainee-auth-block">
+        <h3>🔐 ورود شاگرد</h3>
+        <label>شماره موبایل</label><input id="traineePhoneLogin" type="tel" inputmode="tel" autocomplete="username" placeholder="09121234567">
+        <label>رمز عبور</label><input id="traineeLoginPassword" type="password" autocomplete="current-password" placeholder="رمز اولیه یا رمز شخصی">
+        <button type="button" onclick="if(typeof window.loginTraineePhone==='function')window.loginTraineePhone();else {const e=document.getElementById('authError');e.textContent='بخش ورود شاگرد بارگذاری نشده است؛ صفحه را تازه‌سازی کنید.';e.style.display='block';}">ورود شاگرد</button>
+        <p class="muted">ورود پس از تأیید درخواست ثبت‌نام توسط مربی امکان‌پذیر است.</p>
+      </div>
+    </div>
     <div id="authError" class="auth-error"></div>
   </div>
 </div>
