@@ -18,7 +18,7 @@ self.addEventListener('push', function (event) {
   const options = {
     body: data.body || 'یک پیام جدید از شاگرد دریافت کردید.',
     tag: data.tag || 'fitness-seh-galeh-chat',
-    renotify: true,
+    renotify: false,
     data: {
       url: './',
       trainee_id: data.trainee_id || null
