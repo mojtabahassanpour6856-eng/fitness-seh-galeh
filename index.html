@@ -2858,6 +2858,7 @@ window.loadDashboard = loadDashboard;
       clients=all.filter(function(c){return mode==='archived'?!!c.archivedAt:!c.archivedAt;});
       originalRender.apply(this,arguments);
     }finally{clients=all;}
+    ensureControls();
     var grid=el('coachMobileCards');if(!grid)return;
     Array.from(grid.querySelectorAll('.coach-name-cell')).forEach(function(btn){
       if(btn.parentElement&&btn.parentElement.classList.contains('trainee-archive-row'))return;
