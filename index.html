@@ -743,6 +743,7 @@ body.locked{overflow:hidden!important}
 <div id="mealRecipeFields" class="hide">
  <label>دسته وعده</label><select id="mealRecipeCategory" onchange="filterMealRecipes()"><option value="all">همه دستورها</option><option value="breakfast">صبحانه</option><option value="lunch">ناهار</option><option value="dinner">شام</option><option value="snack">میان‌وعده</option><option value="bedtime">قبل خواب</option><option value="preworkout">قبل تمرین</option><option value="postworkout">بعد تمرین</option></select>
 <label>انتخاب دستور ترکیبی</label><select id="mealRecipeSelect" onchange="resetMealRecipeDraft();previewMealRecipe()"></select>
+<div class="grid2" style="margin:8px 0"><button type="button" class="secondary" onclick="createCustomMealRecipe()">＋ ساخت ترکیب غذایی جدید</button><small class="muted" style="align-self:center">ترکیب‌ها جدا از بانک اصلی غذا ذخیره می‌شوند.</small></div>
 <div id="mealRecipeIngredients" class="sub-result"></div>
 </div>
 <label>یادداشت</label><input id="mealFoodNote" placeholder="اختیاری">
@@ -1488,6 +1489,34 @@ const MEAL_RECIPES=[
  {name:"عدس‌پلو",category:"lunch",ingredients:[["برنج پخته",200,"گرم"],["عدس پخته",100,"گرم"],["روغن زیتون",5,"گرم"]],note:"کشمش، پیازداغ یا گوشت چرخ‌کرده را در صورت مصرف به مواد اضافه کن؛ مقدار روغن نیز قابل تغییر است."},
  {name:"سبزی‌پلو",category:"lunch",ingredients:[["برنج پخته",200,"گرم"],["سبزی",40,"گرم"],["روغن زیتون",5,"گرم"]],note:"این دستور پایه است؛ اگر با ماهی یا ماده دیگری سرو می‌کنی، آن را جداگانه به مواد اضافه کن."}
 ];
+const CUSTOM_MEAL_RECIPES_STORAGE_KEY="fitness_seh_galeh_custom_meal_recipes_v1";
+function persistCustomMealRecipes(){
+ try{localStorage.setItem(CUSTOM_MEAL_RECIPES_STORAGE_KEY,JSON.stringify(MEAL_RECIPES.filter(r=>r&&r.userSaved).map(r=>({name:r.name,category:r.category,ingredients:r.ingredients||[],note:r.note||""}))));}
+ catch(e){console.warn("ذخیره دستورهای غذایی روی این دستگاه انجام نشد",e);}
+}
+function loadCustomMealRecipes(){
+ try{
+  const saved=JSON.parse(localStorage.getItem(CUSTOM_MEAL_RECIPES_STORAGE_KEY)||"[]");
+  if(Array.isArray(saved))saved.forEach(r=>{
+   if(r&&typeof r.name==="string"&&r.name.trim()&&Array.isArray(r.ingredients))
+    MEAL_RECIPES.push({name:r.name.trim(),category:r.category||"breakfast",ingredients:r.ingredients,note:r.note||"",userSaved:true});
+  });
+ }catch(e){console.warn("خواندن دستورهای غذایی ذخیره‌شده ممکن نشد",e);}
+}
+loadCustomMealRecipes();
+window.createCustomMealRecipe=function(){
+ const name=prompt("نام ترکیب غذایی جدید را وارد کن:");
+ if(!name||!name.trim())return;
+ const category=$("mealRecipeCategory")?.value;
+ const validCategory=["breakfast","lunch","dinner","snack","bedtime","preworkout","postworkout"].includes(category)?category:"breakfast";
+ if(MEAL_RECIPES.some(r=>r.name.trim()===name.trim())&&!confirm("دستوری با این نام وجود دارد. با نام تکراری یک دستور جداگانه بسازم؟"))return;
+ MEAL_RECIPES.push({name:name.trim(),category:validCategory,ingredients:[],note:"",userSaved:true});
+ persistCustomMealRecipes();
+ $("mealRecipeCategory").value=validCategory;
+ filterMealRecipes();
+ $("mealRecipeSelect").value=String(MEAL_RECIPES.length-1);
+ resetMealRecipeDraft();previewMealRecipe();
+};
 function switchMealFoodMode(){
  const recipe=$("mealFoodMode").value==="recipe";
  $("mealSingleFoodFields").classList.toggle("hide",recipe);
@@ -10047,7 +10076,32 @@ body.workout-output.workout-compact{
           '<button type="button" class="mini danger" data-recipe-remove="'+i+'" style="margin-top:6px">حذف این ماده از دستور</button></div>';
       }).join("")+'</div>'+
       '<div class="grid2" style="margin-top:10px"><div><label>افزودن ماده از بانک غذا</label><select id="recipeAddFoodSelect">'+options("")+'</select></div><div style="display:flex;align-items:end"><button type="button" id="recipeAddFoodButton" class="secondary" style="width:100%">＋ افزودن ماده</button></div></div>'+
-      (recipe.note?'<small>'+esc(recipe.note)+'</small>':'');
+      (recipe.note?'<small>'+esc(recipe.note)+'</small>':'')+
+      '<div class="grid2" style="margin-top:10px"><button type="button" class="secondary" id="saveRecipeAsCustomButton">ذخیره به‌عنوان دستور جدید</button>'+
+      (recipe.userSaved?'<button type="button" class="mini danger" id="deleteCustomRecipeButton">حذف از دستورهای من</button>':'')+'</div>';
+    const saveAsButton=document.getElementById("saveRecipeAsCustomButton");
+    if(saveAsButton)saveAsButton.addEventListener("click",()=>{
+      const name=prompt("این ترکیب را با چه نامی ذخیره کنم؟",recipe.userSaved?recipe.name+" (جدید)":recipe.name);
+      if(!name||!name.trim())return;
+      if(!recipeDraft.length){alert("ابتدا حداقل یک ماده به ترکیب اضافه کن.");return;}
+      const ingredients=recipeDraft.map(row=>{const f=getFoodById(row.foodId);return f?[f[0],Number(row.amount),row.unit]:null;});
+      if(ingredients.some(row=>!row||!Number.isFinite(row[1])||row[1]<=0)){alert("همه مواد و مقدارها باید معتبر باشند.");return;}
+      if(MEAL_RECIPES.some(r=>r.name.trim()===name.trim())&&!confirm("دستوری با این نام وجود دارد. با نام تکراری ذخیره کنم؟"))return;
+      MEAL_RECIPES.push({name:name.trim(),category:recipe.category||"breakfast",ingredients,note:recipe.note||"",userSaved:true});
+      persistCustomMealRecipes();
+      document.getElementById("mealRecipeCategory").value=recipe.category||"breakfast";
+      filterMealRecipes();
+      document.getElementById("mealRecipeSelect").value=String(MEAL_RECIPES.length-1);
+      draftRecipeIndex=null;window.previewMealRecipe();
+      alert("ترکیب غذایی در «دستورهای من» ذخیره شد.");
+    });
+    const deleteButton=document.getElementById("deleteCustomRecipeButton");
+    if(deleteButton)deleteButton.addEventListener("click",()=>{
+      if(!confirm("این دستور از فهرست دستورهای ذخیره‌شده روی همین دستگاه حذف شود؟"))return;
+      const idx=Number(document.getElementById("mealRecipeSelect").value);
+      if(!MEAL_RECIPES[idx]?.userSaved)return;
+      MEAL_RECIPES.splice(idx,1);persistCustomMealRecipes();draftRecipeIndex=null;filterMealRecipes();
+    });
     host.querySelectorAll("[data-recipe-amount]").forEach(el=>el.addEventListener("change",()=>{
       const i=Number(el.dataset.recipeAmount);if(recipeDraft[i]){recipeDraft[i].amount=Number(el.value)||0;renderRecipe();}
     }));
