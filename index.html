@@ -2815,6 +2815,72 @@ window.loadDashboard = loadDashboard;
 
 
 
+
+<script id="trainee-archive-controls">
+(function(){
+  'use strict';
+  var mode='active';
+  function el(id){return document.getElementById(id);}
+  function ensureControls(){
+    var list=el('clientList'); if(!list)return;
+    var grid=el('coachMobileCards'); if(!grid)return;
+    if(!el('traineeArchiveControls')){
+      var bar=document.createElement('div');bar.id='traineeArchiveControls';
+      bar.style.cssText='display:flex;gap:8px;flex-wrap:wrap;margin:8px 0;';
+      bar.innerHTML='<button type="button" data-mode="active" class="secondary">👥 شاگردان فعال</button><button type="button" data-mode="archived" class="secondary">📦 بایگانی‌شده‌ها</button><span id="traineeArchiveHint" style="font-size:12px;align-self:center;color:#cbd5df">بایگانی اطلاعات را حذف نمی‌کند.</span>';
+      bar.querySelectorAll('button').forEach(function(b){b.addEventListener('click',function(){mode=b.getAttribute('data-mode');bar.querySelectorAll('button').forEach(function(x){x.classList.toggle('active',x===b);});if(typeof window.renderClients==='function')window.renderClients();});});
+      list.insertBefore(bar,grid);
+    }
+    var bar2=el('traineeArchiveControls');
+    if(bar2)bar2.querySelectorAll('button').forEach(function(b){b.classList.toggle('active',b.getAttribute('data-mode')===mode);});
+  }
+  async function setArchived(id, archived, name){
+    var promptText=archived
+      ? 'شاگرد «'+name+'» از فهرست فعال خارج و بایگانی شود؟ تمام سوابق و برنامه‌هایش در دیتابیس باقی می‌ماند.'
+      : 'شاگرد «'+name+'» دوباره به فهرست فعال برگردد؟';
+    if(!window.confirm(promptText))return;
+    try{
+      if(typeof window.sbWrite!=='function')throw new Error('اتصال امن دیتابیس آماده نیست؛ دوباره وارد پنل مربی شوید.');
+      await window.sbWrite('/trainees?id=eq.'+encodeURIComponent(id),'PATCH',{archived_at:archived?new Date().toISOString():null});
+      if(typeof window.loadClients==='function')await window.loadClients();
+      alert(archived?'شاگرد با موفقیت بایگانی شد؛ اطلاعاتش حذف نشده است.':'شاگرد با موفقیت به فهرست فعال برگشت.');
+    }catch(e){
+      console.error('Trainee archive action failed:',e);
+      alert((archived?'بایگانی شاگرد':'بازگردانی شاگرد')+' انجام نشد.\n'+(e&&e.message?e.message:String(e)));
+    }
+  }
+  var originalRender=window.renderClients;
+  if(typeof originalRender!=='function')return;
+  window.renderClients=function(){
+    ensureControls();
+    var all=clients;
+    try{
+      clients=all.filter(function(c){return mode==='archived'?!!c.archivedAt:!c.archivedAt;});
+      originalRender.apply(this,arguments);
+    }finally{clients=all;}
+    var grid=el('coachMobileCards');if(!grid)return;
+    Array.from(grid.querySelectorAll('.coach-name-cell')).forEach(function(btn){
+      if(btn.parentElement&&btn.parentElement.classList.contains('trainee-archive-row'))return;
+      var id=btn.getAttribute('data-trainee-id');
+      var c=(Array.isArray(clients)?clients:[]).find(function(x){return String(x.id)===String(id);});
+      if(!c)return;
+      var row=document.createElement('div');row.className='trainee-archive-row';
+      row.style.cssText='display:flex;align-items:stretch;gap:6px;width:100%;min-width:0;';
+      btn.style.cssText+=';flex:1;min-width:0;text-align:right;';
+      var action=document.createElement('button');action.type='button';action.className='secondary';
+      action.style.cssText='flex:0 0 auto;max-width:112px;padding:7px 9px;font-size:11px;white-space:normal;';
+      action.textContent=mode==='archived'?'↩️ بازگردانی':'📦 بایگانی';
+      action.setAttribute('aria-label',(mode==='archived'?'بازگردانی ':'بایگانی ')+(c.name||'شاگرد'));
+      action.addEventListener('click',function(ev){ev.preventDefault();ev.stopPropagation();setArchived(id,mode!=='archived',c.name||'بدون نام');});
+      btn.parentNode.replaceChild(row,btn);row.appendChild(btn);row.appendChild(action);
+    });
+    var hint=el('traineeArchiveHint');
+    if(hint)hint.textContent=mode==='archived'?'فقط شاگردان بایگانی‌شده؛ برای بازگشت، «بازگردانی» را بزن.':'شاگرد را بایگانی کن تا از فهرست فعال خارج شود؛ اطلاعات حذف نمی‌شود.';
+  };
+  var style=document.createElement('style');style.textContent='#clientList #coachMobileCards .trainee-archive-row{grid-column:1/-1}#traineeArchiveControls button.active{background:#ffbd16!important;color:#111!important;border-color:#ffbd16!important}';document.head.appendChild(style);
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',ensureControls);else ensureControls();
+})();
+</script>
 </body></html>`;
     const w=window.open('','_blank');if(w){w.document.write(html);w.document.close();}
   };
@@ -4531,7 +4597,7 @@ window.toggleExerciseFavorite=async function(id,value){try{await sbWrite(`/train
         weight:c.current_weight??c.weight??null,height:c.height??null,goal:c.goal||'',level:c.training_level||'',
         history:c.training_history||'',limitations:c.limitations||'',training_type:c.training_type||'gym',
         home_equipment:c.home_equipment||'',training_days:c.training_days||'',training_time:c.training_time||'',
-        createdAt:c.created_at||null,active:true,membershipStatus:'وضعیت نامشخص',plans:0
+        createdAt:c.created_at||null,archivedAt:c.archived_at||null,active:!c.archived_at,membershipStatus:'وضعیت نامشخص',plans:0
       }));
       // Membership information is supplementary; failure must not erase the trainee list.
       try{
