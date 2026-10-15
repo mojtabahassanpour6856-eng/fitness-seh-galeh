@@ -1968,6 +1968,9 @@ async function loginApp(){
     if(error)throw error;await finishLogin(data.user);
   }catch(e){console.error(e);showAuthError(e.message||'ایمیل یا رمز عبور نادرست است.');}
 }
+// Publish the coach login handler immediately so the login screen remains usable
+// even if a later optional initializer fails during startup.
+window.loginApp=loginApp;
 async function finishLogin(user){
   try{
     let {data:rows,error:profileError}=await AUTH_SUPABASE
