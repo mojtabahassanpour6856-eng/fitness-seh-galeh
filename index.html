@@ -10424,10 +10424,26 @@ body.workout-output.workout-compact{
   if(!body||!selected)return;
   if(body.length>4000){alert('پیام نباید بیشتر از ۴۰۰۰ نویسه باشد.');return;}
   button.disabled=true;
+  const traineeId=selected.id,sendMode=mode;
   try{
    const user=await currentAuthUser();
-   const r=await window.AUTH_SUPABASE.from('coach_chat_messages').insert({trainee_id:selected.id,sender_id:user.id,body}).select('id').single();
-   if(r.error)throw r.error;if(mode==='trainee'){try{const pushResult=await window.AUTH_SUPABASE.functions.invoke('send-chat-push',{body:{trainee_id:selected.id}});if(pushResult.error)console.info('Chat push is not ready yet:',pushResult.error.message||pushResult.error);}catch(pushErr){console.info('Chat push is not ready yet:',pushErr);}}input.value='';await loadMessages(true);if(mode==='coach')await loadCoachConversations(user);
+   const r=await window.AUTH_SUPABASE.from('coach_chat_messages').insert({trainee_id:traineeId,sender_id:user.id,body}).select('id').single();
+   if(r.error)throw r.error;
+   input.value='';
+   const box=$('sehChatMessages');
+   if(box){
+    box.querySelectorAll('.seh-chat-muted').forEach(el=>el.remove());
+    const bubble=document.createElement('div');bubble.className='seh-chat-bubble mine';
+    bubble.appendChild(document.createTextNode(body));
+    const stamp=document.createElement('span');stamp.className='seh-chat-time';stamp.textContent=new Date().toLocaleString('fa-IR',{dateStyle:'short',timeStyle:'short'});
+    bubble.appendChild(stamp);box.appendChild(bubble);box.scrollTop=box.scrollHeight;
+   }
+   lastMessageId=r.data?.id||lastMessageId;
+   // Push delivery must not block the sender's chat UI.
+   if(sendMode==='trainee')window.AUTH_SUPABASE.functions.invoke('send-chat-push',{body:{trainee_id:traineeId}}).then(pushResult=>{if(pushResult?.error)console.info('Chat push is not ready yet:',pushResult.error.message||pushResult.error);}).catch(pushErr=>console.info('Chat push is not ready yet:',pushErr));
+   // Refresh read receipts and conversation counts in the background.
+   loadMessages(true).catch(err=>console.warn('Chat refresh after send:',err));
+   if(sendMode==='coach')loadCoachConversations(user).catch(err=>console.warn('Conversation list refresh after send:',err));
   }catch(err){console.error('Chat send failed',err);alert('ارسال پیام انجام نشد. '+(err.message||''));}
   finally{button.disabled=false;input.focus();}
  }
