@@ -421,11 +421,30 @@ body.locked{overflow:hidden!important}
 </div>
 </section>
 
-<!-- CALORIE CALCULATOR CARD: isolated placeholder only; existing sections unchanged -->
+<!-- CALORIE CALCULATOR CARD: isolated module; existing app sections untouched -->
 <section id="calorieCalculatorCard" class="section">
-  <div class="card">
-    <h2>🧮 کارت محاسبه‌گر کالری</h2>
-    <p class="muted">این کارت به‌صورت مستقل اضافه شده است. فرم و محاسبات در مرحله بعد و پس از تأیید سالم بودن بخش‌های فعلی اضافه می‌شوند.</p>
+  <div class="card" id="sehCalorieCalcRoot">
+    <h2>🧮 کارت محاسبه‌گر کالری شاگرد</h2>
+    <p class="muted">اطلاعات شاگرد را وارد کن تا کالری پایه، کالری نگهدارنده و پیشنهاد روزانه بر اساس هدف محاسبه شود. این ابزار تخمینی است و جایگزین ارزیابی تخصصی نیست.</p>
+    <div class="grid2">
+      <div><label for="sehCalName">نام شاگرد (اختیاری)</label><input id="sehCalName" type="text" maxlength="80" placeholder="نام شاگرد"></div>
+      <div><label for="sehCalSex">جنسیت</label><select id="sehCalSex"><option value="male">مرد</option><option value="female">زن</option></select></div>
+      <div><label for="sehCalAge">سن (سال)</label><input id="sehCalAge" type="number" min="18" max="100" step="1" value="30"></div>
+      <div><label for="sehCalHeight">قد (سانتی‌متر)</label><input id="sehCalHeight" type="number" min="120" max="230" step="0.5" placeholder="مثلاً 175"></div>
+      <div><label for="sehCalWeight">وزن فعلی (کیلوگرم)</label><input id="sehCalWeight" type="number" min="30" max="350" step="0.1" placeholder="مثلاً 85"></div>
+      <div><label for="sehCalGoal">هدف</label><select id="sehCalGoal"><option value="lose">کاهش وزن</option><option value="maintain">حفظ وزن</option><option value="gain">افزایش وزن</option></select></div>
+      <div id="sehCalTargetWrap"><label for="sehCalTarget">وزن هدف (کیلوگرم)</label><input id="sehCalTarget" type="number" min="30" max="350" step="0.1" placeholder="مثلاً 78"></div>
+      <div id="sehCalWeeksWrap"><label for="sehCalWeeks">مدت رسیدن به هدف (هفته)</label><input id="sehCalWeeks" type="number" min="1" max="104" step="1" value="12"></div>
+      <div><label for="sehCalActivity">میزان فعالیت روزانه خارج از تمرین</label><select id="sehCalActivity"><option value="1.2">کم‌تحرک؛ بیشتر نشسته</option><option value="1.375">فعالیت سبک</option><option value="1.55" selected>فعالیت متوسط</option><option value="1.725">فعالیت زیاد</option><option value="1.9">فعالیت بسیار زیاد</option></select></div>
+      <div><label for="sehCalSessions">جلسات تمرین در هفته</label><select id="sehCalSessions"><option value="0">بدون تمرین</option><option value="1">۱ جلسه</option><option value="2">۲ جلسه</option><option value="3" selected>۳ جلسه</option><option value="4">۴ جلسه</option><option value="5">۵ جلسه</option><option value="6">۶ جلسه</option><option value="7">۷ جلسه</option></select></div>
+      <div><label for="sehCalDuration">مدت هر جلسه (دقیقه)</label><input id="sehCalDuration" type="number" min="0" max="300" step="5" value="60"></div>
+    </div>
+    <p class="muted" style="font-size:12px;margin-top:8px">ضریب فعالیت، فعالیت کلی روزانه را تخمین می‌زند؛ جلسات و مدت تمرین برای ثبت زمینه برنامه استفاده می‌شوند و جداگانه دوباره به کالری اضافه نمی‌شوند.</p>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px">
+      <button type="button" onclick="sehCalcCalories()">محاسبه کالری و درشت‌مغذی‌ها</button>
+      <button type="button" class="secondary" onclick="sehResetCalories()">پاک کردن اطلاعات</button>
+    </div>
+    <div id="sehCalcResult" aria-live="polite" style="margin-top:14px"></div>
   </div>
 </section>
 
@@ -11005,4 +11024,54 @@ body.workout-output.workout-compact{
  }
 })();
 </script>
+
+<script id="sehCalorieCalcIsolatedScript">
+(function(){
+  'use strict';
+  var root=document.getElementById('sehCalorieCalcRoot');
+  if(!root||window.__sehCalorieCalcReady)return;
+  window.__sehCalorieCalcReady=true;
+  function el(id){return document.getElementById(id);}
+  function num(id){return Number(el(id).value);}
+  function showGoalFields(){var goal=el('sehCalGoal').value;el('sehCalTargetWrap').style.display=goal==='maintain'?'none':'block';el('sehCalWeeksWrap').style.display=goal==='maintain'?'none':'block';}
+  el('sehCalGoal').addEventListener('change',showGoalFields);showGoalFields();
+  window.sehResetCalories=function(){
+    ['sehCalName','sehCalHeight','sehCalWeight','sehCalTarget'].forEach(function(id){el(id).value='';});
+    el('sehCalSex').value='male';el('sehCalAge').value='30';el('sehCalGoal').value='lose';el('sehCalWeeks').value='12';el('sehCalActivity').value='1.55';el('sehCalSessions').value='3';el('sehCalDuration').value='60';el('sehCalcResult').innerHTML='';showGoalFields();
+  };
+  window.sehCalcCalories=function(){
+    var sex=el('sehCalSex').value,age=num('sehCalAge'),height=num('sehCalHeight'),weight=num('sehCalWeight'),goal=el('sehCalGoal').value;
+    var target=goal==='maintain'?weight:num('sehCalTarget'),weeks=goal==='maintain'?0:num('sehCalWeeks'),activity=num('sehCalActivity'),sessions=num('sehCalSessions'),duration=num('sehCalDuration');
+    var errors=[];
+    if(!Number.isFinite(age)||age<18||age>100)errors.push('سن باید بین ۱۸ تا ۱۰۰ سال باشد.');
+    if(!Number.isFinite(height)||height<120||height>230)errors.push('قد معتبر را به سانتی‌متر وارد کن.');
+    if(!Number.isFinite(weight)||weight<30||weight>350)errors.push('وزن فعلی معتبر را وارد کن.');
+    if(goal!=='maintain'&&(!Number.isFinite(target)||target<30||target>350))errors.push('وزن هدف معتبر را وارد کن.');
+    if(goal!=='maintain'&&(!Number.isFinite(weeks)||weeks<1||weeks>104))errors.push('مدت هدف باید بین ۱ تا ۱۰۴ هفته باشد.');
+    if(errors.length){el('sehCalcResult').innerHTML='<div style="padding:12px;border-radius:10px;background:#fff1e8;color:#7b2d12">'+errors.join('<br>')+'</div>';return;}
+    var bmr=10*weight+6.25*height-5*age+(sex==='male'?5:-161),maintenance=bmr*activity,change=target-weight,weekly=weeks?Math.abs(change)/weeks:0,pct=weight?weekly/weight*100:0,adjustment=0,warnings=[];
+    if(goal==='lose')adjustment=-(Math.abs(change)*7700/(weeks*7));
+    if(goal==='gain')adjustment=(Math.abs(change)*7700/(weeks*7));
+    if(goal==='lose'&&target>weight)warnings.push('وزن هدف از وزن فعلی بیشتر است؛ هدف را بررسی کن.');
+    if(goal==='gain'&&target<weight)warnings.push('وزن هدف از وزن فعلی کمتر است؛ هدف را بررسی کن.');
+    if(goal!=='maintain'&&Math.abs(change)<0.01)warnings.push('وزن هدف با وزن فعلی برابر است؛ مقدار هدف را بررسی کن.');
+    if(goal==='lose'&&pct>1)warnings.push('سرعت کاهش وزن بیش از ۱٪ وزن بدن در هفته است و ممکن است بیش از حد تهاجمی باشد.');
+    if(goal==='gain'&&pct>0.5)warnings.push('سرعت افزایش وزن بیش از ۰٫۵٪ وزن بدن در هفته است؛ هدف را بازبینی کن.');
+    if(goal!=='maintain'&&Math.abs(adjustment)>1000)warnings.push('برای رسیدن به هدف، کسری/مازاد محاسباتی بسیار زیاد است؛ زمان بیشتری انتخاب کن.');
+    var applied=Math.max(-750,Math.min(500,adjustment)),calories=Math.round((maintenance+applied)/50)*50,minCal=sex==='female'?1200:1500;
+    if(calories<minCal){warnings.push('کالری پیشنهادی از حد احتیاطی '+minCal+' کیلوکالری کمتر است؛ بدون ارزیابی تخصصی از این مقدار استفاده نکن.');calories=minCal;}
+    var macroWeight=goal==='gain'?Math.max(weight,target):weight,protein=Math.round(macroWeight*1.8),fat=Math.round(macroWeight*0.8),carbs=Math.max(0,Math.round((calories-protein*4-fat*9)/4));
+    var name=el('sehCalName').value.trim(),safeName=name.replace(/[&<>"]/g,function(ch){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[ch];});
+    var html=name?'<h3 style="margin:0 0 10px">نتیجه محاسبه: '+safeName+'</h3>':'<h3 style="margin:0 0 10px">نتیجه محاسبه</h3>';
+    var cards=[['سوخت‌وساز پایه (BMR)',Math.round(bmr)+' کیلوکالری'],['کالری نگهدارنده تخمینی',Math.round(maintenance)+' کیلوکالری'],['هدف کالری روزانه',calories+' کیلوکالری'],['پروتئین روزانه',protein+' گرم'],['چربی روزانه',fat+' گرم'],['کربوهیدرات روزانه',carbs+' گرم']];
+    html+='<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(145px,1fr));gap:8px">';
+    cards.forEach(function(item){html+='<div style="border:1px solid #d8c59a;border-radius:10px;padding:11px;background:#fffaf0"><div style="font-size:12px;color:#685a3d">'+item[0]+'</div><strong style="display:block;margin-top:5px;font-size:17px">'+item[1]+'</strong></div>';});
+    html+='</div><p class="muted" style="margin-top:10px">هدف: '+({lose:'کاهش وزن',maintain:'حفظ وزن',gain:'افزایش وزن'}[goal])+' | تمرین: '+sessions+' جلسه در هفته، هر جلسه '+duration+' دقیقه.</p>';
+    if(warnings.length)html+='<div style="margin-top:10px;padding:12px;border-radius:10px;background:#fff1e8;color:#7b2d12"><strong>موارد قابل بررسی</strong><ul style="margin:6px 0 0;padding-right:20px">'+warnings.map(function(w){return '<li>'+w+'</li>';}).join('')+'</ul></div>';
+    html+='<p style="font-size:12px;color:#777;margin-top:10px">برآورد با فرمول Mifflin–St Jeor و تخمین تقریبی ۷۷۰۰ کیلوکالری به ازای هر کیلوگرم تغییر وزن انجام شده است. نیاز واقعی با توجه به شرایط فرد، داروها، بیماری‌ها و روند وزن متفاوت است؛ نتیجه را با پیگیری وزن و ارزیابی مربی/متخصص تنظیم کن.</p>';
+    el('sehCalcResult').innerHTML=html;
+  };
+})();
+</script>
+
 </body></html>
