@@ -8637,11 +8637,18 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
       await loadDeviceLinkRequests();
     }catch(e){alert("بررسی درخواست انجام نشد: "+(e?.message||String(e)));}
   };
+  function moveCoachUtilityCardsBelowTrainees(){
+    const list=$("clientList"), listCard=list?.closest(".card");
+    if(!listCard)return;
+    const chat=$("sehChatCoachCard"), water=$("coachWaterWeekCard"), device=$("deviceLinkRequestsPanel");
+    let anchor=listCard;
+    [chat,water,device].forEach(card=>{if(card&&card.parentElement){anchor.insertAdjacentElement("afterend",card);anchor=card;}});
+  }
   function ensureDevicePanel(){
-    const reg=$("registrationRequestsPanel");if(!reg||$("deviceLinkRequestsPanel"))return;
+    const reg=$("registrationRequestsPanel");if(!reg)return;if($("deviceLinkRequestsPanel")){moveCoachUtilityCardsBelowTrainees();return;}
     const panel=document.createElement("div");panel.id="deviceLinkRequestsPanel";panel.className="card";panel.style.marginTop="12px";
     panel.innerHTML='<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap"><h3 style="margin:0">📱 درخواست‌های اتصال گوشی جدید</h3><button type="button" class="secondary mini" id="refreshDeviceLinkRequests">🔄 تازه‌سازی</button></div><p class="muted">فقط با تأیید مربی، گوشی جدید به همان حساب قبلی متصل می‌شود؛ سوابق شاگرد حفظ خواهد شد.</p><div id="deviceLinkRequests"><p class="muted">در حال دریافت درخواست‌ها…</p></div>';
-    reg.insertAdjacentElement("afterend",panel);$("refreshDeviceLinkRequests")?.addEventListener("click",loadDeviceLinkRequests);
+    reg.insertAdjacentElement("afterend",panel);$("refreshDeviceLinkRequests")?.addEventListener("click",loadDeviceLinkRequests);moveCoachUtilityCardsBelowTrainees();
   }
   const oldLoadClients=window.loadClients;
   if(typeof oldLoadClients==="function"&&!window.__sehDeviceLinkCoachWrap){
@@ -10267,7 +10274,7 @@ body.workout-output.workout-compact{
    const coach=$('coach');if(coach&&!$('sehChatCoachCard')){
     const card=document.createElement('div');card.id='sehChatCoachCard';card.className='card';
     card.innerHTML='<h2>💬 پیام‌های شاگردان <span class="seh-chat-unread" id="sehChatCoachUnread" style="display:none">۰</span></h2><p class="muted">گفت‌وگوهای خصوصی شاگردان را از اینجا باز کنید.</p><button type="button" onclick="window.sehOpenCoachChat()">باز کردن پیام‌ها</button> <button type="button" id="sehEnableChatNotices">فعال‌سازی اعلان پیام</button><small id="sehChatNoticeStatus" style="display:block;margin-top:8px;color:#587066">مرحله اول: شناسایی پیام جدید و نام شاگرد؛ اعلان کامل گوشی در مراحل بعد تکمیل می‌شود.</small>';
-    const first=coach.querySelector('.card');if(first)first.insertAdjacentElement('afterend',card);else coach.prepend(card);
+    const listCard=$('clientList')?.closest('.card');if(listCard)listCard.insertAdjacentElement('afterend',card);else{const first=coach.querySelector('.card');if(first)first.insertAdjacentElement('afterend',card);else coach.prepend(card);}
    }
   }
  }
