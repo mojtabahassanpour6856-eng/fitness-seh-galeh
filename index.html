@@ -10432,7 +10432,7 @@ body.workout-output.workout-compact{
   finally{button.disabled=false;input.focus();}
  }
  function stopPolling(){if(pollTimer)clearInterval(pollTimer);pollTimer=null;}
- async function openChat(who){
+ async function openChat(who,preferredTraineeId){
   mode=who;selected=null;lastMessageId=null;ensureSection();addEntryCard();
   const sec=$('sehChatSection');const layout=$('sehChatLayout');const convCard=$('sehChatConversationCard');
   layout?.classList.toggle('coach-mode',who==='coach');if(convCard)convCard.style.display=who==='coach'?'block':'none';
@@ -10447,20 +10447,18 @@ body.workout-output.workout-compact{
     await loadMessages(true);
    }else{
     await loadCoachConversations(user);
-    if(conversations.length)await selectConversation(conversations[0]);
+    const preferred=preferredTraineeId?conversations.find(x=>String(x.id)===String(preferredTraineeId)):null;
+    const initial=preferred||conversations[0];
+    if(initial)await selectConversation(initial);
+    else if(preferredTraineeId)$('sehChatMessages').innerHTML='<div class="seh-chat-muted">گفت‌وگوی مربوط به این اعلان پیدا نشد؛ فهرست شاگردان را بررسی کنید.</div>';
    }
    stopPolling();pollTimer=setInterval(async()=>{if(document.visibilityState==='visible'&&$('sehChatSection')?.classList.contains('active')){if(mode==='coach'){const u=await currentAuthUser().catch(()=>null);if(u)await loadCoachConversations(u);}if(selected)await loadMessages(false);}},5000);
   }catch(e){console.error('Chat open failed',e);$('sehChatMessages').innerHTML='<div class="seh-chat-muted">'+esc(e.message||'بازکردن گفت‌وگو انجام نشد.')+'</div>';}
  }
  window.sehOpenCoachChat=()=>openChat('coach');
  window.sehOpenCoachChatForTrainee=async id=>{
-  await openChat('coach');
-  let t=conversations.find(x=>String(x.id)===String(id));
-  if(!t){
-   try{await loadCoachConversations(await currentAuthUser());}catch(e){console.warn('Unable to refresh coach conversations for notification:',e);}
-   t=conversations.find(x=>String(x.id)===String(id));
-  }
-  if(t)await selectConversation(t);
+  // Open the requested trainee first instead of loading another conversation before it.
+  await openChat('coach',String(id));
  };
  // Handle a notification click while this app page is already open.
  if('serviceWorker' in navigator&&!window.sehChatNotificationMessageBound){
