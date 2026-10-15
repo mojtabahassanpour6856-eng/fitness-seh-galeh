@@ -7672,6 +7672,17 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
    preview.innerHTML='<p style="color:#ffbd16">خواندن هدف‌های شاگرد ناموفق بود.</p><p style="direction:ltr;overflow-wrap:anywhere;font-size:11px">'+esc(e&&e.message||e)+'</p>';
   }
  }
+ const originalShowGoalsForSelection=showGoals;
+ let selectionGoalsPromise=null;
+ showGoals=function(){
+  const inSelection=typeof window.__sehIsClientSelectionBatchActive==='function'&&window.__sehIsClientSelectionBatchActive();
+  if(!inSelection)return originalShowGoalsForSelection.apply(this,arguments);
+  if(selectionGoalsPromise)return selectionGoalsPromise;
+  selectionGoalsPromise=Promise.resolve().then(()=>originalShowGoalsForSelection.apply(this,arguments)).finally(()=>{
+   setTimeout(()=>{selectionGoalsPromise=null;},350);
+  });
+  return selectionGoalsPromise;
+ };
  window.showCoachGoalsDirectly=showGoals;
  var oldSelect=window.selectClient;
  if(typeof oldSelect==='function'){
@@ -10640,6 +10651,7 @@ body.workout-output.workout-compact{
     'loadCoachActivityReport'
   ];
   let selectionBatch=null;
+  window.__sehIsClientSelectionBatchActive=function(){return !!selectionBatch;};
   loaderNames.forEach(function(name){
     const original=window[name];
     if(typeof original!=='function')return;
