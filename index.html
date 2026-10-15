@@ -3657,15 +3657,29 @@ window.toggleExerciseFavorite=async function(id,value){try{await sbWrite(`/train
     }
   };
 
-  // Ensure the schedule card has a visible save button.
+  // در پنل مربی، برنامه حضور فقط برای مشاهده است؛ ثبت روز و ساعت بر عهده شاگرد است.
   function ensureScheduleCard(){
     const sec=byId('client');
-    if(!sec || byId('scheduleCard')) return;
-    const card=document.createElement('div');
-    card.className='card';
-    card.id='scheduleCard';
-    card.innerHTML='<h2>🗓️ برنامه حضور و ساعت تمرین</h2><div class="grid2"><div><label>روزهای تمرین</label><input id="trainingDaysEdit" placeholder="شنبه، دوشنبه، چهارشنبه"></div><div><label>ساعت تمرین</label><input id="trainingTimeEdit" type="time"></div></div><button onclick="saveTrainingSchedule()">💾 ثبت روز و ساعت تمرین</button>';
-    sec.appendChild(card);
+    if(!sec)return;
+    let card=byId('scheduleCard');
+    // کارت قابل ویرایش شاگرد را دست‌نخورده می‌گذاریم.
+    if(card&&card.dataset.traineeScheduleEditable==='1')return;
+    if(!card){
+      card=document.createElement('div');
+      card.className='card';
+      card.id='scheduleCard';
+      sec.appendChild(card);
+    }
+    card.innerHTML='<h2>🗓️ برنامه حضور و تمرین شاگرد</h2><p class="muted">این اطلاعات را شاگرد ثبت می‌کند؛ در پنل مربی فقط قابل مشاهده است.</p><div class="grid2"><div><label>روزهای ثبت‌شده</label><div id="coachScheduleDays" class="receipt-item">—</div></div><div><label>ساعت ثبت‌شده</label><div id="coachScheduleTime" class="receipt-item">—</div></div></div><p id="coachScheduleSessions" class="muted"></p><input type="hidden" id="trainingDaysEdit"><input type="hidden" id="trainingTimeEdit">';
+    const c=typeof currentClient!=='undefined'?currentClient:null;
+    const days=c?.training_days||'ثبت نشده';
+    const time=String(c?.training_time||'').slice(0,5)||'ثبت نشده';
+    const daysView=byId('coachScheduleDays'),timeView=byId('coachScheduleTime'),sessionsView=byId('coachScheduleSessions');
+    if(daysView)daysView.textContent=days;
+    if(timeView)timeView.textContent=time;
+    if(sessionsView)sessionsView.textContent='تعداد جلسات هفتگی: '+(c?.weekly_sessions||'ثبت نشده');
+    if(byId('trainingDaysEdit'))byId('trainingDaysEdit').value=c?.training_days||'';
+    if(byId('trainingTimeEdit'))byId('trainingTimeEdit').value=String(c?.training_time||'').slice(0,5);
   }
 
   const previousSelect=window.selectClient;
