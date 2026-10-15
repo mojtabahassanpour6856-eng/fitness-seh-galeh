@@ -3987,8 +3987,24 @@ window.toggleExerciseFavorite=async function(id,value){try{await sbWrite(`/train
     if(!traineeId){alert('اول یک شاگرد را انتخاب کنید.');return;}
     const ownedPlanId=same(workoutPlanOwnerId,traineeId)?currentWorkoutPlanId:null;
     const dateInput=byId('workoutStartDate');
-    const startDate=String(dateInput?.value||'').trim();
-    if(!/^\d{4}-\d{2}-\d{2}$/.test(startDate)||!Number.isFinite(Date.parse(startDate+'T00:00:00Z'))){alert('تاریخ شروع برنامه معتبر نیست؛ لطفاً تاریخ را دوباره انتخاب کنید.');return;}
+    let startDate=String(dateInput?.value||'').trim()
+      .replace(/[۰-۹]/g,ch=>String('۰۱۲۳۴۵۶۷۸۹'.indexOf(ch)))
+      .replace(/[٠-٩]/g,ch=>String('٠١٢٣٤٥٦٧٨٩'.indexOf(ch)));
+    if(!startDate && dateInput?.valueAsDate instanceof Date && Number.isFinite(dateInput.valueAsDate.getTime())) startDate=dateInput.valueAsDate.toISOString().slice(0,10);
+    if(/^\d{4}-\d{2}-\d{2}$/.test(startDate) && Number(startDate.slice(0,4))>=1300 && Number(startDate.slice(0,4))<=1500){
+      const parts=startDate.split('-').map(Number), jy=parts[0], jm=parts[1], jd=parts[2];
+      const fmt=new Intl.DateTimeFormat('en-u-ca-persian',{year:'numeric',month:'numeric',day:'numeric',timeZone:'UTC'});
+      const base=Date.UTC(jy+621,2,19);
+      let converted='';
+      for(let offset=-35;offset<=370;offset++){
+        const d=new Date(base+offset*86400000), p={};
+        fmt.formatToParts(d).forEach(x=>{if(x.type==='year'||x.type==='month'||x.type==='day')p[x.type]=Number(x.value)});
+        if(p.year===jy&&p.month===jm&&p.day===jd){converted=d.toISOString().slice(0,10);break;}
+      }
+      if(converted)startDate=converted;
+    }
+    if(!/^\d{4}-\d{2}-\d{2}$/.test(startDate)||!Number.isFinite(Date.parse(startDate+'T00:00:00Z'))){alert('تاریخ شروع برنامه معتبر نیست. مقدار دریافت‌شده: «'+String(dateInput?.value||'خالی')+'». لطفاً تاریخ را از تقویم انتخاب کنید.');return;}
+    if(dateInput && dateInput.value!==startDate)dateInput.value=startDate;
     const body={trainee_id:traineeId,title:(byId('workoutTitle')?.value||'').trim()||'برنامه تمرینی',plan_date:startDate,goal:(byId('workoutGoal')?.value||'').trim()||null,notes:(byId('workoutNotes')?.value||'').trim()||null};
     try{
       let savedId=ownedPlanId;
