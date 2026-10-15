@@ -10946,4 +10946,53 @@ body.workout-output.workout-compact{
 })();
 </script>
 
+
+<!-- SEH_ACTIVITY_WATER_CARD_ISOLATION_FIX_20261015 -->
+<script id="SEH_ACTIVITY_WATER_CARD_ISOLATION_FIX_20261015">
+(function(){
+ 'use strict';
+ function isolate(){
+  var water=document.getElementById('water');
+  if(!water)return;
+  function moveOut(panelId,hostId,insertAfterId){
+   var panel=document.getElementById(panelId);
+   var host=document.getElementById(hostId);
+   if(!panel)return;
+   if(!host){
+    host=document.createElement('section');
+    host.id=hostId;
+    host.className='section';
+    var anchor=document.getElementById(insertAfterId)||water;
+    anchor.insertAdjacentElement('afterend',host);
+   }else if(water.contains(host)){
+    water.insertAdjacentElement('afterend',host);
+   }
+   if(water.contains(panel)||panel.parentElement!==host)host.appendChild(panel);
+   if(hostId==='coachActivitySection'){
+    host.hidden=false;
+    host.style.removeProperty('display');
+   }
+  }
+  moveOut('coachActivityTodayPanel','coachActivitySection','client');
+  moveOut('activityDailyPanel','activitySection','traineeDashboard');
+ }
+ var oldDash=window.dashOpen;
+ if(typeof oldDash==='function'&&!window.__sehActivityWaterIsolationDash){
+  window.dashOpen=function(section){
+   var result=oldDash.apply(this,arguments);
+   if(section==='water'||section==='activity'){
+    isolate();
+    [0,80,250,700].forEach(function(ms){setTimeout(isolate,ms);});
+   }
+   return result;
+  };
+  window.__sehActivityWaterIsolationDash=true;
+ }
+ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',function(){isolate();setTimeout(isolate,300);setTimeout(isolate,1000);},{once:true});
+ else {isolate();setTimeout(isolate,300);setTimeout(isolate,1000);}
+ if(typeof MutationObserver!=='undefined'&&document.body){
+  new MutationObserver(function(){isolate();}).observe(document.body,{childList:true,subtree:true});
+ }
+})();
+</script>
 </body></html>
