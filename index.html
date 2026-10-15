@@ -4356,21 +4356,23 @@ window.toggleExerciseFavorite=async function(id,value){try{await sbWrite(`/train
     const ids=new Set([...workoutRows,...nutritionRows].filter(x=>x&&x.trainee_id!=null).map(x=>String(x.trainee_id)));
     const planCount=ids.size;
     const todayKey=workoutLocalDateKey(),todayMs=Date.parse(todayKey+'T00:00:00Z');
-    /* Evaluate only the newest saved workout plan per trainee to avoid old duplicate plans triggering false alerts. */
+    /* Prefer an explicitly saved plan_date over created_at.
+       Otherwise, a newer duplicate row with an empty plan_date can hide the trainee's real start date
+       and incorrectly remove the red renewal dot. Only fall back to created_at if no dated plan exists. */
     const newestByTrainee=new Map();
-    /* A plan can be edited in place, so created_at alone is not the plan's effective start date.
-       Choose the newest effective plan date first, then created_at as a tie-breaker. */
-    const effectivePlanDate=p=>String(p?.plan_date||p?.created_at||'').slice(0,10);
+    const explicitPlanDate=p=>String(p?.plan_date||'').slice(0,10);
     workoutRows.slice().sort((a,b)=>{
-      const dateCompare=effectivePlanDate(b).localeCompare(effectivePlanDate(a));
-      return dateCompare||String(b.created_at||'').localeCompare(String(a.created_at||''));
+      const ad=explicitPlanDate(a),bd=explicitPlanDate(b);
+      if(ad&&!bd)return -1;
+      if(bd&&!ad)return 1;
+      return bd.localeCompare(ad)||String(b.created_at||'').localeCompare(String(a.created_at||''));
     }).forEach(p=>{
       const id=String(p.trainee_id??'');
       if(id&&!newestByTrainee.has(id))newestByTrainee.set(id,p);
     });
     const dueIds=new Set();
     newestByTrainee.forEach((p,id)=>{
-      const start=effectivePlanDate(p);
+      const start=explicitPlanDate(p)||String(p?.created_at||'').slice(0,10);
       if(!start)return;
       const startMs=Date.parse(start+'T00:00:00Z');
       if(!Number.isFinite(startMs))return;
