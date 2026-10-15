@@ -1396,26 +1396,17 @@ let currentPlanId=null,currentMealId=null,currentMealFoods=[];
 // مقادیر بانک غذا برای هر ۱۰۰ گرم هستند؛ تبدیل واحدهای خانگی تقریبی است و فقط برای غذاهای شناخته‌شده فعال می‌شود.
 function mealFoodUnitInfo(name){
  const n=String(name||"").replace(/ي/g,"ی").replace(/ك/g,"ک");
- if(/تخم\s*مرغ|تخممرغ/.test(n))return {kind:"egg",units:[["عدد","عدد (حدود ۵۰ گرم)"]],defaultUnit:"عدد",defaultAmount:2};
- if(/عسل/.test(n))return {kind:"spoon",units:[["قاشق غذاخوری","قاشق غذاخوری (حدود ۲۱ گرم)"]],defaultUnit:"قاشق غذاخوری",defaultAmount:1};
- if(/کره بادام زمینی/.test(n))return {kind:"spoon",units:[["قاشق غذاخوری","قاشق غذاخوری (حدود ۱۶ گرم)"]],defaultUnit:"قاشق غذاخوری",defaultAmount:1};
- if(/سالاد/.test(n))return {kind:"salad",units:[["بشقاب","بشقاب (حدود ۲۵۰ گرم)"]],defaultUnit:"بشقاب",defaultAmount:1};
- if(/بادام|پسته|فندق|گردو|بادام\s*هندی|تخمه|آجیل|اجیل|مغز/.test(n)){
-  const single=/بادام(?!\s*هندی)|پسته|فندق|تخمه/.test(n);
-  const units=[["مشت","مشت (حدود ۲۵ گرم)"]];
-  if(single)units.push(["عدد","عدد (وزن تقریبی بر اساس نوع مغز)"]);
-  return {kind:"nuts",units,defaultUnit:"مشت",defaultAmount:1};
- }
- if(/چای|قهوه|اسپرسو|دمنوش|دوغ|شیک پروتئینی|شیر\s*کم[\s‌-]*چرب|شیر\s*پر[\s‌-]*چرب/.test(n)){
-  return {kind:"drink",units:[["میلی‌لیتر","میلی‌لیتر"],["لیوان","لیوان (حدود ۲۵۰ میلی‌لیتر)"]],defaultUnit:"لیوان",defaultAmount:1};
- }
- if(/پودر وی|پودر پروتئین/.test(n)){
-  return {kind:"supplement",units:[["پیمانه","پیمانه (حدود ۳۰ گرم)"]],defaultUnit:"پیمانه",defaultAmount:1};
- }
- if(/سیب|موز|پرتقال|نارنگی|گلابی|هلو|شلیل|کیوی|انبه|گریپ\s*فروت|خرمالو|آووکادو|خرما|توت.?فرنگی|بلوبری|انگور|هندوانه/.test(n)){
-  return {kind:"fruit",units:[["عدد","عدد (وزن تقریبی بر اساس میوه)"]],defaultUnit:"عدد",defaultAmount:1};
- }
- return {kind:"other",units:[],defaultUnit:"گرم",defaultAmount:100};
+ const units=[["گرم","گرم"],["مشت","مشت (تقریبی؛ برای مغزها حدود ۲۵ گرم)"],["عدد","عدد (وزن تقریبی؛ بسته به غذا)"],["بشقاب","بشقاب (حدود ۲۵۰ گرم)"]];
+ let defaultUnit="گرم",defaultAmount=100;
+ if(/تخم\s*مرغ|تخممرغ/.test(n)){defaultUnit="عدد";defaultAmount=2;}
+ else if(/عسل/.test(n)){units.push(["قاشق غذاخوری","قاشق غذاخوری (حدود ۲۱ گرم)"]);defaultUnit="قاشق غذاخوری";defaultAmount=1;}
+ else if(/کره بادام زمینی/.test(n)){units.push(["قاشق غذاخوری","قاشق غذاخوری (حدود ۱۶ گرم)"]);defaultUnit="قاشق غذاخوری";defaultAmount=1;}
+ else if(/سالاد/.test(n)){defaultUnit="بشقاب";defaultAmount=1;}
+ else if(/بادام|پسته|فندق|گردو|بادام\s*هندی|تخمه|آجیل|اجیل|مغز/.test(n)){defaultUnit="مشت";defaultAmount=1;}
+ else if(/چای|قهوه|اسپرسو|دمنوش|دوغ|شیک پروتئینی|شیر\s*کم[\s‌-]*چرب|شیر\s*پر[\s‌-]*چرب/.test(n)){units.push(["میلی‌لیتر","میلی‌لیتر"],["لیوان","لیوان (حدود ۲۵۰ میلی‌لیتر)"]);defaultUnit="لیوان";defaultAmount=1;}
+ else if(/پودر وی|پودر پروتئین/.test(n)){units.push(["پیمانه","پیمانه (حدود ۳۰ گرم)"]);defaultUnit="پیمانه";defaultAmount=1;}
+ else if(/سیب|موز|پرتقال|نارنگی|گلابی|هلو|شلیل|کیوی|انبه|گریپ\s*فروت|خرمالو|آووکادو|خرما|توت.?فرنگی|بلوبری|انگور|هندوانه/.test(n)){defaultUnit="عدد";defaultAmount=1;}
+ return {kind:"common",units,defaultUnit,defaultAmount};
 }
 function mealUnitGrams(name,unit){
  const n=String(name||"").replace(/ي/g,"ی").replace(/ك/g,"ک"), u=String(unit||"گرم");
@@ -1447,6 +1438,9 @@ function mealUnitGrams(name,unit){
   if(/آووکادو/.test(n))return 150;
   if(/خرما/.test(n))return 8;
  }
+ if(u==="مشت")return 100;
+ if(u==="بشقاب")return 250;
+ if(u==="عدد")return 100;
  return null;
 }
 function foodMetrics(foodRow, amount, unit){
