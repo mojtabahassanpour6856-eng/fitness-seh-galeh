@@ -11503,7 +11503,11 @@ body.workout-output.workout-compact{
     try{
       if(typeof window.sbWrite!=='function')throw new Error('اتصال امن دیتابیس آماده نیست؛ دوباره وارد پنل مربی شوید.');
       await window.sbWrite('/trainees?id=eq.'+encodeURIComponent(id),'PATCH',{archived_at:archived?new Date().toISOString():null});
+      // After restoring from the archive, switch back to the active list before reloading.
+      // Otherwise the successful restore leaves the coach on an empty archive screen.
+      if(!archived)mode='active';
       if(typeof window.loadClients==='function')await window.loadClients();
+      else if(typeof window.renderClients==='function')window.renderClients();
       alert(archived?'شاگرد با موفقیت بایگانی شد؛ اطلاعاتش حذف نشده است.':'شاگرد با موفقیت به فهرست فعال برگشت.');
     }catch(e){
       console.error('Trainee archive action failed:',e);
