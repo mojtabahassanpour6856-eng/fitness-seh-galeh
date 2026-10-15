@@ -2286,7 +2286,21 @@ if($("prDate"))$("prDate").value=today();if($("anDate"))$("anDate").value=today(
     buildDashboard();if(!currentClient)return;
     setText('dashWelcome',`${currentClient.name||'شاگرد'} | ${currentClient.goal||'هدف ثبت نشده'}`);setText('dashGoal',currentClient.goal||'ثبت نشده');
     try{const w=await sbGet(`/trainee_workout_plans?trainee_id=eq.${encodeURIComponent(currentClient.id)}&select=id&order=created_at.desc&limit=1`);setText('dashWorkout',w.length?'برنامه فعال':'ثبت نشده');}catch(e){}
-    try{const m=await sbGet(`/nutrition_plans?trainee_id=eq.${encodeURIComponent(currentClient.id)}&select=id,is_active&order=created_at.desc&limit=1`);setText('dashMeal',m.length?'برنامه فعال':'ثبت نشده');}catch(e){}
+    try{
+      const traineeId=currentClient.id;
+      const [plans,dietRows]=await Promise.all([
+        sbGet(`/nutrition_plans?trainee_id=eq.${encodeURIComponent(traineeId)}&select=id,is_active&order=created_at.desc&limit=1`),
+        sbGet(`/fasting_logs?trainee_id=eq.${encodeURIComponent(traineeId)}&select=description&order=created_at.desc&limit=50`).catch(()=>[])
+      ]);
+      const hasNutritionPlan=(plans||[]).some(p=>p.is_active!==false);
+      const hasAssignedDiet=(dietRows||[]).some(row=>{
+        const description=String(row.description||'');
+        return description.startsWith('رژیم‌غذایی::')||
+          (!description.startsWith('STUDENT_DIET_REQUEST:')&&
+           !description.startsWith('DIET_CONFIG:')&&/^نوع\\s/.test(description));
+      });
+      setText('dashMeal',hasNutritionPlan||hasAssignedDiet?'برنامه فعال':'ثبت نشده');
+    }catch(e){setText('dashMeal','وضعیت در دسترس نیست');}
     try{const a=await sbGet(`/body_analyses?trainee_id=eq.${encodeURIComponent(currentClient.id)}&select=weight,body_fat,analysis_date&order=analysis_date.desc&limit=1`);setText('dashAnalysis',a[0]?`${a[0].weight||'—'} kg`:'ثبت نشده');setText('dashProgress',a[0]?.analysis_date||'ثبت نشده');}catch(e){}
     try{
       const water=await loadWaterToday();
