@@ -10452,7 +10452,25 @@ body.workout-output.workout-compact{
   }catch(e){console.error('Chat open failed',e);$('sehChatMessages').innerHTML='<div class="seh-chat-muted">'+esc(e.message||'بازکردن گفت‌وگو انجام نشد.')+'</div>';}
  }
  window.sehOpenCoachChat=()=>openChat('coach');
- window.sehOpenCoachChatForTrainee=async id=>{await openChat('coach');const t=conversations.find(x=>String(x.id)===String(id));if(t)await selectConversation(t);};
+ window.sehOpenCoachChatForTrainee=async id=>{
+  await openChat('coach');
+  let t=conversations.find(x=>String(x.id)===String(id));
+  if(!t){
+   try{await loadCoachConversations(await currentAuthUser());}catch(e){console.warn('Unable to refresh coach conversations for notification:',e);}
+   t=conversations.find(x=>String(x.id)===String(id));
+  }
+  if(t)await selectConversation(t);
+ };
+ // Handle a notification click while this app page is already open.
+ if('serviceWorker' in navigator&&!window.sehChatNotificationMessageBound){
+  window.sehChatNotificationMessageBound=true;
+  navigator.serviceWorker.addEventListener('message',event=>{
+   const data=event.data||{};
+   if(data.type==='OPEN_CHAT_TRAINEE'&&/^[0-9a-f-]{36}$/i.test(String(data.trainee_id||''))){
+    window.sehOpenCoachChatForTrainee(String(data.trainee_id));
+   }
+  });
+ }
  // Open the requested trainee conversation after login when launched from a push notification.
  (function handleChatNotificationRoute(){
   let requestedId='';
