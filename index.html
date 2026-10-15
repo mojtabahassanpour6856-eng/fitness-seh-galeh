@@ -425,7 +425,14 @@ body.locked{overflow:hidden!important}
 <section id="calorieCalculatorCard" class="section">
   <div class="card" id="sehCalorieCalcRoot">
     <h2>🧮 کارت محاسبه‌گر کالری شاگرد</h2>
-    <p class="muted">اطلاعات شاگرد را وارد کن تا کالری پایه، کالری نگهدارنده و پیشنهاد روزانه بر اساس هدف محاسبه شود. این ابزار تخمینی است و جایگزین ارزیابی تخصصی نیست.</p>
+    <p class="muted">شاگرد را انتخاب کن تا اطلاعات ثبت‌شده‌اش خودکار وارد شود؛ همه فیلدها پس از آن قابل تغییر دستی هستند. اگر شاگرد انتخاب نکنی، اطلاعات را دستی وارد کن. این ابزار تخمینی است و جایگزین ارزیابی تخصصی نیست.</p>
+    <div style="margin:12px 0">
+      <label for="sehCalClientSelect">انتخاب از فهرست شاگردان</label>
+      <select id="sehCalClientSelect" onchange="sehUseCalorieTrainee(this.value)">
+        <option value="">انتخاب شاگرد…</option>
+      </select>
+      <p id="sehCalClientStatus" class="muted" style="font-size:12px;margin:5px 0 0">با انتخاب شاگرد، نام، جنسیت، سن، قد، وزن و هدف او وارد می‌شود؛ می‌توانی هرکدام را دستی اصلاح کنی.</p>
+    </div>
     <div class="grid2">
       <div><label for="sehCalName">نام شاگرد (اختیاری)</label><input id="sehCalName" type="text" maxlength="80" placeholder="نام شاگرد"></div>
       <div><label for="sehCalSex">جنسیت</label><select id="sehCalSex"><option value="male">مرد</option><option value="female">زن</option></select></div>
@@ -1148,6 +1155,7 @@ async function loadClients(){
     }));
 
     renderClients();
+    if(typeof window.sehSyncCalorieTrainees==="function")window.sehSyncCalorieTrainees();
 
   }catch(e){
     console.error(e);
@@ -1193,6 +1201,7 @@ function updateStats(){
 
 function selectClient(id){
   currentClient=clients.find(x=>String(x.id)===String(id));if(!currentClient)return;
+  if(typeof window.sehUseCalorieTrainee==="function")window.sehUseCalorieTrainee(currentClient.id);
   $("pn").value=currentClient.name||"";$("page").value=currentClient.age||"";$("pweight").value=currentClient.weight||"";
   $("pheight").value=currentClient.height||"";$("pgoal").value=currentClient.goal||"کاهش وزن";
   $("plevel").value=currentClient.level||"مبتدی";loadNutritionForClient();loadWorkoutForClient();loadDietSummary();
@@ -11033,8 +11042,46 @@ body.workout-output.workout-compact{
   window.__sehCalorieCalcReady=true;
   function el(id){return document.getElementById(id);}
   function num(id){return Number(el(id).value);}
+  function mapGoal(goal){
+    var g=String(goal||'').toLowerCase();
+    if(g.indexOf('کاهش')>=0||g.indexOf('چربی')>=0||g.indexOf('lose')>=0||g.indexOf('fat')>=0)return 'lose';
+    if(g.indexOf('افزایش')>=0||g.indexOf('عضله')>=0||g.indexOf('قدرت')>=0||g.indexOf('gain')>=0||g.indexOf('muscle')>=0)return 'gain';
+    return 'maintain';
+  }
+  window.sehSyncCalorieTrainees=function(){
+    var select=el('sehCalClientSelect');if(!select)return;
+    var previous=select.value;
+    var list=Array.isArray(window.clients)?window.clients:[];
+    select.innerHTML='<option value="">انتخاب شاگرد…</option>'+list.map(function(c){
+      var name=String(c.name||'بدون نام').replace(/[&<>"]/g,function(ch){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[ch];});
+      return '<option value="'+String(c.id).replace(/"/g,'&quot;')+'">'+name+'</option>';
+    }).join('');
+    if(previous&&list.some(function(c){return String(c.id)===String(previous);}))select.value=previous;
+    else if(window.currentClient&&list.some(function(c){return String(c.id)===String(window.currentClient.id);}))select.value=String(window.currentClient.id);
+  };
+  window.sehUseCalorieTrainee=function(id){
+    if(!id){if(el('sehCalClientStatus'))el('sehCalClientStatus').textContent='شاگردی انتخاب نشده؛ اطلاعات را دستی وارد کن.';return;}
+    var list=Array.isArray(window.clients)?window.clients:[];
+    var c=list.find(function(x){return String(x.id)===String(id);});
+    if(!c&&window.currentClient&&String(window.currentClient.id)===String(id))c=window.currentClient;
+    if(!c)return;
+    el('sehCalName').value=c.name||'';
+    el('sehCalSex').value=(String(c.gender||'').indexOf('زن')>=0||String(c.gender||'').toLowerCase()==='female')?'female':'male';
+    el('sehCalAge').value=c.age||'';
+    el('sehCalHeight').value=c.height||'';
+    el('sehCalWeight').value=c.weight||'';
+    el('sehCalGoal').value=mapGoal(c.goal);
+    if(c.target_weight||c.targetWeight)el('sehCalTarget').value=c.target_weight||c.targetWeight;
+    else el('sehCalTarget').value='';
+    if(c.goal_weeks||c.goalWeeks)el('sehCalWeeks').value=c.goal_weeks||c.goalWeeks;
+    else el('sehCalWeeks').value='12';
+    el('sehCalcResult').innerHTML='';
+    showGoalFields();
+    if(el('sehCalClientStatus'))el('sehCalClientStatus').textContent='اطلاعات «'+(c.name||'شاگرد انتخاب‌شده')+'» وارد شد. می‌توانی فیلدها را دستی تغییر بدهی؛ تغییرات فقط برای همین محاسبه است و پروفایل شاگرد را تغییر نمی‌دهد.';
+  };
   function showGoalFields(){var goal=el('sehCalGoal').value;el('sehCalTargetWrap').style.display=goal==='maintain'?'none':'block';el('sehCalWeeksWrap').style.display=goal==='maintain'?'none':'block';}
   el('sehCalGoal').addEventListener('change',showGoalFields);showGoalFields();
+  if(typeof window.sehSyncCalorieTrainees==='function')window.sehSyncCalorieTrainees();
   window.sehResetCalories=function(){
     ['sehCalName','sehCalHeight','sehCalWeight','sehCalTarget'].forEach(function(id){el(id).value='';});
     el('sehCalSex').value='male';el('sehCalAge').value='30';el('sehCalGoal').value='lose';el('sehCalWeeks').value='12';el('sehCalActivity').value='1.55';el('sehCalSessions').value='3';el('sehCalDuration').value='60';el('sehCalcResult').innerHTML='';showGoalFields();
