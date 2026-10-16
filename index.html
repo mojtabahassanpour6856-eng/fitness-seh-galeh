@@ -11791,15 +11791,28 @@ body.workout-output.workout-compact{
   window.renderClients=function(){
     ensureControls();
     var all=clients;
+    // The base renderer updates dashboard statistics. Suppress that call while
+    // the shared clients array is temporarily filtered, or counters can be
+    // overwritten with archived-only/active-only values after async requests.
+    var originalUpdateStats=window.updateStats;
+    var statsSuppressed=false;
     try{
       clients=all.filter(function(c){return mode==='archived'?!!c.archivedAt:!c.archivedAt;});
+      if(typeof originalUpdateStats==='function'){
+        window.updateStats=function(){};
+        statsSuppressed=true;
+      }
       originalRender.apply(this,arguments);
-    }finally{clients=all;}
+    }finally{
+      clients=all;
+      if(statsSuppressed)window.updateStats=originalUpdateStats;
+    }
+    // Always calculate the four dashboard counters from the complete trainee list.
+    if(typeof originalUpdateStats==='function')originalUpdateStats();
     ensureControls();
     var grid=el('coachMobileCards');if(!grid)return;
     if(mode==='archived'&&!all.some(function(c){return !!c.archivedAt;})){
       grid.innerHTML='<div style="padding:14px;border:1px solid #8b6b2b;border-radius:10px;margin-top:10px"><strong>هنوز شاگردی بایگانی نشده است.</strong><p>در حال حاضر همه شاگردان در فهرست فعال هستند. برای انتقال شاگرد به این بخش، به «شاگردان فعال» برگرد و کنار نام او «📦 بایگانی» را بزن.</p></div>';
-      if(typeof window.updateStats==='function')window.updateStats();
       var emptyHint=el('traineeArchiveHint');if(emptyHint)emptyHint.textContent='فهرست بایگانی فعلاً خالی است؛ هیچ شاگردی حذف نشده.';
       return;
     }
