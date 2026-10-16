@@ -4684,10 +4684,21 @@ window.toggleExerciseFavorite=async function(id,value){try{await sbWrite(`/train
       const sessionResult=await window.AUTH_SUPABASE.auth.getSession();
       const session=sessionResult?.data?.session;
       if(!session?.user?.id)throw new Error('نشست ورود معتبر نیست؛ خارج شوید و دوباره وارد شوید.');
-      const profileResult=await window.AUTH_SUPABASE.from('profiles').select('id,role').eq('id',session.user.id).maybeSingle();
-      if(profileResult.error)throw profileResult.error;
-      if(!profileResult.data)throw new Error('پروفایل حساب واردشده در جدول profiles پیدا نشد.');
-      if(profileResult.data.role!=='coach')throw new Error('این بخش فقط برای حساب مربی است.');
+      // finishLogin already verifies and loads the signed-in user's profile.
+      // Reuse that fresh same-session profile to avoid a duplicate network read on dashboard startup.
+      // If no matching cached profile exists, retain the original database verification.
+      let verifiedRole=null;
+      try{
+        const cachedProfile=(typeof authProfile!=='undefined'&&authProfile)?authProfile:window.authProfile;
+        if(cachedProfile&&String(cachedProfile.id)===String(session.user.id))verifiedRole=cachedProfile.role||null;
+      }catch(_){}
+      if(!verifiedRole){
+        const profileResult=await window.AUTH_SUPABASE.from('profiles').select('id,role').eq('id',session.user.id).maybeSingle();
+        if(profileResult.error)throw profileResult.error;
+        if(!profileResult.data)throw new Error('پروفایل حساب واردشده در جدول profiles پیدا نشد.');
+        verifiedRole=profileResult.data.role;
+      }
+      if(verifiedRole!=='coach')throw new Error('این بخش فقط برای حساب مربی است.');
       // Start the optional membership read alongside the trainee query.
       // The trainee list remains the priority; membership data is applied after the list is visible.
       const membershipPromise=window.sbGet('/trainee_memberships?select=id,trainee_id,start_date,end_date,status,created_at&order=created_at.desc')
