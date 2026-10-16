@@ -12309,6 +12309,12 @@ body.workout-output.workout-compact{
   'use strict';
   let lockedId=null, lockUntil=0, guardTimer=null;
   const byId=id=>document.getElementById(id);
+  function isCoachRole(){
+    try{if(typeof authProfile!=='undefined'&&authProfile&&authProfile.role)return String(authProfile.role).toLowerCase()==='coach';}catch(e){}
+    try{if(window.authProfile&&window.authProfile.role)return String(window.authProfile.role).toLowerCase()==='coach';}catch(e){}
+    const label=byId('authUserText');
+    return !!(label&&/مربی/.test(label.textContent||'')&&!/شاگرد/.test(label.textContent||''));
+  }
   function clientRows(){
     try{if(Array.isArray(clients))return clients;}catch(e){}
     return Array.isArray(window.clients)?window.clients:[];
@@ -12352,7 +12358,8 @@ body.workout-output.workout-compact{
     return true;
   }
   function keepSelectedProfile(){
-    if(!lockedId||Date.now()>lockUntil){lockedId=null;return;}
+    // This temporary lock is only for the coach's trainee-list workflow.
+    if(!isCoachRole()||!lockedId||Date.now()>lockUntil){lockedId=null;return;}
     openProfile(lockedId);
   }
   function startGuard(id){
@@ -12399,9 +12406,11 @@ body.workout-output.workout-compact{
   const oldShow=window.showSection;
   if(typeof oldShow==='function'&&!oldShow.__sehProfileGuardV6){
     const guarded=function(id,button){
-      if(lockedId&&Date.now()<lockUntil&&String(id)!=='client'){
+      // The coach selection lock must never redirect trainee dashboard cards to the profile.
+      if(isCoachRole()&&lockedId&&Date.now()<lockUntil&&String(id)!=='client'){
         return oldShow.call(this,'client',clientNav());
       }
+      if(!isCoachRole()&&lockedId){lockedId=null;clearTimeout(guardTimer);}
       return oldShow.apply(this,arguments);
     };
     guarded.__sehProfileGuardV6=true;
