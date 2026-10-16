@@ -4003,6 +4003,17 @@ window.toggleExerciseFavorite=async function(id,value){try{await sbWrite(`/train
     const paid=value('subPaid');
     if(!Number.isFinite(amount)||amount<0){alert('مبلغ شهریه باید عددی معتبر و صفر یا بیشتر باشد.');return;}
     const isPaid=paid==='پرداخت شده';
+    // Keep one stable random membership number for each trainee and persist it on the membership row.
+    let cardNumber='';
+    try{
+      const priorMemberships=await sbGet('/trainee_memberships?trainee_id=eq.'+encodeURIComponent(traineeId)+'&select=card_number&order=created_at.desc&limit=10');
+      cardNumber=String((priorMemberships||[]).find(x=>x.card_number)?.card_number||'');
+    }catch(e){console.warn('Could not read prior membership card number:',e);}
+    if(!cardNumber){
+      const bytes=new Uint32Array(1);
+      if(window.crypto&&window.crypto.getRandomValues)window.crypto.getRandomValues(bytes);else bytes[0]=Math.floor(Math.random()*0xffffffff);
+      cardNumber=String(10000000+(bytes[0]%90000000));
+    }
     if(pendingPayment){
       if(!samePayment(pendingPayment,traineeId,amount,paid,start,end)){
         alert('یک عضویت ذخیره شده اما ثبت پرداخت آن ناموفق بوده است. برای جلوگیری از ثبت تکراری، ابتدا همان شاگرد، مبلغ و وضعیت قبلی را برگردانید و دوباره ذخیره کنید.');
@@ -4024,6 +4035,10 @@ window.toggleExerciseFavorite=async function(id,value){try{await sbWrite(`/train
     saving=true;
     try{
       const membershipBody={trainee_id:traineeId,start_date:start,end_date:end,
+        amount:amount,
+        payment_status:isPaid?'paid':'unpaid',
+        card_number:cardNumber,
+        card_holder:String(currentClient.full_name||currentClient.name||'عضو باشگاه'),
         status:isPaid?'active':'pending',
         description:'عضویت باشگاه'};
       await window.sbWrite('/trainee_memberships','POST',membershipBody);
@@ -6597,7 +6612,7 @@ const oldWorkoutRenderer=window.renderWorkoutList;
    const memberName=String(profile.full_name||currentClient.full_name||currentClient.name||"شاگرد باشگاه");
    const gender=String(profile.gender||currentClient.gender||"").trim();
    const title=gender==="زن"||gender.toLowerCase()==="female"?"خانم":gender==="مرد"||gender.toLowerCase()==="male"?"آقا":"عضو باشگاه";
-   const memberNumber=String(cardRows?.[0]?.card_number||"");
+   const memberNumber=String(cardRows?.[0]?.card_number||m?.card_number||"");
    const put=(key,value)=>{const el=$(key);if(el)el.textContent=value;};
    put("sehMemberName",memberName);put("sehMemberTitle",title);
    put("sehMemberNumber",memberNumber||"در انتظار ثبت توسط مربی");
