@@ -11253,7 +11253,7 @@ body.workout-output.workout-compact{
  }
  var activityView=false, busy=false;
  function isolate(){
-  if(!activityView||busy||role()!=='trainee'||window.__sehForceDashboardReturn)return;
+  if(!activityView||busy||role()!=='trainee')return;
   var panel=document.getElementById('activityDailyPanel');
   if(!panel)return;
   busy=true;
@@ -11341,7 +11341,7 @@ body.workout-output.workout-compact{
  };
  document.addEventListener('click',function(e){
   var node=e.target&&e.target.closest&&e.target.closest('[onclick*="dashOpen(\'activity\')"],[onclick*="dashOpen(\"activity\")"]');
-  if(node&&role()==='trainee'){window.__sehForceDashboardReturn=false;activityView=true;[0,80,250,700].forEach(function(ms){setTimeout(isolate,ms);});}
+  if(node&&role()==='trainee'){activityView=true;[0,80,250,700].forEach(function(ms){setTimeout(isolate,ms);});}
  },true);
  if(typeof MutationObserver!=='undefined'&&document.body){
   new MutationObserver(function(){if(activityView&&role()==='trainee')setTimeout(isolate,0);}).observe(document.body,{childList:true,subtree:true});
@@ -12478,29 +12478,5 @@ body.workout-output.workout-compact{
   [0,80,250,600,1000].forEach(function(ms){setTimeout(revealDashboard,ms);});
  };
  window.addEventListener('popstate',function(){if(role()==='trainee'&&document.getElementById('activitySection')?.classList.contains('active'))window.sehReturnToDashboard();});
-})();
-</script>
-
-<script id="seh-activity-dashboard-direct-nav-fix-20261016">
-(function(){
- 'use strict';
- function isTrainee(){
-  try{if(typeof authProfile!=='undefined'&&authProfile&&String(authProfile.role).toLowerCase()==='trainee')return true;}catch(e){}
-  try{if(window.authProfile&&String(window.authProfile.role).toLowerCase()==='trainee')return true;}catch(e){}
-  var t=document.getElementById('authUserText');return !!(t&&/شاگرد/.test(t.textContent||''));
- }
- // The activity isolation observer previously kept hiding the dashboard after
- // the trainee tapped the dashboard navigation item. Suspend that observer on return.
- document.addEventListener('click',function(e){
-  var btn=e.target&&e.target.closest?e.target.closest('#navDash'):null;
-  if(!btn||!isTrainee())return;
-  e.preventDefault();e.stopPropagation();e.stopImmediatePropagation();
-  window.__sehForceDashboardReturn=true;
-  if(typeof window.sehReturnToDashboard==='function')window.sehReturnToDashboard();
-  else {
-   var dash=document.getElementById('traineeDashboard');
-   if(dash){document.querySelectorAll('.section').forEach(function(sec){sec.classList.remove('active');sec.style.setProperty('display','none','important');});dash.classList.add('active');dash.style.setProperty('display','block','important');}
-  }
- },true);
 })();
 </script>
