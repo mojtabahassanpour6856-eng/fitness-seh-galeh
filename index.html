@@ -12384,3 +12384,26 @@ body.workout-output.workout-compact{
   },true);
 })();
 </script>
+
+<script id="seh-membership-card-live-refresh-2026-10-16">
+/* MEMBERSHIP CARD LIVE REFRESH PATCH 2026-10-16
+   Keep the coach's visual membership card synchronized after the existing save action.
+   The existing membership save logic and database schema are left unchanged. */
+(function(){
+  const originalSave=window.saveSubscription;
+  if(typeof originalSave!=="function" || originalSave.__sehCardRefreshWrapped) return;
+  const wrapped=async function(){
+    const traineeId=(typeof currentClient!=="undefined" && currentClient)?String(currentClient.id):"";
+    const result=await originalSave.apply(this,arguments);
+    try{
+      if(traineeId && typeof currentClient!=="undefined" && currentClient &&
+         String(currentClient.id)===traineeId && typeof loadMembershipCard==="function"){
+        await loadMembershipCard();
+      }
+    }catch(error){console.warn("Membership card refresh after save failed:",error);}
+    return result;
+  };
+  wrapped.__sehCardRefreshWrapped=true;
+  window.saveSubscription=wrapped;
+})();
+</script>
