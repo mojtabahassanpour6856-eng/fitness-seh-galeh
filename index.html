@@ -11956,7 +11956,7 @@ body.workout-output.workout-compact{
     if(!c) return;
     const set = (id,value) => {
       const el = $(id);
-      if(el && document.activeElement !== el && value != null && String(value) !== '') el.value = String(value);
+      if(el && document.activeElement !== el) el.value = value == null ? '' : String(value);
     };
     set('pgoal', c.goal);
     set('plevel', c.training_level || c.level);
