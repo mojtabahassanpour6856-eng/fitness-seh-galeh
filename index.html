@@ -12919,3 +12919,43 @@ body.workout-output.workout-compact{
   ['loadExercises','loadLibraryExercises'].forEach(wrap);
 })();
 </script>
+
+<!-- SEH_FINAL_FETCH_AND_SESSION_RECOVERY_20261016 -->
+<script id="SEH_FINAL_FETCH_AND_SESSION_RECOVERY_20261016">
+(function(){
+  'use strict';
+  // Older code paths still read this shared reference. Repair it before any dashboard requests.
+  if(typeof window.__SEH_ORIGINAL_FETCH!=='function' && typeof window.fetch==='function'){
+    window.__SEH_ORIGINAL_FETCH=window.fetch.bind(window);
+  }
+  // Restore the persisted Supabase session after all login wrappers have been installed.
+  // This keeps a normal page refresh from unnecessarily asking the coach to sign in again.
+  var started=false;
+  async function restoreSavedSession(){
+    if(started)return;
+    started=true;
+    if(typeof window.__SEH_ORIGINAL_FETCH!=='function' && typeof window.fetch==='function'){
+      window.__SEH_ORIGINAL_FETCH=window.fetch.bind(window);
+    }
+    var auth=window.AUTH_SUPABASE;
+    if(!auth || !auth.auth || typeof window.finishLogin!=='function')return;
+    var screen=document.getElementById('authScreen');
+    if(document.body && !document.body.classList.contains('locked') && screen && screen.style.display==='none')return;
+    try{
+      var result=await auth.auth.getSession();
+      if(result && result.error)throw result.error;
+      var session=result && result.data && result.data.session;
+      if(session && session.user && typeof window.finishLogin==='function'){
+        await window.finishLogin(session.user);
+      }
+    }catch(error){
+      console.error('Saved session restoration failed:',error);
+    }
+  }
+  if(document.readyState==='loading'){
+    document.addEventListener('DOMContentLoaded',function(){setTimeout(restoreSavedSession,0);},{once:true});
+  }else{
+    setTimeout(restoreSavedSession,0);
+  }
+})();
+</script>
