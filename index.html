@@ -4688,7 +4688,11 @@ window.toggleExerciseFavorite=async function(id,value){try{await sbWrite(`/train
       if(profileResult.error)throw profileResult.error;
       if(!profileResult.data)throw new Error('پروفایل حساب واردشده در جدول profiles پیدا نشد.');
       if(profileResult.data.role!=='coach')throw new Error('این بخش فقط برای حساب مربی است.');
-      // Use authenticated REST. Do not let an optional membership table hide the trainees.
+      // Start the optional membership read alongside the trainee query.
+      // The trainee list remains the priority; membership data is applied after the list is visible.
+      const membershipPromise=window.sbGet('/trainee_memberships?select=id,trainee_id,start_date,end_date,status,created_at&order=created_at.desc')
+        .then(rows=>({ok:true,rows:rows||[]}))
+        .catch(error=>({ok:false,error}));
       const data=await window.sbGet('/trainees?select=*&order=created_at.desc');
       clients=(data||[]).map(c=>({
         id:c.id,name:c.full_name||c.name||'بدون نام',phone:c.phone||'',gender:c.gender||'',
@@ -4705,8 +4709,10 @@ window.toggleExerciseFavorite=async function(id,value){try{await sbWrite(`/train
       // renderClients already triggers one dashboard-statistics refresh.
       // Avoid a second identical summary request before membership data finishes loading.
       // Membership information is supplementary; failure must not erase the trainee list.
+      const membershipResult=await membershipPromise;
       try{
-        let memberships=await window.sbGet('/trainee_memberships?select=id,trainee_id,start_date,end_date,status,created_at&order=created_at.desc');
+        if(!membershipResult.ok)throw membershipResult.error;
+        const memberships=membershipResult.rows;
         const latest={};(memberships||[]).forEach(m=>{if(!latest[m.trainee_id])latest[m.trainee_id]=m;});
         clients.forEach(c=>{
           const m=latest[c.id];if(!m){c.membershipStatus='بدون عضویت';c.active=!c.archivedAt;return;}
