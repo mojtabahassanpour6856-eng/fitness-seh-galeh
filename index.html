@@ -4581,7 +4581,10 @@ window.toggleExerciseFavorite=async function(id,value){try{await sbWrite(`/train
     // Update the visible counters immediately; network work below must not block the coach dashboard.
     if(el('clientCount'))el('clientCount').textContent=fa(total);
     if(el('activeCount'))el('activeCount').textContent=fa(active);
-    if(el('alertCount'))el('alertCount').textContent=fa(baseAlerts);
+    // These two figures depend on the asynchronous plan and renewal queries.
+    // Show a neutral loading marker rather than a provisional number that then jumps.
+    if(el('planCount'))el('planCount').textContent='…';
+    if(el('alertCount'))el('alertCount').textContent='…';
     let workoutRows=[],nutritionRows=[];
     // Fetch both summary datasets at the same time instead of waiting for one after the other.
     const results=await Promise.allSettled([
@@ -4604,7 +4607,12 @@ window.toggleExerciseFavorite=async function(id,value){try{await sbWrite(`/train
     }
     // Ignore stale async results if the shared trainee array changed while these requests were in flight.
     // This prevents a delayed stats call started during an older filtered render from overwriting full-list counts.
-    if(currentClients!==clients)return;
+    if(currentClients!==clients){
+      // A newer trainee-list load replaced the array while these requests were running.
+      // Retry after the shared in-flight request settles so the visible markers are resolved.
+      setTimeout(()=>{if(typeof window.updateStats==='function')window.updateStats(true);},0);
+      return;
+    }
     const ids=new Set([...workoutRows,...nutritionRows].filter(x=>x&&x.trainee_id!=null).map(x=>String(x.trainee_id)));
     currentClients.forEach(c=>c.plans=ids.has(String(c.id))?1:0);
     const todayKey=workoutLocalDateKey(),todayMs=Date.parse(todayKey+'T00:00:00Z');
