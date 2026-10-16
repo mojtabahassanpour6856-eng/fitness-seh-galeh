@@ -10922,7 +10922,7 @@ body.workout-output.workout-compact{
  }
  function stopPolling(){if(pollTimer)clearInterval(pollTimer);pollTimer=null;}
  async function openChat(who,preferredTraineeId){
-  mode=who;selected=null;lastMessageId=null;ensureSection();addEntryCard();
+  mode=who;selected=null;lastMessageId=null;ensureSection();const backButton=$('sehChatBack');if(backButton)backButton.style.display=who==='trainee'?'none':'';addEntryCard();
   const sec=$('sehChatSection');const layout=$('sehChatLayout');const convCard=$('sehChatConversationCard');
   layout?.classList.toggle('coach-mode',who==='coach');if(convCard)convCard.style.display=who==='coach'?'block':'none';
   $('sehChatHint').textContent=who==='coach'?'گفت‌وگوها فقط برای مربی و شاگرد مربوطه قابل مشاهده‌اند.':'این گفت‌وگو فقط بین شما و مربی است.';
