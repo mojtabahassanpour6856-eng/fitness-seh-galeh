@@ -6684,7 +6684,7 @@ const oldWorkoutRenderer=window.renderWorkoutList;
   if(!date)return alert("تاریخ واریز شمسی معتبر وارد کنید.");
   const traineeId=currentClient.id;let path=null;
   try{
-   const {data:{user},error:userError}=await AUTH_SUPABASE.auth.getUser();if(userError||!user)throw new Error("نشست حساب شاگرد معتبر نیست.");
+   const session=await __fitnessGetApiSession();const user=session?.user;if(!user)throw new Error("نشست حساب شاگرد معتبر نیست.");
    const uploadFile=await window.sehOptimizeUploadImage(file);
    const name=uploadFile.name.replace(/[^a-zA-Z0-9._-]/g,"_").slice(-80)||"receipt";
    path=user.id+"/"+traineeId+"/"+Date.now()+"_"+name;
@@ -6694,7 +6694,7 @@ const oldWorkoutRenderer=window.renderWorkoutList;
    if(insertError){await AUTH_SUPABASE.storage.from("payment-receipts").remove([path]);throw insertError;}
    $("receiptFile").value="";$("receiptAmount").value="";$("receiptNote").value="";
    alert("فیش با موفقیت برای بررسی مربی ارسال شد؛ وضعیت شهریه پس از تأیید مربی تغییر می‌کند.");
-   await loadTraineeMembership();
+   loadTraineeMembership().catch(e=>console.warn("background membership refresh",e));
   }catch(e){console.error("submitPaymentReceipt failed",e);alert("ارسال فیش انجام نشد. "+(e.message||String(e)));}
   finally{const b=$("submitPaymentReceiptBtn");if(b){b.disabled=false;b.textContent="📨 ارسال فیش برای مربی";}}
  };
@@ -8587,8 +8587,9 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
     const btn=$('uploadHealthReportBtn');if(btn){btn.disabled=true;btn.textContent='⏳ در حال آپلود…';}
     let path=null;
     try{
-      const {data:{user},error:userError}=await AUTH_SUPABASE.auth.getUser();
-      if(userError||!user)throw new Error('نشست حساب شاگرد معتبر نیست.');
+      const session=await __fitnessGetApiSession();
+      const user=session?.user;
+      if(!user)throw new Error('نشست حساب شاگرد معتبر نیست.');
       const uploadFile=await window.sehOptimizeUploadImage(file);
       const clean=uploadFile.name.replace(/[^a-zA-Z0-9._-]/g,'_').slice(-80)||'lab-report';
       path=user.id+'/'+c.id+'/health_'+Date.now()+'_'+clean;
@@ -8604,7 +8605,7 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
       $('healthReportFile').value='';if($('healthFileNote'))$('healthFileNote').value='';
       if($('traineeHealthReportStatus'))$('traineeHealthReportStatus').textContent='فایل آپلود شد و برای مربی ارسال شد.';
       alert('فایل با موفقیت برای مربی ارسال شد.');
-      await loadTraineeHealthReports();
+      loadTraineeHealthReports().catch(e=>console.warn('background health history refresh',e));
     }catch(e){
       console.error('upload health report',e);
       const msg=String(e?.message||e);
