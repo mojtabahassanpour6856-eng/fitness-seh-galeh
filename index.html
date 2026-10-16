@@ -7876,6 +7876,15 @@ const oldWorkoutRenderer=window.renderWorkoutList;
       if(rowsBox)rowsBox.innerHTML='<p class="muted">اتصال و دسترسی خواندن جدول ثبت آب را بررسی کنید.</p>';
     }
   }
+  // Coalesce overlapping water-panel refreshes triggered by navigation, selection,
+  // login and save handlers. Sequential refreshes remain possible after completion.
+  const __waterRefreshCore=refreshWaterPanel;
+  let __waterRefreshPending=null;
+  refreshWaterPanel=function(){
+    if(__waterRefreshPending)return __waterRefreshPending;
+    __waterRefreshPending=Promise.resolve().then(()=>__waterRefreshCore()).finally(()=>{__waterRefreshPending=null;});
+    return __waterRefreshPending;
+  };
   // Block the trainee role from invoking the coach-only goal editor even if called manually.
   const oldSaveGoal=window.saveWaterGoal;
   if(typeof oldSaveGoal==='function'&&!window.__traineeWaterGoalBlocked){
