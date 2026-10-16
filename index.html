@@ -11671,7 +11671,7 @@ body.workout-output.workout-compact{
       login.className='trainee-auth-block';
       box.appendChild(login);
     }
-    login.innerHTML='<h3>🔐 ورود شاگرد</h3><label>شماره موبایل</label><input id="traineePhoneLogin" type="tel" inputmode="tel" autocomplete="tel" placeholder="09121234567"><label>رمز عبور</label><input id="traineeLoginPassword" type="password" autocomplete="current-password" placeholder="رمز شخصی شما"><button type="button" id="sehPhonePasswordLogin">ورود شاگرد</button><p class="muted">ورود فقط پس از تأیید مربی فعال می‌شود. اگر تازه تأیید شده‌اید و هنوز رمز شخصی نساخته‌اید، رمز اولیه 123456 را وارد کنید.</p>';
+    login.innerHTML='<h3>🔐 ورود شاگرد</h3><label>شماره موبایل</label><input id="traineePhoneLogin" type="tel" inputmode="tel" autocomplete="tel" placeholder="09121234567"><label>رمز عبور</label><input id="traineeLoginPassword" type="password" autocomplete="current-password" placeholder="رمز شخصی شما"><button type="button" id="sehPhonePasswordLogin">ورود با شماره و رمز</button><p class="muted">ورود فقط پس از تأیید مربی فعال می‌شود. اگر تازه تأیید شده‌اید و هنوز رمز شخصی نساخته‌اید، رمز اولیه 123456 را وارد کنید.</p>';
     const btn=$('sehPhonePasswordLogin');
     if(btn&&!btn.dataset.bound){
       btn.dataset.bound='1';
@@ -11694,7 +11694,7 @@ body.workout-output.workout-compact{
           if(verified.error||verified.data?.session?.user?.id!==data.user.id)throw new Error('نشست ورود ذخیره نشد؛ دوباره تلاش کنید.');
           await window.finishLogin(data.user);
         }catch(e){console.error('phone/password trainee login',e);show('ورود انجام نشد: '+(e?.message||String(e)));}
-        finally{btn.disabled=false;btn.textContent='ورود شاگرد';}
+        finally{btn.disabled=false;btn.textContent='ورود با شماره و رمز';}
       });
     }
   }
