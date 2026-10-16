@@ -12491,96 +12491,111 @@ body.workout-output.workout-compact{
 </script>
 
 
-<script id="SEH_TRAINEE_NAV_STABILITY_GUARD_20261016">
-/* Keep trainee navigation stable when older asynchronous loaders try to reopen the profile.
-   The selected card remains authoritative until the trainee explicitly requests another section. */
+<script id="SEH_TRAINEE_NAV_STABILITY_GUARD_V2_20261016">
+/* One authoritative trainee section controller. Clears stale inline visibility
+   left by legacy profile/activity handlers and prevents delayed loaders from
+   replacing the section explicitly selected by the trainee. */
 (function(){
-  'use strict';
-  if(window.__sehTraineeNavStabilityGuard)return;
-  window.__sehTraineeNavStabilityGuard=true;
-  var requested=null, requestedAt=0, busy=false;
-  function role(){
-    try{if(typeof authProfile!=='undefined'&&authProfile&&authProfile.role)return String(authProfile.role).toLowerCase();}catch(e){}
-    try{if(window.authProfile&&window.authProfile.role)return String(window.authProfile.role).toLowerCase();}catch(e){}
-    return '';
-  }
-  function sectionId(key){
-    var map={analysis:'traineeAnalysis',activity:'activitySection',goals:'traineeGoalsSection'};
-    return map[key]||key;
-  }
-  function remember(key){
-    if(!key)return;
-    requested=String(key);
-    requestedAt=Date.now();
-  }
-  function activeSection(){
-    return document.querySelector('.section.active');
-  }
-  function stabilize(targetId){
-    if(role()!=='trainee'||busy||!targetId)return;
-    var target=document.getElementById(targetId);
-    if(!target||!target.classList.contains('section'))return;
-    busy=true;
-    try{
-      document.querySelectorAll('.section').forEach(function(sec){
-        if(sec===target){
-          sec.hidden=false;sec.removeAttribute('hidden');sec.removeAttribute('aria-hidden');
-          sec.classList.add('active');
-          sec.style.setProperty('display','block','important');
-          sec.style.setProperty('visibility','visible','important');
-          sec.style.removeProperty('opacity');
-        }else{
-          sec.classList.remove('active');
-          sec.style.setProperty('display','none','important');
-          sec.style.setProperty('visibility','hidden','important');
-          sec.setAttribute('aria-hidden','true');
-        }
-      });
-    }finally{busy=false;}
-  }
-  var oldDash=window.dashOpen;
-  if(typeof oldDash==='function'){
-    window.dashOpen=function(key){
-      if(role()==='trainee')remember(key==='membership'?'membership':key);
-      return oldDash.apply(this,arguments);
-    };
-  }
-  var oldShow=window.showSection;
-  if(typeof oldShow==='function'){
-    window.showSection=function(id,btn){
-      var trainee=role()==='trainee';
-      if(trainee && String(id)==='client' && requested && requested!=='client'){
-        // Ignore a late profile navigation emitted by an older async selectClient/load callback.
-        stabilize(sectionId(requested));
-        return;
-      }
-      if(trainee && id)remember(id==='traineeDashboard'?'traineeDashboard':id);
-      var result=oldShow.apply(this,arguments);
-      if(trainee && id){
-        var target=String(id)==='client'?'client':String(id);
-        setTimeout(function(){stabilize(target);},0);
-        setTimeout(function(){stabilize(target);},120);
-      }
-      return result;
-    };
-  }
-  document.addEventListener('click',function(e){
-    if(role()!=='trainee')return;
-    var nav=e.target&&e.target.closest?e.target.closest('.nav button'):null;
-    if(!nav)return;
-    var code=String(nav.getAttribute('onclick')||'');
-    var m=code.match(/(?:showSection|dashOpen)\(['"]([^'"]+)['"]/);
-    if(m)remember(m[1]);
-  },true);
-  // If a delayed legacy callback activates the profile directly, restore the last requested card.
-  function enforce(){
-    if(role()!=='trainee'||!requested||requested==='client'||requested==='membership'||busy)return;
-    var target=sectionId(requested);
-    var current=activeSection();
-    if(current&&current.id==='client')stabilize(target);
-  }
-  if(typeof MutationObserver!=='undefined'&&document.body){
-    new MutationObserver(enforce).observe(document.body,{subtree:true,childList:true,attributes:true,attributeFilter:['class','style','hidden','aria-hidden']});
-  }
+ 'use strict';
+ if(window.__sehTraineeNavStabilityGuardV2)return;
+ window.__sehTraineeNavStabilityGuardV2=true;
+ var requested=null, applying=false, lastUserAction=0;
+ function role(){
+  try{if(typeof authProfile!=='undefined'&&authProfile&&authProfile.role)return String(authProfile.role).toLowerCase();}catch(e){}
+  try{if(window.authProfile&&window.authProfile.role)return String(window.authProfile.role).toLowerCase();}catch(e){}
+  return '';
+ }
+ function targetFor(key){
+  var map={analysis:'traineeAnalysis',activity:'activitySection',goals:'traineeGoalsSection'};
+  return map[key]||key;
+ }
+ function validSection(id){
+  var el=document.getElementById(id);
+  return !!(el&&el.classList&&el.classList.contains('section'));
+ }
+ function apply(id){
+  if(role()!=='trainee'||applying||!id||!validSection(id))return;
+  applying=true;
+  try{
+   document.querySelectorAll('.section').forEach(function(sec){
+    var chosen=sec.id===id;
+    sec.classList.toggle('active',chosen);
+    if(chosen){
+     sec.hidden=false;sec.removeAttribute('hidden');sec.removeAttribute('aria-hidden');sec.classList.remove('hide');
+     sec.style.removeProperty('display');sec.style.removeProperty('visibility');sec.style.removeProperty('opacity');
+     sec.style.setProperty('display','block','important');
+     sec.style.setProperty('visibility','visible','important');
+    }else{
+     sec.style.setProperty('display','none','important');
+     sec.style.setProperty('visibility','hidden','important');
+     sec.setAttribute('aria-hidden','true');
+    }
+   });
+  }finally{applying=false;}
+ }
+ function remember(key){
+  if(!key)return;
+  requested=String(key);
+  lastUserAction=Date.now();
+ }
+ function schedule(key){
+  var id=targetFor(key);
+  [0,80,250,700].forEach(function(ms){setTimeout(function(){apply(id);},ms);});
+ }
+ var oldDash=window.dashOpen;
+ if(typeof oldDash==='function'){
+  window.dashOpen=function(key){
+   if(role()==='trainee'){
+    remember(key);
+    if(key==='client'){
+     var p=document.getElementById('client');
+     if(p){p.hidden=false;p.removeAttribute('hidden');p.classList.remove('hide');}
+    }
+   }
+   var result;
+   try{result=oldDash.apply(this,arguments);}
+   finally{if(role()==='trainee'&&key!=='membership')schedule(key);}
+   return result;
+  };
+ }
+ var oldShow=window.showSection;
+ if(typeof oldShow==='function'){
+  window.showSection=function(id,btn){
+   if(role()==='trainee'&&requested&&Date.now()-lastUserAction<120000){
+    var expected=targetFor(requested);
+    if(String(id)!==expected){
+     // Delayed callbacks must not change the trainee's explicitly selected card.
+     schedule(requested);
+     return;
+    }
+   }
+   var result=oldShow.apply(this,arguments);
+   if(role()==='trainee'&&id)schedule(String(id)==='client'?'client':id);
+   return result;
+  };
+ }
+ document.addEventListener('click',function(e){
+  if(role()!=='trainee')return;
+  var nav=e.target&&e.target.closest?e.target.closest('.nav button'):null;
+  if(!nav)return;
+  var code=String(nav.getAttribute('onclick')||'');
+  var m=code.match(/(?:showSection|dashOpen)\(['"]([^'"]+)['"]/);
+  if(m){remember(m[1]);schedule(m[1]);}
+ },true);
+ // Keep only the requested section visible even if a legacy handler writes
+ // display:block!important directly to #client after navigation.
+ if(typeof MutationObserver!=='undefined'&&document.body){
+  var observer=new MutationObserver(function(){
+   if(role()!=='trainee'||applying||!requested||requested==='membership')return;
+   var id=targetFor(requested);
+   var chosen=document.getElementById(id);
+   if(!chosen)return;
+   var profile=document.getElementById('client');
+   if(profile&&id!=='client'&&(profile.classList.contains('active')||getComputedStyle(profile).display!=='none'||profile.style.getPropertyValue('display')==='block')){
+    apply(id);
+   }
+  });
+  observer.observe(document.body,{subtree:true,childList:true,attributes:true,attributeFilter:['class','style','hidden','aria-hidden']});
+ }
 })();
 </script>
