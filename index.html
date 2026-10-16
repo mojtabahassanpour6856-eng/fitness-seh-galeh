@@ -2844,7 +2844,6 @@ window.loadDashboard = loadDashboard;
       }
       if(!Array.isArray(inserted)||inserted.length!==chosen.length)throw new Error('همه حرکت‌ها از پاسخ پایگاه داده تأیید نشدند؛ لطفاً فهرست را تازه‌سازی کنید.');
       added=inserted.length;
-      if(!same(currentTraineeId(),traineeId)||!same(currentWorkoutPlanId,planId))throw new Error('شاگرد یا برنامه هنگام ثبت تغییر کرد؛ برای مشاهده دوباره برنامه را باز کنید.');
       // Refresh the exercise list once after a batch insert, not once per movement.
       if($id('workoutExerciseNotes'))$id('workoutExerciseNotes').value='';
       if(groupMode)document.querySelectorAll('#workoutGroupPicker input[name="groupExercise"]').forEach(el=>el.checked=false);
