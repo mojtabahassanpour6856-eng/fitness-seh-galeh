@@ -8597,8 +8597,12 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
     if(!isTrainee()){return typeof priorSave==='function'?priorSave.apply(this,arguments):undefined;}
     const c=typeof currentClient!=='undefined'?currentClient:null;
     if(!c||!c.id){alert('پروفایل شاگرد پیدا نشد؛ لطفاً یک بار خارج شوید و دوباره وارد شوید.');return;}
+    const rawAge=$('page')?.value;
+    const age=rawAge==null||String(rawAge).trim()===''?null:Number(rawAge);
+    if(age!==null&&(!Number.isInteger(age)||age<1||age>120)){alert('سن باید عددی بین ۱ تا ۱۲۰ باشد.');return;}
     const payload={
       full_name:$('pn')?.value.trim()||null,
+      age,
       current_weight:Number($('pweight')?.value)||null,
       height:Number($('pheight')?.value)||null,
       goal:$('pgoal')?.value||null,
@@ -8615,7 +8619,7 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
     if(!payload.full_name){alert('نام و نام خانوادگی را وارد کنید.');return;}
     try{
       await window.sbWrite('/trainees?id=eq.'+encodeURIComponent(c.id),'PATCH',payload);
-      Object.assign(c,{name:payload.full_name,full_name:payload.full_name,weight:payload.current_weight,current_weight:payload.current_weight,height:payload.height,goal:payload.goal,level:payload.training_level,training_level:payload.training_level,training_type:payload.training_type,home_equipment:payload.home_equipment,gender:payload.gender,weekly_sessions:payload.weekly_sessions,training_days:payload.training_days,training_time:payload.training_time,training_history:payload.training_history,history:payload.training_history,limitations:payload.limitations});
+      Object.assign(c,{name:payload.full_name,full_name:payload.full_name,age,weight:payload.current_weight,current_weight:payload.current_weight,height:payload.height,goal:payload.goal,level:payload.training_level,training_level:payload.training_level,training_type:payload.training_type,home_equipment:payload.home_equipment,gender:payload.gender,weekly_sessions:payload.weekly_sessions,training_days:payload.training_days,training_time:payload.training_time,training_history:payload.training_history,history:payload.training_history,limitations:payload.limitations});
       if(typeof window.loadClients==='function')await window.loadClients();
       if(typeof clients!=='undefined'&&Array.isArray(clients)){const fresh=clients.find(x=>String(x.id)===String(c.id));if(fresh)currentClient=Object.assign(fresh,{training_days:payload.training_days,training_time:payload.training_time,training_history:payload.training_history,limitations:payload.limitations,weekly_sessions:payload.weekly_sessions});}
       ensureProfileFields();
