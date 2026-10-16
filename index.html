@@ -6542,23 +6542,35 @@ const oldWorkoutRenderer=window.renderWorkoutList;
   if(!isTrainee())return;
   const sec=$("client");if(!sec)return;
   const cards=[...sec.querySelectorAll(":scope > .card")];
-  // Prefer the real membership card; some UI patches remove #subStart before this runs.
   let card=cards.find(c=>c.querySelector("#subStart"));
   if(!card)card=cards.find(c=>/عضویت باشگاه|عضویت و شهریه/.test(c.querySelector("h2")?.textContent||"")&&!c.querySelector("#traineeMembershipStatus"));
-  if(!card)card=cards.find(c=>c.querySelector(".role-readonly-message")&&!c.querySelector("#traineeMembershipStatus"));
-  if(!card){
-   const existing=sec.querySelector("#traineeMembershipStatus");
-   if(existing){const existingCard=existing.closest(".card");if(existingCard){existingCard.style.display="block";existingCard.hidden=false;existingCard.classList.remove("hide");}loadTraineeMembership();return;}
-   return;
-  }
-  // Restore visibility: an older trainee-role rule left the membership card hidden.
-  card.style.display="block";
-  card.hidden=false;
-  card.classList.remove("hide");
-  card.removeAttribute("aria-hidden");
+  if(!card)card=cards.find(c=>c.querySelector("#traineeMembershipStatus"));
+  if(!card)return;
+  card.style.display="block";card.hidden=false;card.classList.remove("hide");card.removeAttribute("aria-hidden");
+  // Keep exactly one membership card in the trainee profile; preserve unrelated cards.
+  [...sec.querySelectorAll(":scope > .card")].forEach(other=>{
+   if(other===card)return;
+   const heading=other.querySelector("h2")?.textContent||"";
+   if(other.querySelector("#subStart")||other.querySelector("#traineeMembershipStatus")||/عضویت باشگاه|عضویت و شهریه/.test(heading))other.remove();
+  });
   if(card.dataset.receiptUi==="1"){loadTraineeMembership();return;}
   card.dataset.receiptUi="1";
-  card.innerHTML='<h2>💳 عضویت و شهریه</h2><div class="receipt-item" style="margin:10px 0;border:1px solid #c8a34d;border-radius:12px;padding:12px"><b>🏦 اطلاعات کارت باشگاه</b><div style="margin-top:8px">نام صاحب کارت: <b>مجتبی حسن پور</b></div><div style="margin-top:6px;display:flex;align-items:center;gap:8px;flex-wrap:wrap"><span>شماره کارت:</span><b dir="ltr" style="font-size:17px;letter-spacing:1px">6037 7015 1854 8596</b><button type="button" class="secondary" onclick="copyClubBankCard()">📋 کپی شماره کارت</button></div></div><div id="traineeMembershipStatus" class="muted">در حال دریافت وضعیت عضویت…</div><div id="traineeReceiptUpload" class="receipt-item"><h3>📤 ارسال فیش واریزی</h3><p class="muted">فیش فقط برای مربی و حساب خودتان قابل مشاهده است. فرمت JPG، PNG، WEBP یا PDF تا ۵ مگابایت.</p><label>مبلغ پرداختی (تومان)</label><input id="receiptAmount" type="number" min="1" placeholder="مبلغ واریزی"><label>تاریخ واریز (شمسی)</label><input id="receiptDate" type="text" inputmode="numeric" placeholder="۱۴۰۵/۰۷/۱۸" autocomplete="off"><label>تصویر یا PDF فیش</label><input id="receiptFile" type="file" accept="image/jpeg,image/png,image/webp,application/pdf"><label>توضیح (اختیاری)</label><input id="receiptNote" placeholder="مثلاً شهریه مهر"><button id="submitPaymentReceiptBtn" type="button" onclick="submitPaymentReceipt()">📨 ارسال فیش برای مربی</button></div><div id="traineeReceiptHistory"></div>';
+  card.innerHTML='<h2>💳 عضویت و شهریه</h2>'+
+   '<div class="seh-real-membership-card" aria-label="کارت عضویت باشگاه">'+
+    '<div class="seh-real-membership-top"><span>FITNESS SEH GALEH</span><span>🏅 کارت عضویت</span></div>'+
+    '<div class="seh-real-membership-person"><small id="sehMemberTitle">عضو باشگاه</small><strong id="sehMemberName">در حال دریافت اطلاعات…</strong></div>'+
+    '<div class="seh-real-membership-number"><small>شماره عضویت</small><b id="sehMemberNumber" dir="ltr">—</b></div>'+
+    '<div class="seh-real-membership-details">'+
+     '<div><small>تاریخ شروع</small><b id="sehMemberStart">—</b></div>'+
+     '<div><small>تاریخ انقضا</small><b id="sehMemberEnd">—</b></div>'+
+     '<div><small>مبلغ شهریه</small><b id="sehMemberFee">—</b></div>'+
+     '<div><small>وضعیت پرداخت</small><b id="sehMemberPayStatus">در حال بررسی</b></div>'+
+    '</div>'+
+   '</div>'+
+   '<div class="receipt-item" style="margin:10px 0;border:1px solid #c8a34d;border-radius:12px;padding:12px"><b>🏦 اطلاعات کارت بانکی باشگاه</b><div style="margin-top:8px">نام صاحب کارت: <b>مجتبی حسن پور</b></div><div style="margin-top:6px;display:flex;align-items:center;gap:8px;flex-wrap:wrap"><span>شماره کارت:</span><b dir="ltr" style="font-size:17px;letter-spacing:1px">6037 7015 1854 8596</b><button type="button" class="secondary" onclick="copyClubBankCard()">📋 کپی شماره کارت</button></div></div>'+
+   '<div id="traineeMembershipStatus" class="muted">در حال دریافت اطلاعات عضویت…</div>'+
+   '<div id="traineeReceiptUpload" class="receipt-item"><h3>📤 ارسال فیش واریزی</h3><p class="muted">فیش فقط برای مربی و حساب خودتان قابل مشاهده است. فرمت JPG، PNG، WEBP یا PDF تا ۵ مگابایت.</p><label>مبلغ پرداختی (تومان)</label><input id="receiptAmount" type="number" min="1" placeholder="مبلغ واریزی"><label>تاریخ واریز (شمسی)</label><input id="receiptDate" type="text" inputmode="numeric" placeholder="۱۴۰۵/۰۷/۱۸" autocomplete="off"><label>تصویر یا PDF فیش</label><input id="receiptFile" type="file" accept="image/jpeg,image/png,image/webp,application/pdf"><label>توضیح (اختیاری)</label><input id="receiptNote" placeholder="مثلاً شهریه مهر"><button id="submitPaymentReceiptBtn" type="button" onclick="submitPaymentReceipt()">📨 ارسال فیش برای مربی</button></div>'+
+   '<div id="traineeReceiptHistory"></div>';
   loadTraineeMembership();
  }
  window.copyClubBankCard=function(){const number="6037701518548596";if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(number).then(function(){alert("شماره کارت کپی شد.");}).catch(function(){alert(number);});}else{alert(number);}};
@@ -6567,18 +6579,34 @@ const oldWorkoutRenderer=window.renderWorkoutList;
   if(!isTrainee()||!currentClient?.id)return;
   const id=currentClient.id;
   try{
-   const [members,receipts,profileRows]=await Promise.all([
+   const [members,receipts,profileRows,paymentRows]=await Promise.all([
     sbGet("/trainee_memberships?trainee_id=eq."+encodeURIComponent(id)+"&select=*&order=created_at.desc&limit=1"),
     sbGet("/trainee_payment_receipts?trainee_id=eq."+encodeURIComponent(id)+"&select=id,receipt_path,amount,payment_date,note,review_status,created_at&order=created_at.desc"),
-    sbGet("/trainees?id=eq."+encodeURIComponent(id)+"&select=club_registration_date,weekly_sessions,training_days,training_time&limit=1")
+    sbGet("/trainees?id=eq."+encodeURIComponent(id)+"&select=full_name,gender,club_registration_date,weekly_sessions,training_days,training_time&limit=1"),
+    sbGet("/trainee_payments?trainee_id=eq."+encodeURIComponent(id)+"&select=amount,payment_date,description&order=payment_date.desc&limit=1").catch(()=>[])
    ]);
    if(!currentClient||String(currentClient.id)!==String(id))return;
-   const m=members[0],profile=profileRows[0]||{};
-   $("traineeMembershipStatus").innerHTML='<div class="receipt-item"><b>تاریخ ثبت‌نام باشگاه:</b> '+safe(fmtDate(profile.club_registration_date)||"ثبت نشده")+'<br><b>تعداد جلسات:</b> '+safe(profile.weekly_sessions||"—")+' جلسه در هفته<br><b>روزها و ساعت تمرین:</b> '+safe(profile.training_days||"—")+' · '+safe(String(profile.training_time||"").slice(0,5)||"—")+'<br><b>تاریخ شروع عضویت:</b> '+safe(fmtDate(m?.start_date)||"ثبت نشده")+'<br><b>تاریخ پایان عضویت:</b> '+safe(fmtDate(m?.end_date)||"ثبت نشده")+'<br><b>وضعیت شهریه:</b> '+(m?(receipts.some(r=>r.review_status==="pending")||m.payment_status==="pending"?"<span>فیش در انتظار بررسی</span>":m.payment_status==="paid"?"<span class=\"done\">پرداخت‌شده</span>":"<span>پرداخت‌نشده</span>"):'<span>هنوز عضویت توسط مربی ثبت نشده است</span>')+'</div>';
+   const m=members[0],profile=profileRows[0]||{},payment=paymentRows[0]||{};
+   const memberName=String(profile.full_name||currentClient.full_name||currentClient.name||"شاگرد باشگاه");
+   const gender=String(profile.gender||currentClient.gender||"").trim();
+   const title=gender==="زن"||gender.toLowerCase()==="female"?"خانم":gender==="مرد"||gender.toLowerCase()==="male"?"آقا":"عضو باشگاه";
+   const memberNumber="SG-"+String(id).replace(/[^a-z0-9]/gi,"").slice(-8).toUpperCase().padStart(8,"0");
+   const put=(key,value)=>{const el=$(key);if(el)el.textContent=value;};
+   put("sehMemberName",memberName);put("sehMemberTitle",title);
+   put("sehMemberNumber",memberNumber);
+   put("sehMemberStart",fmtDate(m?.start_date)||"ثبت نشده");
+   put("sehMemberEnd",fmtDate(m?.end_date)||"ثبت نشده");
+   const fee=Number(payment.amount||m?.amount||0);
+   put("sehMemberFee",fee>0?fee.toLocaleString("fa-IR")+" تومان":"ثبت نشده");
+   const pending=receipts.some(r=>r.review_status==="pending")||m?.payment_status==="pending";
+   const paid=m?.payment_status==="paid";
+   put("sehMemberPayStatus",m?(pending?"در انتظار بررسی":paid?"پرداخت‌شده":"پرداخت‌نشده"):"عضویت ثبت نشده");
+   const status=$("traineeMembershipStatus");
+   if(status)status.innerHTML='<div class="receipt-item"><b>تاریخ ثبت‌نام باشگاه:</b> '+safe(fmtDate(profile.club_registration_date)||"ثبت نشده")+'<br><b>تعداد جلسات:</b> '+safe(profile.weekly_sessions||"—")+' جلسه در هفته<br><b>روزها و ساعت تمرین:</b> '+safe(profile.training_days||"—")+' · '+safe(String(profile.training_time||"").slice(0,5)||"—")+'</div>';
    const box=$("traineeReceiptHistory");
    if(box){
-    const status={pending:"در انتظار بررسی مربی",approved:"تأیید شده",rejected:"رد شده"};
-    box.innerHTML='<h3>📑 فیش‌های ارسالی من</h3>'+(receipts.length?receipts.map(x=>'<div class="receipt-item"><b>'+safe(Number(x.amount||0).toLocaleString("fa-IR"))+' تومان</b><br>تاریخ: '+safe(fmtDate(x.payment_date)||"—")+'<br>وضعیت: '+safe(status[x.review_status]||x.review_status)+'<br>'+safe(x.note||"")+'</div>').join(""):'<p class="muted">هنوز فیشی ارسال نکرده‌اید.</p>');
+    const statusLabels={pending:"در انتظار بررسی مربی",approved:"تأیید شده",rejected:"رد شده"};
+    box.innerHTML='<h3>📑 فیش‌های ارسالی من</h3>'+(receipts.length?receipts.map(x=>'<div class="receipt-item"><b>'+safe(Number(x.amount||0).toLocaleString("fa-IR"))+' تومان</b><br>تاریخ: '+safe(fmtDate(x.payment_date)||"—")+'<br>وضعیت: '+safe(statusLabels[x.review_status]||x.review_status)+'<br>'+safe(x.note||"")+'</div>').join(""):'<p class="muted">هنوز فیشی ارسال نکرده‌اید.</p>');
    }
   }catch(e){
    console.error("loadTraineeMembership failed",e);
@@ -6821,6 +6849,15 @@ const oldWorkoutRenderer=window.renderWorkoutList;
 })();
 </script>
 
+<style id="seh-real-membership-card-style">
+.seh-real-membership-card{position:relative;overflow:hidden;isolation:isolate;margin:12px 0 16px;padding:16px;border:1px solid #d7b45d;border-radius:18px;color:#17243a;background:linear-gradient(135deg,#fff8df 0%,#f4df9c 48%,#e4bd60 100%);box-shadow:0 8px 22px rgba(0,0,0,.2);font-family:inherit}
+.seh-real-membership-card:after{content:"";position:absolute;z-index:-1;width:180px;height:180px;left:-55px;bottom:-95px;border:1px solid rgba(126,88,17,.2);border-radius:50%;box-shadow:0 0 0 16px rgba(126,88,17,.035),0 0 0 32px rgba(126,88,17,.025)}
+.seh-real-membership-top{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;padding-bottom:10px;border-bottom:1px solid rgba(107,77,17,.25);font-size:12px;font-weight:900;letter-spacing:.5px}
+.seh-real-membership-person{display:flex;flex-direction:column;gap:3px;margin:13px 0 10px}.seh-real-membership-person small,.seh-real-membership-number small,.seh-real-membership-details small{font-size:11px;opacity:.78;font-weight:700}.seh-real-membership-person strong{font-size:20px;line-height:1.6;overflow-wrap:anywhere}
+.seh-real-membership-number{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;padding:9px 11px;border:1px solid rgba(107,77,17,.25);border-radius:10px;background:rgba(255,255,255,.34)}.seh-real-membership-number b{font-size:17px;letter-spacing:1.2px}
+.seh-real-membership-details{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px;margin-top:11px}.seh-real-membership-details>div{display:flex;flex-direction:column;gap:3px;min-width:0;padding:8px 9px;border-radius:9px;background:rgba(255,255,255,.38);border:1px solid rgba(107,77,17,.13)}.seh-real-membership-details b{font-size:13px;overflow-wrap:anywhere}
+@media(min-width:520px){.seh-real-membership-card{padding:19px 22px}.seh-real-membership-details{grid-template-columns:repeat(4,minmax(0,1fr))}.seh-real-membership-person strong{font-size:22px}}
+</style>
 <style id="seh-galeh-membership-polish">
 /* Visual-only membership and tuition card refinement */
 #client .seh-membership-polish-card{
