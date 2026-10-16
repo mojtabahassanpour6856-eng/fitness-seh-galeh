@@ -9889,7 +9889,7 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
  'use strict';
  const $=id=>document.getElementById(id);
  const PREFIX='رژیم‌غذایی::';
- let lastLoadedId='',loading=false;
+ let lastLoadedId='',loading=false,loadSequence=0;
  const esc=v=>String(v==null?'':v).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
  function traineeMode(){try{return typeof authProfile!=='undefined'&&authProfile&&authProfile.role==='trainee';}catch(e){return false;}}
  function trainee(){try{return typeof currentClient!=='undefined'&&currentClient?currentClient:null;}catch(e){return null;}}
@@ -9938,26 +9938,25 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
      const mealText=bits.filter(x=>!/^شروع فست:|^پایان فست:/.test(x)).join('\n');
      html+='<div class="sdpp-meal"><div class="sdpp-meal-title">⏳ برنامه فستینگ و وعده‌ها</div><div class="sdpp-meal-body">'+esc(mealText||desc)+'</div></div>';
    }
-   body.innerHTML=html;status.textContent='✅ برنامه غذایی ثبت‌شده توسط مربی';
- }
- async function load(force){
+   body.innerHTML=html;status.textContent='✅ برنامه غذایی ثبت‌شده تasync function load(force){
    mount();const card=$('studentDietPrintablePlan');if(!card)return;
-   if(!traineeMode()){card.style.display='none';return;}card.style.display='';
-   const t=trainee(),id=t&&t.id;if(!id){renderEmpty('حساب شاگرد هنوز به پرونده متصل نشده است.');return;}
-   if(loading)return;if(!force&&lastLoadedId===String(id)&&card.dataset.loaded==='1')return;
-   loading=true;lastLoadedId=String(id);
+   if(!traineeMode()){loadSequence++;card.style.display='none';return;}card.style.display='';
+   const t=trainee(),id=t&&t.id;if(!id){loadSequence++;renderEmpty('حساب شاگرد هنوز به پرونده متصل نشده است.');return;}
+   if(loading&&lastLoadedId===String(id))return;if(!force&&lastLoadedId===String(id)&&card.dataset.loaded==='1')return;
+   loading=true;lastLoadedId=String(id);const requestId=++loadSequence;
    const status=$('sdppStatus'),body=$('sdppBody');if(status)status.textContent='در حال دریافت رژیم ثبت‌شده توسط مربی…';if(body)body.innerHTML='';
    try{
      if(typeof sbGet!=='function')throw new Error('اتصال پایگاه داده آماده نیست.');
      const rows=await sbGet('/fasting_logs?trainee_id=eq.'+encodeURIComponent(id)+'&order=created_at.desc&limit=60');
+     const latest=trainee();if(requestId!==loadSequence||!traineeMode()||!latest||String(latest.id)!==String(id))return;
      const list=Array.isArray(rows)?rows:[];
      let data=null;for(const row of list){const raw=String(row.description||'');if(raw.startsWith(PREFIX)){try{data=JSON.parse(raw.slice(PREFIX.length));break;}catch(e){}}}
      const fasting=list.find(row=>{const d=String(row.description||'');return !d.startsWith(PREFIX)&&!d.startsWith('STUDENT_DIET_REQUEST:')&&!d.startsWith('DIET_CONFIG:')&&/^نوع\s/.test(d);});
      if(!data&&!fasting)renderEmpty('هنوز رژیم یا برنامه فستینگ برای شما ثبت نشده است.');
      else render(data,fasting);
      card.dataset.loaded='1';
-   }catch(e){console.error('load printable student diet',e);renderEmpty('دریافت رژیم انجام نشد؛ اتصال اینترنت را بررسی و به‌روزرسانی را بزنید.');}
-   finally{loading=false;}
+   }catch(e){if(requestId===loadSequence&&traineeMode()&&String((trainee()||{}).id)===String(id)){console.error('load printable student diet',e);renderEmpty('دریافت رژیم انجام نشد؛ اتصال اینترنت را بررسی و به‌روزرسانی را بزنید.');}}
+   finally{if(requestId===loadSequence)loading=false;}
  }
  function exportPlan(mode){
    const card=$('studentDietPrintablePlan'),status=$('sdppActionStatus'),body=$('sdppBody');
