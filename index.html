@@ -6630,7 +6630,7 @@ const oldWorkoutRenderer=window.renderWorkoutList;
  }
  window.copyClubBankCard=function(){const number="6037701518548596";if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(number).then(function(){alert("شماره کارت کپی شد.");}).catch(function(){alert(number);});}else{alert(number);}};
  window.ensureTraineeMembershipCard=function(){return replaceTraineeMembershipCard();};
- async function loadTraineeMembership(){
+ async function loadTraineeMembershipCore(){
   if(!isTrainee()||!currentClient?.id)return;
   const id=currentClient.id;
   try{
@@ -6670,6 +6670,12 @@ const oldWorkoutRenderer=window.renderWorkoutList;
    const status=$("traineeMembershipStatus");
    if(status)status.innerHTML='<div class="receipt-item"><b>دریافت وضعیت عضویت ناموفق بود.</b><p>'+safe(e?.message||String(e))+'</p><button type="button" onclick="window.retryTraineeMembership()">🔄 تلاش دوباره</button></div>';
   }
+ }
+ let __traineeMembershipLoadPending=null;
+ async function loadTraineeMembership(){
+  if(__traineeMembershipLoadPending)return __traineeMembershipLoadPending;
+  __traineeMembershipLoadPending=Promise.resolve().then(()=>loadTraineeMembershipCore()).finally(()=>{__traineeMembershipLoadPending=null;});
+  return __traineeMembershipLoadPending;
  }
  window.retryTraineeMembership=function(){return loadTraineeMembership();};
  // Reduce upload time for large photos without changing PDFs or small files.
