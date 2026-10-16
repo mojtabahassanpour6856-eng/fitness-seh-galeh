@@ -12362,11 +12362,8 @@ body.workout-output.workout-compact{
         Promise.resolve(result).catch(error => console.error('بارگذاری اطلاعات تکمیلی شاگرد ناموفق بود:', error));
       }
     } catch (error) { console.error('خطا در بارگذاری تکمیلی شاگرد:', error); }
-    try {
-      if (typeof window.loadMembershipCard === 'function') {
-        Promise.resolve(window.loadMembershipCard()).catch(error => console.error('بارگذاری کارت عضویت ناموفق بود:', error));
-      }
-    } catch (error) { console.error('بارگذاری کارت عضویت ناموفق بود:', error); }
+    // The existing selectClient pipeline already refreshes the membership card.
+    // Avoid issuing the same membership-card requests a second time here.
     return Promise.resolve(result).catch(() => undefined);
   };
 })();
