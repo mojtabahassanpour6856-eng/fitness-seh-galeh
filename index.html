@@ -12013,22 +12013,43 @@ body.workout-output.workout-compact{
   const priorDash = window.dashOpen;
   window.dashOpen = function(section){
     if(section === 'goals' && isTrainee()){
+      if(typeof priorDash === 'function') return priorDash.apply(this, arguments);
       const goal = $('traineeGoalsSection');
-      if(goal){
-        if(typeof window.showSection === 'function') window.showSection('traineeGoalsSection', null);
-        if(typeof goal.scrollIntoView === 'function') goal.scrollIntoView({behavior:'smooth',block:'start'});
-        if(typeof window.loadTraineeGoals === 'function') window.loadTraineeGoals();
-      }
+      if(goal && typeof window.showSection === 'function') window.showSection('traineeGoalsSection', null);
       return;
     }
     if(typeof priorDash === 'function') return priorDash.apply(this, arguments);
   };
 
+  async function saveCoachProfile(){
+    const c = (typeof currentClient !== 'undefined' && currentClient) || window.currentClient;
+    if(!c || !c.id){ alert('اول شاگرد را انتخاب کنید.'); return; }
+    const name = String($('pn')?.value || '').trim();
+    if(name.length < 2){ alert('نام و نام خانوادگی را وارد کنید.'); return; }
+    const ageRaw = $('page') ? String($('page').value || '').trim() : '';
+    const age = ageRaw === '' ? null : Number(ageRaw);
+    if(age !== null && (!Number.isInteger(age) || age < 1 || age > 120)){ alert('سن باید عددی بین ۱ تا ۱۲۰ باشد.'); return; }
+    const payload = {
+      full_name:name, age,
+      current_weight:$('pweight') && $('pweight').value !== '' ? Number($('pweight').value) : null,
+      height:$('pheight') && $('pheight').value !== '' ? Number($('pheight').value) : null,
+      goal:$('pgoal')?.value || null,
+      training_level:$('plevel')?.value || null,
+      training_type:$('ptype')?.value || 'gym',
+      home_equipment:String($('pequipment')?.value || '').trim() || null
+    };
+    try{
+      if(typeof window.sbWrite !== 'function') throw new Error('اتصال امن ذخیره‌سازی آماده نیست.');
+      await window.sbWrite('/trainees?id=eq.'+encodeURIComponent(c.id),'PATCH',payload);
+      if(typeof window.loadClients === 'function') await window.loadClients();
+      const fresh = Array.isArray(clients) ? clients.find(x=>String(x.id)===String(c.id)) : null;
+      if(fresh){ try{currentClient=fresh;}catch(e){} window.currentClient=fresh; }
+      alert('پروفایل شاگرد ذخیره شد.');
+    }catch(e){ console.error(e); alert('ذخیره پروفایل انجام نشد.\\n'+(e?.message||String(e))); }
+  }
+
   window.saveProfile = async function(){
-    if(!isTrainee()){
-      if(typeof window.__sehPreviousSaveProfile === 'function') return window.__sehPreviousSaveProfile.apply(this, arguments);
-      return;
-    }
+    if(!isTrainee()) return saveCoachProfile();
     const c = (typeof currentClient !== 'undefined' && currentClient) || window.currentClient;
     const profile = (typeof authProfile !== 'undefined' && authProfile) || window.authProfile;
     const traineeId = profile && profile.trainee_id;
