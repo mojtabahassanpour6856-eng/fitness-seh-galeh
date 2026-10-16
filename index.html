@@ -838,6 +838,7 @@ body.locked{overflow:hidden!important}
 
 <div class="card" id="activityDailyPanel">
 <h2>🔥 فعالیت و کالری روزانه من</h2>
+<button type="button" id="sehActivityBackDashboard" onclick="window.sehReturnToDashboard()" style="width:100%;margin:0 0 12px;background:linear-gradient(135deg,#fff3c4,#d8b04b);color:#35270b;border:1px solid #b58a24;border-radius:10px;font-weight:800">🏠 بازگشت به داشبورد شاگرد</button>
 <div class="grid2">
 <div><label>تاریخ</label><input id="actDate" type="date"></div>
 <div><label>نوع فعالیت</label><select id="actType"><option>پیاده‌روی</option><option>دویدن</option><option>دوچرخه</option><option>بدنسازی</option><option>فوتبال</option><option>کاردیو</option><option>سایر</option></select></div>
@@ -12433,5 +12434,49 @@ body.workout-output.workout-compact{
   };
   wrapped.__sehCardRefreshWrapped=true;
   window.saveSubscription=wrapped;
+})();
+</script>
+
+<script id="seh-activity-dashboard-return-v1">
+(function(){
+ 'use strict';
+ function role(){
+  try{if(typeof authProfile!=='undefined'&&authProfile&&authProfile.role)return String(authProfile.role).toLowerCase();}catch(e){}
+  try{if(window.authProfile&&window.authProfile.role)return String(window.authProfile.role).toLowerCase();}catch(e){}
+  var t=document.getElementById('authUserText');
+  return t&&/شاگرد/.test(t.textContent||'')?'trainee':'';
+ }
+ function revealDashboard(){
+  var dash=document.getElementById('traineeDashboard');
+  if(!dash)return false;
+  document.querySelectorAll('.section').forEach(function(sec){
+   sec.classList.remove('active');
+   sec.style.removeProperty('display');
+   sec.style.removeProperty('visibility');
+   sec.style.removeProperty('opacity');
+   sec.hidden=false;
+   sec.removeAttribute('aria-hidden');
+  });
+  dash.hidden=false;
+  dash.removeAttribute('hidden');
+  dash.classList.add('active');
+  dash.style.removeProperty('display');
+  dash.style.removeProperty('visibility');
+  dash.style.removeProperty('opacity');
+  dash.style.setProperty('display','block','important');
+  dash.style.setProperty('visibility','visible','important');
+  document.querySelectorAll('.nav button').forEach(function(b){b.classList.remove('active');});
+  var nav=document.getElementById('navDash');
+  if(nav){nav.classList.add('active');nav.hidden=false;nav.style.removeProperty('display');}
+  dash.scrollIntoView({behavior:'smooth',block:'start'});
+  return true;
+ }
+ window.sehReturnToDashboard=function(){
+  if(role()!=='trainee'){console.warn('بازگشت به داشبورد فقط برای نقش شاگرد است.');return;}
+  try{if(typeof window.dashOpen==='function')window.dashOpen('traineeDashboard');}catch(e){console.warn('مسیر عادی داشبورد ناموفق بود:',e);}
+  try{if(typeof window.loadDashboard==='function')window.loadDashboard();}catch(e){console.warn('بازسازی داشبورد ناموفق بود:',e);}
+  [0,80,250,600,1000].forEach(function(ms){setTimeout(revealDashboard,ms);});
+ };
+ window.addEventListener('popstate',function(){if(role()==='trainee'&&document.getElementById('activitySection')?.classList.contains('active'))window.sehReturnToDashboard();});
 })();
 </script>
