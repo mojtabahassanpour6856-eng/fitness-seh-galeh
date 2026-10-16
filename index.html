@@ -6656,7 +6656,7 @@ const oldWorkoutRenderer=window.renderWorkoutList;
  window.retryTraineeMembership=function(){return loadTraineeMembership();};
  // Reduce upload time for large photos without changing PDFs or small files.
  async function sehOptimizeUploadImage(file){
-  if(!file||!/^image\\/(jpeg|png|webp)$/i.test(file.type)||file.size<1200*1024||typeof createImageBitmap!=="function")return file;
+  if(!file||!/^image\/(jpeg|png|webp)$/i.test(file.type)||file.size<1200*1024||typeof createImageBitmap!=="function")return file;
   try{
    const bitmap=await createImageBitmap(file);
    const scale=Math.min(1,2200/Math.max(bitmap.width,bitmap.height));
@@ -6669,7 +6669,7 @@ const oldWorkoutRenderer=window.renderWorkoutList;
    bitmap.close?.();
    const blob=await new Promise(resolve=>canvas.toBlob(resolve,"image/webp",0.9));
    if(!blob||blob.type!=="image/webp"||blob.size>=file.size*0.9)return file;
-   const base=file.name.replace(/\\.[^.]+$/,"")||"upload";
+   const base=file.name.replace(/\.[^.]+$/,"")||"upload";
    return new File([blob],base+".webp",{type:"image/webp",lastModified:Date.now()});
   }catch(_){return file;}
  }
