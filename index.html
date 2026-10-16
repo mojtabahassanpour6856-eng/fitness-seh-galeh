@@ -4587,10 +4587,12 @@ window.toggleExerciseFavorite=async function(id,value){try{await sbWrite(`/train
     if(el('alertCount'))el('alertCount').textContent='…';
     let workoutRows=[],nutritionRows=[];
     // Fetch both summary datasets at the same time instead of waiting for one after the other.
-    const results=await Promise.allSettled([
+    // Reuse the dashboard summaries preloaded in parallel with the trainee list and membership query.
+    // If this page was entered through another path, preserve the original parallel-fetch fallback.
+    const results=await (window.__sehDashboardSummaryPromise||Promise.allSettled([
       window.sbGet('/trainee_workout_plans?select=trainee_id,plan_date,created_at'),
       window.sbGet('/nutrition_plans?select=trainee_id')
-    ]);
+    ]));
     if(results[0].status==='fulfilled'&&Array.isArray(results[0].value)){
       workoutRows=results[0].value;
     }else{
@@ -4699,8 +4701,14 @@ window.toggleExerciseFavorite=async function(id,value){try{await sbWrite(`/train
         verifiedRole=profileResult.data.role;
       }
       if(verifiedRole!=='coach')throw new Error('این بخش فقط برای حساب مربی است.');
-      // Start the optional membership read alongside the trainee query.
-      // The trainee list remains the priority; membership data is applied after the list is visible.
+      // Start all dashboard reads together so the two slower summary counters can be ready
+      // by the time the trainee list is rendered. Do not duplicate them if a stats refresh is in flight.
+      if(!dashboardStatsInFlight){
+        window.__sehDashboardSummaryPromise=Promise.allSettled([
+          window.sbGet('/trainee_workout_plans?select=trainee_id,plan_date,created_at'),
+          window.sbGet('/nutrition_plans?select=trainee_id')
+        ]);
+      }
       const membershipPromise=window.sbGet('/trainee_memberships?select=id,trainee_id,start_date,end_date,status,created_at&order=created_at.desc')
         .then(rows=>({ok:true,rows:rows||[]}))
         .catch(error=>({ok:false,error}));
@@ -4732,8 +4740,12 @@ window.toggleExerciseFavorite=async function(id,value){try{await sbWrite(`/train
           c.active=!c.archivedAt&&!expired&&m.status!=='pending';
         });
       }catch(e){console.warn('جدول عضویت در دسترس نیست؛ فهرست شاگردان بدون آن نمایش داده می‌شود.',e);}
-      // Refresh counts and renewal indicators in the background after the list is already visible.
-      Promise.resolve().then(()=>window.updateStats()).then(()=>window.renderClients()).catch(e=>console.warn('به‌روزرسانی آمار پنل مربی با تأخیر انجام شد:',e));
+      // Recalculate after membership data is applied, while reusing the already-fetched summary rows.
+      // This resolves the follow-up counter without forcing another round trip to Supabase.
+      Promise.resolve().then(()=>window.updateStats(true)).then(()=>{
+        window.__sehDashboardSummaryPromise=null;
+        window.renderClients();
+      }).catch(e=>console.warn('به‌روزرسانی آمار پنل مربی با تأخیر انجام شد:',e));
     }catch(e){
       console.error('بارگذاری شاگردان ناموفق بود:',e);
       if(list)list.innerHTML='<div style="padding:12px;border:1px solid #8b3535;border-radius:10px;color:#ffaaaa">دریافت شاگردان ناموفق بود:<br>'+esc(e.message||String(e))+'<br><button type="button" onclick="loadClients()">تلاش دوباره</button></div>';
