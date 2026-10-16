@@ -13043,3 +13043,55 @@ body.workout-output.workout-compact{
   window.addEventListener('pageshow',function(){if(traineeButtons()===0){attempts=0;start();}});
 })();
 </script>
+
+
+<!-- COACH DASHBOARD FIRST-LOAD RELIABILITY GUARD -->
+<script id="seh-coach-first-load-guard">
+(function(){
+  if(window.__sehCoachFirstLoadGuardInstalled)return;
+  window.__sehCoachFirstLoadGuardInstalled=true;
+  let clientsLoadInFlight=null;
+  const originalLoadClients=window.loadClients;
+  if(typeof originalLoadClients==="function"){
+    window.loadClients=function(){
+      if(clientsLoadInFlight)return clientsLoadInFlight;
+      clientsLoadInFlight=Promise.resolve().then(()=>originalLoadClients.apply(this,arguments))
+        .then(result=>{window.__sehCoachListLoadAttempted=true;return result;})
+        .catch(error=>{window.__sehCoachListLoadAttempted=true;throw error;})
+        .finally(()=>{clientsLoadInFlight=null;});
+      return clientsLoadInFlight;
+    };
+  }
+  function isCoach(){
+    try{if(typeof authProfile!=="undefined"&&authProfile&&authProfile.role==="coach")return true;}catch(e){}
+    return /\|\s*مربی\s*$/.test((document.getElementById("authUserText")?.textContent||"").trim());
+  }
+  async function ensureCoachList(){
+    if(!isCoach()||window.__sehCoachListLoadAttempted||typeof window.loadClients!=="function")return;
+    await window.loadClients();
+  }
+  const previousFinish=window.finishLogin;
+  if(typeof previousFinish==="function"){
+    window.finishLogin=async function(){
+      const result=await previousFinish.apply(this,arguments);
+      if(isCoach()&&!window.__sehCoachListLoadAttempted)await ensureCoachList();
+      return result;
+    };
+  }
+  function waitForSessionAndLoad(){
+    let tries=0;
+    const timer=setInterval(async()=>{
+      tries++;
+      if(window.__sehCoachListLoadAttempted){clearInterval(timer);return;}
+      if(isCoach()){
+        clearInterval(timer);
+        try{await ensureCoachList();}catch(e){console.warn("بارگذاری اولیه فهرست مربی انجام نشد؛ امکان تلاش دوباره وجود دارد.",e);}
+        return;
+      }
+      if(tries>=40)clearInterval(timer);
+    },300);
+  }
+  if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",waitForSessionAndLoad,{once:true});
+  else waitForSessionAndLoad();
+})();
+</script>
