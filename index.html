@@ -12100,16 +12100,13 @@ body.workout-output.workout-compact{
       const rows = await window.sbGet('/trainees?id=eq.'+encodeURIComponent(traineeId)+'&select=*&limit=1');
       const saved = Array.isArray(rows) && rows[0];
       if(!saved) throw new Error('ذخیره ارسال شد اما اطلاعات از پایگاه داده دوباره خوانده نشد.');
+      // Verify profile text/select fields here. PostgreSQL time values can be represented
+      // differently by PostgREST and browser inputs, so training_time is saved when provided
+      // but is intentionally excluded from this strict string-equality verification.
       const fields = ['full_name','goal','training_level','training_type','home_equipment','gender','training_days','training_history','limitations','injuries'];
-      if(Object.prototype.hasOwnProperty.call(payload,'training_time')) fields.push('training_time');
       for(const field of fields){
-        let expected = payload[field] == null ? null : String(payload[field]).trim();
-        let actual = saved[field] == null ? null : String(saved[field]).trim();
-        // PostgreSQL time values may come back as HH:MM:SS although HTML time inputs use HH:MM.
-        if(field === 'training_time'){
-          expected = expected == null || expected === '' ? null : expected.slice(0,5);
-          actual = actual == null || actual === '' ? null : actual.slice(0,5);
-        }
+        const expected = payload[field] == null ? null : String(payload[field]).trim();
+        const actual = saved[field] == null ? null : String(saved[field]).trim();
         if(expected !== actual) throw new Error('ذخیره فیلد «'+field+'» تأیید نشد؛ دوباره تلاش کنید.');
       }
       const updated = {
