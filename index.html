@@ -9142,21 +9142,19 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
   window.registerTraineePhone=async function(){
     const name=visibleField("traineeRegName")?.value.trim()||"",phone=normPhone(visibleField("traineeRegPhone")?.value||"");
     const weekly_sessions=Number(visibleField("traineeRegSessions")?.value||0),training_days=visibleField("traineeRegDays")?.value.trim()||"",training_time=visibleField("traineeRegTime")?.value||"";
+    const password=visibleField("traineeRegPassword")?.value||"",confirmPassword=visibleField("traineeRegPasswordConfirm")?.value||"";
     if(name.length<2){message("sehRegistrationLoginStatus","نام و نام خانوادگی را وارد کنید.");return;}
-    if(!/^\+989\d{9}$/.test(phone)){message("sehRegistrationLoginStatus","شماره موبایل معتبر نیست؛ مانند 09121234567 وارد کنید.");return;}
+    if(!/^\\+989\\d{9}$/.test(phone)){message("sehRegistrationLoginStatus","شماره موبایل معتبر نیست؛ مانند 09121234567 وارد کنید.");return;}
     if(!Number.isInteger(weekly_sessions)||weekly_sessions<1||weekly_sessions>7||!training_days||!training_time){message("sehRegistrationLoginStatus","تعداد جلسات، روزها و ساعت تمرین را کامل کنید.");return;}
-    if(read(REG_KEY)){message("sehRegistrationLoginStatus","درخواست قبلی شما هنوز در حال بررسی است.");startPolling();return;}
+    if(password.length<8){message("sehRegistrationLoginStatus","رمز شخصی باید حداقل ۸ کاراکتر باشد.");return;}
+    if(password!==confirmPassword){message("sehRegistrationLoginStatus","رمز عبور و تکرار آن یکسان نیستند.");return;}
     const btn=$("traineeLoginBox")?.querySelector('.trainee-auth-block button[onclick*="registerTraineePhone"]');
     if(btn){btn.disabled=true;btn.textContent="⏳ در حال ارسال…";}
     try{
-      const sec=secret();
-      const {data,error}=await AUTH_SUPABASE.functions.invoke("trainee-registration-request",{body:{full_name:name,phone,weekly_sessions,training_days,training_time,request_secret:sec}});
+      const {data,error}=await AUTH_SUPABASE.functions.invoke("trainee-registration-request",{body:{full_name:name,phone,weekly_sessions,training_days,training_time,password}});
       if(error)throw error;if(data?.error)throw new Error(data.error);
-      if(!data?.request_id)throw new Error("درخواست ثبت شد اما شناسه ورود امن دریافت نشد. لطفاً صفحه را تازه‌سازی و با مربی هماهنگ کنید.");
-      save(REG_KEY,{id:data.request_id,secret:sec,phone});
-      ["traineeRegName","traineeRegPhone","traineeRegSessions","traineeRegDays","traineeRegTime"].forEach(id=>{const el=visibleField(id);if(el)el.value="";});
-      message("sehRegistrationLoginStatus","درخواست «"+name+"» ثبت شد. لطفاً نام نمایش‌داده‌شده را بررسی کنید؛ اکنون منتظر تأیید مربی بمانید.",true);
-      startPolling();
+      ["traineeRegName","traineeRegPhone","traineeRegSessions","traineeRegDays","traineeRegTime","traineeRegPassword","traineeRegPasswordConfirm"].forEach(id=>{const el=visibleField(id);if(el)el.value="";});
+      message("sehRegistrationLoginStatus","درخواست عضویت «"+name+"» ثبت شد. پس از تأیید مربی، با همین شماره و رمزی که تعیین کردید وارد شوید.",true);
     }catch(e){message("sehRegistrationLoginStatus","ارسال درخواست انجام نشد: "+(e?.message||String(e)));}
     finally{if(btn){btn.disabled=false;btn.textContent="📨 ارسال درخواست عضویت";}}
   };
@@ -11900,17 +11898,10 @@ body.workout-output.workout-compact{
     const reg=Array.from((box||document).querySelectorAll('.trainee-auth-block')).find(b=>(b.querySelector('h3')?.textContent||'').includes('درخواست ثبت‌نام'));
     if(reg){
       const p=reg.querySelector('p.muted');
-      if(p)p.textContent='درخواست را یک‌بار ثبت کنید. پس از تأیید مربی، همین گوشی به‌صورت خودکار وارد حساب شما می‌شود؛ رمز و پیامک لازم نیست.';
-      ['traineeRegPassword','traineeRegPasswordConfirm'].forEach(function(id){
-        const field=$(id);
-        if(field){
-          const label=field.previousElementSibling;
-          if(label&&label.tagName==='LABEL')label.remove();
-          field.remove();
-        }
-      });
+      if(p)p.textContent='درخواست را یک‌بار ثبت کنید و رمز شخصی خود را به خاطر بسپارید. پس از تأیید مربی، با همان شماره و رمز وارد شوید.';
+      /* Keep password + confirmation fields visible for password-based registration. */
       const login=Array.from((box||document).querySelectorAll('.trainee-auth-block')).find(b=>(b.querySelector('h3')?.textContent||'').includes('ورود شاگرد'));
-      if(login)login.style.display='none';
+      if(login)login.style.display='block';
       const b=reg.querySelector('button[onclick*="registerTraineePhone"]');
       if(b)b.textContent='📨 ارسال درخواست عضویت';
     }
