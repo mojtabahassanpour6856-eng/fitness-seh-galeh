@@ -2712,7 +2712,7 @@ window.loadDashboard = loadDashboard;
     const phone=phoneNorm($id('traineePhoneLogin')?.value||'');
     const password=$id('traineeLoginPassword')?.value||'';
     if(!/^\+989\d{9}$/.test(phone)||!password){showAuthError('شماره موبایل معتبر و رمز عبور را وارد کنید.');return;}
-    const btn=$id('traineeLoginBox')?.querySelectorAll('.trainee-auth-block button')[1];
+    const btn=$id('sehPhonePasswordLogin');
     if(btn){btn.disabled=true;btn.textContent='⏳ در حال ورود…';}
     try{
       const {data,error}=await AUTH_SUPABASE.auth.signInWithPassword({phone,password});
@@ -9047,8 +9047,12 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
     if(saved.error)throw saved.error;
     const verified=await AUTH_SUPABASE.auth.getSession();
     if(verified.error||verified.data?.session?.user?.id!==auth.user.id)throw new Error("نشست ورود ذخیره نشد؛ درخواست اتصال را دوباره بررسی کنید.");
-    clear(storeKey);message(statusId,"ورود موفق بود؛ در حال بازکردن حساب شما…",true);
-    if(typeof window.finishLogin==="function")await window.finishLogin(auth.user);
+    // Mark the freshly approved registration as requiring a personal password.
+    // This is done only after the trainee has authenticated with the one-time secret-backed flow.
+    const setup=await AUTH_SUPABASE.auth.updateUser({data:{...(auth.user.user_metadata||{}),role:"trainee",must_change_password:true}});
+    if(setup.error)throw setup.error;
+    clear(storeKey);message(statusId,"درخواست تأیید شد؛ حالا رمز شخصی خود را تنظیم کنید.",true);
+    if(typeof window.finishLogin==="function")await window.finishLogin(setup.data?.user||auth.user);
   }
   async function pollRegistration(){
     if(pollBusy)return;const p=read(REG_KEY);if(!p?.id||!p?.secret||!authReady())return;
@@ -9098,7 +9102,7 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
     const blocks=Array.from(box.querySelectorAll(".trainee-auth-block"));
     const oldLogin=blocks.find(b=>(b.querySelector("h3")?.textContent||"").includes("ورود شاگرد"));
     if(oldLogin){
-      oldLogin.innerHTML='<h3>👤 ورود شاگرد بدون رمز</h3><p class="muted">اگر قبلاً حساب دارید یا گوشی خود را عوض کرده‌اید، مشخصات حساب قبلی را وارد کنید. ورود فقط پس از تأیید مربی انجام می‌شود.</p><label>نام و نام خانوادگی ثبت‌شده</label><input id="sehDeviceLinkName" autocomplete="name" maxlength="120" placeholder="نام کامل"><label>شماره موبایل حساب قبلی</label><input id="sehDeviceLinkPhone" type="tel" inputmode="tel" autocomplete="tel" placeholder="09121234567"><button type="button" id="sehDeviceLinkSubmit">🔗 درخواست اتصال به حساب قبلی</button>';
+      oldLogin.innerHTML='<h3>👤 ورود شاگرد</h3><p class="muted">پس از تأیید مربی، با شماره موبایل و رمز شخصی خود وارد شوید. تا زمانی که خروج از حساب را نزنید، ورود این دستگاه حفظ می‌شود.</p><label>شماره موبایل</label><input id="traineePhoneLogin" type="tel" inputmode="tel" autocomplete="tel" placeholder="09121234567"><label>رمز شخصی</label><input id="traineeLoginPassword" type="password" autocomplete="current-password" placeholder="رمز عبور"><button type="button" id="sehPhonePasswordLogin" onclick="loginTraineePhone()">ورود شاگرد</button>';
       addStatus(oldLogin,"sehDeviceLinkStatus");
     }
     const reg=blocks.find(b=>(b.querySelector("h3")?.textContent||"").includes("درخواست ثبت‌نام"));
@@ -9106,7 +9110,7 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
       const btn=reg.querySelector('button[onclick*="registerTraineePhone"]');
       if(btn)btn.textContent="📨 ارسال درخواست عضویت";
       let p=addStatus(reg,"sehRegistrationLoginStatus");
-      p.textContent="پس از تأیید مربی، ورود به‌صورت خودکار انجام می‌شود؛ رمز و پیامک لازم نیست.";
+      p.textContent="پس از تأیید مربی، برای ورود نخست رمز شخصی خود را تنظیم کنید؛ دفعات بعد با همان شماره و رمز وارد شوید.";
       const para=reg.querySelector("p.muted");
       if(para)para.textContent="درخواست عضویت را یک‌بار ثبت کنید. پس از تأیید مربی، همین دستگاه به‌صورت خودکار وارد حساب شما می‌شود؛ رمز و پیامک لازم نیست.";
     }
