@@ -4573,6 +4573,20 @@ window.toggleExerciseFavorite=async function(id,value){try{await sbWrite(`/train
       alert('گزارش تشخیص اتصال\nشناسه حساب: '+session.user.id+'\nنقش پروفایل: '+(profile.data?.role||'پیدا نشد')+'\nشاگردهای قابل مشاهده: '+traineeCount+'\nپروژه اپ: '+SUPABASE_URL+'\n\nاگر تعداد شاگردها صفر است، باید coach_user_id رکوردها و سیاست‌های RLS در همین پروژه بررسی شوند.');
     }catch(e){alert('گرفتن گزارش اتصال ناموفق بود.\n'+(e.message||String(e)));}
   };
+  // Fetch large dashboard collections in stable pages so Supabase's row cap
+  // cannot silently hide trainees or their plans as the gym grows.
+  async function dashboardGetAllPages(path,pageSize=500){
+    const all=[];
+    for(let offset=0;offset<100000;offset+=pageSize){
+      const sep=path.includes('?')?'&':'?';
+      const page=await window.sbGet(path+sep+'limit='+pageSize+'&offset='+offset);
+      if(!Array.isArray(page))throw new Error('پاسخ صفحه‌بندی داشبورد معتبر نیست.');
+      all.push(...page);
+      if(page.length<pageSize)return all;
+    }
+    throw new Error('تعداد رکوردهای داشبورد از حد ایمن صفحه‌بندی بیشتر است.');
+  }
+
   window.updateStats=async function(){
     const currentClients=Array.isArray(clients)?clients:[];
     const total=currentClients.length;
@@ -4590,15 +4604,15 @@ window.toggleExerciseFavorite=async function(id,value){try{await sbWrite(`/train
     // Reuse the dashboard summaries preloaded in parallel with the trainee list and membership query.
     // If this page was entered through another path, preserve the original parallel-fetch fallback.
     const results=await (window.__sehDashboardSummaryPromise||Promise.allSettled([
-      window.sbGet('/trainee_workout_plans?select=trainee_id,plan_date,created_at'),
-      window.sbGet('/nutrition_plans?select=trainee_id')
+      dashboardGetAllPages('/trainee_workout_plans?select=trainee_id,plan_date,created_at&order=id.asc'),
+      dashboardGetAllPages('/nutrition_plans?select=trainee_id&order=id.asc')
     ]));
     if(results[0].status==='fulfilled'&&Array.isArray(results[0].value)){
       workoutRows=results[0].value;
     }else{
       console.warn('دریافت خلاصه برنامه‌های تمرینی ناموفق بود:',results[0].reason);
       try{
-        workoutRows=await window.sbGet('/trainee_workout_plans?select=trainee_id,created_at');
+        workoutRows=await dashboardGetAllPages('/trainee_workout_plans?select=trainee_id,created_at&order=id.asc');
         if(!Array.isArray(workoutRows))workoutRows=[];
       }catch(e){workoutRows=[];}
     }
@@ -4705,14 +4719,14 @@ window.toggleExerciseFavorite=async function(id,value){try{await sbWrite(`/train
       // by the time the trainee list is rendered. Do not duplicate them if a stats refresh is in flight.
       if(!dashboardStatsInFlight){
         window.__sehDashboardSummaryPromise=Promise.allSettled([
-          window.sbGet('/trainee_workout_plans?select=trainee_id,plan_date,created_at'),
-          window.sbGet('/nutrition_plans?select=trainee_id')
+          dashboardGetAllPages('/trainee_workout_plans?select=trainee_id,plan_date,created_at&order=id.asc'),
+          dashboardGetAllPages('/nutrition_plans?select=trainee_id&order=id.asc')
         ]);
       }
-      const membershipPromise=window.sbGet('/trainee_memberships?select=id,trainee_id,start_date,end_date,status,created_at&order=created_at.desc')
+      const membershipPromise=dashboardGetAllPages('/trainee_memberships?select=id,trainee_id,start_date,end_date,status,created_at&order=created_at.desc,id.desc')
         .then(rows=>({ok:true,rows:rows||[]}))
         .catch(error=>({ok:false,error}));
-      const data=await window.sbGet('/trainees?select=*&order=created_at.desc');
+      const data=await dashboardGetAllPages('/trainees?select=*&order=created_at.desc,id.desc');
       clients=(data||[]).map(c=>({
         id:c.id,name:c.full_name||c.name||'بدون نام',phone:c.phone||'',gender:c.gender||'',
         birth_date:c.birth_date||null,age:c.age!=null&&c.age!==''?Number(c.age):(typeof calcAge==='function'?calcAge(c.birth_date):null),
