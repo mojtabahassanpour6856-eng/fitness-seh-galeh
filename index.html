@@ -4705,7 +4705,7 @@ window.toggleExerciseFavorite=async function(id,value){try{await sbWrite(`/train
   // Session restoration may already have loaded the list; only repair the visible list if empty.
   document.addEventListener('DOMContentLoaded',()=>{
     if(document.body.classList.contains('locked')===false&&typeof authProfile!=='undefined'&&authProfile?.role==='coach'&&
-       Array.isArray(window.clients)&&window.clients.length===0) window.loadClients();
+       Array.isArray(clients)&&clients.length===0) window.loadClients();
   });
 })();
 </script>
