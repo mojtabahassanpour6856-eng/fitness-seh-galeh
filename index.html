@@ -6599,7 +6599,7 @@ const oldWorkoutRenderer=window.renderWorkoutList;
    const fee=Number(payment.amount||m?.amount||0);
    put("sehMemberFee",fee>0?fee.toLocaleString("fa-IR")+" تومان":"ثبت نشده");
    const pending=receipts.some(r=>r.review_status==="pending")||m?.payment_status==="pending";
-   const paid=m?.payment_status==="paid";
+   const paid=m?.payment_status==="paid"||m?.status==="active";
    put("sehMemberPayStatus",m?(pending?"در انتظار بررسی":paid?"پرداخت‌شده":"پرداخت‌نشده"):"عضویت ثبت نشده");
    const status=$("traineeMembershipStatus");
    if(status)status.innerHTML='<div class="receipt-item"><b>تاریخ ثبت‌نام باشگاه:</b> '+safe(fmtDate(profile.club_registration_date)||"ثبت نشده")+'<br><b>تعداد جلسات:</b> '+safe(profile.weekly_sessions||"—")+' جلسه در هفته<br><b>روزها و ساعت تمرین:</b> '+safe(profile.training_days||"—")+' · '+safe(String(profile.training_time||"").slice(0,5)||"—")+'</div>';
