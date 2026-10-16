@@ -12401,10 +12401,21 @@ body.workout-output.workout-compact{
     document.querySelectorAll('.coach-name-cell[data-trainee-id]').forEach(b=>b.classList.toggle('selected',String(b.getAttribute('data-trainee-id'))===String(id)));
     return true;
   }
+  function profileIsAlreadyVisible(id){
+    const profile=byId('client');
+    if(!profile||!profile.classList.contains('active')||profile.hidden)return false;
+    const style=window.getComputedStyle(profile);
+    if(style.display==='none'||style.visibility==='hidden')return false;
+    try{
+      const selected=typeof currentClient!=='undefined'&&currentClient?String(currentClient.id):'';
+      if(selected&&selected!==String(id))return false;
+    }catch(e){}
+    return true;
+  }
   function keepSelectedProfile(){
-    // This temporary lock is only for the coach's trainee-list workflow.
+    // Recheck only if another loader actually hid the selected profile.
     if(!isCoachRole()||!lockedId||Date.now()>lockUntil){lockedId=null;return;}
-    openProfile(lockedId);
+    if(!profileIsAlreadyVisible(lockedId))openProfile(lockedId);
   }
   function startGuard(id){
     lockedId=String(id);lockUntil=Date.now()+5000;
@@ -12437,7 +12448,11 @@ body.workout-output.workout-compact{
         Promise.resolve(result).catch(e=>console.error('بارگذاری اطلاعات شاگرد ناموفق بود:',e));
       }
     }catch(e){console.error('اجرای مسیر انتخاب شاگرد ناموفق بود:',e);}
-    [100,350,800,1500,2600,4200].forEach(ms=>setTimeout(()=>openProfile(id),ms));
+    // Do not repeatedly reopen an already-visible profile: doing so races with
+    // async card loaders and causes visible layout/scroll jumps for several seconds.
+    [100,350,800,1500,2600,4200].forEach(ms=>setTimeout(()=>{
+      if(!profileIsAlreadyVisible(id))openProfile(id);
+    },ms));
   }
   // One document-level delegated handler covers dynamic lists after every login,
   // logout/reload, and role switch. It does not depend on listeners on each button.
