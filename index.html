@@ -12611,9 +12611,28 @@ body.workout-output.workout-compact{
   requested=String(key);
   lastUserAction=Date.now();
  }
+ var scheduledApplyTimers=new Map();
  function schedule(key){
   var id=targetFor(key);
-  [0,80,250,700].forEach(function(ms){setTimeout(function(){apply(id);},ms);});
+  if(!id)return;
+  var prior=scheduledApplyTimers.get(id);
+  if(prior){
+   clearTimeout(prior.fallback);
+   if(prior.raf&&typeof cancelAnimationFrame==='function')cancelAnimationFrame(prior.raf);
+  }
+  var state={raf:null,fallback:null};
+  scheduledApplyTimers.set(id,state);
+  var run=function(){
+   if(scheduledApplyTimers.get(id)!==state)return;
+   apply(id);
+  };
+  if(typeof requestAnimationFrame==='function')state.raf=requestAnimationFrame(run);
+  else state.raf=setTimeout(run,0);
+  state.fallback=setTimeout(function(){
+   if(scheduledApplyTimers.get(id)!==state)return;
+   apply(id);
+   scheduledApplyTimers.delete(id);
+  },320);
  }
  var oldDash=window.dashOpen;
  if(typeof oldDash==='function'){
