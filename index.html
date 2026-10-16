@@ -2112,7 +2112,8 @@ function esc(s){return String(s).replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2" onerror="this.onerror=null;this.src='https://unpkg.com/@supabase/supabase-js@2'"></script>
 <script>
 window.AUTH_SUPABASE=window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
-const AUTH_SUPABASE=window.AUTH_SUPABASE;const ORIGINAL_FETCH=window.fetch;
+/* SEH_FIX_ORIGINAL_FETCH_SCOPE_20261016: expose the original browser fetch across classic-script scopes */
+const AUTH_SUPABASE=window.AUTH_SUPABASE;const ORIGINAL_FETCH=window.__SEH_ORIGINAL_FETCH||(window.__SEH_ORIGINAL_FETCH=window.fetch);
 
 /* Cache the auth session briefly: previously every single REST request waited
    for auth.getSession(), multiplying latency when several dashboard cards load together. */
@@ -2142,7 +2143,7 @@ window.fetch=async function(input,init={}){
     headers.set("Authorization","Bearer "+(session?.access_token||SUPABASE_KEY));
     init={...init,headers};
   }
-  return ORIGINAL_FETCH(input,init);
+  return window.__SEH_ORIGINAL_FETCH(input,init);
 };
 let authProfile=null;
 function showAuthError(msg){const e=$('authError');e.textContent=msg||'ورود انجام نشد.';e.style.display='block';}
@@ -3822,7 +3823,7 @@ window.toggleExerciseFavorite=async function(id,value){try{await sbWrite(`/train
       headers.Prefer='return=representation';
       options.body=JSON.stringify(body);
     }
-    let response=await ORIGINAL_FETCH(SUPABASE_URL+'/rest/v1'+path,options);
+    let response=await window.__SEH_ORIGINAL_FETCH(SUPABASE_URL+'/rest/v1'+path,options);
     let text=await response.text();
 
     // Compatibility for deployments whose migration created the singular
@@ -3834,7 +3835,7 @@ window.toggleExerciseFavorite=async function(id,value){try{await sbWrite(`/train
       /(?:relation|table|could not find the table|schema cache).*(?:trainee_memberships|does not exist|not found)|(?:trainee_memberships).*(?:does not exist|not found)/i.test(text);
     if(missingRelation && /^(\/trainee_memberships)(?=[?]|$)/.test(path)){
       const singularPath=path.replace(/^\/trainee_memberships(?=[?]|$)/,'/trainee_membership');
-      response=await ORIGINAL_FETCH(SUPABASE_URL+'/rest/v1'+singularPath,options);
+      response=await window.__SEH_ORIGINAL_FETCH(SUPABASE_URL+'/rest/v1'+singularPath,options);
       text=await response.text();
     }
     if(!response.ok) throw new Error(text||('HTTP '+response.status));
