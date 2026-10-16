@@ -12959,3 +12959,56 @@ body.workout-output.workout-compact{
   }
 })();
 </script>
+
+<!-- SEH_COACH_DASHBOARD_AND_SESSION_RECOVERY_20261016 -->
+<script id="seh-coach-dashboard-session-recovery-20261016">
+(function(){
+  'use strict';
+  var running=false, attempts=0, timer=null;
+  function el(id){return document.getElementById(id);}
+  function isCoachVisible(){
+    var text=(el('authUserText')&&el('authUserText').textContent)||'';
+    return /\|\s*مربی\s*$/.test(text.trim()) || (window.authProfile&&window.authProfile.role==='coach');
+  }
+  function traineeButtons(){
+    return document.querySelectorAll('#coachMobileCards .coach-name-cell[data-trainee-id]').length;
+  }
+  async function recover(){
+    if(running || attempts>=4)return;
+    var auth=window.AUTH_SUPABASE;
+    if(!auth || !auth.auth || typeof window.loadClients!=='function')return;
+    running=true;attempts++;
+    try{
+      var result=await auth.auth.getSession();
+      var session=result&&result.data&&result.data.session;
+      if(result&&result.error)throw result.error;
+      if(!session||!session.user)return;
+      var p=await auth.from('profiles').select('id,role,full_name').eq('id',session.user.id).maybeSingle();
+      if(p.error)throw p.error;
+      if(!p.data || p.data.role!=='coach')return;
+      if(!isCoachVisible() || (el('authScreen') && el('authScreen').style.display!=='none')){
+        if(typeof window.finishLogin==='function')await window.finishLogin(session.user);
+      }
+      // Some older login wrappers finish before the final trainee-list renderer is ready.
+      // Retry only when the visible list is empty; do not change the dashboard structure.
+      if(traineeButtons()===0){
+        await window.loadClients();
+      }
+      if(typeof window.updateStats==='function')await window.updateStats();
+      if(typeof window.renderClients==='function')window.renderClients();
+    }catch(e){
+      console.warn('[seh coach dashboard recovery]',e&&e.message?e.message:e);
+    }finally{
+      running=false;
+      if(traineeButtons()===0 && attempts<4){
+        clearTimeout(timer);
+        timer=setTimeout(recover,500*attempts);
+      }
+    }
+  }
+  function start(){setTimeout(recover,350);}
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start,{once:true});
+  else start();
+  window.addEventListener('pageshow',function(){if(traineeButtons()===0){attempts=0;start();}});
+})();
+</script>
