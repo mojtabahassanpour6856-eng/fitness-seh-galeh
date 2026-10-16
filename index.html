@@ -3793,6 +3793,10 @@ window.toggleExerciseFavorite=async function(id,value){try{await sbWrite(`/train
   const auth = window.AUTH_SUPABASE || window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
   window.AUTH_SUPABASE = auth;
   const byId = id => document.getElementById(id);
+  // Keep REST requests working if another script accidentally overwrites the shared fetch reference.
+  const sehOriginalFetch = typeof window.__SEH_ORIGINAL_FETCH === 'function'
+    ? window.__SEH_ORIGINAL_FETCH
+    : window.fetch.bind(window);
 
   // Fix: the original phoneNorm lived inside another IIFE and was not visible here.
   function phoneNormForRegistration(v){
@@ -3826,7 +3830,7 @@ window.toggleExerciseFavorite=async function(id,value){try{await sbWrite(`/train
       headers.Prefer='return=representation';
       options.body=JSON.stringify(body);
     }
-    let response=await window.__SEH_ORIGINAL_FETCH(SUPABASE_URL+'/rest/v1'+path,options);
+    let response=await sehOriginalFetch(SUPABASE_URL+'/rest/v1'+path,options);
     let text=await response.text();
 
     // Compatibility for deployments whose migration created the singular
@@ -3838,7 +3842,7 @@ window.toggleExerciseFavorite=async function(id,value){try{await sbWrite(`/train
       /(?:relation|table|could not find the table|schema cache).*(?:trainee_memberships|does not exist|not found)|(?:trainee_memberships).*(?:does not exist|not found)/i.test(text);
     if(missingRelation && /^(\/trainee_memberships)(?=[?]|$)/.test(path)){
       const singularPath=path.replace(/^\/trainee_memberships(?=[?]|$)/,'/trainee_membership');
-      response=await window.__SEH_ORIGINAL_FETCH(SUPABASE_URL+'/rest/v1'+singularPath,options);
+      response=await sehOriginalFetch(SUPABASE_URL+'/rest/v1'+singularPath,options);
       text=await response.text();
     }
     if(!response.ok) throw new Error(text||('HTTP '+response.status));
