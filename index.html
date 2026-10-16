@@ -4541,7 +4541,7 @@ window.toggleExerciseFavorite=async function(id,value){try{await sbWrite(`/train
       const data=await window.sbGet('/trainees?select=*&order=created_at.desc');
       clients=(data||[]).map(c=>({
         id:c.id,name:c.full_name||c.name||'بدون نام',phone:c.phone||'',gender:c.gender||'',
-        birth_date:c.birth_date||null,age:typeof calcAge==='function'?calcAge(c.birth_date):null,
+        birth_date:c.birth_date||null,age:c.age!=null&&c.age!==''?Number(c.age):(typeof calcAge==='function'?calcAge(c.birth_date):null),
         weight:c.current_weight??c.weight??null,height:c.height??null,goal:c.goal||'',level:c.training_level||'',
         history:c.training_history||'',limitations:c.limitations||'',training_type:c.training_type||'gym',
         home_equipment:c.home_equipment||'',training_days:c.training_days||'',training_time:c.training_time||'',
