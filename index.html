@@ -11663,7 +11663,7 @@ body.workout-output.workout-compact{
   }
   function restoreLoginForm(){
     const box=$('traineeLoginBox');
-    if(!box)return;
+    if(!box||$('sehPhonePasswordLogin'))return;
     let blocks=Array.from(box.querySelectorAll('.trainee-auth-block'));
     let login=blocks.find(b=>(b.querySelector('h3')?.textContent||'').includes('ورود شاگرد'));
     if(!login){
