@@ -6784,10 +6784,10 @@ const oldWorkoutRenderer=window.renderWorkoutList;
 
  function applyFeatureUI(){
   addRegistrationFields();ensureCoachRegistrationDateField();
-  // The trainee dashboard already has the dedicated membership card. Hide only
-  // this duplicate read-only card inside the profile; keep it available to coaches.
+  // The upper membership section is the source of truth in coach view.
+  // This older duplicate card inside #client must stay hidden for both roles.
   const duplicateMembershipCard=$("membershipCardBox");
-  if(duplicateMembershipCard)duplicateMembershipCard.style.display=isTrainee()?"none":"";
+  if(duplicateMembershipCard)duplicateMembershipCard.style.setProperty("display","none","important");
   if(!isTrainee())return;
   const workout=$("workout");
   if(workout){
@@ -12770,4 +12770,9 @@ body.workout-output.workout-compact{
   animation:none!important;
   transition:none!important;
 }
+</style>
+
+<style id="FIX_HIDE_DUPLICATE_PROFILE_MEMBERSHIP_CARD_V2">
+/* Remove the legacy duplicate card from the shared profile for coach and trainee roles. */
+#client > #membershipCardBox{display:none!important;}
 </style>
