@@ -12664,3 +12664,62 @@ body.workout-output.workout-compact{
  }
 })();
 </script>
+
+
+<script id="FIX_COACH_TRAINEE_SCHEDULE_READ_V1">
+(function(){
+  if(window.__coachTraineeScheduleReadV1)return;
+  window.__coachTraineeScheduleReadV1=true;
+  function el(id){return document.getElementById(id);}
+  function selectedClient(){
+    try{return typeof currentClient!=='undefined'?currentClient:window.currentClient;}catch(e){return window.currentClient;}
+  }
+  function render(row){
+    var selected=selectedClient();
+    if(selected&&String(selected.id)===String(row.id)){
+      selected.training_days=row.training_days||'';
+      selected.training_time=row.training_time||'';
+      selected.weekly_sessions=row.weekly_sessions??null;
+      window.currentClient=selected;
+    }
+    try{
+      if(typeof clients!=='undefined'&&Array.isArray(clients)){
+        var item=clients.find(function(x){return String(x.id)===String(row.id);});
+        if(item){item.training_days=row.training_days||'';item.training_time=row.training_time||'';item.weekly_sessions=row.weekly_sessions??null;}
+      }else if(Array.isArray(window.clients)){
+        var item2=window.clients.find(function(x){return String(x.id)===String(row.id);});
+        if(item2){item2.training_days=row.training_days||'';item2.training_time=row.training_time||'';item2.weekly_sessions=row.weekly_sessions??null;}
+      }
+    }catch(e){}
+    var days=el('coachScheduleDays'),time=el('coachScheduleTime'),sessions=el('coachScheduleSessions');
+    if(days)days.textContent=row.training_days||'ثبت نشده';
+    if(time)time.textContent=String(row.training_time||'').slice(0,5)||'ثبت نشده';
+    if(sessions)sessions.textContent='تعداد جلسات هفتگی: '+(row.weekly_sessions??'ثبت نشده');
+  }
+  async function refresh(){
+    try{
+      if(typeof isTrainee==='function'&&isTrainee())return;
+      var selected=selectedClient();
+      if(!selected||!selected.id||typeof window.sbGet!=='function')return;
+      var id=selected.id;
+      var rows=await window.sbGet('/trainees?id=eq.'+encodeURIComponent(id)+'&select=id,training_days,training_time,weekly_sessions&limit=1');
+      if(!Array.isArray(rows)||!rows.length)return;
+      var latest=selectedClient();
+      if(!latest||String(latest.id)!==String(id))return;
+      render(rows[0]);
+    }catch(e){console.warn('Could not refresh trainee schedule in coach profile:',e);}
+  }
+  var previous=window.selectClient;
+  if(typeof previous==='function'){
+    window.selectClient=async function(id){
+      var result=await previous.apply(this,arguments);
+      await refresh();
+      return result;
+    };
+  }
+  document.addEventListener('click',function(e){
+    var target=e.target&&e.target.closest&&e.target.closest('[data-trainee-id]');
+    if(target)setTimeout(refresh,500);
+  },true);
+})();
+</script>
