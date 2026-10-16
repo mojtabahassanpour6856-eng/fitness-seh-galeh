@@ -12576,6 +12576,13 @@ body.workout-output.workout-compact{
  }
  document.addEventListener('click',function(e){
   if(role()!=='trainee')return;
+  // These two dashboard cards use direct JavaScript handlers, not nav buttons.
+  // Record their intended destination before legacy handlers run, so the
+  // stability guard does not restore the section that was open previously.
+  var profileCard=e.target&&e.target.closest?e.target.closest('#traineeDashboard [data-profile-card]'):null;
+  if(profileCard){remember('client');schedule('client');return;}
+  var chatCard=e.target&&e.target.closest?e.target.closest('#sehChatEntryCard'):null;
+  if(chatCard){remember('sehChatSection');schedule('sehChatSection');return;}
   var nav=e.target&&e.target.closest?e.target.closest('.nav button'):null;
   if(!nav)return;
   // The dashboard button is created with a JavaScript onclick property,
