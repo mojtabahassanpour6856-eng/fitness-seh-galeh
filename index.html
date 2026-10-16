@@ -4651,6 +4651,16 @@ window.toggleExerciseFavorite=async function(id,value){try{await sbWrite(`/train
     if(el('planCount'))el('planCount').textContent=fa(ids.size);
     if(el('alertCount'))el('alertCount').textContent=fa(alerts);
   };
+  // Share overlapping dashboard-stat requests so concurrent renders do not issue the same bulk reads twice.
+  const originalDashboardStats=window.updateStats;
+  let dashboardStatsInFlight=null;
+  if(typeof originalDashboardStats==='function'){
+    window.updateStats=function(){
+      if(dashboardStatsInFlight)return dashboardStatsInFlight;
+      dashboardStatsInFlight=Promise.resolve().then(()=>originalDashboardStats.apply(this,arguments)).finally(()=>{dashboardStatsInFlight=null;});
+      return dashboardStatsInFlight;
+    };
+  }
   window.loadClients=async function(){
     const list=el('clientList');
     if(list)list.innerHTML='<div class="muted" style="padding:12px">در حال دریافت شاگردان از دیتابیس…</div>';
