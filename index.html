@@ -4585,7 +4585,7 @@ window.toggleExerciseFavorite=async function(id,value){try{await sbWrite(`/train
     let workoutRows=[],nutritionRows=[];
     // Fetch both summary datasets at the same time instead of waiting for one after the other.
     const results=await Promise.allSettled([
-      window.sbGet('/trainee_workout_plans?select=trainee_id,plan_date,created_at&order=created_at.desc'),
+      window.sbGet('/trainee_workout_plans?select=trainee_id,plan_date,created_at'),
       window.sbGet('/nutrition_plans?select=trainee_id')
     ]);
     if(results[0].status==='fulfilled'&&Array.isArray(results[0].value)){
@@ -4593,7 +4593,7 @@ window.toggleExerciseFavorite=async function(id,value){try{await sbWrite(`/train
     }else{
       console.warn('دریافت خلاصه برنامه‌های تمرینی ناموفق بود:',results[0].reason);
       try{
-        workoutRows=await window.sbGet('/trainee_workout_plans?select=trainee_id,created_at&order=created_at.desc');
+        workoutRows=await window.sbGet('/trainee_workout_plans?select=trainee_id,created_at');
         if(!Array.isArray(workoutRows))workoutRows=[];
       }catch(e){workoutRows=[];}
     }
