@@ -12786,3 +12786,55 @@ body.workout-output.workout-compact{
 /* Remove the legacy duplicate card from the shared profile for coach and trainee roles. */
 #client > #membershipCardBox{display:none!important;}
 </style>
+
+
+<!-- SEH_LOAD_SINGLEFLIGHT_OPTIMIZATION_V1 -->
+<script id="SEH_LOAD_SINGLEFLIGHT_OPTIMIZATION_V1">
+/* Conservative performance guard: merge only overlapping identical loads.
+   No UI, schema, authorization, or persistence behavior is changed. */
+(function(){
+  'use strict';
+  if(window.__sehLoadSingleflightV1)return;
+  window.__sehLoadSingleflightV1=true;
+
+  var activeClientListLoad=null;
+  var originalLoadClients=window.loadClients;
+  if(typeof originalLoadClients==='function'){
+    var loadClientsSingleflight=function(){
+      if(activeClientListLoad)return activeClientListLoad;
+      var result;
+      try{result=originalLoadClients.apply(this,arguments);}
+      catch(error){throw error;}
+      if(!result||typeof result.then!=='function')return result;
+      activeClientListLoad=Promise.resolve(result).finally(function(){
+        activeClientListLoad=null;
+      });
+      return activeClientListLoad;
+    };
+    loadClientsSingleflight.__sehSingleflightWrapped=true;
+    window.loadClients=loadClientsSingleflight;
+  }
+
+  var activeSelections=new Map();
+  var originalSelectClient=window.selectClient;
+  if(typeof originalSelectClient==='function'){
+    var selectClientSingleflight=function(id){
+      var key=String(id==null?'':id);
+      if(!key)return originalSelectClient.apply(this,arguments);
+      if(activeSelections.has(key))return activeSelections.get(key);
+      var result;
+      try{result=originalSelectClient.apply(this,arguments);}
+      catch(error){throw error;}
+      if(!result||typeof result.then!=='function')return result;
+      var pending=Promise.resolve(result).finally(function(){
+        if(activeSelections.get(key)===pending)activeSelections.delete(key);
+      });
+      activeSelections.set(key,pending);
+      return pending;
+    };
+    selectClientSingleflight.__sehSingleflightWrapped=true;
+    window.selectClient=selectClientSingleflight;
+  }
+})();
+</script>
+
