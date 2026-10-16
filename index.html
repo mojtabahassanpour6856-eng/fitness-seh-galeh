@@ -12723,3 +12723,32 @@ body.workout-output.workout-compact{
   },true);
 })();
 </script>
+
+
+<style id="FIX_COACH_GOAL_LAYOUT_STABILITY_V1">
+/* Keep the coach goal card anchored while overlapping legacy goal loaders refresh its contents. */
+#client > #goalBox{
+  position:relative!important;
+  inset:auto!important;
+  transform:none!important;
+  animation:none!important;
+  transition:none!important;
+  scroll-margin-top:12px;
+  box-sizing:border-box;
+  contain:layout style;
+}
+#client > #goalBox #goalStructuredPreview{
+  display:block;
+  min-height:132px;
+  box-sizing:border-box;
+  overflow-wrap:anywhere;
+  animation:none!important;
+  transition:none!important;
+}
+#client > #goalBox h2,
+#client > #goalBox p,
+#client > #goalBox div{
+  animation:none!important;
+  transition:none!important;
+}
+</style>
