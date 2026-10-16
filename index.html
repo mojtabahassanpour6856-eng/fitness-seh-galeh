@@ -2113,7 +2113,7 @@ function esc(s){return String(s).replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",
 <script>
 window.AUTH_SUPABASE=window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
 /* SEH_FIX_ORIGINAL_FETCH_SCOPE_20261016: expose the original browser fetch across classic-script scopes */
-const AUTH_SUPABASE=window.AUTH_SUPABASE;const ORIGINAL_FETCH=window.__SEH_ORIGINAL_FETCH||(window.__SEH_ORIGINAL_FETCH=window.fetch);
+const AUTH_SUPABASE=window.AUTH_SUPABASE;const ORIGINAL_FETCH=(typeof window.__SEH_ORIGINAL_FETCH==="function"?window.__SEH_ORIGINAL_FETCH:window.fetch.bind(window));window.__SEH_ORIGINAL_FETCH=ORIGINAL_FETCH;
 
 /* Cache the auth session briefly: previously every single REST request waited
    for auth.getSession(), multiplying latency when several dashboard cards load together. */
@@ -2143,7 +2143,7 @@ window.fetch=async function(input,init={}){
     headers.set("Authorization","Bearer "+(session?.access_token||SUPABASE_KEY));
     init={...init,headers};
   }
-  return window.__SEH_ORIGINAL_FETCH(input,init);
+  return ORIGINAL_FETCH(input,init);
 };
 let authProfile=null;
 function showAuthError(msg){const e=$('authError');e.textContent=msg||'ورود انجام نشد.';e.style.display='block';}
