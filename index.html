@@ -3989,7 +3989,9 @@ window.toggleExerciseFavorite=async function(id,value){try{await sbWrite(`/train
     if(saving)return;
     if(typeof currentClient==='undefined'||!currentClient){alert('اول شاگرد را انتخاب کنید.');return;}
     const traineeId=currentClient.id;
-    const startRaw=value('subStart'),endRaw=value('subEnd');
+    // Read exactly what the coach sees in the Shamsi fields, then convert once to the database's Gregorian ISO date.
+    const startRaw=(window.getJalaliVisibleValue?window.getJalaliVisibleValue('subStart'):value('subStart')).trim();
+    const endRaw=(window.getJalaliVisibleValue?window.getJalaliVisibleValue('subEnd'):value('subEnd')).trim();
     if(!startRaw||!endRaw){alert('لطفاً تاریخ شروع و پایان عضویت را هر دو به صورت شمسی وارد کنید.');return;}
     const start=window.jalaliToISODate(startRaw);
     const end=window.jalaliToISODate(endRaw);
@@ -4672,6 +4674,8 @@ window.toggleExerciseFavorite=async function(id,value){try{await sbWrite(`/train
  function todayJ(){return g2j(new Date().getFullYear(),new Date().getMonth()+1,new Date().getDate());}
  function validJ(y,m,d){if(y<1200||y>1600||m<1||m>12||d<1||d>(m<=6?31:m<=11?30:30))return false;const [gy,gm,gd]=j2g(y,m,d),b=g2j(gy,gm,gd);return b[0]===y&&b[1]===m&&b[2]===d;}
  const nativeValue=Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value');
+ // Read the actual visible Jalali text without the compatibility .value getter, which exposes ISO to legacy code.
+ window.getJalaliVisibleValue=function(idOrInput){const input=typeof idOrInput==='string'?document.getElementById(idOrInput):idOrInput;return input?String(nativeValue.get.call(input)??'').trim():'';};
  let pop=null,active=null,view=null,chosen=null;
  function shown(input){return nativeValue.get.call(input);}
  function rawSet(input,v){nativeValue.set.call(input,v);}
