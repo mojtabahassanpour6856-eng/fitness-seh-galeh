@@ -6654,6 +6654,25 @@ const oldWorkoutRenderer=window.renderWorkoutList;
   }
  }
  window.retryTraineeMembership=function(){return loadTraineeMembership();};
+ // Reduce upload time for large photos without changing PDFs or small files.
+ async function sehOptimizeUploadImage(file){
+  if(!file||!/^image\\/(jpeg|png|webp)$/i.test(file.type)||file.size<1200*1024||typeof createImageBitmap!=="function")return file;
+  try{
+   const bitmap=await createImageBitmap(file);
+   const scale=Math.min(1,2200/Math.max(bitmap.width,bitmap.height));
+   const canvas=document.createElement("canvas");
+   canvas.width=Math.max(1,Math.round(bitmap.width*scale));
+   canvas.height=Math.max(1,Math.round(bitmap.height*scale));
+   const ctx=canvas.getContext("2d");
+   if(!ctx){bitmap.close?.();return file;}
+   ctx.drawImage(bitmap,0,0,canvas.width,canvas.height);
+   bitmap.close?.();
+   const blob=await new Promise(resolve=>canvas.toBlob(resolve,"image/webp",0.9));
+   if(!blob||blob.type!=="image/webp"||blob.size>=file.size*0.9)return file;
+   const base=file.name.replace(/\\.[^.]+$/,"")||"upload";
+   return new File([blob],base+".webp",{type:"image/webp",lastModified:Date.now()});
+  }catch(_){return file;}
+ }
  window.submitPaymentReceipt=async function(){
   if(!isTrainee()||!currentClient?.id)return alert("حساب شاگرد هنوز بارگذاری نشده است؛ یک بار صفحه را تازه‌سازی کنید و دوباره تلاش کنید.");
   const file=$("receiptFile")?.files?.[0],amount=Number($("receiptAmount")?.value||0),rawDate=$("receiptDate")?.value||"",date=isoDate(rawDate);
@@ -6666,9 +6685,10 @@ const oldWorkoutRenderer=window.renderWorkoutList;
   const traineeId=currentClient.id;let path=null;
   try{
    const {data:{user},error:userError}=await AUTH_SUPABASE.auth.getUser();if(userError||!user)throw new Error("نشست حساب شاگرد معتبر نیست.");
-   const name=file.name.replace(/[^a-zA-Z0-9._-]/g,"_").slice(-80)||"receipt";
+   const uploadFile=await sehOptimizeUploadImage(file);
+   const name=uploadFile.name.replace(/[^a-zA-Z0-9._-]/g,"_").slice(-80)||"receipt";
    path=user.id+"/"+traineeId+"/"+Date.now()+"_"+name;
-   const {error:uploadError}=await AUTH_SUPABASE.storage.from("payment-receipts").upload(path,file,{upsert:false,contentType:file.type});
+   const {error:uploadError}=await AUTH_SUPABASE.storage.from("payment-receipts").upload(path,uploadFile,{upsert:false,contentType:uploadFile.type});
    if(uploadError)throw uploadError;
    const {error:insertError}=await AUTH_SUPABASE.from("trainee_payment_receipts").insert({trainee_id:traineeId,submitted_by:user.id,receipt_path:path,amount,payment_date:date,note:($("receiptNote")?.value||"").trim()||null,review_status:"pending"});
    if(insertError){await AUTH_SUPABASE.storage.from("payment-receipts").remove([path]);throw insertError;}
@@ -8569,9 +8589,10 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
     try{
       const {data:{user},error:userError}=await AUTH_SUPABASE.auth.getUser();
       if(userError||!user)throw new Error('نشست حساب شاگرد معتبر نیست.');
-      const clean=file.name.replace(/[^a-zA-Z0-9._-]/g,'_').slice(-80)||'lab-report';
+      const uploadFile=await sehOptimizeUploadImage(file);
+      const clean=uploadFile.name.replace(/[^a-zA-Z0-9._-]/g,'_').slice(-80)||'lab-report';
       path=user.id+'/'+c.id+'/health_'+Date.now()+'_'+clean;
-      const {error:uploadError}=await AUTH_SUPABASE.storage.from('trainee-health-reports').upload(path,file,{upsert:false,contentType:file.type});
+      const {error:uploadError}=await AUTH_SUPABASE.storage.from('trainee-health-reports').upload(path,uploadFile,{upsert:false,contentType:uploadFile.type});
       if(uploadError)throw uploadError;
       const note='HEALTH_REPORT_FILE::'+JSON.stringify({path,name:file.name,type:file.type,note:$('healthFileNote')?.value.trim()||''});
       try{
