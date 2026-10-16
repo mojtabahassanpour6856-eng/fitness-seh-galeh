@@ -12489,3 +12489,98 @@ body.workout-output.workout-compact{
  window.addEventListener('popstate',function(){if(role()==='trainee'&&document.getElementById('activitySection')?.classList.contains('active'))window.sehReturnToDashboard();});
 })();
 </script>
+
+
+<script id="SEH_TRAINEE_NAV_STABILITY_GUARD_20261016">
+/* Keep trainee navigation stable when older asynchronous loaders try to reopen the profile.
+   The selected card remains authoritative until the trainee explicitly requests another section. */
+(function(){
+  'use strict';
+  if(window.__sehTraineeNavStabilityGuard)return;
+  window.__sehTraineeNavStabilityGuard=true;
+  var requested=null, requestedAt=0, busy=false;
+  function role(){
+    try{if(typeof authProfile!=='undefined'&&authProfile&&authProfile.role)return String(authProfile.role).toLowerCase();}catch(e){}
+    try{if(window.authProfile&&window.authProfile.role)return String(window.authProfile.role).toLowerCase();}catch(e){}
+    return '';
+  }
+  function sectionId(key){
+    var map={analysis:'traineeAnalysis',activity:'activitySection',goals:'traineeGoalsSection'};
+    return map[key]||key;
+  }
+  function remember(key){
+    if(!key)return;
+    requested=String(key);
+    requestedAt=Date.now();
+  }
+  function activeSection(){
+    return document.querySelector('.section.active');
+  }
+  function stabilize(targetId){
+    if(role()!=='trainee'||busy||!targetId)return;
+    var target=document.getElementById(targetId);
+    if(!target||!target.classList.contains('section'))return;
+    busy=true;
+    try{
+      document.querySelectorAll('.section').forEach(function(sec){
+        if(sec===target){
+          sec.hidden=false;sec.removeAttribute('hidden');sec.removeAttribute('aria-hidden');
+          sec.classList.add('active');
+          sec.style.setProperty('display','block','important');
+          sec.style.setProperty('visibility','visible','important');
+          sec.style.removeProperty('opacity');
+        }else{
+          sec.classList.remove('active');
+          sec.style.setProperty('display','none','important');
+          sec.style.setProperty('visibility','hidden','important');
+          sec.setAttribute('aria-hidden','true');
+        }
+      });
+    }finally{busy=false;}
+  }
+  var oldDash=window.dashOpen;
+  if(typeof oldDash==='function'){
+    window.dashOpen=function(key){
+      if(role()==='trainee')remember(key==='membership'?'membership':key);
+      return oldDash.apply(this,arguments);
+    };
+  }
+  var oldShow=window.showSection;
+  if(typeof oldShow==='function'){
+    window.showSection=function(id,btn){
+      var trainee=role()==='trainee';
+      if(trainee && String(id)==='client' && requested && requested!=='client'){
+        // Ignore a late profile navigation emitted by an older async selectClient/load callback.
+        stabilize(sectionId(requested));
+        return;
+      }
+      if(trainee && id)remember(id==='traineeDashboard'?'traineeDashboard':id);
+      var result=oldShow.apply(this,arguments);
+      if(trainee && id){
+        var target=String(id)==='client'?'client':String(id);
+        setTimeout(function(){stabilize(target);},0);
+        setTimeout(function(){stabilize(target);},120);
+      }
+      return result;
+    };
+  }
+  document.addEventListener('click',function(e){
+    if(role()!=='trainee')return;
+    var nav=e.target&&e.target.closest?e.target.closest('.nav button'):null;
+    if(!nav)return;
+    var code=String(nav.getAttribute('onclick')||'');
+    var m=code.match(/(?:showSection|dashOpen)\(['"]([^'"]+)['"]/);
+    if(m)remember(m[1]);
+  },true);
+  // If a delayed legacy callback activates the profile directly, restore the last requested card.
+  function enforce(){
+    if(role()!=='trainee'||!requested||requested==='client'||requested==='membership'||busy)return;
+    var target=sectionId(requested);
+    var current=activeSection();
+    if(current&&current.id==='client')stabilize(target);
+  }
+  if(typeof MutationObserver!=='undefined'&&document.body){
+    new MutationObserver(enforce).observe(document.body,{subtree:true,childList:true,attributes:true,attributeFilter:['class','style','hidden','aria-hidden']});
+  }
+})();
+</script>
