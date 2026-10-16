@@ -8192,7 +8192,17 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
    ensurePanel();setTimeout(showGoals,500);
    var host=document.getElementById('client');
    if(host&&typeof MutationObserver==='function'){
-    var mo=new MutationObserver(function(){if(host.offsetParent!==null)setTimeout(showGoals,120);});
+    // Coalesce rapid visibility/class changes into one goal refresh instead of
+    // issuing repeated overlapping reads while the coach selects a trainee.
+    var goalRefreshTimer=null;
+    var mo=new MutationObserver(function(){
+     if(host.offsetParent===null)return;
+     if(goalRefreshTimer)clearTimeout(goalRefreshTimer);
+     goalRefreshTimer=setTimeout(function(){
+      goalRefreshTimer=null;
+      if(host.offsetParent!==null)showGoals();
+     },180);
+    });
     mo.observe(host,{attributes:true,attributeFilter:['style','class','hidden']});
    }
   }
