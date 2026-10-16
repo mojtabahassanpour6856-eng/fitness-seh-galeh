@@ -2459,10 +2459,22 @@ if($("prDate"))$("prDate").value=today();if($("anDate"))$("anDate").value=today(
       const rows=await sbWrite(`/trainees?id=eq.${encodeURIComponent(traineeId)}`,'PATCH',payload);
       const saved=Array.isArray(rows)&&rows.find(r=>String(r.id)===String(traineeId));
       if(!saved||(saved.age==null?age!==null:Number(saved.age)!==age))throw new Error('ذخیره سن در پایگاه داده تأیید نشد؛ لطفاً دوباره تلاش کنید.');
-      await loadClients();
-      if(currentClient&&String(currentClient.id)===String(traineeId))currentClient=clients.find(x=>String(x.id)===String(traineeId))||currentClient;
+      // Update the already-loaded trainee locally after the database confirms the save.
+      // Avoid re-fetching the entire trainee list and dashboard data just to refresh profile fields.
+      if(currentClient&&String(currentClient.id)===String(traineeId)){
+        Object.assign(currentClient,{name:payload.full_name,full_name:payload.full_name,age,weight:payload.current_weight,current_weight:payload.current_weight,height:payload.height,goal:payload.goal,level:payload.training_level,training_level:payload.training_level,training_type:payload.training_type,home_equipment:payload.home_equipment});
+        if(Array.isArray(clients)){
+          const i=clients.findIndex(x=>String(x.id)===String(traineeId));
+          if(i>=0)clients[i]=Object.assign({},clients[i],currentClient);
+        }
+        if(typeof updateStats==='function')updateStats();
+        if(typeof renderClients==='function')renderClients();
+        if(typeof setText==='function'){
+          setText('dashWelcome',`${currentClient.name||'شاگرد'} | ${currentClient.goal||'هدف ثبت نشده'}`);
+          setText('dashGoal',currentClient.goal||'ثبت نشده');
+        }
+      }
       alert('پروفایل شاگرد ذخیره شد و سن هم تأیید شد.');
-      await loadDashboard();
     }catch(e){alert('ذخیره پروفایل انجام نشد.\\n'+e.message)}
   };
 
