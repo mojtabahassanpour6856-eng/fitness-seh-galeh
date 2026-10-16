@@ -12992,10 +12992,13 @@ body.workout-output.workout-compact{
       // Some older login wrappers finish before the final trainee-list renderer is ready.
       // Retry only when the visible list is empty; do not change the dashboard structure.
       if(traineeButtons()===0){
+        // loadClients already renders the list and updates the four dashboard counters.
+        // Avoid immediately repeating the same database reads and full render.
         await window.loadClients();
+      }else if(typeof window.updateStats==='function'){
+        // The list is already present; refresh only the counters.
+        await window.updateStats();
       }
-      if(typeof window.updateStats==='function')await window.updateStats();
-      if(typeof window.renderClients==='function')window.renderClients();
     }catch(e){
       console.warn('[seh coach dashboard recovery]',e&&e.message?e.message:e);
     }finally{
