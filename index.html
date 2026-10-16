@@ -2627,15 +2627,15 @@ window.loadDashboard = loadDashboard;
     if(user.user_metadata?.must_change_password){
       const nextPass=prompt('حساب شما تأیید شد. برای ادامه، یک رمز شخصی حداقل ۸ کاراکتری بسازید:');
       if(!nextPass||nextPass.length<8){
-        showAuthError('برای ورود باید رمز شخصی حداقل ۸ کاراکتری تعیین کنید.');
+        showAuthError('برای ادامه، صفحه را تازه‌سازی کنید تا دوباره فرم تعیین رمز نمایش داده شود.');
         $id('authScreen').style.display='block';$id('authUserBar').style.display='none';document.body.classList.add('locked');
-        await AUTH_SUPABASE.auth.signOut();return;
+        return;
       }
       const confirmPass=prompt('رمز شخصی را دوباره وارد کنید:');
       if(nextPass!==confirmPass){
-        showAuthError('دو رمز یکسان نیستند. دوباره با رمز اولیه 123456 وارد شوید.');
+        showAuthError('دو رمز یکسان نیستند. صفحه را تازه‌سازی کنید و رمز را دوباره تنظیم کنید.');
         $id('authScreen').style.display='block';$id('authUserBar').style.display='none';document.body.classList.add('locked');
-        await AUTH_SUPABASE.auth.signOut();return;
+        return;
       }
       const {data:updated,error:passwordError}=await AUTH_SUPABASE.auth.updateUser({password:nextPass,data:{...(user.user_metadata||{}),must_change_password:false}});
       if(passwordError)throw passwordError;
