@@ -9938,7 +9938,9 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
      const mealText=bits.filter(x=>!/^شروع فست:|^پایان فست:/.test(x)).join('\n');
      html+='<div class="sdpp-meal"><div class="sdpp-meal-title">⏳ برنامه فستینگ و وعده‌ها</div><div class="sdpp-meal-body">'+esc(mealText||desc)+'</div></div>';
    }
-   body.innerHTML=html;status.textContent='✅ برنامه غذایی ثبت‌شده تasync function load(force){
+   body.innerHTML=html;status.textContent='✅ برنامه غذایی ثبت‌شده توسط مربی';
+ }
+ async function load(force){
    mount();const card=$('studentDietPrintablePlan');if(!card)return;
    if(!traineeMode()){loadSequence++;card.style.display='none';return;}card.style.display='';
    const t=trainee(),id=t&&t.id;if(!id){loadSequence++;renderEmpty('حساب شاگرد هنوز به پرونده متصل نشده است.');return;}
