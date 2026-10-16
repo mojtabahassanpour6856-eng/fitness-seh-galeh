@@ -4601,6 +4601,9 @@ window.toggleExerciseFavorite=async function(id,value){try{await sbWrite(`/train
     }else{
       console.warn('دریافت خلاصه برنامه‌های غذایی ناموفق بود:',results[1].reason);
     }
+    // Ignore stale async results if the shared trainee array changed while these requests were in flight.
+    // This prevents a delayed stats call started during an older filtered render from overwriting full-list counts.
+    if(currentClients!==clients)return;
     const ids=new Set([...workoutRows,...nutritionRows].filter(x=>x&&x.trainee_id!=null).map(x=>String(x.trainee_id)));
     currentClients.forEach(c=>c.plans=ids.has(String(c.id))?1:0);
     const todayKey=workoutLocalDateKey(),todayMs=Date.parse(todayKey+'T00:00:00Z');
