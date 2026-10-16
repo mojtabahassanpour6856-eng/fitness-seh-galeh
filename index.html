@@ -11786,3 +11786,61 @@ body.workout-output.workout-compact{
 </script>
 
 </body></html>
+
+<!-- SEH COACH LOGIN VISIBLE DIAGNOSTIC -->
+<script id="seh-coach-login-visible-diagnostic-20261016">
+(function(){
+  function visibleStatus(message){
+    var e=document.getElementById('authError');
+    if(!e){
+      var card=document.querySelector('#authScreen .auth-card');
+      if(card){e=document.createElement('div');e.id='authError';card.appendChild(e);}
+    }
+    if(e){
+      e.textContent=message;
+      e.style.setProperty('display','block','important');
+      e.style.setProperty('visibility','visible','important');
+      e.style.setProperty('opacity','1','important');
+      e.style.setProperty('color','#b42318','important');
+      e.style.setProperty('background','#fff1f0','important');
+      e.style.setProperty('padding','10px','important');
+      e.style.setProperty('margin-top','10px','important');
+      e.style.setProperty('border-radius','8px','important');
+      e.style.setProperty('white-space','pre-wrap','important');
+    }
+  }
+  var original=window.loginApp;
+  if(typeof original==='function'&&!original.__sehVisibleWrapped){
+    var wrapped=async function(){
+      visibleStatus('در حال بررسی اطلاعات ورود مربی…');
+      try{
+        await original.apply(this,arguments);
+        var screen=document.getElementById('authScreen');
+        var stillVisible=screen && getComputedStyle(screen).display!=='none' && getComputedStyle(screen).visibility!=='hidden';
+        var e=document.getElementById('authError');
+        if(stillVisible&&(!e||!e.textContent.trim()||e.textContent.indexOf('در حال بررسی اطلاعات ورود')===0)){
+          visibleStatus('ورود کامل نشد و پیام خطا از سامانه دریافت نشد. لطفاً یک‌بار صفحه را تازه‌سازی کنید؛ اگر تکرار شد همین پیام را برای مربی گزارش کنید.');
+        }
+      }catch(err){
+        visibleStatus('خطای ورود مربی: '+(err&&err.message?err.message:String(err)));
+      }
+    };
+    wrapped.__sehVisibleWrapped=true;
+    window.loginApp=wrapped;
+  }
+  function bind(){
+    var box=document.getElementById('coachLoginBox');
+    if(!box||box.dataset.sehVisibleDiagnostic)return;
+    box.dataset.sehVisibleDiagnostic='1';
+    var button=box.querySelector('button');
+    if(button)button.addEventListener('click',function(){
+      visibleStatus('دکمه ورود فشرده شد؛ در حال اتصال به سامانه…');
+      if(typeof window.loginApp!=='function'){
+        visibleStatus('خطا: تابع ورود مربی بارگذاری نشده است. صفحه را تازه‌سازی کنید.');
+      }
+    },true);
+  }
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',bind);else bind();
+  setTimeout(bind,500);setTimeout(bind,1500);
+})();
+</script>
