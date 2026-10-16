@@ -2875,41 +2875,6 @@ window.loadDashboard = loadDashboard;
 
 
 
-<!-- SEH COACH LOGIN CLICK SAFETY V1 -->
-<script id="seh-coach-login-click-safety-v1">
-(function(){
-  function wire(){
-    var box=document.getElementById('coachLoginBox');
-    if(!box||box.dataset.sehClickSafety==='1')return;
-    box.dataset.sehClickSafety='1';
-    box.addEventListener('click',function(ev){
-      var btn=ev.target&&ev.target.closest?ev.target.closest('button'):null;
-      if(!btn||!box.contains(btn))return;
-      if(!/ورود مربی/.test(btn.textContent||''))return;
-      ev.preventDefault();
-      ev.stopPropagation();
-      if(ev.stopImmediatePropagation)ev.stopImmediatePropagation();
-      var error=document.getElementById('authError');
-      if(error){error.style.display='none';error.textContent='';}
-      var old=btn.textContent;
-      btn.disabled=true;btn.textContent='⏳ در حال بررسی ورود…';
-      Promise.resolve().then(function(){
-        if(typeof window.loginApp!=='function')throw new Error('تابع ورود مربی بارگذاری نشده است. صفحه را تازه‌سازی کنید.');
-        return window.loginApp();
-      }).catch(function(e){
-        console.error('[seh-coach-login-click-safety]',e);
-        if(error){error.textContent='ورود انجام نشد: '+(e&&e.message?e.message:String(e));error.style.display='block';}
-      }).finally(function(){
-        btn.disabled=false;
-        if(btn.isConnected)btn.textContent=old||'🔐 ورود مربی';
-      });
-    },true);
-  }
-  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',wire);else wire();
-  var tries=0,t=setInterval(function(){wire();if(++tries>20)clearInterval(t);},400);
-})();
-</script>
-
 </body></html>`;
     const w=window.open('','_blank');if(w){w.document.write(html);w.document.close();}
   };
