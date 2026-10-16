@@ -12576,13 +12576,24 @@ body.workout-output.workout-compact{
  }
  document.addEventListener('click',function(e){
   if(role()!=='trainee')return;
-  // These two dashboard cards use direct JavaScript handlers, not nav buttons.
-  // Record their intended destination before legacy handlers run, so the
-  // stability guard does not restore the section that was open previously.
+  // Route these two cards explicitly in capture phase to avoid conflicting
+  // legacy inline handlers and delayed section restorers.
   var profileCard=e.target&&e.target.closest?e.target.closest('#traineeDashboard [data-profile-card]'):null;
-  if(profileCard){remember('client');schedule('client');return;}
+  if(profileCard){
+   e.preventDefault();e.stopPropagation();e.stopImmediatePropagation();
+   remember('client');
+   if(typeof window.openTraineeProfile==='function')window.openTraineeProfile();
+   schedule('client');
+   return;
+  }
   var chatCard=e.target&&e.target.closest?e.target.closest('#sehChatEntryCard'):null;
-  if(chatCard){remember('sehChatSection');schedule('sehChatSection');return;}
+  if(chatCard){
+   e.preventDefault();e.stopPropagation();e.stopImmediatePropagation();
+   remember('sehChatSection');
+   if(typeof window.sehOpenTraineeChat==='function')window.sehOpenTraineeChat();
+   schedule('sehChatSection');
+   return;
+  }
   var nav=e.target&&e.target.closest?e.target.closest('.nav button'):null;
   if(!nav)return;
   // The dashboard button is created with a JavaScript onclick property,
