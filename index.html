@@ -12083,12 +12083,15 @@ body.workout-output.workout-compact{
       gender:val('traineeProfileGender') || val('pgender') || null,
       weekly_sessions:numberOrNull('traineeProfileSessions'),
       training_days:val('traineeProfileDays') || null,
-      training_time:val('traineeProfileTime') || null,
       training_history:history || null,
       limitations:limit || null,
       injuries:limit || null
     };
     if(birthRaw) payload.birth_date = birthISO;
+    // Do not erase a previously saved training time when the field is blank/not hydrated.
+    // A non-empty time is saved and verified normally.
+    const trainingTimeValue = val('traineeProfileTime');
+    if(trainingTimeValue) payload.training_time = trainingTimeValue;
     const btn = document.querySelector('#client button[onclick="saveProfile()"]');
     if(btn){ btn.disabled=true; btn.textContent='⏳ در حال ذخیره…'; }
     try{
@@ -12097,7 +12100,8 @@ body.workout-output.workout-compact{
       const rows = await window.sbGet('/trainees?id=eq.'+encodeURIComponent(traineeId)+'&select=*&limit=1');
       const saved = Array.isArray(rows) && rows[0];
       if(!saved) throw new Error('ذخیره ارسال شد اما اطلاعات از پایگاه داده دوباره خوانده نشد.');
-      const fields = ['full_name','goal','training_level','training_type','home_equipment','gender','training_days','training_time','training_history','limitations','injuries'];
+      const fields = ['full_name','goal','training_level','training_type','home_equipment','gender','training_days','training_history','limitations','injuries'];
+      if(Object.prototype.hasOwnProperty.call(payload,'training_time')) fields.push('training_time');
       for(const field of fields){
         let expected = payload[field] == null ? null : String(payload[field]).trim();
         let actual = saved[field] == null ? null : String(saved[field]).trim();
