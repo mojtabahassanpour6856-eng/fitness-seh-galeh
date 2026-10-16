@@ -4676,9 +4676,8 @@ window.toggleExerciseFavorite=async function(id,value){try{await sbWrite(`/train
       // Do not keep the main coach table waiting for these slower requests.
       ensureList();
       window.renderClients();
-      // Start dashboard summary reads immediately, in parallel with the supplementary membership request.
-      // The trainee table and initial counters should not wait for membership data.
-      Promise.resolve().then(()=>window.updateStats()).catch(e=>console.warn('به‌روزرسانی اولیه آمار پنل مربی ناموفق بود:',e));
+      // renderClients already triggers one dashboard-statistics refresh.
+      // Avoid a second identical summary request before membership data finishes loading.
       // Membership information is supplementary; failure must not erase the trainee list.
       try{
         let memberships=await window.sbGet('/trainee_memberships?select=id,trainee_id,start_date,end_date,status,created_at&order=created_at.desc');
