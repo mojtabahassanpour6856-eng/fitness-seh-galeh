@@ -2126,8 +2126,14 @@ async function saveActivity(){
  try{await sbWrite("/activity_logs","POST",{trainee_id:currentClient.id,activity_date:date,activity_type:type,duration_minutes:duration,calories_burned:cal,notes:$("actNotes").value.trim()||null});$("actDuration").value="";$("actCalories").value="";$("actNotes").value="";await loadActivityToday();alert("فعالیت با موفقیت ثبت شد.");}catch(e){alert("ثبت فعالیت انجام نشد.\n"+e.message);}
 }
 async function loadActivityToday(){
- if(!currentClient)return;
- try{const rows=await sbGet(`/activity_logs?trainee_id=eq.${encodeURIComponent(currentClient.id)}&activity_date=eq.${encodeURIComponent(today())}&select=activity_type,duration_minutes,calories_burned&order=created_at.desc`);const total=rows.reduce((a,x)=>a+(+x.calories_burned||0),0),mins=rows.reduce((a,x)=>a+(+x.duration_minutes||0),0);$("activityToday").innerHTML=`🔥 امروز: <b>${total.toLocaleString("fa-IR")} kcal</b> | ⏱️ ${mins.toLocaleString("fa-IR")} دقیقه | ${rows.length.toLocaleString("fa-IR")} فعالیت`;}catch(e){console.error(e);}}
+ const traineeId=currentClient?.id;if(traineeId==null)return;
+ try{
+  const rows=await sbGet(`/activity_logs?trainee_id=eq.${encodeURIComponent(traineeId)}&activity_date=eq.${encodeURIComponent(today())}&select=activity_type,duration_minutes,calories_burned&order=created_at.desc`);
+  if(!currentClient||String(currentClient.id)!==String(traineeId))return;
+  const total=rows.reduce((a,x)=>a+(+x.calories_burned||0),0),mins=rows.reduce((a,x)=>a+(+x.duration_minutes||0),0);
+  $("activityToday").innerHTML=`🔥 امروز: <b>${total.toLocaleString("fa-IR")} kcal</b> | ⏱️ ${mins.toLocaleString("fa-IR")} دقیقه | ${rows.length.toLocaleString("fa-IR")} فعالیت`;
+ }catch(e){if(currentClient&&String(currentClient.id)===String(traineeId))console.error(e);}
+}
 
 function esc(s){return String(s).replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[m]));}
 
