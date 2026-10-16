@@ -4654,14 +4654,22 @@ window.toggleExerciseFavorite=async function(id,value){try{await sbWrite(`/train
   // Share overlapping dashboard-stat requests so concurrent renders do not issue the same bulk reads twice.
   const originalDashboardStats=window.updateStats;
   let dashboardStatsInFlight=null;
+  let dashboardStatsCacheUntil=0;
   if(typeof originalDashboardStats==='function'){
-    window.updateStats=function(){
+    window.updateStats=function(forceRefresh){
+      const now=Date.now();
       if(dashboardStatsInFlight)return dashboardStatsInFlight;
-      dashboardStatsInFlight=Promise.resolve().then(()=>originalDashboardStats.apply(this,arguments)).finally(()=>{dashboardStatsInFlight=null;});
+      // Reuse a very recent completed stats read during repeated renders; never cache across a fresh trainee-list load.
+      if(!forceRefresh&&now<dashboardStatsCacheUntil)return Promise.resolve();
+      dashboardStatsInFlight=Promise.resolve().then(()=>originalDashboardStats.apply(this,arguments)).then(result=>{
+        dashboardStatsCacheUntil=Date.now()+1500;
+        return result;
+      }).finally(()=>{dashboardStatsInFlight=null;});
       return dashboardStatsInFlight;
     };
   }
   window.loadClients=async function(){
+    dashboardStatsCacheUntil=0;
     const list=el('clientList');
     if(list)list.innerHTML='<div class="muted" style="padding:12px">در حال دریافت شاگردان از دیتابیس…</div>';
     try{
