@@ -11901,3 +11901,61 @@ body.workout-output.workout-compact{
   setTimeout(install,1400);
 })();
 </script>
+
+
+<!-- SEH_COACH_LOGIN_DELEGATED_RECOVERY_20261016: robust coach-login binding after dynamic auth-card rebuilds -->
+<script id="SEH_COACH_LOGIN_DELEGATED_RECOVERY_20261016">
+(function(){
+  'use strict';
+  if(window.__sehCoachLoginDelegatedRecovery)return;
+  window.__sehCoachLoginDelegatedRecovery=true;
+  function show(message){
+    var e=document.getElementById('authError');
+    if(!e){
+      var card=document.querySelector('#authScreen .auth-card');
+      if(card){e=document.createElement('div');e.id='authError';card.appendChild(e);}
+    }
+    if(e){
+      e.textContent=message;
+      e.style.setProperty('display','block','important');
+      e.style.setProperty('visibility','visible','important');
+      e.style.setProperty('opacity','1','important');
+      e.style.setProperty('color','#b42318','important');
+      e.style.setProperty('background','#fff1f0','important');
+      e.style.setProperty('padding','10px','important');
+      e.style.setProperty('border-radius','8px','important');
+    }
+  }
+  document.addEventListener('click',async function(ev){
+    var button=ev.target&&ev.target.closest?ev.target.closest('#coachLoginBox button'):null;
+    if(!button)return;
+    ev.preventDefault();
+    ev.stopPropagation();
+    ev.stopImmediatePropagation();
+    var email=document.getElementById('loginEmail');
+    var pass=document.getElementById('loginPassword');
+    if(!email||!pass){show('فرم ورود مربی کامل بارگذاری نشده است. صفحه را تازه‌سازی کنید.');return;}
+    if(!email.value.trim()||!pass.value){show('ایمیل و رمز عبور مربی را وارد کنید.');return;}
+    if(typeof window.loginApp!=='function'){show('تابع ورود مربی بارگذاری نشده است؛ لطفاً صفحه را تازه‌سازی کنید.');return;}
+    var old=button.textContent;
+    button.disabled=true;
+    button.textContent='⏳ در حال ورود…';
+    show('درخواست ورود ارسال شد؛ در حال بررسی حساب مربی…');
+    try{
+      await window.loginApp();
+      var screen=document.getElementById('authScreen');
+      var stillVisible=screen&&getComputedStyle(screen).display!=='none'&&getComputedStyle(screen).visibility!=='hidden';
+      var e=document.getElementById('authError');
+      if(stillVisible&&(!e||!e.textContent.trim()||e.textContent.indexOf('درخواست ورود ارسال شد')===0)){
+        show('ورود کامل نشد و پیام خطا دریافت نشد. یک‌بار صفحه را تازه‌سازی کنید و دوباره امتحان کنید.');
+      }
+    }catch(err){
+      console.error('[SEH_COACH_LOGIN_DELEGATED_RECOVERY_20261016]',err);
+      show('ورود انجام نشد: '+(err&&err.message?err.message:String(err)));
+    }finally{
+      button.disabled=false;
+      button.textContent=old||'🔐 ورود مربی';
+    }
+  },true);
+})();
+</script>
