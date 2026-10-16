@@ -11925,3 +11925,222 @@ body.workout-output.workout-compact{
   },true);
 })();
 </script>
+
+
+<!-- TRAINEE PROFILE + SECTION ISOLATION FIX 2026-10-16 -->
+<script id="SEH_TRAINEE_PROFILE_SECTION_FIX_20261016">
+(function(){
+  'use strict';
+  const $ = id => document.getElementById(id);
+  const isTrainee = () => {
+    try { return !!((typeof authProfile !== 'undefined' && authProfile && authProfile.role === 'trainee') || (window.authProfile && window.authProfile.role === 'trainee')); }
+    catch(e) { return !!(window.authProfile && window.authProfile.role === 'trainee'); }
+  };
+  const esc = v => String(v == null ? '' : v).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+  function normalizeProfile(){
+    if(!isTrainee()) return;
+    const section = $('client');
+    const card = section && section.querySelector('#pn')?.closest('.card');
+    if(!card) return;
+    card.querySelectorAll('input,select,textarea').forEach(el=>{
+      el.disabled = false;
+      el.removeAttribute('disabled');
+      el.removeAttribute('readonly');
+      el.setAttribute('aria-disabled','false');
+      el.style.pointerEvents = 'auto';
+      el.style.userSelect = 'text';
+      el.style.webkitUserSelect = 'text';
+    });
+    const c = (typeof currentClient !== 'undefined' && currentClient) || window.currentClient;
+    if(!c) return;
+    const set = (id,value) => {
+      const el = $(id);
+      if(el && document.activeElement !== el && value != null && String(value) !== '') el.value = String(value);
+    };
+    set('pgoal', c.goal);
+    set('plevel', c.training_level || c.level);
+    set('ptype', c.training_type || 'gym');
+    set('pequipment', c.home_equipment);
+    set('page', c.age);
+    set('pweight', c.current_weight ?? c.weight);
+    set('pheight', c.height);
+    set('traineeProfileGender', c.gender);
+    set('traineeProfileSessions', c.weekly_sessions);
+    set('traineeProfileDays', c.training_days);
+    set('traineeProfileTime', String(c.training_time || '').slice(0,5));
+    set('traineeProfileHistory', c.training_history || c.history);
+    set('traineeProfileLimitations', c.limitations || c.injuries);
+  }
+
+  function normalizeSectionContents(){
+    const goalSection = $('traineeGoalsSection');
+    const clientSection = $('client');
+    if(goalSection && clientSection){
+      Array.from(goalSection.querySelectorAll(':scope > .card')).forEach(card=>{
+        if(card.id === 'goalBox' || card.querySelector('#goalChoices,#goalSavePersonal,#goalSatisfactionChart,#goalCoachMessage')) return;
+        if(card.querySelector('#pn,#pgoal,#plevel,#suppList,#traineeMembershipStatus,#subStart,#traineeReceiptUpload')){
+          clientSection.appendChild(card);
+        }
+      });
+    }
+    const workout = $('workout');
+    if(workout){
+      document.querySelectorAll('#workoutList,#workoutFourWeekSummary,#sehWorkoutSectionExport').forEach(el=>{
+        if(workout.contains(el)) return;
+        const card = el.closest('.card');
+        if(card && !workout.contains(card)) workout.appendChild(card);
+        else if(!card) workout.appendChild(el);
+      });
+    }
+  }
+
+  const priorShow = window.showSection;
+  if(typeof priorShow === 'function' && !window.__sehTraineeSectionIsolation){
+    window.showSection = function(id, btn){
+      const result = priorShow.apply(this, arguments);
+      const target = $(id);
+      if(target && target.classList.contains('section')){
+        document.querySelectorAll('.section.active').forEach(sec=>{ if(sec !== target) sec.classList.remove('active'); });
+        target.classList.add('active');
+      }
+      setTimeout(()=>{ normalizeSectionContents(); normalizeProfile(); }, 0);
+      return result;
+    };
+    window.__sehTraineeSectionIsolation = true;
+  }
+
+  const priorDash = window.dashOpen;
+  window.dashOpen = function(section){
+    if(section === 'goals' && isTrainee()){
+      const goal = $('traineeGoalsSection');
+      if(goal){
+        if(typeof window.showSection === 'function') window.showSection('traineeGoalsSection', null);
+        if(typeof goal.scrollIntoView === 'function') goal.scrollIntoView({behavior:'smooth',block:'start'});
+        if(typeof window.loadTraineeGoals === 'function') window.loadTraineeGoals();
+      }
+      return;
+    }
+    if(typeof priorDash === 'function') return priorDash.apply(this, arguments);
+  };
+
+  window.saveProfile = async function(){
+    if(!isTrainee()){
+      if(typeof window.__sehPreviousSaveProfile === 'function') return window.__sehPreviousSaveProfile.apply(this, arguments);
+      return;
+    }
+    const c = (typeof currentClient !== 'undefined' && currentClient) || window.currentClient;
+    const profile = (typeof authProfile !== 'undefined' && authProfile) || window.authProfile;
+    const traineeId = profile && profile.trainee_id;
+    if(!traineeId || !c || String(c.id) !== String(traineeId)){
+      alert('پروفایل به حساب شاگرد فعلی متصل نیست؛ برای امنیت، ذخیره انجام نشد.');
+      return;
+    }
+    const val = id => $(id) ? String($(id).value || '').trim() : '';
+    const numberOrNull = id => val(id) === '' ? null : (Number.isFinite(Number(val(id))) ? Number(val(id)) : null);
+    const name = val('pn');
+    if(name.length < 2){ alert('نام و نام خانوادگی را وارد کنید.'); return; }
+    const age = numberOrNull('page');
+    if(age !== null && (!Number.isInteger(age) || age < 1 || age > 120)){ alert('سن باید عددی بین ۱ تا ۱۲۰ باشد.'); return; }
+    const limit = val('traineeProfileLimitations') || val('plimit') || '';
+    const history = val('traineeProfileHistory') || '';
+    const birthRaw = val('pbirth');
+    let birthISO = null;
+    if(birthRaw){
+      birthISO = typeof window.jalaliToISODate === 'function' ? window.jalaliToISODate(birthRaw) : null;
+      if(!birthISO){ alert('تاریخ تولد را به صورت شمسی معتبر وارد کنید.'); return; }
+    }
+    const payload = {
+      full_name:name,
+      age,
+      current_weight:numberOrNull('pweight'),
+      height:numberOrNull('pheight'),
+      goal:val('pgoal') || null,
+      training_level:val('plevel') || null,
+      training_type:val('ptype') || 'gym',
+      home_equipment:val('pequipment') || null,
+      gender:val('traineeProfileGender') || val('pgender') || null,
+      weekly_sessions:numberOrNull('traineeProfileSessions'),
+      training_days:val('traineeProfileDays') || null,
+      training_time:val('traineeProfileTime') || null,
+      training_history:history || null,
+      limitations:limit || null,
+      injuries:limit || null
+    };
+    if(birthRaw) payload.birth_date = birthISO;
+    const btn = document.querySelector('#client button[onclick="saveProfile()"]');
+    if(btn){ btn.disabled=true; btn.textContent='⏳ در حال ذخیره…'; }
+    try{
+      if(typeof window.sbWrite !== 'function' || typeof window.sbGet !== 'function') throw new Error('اتصال امن ذخیره‌سازی آماده نیست؛ صفحه را تازه‌سازی کنید.');
+      await window.sbWrite('/trainees?id=eq.'+encodeURIComponent(traineeId), 'PATCH', payload);
+      const rows = await window.sbGet('/trainees?id=eq.'+encodeURIComponent(traineeId)+'&select=*&limit=1');
+      const saved = Array.isArray(rows) && rows[0];
+      if(!saved) throw new Error('ذخیره ارسال شد اما اطلاعات از پایگاه داده دوباره خوانده نشد.');
+      const fields = ['full_name','goal','training_level','training_type','home_equipment','gender','training_days','training_time','training_history','limitations','injuries'];
+      for(const field of fields){
+        const expected = payload[field] == null ? null : String(payload[field]);
+        const actual = saved[field] == null ? null : String(saved[field]);
+        if(expected !== actual) throw new Error('ذخیره فیلد «'+field+'» تأیید نشد؛ دوباره تلاش کنید.');
+      }
+      const updated = {
+        ...c, id:saved.id, name:saved.full_name, full_name:saved.full_name, age:saved.age,
+        weight:saved.current_weight, current_weight:saved.current_weight, height:saved.height,
+        goal:saved.goal, level:saved.training_level, training_level:saved.training_level,
+        training_type:saved.training_type||'gym', home_equipment:saved.home_equipment||'',
+        gender:saved.gender, birth_date:saved.birth_date, weekly_sessions:saved.weekly_sessions,
+        training_days:saved.training_days||'', training_time:saved.training_time||'',
+        training_history:saved.training_history||'', history:saved.training_history||'',
+        limitations:saved.limitations||'', injuries:saved.injuries||''
+      };
+      if(typeof window.loadClients === 'function'){
+        await window.loadClients();
+        if(Array.isArray(clients)){
+          const fresh = clients.find(x=>String(x.id)===String(traineeId));
+          if(fresh) Object.assign(updated, fresh);
+        }
+      }
+      try { currentClient = updated; } catch(e) {}
+      window.currentClient = updated;
+      normalizeProfile();
+      if(typeof window.loadDashboard === 'function') await window.loadDashboard();
+      alert('پروفایل شما با موفقیت ذخیره و از پایگاه داده بررسی شد.');
+    }catch(e){
+      console.error('trainee profile save failed', e);
+      alert('ذخیره پروفایل انجام نشد.\n'+(e && e.message ? e.message : String(e)));
+    }finally{
+      if(btn){ btn.disabled=false; btn.textContent='💾 ذخیره اطلاعات شخصی من'; }
+    }
+  };
+
+  function init(){
+    normalizeSectionContents();
+    normalizeProfile();
+    const client = $('client');
+    if(client && typeof MutationObserver === 'function'){
+      new MutationObserver(()=>{ normalizeSectionContents(); normalizeProfile(); }).observe(client,{childList:true,subtree:true});
+    }
+    const priorFinish = window.finishLogin;
+    if(typeof priorFinish === 'function' && !window.__sehTraineeProfileFixLogin){
+      window.finishLogin = async function(){
+        const result = await priorFinish.apply(this,arguments);
+        setTimeout(()=>{normalizeSectionContents();normalizeProfile();},100);
+        setTimeout(()=>{normalizeSectionContents();normalizeProfile();},700);
+        return result;
+      };
+      window.__sehTraineeProfileFixLogin = true;
+    }
+    const priorSelect = window.selectClient;
+    if(typeof priorSelect === 'function' && !window.__sehTraineeProfileFixSelect){
+      window.selectClient = async function(){
+        const result = await priorSelect.apply(this,arguments);
+        setTimeout(()=>{normalizeSectionContents();normalizeProfile();},80);
+        return result;
+      };
+      window.__sehTraineeProfileFixSelect = true;
+    }
+  }
+  if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded',init,{once:true});
+  else init();
+  setTimeout(()=>{normalizeSectionContents();normalizeProfile();},900);
+})();
+</script>
