@@ -2832,17 +2832,22 @@ window.loadDashboard = loadDashboard;
     const base={workout_plan_id:currentWorkoutPlanId,sets:+$id('workoutSets').value||0,reps:$id('workoutReps').value.trim()||null,rest_seconds:+$id('workoutRest').value||0,notes:$id('workoutExerciseNotes').value.trim()||null,training_system:system,group_key:groupKey,training_day:$id('workoutDay')?.value||null,is_completed:false};
     let added=0;
     try{
-      for(let i=0;i<chosen.length;i++){
-        const body={...base,exercise_id:chosen[i],sort_order:baseOrder+i};
-        try{await sbWrite('/trainee_workout_exercises','POST',body);}
-        catch(e){
-          if(/training_day|is_completed/i.test(e.message)){delete body.training_day;delete body.is_completed;await sbWrite('/trainee_workout_exercises','POST',body);}
-          else throw e;
-        }
-        added++;
+      const payloads=chosen.map((exerciseId,i)=>({...base,exercise_id:exerciseId,sort_order:baseOrder+i}));
+      let inserted;
+      try{
+        // PostgREST accepts an array of rows, saving all movements in one request.
+        inserted=await sbWrite('/trainee_workout_exercises','POST',payloads);
+      }catch(e){
+        if(!/training_day|is_completed/i.test(e.message))throw e;
+        const fallback=payloads.map(row=>{const copy={...row};delete copy.training_day;delete copy.is_completed;return copy;});
+        inserted=await sbWrite('/trainee_workout_exercises','POST',fallback);
       }
+      if(!Array.isArray(inserted)||inserted.length!==chosen.length)throw new Error('همه حرکت‌ها از پاسخ پایگاه داده تأیید نشدند؛ لطفاً فهرست را تازه‌سازی کنید.');
+      added=inserted.length;
+      if(!same(currentTraineeId(),traineeId)||!same(currentWorkoutPlanId,planId))throw new Error('شاگرد یا برنامه هنگام ثبت تغییر کرد؛ برای مشاهده دوباره برنامه را باز کنید.');
+      // Refresh the exercise list once after a batch insert, not once per movement.
       if($id('workoutExerciseNotes'))$id('workoutExerciseNotes').value='';
-      if(groupMode){document.querySelectorAll('#workoutGroupPicker input[name="groupExercise"]').forEach(el=>el.checked=false);}
+      if(groupMode)document.querySelectorAll('#workoutGroupPicker input[name="groupExercise"]').forEach(el=>el.checked=false);
       await loadWorkoutForClient();
       alert(groupMode?('گروه '+(system==='superset'?'سوپرست':system==='triset'?'تری‌ست':'جاینت‌ست')+' با '+added+' حرکت ثبت شد.'): 'حرکت به برنامه اضافه شد.');
     }catch(e){
@@ -4134,23 +4139,31 @@ window.toggleExerciseFavorite=async function(id,value){try{await sbWrite(`/train
     const body={trainee_id:traineeId,title:(byId('workoutTitle')?.value||'').trim()||'برنامه تمرینی',plan_date:startDate,goal:(byId('workoutGoal')?.value||'').trim()||null,notes:(byId('workoutNotes')?.value||'').trim()||null};
     try{
       let savedId=ownedPlanId;
+      let savedRow=null;
       if(ownedPlanId){
-        const check=await sbGet(`/trainee_workout_plans?id=eq.${encodeURIComponent(ownedPlanId)}&select=id,trainee_id&limit=1`);
-        if(!check[0]||!same(check[0].trainee_id,traineeId))throw new Error('مالکیت برنامه با شاگرد انتخاب‌شده تطبیق ندارد؛ ذخیره متوقف شد.');
-        await sbWrite(`/trainee_workout_plans?id=eq.${encodeURIComponent(ownedPlanId)}&trainee_id=eq.${encodeURIComponent(traineeId)}`,'PATCH',body);
+        // Scope the update by both plan and trainee IDs; the returned row
+        // proves ownership and persistence in the same round trip.
+        const updated=await sbWrite(`/trainee_workout_plans?id=eq.${encodeURIComponent(ownedPlanId)}&trainee_id=eq.${encodeURIComponent(traineeId)}`,'PATCH',body);
+        savedRow=Array.isArray(updated)?updated.find(x=>same(x.id,ownedPlanId)&&same(x.trainee_id,traineeId)):null;
+        if(!savedRow)throw new Error('ذخیره برنامه تأیید نشد؛ ردیف متعلق به این شاگرد از پایگاه داده برنگشت.');
+        savedId=savedRow.id;
       }else{
         const inserted=await sbWrite('/trainee_workout_plans','POST',body);
-        savedId=inserted?.[0]?.id;
-        if(!savedId)throw new Error('برنامه ذخیره شد اما شناسه آن از دیتابیس دریافت نشد.');
+        savedRow=Array.isArray(inserted)?inserted.find(x=>same(x.trainee_id,traineeId)&&String(x.plan_date||'').slice(0,10)===startDate):null;
+        savedId=savedRow?.id;
+        if(!savedId)throw new Error('برنامه ذخیره شد اما تأیید و شناسه آن از پایگاه داده دریافت نشد.');
       }
+      if(String(savedRow.plan_date||'').slice(0,10)!==startDate)throw new Error('تاریخ شروع ذخیره‌شده با تاریخ انتخابی مطابقت ندارد.');
       if(same(currentTraineeId(),traineeId)){
         currentWorkoutPlanId=savedId;workoutPlanOwnerId=traineeId;
-        await window.loadWorkoutForClient();
-        const verified=await sbGet(`/trainee_workout_plans?id=eq.${encodeURIComponent(savedId)}&trainee_id=eq.${encodeURIComponent(traineeId)}&select=id,plan_date&limit=1`);
-        if(!verified[0]||String(verified[0].plan_date||'').slice(0,10)!==startDate)throw new Error('تاریخ انتخابی در پایگاه داده تأیید نشد؛ لطفاً دوباره ذخیره نکنید و نتیجه را اطلاع دهید.');
-        if(byId('workoutStartDate'))byId('workoutStartDate').value=String(verified[0].plan_date).slice(0,10);
+        // The returned database row is authoritative, so do not reload the
+        // whole plan and all exercise records just to refresh header fields.
+        if(byId('workoutTitle'))byId('workoutTitle').value=savedRow.title||body.title;
+        if(byId('workoutStartDate'))byId('workoutStartDate').value=String(savedRow.plan_date).slice(0,10);
+        if(byId('workoutGoal'))byId('workoutGoal').value=savedRow.goal||'';
+        if(byId('workoutNotes'))byId('workoutNotes').value=savedRow.notes||'';
         if(typeof window.updateWorkoutStartDateFa==='function')window.updateWorkoutStartDateFa();
-        if(same(currentTraineeId(),traineeId))alert('برنامه تمرینی و تاریخ شروع با موفقیت ذخیره و از پایگاه داده تأیید شد.');
+        alert('برنامه تمرینی و تاریخ شروع با موفقیت ذخیره و از پاسخ پایگاه داده تأیید شد.');
       }
     }catch(e){alert('ذخیره برنامه تمرینی انجام نشد.\n'+(e.message||String(e)));}
   };
