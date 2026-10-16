@@ -12292,22 +12292,25 @@ body.workout-output.workout-compact{
 
 
 <script id="seh-coach-trainee-click-recovery-v3">
-/* FINAL COACH TRAINEE SELECTION STABILITY v4
-   Keep selection synchronous, then re-apply the selected profile after legacy async wrappers settle. */
+/* COACH PROFILE SELECTION GUARD v5 — keep the selected trainee profile open across legacy async UI updates. */
 (function(){
   'use strict';
+  let lockUntil=0, lockedId=null, guardTimer=null;
+  const $id=id=>document.getElementById(id);
   function getClients(){
-    if(Array.isArray(window.clients)) return window.clients;
-    try { if(typeof clients!=='undefined' && Array.isArray(clients)) return clients; } catch(e){}
-    return [];
+    try{if(Array.isArray(clients))return clients;}catch(e){}
+    return Array.isArray(window.clients)?window.clients:[];
   }
-  function activateProfile(id){
-    const list=getClients();
-    const selected=list.find(c=>String(c.id)===String(id));
-    if(!selected) return false;
-    try { currentClient=selected; } catch(e){}
+  function findClient(id){
+    return getClients().find(c=>String(c.id)===String(id)) ||
+      (typeof currentClient!=='undefined'&&currentClient&&String(currentClient.id)===String(id)?currentClient:null);
+  }
+  function activate(id){
+    const selected=findClient(id);
+    if(!selected)return false;
+    try{currentClient=selected;}catch(e){}
     window.currentClient=selected;
-    const values={
+    const vals={
       pn:selected.name||selected.full_name||'',
       page:selected.age??'',
       pweight:selected.weight??selected.current_weight??'',
@@ -12320,68 +12323,51 @@ body.workout-output.workout-compact{
       pequipment2:selected.home_equipment||'',
       plimit:selected.limitations||''
     };
-    Object.keys(values).forEach(key=>{
-      const node=document.getElementById(key);
-      if(node) node.value=String(values[key]??'');
-    });
-    const profile=document.getElementById('client');
+    Object.keys(vals).forEach(k=>{const e=$id(k);if(e)e.value=String(vals[k]??'');});
+    const nav=Array.from(document.querySelectorAll('.nav button')).find(b=>/['"]client['"]/.test(String(b.getAttribute('onclick')||'')));
+    try{if(typeof window.showSection==='function')window.showSection('client',nav||null);}catch(e){console.warn('showSection client failed',e);}
+    const profile=$id('client');
     if(profile){
-      document.querySelectorAll('.section.active').forEach(section=>{
-        if(section!==profile) section.classList.remove('active');
-      });
-      profile.hidden=false;
-      profile.removeAttribute('aria-hidden');
-      profile.classList.add('active');
-      profile.style.removeProperty('display');
+      document.querySelectorAll('.section.active').forEach(s=>{if(s!==profile)s.classList.remove('active');});
+      profile.hidden=false;profile.removeAttribute('hidden');profile.removeAttribute('aria-hidden');
+      profile.classList.add('active');profile.style.removeProperty('display');
     }
-    document.querySelectorAll('.nav button').forEach(button=>button.classList.remove('active'));
-    const navButton=Array.from(document.querySelectorAll('.nav button')).find(button=>
-      String(button.getAttribute('onclick')||'').includes("'client'")
-    );
-    if(navButton) navButton.classList.add('active');
-    document.querySelectorAll('#coachMobileCards .coach-name-cell[data-trainee-id]').forEach(button=>{
-      button.classList.toggle('selected',String(button.getAttribute('data-trainee-id'))===String(id));
-    });
+    document.querySelectorAll('.nav button').forEach(b=>b.classList.toggle('active',b===nav));
+    document.querySelectorAll('.coach-name-cell[data-trainee-id]').forEach(b=>b.classList.toggle('selected',String(b.getAttribute('data-trainee-id'))===String(id)));
     return true;
   }
-  function stableSelect(id){
-    if(!activateProfile(id)){
-      console.warn('پرونده شاگرد در فهرست فعلی پیدا نشد:',id);
-      return;
-    }
-    const previous=stableSelect.__previous;
-    let result;
-    try {
-      if(typeof previous==='function') result=previous.call(this,id);
-    } catch(error) {
-      console.error('خطای بخش‌های جانبی هنگام انتخاب شاگرد:',error);
-    }
-    // Legacy wrappers may perform async work and change sections later. Restore the profile
-    // after the full promise chain settles, regardless of success or failure.
-    Promise.resolve(result).then(
-      ()=>activateProfile(id),
-      error=>{ console.error('بارگذاری اطلاعات جانبی شاگرد ناموفق بود:',error); activateProfile(id); }
-    );
-    [0,120,450].forEach(delay=>setTimeout(()=>activateProfile(id),delay));
-    return result;
+  function enforce(){
+    if(!lockedId||Date.now()>lockUntil){lockedId=null;return;}
+    activate(lockedId);
   }
-  if(!window.__sehStableSelectInstalled){
-    stableSelect.__previous=typeof window.selectClient==='function'?window.selectClient:null;
-    window.selectClient=stableSelect;
-    window.__sehStableSelectInstalled=true;
+  function beginLock(id){
+    lockedId=String(id);lockUntil=Date.now()+3000;
+    [0,60,150,300,550,900,1400,2100,2900].forEach(ms=>setTimeout(enforce,ms));
+    clearTimeout(guardTimer);
+    guardTimer=setTimeout(()=>{lockedId=null;},3200);
   }
+  // Stop legacy inline handlers from toggling only the yellow highlight without opening the profile.
   document.addEventListener('click',function(event){
-    const button=event.target&&event.target.closest
-      ?event.target.closest('#coachMobileCards .coach-name-cell[data-trainee-id]')
-      :null;
-    if(!button) return;
-    const id=button.getAttribute('data-trainee-id');
-    if(!id) return;
-    event.preventDefault();
-    event.stopPropagation();
-    event.stopImmediatePropagation();
-    window.selectClient(id);
+    const button=event.target&&event.target.closest?event.target.closest('.coach-name-cell[data-trainee-id]'):null;
+    if(!button)return;
+    const id=button.getAttribute('data-trainee-id');if(!id)return;
+    event.preventDefault();event.stopPropagation();event.stopImmediatePropagation();
+    beginLock(id);
+    let result;
+    try{if(typeof window.selectClient==='function')result=window.selectClient(id);}catch(e){console.error('selectClient failed',e);}
+    Promise.resolve(result).catch(e=>console.error('بارگذاری اطلاعات شاگرد ناموفق بود:',e)).finally(enforce);
+    setTimeout(()=>{if(!activate(id))console.warn('اطلاعات شاگرد در فهرست فعلی پیدا نشد:',id);},0);
   },true);
+  // During the short selection window, legacy async callbacks may not switch away from the chosen profile.
+  const oldShow=window.showSection;
+  if(typeof oldShow==='function'&&!oldShow.__sehProfileGuard){
+    const guarded=function(id,btn){
+      if(lockedId&&Date.now()<lockUntil&&String(id)!=='client')return oldShow.call(this,'client',Array.from(document.querySelectorAll('.nav button')).find(b=>/['"]client['"]/.test(String(b.getAttribute('onclick')||'')))||null);
+      return oldShow.apply(this,arguments);
+    };
+    guarded.__sehProfileGuard=true;
+    window.showSection=guarded;
+  }
 })();
 </script>
 
