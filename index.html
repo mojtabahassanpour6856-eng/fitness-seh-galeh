@@ -2503,7 +2503,19 @@ if($("prDate"))$("prDate").value=today();if($("anDate"))$("anDate").value=today(
     try{
       const rows=await sbWrite(`/trainees?id=eq.${encodeURIComponent(traineeId)}`,'PATCH',payload);
       const saved=Array.isArray(rows)&&rows.find(r=>String(r.id)===String(traineeId));
-      if(!saved||(saved.age==null?age!==null:Number(saved.age)!==age))throw new Error('ذخیره سن در پایگاه داده تأیید نشد؛ لطفاً دوباره تلاش کنید.');
+      if(!saved)throw new Error('پایگاه داده ردیف ذخیره‌شده را برنگرداند؛ اطلاعات تغییر نکرده تلقی می‌شود.');
+      const numericFields=['age','current_weight','height'];
+      const textFields=['full_name','goal','training_level','training_type','home_equipment'];
+      for(const key of numericFields){
+        const expected=payload[key]==null||payload[key]===''?null:Number(payload[key]);
+        const actual=saved[key]==null||saved[key]===''?null:Number(saved[key]);
+        if(expected!==actual)throw new Error('تأیید ذخیره فیلد «'+key+'» ناموفق بود؛ لطفاً دوباره تلاش کنید.');
+      }
+      for(const key of textFields){
+        const expected=payload[key]==null?'':String(payload[key]).trim();
+        const actual=saved[key]==null?'':String(saved[key]).trim();
+        if(expected!==actual)throw new Error('تأیید ذخیره فیلد «'+key+'» ناموفق بود؛ لطفاً دوباره تلاش کنید.');
+      }
       // Update the already-loaded trainee locally after the database confirms the save.
       // Avoid re-fetching the entire trainee list and dashboard data just to refresh profile fields.
       if(currentClient&&String(currentClient.id)===String(traineeId)){
