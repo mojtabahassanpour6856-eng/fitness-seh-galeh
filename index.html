@@ -8825,7 +8825,7 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
     if(!window.AUTH_SUPABASE?.functions?.invoke){msg.textContent='ارتباط با سامانه آماده نیست. صفحه را تازه‌سازی و دوباره امتحان کنید.';return;}
     btn.disabled=true;btn.textContent='⏳ در حال ارسال…';
     try{
-      const {data,error}=await window.AUTH_SUPABASE.functions.invoke('trainee-registration-request',{body:{full_name:name,phone,weekly_sessions,training_days,training_time}});
+      const {data,error}=await window.AUTH_SUPABASE.functions.invoke('trainee-registration-request',{body:{full_name:name,phone,weekly_sessions,training_days,training_time,password}});
       if(error)throw error;if(data?.error)throw new Error(data.error);
       msg.style.color='#9be2b0';msg.textContent='✅ درخواست ثبت شد و برای تأیید مربی ارسال شد.';
       form.reset();
