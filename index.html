@@ -7455,7 +7455,7 @@ const oldWorkoutRenderer=window.renderWorkoutList;
   }catch(error){console.error("loadDietSummary",error);box.textContent="نمایش رژیم ثبت‌شده ممکن نیست؛ اتصال پایگاه داده را بررسی کن.";}
  };
  const originalSelectClient=window.selectClient;
- if(typeof originalSelectClient==="function"){window.selectClient=function(){const result=originalSelectClient.apply(this,arguments);window.loadDietSummary();if(typeof window.loadFastingSummary==="function")window.loadFastingSummary();return result;};}
+ if(typeof originalSelectClient==="function"){window.selectClient=function(){const result=originalSelectClient.apply(this,arguments);if(typeof window.loadFastingSummary==="function")window.loadFastingSummary();return result;};}
  window.syncDietTypeUI=syncDietTypeUI;
 })();
 </script>
