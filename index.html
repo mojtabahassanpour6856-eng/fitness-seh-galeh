@@ -1130,7 +1130,7 @@ async function loadClients(){
       phone:c.phone,
       gender:c.gender,
       birth_date:c.birth_date,
-      age:calcAge(c.birth_date),
+      age:c.age??calcAge(c.birth_date),
       weight:c.current_weight,
       height:c.height,
       goal:c.goal,
@@ -2428,7 +2428,7 @@ if($("prDate"))$("prDate").value=today();if($("anDate"))$("anDate").value=today(
   window.loadClients=async function(){
     try{
       const data=await sbGet('/trainees?select=*&order=created_at.desc');
-      clients=data.map(c=>({id:c.id,name:c.full_name,phone:c.phone,gender:c.gender,birth_date:c.birth_date,age:calcAge(c.birth_date),weight:c.current_weight,height:c.height,goal:c.goal,level:c.training_level,history:c.training_history,limitations:c.limitations,training_type:c.training_type||'gym',home_equipment:c.home_equipment||'',training_days:c.training_days||'',training_time:c.training_time||'',weekly_sessions:c.weekly_sessions||null,club_registration_date:c.club_registration_date||null,createdAt:c.created_at,active:c.approval_status==='active',approval_status:c.approval_status||'active',plans:0}));
+      clients=data.map(c=>({id:c.id,name:c.full_name,phone:c.phone,gender:c.gender,birth_date:c.birth_date,age:c.age??calcAge(c.birth_date),weight:c.current_weight,height:c.height,goal:c.goal,level:c.training_level,history:c.training_history,limitations:c.limitations,training_type:c.training_type||'gym',home_equipment:c.home_equipment||'',training_days:c.training_days||'',training_time:c.training_time||'',weekly_sessions:c.weekly_sessions||null,club_registration_date:c.club_registration_date||null,createdAt:c.created_at,active:c.approval_status==='active',approval_status:c.approval_status||'active',plans:0}));
       buildCoachControls();renderClients();
     }catch(e){console.error(e);if($id('clientTableBody'))$id('clientTableBody').innerHTML=`<tr><td colspan="7" class="v4-danger">دریافت شاگردان انجام نشد: ${esc2(e.message)}</td></tr>`;}
   };
@@ -2450,8 +2450,20 @@ if($("prDate"))$("prDate").value=today();if($("anDate"))$("anDate").value=today(
 
   window.saveProfile=async function(){
     if(!currentClient)return alert('اول شاگرد را انتخاب کنید.');
-    const payload={full_name:$id('pn').value.trim(),current_weight:+$id('pweight').value||null,height:+$id('pheight').value||null,goal:$id('pgoal').value||null,training_level:$id('plevel').value||null,training_type:$id('ptype')?.value||'gym',home_equipment:$id('pequipment')?.value.trim()||null};
-    try{await sbWrite(`/trainees?id=eq.${encodeURIComponent(currentClient.id)}`,'PATCH',payload);await loadClients();currentClient=clients.find(x=>String(x.id)===String(currentClient.id));alert('پروفایل شاگرد ذخیره شد.');await loadDashboard();}catch(e){alert('ذخیره پروفایل انجام نشد.\n'+e.message)}
+    const traineeId=currentClient.id;
+    const rawAge=$id('page')?.value;
+    const age=rawAge==null||String(rawAge).trim()===''?null:Number(rawAge);
+    if(age!==null&&(!Number.isInteger(age)||age<1||age>120)){alert('سن باید عددی بین ۱ تا ۱۲۰ باشد.');return;}
+    const payload={full_name:$id('pn').value.trim(),age,current_weight:+$id('pweight').value||null,height:+$id('pheight').value||null,goal:$id('pgoal').value||null,training_level:$id('plevel').value||null,training_type:$id('ptype')?.value||'gym',home_equipment:$id('pequipment')?.value.trim()||null};
+    try{
+      const rows=await sbWrite(`/trainees?id=eq.${encodeURIComponent(traineeId)}`,'PATCH',payload);
+      const saved=Array.isArray(rows)&&rows.find(r=>String(r.id)===String(traineeId));
+      if(!saved||(saved.age==null?age!==null:Number(saved.age)!==age))throw new Error('ذخیره سن در پایگاه داده تأیید نشد؛ لطفاً دوباره تلاش کنید.');
+      await loadClients();
+      if(currentClient&&String(currentClient.id)===String(traineeId))currentClient=clients.find(x=>String(x.id)===String(traineeId))||currentClient;
+      alert('پروفایل شاگرد ذخیره شد و سن هم تأیید شد.');
+      await loadDashboard();
+    }catch(e){alert('ذخیره پروفایل انجام نشد.\\n'+e.message)}
   };
 
   async function saveTrainingSchedule(){
@@ -2567,7 +2579,7 @@ window.loadDashboard = loadDashboard;
       c.auth_user_id=user.id;
     }
     authProfile={id:user.id,role:'trainee',full_name:c.full_name||user.phone||'شاگرد',trainee_id:c.id};
-    clients=[{id:c.id,name:c.full_name,phone:c.phone,gender:c.gender,birth_date:c.birth_date,age:calcAge(c.birth_date),weight:c.current_weight,height:c.height,goal:c.goal,level:c.training_level,history:c.training_history,limitations:c.limitations,training_type:c.training_type||'gym',home_equipment:c.home_equipment||'',training_days:c.training_days||'',training_time:c.training_time||'',weekly_sessions:c.weekly_sessions||null,club_registration_date:c.club_registration_date||null,createdAt:c.created_at||null,active:true,plans:0}];currentClient=clients[0];
+    clients=[{id:c.id,name:c.full_name,phone:c.phone,gender:c.gender,birth_date:c.birth_date,age:c.age??calcAge(c.birth_date),weight:c.current_weight,height:c.height,goal:c.goal,level:c.training_level,history:c.training_history,limitations:c.limitations,training_type:c.training_type||'gym',home_equipment:c.home_equipment||'',training_days:c.training_days||'',training_time:c.training_time||'',weekly_sessions:c.weekly_sessions||null,club_registration_date:c.club_registration_date||null,createdAt:c.created_at||null,active:true,plans:0}];currentClient=clients[0];
     qsAll('.nav button').forEach(b=>b.style.display='none');$id('navDash').style.display='block';
     ['client','meal','workout','progress'].forEach(sec=>{const b=qsAll('.nav button').find(x=>String(x.getAttribute('onclick')||'').includes("'"+sec+"'"));if(b)b.style.display='block';});
     document.body.classList.remove('locked');$id('authScreen').style.display='none';$id('authUserBar').style.display='block';$id('authUserText').textContent=`${c.full_name||user.phone} | شاگرد`;
@@ -3106,7 +3118,7 @@ memberships=membershipRows||[];
       memberships.forEach(m=>{if(!latest[m.trainee_id])latest[m.trainee_id]=m;});
       clients=data.map(c=>{
         const membershipStatus=membershipAvailable?statusForMembership(latest[c.id]):'وضعیت نامشخص';
-        return {id:c.id,name:c.full_name,phone:c.phone,gender:c.gender,birth_date:c.birth_date,age:calcAge(c.birth_date),weight:c.current_weight,height:c.height,goal:c.goal,level:c.training_level,history:c.training_history,limitations:c.limitations,injuries:c.injuries||c.limitations||'',training_type:c.training_type||'gym',home_equipment:c.home_equipment||'',training_days:c.training_days||'',training_time:c.training_time||'',weekly_sessions:c.weekly_sessions||null,createdAt:c.created_at,active:membershipAvailable&&membershipStatus==='فعال',membershipStatus, membershipError:membershipAvailable?'':membershipError, plans:0};
+        return {id:c.id,name:c.full_name,phone:c.phone,gender:c.gender,birth_date:c.birth_date,age:c.age??calcAge(c.birth_date),weight:c.current_weight,height:c.height,goal:c.goal,level:c.training_level,history:c.training_history,limitations:c.limitations,injuries:c.injuries||c.limitations||'',training_type:c.training_type||'gym',home_equipment:c.home_equipment||'',training_days:c.training_days||'',training_time:c.training_time||'',weekly_sessions:c.weekly_sessions||null,createdAt:c.created_at,active:membershipAvailable&&membershipStatus==='فعال',membershipStatus, membershipError:membershipAvailable?'':membershipError, plans:0};
       });
       await window.updateStats();
       if(typeof buildCoachControls==='function')buildCoachControls();
