@@ -12866,3 +12866,28 @@ body.workout-output.workout-compact{
 })();
 </script>
 
+
+<!-- SEH_DASHBOARD_READ_SINGLEFLIGHT_V2 -->
+<script id="SEH_DASHBOARD_READ_SINGLEFLIGHT_V2">
+(function(){
+  'use strict';
+  if(window.__sehDashboardReadSingleflightV2)return;
+  window.__sehDashboardReadSingleflightV2=true;
+  function wrap(name){
+    var fn=window[name];
+    if(typeof fn!=='function'||fn.__sehReadWrappedV2)return;
+    var pending=null;
+    var wrapped=function(){
+      if(pending)return pending;
+      var out;
+      try{out=fn.apply(this,arguments);}catch(e){throw e;}
+      if(!out||typeof out.then!=='function')return out;
+      pending=Promise.resolve(out).finally(function(){pending=null;});
+      return pending;
+    };
+    wrapped.__sehReadWrappedV2=true;
+    window[name]=wrapped;
+  }
+  ['loadExercises','loadLibraryExercises'].forEach(wrap);
+})();
+</script>
