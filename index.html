@@ -11869,73 +11869,22 @@ body.workout-output.workout-compact{
     return p;
   }
   function restoreLoginForm(){
+    // Passwordless trainees use the Supabase session restored elsewhere.
+    // Do not recreate a phone/password login form.
     const box=$('traineeLoginBox');
-    if(!box||$('sehPhonePasswordLogin'))return;
-    let blocks=Array.from(box.querySelectorAll('.trainee-auth-block'));
-    let login=blocks.find(b=>(b.querySelector('h3')?.textContent||'').includes('ورود شاگرد'));
-    if(!login){
-      login=document.createElement('div');
-      login.className='trainee-auth-block';
-      box.appendChild(login);
-    }
-    login.innerHTML='<h3>🔐 ورود شاگرد</h3><label>شماره موبایل</label><input id="traineePhoneLogin" type="tel" inputmode="tel" autocomplete="tel" placeholder="09121234567"><label>رمز عبور</label><input id="traineeLoginPassword" type="password" autocomplete="current-password" placeholder="رمز شخصی شما"><button type="button" id="sehPhonePasswordLogin">ورود با شماره و رمز</button><p class="muted">ورود فقط پس از تأیید مربی فعال می‌شود. رمز اولیه و رمز یک‌بارمصرف وجود ندارد.</p>';
-    const btn=$('sehPhonePasswordLogin');
-    if(btn&&!btn.dataset.bound){
-      btn.dataset.bound='1';
-      btn.addEventListener('click',async()=>{
-        const phone=normalizePhone($('traineePhoneLogin')?.value);
-        const password=$('traineeLoginPassword')?.value||'';
-        const err=$('authError');
-        const show=m=>{if(err){err.textContent=m;err.style.display='block';}};
-        if(!/^\+989\d{9}$/.test(phone)||!password){show('شماره موبایل معتبر و رمز عبور را وارد کنید. نمونه شماره: 09121234567');return;}
-        if(!window.AUTH_SUPABASE?.auth||typeof window.finishLogin!=='function'){show('سامانه ورود هنوز آماده نیست؛ صفحه را تازه‌سازی کنید.');return;}
-        btn.disabled=true;btn.textContent='⏳ در حال ورود…';
-        if(err)err.style.display='none';
-        try{
-          const {data,error}=await window.AUTH_SUPABASE.auth.signInWithPassword({phone,password});
-          if(error)throw error;
-          if(!data?.user||!data?.session?.access_token||!data?.session?.refresh_token)throw new Error('نشست امن ورود ساخته نشد.');
-          const saved=await window.AUTH_SUPABASE.auth.setSession({access_token:data.session.access_token,refresh_token:data.session.refresh_token});
-          if(saved.error)throw saved.error;
-          const verified=await window.AUTH_SUPABASE.auth.getSession();
-          if(verified.error||verified.data?.session?.user?.id!==data.user.id)throw new Error('نشست ورود ذخیره نشد؛ دوباره تلاش کنید.');
-          await window.finishLogin(data.user);
-        }catch(e){console.error('phone/password trainee login',e);show('ورود انجام نشد: '+(e?.message||String(e)));}
-        finally{btn.disabled=false;btn.textContent='ورود با شماره و رمز';}
-      });
-    }
+    if(!box)return;
+    const login=Array.from(box.querySelectorAll('.trainee-auth-block')).find(b=>(b.querySelector('h3')?.textContent||'').includes('ورود شاگرد'));
+    if(login)login.style.display='none';
   }
-  window.registerTraineePhone=async function(){
-    const name=$('traineeRegName')?.value.trim()||'';
-    const phone=normalizePhone($('traineeRegPhone')?.value||'');
-    const weekly_sessions=Number($('traineeRegSessions')?.value||0);
-    const training_days=$('traineeRegDays')?.value.trim()||'';
-    const training_time=$('traineeRegTime')?.value||'';
-    const password=$('traineeRegPassword')?.value||'';
-    const passwordConfirm=$('traineeRegPasswordConfirm')?.value||'';
-    let status=$('sehRegistrationLoginStatus');
-    if(!status){
-      const reg=Array.from(($('traineeLoginBox')||document).querySelectorAll('.trainee-auth-block')).find(b=>(b.querySelector('h3')?.textContent||'').includes('درخواست ثبت‌نام'));
-      if(reg){status=document.createElement('p');status.id='sehRegistrationLoginStatus';status.className='muted';reg.appendChild(status);}
+  // Preserve the authoritative passwordless registration handler installed above.
+  const passwordlessRegister = window.registerTraineePhone;
+  window.registerTraineePhone = async function(){
+    if(typeof passwordlessRegister !== 'function'){
+      const status=$('sehRegistrationLoginStatus')||$('authError');
+      if(status){status.textContent='ثبت‌نام بدون رمز بارگذاری نشده است؛ صفحه را تازه‌سازی کنید.';status.style.display='block';}
+      return;
     }
-    const show=m=>{if(status){status.textContent=m;status.style.whiteSpace='pre-wrap';}};
-    if(name.length<2){show('نام و نام خانوادگی را وارد کنید.');return;}
-    if(password.length<8){show('رمز شخصی باید حداقل ۸ کاراکتر باشد.');return;}
-    if(password!==passwordConfirm){show('تکرار رمز با رمز واردشده یکسان نیست.');return;}
-    if(!/^\+989\d{9}$/.test(phone)){show('شماره موبایل معتبر نیست؛ مانند 09121234567 وارد کنید.');return;}
-    if(!Number.isInteger(weekly_sessions)||weekly_sessions<1||weekly_sessions>7||!training_days||!training_time){show('تعداد جلسات، روزها و ساعت تمرین را کامل کنید.');return;}
-    if(!window.AUTH_SUPABASE?.functions?.invoke){show('ارتباط با سامانه آماده نیست؛ صفحه را تازه‌سازی کنید.');return;}
-    const reg=Array.from(($('traineeLoginBox')||document).querySelectorAll('.trainee-auth-block')).find(b=>(b.querySelector('h3')?.textContent||'').includes('درخواست ثبت‌نام'));
-    const btn=reg?.querySelector('button[onclick*="registerTraineePhone"]')||reg?.querySelector('button');
-    if(btn){btn.disabled=true;btn.textContent='⏳ در حال ارسال درخواست…';}
-    try{
-      const {data,error}=await window.AUTH_SUPABASE.functions.invoke('trainee-registration-request',{body:{full_name:name,phone,weekly_sessions,training_days,training_time,password}});
-      if(error)throw error;
-      if(data?.error)throw new Error(data.error);
-      show('✅ درخواست عضویت ارسال شد. پس از تأیید مربی، با همین شماره موبایل و رمز شخصی که ساختید وارد شوید.');
-      ['traineeRegName','traineeRegPhone','traineeRegSessions','traineeRegDays','traineeRegTime','traineeRegPassword','traineeRegPasswordConfirm'].forEach(id=>{if($(id))$(id).value='';});
-    }catch(e){console.error('trainee registration request',e);show('ارسال درخواست انجام نشد: '+(e?.message||String(e)));}
-    finally{if(btn){btn.disabled=false;btn.textContent='📨 ارسال درخواست عضویت';}}
+    return passwordlessRegister.apply(this, arguments);
   };
   function install(){
     restoreLoginForm();
@@ -11943,7 +11892,17 @@ body.workout-output.workout-compact{
     const reg=Array.from((box||document).querySelectorAll('.trainee-auth-block')).find(b=>(b.querySelector('h3')?.textContent||'').includes('درخواست ثبت‌نام'));
     if(reg){
       const p=reg.querySelector('p.muted');
-      if(p)p.textContent='درخواست را ثبت کنید. هنگام ثبت درخواست، رمز شخصی خودتان را می‌سازید. ورود فقط پس از تأیید مربی فعال می‌شود.';
+      if(p)p.textContent='درخواست را یک‌بار ثبت کنید. پس از تأیید مربی، همین گوشی به‌صورت خودکار وارد حساب شما می‌شود؛ رمز و پیامک لازم نیست.';
+      ['traineeRegPassword','traineeRegPasswordConfirm'].forEach(function(id){
+        const field=$(id);
+        if(field){
+          const label=field.previousElementSibling;
+          if(label&&label.tagName==='LABEL')label.remove();
+          field.remove();
+        }
+      });
+      const login=Array.from((box||document).querySelectorAll('.trainee-auth-block')).find(b=>(b.querySelector('h3')?.textContent||'').includes('ورود شاگرد'));
+      if(login)login.style.display='none';
       const b=reg.querySelector('button[onclick*="registerTraineePhone"]');
       if(b)b.textContent='📨 ارسال درخواست عضویت';
     }
