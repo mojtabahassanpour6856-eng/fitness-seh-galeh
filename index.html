@@ -11844,3 +11844,60 @@ body.workout-output.workout-compact{
   setTimeout(bind,500);setTimeout(bind,1500);
 })();
 </script>
+
+<!-- SEH COACH LOGIN CLICK FIX V1: bind the coach login button directly and surface failures -->
+<script id="seh-coach-login-click-fix-v1">
+(function(){
+  'use strict';
+  function install(){
+    var box=document.getElementById('coachLoginBox');
+    var btn=box&&box.querySelector('button');
+    var email=document.getElementById('loginEmail');
+    var pass=document.getElementById('loginPassword');
+    var err=document.getElementById('authError');
+    if(!box||!btn||btn.dataset.sehDirectLogin==='1')return;
+    btn.dataset.sehDirectLogin='1';
+    btn.type='button';
+    btn.removeAttribute('onclick');
+    function status(message){
+      if(!err)return;
+      err.textContent=message;
+      err.style.display='block';
+      err.style.visibility='visible';
+      err.style.opacity='1';
+    }
+    async function go(ev){
+      if(ev){ev.preventDefault();ev.stopPropagation();}
+      if(!email||!pass){status('فرم ورود مربی کامل بارگذاری نشده است. صفحه را تازه‌سازی کنید.');return;}
+      if(!email.value.trim()||!pass.value){status('ایمیل و رمز عبور مربی را وارد کنید.');return;}
+      if(typeof window.loginApp!=='function'){status('تابع ورود مربی بارگذاری نشده است. لطفاً صفحه را تازه‌سازی کنید.');return;}
+      btn.disabled=true;
+      var old=btn.textContent;
+      btn.textContent='⏳ در حال ورود…';
+      status('درخواست ورود ارسال شد؛ در حال بررسی حساب مربی…');
+      try{
+        await window.loginApp();
+        var screen=document.getElementById('authScreen');
+        var visible=screen&&getComputedStyle(screen).display!=='none';
+        if(visible&&err&&(!err.textContent.trim()||err.textContent.indexOf('درخواست ورود ارسال شد')===0)){
+          status('ورود کامل نشد و پیام خطا دریافت نشد. لطفاً صفحه را تازه‌سازی کنید و دوباره امتحان کنید.');
+        }
+      }catch(e){
+        console.error('[seh-coach-login-click-fix]',e);
+        status('ورود انجام نشد: '+(e&&e.message?e.message:String(e)));
+      }finally{
+        btn.disabled=false;
+        btn.textContent=old||'🔐 ورود مربی';
+      }
+    }
+    btn.addEventListener('click',go);
+    [email,pass].forEach(function(input){
+      input.addEventListener('keydown',function(ev){if(ev.key==='Enter')go(ev);});
+    });
+  }
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',install);
+  else install();
+  setTimeout(install,500);
+  setTimeout(install,1400);
+})();
+</script>
