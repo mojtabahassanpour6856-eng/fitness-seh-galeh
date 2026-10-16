@@ -12239,27 +12239,22 @@ body.workout-output.workout-compact{
   setTimeout(()=>{normalizeSectionContents();normalizeProfile();},900);
 })();
 
-/* FINAL COACH TRAINEE SELECTION GUARD:
-   Keep selection/navigation working even if an older optional select hook throws. */
+/* FINAL COACH TRAINEE SELECTION GUARD v2:
+   Navigate immediately; never let a slow optional data loader block opening the trainee profile. */
 (function(){
   const previousSelect = window.selectClient;
-  window.selectClient = async function(id){
+  window.selectClient = function(id){
     const rows = Array.isArray(clients) ? clients : [];
     const selected = rows.find(c => String(c.id) === String(id));
     if (!selected) {
       console.warn('انتخاب شاگرد انجام نشد؛ شناسه در فهرست فعلی پیدا نشد:', id);
-      return;
+      return Promise.resolve();
     }
-    let result;
-    try {
-      if (typeof previousSelect === 'function') result = await previousSelect.call(this, id);
-    } catch (error) {
-      console.error('خطا در یکی از مراحل جانبی انتخاب شاگرد؛ انتخاب پایه ادامه پیدا می‌کند:', error);
-    }
+    // Commit selection and navigate synchronously, before any network-dependent hooks.
     try { currentClient = selected; } catch (error) {}
     window.currentClient = selected;
-    const setValue = (id, value) => {
-      const node = document.getElementById(id);
+    const setValue = (key, value) => {
+      const node = document.getElementById(key);
       if (node) node.value = value == null ? '' : String(value);
     };
     setValue('pn', selected.name || selected.full_name || '');
@@ -12276,11 +12271,21 @@ body.workout-output.workout-compact{
     document.querySelectorAll('#coachMobileCards .coach-name-cell').forEach(button => {
       button.classList.toggle('selected', String(button.getAttribute('data-trainee-id')) === String(selected.id));
     });
+    // Run the existing selection pipeline in the background. Optional slow/failing
+    // loaders must not prevent navigation or leave only the yellow focus glow visible.
+    let result;
     try {
-      if (typeof window.loadMembershipCard === 'function') await window.loadMembershipCard();
+      if (typeof previousSelect === 'function') {
+        result = previousSelect.call(this, id);
+        Promise.resolve(result).catch(error => console.error('بارگذاری اطلاعات تکمیلی شاگرد ناموفق بود:', error));
+      }
+    } catch (error) { console.error('خطا در بارگذاری تکمیلی شاگرد:', error); }
+    try {
+      if (typeof window.loadMembershipCard === 'function') {
+        Promise.resolve(window.loadMembershipCard()).catch(error => console.error('بارگذاری کارت عضویت ناموفق بود:', error));
+      }
     } catch (error) { console.error('بارگذاری کارت عضویت ناموفق بود:', error); }
-    return result;
+    return Promise.resolve(result).catch(() => undefined);
   };
 })();
-
 </script>
