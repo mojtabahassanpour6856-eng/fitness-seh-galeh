@@ -12227,7 +12227,19 @@ body.workout-output.workout-compact{
     };
     try{
       if(typeof window.sbWrite !== 'function') throw new Error('اتصال امن ذخیره‌سازی آماده نیست.');
-      await window.sbWrite('/trainees?id=eq.'+encodeURIComponent(c.id),'PATCH',payload);
+      const rows = await window.sbWrite('/trainees?id=eq.'+encodeURIComponent(c.id),'PATCH',payload);
+      const saved = Array.isArray(rows) ? rows.find(row=>String(row.id)===String(c.id)) : null;
+      if(!saved) throw new Error('پایگاه داده ردیف ذخیره‌شده را برنگرداند؛ ذخیره پروفایل تأیید نشد.');
+      for(const field of ['age','current_weight','height']){
+        const expected = payload[field] == null || payload[field] === '' ? null : Number(payload[field]);
+        const actual = saved[field] == null || saved[field] === '' ? null : Number(saved[field]);
+        if(expected !== actual) throw new Error('ذخیره فیلد «'+field+'» تأیید نشد؛ دوباره تلاش کنید.');
+      }
+      for(const field of ['full_name','goal','training_level','training_type','home_equipment']){
+        const expected = payload[field] == null ? '' : String(payload[field]).trim();
+        const actual = saved[field] == null ? '' : String(saved[field]).trim();
+        if(expected !== actual) throw new Error('ذخیره فیلد «'+field+'» تأیید نشد؛ دوباره تلاش کنید.');
+      }
       if(typeof window.loadClients === 'function') await window.loadClients();
       const fresh = Array.isArray(clients) ? clients.find(x=>String(x.id)===String(c.id)) : null;
       if(fresh){ try{currentClient=fresh;}catch(e){} window.currentClient=fresh; }
