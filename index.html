@@ -12099,8 +12099,13 @@ body.workout-output.workout-compact{
       if(!saved) throw new Error('ذخیره ارسال شد اما اطلاعات از پایگاه داده دوباره خوانده نشد.');
       const fields = ['full_name','goal','training_level','training_type','home_equipment','gender','training_days','training_time','training_history','limitations','injuries'];
       for(const field of fields){
-        const expected = payload[field] == null ? null : String(payload[field]);
-        const actual = saved[field] == null ? null : String(saved[field]);
+        let expected = payload[field] == null ? null : String(payload[field]).trim();
+        let actual = saved[field] == null ? null : String(saved[field]).trim();
+        // PostgreSQL time values may come back as HH:MM:SS although HTML time inputs use HH:MM.
+        if(field === 'training_time'){
+          expected = expected == null || expected === '' ? null : expected.slice(0,5);
+          actual = actual == null || actual === '' ? null : actual.slice(0,5);
+        }
         if(expected !== actual) throw new Error('ذخیره فیلد «'+field+'» تأیید نشد؛ دوباره تلاش کنید.');
       }
       const updated = {
