@@ -12578,6 +12578,9 @@ body.workout-output.workout-compact{
   if(role()!=='trainee')return;
   var nav=e.target&&e.target.closest?e.target.closest('.nav button'):null;
   if(!nav)return;
+  // The dashboard button is created with a JavaScript onclick property,
+  // so it has no onclick HTML attribute for the generic parser to read.
+  if(nav.id==='navDash'){remember('traineeDashboard');schedule('traineeDashboard');return;}
   var code=String(nav.getAttribute('onclick')||'');
   var m=code.match(/(?:showSection|dashOpen)\(['"]([^'"]+)['"]/);
   if(m){remember(m[1]);schedule(m[1]);}
