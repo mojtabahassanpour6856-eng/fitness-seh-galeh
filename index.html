@@ -11578,6 +11578,11 @@ body.workout-output.workout-compact{
       if(profileResult.error)throw profileResult.error;
       var profile=profileResult.data&&profileResult.data[0];
       if(!profile)throw new Error('حساب وارد شد اما پروفایل مربی در جدول profiles پیدا نشد. شناسه حساب: '+user.id);
+      // Keep the app's shared role state synchronized with the authenticated profile.
+      // This recovery login performs its own sign-in, so it must not bypass
+      // the authProfile assignment normally done by finishLogin().
+      try{authProfile=profile;}catch(stateError){console.warn('Could not update shared authProfile binding',stateError);}
+      window.authProfile=profile;
       if(profile.role==='trainee'){
         if(typeof window.setupTraineeAuth==='function'){await window.setupTraineeAuth(user);return;}
         throw new Error('این حساب نقش شاگرد دارد؛ مسیر ورود شاگرد هنوز آماده نیست.');
@@ -11591,6 +11596,9 @@ body.workout-output.workout-compact{
         var nav=Array.from(document.querySelectorAll('.nav button')).find(function(b){return String(b.getAttribute('onclick')||'').includes("'coach'");});
         window.showSection('coach',nav||null);
       }
+      // Do not carry a previous trainee selection into a new coach session.
+      try{currentClient=null;}catch(stateError){}
+      window.currentClient=null;
       if(typeof window.loadClients==='function')await window.loadClients();
       else throw new Error('ورود انجام شد، اما تابع بارگذاری فهرست شاگردان آماده نیست.');
       if(typeof window.loadExercises==='function')try{await window.loadExercises();}catch(e){console.warn('بارگذاری حرکات انجام نشد',e);}
