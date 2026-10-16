@@ -8589,7 +8589,7 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
     try{
       const {data:{user},error:userError}=await AUTH_SUPABASE.auth.getUser();
       if(userError||!user)throw new Error('نشست حساب شاگرد معتبر نیست.');
-      const uploadFile=await sehOptimizeUploadImage(file);
+      const uploadFile=await window.sehOptimizeUploadImage(file);
       const clean=uploadFile.name.replace(/[^a-zA-Z0-9._-]/g,'_').slice(-80)||'lab-report';
       path=user.id+'/'+c.id+'/health_'+Date.now()+'_'+clean;
       const {error:uploadError}=await AUTH_SUPABASE.storage.from('trainee-health-reports').upload(path,uploadFile,{upsert:false,contentType:uploadFile.type});
