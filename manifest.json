@@ -22,7 +22,7 @@
   "related_applications": [],
   "icons": [
     {
-      "src": "icon.svg?v=2",
+      "src": "icon.svg",
       "sizes": "any",
       "type": "image/svg+xml",
       "purpose": "any"
