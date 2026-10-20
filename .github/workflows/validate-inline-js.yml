@@ -5,6 +5,7 @@ on:
       - 'index.html'
       - 'workout-editor-preview.html'
       - 'workout-editor-entry-preview.html'
+      - 'experiments/workout-template-planner.html'
       - '.github/workflows/validate-inline-js.yml'
   workflow_dispatch:
 jobs:
@@ -21,7 +22,7 @@ jobs:
           const fs = require('fs');
           const { spawnSync } = require('child_process');
           let failed = false, count = 0;
-          for (const filename of ['index.html', 'workout-editor-preview.html', 'workout-editor-entry-preview.html']) {
+          for (const filename of ['index.html', 'workout-editor-preview.html', 'workout-editor-entry-preview.html', 'experiments/workout-template-planner.html']) {
             if (!fs.existsSync(filename)) continue;
             const html = fs.readFileSync(filename, 'utf8');
             const scripts = [...html.matchAll(/<script\b([^>]*)>([\s\S]*?)<\/script\s*>/gi)];
