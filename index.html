@@ -12267,7 +12267,8 @@ body.workout-output.workout-compact{
    if(!Array.isArray(inserted)||inserted.length!==payload.length)throw new Error('ثبت همه حرکات تأیید نشد.');
    if(!currentClient||!same(currentClient.id,traineeId))throw new Error('شاگرد هنگام ساخت نسخه تغییر کرد؛ نسخه ساخته‌شده را از فهرست برنامه‌ها بررسی کنید.');
    currentWorkoutPlanId=newPlanId;
-   // Load the exact plan we just created; do not let "latest plan" sorting select another plan.
+   workoutPlanOwnerId=traineeId;
+   // Keep the owner marker in sync and render the exact new plan without re-selecting another plan by date.
    $('workoutTitle').value=data.title||template.name;
    $('workoutStartDate').value=newPlanDate;
    if(typeof updateWorkoutStartDateFa==='function')updateWorkoutStartDateFa();
@@ -12278,7 +12279,8 @@ body.workout-output.workout-compact{
    const exerciseIds=[...new Set(createdRows.map(x=>x.exercise_id))];
    const exerciseNames={};
    if(exerciseIds.length){const exerciseRows=await sbGet('/exercises?id=in.('+exerciseIds.join(',')+')&select=id,name');exerciseRows.forEach(x=>exerciseNames[x.id]=x.name);}
-   renderWorkoutList(createdRows,exerciseNames);
+   if(!currentClient||!same(currentClient.id,traineeId))throw new Error('شاگرد هنگام بارگذاری نسخه تغییر کرد؛ برای جلوگیری از نمایش اطلاعات اشتباه، دوباره شاگرد را انتخاب کنید.');
+   if(typeof window.renderWorkoutList==='function')window.renderWorkoutList(createdRows,exerciseNames);else renderWorkoutList(createdRows,exerciseNames);
    status('نسخه مستقل الگوی «'+template.name+'» برای شاگرد ساخته شد. تغییرات بعدی روی همین نسخه اعمال می‌شود، نه روی الگوی اصلی.');
   }catch(e){
    if(newPlanId){try{await sbWrite('/trainee_workout_exercises?workout_plan_id=eq.'+encodeURIComponent(newPlanId),'DELETE',{});}catch(cleanupError){}try{await sbWrite('/trainee_workout_plans?id=eq.'+encodeURIComponent(newPlanId),'DELETE',{});}catch(cleanupError){}}
