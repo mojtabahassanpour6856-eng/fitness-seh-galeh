@@ -198,6 +198,9 @@ const assert = require('node:assert/strict');
       assert.equal(squat[2], 'سوپرست');
       assert.equal(chest[3], squat[3], 'both movements should share the same group');
       assert.match(await page.locator('#bankStatus').innerText(), /2 حرکت به‌صورت سوپرست/);
+      await page.locator('#preview').click();
+      assert.match(await page.locator('#status').innerText(), /بررسی اولیه موفق بود/);
+      assert.ok((await page.locator('#sessions').innerText()).includes('پرس سینه هالتر + اسکوات جام'), 'preview should show selected movements together in selection order with a plus separator');
     });
     await check('groups with the same label in different sessions are validated separately', async () => {
       await page.locator('#count').selectOption('2');
