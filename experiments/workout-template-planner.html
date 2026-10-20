@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>آزمایش طراحی سریع برنامه تمرینی | فیتنس سه‌قلعه</title>
+<style>
+:root{font-family:Tahoma,Arial,sans-serif;color:#29251d;background:#faf7ef}*{box-sizing:border-box}body{margin:0;padding:16px;max-width:1100px;margin:auto}h1{font-size:1.35rem;color:#8a6929}p{line-height:1.8}.card{background:#fff;border:1px solid #e6dcc6;border-radius:14px;padding:16px;margin:12px 0;box-shadow:0 2px 8px #00000008}.row{display:flex;gap:10px;flex-wrap:wrap;align-items:end}.field{display:flex;flex-direction:column;gap:6px;flex:1;min-width:150px}label{font-size:.9rem}input,select,textarea,button{font:inherit;border:1px solid #d8cdb7;border-radius:9px;padding:10px;background:#fff;max-width:100%}textarea{width:100%;min-height:145px;direction:rtl}button{cursor:pointer;background:#98732e;color:#fff;border:0}button.secondary{background:#eee7d8;color:#392f1b}button.danger{background:#a73b31}.muted{color:#6f6a60;font-size:.88rem}.sessions{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:10px}.session{border:1px solid #e5dcc9;border-radius:10px;padding:12px;background:#fffdf8}.session h3{margin-top:0;font-size:1rem}.move{padding:8px 0;border-bottom:1px solid #eee5d5;line-height:1.7}.move:last-child{border:0}.pill{display:inline-block;background:#f3ead4;border-radius:20px;padding:3px 8px;font-size:.8rem}.status{margin-top:10px;white-space:pre-wrap}.error{color:#a32921}.success{color:#28613a}@media(max-width:560px){body{padding:10px}.row{display:grid;grid-template-columns:1fr}.field{min-width:0}}
+</style></head>
+<body>
+<h1>فیتنس سه‌قلعه | آزمایش قالب و تقسیم سریع تمرین</h1>
+<p class="muted">نمونه مستقل آزمایشی است؛ اطلاعات فقط در همین صفحه پردازش می‌شود و به شاگرد یا پایگاه داده ارسال نمی‌شود.</p>
+<section class="card"><h2>۱) تنظیم قالب برنامه</h2><div class="row">
+<div class="field"><label for="gender">قالب</label><select id="gender"><option value="men">آقایان</option><option value="women">خانم‌ها</option></select></div>
+<div class="field"><label for="count">تعداد جلسات</label><select id="count"><option>2</option><option>3</option><option selected>4</option><option>5</option><option>6</option></select></div>
+<div class="field"><label for="split">روش تقسیم</label><select id="split"><option value="manual">جلسه از روی ستون ورودی</option><option value="round">تقسیم چرخشی بین جلسات</option><option value="muscle">تقسیم پیشنهادی بر اساس گروه عضلانی</option></select></div>
+</div><p id="templateHint" class="muted"></p><button id="build" type="button">ساخت / به‌روزرسانی جلسات</button></section>
+<section class="card"><h2>۲) ورود گروهی حرکات</h2><p>هر حرکت را در یک خط وارد کن. حالت پیشرفته با Tab جدا می‌شود: <span class="pill">نام حرکت · جلسه · سیستم · گروه · ست · تکرار · استراحت</span></p>
+<p class="muted">نمونه را می‌توانی ویرایش کنی؛ ستون جلسه از ۱ شروع می‌شود. برای سیستم عادی، گروه را با — پر کن.</p>
+<textarea id="bulk" spellcheck="false">پرس سینه دمبل	1	عادی	—	3	12	60
+بالاسینه دستگاه	1	سوپرست	1	3	12	60
+قفسه سیم‌کش	1	سوپرست	1	3	12	60
+لت سیم‌کش	2	عادی	—	3	12	60
+قایقی	2	تری‌ست	2	3	12	60
+فیس‌پول	2	تری‌ست	2	3	15	45
+اسکوات جام	3	عادی	—	4	15	75
+</textarea><div class="row" style="margin-top:10px"><button id="preview" type="button">اعتبارسنجی و پیش‌نمایش</button><button id="example" type="button" class="secondary">بازگردانی نمونه</button><button id="export" type="button" class="secondary">دانلود داده‌های آزمایشی JSON</button></div><div id="status" class="status" role="status"></div></section>
+<section class="card"><h2>۳) پیش‌نمایش جلسات</h2><div id="sessions" class="sessions"><p class="muted">برای دیدن جلسات، پیش‌نمایش را بزن.</p></div></section>
+<script>
+(function(){
+const $=id=>document.getElementById(id);
+const example=$('bulk').value;
+function hint(){const g=$('gender').value; $('templateHint').textContent=g==='women'?'قالب خانم‌ها انتخاب شده؛ این انتخاب فقط برچسب قالب است و نسخه تمرین یا شدت را خودکار تغییر نمی‌دهد.':'قالب آقایان انتخاب شده؛ حرکات و شدت بر اساس نیاز شاگرد باید توسط مربی تنظیم شود.';}
+function n(){return Number($('count').value)||4}
+function parse(){
+ const lines=$('bulk').value.split(/\r?\n/).map(x=>x.trim()).filter(Boolean), moves=[], errors=[];
+ lines.forEach((line,i)=>{
+  const p=line.includes('\t')?line.split('\t').map(x=>x.trim()):line.split(/[;,]/).map(x=>x.trim());
+  if(p.length<1||!p[0]){errors.push('خط '+(i+1)+': نام حرکت خالی است.');return;}
+  let name=p[0],session=Number(p[1])||1,system=p[2]||'عادی',group=p[3]||'—',sets=p[4]||'3',reps=p[5]||'12',rest=p[6]||'60';
+  if(!['عادی','سوپرست','تری‌ست','تری ست','جاینت‌ست','جاینت ست'].includes(system)){errors.push('خط '+(i+1)+': سیستم تمرین ناشناخته است («'+system+'»).');}
+  if(!Number.isInteger(session)||session<1||session>n())errors.push('خط '+(i+1)+': شماره جلسه باید بین ۱ تا '+n()+' باشد.');
+  if(!/^\d+$/.test(String(sets))||!/^\d+$/.test(String(reps))||!/^\d+$/.test(String(rest)))errors.push('خط '+(i+1)+': ست، تکرار و استراحت باید عدد باشند.');
+  moves.push({name,session,system,group,sets:Number(sets),reps:Number(reps),rest:Number(rest)});
+ });
+ const groups={}; moves.forEach((m,i)=>{if(m.system!=='عادی'&&m.system){const key=m.system+'|'+m.group;if(!m.group||m.group==='—')errors.push('حرکت «'+m.name+'»: برای '+m.system+' گروه مشخص کن.');(groups[key]||(groups[key]=[])).push(i);}});
+ Object.entries(groups).forEach(([key,idx])=>{const typ=key.split('|')[0];const min=typ.startsWith('سوپر')?2:typ.startsWith('تری')?3:4;if(idx.length<min)errors.push('گروه «'+key.split('|')[1]+'» برای '+typ+' حداقل '+min+' حرکت لازم دارد.');});
+ return {moves,errors};
+}
+function render(){
+ const {moves,errors}=parse();const method=$('split').value;let arranged=moves.map(m=>({...m}));
+ if(method==='round'){arranged.forEach((m,i)=>m.session=(i%n())+1);}
+ if(method==='muscle'){const slots={'سینه':1,'پشت':2,'سرشانه':3,'پا':4,'جلو بازو':5,'پشت بازو':6,'شکم':n()};arranged.forEach(m=>{const k=Object.keys(slots).find(k=>m.name.includes(k));if(k)m.session=Math.min(n(),slots[k]);});}
+ const wrap=$('sessions');wrap.innerHTML='';
+ for(let s=1;s<=n();s++){const box=document.createElement('div');box.className='session';const h=document.createElement('h3');h.textContent='جلسه '+s;box.appendChild(h);const list=arranged.filter(m=>m.session===s);if(!list.length){const em=document.createElement('p');em.className='muted';em.textContent='هنوز حرکتی در این جلسه نیست.';box.appendChild(em);}list.forEach(m=>{const d=document.createElement('div');d.className='move';d.textContent=m.name+' — '+m.sets+' ست × '+m.reps+' تکرار · استراحت '+m.rest+' ثانیه';if(m.system!=='عادی'){const b=document.createElement('span');b.className='pill';b.textContent=m.system+' گروه '+m.group;d.appendChild(document.createElement('br'));d.appendChild(b);}box.appendChild(d);});wrap.appendChild(box);}
+ const status=$('status');status.className='status '+(errors.length?'error':'success');status.textContent=errors.length?'خطاهای بررسی:\n• '+[...new Set(errors)].join('\n• '):'بررسی اولیه موفق بود: '+moves.length+' حرکت، '+n()+' جلسه. این فقط اعتبارسنجی نمونه مستقل است و ذخیره در اپ اصلی را آزمایش نمی‌کند.';
+ window.__trial={gender:$('gender').value,sessions:n(),moves:arranged,errors};
+}
+$('build').addEventListener('click',()=>{render();});$('preview').addEventListener('click',render);$('gender').addEventListener('change',hint);$('count').addEventListener('change',()=>{hint();render();});$('split').addEventListener('change',render);$('example').addEventListener('click',()=>{$('bulk').value=example;render();});
+$('export').addEventListener('click',()=>{render();const data=window.__trial;if(data.errors.length){$('status').textContent+='\nابتدا خطاها را اصلاح کن تا خروجی گرفته شود.';return;}const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='fitness-seh-galeh-workout-trial.json';a.click();URL.revokeObjectURL(a.href);});
+hint();
+})();
+</script></body></html>
