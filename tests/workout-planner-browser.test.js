@@ -274,6 +274,14 @@ const assert = require('node:assert/strict');
       assert.equal(await page.locator('#quickSystem').inputValue(), 'سوپرست');
       assert.equal(await page.locator('#quickGroup').inputValue(), 'A', 'a label used in another session or system should be reusable here');
     });
+    await check('new group labels account for existing semicolon-delimited movement rows', async () => {
+      await page.locator('#bulk').fill('حرکت موجود;1;سوپرست;A;3;10;60');
+      await page.locator('#count').selectOption('2');
+      await page.locator('#quickSession').selectOption('1');
+      await page.locator('#quickSystem').selectOption('سوپرست');
+      await page.getByRole('button', { name: 'ساخت گروه جدید' }).click();
+      assert.equal(await page.locator('#quickGroup').inputValue(), 'B', 'the existing group A must not be reused');
+    });
     await check('group selection is preserved across bank category filters', async () => {
       await page.locator('#clearSelectedExercises').click();
       await page.locator('#bulk').fill('');
