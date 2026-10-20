@@ -238,12 +238,23 @@ const assert = require('node:assert/strict');
     await check('quick group builder chooses an unused label instead of joining an existing group', async () => {
       await page.locator('#bulk').fill([
         ['حرکت گروه A', '1', 'سوپرست', 'A', '3', '10', '60'].join(String.fromCharCode(9)),
-        ['حرکت گروه B', '2', 'تری‌ست', 'B', '3', '10', '60'].join(String.fromCharCode(9))
+        ['حرکت گروه B', '1', 'سوپرست', 'B', '3', '10', '60'].join(String.fromCharCode(9))
       ].join(String.fromCharCode(10)));
       await page.locator('#quickSystem').selectOption('عادی');
       await page.getByRole('button', { name: 'ساخت گروه جدید' }).click();
       assert.equal(await page.locator('#quickSystem').inputValue(), 'سوپرست');
       assert.equal(await page.locator('#quickGroup').inputValue(), 'C', 'new group should not reuse A or B from existing movements');
+    });
+    await check('new group labels are scoped to the selected session and system', async () => {
+      await page.locator('#bulk').fill([
+        ['سوپرست جلسه یک', '1', 'سوپرست', 'A', '3', '10', '60'].join(String.fromCharCode(9)),
+        ['تری‌ست جلسه دو', '2', 'تری‌ست', 'A', '3', '10', '60'].join(String.fromCharCode(9))
+      ].join(String.fromCharCode(10)));
+      await page.locator('#quickSession').selectOption('2');
+      await page.locator('#quickSystem').selectOption('عادی');
+      await page.getByRole('button', { name: 'ساخت گروه جدید' }).click();
+      assert.equal(await page.locator('#quickSystem').inputValue(), 'سوپرست');
+      assert.equal(await page.locator('#quickGroup').inputValue(), 'A', 'a label used in another session or system should be reusable here');
     });
     await check('group selection is preserved across bank category filters', async () => {
       await page.locator('#bulk').fill('');
