@@ -812,7 +812,7 @@ body.locked{overflow:hidden!important}
 <p class="muted">برنامه چندجلسه‌ای را یک‌بار ذخیره کنید و بعد برای هر شاگرد، یک نسخه مستقل بسازید. تغییر نسخه شاگرد، الگوی اصلی را تغییر نمی‌دهد.</p>
 <div class="grid2">
 <div><label for="coachWorkoutTemplateName">نام الگو</label><input id="coachWorkoutTemplateName" maxlength="120" placeholder="مثلاً الگوی چهار جلسه‌ای سطح متوسط"></div>
-<div><label for="workoutTemplateGender">جنسیت الگو</label><select id="workoutTemplateGender"><option value="زن">بانوان</option><option value="مرد">آقایان</option><option value="عمومی">عمومی</option></select></div>
+<div><label for="workoutTemplateGender">جنسیت الگو</label><select id="workoutTemplateGender"><option value="">انتخاب جنسیت الگو…</option><option value="زن">بانوان</option><option value="مرد">آقایان</option><option value="عمومی">عمومی</option></select></div>
 <div><label for="savedWorkoutTemplates">الگوهای موجود</label><select id="savedWorkoutTemplates"><option value="">ابتدا الگوها را بارگذاری کنید</option></select></div>
 </div>
 <div class="row" style="gap:8px;flex-wrap:wrap;margin-top:10px">
@@ -12228,7 +12228,7 @@ body.workout-output.workout-compact{
    const rows=await sbGet('/coach_workout_templates?select=id,name,description,template_kind,template_data,updated_at&order=updated_at.desc,created_at.desc');
    savedTemplates=Array.isArray(rows)?rows:[];
    const select=el('savedWorkoutTemplates');
-   if(select){const target=el('workoutTemplateGender')?.value||'عمومی';const visible=savedTemplates.filter(t=>{const g=t.template_data?.audience_gender||'عمومی';return g==='عمومی'||target==='عمومی'||g===target;});select.innerHTML='<option value="">انتخاب الگو…</option>'+visible.map(t=>'<option value="'+String(t.id)+'">'+String(t.name||'الگوی بدون نام').replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]))+'</option>').join('');}
+   if(select){const target=el('workoutTemplateGender')?.value||'__choose__';const visible=savedTemplates.filter(t=>{const g=t.template_data?.audience_gender||'عمومی';return target==='__choose__'?g==='عمومی':(g==='عمومی'||target==='عمومی'||g===target);});select.innerHTML='<option value="">انتخاب الگو…</option>'+visible.map(t=>'<option value="'+String(t.id)+'">'+String(t.name||'الگوی بدون نام').replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]))+'</option>').join('');}
    status(savedTemplates.length?savedTemplates.length+' الگو از پایگاه داده بارگذاری شد؛ روی گوشی و لپ‌تاپ مشترک است.':'هنوز الگویی ذخیره نشده است.');
   }catch(e){status('بارگذاری الگوها انجام نشد: '+(e.message||String(e)));}
  };
@@ -12243,7 +12243,7 @@ body.workout-output.workout-compact{
    if(!plans.length)throw new Error('برنامه انتخاب‌شده متعلق به شاگرد فعلی نیست؛ دوباره بارگذاری کنید.');
    const rows=await sbGet('/trainee_workout_exercises?workout_plan_id=eq.'+encodeURIComponent(planId)+'&select=exercise_id,sets,reps,rest_seconds,notes,sort_order,training_day,training_system,group_key&order=sort_order.asc,created_at.asc');
    if(!rows.length)throw new Error('برنامه فعلی هنوز حرکتی ندارد؛ ابتدا حرکات را اضافه کنید.');
-   const data={title:plans[0].title||'برنامه تمرینی',goal:plans[0].goal||'',notes:plans[0].notes||'',audience_gender:el('workoutTemplateGender')?.value||currentClient.gender||'عمومی',exercises:rows.map(x=>({exercise_id:x.exercise_id,sets:x.sets,reps:x.reps,rest_seconds:x.rest_seconds,notes:x.notes||'',sort_order:x.sort_order,training_day:x.training_day||'جلسه اول',training_system:x.training_system||'normal',group_key:x.group_key||null}))};
+   const audienceGender=el('workoutTemplateGender')?.value;if(!audienceGender){status('قبل از ذخیره، جنسیت الگو را مشخص کنید: بانوان، آقایان یا عمومی.');return;}const data={title:plans[0].title||'برنامه تمرینی',goal:plans[0].goal||'',notes:plans[0].notes||'',audience_gender:audienceGender,exercises:rows.map(x=>({exercise_id:x.exercise_id,sets:x.sets,reps:x.reps,rest_seconds:x.rest_seconds,notes:x.notes||'',sort_order:x.sort_order,training_day:x.training_day||'جلسه اول',training_system:x.training_system||'normal',group_key:x.group_key||null}))};
    await sbWrite('/coach_workout_templates','POST',{name,description:'ذخیره‌شده از برنامه '+data.title,template_kind:'multi_session',template_data:data});
    status('الگوی «'+name+'» ذخیره شد؛ نسخه اصلی و برنامه شاگرد دست‌نخورده ماندند.');
    await window.loadSavedWorkoutTemplates();
