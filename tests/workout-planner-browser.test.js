@@ -262,6 +262,26 @@ const assert = require('node:assert/strict');
       assert.ok((await page.locator('#bulk').inputValue()).includes('لت سیم‌کش'));
       assert.equal(await page.evaluate(() => window.__trial.errors.length), 0);
     });
+    await check('movements can be moved between sessions and deleted directly from preview', async () => {
+      await page.locator('#count').selectOption('2');
+      await page.locator('#split').selectOption('manual');
+      await page.locator('#bulk').fill([
+        ['پرس سینه', '1', 'عادی', '—', '3', '12', '60'].join(String.fromCharCode(9)),
+        ['لت سیم‌کش', '1', 'عادی', '—', '3', '10', '60'].join(String.fromCharCode(9))
+      ].join(String.fromCharCode(10)));
+      await page.getByRole('button', { name: 'اعتبارسنجی و پیش‌نمایش' }).click();
+      await page.getByLabel('جلسه مقصد برای پرس سینه').selectOption('2');
+      await page.getByRole('button', { name: 'انتقال از پیش‌نمایش پرس سینه' }).click();
+      let trial = await page.evaluate(() => window.__trial);
+      assert.equal(trial.moves.find(move => move.name === 'پرس سینه').session, 2);
+      assert.equal(trial.moves.find(move => move.name === 'لت سیم‌کش').session, 1);
+      await page.getByRole('button', { name: 'حذف از پیش‌نمایش لت سیم‌کش' }).click();
+      trial = await page.evaluate(() => window.__trial);
+      assert.ok(trial.moves.some(move => move.name === 'پرس سینه'));
+      assert.ok(!trial.moves.some(move => move.name === 'لت سیم‌کش'));
+      assert.ok((await page.locator('#bulk').inputValue()).includes('پرس سینه'));
+      assert.ok(!(await page.locator('#bulk').inputValue()).includes('لت سیم‌کش'));
+    });
     await check('all ready-made templates use supported session counts and pass validation', async () => {
       const expected = { chest: 2, back: 2, legs: 2, shoulders: 2, four: 4, five: 5 };
       for (const [preset, sessions] of Object.entries(expected)) {
