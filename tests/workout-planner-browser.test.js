@@ -461,6 +461,31 @@ const assert = require('node:assert/strict');
       assert.ok(options.some(x => x.includes('آقایان حجم پیشرفته')));
       assert.ok(!options.some(x => x.includes('بانوان کاهش وزن متوسط')));
     });
+    await check('saved workout templates import without overwriting and export as JSON', async () => {
+      const payload = { format: 'fitness-seh-galeh-templates', version: 1, templates: {
+        'قالب انتقالی': { gender: 'women', count: '3', split: 'manual', bulk: 'اسکوات\t1\tعادی\t—\t3\t12\t60', goal: 'muscle', level: 'intermediate' }
+      }};
+      await page.locator('#customName').fill('قالب انتقالی');
+      await page.locator('#gender').selectOption('men');
+      await page.locator('#count').selectOption('4');
+      await page.locator('#saveTemplate').click();
+      await page.locator('#templateImportFile').setInputFiles({ name: 'templates.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify(payload)) });
+      const names = await page.locator('#savedTemplates option').allTextContents();
+      assert.ok(names.some(x => x.includes('قالب انتقالی (2)')), 'same-name import should preserve old template and add a unique name');
+      const downloadPromise = page.waitForEvent('download');
+      await page.locator('#exportTemplates').click();
+      const download = await downloadPromise;
+      assert.match(download.suggestedFilename(), /fitness-seh-galeh-templates\.json$/);
+      const stream = await download.createReadStream();
+      const chunks = [];
+      for await (const chunk of stream) chunks.push(chunk);
+      const exported = JSON.parse(Buffer.concat(chunks).toString('utf8'));
+      assert.equal(exported.format, 'fitness-seh-galeh-templates');
+      assert.ok(exported.templates['قالب انتقالی']);
+      assert.ok(exported.templates['قالب انتقالی (2)']);
+      assert.equal(exported.templates['قالب انتقالی (2)'].goal, 'muscle');
+      assert.equal(exported.templates['قالب انتقالی (2)'].level, 'intermediate');
+    });
     await check('women template selection updates explanatory hint', async () => {
       await page.locator('#gender').selectOption('women');
       assert.ok((await page.locator('#templateHint').innerText()).includes('قالب خانم‌ها'));
