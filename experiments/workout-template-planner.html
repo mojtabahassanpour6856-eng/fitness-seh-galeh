@@ -30,7 +30,7 @@
 <p class="muted">گروه عضلانی را انتخاب یا نام حرکت را جست‌وجو کن؛ با لمس حرکت، نام آن در فرم ثبت می‌شود و بعد می‌توانی جلسه، سیستم و ست‌ها را تنظیم کنی.</p>
 <div class="row"><div class="field"><label for="bankCategory">گروه عضلانی</label><select id="bankCategory"><option value="همه">همه حرکات</option><option>سینه</option><option>پشت</option><option>پا</option><option>سرشانه</option><option>جلو بازو</option><option>پشت بازو</option><option>شکم</option><option>باسن</option><option>ساق</option></select></div>
 <div class="field"><label for="bankSearch">جست‌وجوی حرکت</label><input id="bankSearch" placeholder="مثلاً اسکوات یا پرس سینه"></div></div>
-<div id="exerciseBank" class="row" style="margin-top:10px" aria-live="polite"></div><p id="bankStatus" class="muted" role="status"></p></div>
+<div id="exerciseBank" class="row" style="margin-top:10px" aria-live="polite"></div><div class="row" style="margin-top:10px"><button id="groupSelectedExercises" type="button">گروه‌بندی حرکات انتخاب‌شده</button><button id="clearSelectedExercises" type="button" class="secondary">پاک‌کردن انتخاب‌ها</button></div><p class="muted">برای ساخت گروه، کنار ۲ حرکت برای سوپرست، ۳ حرکت برای تری‌ست یا ۴ حرکت برای جاینت‌ست تیک بزن. جلسه و جزئیات از فرم افزودن سریع گرفته می‌شود.</p><p id="bankStatus" class="muted" role="status"></p></div>
 <div class="card" style="background:#fcfaf4;margin-top:10px">
 <h3 style="margin-top:0">افزودن سریع یک حرکت</h3>
 <p class="muted">حرکت را وارد کن و «افزودن به فهرست» را بزن؛ لازم نیست ستون‌ها را دستی تایپ کنی.</p>
@@ -121,10 +121,28 @@ function renderExerciseBank(){
  const category=$('bankCategory').value,query=$('bankSearch').value.trim().toLocaleLowerCase('fa');
  const entries=Object.entries(exerciseLibrary).filter(([cat])=>category==='همه'||cat===category).flatMap(([cat,names])=>names.filter(name=>name.toLocaleLowerCase('fa').includes(query)).map(name=>({cat,name})));
  if(!entries.length){const p=document.createElement('p');p.className='muted';p.textContent='حرکتی پیدا نشد؛ نام حرکت را می‌توانی دستی وارد کنی.';box.appendChild(p);return;}
- entries.forEach(item=>{const b=document.createElement('button');b.type='button';b.className='secondary';b.textContent=item.name;b.setAttribute('aria-label','انتخاب حرکت '+item.name);b.addEventListener('click',()=>{$('quickName').value=item.name;$('bankStatus').textContent='«'+item.name+'» انتخاب شد؛ جلسه و جزئیات را بررسی کن و افزودن به فهرست را بزن.';$('quickName').focus();});box.appendChild(b);});
+ entries.forEach(item=>{const wrap=document.createElement('label');wrap.style.display='inline-flex';wrap.style.alignItems='center';wrap.style.gap='6px';wrap.style.border='1px solid #e6dcc6';wrap.style.borderRadius='9px';wrap.style.padding='6px 8px';const check=document.createElement('input');check.type='checkbox';check.className='bankMoveCheck';check.value=item.name;check.setAttribute('aria-label','گروه‌بندی '+item.name);const b=document.createElement('button');b.type='button';b.className='secondary';b.textContent=item.name;b.setAttribute('aria-label','انتخاب حرکت '+item.name);b.addEventListener('click',()=>{$('quickName').value=item.name;$('bankStatus').textContent='«'+item.name+'» انتخاب شد؛ جلسه و جزئیات را بررسی کن و افزودن به فهرست را بزن.';$('quickName').focus();});wrap.append(check,b);box.appendChild(wrap);});
 }
 $('bankCategory').addEventListener('change',renderExerciseBank);
 $('bankSearch').addEventListener('input',renderExerciseBank);
+$('clearSelectedExercises').addEventListener('click',()=>{document.querySelectorAll('.bankMoveCheck').forEach(x=>x.checked=false);$('bankStatus').textContent='انتخاب‌ها پاک شدند.';});
+$('groupSelectedExercises').addEventListener('click',()=>{
+ const selected=Array.from(document.querySelectorAll('.bankMoveCheck:checked')).map(x=>x.value);
+ let system=$('quickSystem').value;
+ if(system==='عادی')system='سوپرست';
+ const minimum=system==='سوپرست'?2:system==='تری‌ست'?3:4;
+ if(selected.length!==minimum){$('bankStatus').textContent='برای '+system+' دقیقاً '+minimum+' حرکت انتخاب کن؛ اکنون '+selected.length+' حرکت انتخاب شده.';return;}
+ const session=Number($('quickSession').value),sets=$('quickSets').value,reps=$('quickReps').value,rest=$('quickRest').value;
+ if(session>n()){$('bankStatus').textContent='جلسه انتخاب‌شده از تعداد جلسات برنامه بیشتر است.';return;}
+ if(!/^\\d+$/.test(sets)||Number(sets)<1||!/^\\d+$/.test(reps)||Number(reps)<1||!/^\\d+$/.test(rest)){$('bankStatus').textContent='ست و تکرار باید عدد مثبت و استراحت باید صفر یا بیشتر باشد.';return;}
+ const letters='ABCDEFGHIJKLMNOPQRSTUVWXYZ';const label=letters[nextGroupNumber%letters.length]+(nextGroupNumber>=letters.length?Math.floor(nextGroupNumber/letters.length):'');nextGroupNumber++;
+ const lines=rawLines();
+ selected.forEach(name=>lines.push([name,session,system,label,sets,reps,rest].join('\\t')));
+ $('bulk').value=lines.join('\\n');$('quickSystem').value=system;$('quickGroup').value=label;$('quickSystem').dispatchEvent(new Event('change'));
+ document.querySelectorAll('.bankMoveCheck').forEach(x=>x.checked=false);
+ renderMoveManager();render();
+ $('bankStatus').textContent=selected.length+' حرکت به‌صورت '+system+' گروه «'+label+'» در جلسه '+session+' اضافه شد.';
+});
 renderExerciseBank();
 let editingLine=-1;
 function rawLines(){return $('bulk').value.split(/\r?\n/).filter(line=>line.trim());}
