@@ -24,6 +24,12 @@ const assert = require('node:assert/strict');
     await check('default sample passes validation', async () => {
       assert.match(await page.locator('#status').innerText(), /بررسی اولیه موفق بود/);
     });
+    await check('Ctrl+Enter validates and previews from the bulk movement editor', async () => {
+      await page.locator('#bulk').focus();
+      await page.keyboard.press('Control+Enter');
+      assert.match(await page.locator('#status').innerText(), /بررسی اولیه موفق بود/);
+      assert.ok((await page.locator('#sessions').innerText()).includes('پرس سینه دمبل'));
+    });
     await check('triset renders all three movements with plus separators', async () => {
       const texts = await page.locator('.session').allInnerTexts();
       assert.ok(texts.some(t => t.includes('قایقی + فیس‌پول + پول‌اور سیم‌کش')), 'Three-movement group was not rendered together');
