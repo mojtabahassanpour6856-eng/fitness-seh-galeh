@@ -249,7 +249,10 @@ function renderMoveManager(){
 function resetQuickEdit(){editingLine=-1;$('addQuickMove').textContent='افزودن به فهرست';}
 let nextGroupNumber=0;
 $('newQuickGroup').addEventListener('click',()=>{
- const letters='ABCDEFGHIJKLMNOPQRSTUVWXYZ';const label=letters[nextGroupNumber%letters.length]+(nextGroupNumber>=letters.length?Math.floor(nextGroupNumber/letters.length):'');nextGroupNumber++;
+ const letters='ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+ const usedGroups=new Set(rawLines().map(line=>{const parts=line.split('\t');return parts[2]!=='عادی'&&parts[3]&&parts[3]!=='—'?parts[3].trim().toLocaleUpperCase('en-US'):'';}).filter(Boolean));
+ let label='';
+ do{let value=nextGroupNumber++;label='';do{label=letters[value%letters.length]+label;value=Math.floor(value/letters.length)-1;}while(value>=0);}while(usedGroups.has(label));
  if($('quickSystem').value==='عادی')$('quickSystem').value='سوپرست';
  $('quickSystem').dispatchEvent(new Event('change'));
  $('quickGroup').value=label;
