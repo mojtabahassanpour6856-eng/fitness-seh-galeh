@@ -112,6 +112,7 @@ const assert = require('node:assert/strict');
       assert.equal(rows[2][5], '9');
       await page.locator('#deselectVisibleMoves').click();
       assert.equal(await page.locator('#selectedMoveCount').innerText(), 'انتخاب‌شده: 0');
+      await page.locator('#showAllManagedMoves').click(); // Restore shared test-page state for following tests.
     });
     await check('bulk edits update only selected movements and preserve their other details', async () => {
       await page.locator('#count').selectOption('2');
