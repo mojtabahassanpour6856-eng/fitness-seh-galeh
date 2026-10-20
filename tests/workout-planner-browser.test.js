@@ -235,6 +235,16 @@ const assert = require('node:assert/strict');
       assert.match(await page.locator('#status').innerText(), /بررسی اولیه موفق بود/);
       assert.ok((await page.locator('#sessions').innerText()).includes('پرس سینه گروهی + قفسه گروهی'));
     });
+    await check('quick group builder chooses an unused label instead of joining an existing group', async () => {
+      await page.locator('#bulk').fill([
+        ['حرکت گروه A', '1', 'سوپرست', 'A', '3', '10', '60'].join(String.fromCharCode(9)),
+        ['حرکت گروه B', '2', 'تری‌ست', 'B', '3', '10', '60'].join(String.fromCharCode(9))
+      ].join(String.fromCharCode(10)));
+      await page.locator('#quickSystem').selectOption('عادی');
+      await page.getByRole('button', { name: 'ساخت گروه جدید' }).click();
+      assert.equal(await page.locator('#quickSystem').inputValue(), 'سوپرست');
+      assert.equal(await page.locator('#quickGroup').inputValue(), 'C', 'new group should not reuse A or B from existing movements');
+    });
     await check('group selection is preserved across bank category filters', async () => {
       await page.locator('#bulk').fill('');
       await page.locator('#count').selectOption('2');
