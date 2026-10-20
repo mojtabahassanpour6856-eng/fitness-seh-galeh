@@ -44,11 +44,12 @@ const assert = require('node:assert/strict');
     });
     await check('custom template can be saved and loaded', async () => {
       await page.locator('#customName').fill('تست مرورگر');
+      const originalBulk = await page.locator('#bulk').inputValue();
       await page.getByRole('button', { name: 'ذخیره در همین مرورگر' }).click();
       assert.equal(await page.locator('#savedTemplates').inputValue(), 'تست مرورگر');
       await page.locator('#bulk').fill('حرکت موقت\t1\tعادی\t—\t3\t10\t60');
       await page.getByRole('button', { name: 'بارگذاری', exact: true }).click();
-      assert.ok((await page.locator('#bulk').inputValue()).includes('پرس سینه دمبل'));
+      assert.equal(await page.locator('#bulk').inputValue(), originalBulk, 'loaded template should restore exact saved content');
       await page.getByRole('button', { name: 'حذف', exact: true }).click();
       assert.equal(await page.locator('#savedTemplates option').count(), 1, 'deleted template should disappear');
     });
