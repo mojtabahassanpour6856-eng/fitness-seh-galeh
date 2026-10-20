@@ -4416,11 +4416,17 @@ window.toggleExerciseFavorite=async function(id,value){try{await sbWrite(`/train
     rows.forEach(x=>{const key=unitKey(x);if(!unitMap.has(key)){const u={key,rows:[]};unitMap.set(key,u);units.push(u);}unitMap.get(key).rows.push(x);});
     const unitIndex=units.findIndex(u=>u.rows.some(x=>same(x.id,id)));
     if(unitIndex<0)return;
-    const targetIndex=unitIndex+Number(dir);
-    if(targetIndex<0||targetIndex>=units.length)return;
-    const moved=units.splice(unitIndex,1)[0];
-    units.splice(targetIndex,0,moved);
-    const reordered=units.flatMap(u=>u.rows);
+    const selectedDay=String(units[unitIndex].rows[0].training_day||'').trim();
+    const dayUnits=units.map((u,index)=>({u,index})).filter(x=>String(x.u.rows[0].training_day||'').trim()===selectedDay);
+    const dayIndex=dayUnits.findIndex(x=>x.index===unitIndex);
+    const targetDayIndex=dayIndex+Number(dir);
+    if(targetDayIndex<0||targetDayIndex>=dayUnits.length)return;
+    const reorderedDay=dayUnits.map(x=>x.u);
+    const moved=reorderedDay.splice(dayIndex,1)[0];
+    reorderedDay.splice(targetDayIndex,0,moved);
+    let nextDayUnit=0;
+    const reorderedUnits=units.map(u=>String(u.rows[0].training_day||'').trim()===selectedDay?reorderedDay[nextDayUnit++]:u);
+    const reordered=reorderedUnits.flatMap(u=>u.rows);
     const before=rows.map(x=>({id:x.id,sort_order:x.sort_order}));
     try{
       for(let i=0;i<reordered.length;i++){
