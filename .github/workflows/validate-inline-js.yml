@@ -52,7 +52,15 @@ jobs:
             ['grouped movements use a plus separator', 'workout-group-plus'],
             ['grouped movement output retains repetitions', "x.reps||'—'"],
             ['grouped movement output retains sets', "x.sets??'—'"],
-            ['grouped movement output retains rest time', 'x.rest_seconds??0']
+            ['grouped movement output retains rest time', 'x.rest_seconds??0'],
+            ['bulk editor exposes a system selector per movement row', "sys.className='bulk-system'"],
+            ['bulk editor stores a group key for related movements', "group.className='bulk-group'"],
+            ['grouped systems require a group key', '!item.group_key'],
+            ['group validation is scoped to session, system, and group', "x.training_day+'|'+x.training_system+'|'+x.group_key"],
+            ['superset validation requires two movements', "sys==='superset'?2"],
+            ['triset and giant-set validation requires three movements', "sys==='triset'||sys==='giant'?3"],
+            ['bulk save preserves the selected training system', 'training_system:item.training_system'],
+            ['bulk save preserves the group key', 'group_key:item.group_key']
           ];
           const failed = checks.filter(([label, snippet]) => {
             const ok = html.includes(snippet);
