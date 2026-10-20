@@ -4385,7 +4385,11 @@ window.toggleExerciseFavorite=async function(id,value){try{await sbWrite(`/train
     const traineeId=currentTraineeId(),planId=currentWorkoutPlanId;
     const row=(workoutExercisesCache||[]).find(x=>same(x.id,id));
     if(!traineeId||!row||!same(workoutPlanOwnerId,traineeId)||!same(row.workout_plan_id,planId)){alert('حرکت متعلق به برنامه فعلی نیست؛ فهرست را دوباره بارگذاری کنید.');return;}
-    if(!confirm('این حرکت از برنامه حذف شود؟'))return;
+    const system=String(row.training_system||'normal'),groupKey=String(row.group_key||'');
+    const groupedSystem=['superset','triset','giant','giant_set','giant-set'].includes(system);
+    const groupMembers=groupedSystem&&groupKey?(workoutExercisesCache||[]).filter(x=>same(x.workout_plan_id,planId)&&String(x.training_system||'normal')===system&&String(x.group_key||'')===groupKey):[];
+    const warning=groupMembers.length>1?'این حرکت عضو گروه «'+groupKey+'» است. با حذف آن، گروه ناقص می‌شود و ممکن است دیگر به‌صورت یک گروه نمایش داده نشود. فقط در صورت اطمینان ادامه دهید.\n\n':'تأیید می‌کنید این حرکت از برنامه حذف شود؟\n';
+    if(!confirm(warning))return;
     try{await sbWrite(`/trainee_workout_exercises?id=eq.${encodeURIComponent(id)}&workout_plan_id=eq.${encodeURIComponent(planId)}`,'DELETE');if(same(currentTraineeId(),traineeId)&&same(currentWorkoutPlanId,planId))await window.loadWorkoutForClient();}
     catch(e){alert('حذف حرکت انجام نشد.\n'+(e.message||String(e)));}
   };
@@ -4407,7 +4411,14 @@ window.toggleExerciseFavorite=async function(id,value){try{await sbWrite(`/train
     if(!traineeId||!same(workoutPlanOwnerId,traineeId)){alert('ابتدا برنامه تمرینی شاگرد را بارگذاری کنید.');return;}
     const rows=[...(workoutExercisesCache||[])].filter(x=>same(x.workout_plan_id,planId)).sort((a,b)=>(+a.sort_order||0)-(+b.sort_order||0));
     const i=rows.findIndex(x=>same(x.id,id)),j=i+Number(dir);if(i<0||j<0||j>=rows.length)return;
-    const a=rows[i],b=rows[j],ao=a.sort_order,bo=b.sort_order;
+    const a=rows[i],b=rows[j];
+    const groupable=new Set(['superset','triset','giant','giant_set','giant-set']);
+    const isGrouped=x=>groupable.has(String(x.training_system||'normal'))&&String(x.group_key||'').trim()!=='';
+    if(isGrouped(a)||isGrouped(b)){
+      alert('برای اینکه سوپرست، تری‌ست یا جاینت‌ست از هم جدا نشود، جابه‌جایی تکی حرکت‌های گروهی فعلاً انجام نمی‌شود. ابتدا باید امکان جابه‌جایی کل گروه به‌صورت یک واحد اضافه شود.');
+      return;
+    }
+    const ao=a.sort_order,bo=b.sort_order;
     try{
       await sbWrite(`/trainee_workout_exercises?id=eq.${encodeURIComponent(a.id)}&workout_plan_id=eq.${encodeURIComponent(planId)}`,'PATCH',{sort_order:bo});
       try{await sbWrite(`/trainee_workout_exercises?id=eq.${encodeURIComponent(b.id)}&workout_plan_id=eq.${encodeURIComponent(planId)}`,'PATCH',{sort_order:ao});}
