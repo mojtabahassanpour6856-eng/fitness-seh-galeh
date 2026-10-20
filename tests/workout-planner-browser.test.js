@@ -503,6 +503,19 @@ const assert = require('node:assert/strict');
       assert.ok((await page.locator('#bulk').inputValue()).includes('پرس سینه'));
       assert.ok(!(await page.locator('#bulk').inputValue()).includes('لت سیم‌کش'));
     });
+    await check('deleting a repeated exercise name removes only the movement in the selected session', async () => {
+      await page.locator('#count').selectOption('2');
+      await page.locator('#split').selectOption('manual');
+      await page.locator('#bulk').fill([
+        ['پرس تکراری', '1', 'عادی', '—', '3', '12', '60'],
+        ['پرس تکراری', '2', 'عادی', '—', '4', '10', '75']
+      ].map(row => row.join(String.fromCharCode(9))).join(String.fromCharCode(10)));
+      await page.getByRole('button', { name: 'اعتبارسنجی و پیش‌نمایش' }).click();
+      await page.locator('#sessions .session').nth(1).getByRole('button', { name: 'حذف از پیش‌نمایش پرس تکراری' }).click();
+      const rows = (await page.locator('#bulk').inputValue()).split(String.fromCharCode(10)).map(line => line.split(String.fromCharCode(9)));
+      assert.equal(rows.length, 1, 'only the selected-session movement should be removed');
+      assert.deepEqual(rows[0], ['پرس تکراری', '1', 'عادی', '—', '3', '12', '60']);
+    });
     await check('moving a grouped movement from preview transfers only its full matching group', async () => {
       await page.locator('#count').selectOption('3');
       await page.locator('#split').selectOption('manual');
