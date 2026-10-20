@@ -2135,6 +2135,7 @@ async function bulkAddWorkoutExercises(){
  }finally{if(btn)btn.disabled=false;}
 }
 
+document.addEventListener('DOMContentLoaded',()=>{if($('bulkWorkoutRows')&&!$('bulkWorkoutRows').children.length)addBulkWorkoutRow();});
 async function addWorkoutExercise(){if(!currentClient){alert('اول شاگرد را انتخاب کنید.');return;}if(!currentWorkoutPlanId){await saveWorkoutPlan();if(!currentWorkoutPlanId)return;}const exerciseId=$('workoutExercise').value;if(!exerciseId){alert('حرکت را انتخاب کنید.');return;}const nextOrder=workoutExercisesCache.length?Math.max(...workoutExercisesCache.map(x=>Number(x.sort_order)||0))+1:1;try{await sbWrite('/trainee_workout_exercises','POST',{workout_plan_id:currentWorkoutPlanId,exercise_id:exerciseId,sets:Number($('workoutSets').value)||0,reps:$('workoutReps').value.trim()||null,rest_seconds:Number($('workoutRest').value)||0,notes:$('workoutExerciseNotes').value.trim()||null,sort_order:nextOrder,training_system:'normal',group_key:null});$('workoutExerciseNotes').value='';await loadWorkoutForClient();alert('حرکت به برنامه اضافه شد.');}catch(e){alert('افزودن حرکت انجام نشد.\n'+e.message);}}
 async function deleteWorkoutExercise(id){if(!confirm('این حرکت از برنامه حذف شود؟'))return;try{await sbWrite(`/trainee_workout_exercises?id=eq.${encodeURIComponent(id)}`,'DELETE',{});await loadWorkoutForClient();}catch(e){alert('حذف حرکت انجام نشد.\n'+e.message);}}
 
