@@ -78,6 +78,22 @@ const assert = require('node:assert/strict');
       await page.locator('[data-move-up="1"]').click();
       assert.ok((await page.locator('#bulk').inputValue()).startsWith('حرکت اول'), 'movement should move back up');
     });
+    await check('quick movement entry supports consecutive Enter-key additions', async () => {
+      await page.locator('#bulk').fill('');
+      await page.locator('#count').selectOption('2');
+      await page.locator('#quickSystem').selectOption('عادی');
+      await page.locator('#quickSession').selectOption('1');
+      await page.locator('#quickName').fill('پرس سینه سریع');
+      await page.locator('#quickName').press('Enter');
+      assert.equal(await page.locator('#quickName').inputValue(), '');
+      assert.equal(await page.evaluate(() => document.activeElement.id), 'quickName', 'focus should return to the name field');
+      await page.locator('#quickName').fill('لت سریع');
+      await page.locator('#quickName').press('Enter');
+      const rows = (await page.locator('#bulk').inputValue()).split(String.fromCharCode(10));
+      assert.equal(rows.length, 2, 'each Enter should add exactly one movement');
+      assert.equal(rows[0].split(String.fromCharCode(9))[0], 'پرس سینه سریع');
+      assert.equal(rows[1].split(String.fromCharCode(9))[0], 'لت سریع');
+    });
     await check('movements can be edited and deleted from the manager list', async () => {
       await page.locator('#bulk').fill('');
       await page.locator('#count').selectOption('3');
