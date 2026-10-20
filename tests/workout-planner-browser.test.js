@@ -35,7 +35,7 @@ const assert = require('node:assert/strict');
       await page.locator('#quickReps').fill('10');
       await page.locator('#quickRest').fill('75');
       await page.getByRole('button', { name: 'افزودن به فهرست' }).click();
-      assert.match(await page.locator('#bulk').inputValue(), /^پرس سینه آزمایشی\\t2\\tعادی\\t—\\t4\\t10\\t75$/);
+      assert.equal(await page.locator('#bulk').inputValue(), ['پرس سینه آزمایشی', '2', 'عادی', '—', '4', '10', '75'].join('\t'));
       await page.getByRole('button', { name: 'اعتبارسنجی و پیش‌نمایش' }).click();
       assert.match(await page.locator('#status').innerText(), /بررسی اولیه موفق بود/);
       assert.ok((await page.locator('#sessions').innerText()).includes('پرس سینه آزمایشی'));
