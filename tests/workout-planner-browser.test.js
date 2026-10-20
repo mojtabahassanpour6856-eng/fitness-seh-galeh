@@ -594,6 +594,20 @@ const assert = require('node:assert/strict');
       assert.equal(await page.locator('#workoutVersionSelect option').count(), 1, 'confirmed deletion should remove only selected version');
       assert.match(await page.locator('#workoutVersionStatus').innerText(), /حذف شد/);
     });
+    await check('workout version history can be exported and imported without overwriting existing versions', async () => {
+      const downloadPromise = page.waitForEvent('download');
+      await page.locator('#exportWorkoutVersions').click();
+      const download = await downloadPromise;
+      assert.equal(download.suggestedFilename(), 'fitness-seh-galeh-workout-versions.json');
+      const payload = { format: 'fitness-seh-galeh-workout-versions', version: 1, versions: [{ id: 'external-1', name: 'نسخه وارداتی', createdAt: Date.now(), gender: 'men', sessions: 2, moves: [{ name: 'پرس پا', session: 1, system: 'عادی', group: '—', sets: 3, reps: 12, rest: 60 }] }] };
+      await page.locator('#workoutVersionsFile').setInputFiles({ name: 'versions.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify(payload), 'utf8') });
+      assert.match(await page.locator('#workoutVersionStatus').innerText(), /1 نسخه وارد شد/);
+      assert.equal(await page.locator('#workoutVersionSelect option').count(), 2, 'import should preserve existing versions and add the imported one');
+      assert.ok((await page.locator('#workoutVersionSelect').innerText()).includes('نسخه وارداتی'));
+      await page.locator('#workoutVersionsFile').setInputFiles({ name: 'invalid.json', mimeType: 'application/json', buffer: Buffer.from('{"bad":true}', 'utf8') });
+      assert.match(await page.locator('#workoutVersionStatus').innerText(), /ساختار فایل نسخه‌ها معتبر نیست/);
+      assert.equal(await page.locator('#workoutVersionSelect option').count(), 2, 'invalid import should not change saved versions');
+    });
     await check('women template selection updates explanatory hint', async () => {
       await page.locator('#gender').selectOption('women');
       assert.ok((await page.locator('#templateHint').innerText()).includes('قالب خانم‌ها'));
