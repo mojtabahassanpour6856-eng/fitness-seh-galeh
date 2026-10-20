@@ -39,6 +39,7 @@
 </div>
 <div class="row" style="margin-top:8px"><button id="addQuickMove" type="button">افزودن به فهرست</button><button id="clearQuickForm" type="button" class="secondary">پاک‌کردن نام و گروه</button></div>
 <div id="quickStatus" class="status" role="status"></div>
+<div id="moveManager" style="margin-top:12px" aria-label="مدیریت حرکات"></div>
 </div>
 <div class="row" style="margin-top:10px"><button id="preview" type="button">اعتبارسنجی و پیش‌نمایش</button><button id="example" type="button" class="secondary">بازگردانی نمونه</button><button id="export" type="button" class="secondary">دانلود داده‌های آزمایشی JSON</button></div><div id="status" class="status" role="status"></div></section>
 <section class="card"><h2>۳) قالب‌های آماده و ذخیره قالب شخصی</h2><p class="muted">این قابلیت آزمایشی است و با اپ اصلی یا پایگاه داده ارتباط ندارد.</p><div class="row"><div class="field"><label for="preset">قالب آماده</label><select id="preset"><option value="chest">سینه + پشت بازو</option><option value="back">پشت + جلو بازو</option><option value="legs">پا</option><option value="shoulders">سرشانه + شکم</option><option value="four">تقسیم چهارروزه</option><option value="five">تقسیم پنج‌روزه</option></select></div><button id="applyPreset" type="button">بارگذاری قالب آماده</button></div><hr><div class="row"><div class="field"><label for="customName">نام قالب شخصی</label><input id="customName" placeholder="مثلاً برنامه حجم ۴ روزه"></div><button id="saveTemplate" type="button">ذخیره در همین مرورگر</button></div><div class="row"><div class="field"><label for="savedTemplates">قالب‌های ذخیره‌شده</label><select id="savedTemplates"><option value="">— انتخاب قالب —</option></select></div><button id="loadTemplate" type="button" class="secondary">بارگذاری</button><button id="deleteTemplate" type="button" class="danger">حذف</button></div><div id="templateStatus" class="status" role="status"></div></section>
@@ -97,6 +98,28 @@ $('quickSystem').addEventListener('change',()=>{
  if(normal)$('quickGroup').value='—';
  else if(!$('quickGroup').value||$('quickGroup').value==='—')$('quickGroup').value='A';
 });
+let editingLine=-1;
+function rawLines(){return $('bulk').value.split(/\r?\n/).filter(line=>line.trim());}
+function renderMoveManager(){
+ const box=$('moveManager');box.innerHTML='';
+ const lines=rawLines();
+ const title=document.createElement('h4');title.textContent='حرکات واردشده ('+lines.length+')';box.appendChild(title);
+ if(!lines.length){const p=document.createElement('p');p.className='muted';p.textContent='هنوز حرکتی وارد نشده است.';box.appendChild(p);return;}
+ lines.forEach((line,index)=>{
+  const parts=line.split('\t').map(v=>v.trim());
+  const row=document.createElement('div');row.className='move';row.style.display='flex';row.style.flexWrap='wrap';row.style.alignItems='center';row.style.justifyContent='space-between';row.style.gap='8px';
+  const label=document.createElement('span');label.textContent=(index+1)+'. '+(parts[0]||'حرکت بدون نام')+' · جلسه '+(parts[1]||'۱')+' · '+(parts[2]||'عادی');row.appendChild(label);
+  const actions=document.createElement('div');actions.style.display='flex';actions.style.gap='6px';
+  const edit=document.createElement('button');edit.type='button';edit.className='secondary';edit.textContent='ویرایش';edit.addEventListener('click',()=>{
+   $('quickName').value=parts[0]||'';$('quickSession').value=parts[1]||'1';$('quickSystem').value=parts[2]||'عادی';$('quickGroup').value=parts[3]||'—';$('quickSets').value=parts[4]||'3';$('quickReps').value=parts[5]||'12';$('quickRest').value=parts[6]||'60';
+   $('quickSystem').dispatchEvent(new Event('change'));editingLine=index;$('addQuickMove').textContent='ذخیره ویرایش';$('quickStatus').textContent='در حال ویرایش: '+(parts[0]||'حرکت');$('quickName').focus();
+  });actions.appendChild(edit);
+  const del=document.createElement('button');del.type='button';del.className='danger';del.textContent='حذف';del.addEventListener('click',()=>{
+   const current=rawLines();current.splice(index,1);$('bulk').value=current.join('\n');if(editingLine===index)resetQuickEdit();renderMoveManager();render();$('quickStatus').textContent='حرکت حذف شد.';
+  });actions.appendChild(del);row.appendChild(actions);box.appendChild(row);
+ });
+}
+function resetQuickEdit(){editingLine=-1;$('addQuickMove').textContent='افزودن به فهرست';}
 $('addQuickMove').addEventListener('click',()=>{
  const name=$('quickName').value.trim(),session=Number($('quickSession').value);
  const system=$('quickSystem').value,group=system==='عادی'?'—':$('quickGroup').value.trim();
@@ -106,14 +129,14 @@ $('addQuickMove').addEventListener('click',()=>{
  if(system!=='عادی'&&!group){$('quickStatus').textContent='برای سوپرست، تری‌ست یا جاینت‌ست یک نام گروه وارد کن.';return;}
  if(!/^\d+$/.test(sets)||Number(sets)<1||!/^\d+$/.test(reps)||Number(reps)<1||!/^\d+$/.test(rest)){ $('quickStatus').textContent='ست و تکرار باید عدد مثبت و استراحت باید صفر یا بیشتر باشد.';return;}
  const row=[name,session,system,group,sets,reps,rest].join('\t');
- $('bulk').value=$('bulk').value.trim()?$('bulk').value.trimEnd()+'\n'+row:row;
- $('quickStatus').textContent='حرکت به فهرست اضافه شد؛ برای بررسی گروه‌ها پیش‌نمایش را بزن.';
- $('quickName').value='';
- $('quickName').focus();
+ const lines=rawLines();
+ if(editingLine>=0&&editingLine<lines.length){lines[editingLine]=row;$('bulk').value=lines.join('\n');resetQuickEdit();$('quickStatus').textContent='ویرایش حرکت ذخیره شد.';}
+ else{$('bulk').value=$('bulk').value.trim()?$('bulk').value.trimEnd()+'\n'+row:row;$('quickStatus').textContent='حرکت به فهرست اضافه شد.';}
+ $('quickName').value='';$('quickName').focus();renderMoveManager();render();
 });
-$('clearQuickForm').addEventListener('click',()=>{$('quickName').value='';$('quickGroup').value='A';$('quickStatus').textContent='نام حرکت پاک شد.';});
-updateQuickSessions();
-$('build').addEventListener('click',()=>{render();});$('preview').addEventListener('click',render);$('gender').addEventListener('change',hint);$('count').addEventListener('change',()=>{hint();render();});$('split').addEventListener('change',render);$('example').addEventListener('click',()=>{$('bulk').value=example;render();});
+$('clearQuickForm').addEventListener('click',()=>{resetQuickEdit();$('quickName').value='';$('quickGroup').value='A';$('quickStatus').textContent='فرم پاک شد.';});
+updateQuickSessions();renderMoveManager();
+$('build').addEventListener('click',()=>{render();renderMoveManager();});$('preview').addEventListener('click',render);$('gender').addEventListener('change',hint);$('count').addEventListener('change',()=>{hint();render();});$('split').addEventListener('change',render);$('example').addEventListener('click',()=>{$('bulk').value=example;resetQuickEdit();renderMoveManager();render();});
 $('export').addEventListener('click',()=>{render();const data=window.__trial;if(data.errors.length){$('status').textContent+='\nابتدا خطاها را اصلاح کن تا خروجی گرفته شود.';return;}const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='fitness-seh-galeh-workout-trial.json';a.click();URL.revokeObjectURL(a.href);});
 hint();
 })();
