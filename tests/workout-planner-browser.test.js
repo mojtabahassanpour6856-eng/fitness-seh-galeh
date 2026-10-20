@@ -25,6 +25,21 @@ const assert = require('node:assert/strict');
       assert.equal(await page.locator('#count').inputValue(), '2');
       assert.ok((await page.locator('#sessions').innerText()).includes('پرس سینه دمبل + قفسه سیم‌کش'));
     });
+    await check('quick entry appends a valid movement without manual tab formatting', async () => {
+      await page.locator('#bulk').fill('');
+      await page.locator('#count').selectOption('3');
+      await page.locator('#quickSession').selectOption('2');
+      await page.locator('#quickName').fill('پرس سینه آزمایشی');
+      await page.locator('#quickSystem').selectOption('عادی');
+      await page.locator('#quickSets').fill('4');
+      await page.locator('#quickReps').fill('10');
+      await page.locator('#quickRest').fill('75');
+      await page.getByRole('button', { name: 'افزودن به فهرست' }).click();
+      assert.match(await page.locator('#bulk').inputValue(), /^پرس سینه آزمایشی\\t2\\tعادی\\t—\\t4\\t10\\t75$/);
+      await page.getByRole('button', { name: 'اعتبارسنجی و پیش‌نمایش' }).click();
+      assert.match(await page.locator('#status').innerText(), /بررسی اولیه موفق بود/);
+      assert.ok((await page.locator('#sessions').innerText()).includes('پرس سینه آزمایشی'));
+    });
     await check('all ready-made templates use supported session counts and pass validation', async () => {
       const expected = { chest: 2, back: 2, legs: 2, shoulders: 2, four: 4, five: 5 };
       for (const [preset, sessions] of Object.entries(expected)) {
