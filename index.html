@@ -821,7 +821,7 @@ body.locked{overflow:hidden!important}
 </div>
 <div id="coachWorkoutTemplatesStatus" class="muted" aria-live="polite" style="margin-top:8px"></div>
 </div>
-<div class="card" id="bulkWorkoutEditorCard">
+<div class="card" id="bulkWorkoutEditorCard" style="display:none">
 <h2>⚡ ثبت چند حرکت باهم</h2>
 <p class="muted">حرکت‌ها را در یک جدول وارد کنید و همه را یک‌جا به برنامه شاگرد اضافه کنید. این بخش فقط پنل مربی را تغییر می‌دهد.</p>
 <div id="bulkWorkoutRows" class="bulk-workout-rows"></div>
@@ -12274,8 +12274,9 @@ body.workout-output.workout-compact{
   }
  };
  function syncPanel(){
-  const card=el('coachWorkoutTemplatesCard');
+  const card=el('coachWorkoutTemplatesCard'),bulk=el('bulkWorkoutEditorCard');
   if(card)card.style.display=coachReady()?'':'none';
+  if(bulk)bulk.style.display=coachReady()?'':'none';
   if(coachReady()&&el('savedWorkoutTemplates')&&el('savedWorkoutTemplates').options.length<=1)window.loadSavedWorkoutTemplates();
  }
  document.addEventListener('DOMContentLoaded',function(){
