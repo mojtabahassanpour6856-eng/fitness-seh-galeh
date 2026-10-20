@@ -49,6 +49,19 @@ const assert = require('node:assert/strict');
       assert.match(await page.locator('#status').innerText(), /بررسی اولیه موفق بود/);
       assert.ok((await page.locator('#sessions').innerText()).includes('پرس سینه آزمایشی'));
     });
+    await check('movements can be reordered and preview updates to match', async () => {
+      await page.locator('#bulk').fill('حرکت اول\t1\tعادی\t—\t3\t10\t60\nحرکت دوم\t1\tعادی\t—\t3\t12\t60');
+      await page.locator('#count').selectOption('2');
+      await page.getByRole('button', { name: 'اعتبارسنجی و پیش‌نمایش' }).click();
+      assert.ok((await page.locator('#sessions').innerText()).indexOf('حرکت اول') < (await page.locator('#sessions').innerText()).indexOf('حرکت دوم'));
+      await page.locator('[data-move-down="0"]').click();
+      const rows = (await page.locator('#bulk').inputValue()).split('\n');
+      assert.ok(rows[0].startsWith('حرکت دوم'), 'second movement should move to the first position');
+      const preview = await page.locator('#sessions').innerText();
+      assert.ok(preview.indexOf('حرکت دوم') < preview.indexOf('حرکت اول'), 'preview order should follow the movement list');
+      await page.locator('[data-move-up="1"]').click();
+      assert.ok((await page.locator('#bulk').inputValue()).startsWith('حرکت اول'), 'movement should move back up');
+    });
     await check('movements can be edited and deleted from the manager list', async () => {
       await page.locator('#bulk').fill('');
       await page.locator('#count').selectOption('3');
