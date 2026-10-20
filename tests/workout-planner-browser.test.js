@@ -101,6 +101,34 @@ const assert = require('node:assert/strict');
       assert.ok(summary.includes('تعداد حرکات') && summary.includes('2'), 'summary should report the total movement count');
       assert.ok(summary.includes('جلسه 2: 2 حرکت'), 'summary should report the session movement count');
     });
+    await check('a complete session can be copied into the next session with movement details preserved', async () => {
+      await page.locator('#count').selectOption('2');
+      await page.locator('#split').selectOption('manual');
+      await page.locator('#bulk').fill([
+        ['پرس جلسه یک', '1', 'عادی', '—', '4', '10', '75'].join(String.fromCharCode(9)),
+        ['قفسه جلسه یک', '1', 'سوپرست', 'A', '3', '12', '60'].join(String.fromCharCode(9)),
+        ['حرکت جلسه دو', '2', 'عادی', '—', '3', '15', '45'].join(String.fromCharCode(9))
+      ].join(String.fromCharCode(10)));
+      await page.getByRole('button', { name: 'اعتبارسنجی و پیش‌نمایش' }).click();
+      await page.getByRole('button', { name: 'کپی جلسه 1' }).click();
+      assert.equal(await page.locator('#count').inputValue(), '3');
+      const rows = (await page.locator('#bulk').inputValue()).split(String.fromCharCode(10)).map(line => line.split(String.fromCharCode(9)));
+      const copied = rows.filter(row => row[1] === '3');
+      assert.equal(copied.length, 2, 'both movements from session one should be copied');
+      assert.deepEqual(copied[0], ['پرس جلسه یک', '3', 'عادی', '—', '4', '10', '75']);
+      assert.deepEqual(copied[1], ['قفسه جلسه یک', '3', 'سوپرست', 'A', '3', '12', '60']);
+      assert.ok((await page.locator('#sessions').innerText()).includes('جلسه 3'));
+      assert.match(await page.locator('#quickStatus').innerText(), /به‌صورت جلسه 3 کپی شد/);
+    });
+    await check('copy session is blocked at the six-session limit', async () => {
+      await page.locator('#count').selectOption('6');
+      await page.locator('#bulk').fill('حرکت نمونه\t1\tعادی\t—\t3\t10\t60');
+      await page.getByRole('button', { name: 'اعتبارسنجی و پیش‌نمایش' }).click();
+      await page.getByRole('button', { name: 'کپی جلسه 1' }).click();
+      assert.equal(await page.locator('#count').inputValue(), '6');
+      assert.match(await page.locator('#quickStatus').innerText(), /سقف ۶/);
+      assert.equal((await page.locator('#bulk').inputValue()).split(String.fromCharCode(10)).length, 1);
+    });
     await check('quick group builder creates a named superset and previews its movements together', async () => {
       await page.locator('#bulk').fill('');
       await page.locator('#count').selectOption('3');
