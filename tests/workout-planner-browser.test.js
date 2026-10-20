@@ -11,6 +11,15 @@ const assert = require('node:assert/strict');
   }
   try {
     await page.goto('http://127.0.0.1:4173/experiments/workout-template-planner.html');
+    await check('guided workflow navigates to settings, movement entry, and full preview', async () => {
+      await page.locator('[data-step="planSetup"]').click();
+      assert.equal(await page.locator('#planSetup').count(), 1);
+      await page.locator('[data-step="planMoves"]').click();
+      assert.equal(await page.locator('#planMoves').count(), 1);
+      await page.locator('[data-step="planPreview"]').click();
+      assert.ok((await page.locator('#workflowStatus').innerText()).includes('پیش‌نمایش کل برنامه'));
+      assert.ok((await page.locator('#sessions').innerText()).includes('پرس سینه دمبل'), 'full workout preview should be rendered');
+    });
     await page.getByRole('button', { name: 'اعتبارسنجی و پیش‌نمایش' }).click();
     await check('default sample passes validation', async () => {
       assert.match(await page.locator('#status').innerText(), /بررسی اولیه موفق بود/);
