@@ -291,8 +291,8 @@ const assert = require('node:assert/strict');
         ['اسکوات', '2', 'عادی', '—', '4', '8', '90'].join(String.fromCharCode(9))
       ].join(String.fromCharCode(10)));
       await page.getByRole('button', { name: 'اعتبارسنجی و پیش‌نمایش' }).click();
-      await page.getByLabel('انتخاب حرکت پرس سینه').check();
-      await page.getByLabel('انتخاب حرکت لت سیم‌کش').check();
+      await page.locator('input[type="checkbox"][aria-label="انتخاب حرکت پرس سینه"]').check();
+      await page.locator('input[type="checkbox"][aria-label="انتخاب حرکت لت سیم‌کش"]').check();
       await page.locator('#bulkEditSets').fill('4');
       await page.locator('#bulkEditReps').fill('10');
       await page.locator('#bulkEditRest').fill('45');
