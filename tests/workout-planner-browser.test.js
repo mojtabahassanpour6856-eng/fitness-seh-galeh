@@ -842,6 +842,44 @@ const assert = require('node:assert/strict');
       await page.waitForFunction(() => document.getElementById('previousWorkoutStatus').textContent.includes('فایل بارگذاری نشد'), { timeout: 3000 });
       assert.equal(await page.locator('#bulk').inputValue(), before);
     });
+    await check('end-to-end three-session workout can be built, batch-edited, previewed, and sent to print', async () => {
+      await page.locator('#bulk').fill('');
+      await page.locator('#count').selectOption('3');
+      await page.locator('#split').selectOption('manual');
+      const moves = [
+        { name: 'پرس سینه مرحله نهایی', session: '1' },
+        { name: 'لت سیم‌کش مرحله نهایی', session: '2' },
+        { name: 'اسکوات مرحله نهایی', session: '3' }
+      ];
+      for (const move of moves) {
+        await page.locator('#quickSession').selectOption(move.session);
+        await page.locator('#quickSystem').selectOption('عادی');
+        await page.locator('#quickName').fill(move.name);
+        await page.locator('#quickName').press('Enter');
+      }
+      let rows = (await page.locator('#bulk').inputValue()).split(String.fromCharCode(10)).map(line => line.split(String.fromCharCode(9)));
+      assert.equal(rows.length, 3, 'all three movements should be entered');
+      assert.deepEqual(rows.map(row => row[1]), ['1', '2', '3'], 'each movement should be assigned to its intended session');
+      await page.getByRole('checkbox', { name: 'انتخاب حرکت پرس سینه مرحله نهایی' }).check();
+      await page.getByRole('checkbox', { name: 'انتخاب حرکت لت سیم‌کش مرحله نهایی' }).check();
+      await page.locator('#bulkEditSets').fill('4');
+      await page.locator('#bulkEditReps').fill('10');
+      await page.locator('#bulkEditRest').fill('75');
+      await page.locator('#applyBulkMovementEdits').click();
+      rows = (await page.locator('#bulk').inputValue()).split(String.fromCharCode(10)).map(line => line.split(String.fromCharCode(9)));
+      assert.deepEqual(rows[0].slice(4, 7), ['4', '10', '75']);
+      assert.deepEqual(rows[1].slice(4, 7), ['4', '10', '75']);
+      assert.deepEqual(rows[2].slice(4, 7), ['3', '12', '60'], 'unselected movement details should be preserved');
+      await page.locator('#preview').click();
+      const preview = await page.locator('#sessions').innerText();
+      for (const move of moves) assert.ok(preview.includes(move.name), move.name + ' should appear in the full preview');
+      assert.equal(await page.locator('#sessions .session').count(), 3, 'all three sessions should be rendered');
+      assert.match(await page.locator('#programSummary').innerText(), /3/);
+      await page.evaluate(() => { window.__printCalled = 0; window.print = () => { window.__printCalled += 1; }; });
+      await page.locator('#printWorkoutButton').click();
+      assert.equal(await page.evaluate(() => window.__printCalled), 1, 'the completed workout should reach the print action');
+      assert.ok((await page.locator('#sessions').innerText()).includes('اسکوات مرحله نهایی'), 'the final session must remain present for printing');
+    });
     await check('coach print action opens print dialog and print stylesheet isolates workout preview', async () => {
       const printCss = await page.locator('style').first().innerText();
       assert.match(printCss, /@media print/);
