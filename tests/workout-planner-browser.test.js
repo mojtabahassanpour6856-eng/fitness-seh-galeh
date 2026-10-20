@@ -238,7 +238,7 @@ const assert = require('node:assert/strict');
       await page.getByRole('checkbox', { name: 'انتخاب حرکت لت سیم‌کش' }).check();
       await page.locator('#bulkTargetSession').selectOption('3');
       await page.getByRole('button', { name: 'انتقال انتخاب‌شده‌ها' }).click();
-      const rows = (await page.locator('#bulk').inputValue()).split(/\\r?\\n/).map(line => line.split(String.fromCharCode(9)));
+      const rows = (await page.locator('#bulk').inputValue()).split(/\r?\n/).map(line => line.split(String.fromCharCode(9)));
       assert.equal(rows.find(row => row[0] === 'پرس سینه')[1], '3');
       assert.equal(rows.find(row => row[0] === 'لت سیم‌کش')[1], '3');
       assert.equal(rows.find(row => row[0] === 'اسکوات')[1], '2', 'unselected movement must remain in its original session');
