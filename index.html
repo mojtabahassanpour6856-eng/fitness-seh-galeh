@@ -6363,7 +6363,7 @@ else loadCoachExerciseListsWhenReady();
         if(last&&last.key===key)last.rows.push(x);else groups.push({key,rows:[x]});
       });
       const cards=groups.map(entry=>{
-        const group=entry.rows,first=group[0],sys=String(first.training_system||'normal'),expected=sys==='superset'?2:((sys==='triset'||sys==='giant')?3:0),grouped=!!first.group_key&&(sys==='giant'?group.length>=3:(expected>0&&group.length===expected));
+        const group=entry.rows,first=group[0],sys=String(first.training_system||'normal'),isGiant=sys==='giant'||sys==='giant_set'||sys==='giant-set',expected=sys==='superset'?2:((sys==='triset'||isGiant)?3:0),grouped=!!first.group_key&&(isGiant?group.length>=3:(expected>0&&group.length===expected));
         if(grouped){
           const namesLine=group.map((x,i)=>(i?'<span class="workout-group-plus" aria-label="به‌علاوه"> + </span>':'')+'<strong>'+esc(exerciseName(x,names))+'</strong>').join('');
           const allDone=group.every(x=>x.is_completed===true);
