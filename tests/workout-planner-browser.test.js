@@ -419,6 +419,28 @@ const assert = require('node:assert/strict');
         assert.match(await page.locator('#quickStatus').innerText(), /اعضای گروه تمرینی هم همراه آن منتقل شدند/);
       }
     });
+    await check('group transfer stays within the same source session and system', async () => {
+      await page.locator('#count').selectOption('3');
+      await page.locator('#split').selectOption('manual');
+      const rows = [
+        ['سوپرست اصلی الف', '1', 'سوپرست', 'A', '3', '12', '60'],
+        ['سوپرست اصلی ب', '1', 'سوپرست', 'A', '4', '10', '75'],
+        ['سوپرست جلسه دیگر', '2', 'سوپرست', 'A', '2', '15', '45'],
+        ['تری‌ست با همان نام', '1', 'تری‌ست', 'A', '3', '12', '60'],
+        ['حرکت عادی', '1', 'عادی', '—', '2', '15', '45']
+      ];
+      await page.locator('#bulk').fill(rows.map(row => row.join(String.fromCharCode(9))).join(String.fromCharCode(10)));
+      await page.getByRole('checkbox', { name: 'انتخاب حرکت سوپرست اصلی الف' }).check();
+      await page.locator('#bulkTargetSession').selectOption('3');
+      await page.locator('#moveSelectedToSession').click();
+      const movedRows = (await page.locator('#bulk').inputValue()).split(String.fromCharCode(10)).map(line => line.split(String.fromCharCode(9)));
+      assert.equal(movedRows[0][1], '3');
+      assert.equal(movedRows[1][1], '3', 'same-session members of the selected superset should move together');
+      assert.equal(movedRows[2][1], '2', 'same group label in another session must remain there');
+      assert.equal(movedRows[3][1], '1', 'same group label but a different system must not be included');
+      assert.equal(movedRows[4][1], '1', 'normal movement must remain in its original session');
+      assert.match(await page.locator('#quickStatus').innerText(), /2 حرکت به جلسه 3 منتقل شد/);
+    });
     await check('movement can be edited directly from the full workout preview', async () => {
       await page.locator('#count').selectOption('2');
       await page.locator('#split').selectOption('manual');
