@@ -282,6 +282,30 @@ const assert = require('node:assert/strict');
       assert.ok((await page.locator('#bulk').inputValue()).includes('پرس سینه'));
       assert.ok(!(await page.locator('#bulk').inputValue()).includes('لت سیم‌کش'));
     });
+    await check('selected movements can have sets reps and rest edited in bulk', async () => {
+      await page.locator('#count').selectOption('2');
+      await page.locator('#split').selectOption('manual');
+      await page.locator('#bulk').fill([
+        ['پرس سینه', '1', 'عادی', '—', '3', '12', '60'].join(String.fromCharCode(9)),
+        ['لت سیم‌کش', '1', 'عادی', '—', '3', '10', '60'].join(String.fromCharCode(9)),
+        ['اسکوات', '2', 'عادی', '—', '4', '8', '90'].join(String.fromCharCode(9))
+      ].join(String.fromCharCode(10)));
+      await page.getByRole('button', { name: 'اعتبارسنجی و پیش‌نمایش' }).click();
+      await page.getByLabel('انتخاب حرکت پرس سینه').check();
+      await page.getByLabel('انتخاب حرکت لت سیم‌کش').check();
+      await page.locator('#bulkEditSets').fill('4');
+      await page.locator('#bulkEditReps').fill('10');
+      await page.locator('#bulkEditRest').fill('45');
+      await page.locator('#applyBulkMovementEdits').click();
+      const rows = (await page.locator('#bulk').inputValue()).split(String.fromCharCode(10)).map(line => line.split(String.fromCharCode(9)));
+      const chest = rows.find(row => row[0] === 'پرس سینه');
+      const lat = rows.find(row => row[0] === 'لت سیم‌کش');
+      const squat = rows.find(row => row[0] === 'اسکوات');
+      assert.deepEqual(chest.slice(4, 7), ['4', '10', '45']);
+      assert.deepEqual(lat.slice(4, 7), ['4', '10', '45']);
+      assert.deepEqual(squat.slice(4, 7), ['4', '8', '90']);
+      assert.ok((await page.locator('#quickStatus').innerText()).includes('2 حرکت'));
+    });
     await check('all ready-made templates use supported session counts and pass validation', async () => {
       const expected = { chest: 2, back: 2, legs: 2, shoulders: 2, four: 4, five: 5 };
       for (const [preset, sessions] of Object.entries(expected)) {
