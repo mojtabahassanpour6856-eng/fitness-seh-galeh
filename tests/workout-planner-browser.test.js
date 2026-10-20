@@ -362,6 +362,42 @@ const assert = require('node:assert/strict');
       }
       assert.match(await page.locator('#bankStatus').innerText(),/2 حرکت به جلسه 2 اضافه شد/);
     });
+    await check('bank bulk add rejects invalid settings without changing the workout', async () => {
+      await page.locator('#bulk').fill([
+        ['حرکت موجود', '1', 'عادی', '—', '3', '12', '60'].join(String.fromCharCode(9))
+      ].join(String.fromCharCode(10)));
+      await page.locator('#bankCategory').selectOption('سینه');
+      await page.locator('#bankSearch').fill('پرس سینه');
+      await page.locator('input.bankAddMoveCheck[aria-label="افزودن گروهی پرس سینه هالتر"]').check();
+      await page.locator('#bankBulkSession').selectOption('2');
+      await page.locator('#quickSets').fill('0');
+      const before = await page.locator('#bulk').inputValue();
+      await page.locator('#addSelectedBankExercises').click();
+      assert.equal(await page.locator('#bulk').inputValue(), before, 'invalid sets must not mutate the workout');
+      assert.match(await page.locator('#bankStatus').innerText(), /ست و تکرار باید عدد مثبت/);
+      await page.locator('#quickSets').fill('3');
+      await page.locator('#clearSelectedExercises').click();
+    });
+    await check('bank bulk add avoids duplicates in the same session but allows the same movement in another session', async () => {
+      await page.locator('#count').selectOption('2');
+      await page.locator('#bulk').fill([
+        ['پرس سینه هالتر', '1', 'عادی', '—', '3', '12', '60'].join(String.fromCharCode(9))
+      ].join(String.fromCharCode(10)));
+      await page.locator('#bankCategory').selectOption('سینه');
+      await page.locator('#bankSearch').fill('پرس سینه هالتر');
+      await page.locator('input.bankAddMoveCheck[aria-label="افزودن گروهی پرس سینه هالتر"]').check();
+      await page.locator('#bankBulkSession').selectOption('1');
+      await page.locator('#addSelectedBankExercises').click();
+      let rows = (await page.locator('#bulk').inputValue()).split(String.fromCharCode(10));
+      assert.equal(rows.length, 1, 'same movement and same session should not be duplicated');
+      assert.match(await page.locator('#bankStatus').innerText(), /از قبل در همین جلسه وجود داشتند/);
+      await page.locator('input.bankAddMoveCheck[aria-label="افزودن گروهی پرس سینه هالتر"]').check();
+      await page.locator('#bankBulkSession').selectOption('2');
+      await page.locator('#addSelectedBankExercises').click();
+      rows = (await page.locator('#bulk').inputValue()).split(String.fromCharCode(10));
+      assert.equal(rows.length, 2, 'the same movement may be prescribed in a different session');
+      assert.equal(rows[1].split(String.fromCharCode(9))[1], '2');
+    });
     await check('selected bank movements can be grouped into a triset with plus preview', async () => {
       await page.locator('#clearSelectedExercises').click();
       await page.locator('#bulk').fill('');
