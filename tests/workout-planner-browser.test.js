@@ -55,6 +55,15 @@ const assert = require('node:assert/strict');
       assert.match(await page.locator('#status').innerText(), /بررسی اولیه موفق بود/);
       assert.ok((await page.locator('#sessions').innerText()).includes('پرس سینه آزمایشی'));
     });
+    await check('Enter in quick movement name adds the movement without clicking the button', async () => {
+      await page.locator('#bulk').fill('');
+      await page.locator('#count').selectOption('2');
+      await page.locator('#quickName').fill('پرس پا با میانبر');
+      await page.locator('#quickSession').selectOption('1');
+      await page.locator('#quickName').press('Enter');
+      assert.ok((await page.locator('#bulk').inputValue()).includes('پرس پا با میانبر'));
+      assert.match(await page.locator('#quickStatus').innerText(), /اضافه شد/);
+    });
     await check('movements can be reordered and preview updates to match', async () => {
       await page.locator('#count').selectOption('2');
       await page.locator('#bulk').fill('حرکت اول\t1\tعادی\t—\t3\t10\t60\nحرکت دوم\t1\tعادی\t—\t3\t12\t60');
