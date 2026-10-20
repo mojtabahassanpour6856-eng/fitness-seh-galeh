@@ -430,6 +430,11 @@ const assert = require('node:assert/strict');
       assert.ok(!options.some(x => x.includes('بانوان حجم')));
     });
     await check('saved templates filter by goal, level, and session count', async () => {
+      await page.locator('#templateSearch').fill('');
+      await page.locator('#templateGenderFilter').selectOption('all');
+      await page.locator('#templateGoalFilter').selectOption('all');
+      await page.locator('#templateLevelFilter').selectOption('all');
+      await page.locator('#templateSessionFilter').selectOption('all');
       await page.locator('#gender').selectOption('women');
       await page.locator('#count').selectOption('3');
       await page.locator('#templateGoal').selectOption('fatloss');
