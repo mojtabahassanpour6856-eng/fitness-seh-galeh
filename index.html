@@ -6352,15 +6352,14 @@ else loadCoachExerciseListsWhenReady();
     rows.forEach((row,index)=>{const day=String(row.training_day||'').trim()||'جلسه بدون نام';if(!sessions.has(day))sessions.set(day,[]);sessions.get(day).push({...row,_renderIndex:index});});
     const ordered=[...sessions.entries()].sort((a,b)=>{const ra=rank(a[0]),rb=rank(b[0]);return ra===rb?Math.min(...a[1].map(x=>x._renderIndex))-Math.min(...b[1].map(x=>x._renderIndex)):ra-rb;});
     const html=ordered.map(([day,items])=>{
-      const buckets=new Map(),orderedKeys=[];
+      const groups=[];
       items.forEach(x=>{
-        const sys=String(x.training_system||'normal'),canGroup=groupable.has(sys)&&!!x.group_key;
-        const key=canGroup?sys+'|'+String(x.group_key):'single|'+String(x.id);
-        if(!buckets.has(key)){buckets.set(key,[]);orderedKeys.push(key);}
-        buckets.get(key).push(x);
+        const sys=String(x.training_system||'normal'),key=groupable.has(sys)&&x.group_key?sys+'|'+String(x.group_key):'single|'+String(x.id);
+        const last=groups[groups.length-1];
+        if(last&&last.key===key)last.rows.push(x);else groups.push({key,rows:[x]});
       });
-      const cards=orderedKeys.map(key=>{
-        const group=buckets.get(key),first=group[0],sys=String(first.training_system||'normal'),grouped=groupable.has(sys)&&!!first.group_key&&group.length>1;
+      const cards=groups.map(entry=>{
+        const group=entry.rows,first=group[0],sys=String(first.training_system||'normal'),expected=sys==='superset'?2:((sys==='triset'||sys==='giant')?3:0),grouped=expected>0&&!!first.group_key&&group.length===expected;
         if(grouped){
           const namesLine=group.map((x,i)=>(i?'<span class="workout-group-plus" aria-label="به‌علاوه"> + </span>':'')+'<strong>'+esc(exerciseName(x,names))+'</strong>').join('');
           const allDone=group.every(x=>x.is_completed===true);
@@ -12062,7 +12061,7 @@ body.workout-output.workout-compact{
    const rows=await sbGet('/coach_workout_templates?select=id,name,description,template_kind,template_data,updated_at&order=updated_at.desc,created_at.desc');
    savedTemplates=Array.isArray(rows)?rows:[];
    const select=el('savedWorkoutTemplates');
-   if(select){const target=el('workoutTemplateGender')?.value||'__choose__';const visible=savedTemplates.filter(t=>{const g=t.template_data?.audience_gender||'عمومی';return target==='__choose__'?g==='عمومی':(g==='عمومی'||target==='عمومی'||g===target);});select.innerHTML='<option value="">انتخاب الگو…</option>'+visible.map(t=>'<option value="'+String(t.id)+'">'+String(t.name||'الگوی بدون نام').replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]))+'</option>').join('');}
+   if(select){const target=el('workoutTemplateGender')?.value||'__choose__';const normalizeGender=v=>{const g=String(v||'').trim().toLowerCase();if(['زن','خانم','دختر','female','f','woman','women'].includes(g))return 'زن';if(['مرد','آقا','اقا','پسر','male','m','man','men'].includes(g))return 'مرد';if(g==='عمومی')return 'عمومی';return '';};const visible=savedTemplates.filter(t=>{const g=normalizeGender(t.template_data?.audience_gender||'عمومی');return target==='__choose__'?g==='عمومی':(g==='عمومی'||target==='عمومی'||g===normalizeGender(target));});select.innerHTML='<option value="">انتخاب الگو…</option>'+visible.map(t=>'<option value="'+String(t.id)+'">'+String(t.name||'الگوی بدون نام').replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]))+'</option>').join('');}
    status(savedTemplates.length?savedTemplates.length+' الگو از پایگاه داده بارگذاری شد؛ روی گوشی و لپ‌تاپ مشترک است.':'هنوز الگویی ذخیره نشده است.');
   }catch(e){status('بارگذاری الگوها انجام نشد: '+(e.message||String(e)));}
  };
@@ -12090,8 +12089,9 @@ body.workout-output.workout-compact{
   const template=savedTemplates.find(t=>same(t.id,selected));
   if(!template){status('یک الگو را انتخاب کنید. اگر فهرست خالی است، ابتدا بارگذاری الگوها را بزنید.');return;}
   const data=template.template_data||{},rows=Array.isArray(data.exercises)?data.exercises:[];
-  const targetGender=String(currentClient.gender||'').trim(),audience=String(data.audience_gender||'عمومی');
-  if(audience!=='عمومی'&&targetGender&&audience!==targetGender){status('این الگو برای جنسیت دیگری ذخیره شده است؛ الگوی متناسب را انتخاب کنید.');return;}
+  const normalizeGender=v=>{const g=String(v||'').trim().toLowerCase();if(['زن','خانم','دختر','female','f','woman','women'].includes(g))return 'زن';if(['مرد','آقا','اقا','پسر','male','m','man','men'].includes(g))return 'مرد';if(g==='عمومی')return 'عمومی';return '';};
+  const targetGender=normalizeGender(currentClient.gender),audience=normalizeGender(data.audience_gender||'عمومی');
+  if(audience!=='عمومی'&&(!targetGender||audience!==targetGender)){status(!targetGender?'جنسیت شاگرد در پرونده مشخص یا قابل تشخیص نیست؛ برای جلوگیری از انتخاب اشتباه، ابتدا جنسیت را بررسی کنید.':'این الگو برای جنسیت دیگری ذخیره شده است؛ الگوی متناسب را انتخاب کنید.');return;}
   if(!rows.length){status('این الگو حرکت قابل استفاده ندارد.');return;}
   if(!confirm('یک نسخه مستقل از «'+template.name+'» برای شاگرد «'+(currentClient.full_name||currentClient.name||'انتخاب‌شده')+'» ساخته شود؟ برنامه قبلی حذف نمی‌شود.'))return;
   const traineeId=String(currentClient.id);
