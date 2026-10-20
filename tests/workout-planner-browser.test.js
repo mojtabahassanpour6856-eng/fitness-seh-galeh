@@ -492,6 +492,17 @@ const assert = require('node:assert/strict');
       assert.equal(exported.templates['قالب انتقالی (2)'].goal, 'muscle');
       assert.equal(exported.templates['قالب انتقالی (2)'].level, 'intermediate');
     });
+    await check('coach print action opens print dialog and print stylesheet isolates workout preview', async () => {
+      const printCss = await page.locator('style').first().innerText();
+      assert.match(printCss, /@media print/);
+      assert.match(printCss, /@page\\s*\\{size:A4/);
+      assert.match(printCss, /body>\\*\\{display:none!important\\}/);
+      assert.equal(await page.locator('#printWorkoutButton').count(), 1);
+      await page.evaluate(() => { window.__printCalled = 0; window.print = () => { window.__printCalled += 1; }; });
+      await page.locator('#printWorkoutButton').click();
+      assert.equal(await page.evaluate(() => window.__printCalled), 1, 'print button should call window.print exactly once');
+      assert.ok((await page.locator('#sessions').innerText()).trim().length > 0, 'workout sessions remain rendered for printing');
+    });
     await check('women template selection updates explanatory hint', async () => {
       await page.locator('#gender').selectOption('women');
       assert.ok((await page.locator('#templateHint').innerText()).includes('قالب خانم‌ها'));
