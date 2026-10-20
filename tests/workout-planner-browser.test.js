@@ -205,6 +205,27 @@ const assert = require('node:assert/strict');
       assert.ok((await page.locator('#sessions').innerText()).includes('پرس سینه هالتر + پرس سینه دمبل + پرس بالاسینه دمبل'));
       assert.equal(await page.locator('#moveManager .move').count(), 3);
     });
+    await check('muscle-aware split recognizes exercise-bank movements and groups them into consistent sessions', async () => {
+      await page.locator('#count').selectOption('3');
+      await page.locator('#split').selectOption('manual');
+      await page.locator('#bulk').fill([
+        ['پرس سینه هالتر', '3', 'عادی', '—', '3', '12', '60'].join(String.fromCharCode(9)),
+        ['لت سیم‌کش از جلو', '3', 'عادی', '—', '3', '12', '60'].join(String.fromCharCode(9)),
+        ['اسکوات هالتر', '1', 'عادی', '—', '4', '10', '90'].join(String.fromCharCode(9)),
+        ['جلو بازو دمبل تناوبی', '1', 'عادی', '—', '3', '12', '60'].join(String.fromCharCode(9)),
+        ['حرکت ناشناخته', '3', 'عادی', '—', '3', '10', '60'].join(String.fromCharCode(9))
+      ].join(String.fromCharCode(10)));
+      await page.locator('#split').selectOption('muscle');
+      await page.getByRole('button', { name: 'اعتبارسنجی و پیش‌نمایش' }).click();
+      const trial = await page.evaluate(() => window.__trial);
+      const sessionOf = name => trial.moves.find(move => move.name === name).session;
+      assert.equal(sessionOf('پرس سینه هالتر'), 1, 'chest exercises should map to the chest slot');
+      assert.equal(sessionOf('لت سیم‌کش از جلو'), 2, 'back exercises should map to the back slot');
+      assert.equal(sessionOf('اسکوات هالتر'), 3, 'leg exercises should map to the leg slot');
+      assert.equal(sessionOf('جلو بازو دمبل تناوبی'), 2, 'arm exercises should follow the category-to-session rotation');
+      assert.equal(sessionOf('حرکت ناشناخته'), 3, 'unclassified movements should retain their manually assigned session');
+      assert.equal(trial.sessions, 3);
+    });
     await check('all ready-made templates use supported session counts and pass validation', async () => {
       const expected = { chest: 2, back: 2, legs: 2, shoulders: 2, four: 4, five: 5 };
       for (const [preset, sessions] of Object.entries(expected)) {
