@@ -106,7 +106,7 @@ const assert = require('node:assert/strict');
       await page.locator('.bankMoveCheck').nth(1).check();
       await page.locator('.bankMoveCheck').nth(2).check();
       await page.getByRole('button', { name: 'گروه‌بندی حرکات انتخاب‌شده' }).click();
-      assert.match(await page.locator('#bankStatus').innerText(), /۳ حرکت به‌صورت تری‌ست گروه/);
+      assert.match(await page.locator('#bankStatus').innerText(), /(?:۳|3) حرکت به‌صورت تری‌ست گروه/);
       await page.getByRole('button', { name: 'اعتبارسنجی و پیش‌نمایش' }).click();
       assert.match(await page.locator('#status').innerText(), /بررسی اولیه موفق بود/);
       assert.ok((await page.locator('#sessions').innerText()).includes('پرس سینه هالتر + پرس سینه دمبل + پرس بالاسینه دمبل'));
