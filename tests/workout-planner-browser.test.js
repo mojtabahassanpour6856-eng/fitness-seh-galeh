@@ -25,6 +25,23 @@ const assert = require('node:assert/strict');
       assert.equal(await page.locator('#count').inputValue(), '2');
       assert.ok((await page.locator('#sessions').innerText()).includes('پرس سینه دمبل + قفسه سیم‌کش'));
     });
+    await check('all ready-made templates use supported session counts and pass validation', async () => {
+      const expected = { chest: 2, back: 2, legs: 2, shoulders: 2, four: 4, five: 5 };
+      for (const [preset, sessions] of Object.entries(expected)) {
+        await page.locator('#preset').selectOption(preset);
+        await page.getByRole('button', { name: 'بارگذاری قالب آماده' }).click();
+        assert.equal(await page.locator('#count').inputValue(), String(sessions), preset + ' session count');
+        assert.match(await page.locator('#status').innerText(), /بررسی اولیه موفق بود/, preset + ' should validate');
+        assert.equal(await page.locator('.session').count(), sessions, preset + ' rendered sessions');
+      }
+    });
+    await check('session selector supports three and six sessions', async () => {
+      for (const count of ['3', '6']) {
+        await page.locator('#count').selectOption(count);
+        assert.equal(await page.locator('.session').count(), Number(count));
+        assert.equal(await page.evaluate(() => window.__trial.sessions), Number(count));
+      }
+    });
     await check('custom template can be saved and loaded', async () => {
       await page.locator('#customName').fill('تست مرورگر');
       await page.getByRole('button', { name: 'ذخیره در همین مرورگر' }).click();
@@ -32,6 +49,8 @@ const assert = require('node:assert/strict');
       await page.locator('#bulk').fill('حرکت موقت\t1\tعادی\t—\t3\t10\t60');
       await page.getByRole('button', { name: 'بارگذاری', exact: true }).click();
       assert.ok((await page.locator('#bulk').inputValue()).includes('پرس سینه دمبل'));
+      await page.getByRole('button', { name: 'حذف', exact: true }).click();
+      assert.equal(await page.locator('#savedTemplates option').count(), 1, 'deleted template should disappear');
     });
     await check('JSON export downloads a file', async () => {
       await page.getByRole('button', { name: 'اعتبارسنجی و پیش‌نمایش' }).click();
@@ -39,6 +58,13 @@ const assert = require('node:assert/strict');
       await page.getByRole('button', { name: 'دانلود داده‌های آزمایشی JSON' }).click();
       const download = await downloadPromise;
       assert.match(download.suggestedFilename(), /\.json$/);
+      const stream = await download.createReadStream();
+      const chunks = [];
+      for await (const chunk of stream) chunks.push(chunk);
+      const data = JSON.parse(Buffer.concat(chunks).toString('utf8'));
+      assert.deepEqual(data.errors, []);
+      assert.ok(Array.isArray(data.moves) && data.moves.length > 0, 'JSON should include movements');
+      assert.equal(data.sessions, Number(await page.locator('#count').inputValue()));
     });
     await check('women template selection updates explanatory hint', async () => {
       await page.locator('#gender').selectOption('women');
