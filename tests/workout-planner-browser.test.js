@@ -30,7 +30,7 @@ const assert = require('node:assert/strict');
       await page.getByRole('button', { name: 'ذخیره در همین مرورگر' }).click();
       assert.equal(await page.locator('#savedTemplates').inputValue(), 'تست مرورگر');
       await page.locator('#bulk').fill('حرکت موقت\t1\tعادی\t—\t3\t10\t60');
-      await page.getByRole('button', { name: 'بارگذاری' }).click();
+      await page.getByRole('button', { name: 'بارگذاری', exact: true }).click();
       assert.ok((await page.locator('#bulk').inputValue()).includes('پرس سینه دمبل'));
     });
     await check('JSON export downloads a file', async () => {
