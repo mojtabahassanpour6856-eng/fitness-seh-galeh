@@ -279,10 +279,10 @@ $('previousWorkoutFile').addEventListener('change',async event=>{
    if(!m||typeof m.name!=='string'||!m.name.trim())throw new Error('نام حرکت در ردیف '+(i+1)+' معتبر نیست.');
    const session=Number(m.session),sets=Number(m.sets),reps=Number(m.reps),rest=Number(m.rest),system=String(m.system||'عادی'),group=String(m.group||'—');
    if(!Number.isInteger(session)||session<1||session>Number(data.sessions)||!allowed.includes(system)||!Number.isInteger(sets)||sets<1||!Number.isInteger(reps)||reps<1||!Number.isInteger(rest)||rest<0)throw new Error('اطلاعات حرکت «'+m.name+'» معتبر نیست؛ برنامه قبلی بارگذاری نشد.');
-   return [m.name.trim(),session,system,group,sets,reps,rest].join('\\t');
+   return [m.name.trim(),session,system,group,sets,reps,rest].join('\t');
   });
   if(!rows.length)throw new Error('در فایل برنامه قبلی حرکتی پیدا نشد.');
-  $('gender').value=data.gender;$('count').value=String(Number(data.sessions));$('split').value='manual';$('bulk').value=rows.join('\\n');resetQuickEdit();updateQuickSessions();renderMoveManager();hint();render();
+  $('gender').value=data.gender;$('count').value=String(Number(data.sessions));$('split').value='manual';$('bulk').value=rows.join('\n');resetQuickEdit();updateQuickSessions();renderMoveManager();hint();render();
   $('previousWorkoutStatus').textContent='برنامه قبلی بارگذاری شد ('+rows.length+' حرکت). حالا می‌توانی حرکات، ست‌ها و تقسیم جلسات را تغییر بدهی و با نام تازه ذخیره کنی.';
  }catch(error){$('previousWorkoutStatus').textContent='فایل بارگذاری نشد: '+error.message;}
  event.target.value='';
