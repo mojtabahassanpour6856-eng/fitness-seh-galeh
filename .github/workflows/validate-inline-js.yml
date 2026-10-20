@@ -37,3 +37,20 @@ jobs:
           console.log(`Checked ${count} inline scripts.`);
           if (failed) process.exit(1);
           NODE
+      - name: Guard workout movement numbering
+        run: |
+          node <<'NODE'
+          const fs = require('fs');
+          const html = fs.readFileSync('index.html', 'utf8');
+          const checks = [
+            ['numbering is based on each rendered exercise card', 'cards.map((entry,cardIndex)=>{'],
+            ['numbers are converted to Persian digits', "String(cardIndex+1).replace(/\\d/g,d=>'۰۱۲۳۴۵۶۷۸۹'[Number(d)]);"],
+            ['the Persian movement number is rendered in the card', "حرکت '+movementNumber"]
+          ];
+          const failed = checks.filter(([label, snippet]) => {
+            const ok = html.includes(snippet);
+            console.log(`${ok ? 'PASS' : 'FAIL'}: ${label}`);
+            return !ok;
+          });
+          if (failed.length) process.exit(1);
+          NODE
