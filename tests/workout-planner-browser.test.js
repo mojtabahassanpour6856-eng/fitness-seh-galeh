@@ -84,6 +84,16 @@ const assert = require('node:assert/strict');
       assert.match(status, /جلسه 2/);
       assert.match(status, /حداقل 2 حرکت لازم دارد/);
     });
+    await check('exercise bank filters by muscle group and fills quick-entry name', async () => {
+      await page.locator('#bankCategory').selectOption('پا');
+      assert.ok((await page.locator('#exerciseBank').innerText()).includes('اسکوات هالتر'));
+      await page.locator('#bankSearch').fill('هیپ');
+      assert.ok((await page.locator('#exerciseBank').innerText()).includes('هیپ تراست'));
+      await page.getByRole('button', { name: 'انتخاب حرکت هیپ تراست' }).click();
+      assert.equal(await page.locator('#quickName').inputValue(), 'هیپ تراست');
+      await page.locator('#bankSearch').fill('ناموجود');
+      assert.match(await page.locator('#exerciseBank').innerText(), /حرکتی پیدا نشد/);
+    });
     await check('all ready-made templates use supported session counts and pass validation', async () => {
       const expected = { chest: 2, back: 2, legs: 2, shoulders: 2, four: 4, five: 5 };
       for (const [preset, sessions] of Object.entries(expected)) {
