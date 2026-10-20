@@ -57,6 +57,33 @@ const assert = require('node:assert/strict');
       assert.ok(!(await page.locator('#bulk').inputValue()).includes('حرکت دوم'));
       assert.equal(await page.locator('#moveManager .move').count(), 1);
     });
+    await check('quick group builder creates a named superset and previews its movements together', async () => {
+      await page.locator('#bulk').fill('');
+      await page.locator('#count').selectOption('3');
+      await page.locator('#quickSystem').selectOption('عادی');
+      await page.getByRole('button', { name: 'ساخت گروه جدید' }).click();
+      assert.equal(await page.locator('#quickSystem').inputValue(), 'سوپرست');
+      assert.equal(await page.locator('#quickGroup').inputValue(), 'A');
+      await page.locator('#quickName').fill('پرس سینه گروهی');
+      await page.getByRole('button', { name: 'افزودن به فهرست' }).click();
+      await page.locator('#quickName').fill('قفسه گروهی');
+      await page.getByRole('button', { name: 'افزودن به فهرست' }).click();
+      await page.getByRole('button', { name: 'اعتبارسنجی و پیش‌نمایش' }).click();
+      assert.match(await page.locator('#status').innerText(), /بررسی اولیه موفق بود/);
+      assert.ok((await page.locator('#sessions').innerText()).includes('پرس سینه گروهی + قفسه گروهی'));
+    });
+    await check('groups with the same label in different sessions are validated separately', async () => {
+      await page.locator('#count').selectOption('2');
+      await page.locator('#bulk').fill([
+        ['حرکت یک', '1', 'سوپرست', 'A', '3', '12', '60'].join('\\t'),
+        ['حرکت دو', '2', 'سوپرست', 'A', '3', '12', '60'].join('\\t')
+      ].join('\\n'));
+      await page.getByRole('button', { name: 'اعتبارسنجی و پیش‌نمایش' }).click();
+      const status = await page.locator('#status').innerText();
+      assert.match(status, /جلسه 1/);
+      assert.match(status, /جلسه 2/);
+      assert.match(status, /حداقل 2 حرکت لازم دارد/);
+    });
     await check('all ready-made templates use supported session counts and pass validation', async () => {
       const expected = { chest: 2, back: 2, legs: 2, shoulders: 2, four: 4, five: 5 };
       for (const [preset, sessions] of Object.entries(expected)) {
