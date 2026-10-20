@@ -53,7 +53,7 @@ const assert = require('node:assert/strict');
       await page.locator('#quickName').fill('حرکت اول ویرایش‌شده');
       await page.getByRole('button', { name: 'ذخیره ویرایش' }).click();
       assert.ok((await page.locator('#bulk').inputValue()).includes('حرکت اول ویرایش‌شده'));
-      await page.getByRole('button', { name: 'حذف' }).last().click();
+      await page.locator('#moveManager').getByRole('button', { name: 'حذف', exact: true }).last().click();
       assert.ok(!(await page.locator('#bulk').inputValue()).includes('حرکت دوم'));
       assert.equal(await page.locator('#moveManager .move').count(), 1);
     });
@@ -82,7 +82,7 @@ const assert = require('node:assert/strict');
       await page.locator('#bulk').fill('حرکت موقت\t1\tعادی\t—\t3\t10\t60');
       await page.getByRole('button', { name: 'بارگذاری', exact: true }).click();
       assert.equal(await page.locator('#bulk').inputValue(), originalBulk, 'loaded template should restore exact saved content');
-      await page.getByRole('button', { name: 'حذف', exact: true }).click();
+      await page.locator('#deleteTemplate').click();
       assert.equal(await page.locator('#savedTemplates option').count(), 1, 'deleted template should disappear');
     });
     await check('JSON export downloads a file', async () => {
