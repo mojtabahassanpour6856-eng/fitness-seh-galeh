@@ -24,7 +24,23 @@
 فیس‌پول	2	تری‌ست	2	3	15	45
 پول‌اور سیم‌کش	2	تری‌ست	2	3	15	45
 اسکوات جام	3	عادی	—	4	15	75
-</textarea><div class="row" style="margin-top:10px"><button id="preview" type="button">اعتبارسنجی و پیش‌نمایش</button><button id="example" type="button" class="secondary">بازگردانی نمونه</button><button id="export" type="button" class="secondary">دانلود داده‌های آزمایشی JSON</button></div><div id="status" class="status" role="status"></div></section>
+</textarea>
+<div class="card" style="background:#fcfaf4;margin-top:10px">
+<h3 style="margin-top:0">افزودن سریع یک حرکت</h3>
+<p class="muted">حرکت را وارد کن و «افزودن به فهرست» را بزن؛ لازم نیست ستون‌ها را دستی تایپ کنی.</p>
+<div class="row">
+<div class="field"><label for="quickName">نام حرکت</label><input id="quickName" placeholder="مثلاً پرس سینه دمبل"></div>
+<div class="field"><label for="quickSession">جلسه</label><select id="quickSession"><option value="1">جلسه ۱</option><option value="2">جلسه ۲</option><option value="3">جلسه ۳</option><option value="4">جلسه ۴</option><option value="5">جلسه ۵</option><option value="6">جلسه ۶</option></select></div>
+<div class="field"><label for="quickSystem">سیستم تمرین</label><select id="quickSystem"><option>عادی</option><option>سوپرست</option><option>تری‌ست</option><option>جاینت‌ست</option></select></div>
+<div class="field"><label for="quickGroup">گروه سیستم</label><input id="quickGroup" placeholder="مثلاً A یا 1" value="A"></div>
+<div class="field"><label for="quickSets">ست</label><input id="quickSets" type="number" min="1" value="3"></div>
+<div class="field"><label for="quickReps">تکرار</label><input id="quickReps" type="number" min="1" value="12"></div>
+<div class="field"><label for="quickRest">استراحت (ثانیه)</label><input id="quickRest" type="number" min="0" value="60"></div>
+</div>
+<div class="row" style="margin-top:8px"><button id="addQuickMove" type="button">افزودن به فهرست</button><button id="clearQuickForm" type="button" class="secondary">پاک‌کردن نام و گروه</button></div>
+<div id="quickStatus" class="status" role="status"></div>
+</div>
+<div class="row" style="margin-top:10px"><button id="preview" type="button">اعتبارسنجی و پیش‌نمایش</button><button id="example" type="button" class="secondary">بازگردانی نمونه</button><button id="export" type="button" class="secondary">دانلود داده‌های آزمایشی JSON</button></div><div id="status" class="status" role="status"></div></section>
 <section class="card"><h2>۳) قالب‌های آماده و ذخیره قالب شخصی</h2><p class="muted">این قابلیت آزمایشی است و با اپ اصلی یا پایگاه داده ارتباط ندارد.</p><div class="row"><div class="field"><label for="preset">قالب آماده</label><select id="preset"><option value="chest">سینه + پشت بازو</option><option value="back">پشت + جلو بازو</option><option value="legs">پا</option><option value="shoulders">سرشانه + شکم</option><option value="four">تقسیم چهارروزه</option><option value="five">تقسیم پنج‌روزه</option></select></div><button id="applyPreset" type="button">بارگذاری قالب آماده</button></div><hr><div class="row"><div class="field"><label for="customName">نام قالب شخصی</label><input id="customName" placeholder="مثلاً برنامه حجم ۴ روزه"></div><button id="saveTemplate" type="button">ذخیره در همین مرورگر</button></div><div class="row"><div class="field"><label for="savedTemplates">قالب‌های ذخیره‌شده</label><select id="savedTemplates"><option value="">— انتخاب قالب —</option></select></div><button id="loadTemplate" type="button" class="secondary">بارگذاری</button><button id="deleteTemplate" type="button" class="danger">حذف</button></div><div id="templateStatus" class="status" role="status"></div></section>
 <section class="card"><h2>۴) پیش‌نمایش جلسات</h2><div id="sessions" class="sessions"><p class="muted">برای دیدن جلسات، پیش‌نمایش را بزن.</p></div></section>
 <script>
@@ -69,6 +85,34 @@ $('saveTemplate').addEventListener('click',()=>{const name=$('customName').value
 $('loadTemplate').addEventListener('click',()=>{const t=getSaved()[$('savedTemplates').value];if(!t){$('templateStatus').textContent='یک قالب ذخیره‌شده انتخاب کن.';return;}$('gender').value=t.gender;$('count').value=t.count;$('split').value=t.split;$('bulk').value=t.bulk;hint();render();$('templateStatus').textContent='قالب بارگذاری شد.';});
 $('deleteTemplate').addEventListener('click',()=>{const name=$('savedTemplates').value;if(!name){$('templateStatus').textContent='برای حذف قالبی انتخاب کن.';return;}const all=getSaved();delete all[name];localStorage.setItem('fitnessSehGalehTemplates',JSON.stringify(all));fillSaved();$('templateStatus').textContent='قالب حذف شد.';});
 fillSaved();
+function updateQuickSessions(){
+ const select=$('quickSession'),wanted=Number($('count').value)||4;
+ Array.from(select.options).forEach(o=>{o.disabled=Number(o.value)>wanted;});
+ if(Number(select.value)>wanted)select.value=String(wanted);
+}
+$('count').addEventListener('change',updateQuickSessions);
+$('quickSystem').addEventListener('change',()=>{
+ const normal=$('quickSystem').value==='عادی';
+ $('quickGroup').disabled=normal;
+ if(normal)$('quickGroup').value='—';
+ else if(!$('quickGroup').value||$('quickGroup').value==='—')$('quickGroup').value='A';
+});
+$('addQuickMove').addEventListener('click',()=>{
+ const name=$('quickName').value.trim(),session=Number($('quickSession').value);
+ const system=$('quickSystem').value,group=system==='عادی'?'—':$('quickGroup').value.trim();
+ const sets=$('quickSets').value,reps=$('quickReps').value,rest=$('quickRest').value;
+ if(!name){$('quickStatus').textContent='ابتدا نام حرکت را وارد کن.';return;}
+ if(session>n()){$('quickStatus').textContent='جلسه انتخاب‌شده از تعداد جلسات برنامه بیشتر است.';return;}
+ if(system!=='عادی'&&!group){$('quickStatus').textContent='برای سوپرست، تری‌ست یا جاینت‌ست یک نام گروه وارد کن.';return;}
+ if(!/^\\d+$/.test(sets)||Number(sets)<1||!/^\\d+$/.test(reps)||Number(reps)<1||!/^\\d+$/.test(rest)){ $('quickStatus').textContent='ست و تکرار باید عدد مثبت و استراحت باید صفر یا بیشتر باشد.';return;}
+ const row=[name,session,system,group,sets,reps,rest].join('\\t');
+ $('bulk').value=$('bulk').value.trim()?$('bulk').value.trimEnd()+'\\n'+row:row;
+ $('quickStatus').textContent='حرکت به فهرست اضافه شد؛ برای بررسی گروه‌ها پیش‌نمایش را بزن.';
+ $('quickName').value='';
+ $('quickName').focus();
+});
+$('clearQuickForm').addEventListener('click',()=>{$('quickName').value='';$('quickGroup').value='A';$('quickStatus').textContent='نام حرکت پاک شد.';});
+updateQuickSessions();
 $('build').addEventListener('click',()=>{render();});$('preview').addEventListener('click',render);$('gender').addEventListener('change',hint);$('count').addEventListener('change',()=>{hint();render();});$('split').addEventListener('change',render);$('example').addEventListener('click',()=>{$('bulk').value=example;render();});
 $('export').addEventListener('click',()=>{render();const data=window.__trial;if(data.errors.length){$('status').textContent+='\nابتدا خطاها را اصلاح کن تا خروجی گرفته شود.';return;}const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='fitness-seh-galeh-workout-trial.json';a.click();URL.revokeObjectURL(a.href);});
 hint();
