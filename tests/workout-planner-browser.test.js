@@ -95,6 +95,22 @@ const assert = require('node:assert/strict');
       await page.locator('#bankSearch').fill('ناموجود');
       assert.match(await page.locator('#exerciseBank').innerText(), /حرکتی پیدا نشد/);
     });
+    await check('selected bank movements can be grouped into a triset with plus preview', async () => {
+      await page.locator('#bulk').fill('');
+      await page.locator('#count').selectOption('3');
+      await page.locator('#quickSession').selectOption('1');
+      await page.locator('#quickSystem').selectOption('تری‌ست');
+      await page.locator('#bankCategory').selectOption('سینه');
+      await page.getByRole('checkbox', { name: 'گروه‌بندی پرس سینه هالتر' }).check();
+      await page.getByRole('checkbox', { name: 'گروه‌بندی پرس سینه دمبل' }).check();
+      await page.getByRole('checkbox', { name: 'گروه‌بندی پرس بالاسینه دمبل' }).check();
+      await page.getByRole('button', { name: 'گروه‌بندی حرکات انتخاب‌شده' }).click();
+      assert.match(await page.locator('#bankStatus').innerText(), /۳ حرکت به‌صورت تری‌ست گروه/);
+      await page.getByRole('button', { name: 'اعتبارسنجی و پیش‌نمایش' }).click();
+      assert.match(await page.locator('#status').innerText(), /بررسی اولیه موفق بود/);
+      assert.ok((await page.locator('#sessions').innerText()).includes('پرس سینه هالتر + پرس سینه دمبل + پرس بالاسینه دمبل'));
+      assert.equal(await page.locator('#moveManager .move').count(), 3);
+    });
     await check('all ready-made templates use supported session counts and pass validation', async () => {
       const expected = { chest: 2, back: 2, legs: 2, shoulders: 2, four: 4, five: 5 };
       for (const [preset, sessions] of Object.entries(expected)) {
