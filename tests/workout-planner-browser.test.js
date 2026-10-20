@@ -369,6 +369,18 @@ const assert = require('node:assert/strict');
       assert.ok(Array.isArray(data.moves) && data.moves.length > 0, 'JSON should include movements');
       assert.equal(data.sessions, Number(await page.locator('#count').inputValue()));
     });
+    await check('gender-specific starter templates load the matching session count and movements', async () => {
+      await page.locator('#preset').selectOption('womenBase');
+      await page.getByRole('button', { name: 'بارگذاری قالب آماده' }).click();
+      assert.equal(await page.locator('#gender').inputValue(),'women');
+      assert.equal(await page.locator('#count').inputValue(),'3');
+      assert.ok((await page.locator('#bulk').inputValue()).includes('هیپ تراست'));
+      await page.locator('#preset').selectOption('menBase');
+      await page.getByRole('button', { name: 'بارگذاری قالب آماده' }).click();
+      assert.equal(await page.locator('#gender').inputValue(),'men');
+      assert.equal(await page.locator('#count').inputValue(),'4');
+      assert.ok((await page.locator('#bulk').inputValue()).includes('پرس سینه هالتر'));
+    });
     await check('women template selection updates explanatory hint', async () => {
       await page.locator('#gender').selectOption('women');
       assert.ok((await page.locator('#templateHint').innerText()).includes('قالب خانم‌ها'));
