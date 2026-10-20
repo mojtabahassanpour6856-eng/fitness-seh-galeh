@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>آزمایش ورود سریع برنامه تمرینی | فیتنس سه‌قلعه</title>
+<style>
+:root{--gold:#b68b35;--cream:#fffaf0;--ink:#29251f;--line:#e7d9b9}*{box-sizing:border-box}body{margin:0;background:#f4efe4;color:var(--ink);font-family:Tahoma,Arial,sans-serif}.wrap{max-width:1100px;margin:20px auto;padding:14px}.notice{background:#fff3d6;border:1px solid #e8cc8b;padding:12px;border-radius:12px;margin-bottom:12px}.head,.panel{background:#fffdf8;border:1px solid var(--line);border-radius:16px;padding:16px;margin-bottom:12px}.head{text-align:center;background:linear-gradient(135deg,#fffdf7,#f4e4bb)}h1{font-size:24px;color:#72521b;margin:4px}h2{font-size:17px;margin:0 0 12px;color:#72521b}.row{display:grid;grid-template-columns:2fr 1fr 1fr 1fr .7fr .8fr .8fr auto;gap:7px;align-items:center;margin:8px 0;padding:9px;background:#fff;border:1px solid #eee2c8;border-radius:10px}input,select,textarea,button{font:inherit}input,select,textarea{width:100%;min-width:0;padding:9px;border:1px solid #d9c79f;border-radius:8px;background:white}label{font-size:12px;color:#65583f;display:block;margin-bottom:4px}button{border:1px solid var(--gold);background:#fff;color:#604719;border-radius:9px;padding:9px 12px;font-weight:bold;cursor:pointer}button.primary{background:var(--gold);color:white}.actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}.paste{display:grid;grid-template-columns:1fr auto;gap:8px;align-items:stretch}.paste textarea{min-height:82px}.hint{font-size:12px;color:#756b5b;line-height:1.8}.error{color:#a32323;font-size:13px;margin-top:8px}.preview{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.session{background:white;border:1px solid var(--line);border-radius:12px;overflow:hidden;break-inside:avoid}.session h3{margin:0;background:#f8efd9;padding:12px;font-size:15px}.move{padding:10px;border-bottom:1px solid #eee5d4;display:grid;grid-template-columns:30px 1fr;gap:8px}.num{width:27px;height:27px;border-radius:50%;display:grid;place-items:center;background:#f1dfb6;font-weight:bold}.name{font-weight:bold}.sub{font-size:12px;line-height:1.8;color:#625b4e}.plus{color:#9b6a12;font-weight:bold}.footer{text-align:center;padding:12px;color:#6e5a36}.remove{padding:7px 9px;color:#9b2626;border-color:#e7baba}@media(max-width:800px){.row{grid-template-columns:1fr 1fr 1fr}.row .exercise{grid-column:span 2}.preview{grid-template-columns:1fr}}@media(max-width:480px){.wrap{padding:8px}.row{grid-template-columns:1fr 1fr}.row .exercise{grid-column:span 2}.head h1{font-size:20px}}@media print{body{background:white}.notice,.editor,.actions,.hint{display:none!important}.wrap{margin:0;padding:0}.preview{grid-template-columns:repeat(2,minmax(0,1fr))}}
+</style></head>
+<body><main class="wrap">
+<div class="notice"><b>نسخه آزمایشی مستقل:</b> فقط برای بررسی روش ورود سریع است؛ به Supabase، شاگردان واقعی یا نسخه اصلی اپ وصل نیست.</div>
+<header class="head"><h1>فیتنس سه‌قلعه</h1><div>ورود سریع حرکات برنامه تمرینی · مربی: مجتبی</div></header>
+<section class="panel editor">
+<h2>۱) انتخاب قالب</h2>
+<div class="row" style="grid-template-columns:1fr 1fr 1fr">
+<div><label>قالب برنامه</label><select id="gender"><option value="men">آقایان</option><option value="women">بانوان</option></select></div>
+<div><label>تعداد جلسات</label><select id="sessionCount"><option>3</option><option>4</option><option>5</option><option>6</option></select></div>
+<div><label>نام برنامه (اختیاری)</label><input id="planName" placeholder="مثلاً دوره اول"></div>
+</div>
+<h2 style="margin-top:18px">۲) ورود چند حرکت با هم</h2>
+<div class="paste"><textarea id="bulkNames" placeholder="هر حرکت را در یک خط بنویس؛ مثلاً:&#10;پرس سینه دمبل&#10;بالاسینه دستگاه&#10;قفسه سیم‌کش"></textarea><button class="primary" onclick="addBulk()">افزودن حرکات</button></div>
+<p class="hint">بعد از افزودن، برای هر حرکت می‌توانی جلسه، سیستم تمرین، ست، تکرار و استراحت را جداگانه تغییر بدهی. برای سوپرست، حرکات هم‌گروه را روی یک شماره گروه بگذار.</p>
+<h2 style="margin-top:18px">۳) تنظیم هر حرکت</h2>
+<div id="rows"></div>
+<div class="actions"><button onclick="addRow()">+ افزودن یک حرکت</button><button class="primary" onclick="renderPreview()">به‌روزرسانی پیش‌نمایش</button><button onclick="window.print()">چاپ / ذخیره PDF</button></div>
+<div id="errors" class="error" role="status"></div>
+</section>
+<section class="panel"><h2>پیش‌نمایش خروجی برنامه</h2><div id="preview" class="preview"></div><div class="footer">مربی: مجتبی · FITNESS SEH GALEH</div></section>
+</main>
+<script>
+let nextId=1;
+const fa=n=>String(n).replace(/\d/g,d=>'۰۱۲۳۴۵۶۷۸۹'[+d]);
+function rowHTML(id,name=''){
+return '<div class="row" data-id="'+id+'">'+
+'<div class="exercise"><label>نام حرکت</label><input class="nameInput" value="'+escapeAttr(name)+'" placeholder="نام حرکت"></div>'+
+'<div><label>جلسه</label><select class="day">'+Array.from({length:6},(_,i)=>'<option value="'+(i+1)+'">جلسه '+fa(i+1)+'</option>').join('')+'</select></div>'+
+'<div><label>سیستم</label><select class="system" onchange="systemChanged(this)"><option value="normal">عادی</option><option value="superset">سوپرست</option><option value="triset">تری‌ست</option><option value="giant">جاینت‌ست</option></select></div>'+
+'<div><label>شماره گروه</label><input class="group" type="number" min="1" placeholder="مثلاً ۱" disabled></div>'+
+'<div><label>ست</label><input class="sets" type="number" min="1" value="3"></div>'+
+'<div><label>تکرار</label><input class="reps" value="12"></div>'+
+'<div><label>استراحت (ثانیه)</label><input class="rest" type="number" min="0" value="60"></div>'+
+'<button class="remove" onclick="this.parentElement.remove();renderPreview()">حذف</button></div>';
+}
+function escapeAttr(s){return String(s).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}
+function addRow(name=''){document.getElementById('rows').insertAdjacentHTML('beforeend',rowHTML(nextId++,name));syncDays()}
+function addBulk(){const box=document.getElementById('bulkNames');const names=box.value.split(/\n/).map(s=>s.trim()).filter(Boolean);if(!names.length){document.getElementById('errors').textContent='اول نام یک یا چند حرکت را در کادر بنویس.';return}names.forEach(addRow);box.value='';document.getElementById('errors').textContent='حرکت‌ها اضافه شدند؛ حالا جلسه و سیستم هر حرکت را انتخاب کن.'}
+function systemChanged(sel){const r=sel.closest('.row'),g=r.querySelector('.group');g.disabled=sel.value==='normal';if(sel.value==='normal')g.value='';renderPreview()}
+function syncDays(){const max=Number(document.getElementById('sessionCount').value);document.querySelectorAll('.day').forEach(s=>{const current=Math.min(Number(s.value)||1,max);s.innerHTML=Array.from({length:max},(_,i)=>'<option value="'+(i+1)+'">جلسه '+fa(i+1)+'</option>').join('');s.value=String(current)})}
+document.getElementById('sessionCount').addEventListener('change',()=>{syncDays();renderPreview()});
+function readRows(){return [...document.querySelectorAll('#rows .row')].map(r=>({el:r,name:r.querySelector('.nameInput').value.trim(),day:Number(r.querySelector('.day').value),system:r.querySelector('.system').value,group:r.querySelector('.group').value.trim(),sets:r.querySelector('.sets').value,reps:r.querySelector('.reps').value,rest:r.querySelector('.rest').value}))}
+function renderPreview(){const entries=readRows(),max=Number(document.getElementById('sessionCount').value),errors=[];const groupMap={};entries.forEach(e=>{if(!e.name)return;if(e.system!=='normal'&&!e.group)errors.push('برای حرکت «'+e.name+'» شماره گروه وارد کن.');if(e.system!=='normal'&&e.group){const k=[e.day,e.system,e.group].join('|');(groupMap[k]||(groupMap[k]=[])).push(e)}});Object.keys(groupMap).forEach(k=>{const [day,sys]=k.split('|'),need=sys==='superset'?2:3;if(groupMap[k].length<need)errors.push('گروه '+fa(k.split('|')[2])+' در جلسه '+fa(day)+' برای '+(sys==='superset'?'سوپرست':'سیستم انتخاب‌شده')+' حداقل '+fa(need)+' حرکت لازم دارد.')});
+document.getElementById('errors').textContent=[...new Set(errors)].join(' ');
+const title=document.getElementById('planName').value.trim();
+document.getElementById('preview').innerHTML=Array.from({length:max},(_,i)=>{const day=i+1,items=entries.filter(e=>e.name&&e.day===day),groups=[],seen=new Set();items.forEach(e=>{if(e.system==='normal'){groups.push({members:[e]});return}const key=[e.day,e.system,e.group].join('|');if(!seen.has(key)){seen.add(key);groups.push({members:items.filter(x=>x.system===e.system&&x.group===e.group&&x.day===e.day)})}});
+return '<section class="session"><h3>جلسه '+fa(day)+(title?' · '+escapeAttr(title):'')+'</h3>'+groups.map((g,i)=>'<div class="move"><div class="num">'+fa(i+1)+'</div><div><div class="name">'+g.members.map((e,j)=>(j?'<span class="plus"> + </span>':'')+escapeAttr(e.name)).join('')+'</div><div class="sub">'+g.members.map(e=>'ست و تکرار: '+fa(e.sets)+' × '+escapeAttr(e.reps)+' · استراحت: '+fa(e.rest)+' ثانیه').join('<br>')+(g.members.length>1?'<br><span class="plus">'+(g.members[0].system==='superset'?'سوپرست':g.members[0].system==='triset'?'تری‌ست':'جاینت‌ست')+'</span>':'')+'</div></div></div>').join('')||'<p class="hint" style="padding:12px">هنوز حرکتی برای این جلسه وارد نشده.</p>'+'</section>'}).join('');
+}
+document.getElementById('rows').addEventListener('input',renderPreview);
+document.getElementById('rows').addEventListener('change',renderPreview);
+addRow('پرس سینه دمبل');addRow('بالاسینه دستگاه');addRow('قفسه سیم‌کش');
+const rs=[...document.querySelectorAll('#rows .row')];rs[1].querySelector('.system').value='superset';rs[1].querySelector('.group').disabled=false;rs[1].querySelector('.group').value='1';rs[2].querySelector('.system').value='superset';rs[2].querySelector('.group').disabled=false;rs[2].querySelector('.group').value='1';
+renderPreview();
+</script></body></html>
