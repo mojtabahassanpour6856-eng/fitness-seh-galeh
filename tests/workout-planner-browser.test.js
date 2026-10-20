@@ -202,6 +202,18 @@ const assert = require('node:assert/strict');
       assert.match(await page.locator('#status').innerText(), /بررسی اولیه موفق بود/);
       assert.ok((await page.locator('#sessions').innerText()).includes('پرس سینه هالتر + اسکوات جام'), 'preview should show selected movements together in selection order with a plus separator');
     });
+    await check('quick bank grouping rejects the wrong number of selected movements without changing the plan', async () => {
+      await page.locator('#bulk').fill('برنامه باید حفظ شود\\t1\\tعادی\\t—\\t3\\t10\\t60');
+      await page.locator('#bankCategory').selectOption('سینه');
+      await page.getByRole('checkbox', { name: 'گروه‌بندی پرس سینه هالتر' }).check();
+      await page.getByRole('checkbox', { name: 'گروه‌بندی پرس سینه دمبل' }).check();
+      await page.locator('#quickSystem').selectOption('تری‌ست');
+      await page.locator('#quickSession').selectOption('1');
+      const before = await page.locator('#bulk').inputValue();
+      await page.locator('#groupSelectedExercises').click();
+      assert.equal(await page.locator('#bulk').inputValue(), before, 'invalid selection count must not alter the movement list');
+      assert.match(await page.locator('#bankStatus').innerText(), /برای تری‌ست دقیقاً 3 حرکت انتخاب کن؛ اکنون 2 حرکت انتخاب شده/);
+    });
     await check('groups with the same label in different sessions are validated separately', async () => {
       await page.locator('#count').selectOption('2');
       await page.locator('#bulk').fill([
