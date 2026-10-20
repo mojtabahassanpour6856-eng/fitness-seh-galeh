@@ -495,8 +495,8 @@ const assert = require('node:assert/strict');
     await check('coach print action opens print dialog and print stylesheet isolates workout preview', async () => {
       const printCss = await page.locator('style').first().innerText();
       assert.match(printCss, /@media print/);
-      assert.match(printCss, /@page\\s*\\{size:A4/);
-      assert.match(printCss, /body>\\*\\{display:none!important\\}/);
+      assert.ok(printCss.includes('@page{size:A4'), 'print page should use A4 paper');
+      assert.ok(printCss.includes('body>*{display:none!important}'), 'print should hide editor controls');
       assert.equal(await page.locator('#printWorkoutButton').count(), 1);
       await page.evaluate(() => { window.__printCalled = 0; window.print = () => { window.__printCalled += 1; }; });
       await page.locator('#printWorkoutButton').click();
