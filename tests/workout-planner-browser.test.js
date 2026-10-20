@@ -347,7 +347,7 @@ const assert = require('node:assert/strict');
     await check('custom template can be saved and loaded', async () => {
       await page.locator('#customName').fill('تست مرورگر');
       const originalBulk = await page.locator('#bulk').inputValue();
-      await page.getByRole('button', { name: 'ذخیره در همین مرورگر' }).click();
+      await page.getByRole('button', { name: 'ذخیره با نام دلخواه' }).click();
       assert.equal(await page.locator('#savedTemplates').inputValue(), 'تست مرورگر');
       await page.locator('#bulk').fill('حرکت موقت\t1\tعادی\t—\t3\t10\t60');
       await page.getByRole('button', { name: 'بارگذاری', exact: true }).click();
