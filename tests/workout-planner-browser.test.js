@@ -551,6 +551,39 @@ const assert = require('node:assert/strict');
       assert.equal(await page.evaluate(() => window.__printCalled), 1, 'print button should call window.print exactly once');
       assert.ok((await page.locator('#sessions').innerText()).trim().length > 0, 'workout sessions remain rendered for printing');
     });
+    await check('workout versions can be saved locally and compared with the current plan', async () => {
+      await page.locator('#count').selectOption('2');
+      await page.locator('#bulk').fill([
+        ['پرس سینه', '1', 'عادی', '—', '3', '12', '60'].join(String.fromCharCode(9)),
+        ['لت سیم‌کش', '2', 'عادی', '—', '3', '10', '60'].join(String.fromCharCode(9))
+      ].join(String.fromCharCode(10)));
+      await page.getByRole('button', { name: 'اعتبارسنجی و پیش‌نمایش' }).click();
+      await page.locator('#workoutVersionName').fill('نسخه پایه آزمایشی');
+      await page.locator('#saveWorkoutVersion').click();
+      assert.match(await page.locator('#workoutVersionStatus').innerText(), /ذخیره شد/);
+      assert.equal(await page.locator('#workoutVersionSelect option').count(), 2);
+      await page.locator('#bulk').fill([
+        ['پرس سینه', '1', 'عادی', '—', '4', '10', '45'].join(String.fromCharCode(9)),
+        ['اسکوات', '2', 'عادی', '—', '3', '8', '90'].join(String.fromCharCode(9))
+      ].join(String.fromCharCode(10)));
+      await page.getByRole('button', { name: 'اعتبارسنجی و پیش‌نمایش' }).click();
+      await page.locator('#compareWorkoutVersion').click();
+      const comparison = await page.locator('#workoutVersionComparison').innerText();
+      assert.match(comparison, /اضافه‌شده: 1/);
+      assert.match(comparison, /حذف‌شده: 1/);
+      assert.match(comparison, /تغییرکرده: 1/);
+      assert.match(comparison, /اسکوات/);
+      assert.match(comparison, /لت سیم‌کش/);
+    });
+    await check('loading a saved workout version restores its plan without deleting saved versions', async () => {
+      await page.locator('#workoutVersionSelect').selectOption({ label: /نسخه پایه آزمایشی/ });
+      await page.locator('#loadWorkoutVersion').click();
+      const rows = (await page.locator('#bulk').inputValue()).split(String.fromCharCode(10)).map(line => line.split(String.fromCharCode(9)));
+      assert.ok(rows.some(row => row[0] === 'پرس سینه' && row[4] === '3' && row[5] === '12' && row[6] === '60'));
+      assert.ok(rows.some(row => row[0] === 'لت سیم‌کش'));
+      assert.equal(await page.locator('#workoutVersionSelect option').count(), 2, 'loading a version should preserve the saved version list');
+      assert.match(await page.locator('#workoutVersionStatus').innerText(), /بارگذاری شد/);
+    });
     await check('women template selection updates explanatory hint', async () => {
       await page.locator('#gender').selectOption('women');
       assert.ok((await page.locator('#templateHint').innerText()).includes('قالب خانم‌ها'));
