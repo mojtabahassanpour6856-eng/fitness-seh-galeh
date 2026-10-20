@@ -63,6 +63,23 @@ const assert = require('node:assert/strict');
       await page.locator('#quickName').press('Enter');
       assert.ok((await page.locator('#bulk').inputValue()).includes('پرس پا با میانبر'));
       assert.match(await page.locator('#quickStatus').innerText(), /اضافه شد/);
+      assert.equal(await page.locator('#quickName').inputValue(), '', 'quick entry should clear the name for the next movement');
+      assert.equal(await page.evaluate(() => document.activeElement.id), 'quickName', 'quick entry should refocus the movement name field');
+    });
+    await check('invalid quick movement details do not change the existing plan', async () => {
+      const before = await page.locator('#bulk').inputValue();
+      await page.locator('#quickName').fill('حرکت با مقدار نامعتبر');
+      await page.locator('#quickSets').fill('0');
+      await page.getByRole('button', { name: 'افزودن به فهرست' }).click();
+      assert.equal(await page.locator('#bulk').inputValue(), before, 'invalid input must not append or replace any movement');
+      assert.match(await page.locator('#quickStatus').innerText(), /ست و تکرار باید عدد مثبت/);
+      await page.locator('#quickSets').fill('3');
+    });
+    await check('quick session choices follow the selected number of workout sessions', async () => {
+      await page.locator('#count').selectOption('2');
+      assert.equal(await page.locator('#quickSession option[value="3"]').isDisabled(), true, 'session 3 should be unavailable for a two-session plan');
+      await page.locator('#count').selectOption('4');
+      assert.equal(await page.locator('#quickSession option[value="3"]').isDisabled(), false, 'session 3 should become available when the plan has four sessions');
     });
     await check('movements can be reordered and preview updates to match', async () => {
       await page.locator('#count').selectOption('2');
