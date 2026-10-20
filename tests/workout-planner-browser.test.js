@@ -370,6 +370,25 @@ const assert = require('node:assert/strict');
       assert.match(await page.locator('#quickStatus').innerText(), /2 حرکت به جلسه 3 منتقل شد/);
       assert.equal(await page.locator('#selectedMoveCount').innerText(), 'انتخاب‌شده: 0');
     });
+    await check('moving one grouped movement transfers the whole superset and preserves details', async () => {
+      await page.locator('#count').selectOption('2');
+      await page.locator('#split').selectOption('manual');
+      await page.locator('#bulk').fill([
+        ['پرس گروهی الف', '1', 'سوپرست', 'A', '4', '10', '60'].join(String.fromCharCode(9)),
+        ['پرس گروهی ب', '1', 'سوپرست', 'A', '3', '12', '75'].join(String.fromCharCode(9)),
+        ['حرکت عادی', '1', 'عادی', '—', '2', '15', '45'].join(String.fromCharCode(9))
+      ].join(String.fromCharCode(10)));
+      await page.getByRole('checkbox', { name: 'انتخاب حرکت پرس گروهی الف' }).check();
+      await page.locator('#bulkTargetSession').selectOption('2');
+      await page.locator('#moveSelectedToSession').click();
+      const rows = (await page.locator('#bulk').inputValue()).split(String.fromCharCode(10)).map(line => line.split(String.fromCharCode(9)));
+      assert.deepEqual(rows[0], ['پرس گروهی الف', '2', 'سوپرست', 'A', '4', '10', '60']);
+      assert.deepEqual(rows[1], ['پرس گروهی ب', '2', 'سوپرست', 'A', '3', '12', '75'], 'the other member of the superset should move with the selected movement');
+      assert.deepEqual(rows[2], ['حرکت عادی', '1', 'عادی', '—', '2', '15', '45'], 'unrelated movement should stay in its original session');
+      await page.getByRole('button', { name: 'اعتبارسنجی و پیش‌نمایش' }).click();
+      assert.ok((await page.locator('#sessions').innerText()).includes('پرس گروهی الف + پرس گروهی ب'), 'superset should still render together after moving');
+      assert.match(await page.locator('#quickStatus').innerText(), /اعضای گروه تمرینی هم همراه آن منتقل شدند/);
+    });
     await check('movement can be edited directly from the full workout preview', async () => {
       await page.locator('#count').selectOption('2');
       await page.locator('#split').selectOption('manual');
