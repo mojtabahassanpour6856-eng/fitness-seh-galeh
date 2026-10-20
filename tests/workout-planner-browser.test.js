@@ -412,6 +412,23 @@ const assert = require('node:assert/strict');
       await page.locator('#saveCurrentAsTemplate').click();
       assert.equal(await page.locator('#savedTemplates').inputValue(), 'قالب آزمایش ذخیره سریع (2)');
     });
+    await check('saved templates can be searched and filtered by gender', async () => {
+      await page.locator('#gender').selectOption('women');
+      await page.locator('#customName').fill('بانوان حجم');
+      await page.locator('#saveTemplate').click();
+      await page.locator('#gender').selectOption('men');
+      await page.locator('#customName').fill('آقایان مبتدی');
+      await page.locator('#saveTemplate').click();
+      await page.locator('#templateGenderFilter').selectOption('women');
+      let options = await page.locator('#savedTemplates option').allTextContents();
+      assert.ok(options.some(x => x.includes('بانوان حجم')));
+      assert.ok(!options.some(x => x.includes('آقایان مبتدی')));
+      await page.locator('#templateGenderFilter').selectOption('all');
+      await page.locator('#templateSearch').fill('مبتدی');
+      options = await page.locator('#savedTemplates option').allTextContents();
+      assert.ok(options.some(x => x.includes('آقایان مبتدی')));
+      assert.ok(!options.some(x => x.includes('بانوان حجم')));
+    });
     await check('women template selection updates explanatory hint', async () => {
       await page.locator('#gender').selectOption('women');
       assert.ok((await page.locator('#templateHint').innerText()).includes('قالب خانم‌ها'));
