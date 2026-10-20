@@ -104,9 +104,9 @@ $('addQuickMove').addEventListener('click',()=>{
  if(!name){$('quickStatus').textContent='ابتدا نام حرکت را وارد کن.';return;}
  if(session>n()){$('quickStatus').textContent='جلسه انتخاب‌شده از تعداد جلسات برنامه بیشتر است.';return;}
  if(system!=='عادی'&&!group){$('quickStatus').textContent='برای سوپرست، تری‌ست یا جاینت‌ست یک نام گروه وارد کن.';return;}
- if(!/^\\d+$/.test(sets)||Number(sets)<1||!/^\\d+$/.test(reps)||Number(reps)<1||!/^\\d+$/.test(rest)){ $('quickStatus').textContent='ست و تکرار باید عدد مثبت و استراحت باید صفر یا بیشتر باشد.';return;}
- const row=[name,session,system,group,sets,reps,rest].join('\\t');
- $('bulk').value=$('bulk').value.trim()?$('bulk').value.trimEnd()+'\\n'+row:row;
+ if(!/^\d+$/.test(sets)||Number(sets)<1||!/^\d+$/.test(reps)||Number(reps)<1||!/^\d+$/.test(rest)){ $('quickStatus').textContent='ست و تکرار باید عدد مثبت و استراحت باید صفر یا بیشتر باشد.';return;}
+ const row=[name,session,system,group,sets,reps,rest].join('\t');
+ $('bulk').value=$('bulk').value.trim()?$('bulk').value.trimEnd()+'\n'+row:row;
  $('quickStatus').textContent='حرکت به فهرست اضافه شد؛ برای بررسی گروه‌ها پیش‌نمایش را بزن.';
  $('quickName').value='';
  $('quickName').focus();
