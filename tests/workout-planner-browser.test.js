@@ -492,6 +492,32 @@ const assert = require('node:assert/strict');
       assert.equal(exported.templates['قالب انتقالی (2)'].goal, 'muscle');
       assert.equal(exported.templates['قالب انتقالی (2)'].level, 'intermediate');
     });
+    await check('a new workout can be started from a previously exported workout JSON', async () => {
+      const previous = { gender: 'women', sessions: 2, moves: [
+        { name: 'هیپ تراست', session: 1, system: 'سوپرست', group: 'A', sets: 4, reps: 10, rest: 60 },
+        { name: 'ابداکتور دستگاه', session: 1, system: 'سوپرست', group: 'A', sets: 4, reps: 12, rest: 45 },
+        { name: 'لت سیم‌کش', session: 2, system: 'عادی', group: '—', sets: 3, reps: 12, rest: 60 }
+      ]};
+      await page.locator('#bulk').fill('برنامه قبلی فعلی\t1\tعادی\t—\t3\t10\t60');
+      await page.locator('#previousWorkoutFile').setInputFiles({ name: 'previous-workout.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify(previous)) });
+      await page.waitForFunction(() => document.getElementById('previousWorkoutStatus').textContent.includes('برنامه قبلی بارگذاری شد'), { timeout: 3000 });
+      assert.equal(await page.locator('#gender').inputValue(), 'women');
+      assert.equal(await page.locator('#count').inputValue(), '2');
+      const rows = (await page.locator('#bulk').inputValue()).split('\n');
+      assert.equal(rows.length, 3);
+      assert.deepEqual(rows.map(row => row.split('\t')), [
+        ['هیپ تراست', '1', 'سوپرست', 'A', '4', '10', '60'],
+        ['ابداکتور دستگاه', '1', 'سوپرست', 'A', '4', '12', '45'],
+        ['لت سیم‌کش', '2', 'عادی', '—', '3', '12', '60']
+      ]);
+      assert.ok((await page.locator('#sessions').innerText()).includes('هیپ تراست + ابداکتور دستگاه'));
+    });
+    await check('invalid previous workout JSON does not replace the current plan', async () => {
+      const before = await page.locator('#bulk').inputValue();
+      await page.locator('#previousWorkoutFile').setInputFiles({ name: 'invalid.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify({ gender: 'men', sessions: 99, moves: [] })) });
+      await page.waitForFunction(() => document.getElementById('previousWorkoutStatus').textContent.includes('فایل بارگذاری نشد'), { timeout: 3000 });
+      assert.equal(await page.locator('#bulk').inputValue(), before);
+    });
     await check('coach print action opens print dialog and print stylesheet isolates workout preview', async () => {
       const printCss = await page.locator('style').first().innerText();
       assert.match(printCss, /@media print/);
