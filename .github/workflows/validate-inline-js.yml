@@ -44,7 +44,8 @@ jobs:
           const html = fs.readFileSync('index.html', 'utf8');
           const checks = [
             ['numbering is based on each rendered exercise card', 'cards.map((entry,cardIndex)=>{'],
-            ['numbers are converted to Persian digits', "String(cardIndex+1).replace(/\\d/g,d=>'۰۱۲۳۴۵۶۷۸۹'[Number(d)]);"],
+            ['numbering uses a digit-matching replacement', 'String(cardIndex+1).replace('],
+            ['replacement maps digits to Persian numerals', "۰۱۲۳۴۵۶۷۸۹'[Number(d)]);"],
             ['the Persian movement number is rendered in the card', "حرکت '+movementNumber"]
           ];
           const failed = checks.filter(([label, snippet]) => {
