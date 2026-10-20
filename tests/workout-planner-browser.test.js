@@ -600,11 +600,25 @@ const assert = require('node:assert/strict');
       const download = await downloadPromise;
       assert.equal(download.suggestedFilename(), 'fitness-seh-galeh-workout-versions.json');
       const payload = { format: 'fitness-seh-galeh-workout-versions', version: 1, versions: [{ id: 'external-1', name: 'نسخه وارداتی', createdAt: Date.now(), gender: 'men', sessions: 2, moves: [{ name: 'پرس پا', session: 1, system: 'عادی', group: '—', sets: 3, reps: 12, rest: 60 }] }] };
-      await page.locator('#workoutVersionsFile').setInputFiles({ name: 'versions.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify(payload), 'utf8') });
+      await page.evaluate(async payload => {
+        const input = document.querySelector('#workoutVersionsFile');
+        const transfer = new DataTransfer();
+        transfer.items.add(new File([JSON.stringify(payload)], 'versions.json', { type: 'application/json' }));
+        input.files = transfer.files;
+        input.dispatchEvent(new Event('change', { bubbles: true }));
+      }, payload);
+      await page.waitForFunction(() => document.querySelector('#workoutVersionStatus').textContent.includes('نسخه وارد شد') || document.querySelector('#workoutVersionStatus').textContent.includes('معتبر'));
       assert.match(await page.locator('#workoutVersionStatus').innerText(), /1 نسخه وارد شد/);
       assert.equal(await page.locator('#workoutVersionSelect option').count(), 2, 'import should preserve existing versions and add the imported one');
       assert.ok((await page.locator('#workoutVersionSelect').innerText()).includes('نسخه وارداتی'));
-      await page.locator('#workoutVersionsFile').setInputFiles({ name: 'invalid.json', mimeType: 'application/json', buffer: Buffer.from('{"bad":true}', 'utf8') });
+      await page.evaluate(async () => {
+        const input = document.querySelector('#workoutVersionsFile');
+        const transfer = new DataTransfer();
+        transfer.items.add(new File(['{"bad":true}'], 'invalid.json', { type: 'application/json' }));
+        input.files = transfer.files;
+        input.dispatchEvent(new Event('change', { bubbles: true }));
+      });
+      await page.waitForFunction(() => document.querySelector('#workoutVersionStatus').textContent.includes('ساختار فایل نسخه‌ها معتبر نیست'));
       assert.match(await page.locator('#workoutVersionStatus').innerText(), /ساختار فایل نسخه‌ها معتبر نیست/);
       assert.equal(await page.locator('#workoutVersionSelect option').count(), 2, 'invalid import should not change saved versions');
     });
