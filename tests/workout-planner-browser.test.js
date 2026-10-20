@@ -389,6 +389,36 @@ const assert = require('node:assert/strict');
       assert.ok((await page.locator('#sessions').innerText()).includes('پرس گروهی الف + پرس گروهی ب'), 'superset should still render together after moving');
       assert.match(await page.locator('#quickStatus').innerText(), /اعضای گروه تمرینی هم همراه آن منتقل شدند/);
     });
+    await check('moving one triset or giant-set movement transfers the complete group and preserves details', async () => {
+      const cases = [
+        { system: 'تری‌ست', names: ['تری‌ست الف', 'تری‌ست ب', 'تری‌ست ج'], expectedSize: 3 },
+        { system: 'جاینت‌ست', names: ['جاینت الف', 'جاینت ب', 'جاینت ج', 'جاینت د'], expectedSize: 4 }
+      ];
+      for (const item of cases) {
+        await page.locator('#count').selectOption('2');
+        await page.locator('#split').selectOption('manual');
+        const rows = item.names.map((name, i) => [
+          name, '1', item.system, 'گروه X', String(2 + i), String(10 + i), String(45 + i * 5)
+        ]);
+        rows.push(['حرکت مستقل', '1', 'عادی', '—', '3', '15', '60']);
+        await page.locator('#bulk').fill(rows.map(row => row.join(String.fromCharCode(9))).join(String.fromCharCode(10)));
+        await page.getByRole('checkbox', { name: 'انتخاب حرکت ' + item.names[0] }).check();
+        await page.locator('#bulkTargetSession').selectOption('2');
+        await page.locator('#moveSelectedToSession').click();
+        const movedRows = (await page.locator('#bulk').inputValue()).split(String.fromCharCode(10)).map(line => line.split(String.fromCharCode(9)));
+        for (let i = 0; i < item.expectedSize; i++) {
+          assert.equal(movedRows[i][1], '2', item.system + ' member ' + item.names[i] + ' should move with the selected member');
+          assert.equal(movedRows[i][2], item.system);
+          assert.equal(movedRows[i][3], 'گروه X');
+          assert.equal(movedRows[i][4], String(2 + i), 'sets should be preserved');
+          assert.equal(movedRows[i][5], String(10 + i), 'reps should be preserved');
+          assert.equal(movedRows[i][6], String(45 + i * 5), 'rest should be preserved');
+        }
+        assert.equal(movedRows[item.expectedSize][1], '1', 'unrelated normal movement should stay in the original session');
+        assert.match(await page.locator('#quickStatus').innerText(), new RegExp(item.expectedSize + ' حرکت به جلسه 2 منتقل شد'));
+        assert.match(await page.locator('#quickStatus').innerText(), /اعضای گروه تمرینی هم همراه آن منتقل شدند/);
+      }
+    });
     await check('movement can be edited directly from the full workout preview', async () => {
       await page.locator('#count').selectOption('2');
       await page.locator('#split').selectOption('manual');
