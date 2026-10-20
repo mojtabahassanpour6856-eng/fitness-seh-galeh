@@ -341,6 +341,23 @@ const assert = require('node:assert/strict');
       await page.locator('#bankSearch').fill('ناموجود');
       assert.match(await page.locator('#exerciseBank').innerText(), /حرکتی پیدا نشد/);
     });
+    await check('select-visible bank shortcut selects only current filtered results for bulk addition', async () => {
+      await page.locator('#bulk').fill('');
+      await page.locator('#count').selectOption('2');
+      await page.locator('#bankCategory').selectOption('سینه');
+      await page.locator('#bankSearch').fill('پرس سینه هالتر');
+      const visibleNames = await page.locator('.bankAddMoveCheck').evaluateAll(items => items.map(item => item.value));
+      assert.deepEqual(visibleNames, ['پرس سینه هالتر'], 'search should limit the visible selection scope');
+      await page.locator('#selectVisibleBankForAdd').click();
+      assert.equal(await page.locator('.bankAddMoveCheck:checked').count(), 1);
+      await page.locator('#bankBulkSession').selectOption('2');
+      await page.locator('#addSelectedBankExercises').click();
+      const rows = (await page.locator('#bulk').inputValue()).split(String.fromCharCode(10)).map(line => line.split(String.fromCharCode(9)));
+      assert.equal(rows.length, 1);
+      assert.equal(rows[0][0], 'پرس سینه هالتر');
+      assert.equal(rows[0][1], '2');
+      assert.match(await page.locator('#bankStatus').innerText(), /1 حرکت به جلسه 2 اضافه شد/);
+    });
     await check('multiple bank movements can be added to a selected session with shared sets reps and rest', async () => {
       await page.locator('#bulk').fill('');
       await page.locator('#count').selectOption('2');
