@@ -6345,7 +6345,7 @@ else loadCoachExerciseListsWhenReady();
 (function(){
   const esc=v=>typeof escf==='function'?escf(v):String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const sysLabels={normal:'عادی',superset:'سوپرست',triset:'تری‌ست',giant:'جاینت‌ست','drop-set':'دراپ‌ست',dropset:'دراپ‌ست',drop:'دراپ‌ست',rest_pause:'استراحت-مکث',timed:'تایم‌دار',multi_stage:'چندمرحله‌ای',custom:'سفارشی'};
-  const groupable=new Set(['superset','triset','giant']);
+  const groupable=new Set(['superset','triset','giant','giant_set','giant-set']);
   const exerciseName=(x,names)=>((names&&(names[String(x.exercise_id)]||names[x.exercise_id]))||'حرکت');
   const controls=x=>'<div class="workout-exercise-actions"><button class="mini secondary" onclick="editWorkoutExercise(\''+esc(x.id)+'\')" title="ویرایش">✏️</button><button class="mini secondary" onclick="moveWorkoutExercise(\''+esc(x.id)+'\',-1)" title="انتقال به بالا">⬆️</button><button class="mini secondary" onclick="moveWorkoutExercise(\''+esc(x.id)+'\',1)" title="انتقال به پایین">⬇️</button><button class="mini danger" onclick="deleteWorkoutExercise(\''+esc(x.id)+'\')" title="حذف">🗑</button></div>';
   const rank=v=>{const t=String(v||'').trim();const m=t.match(/(اول|دوم|سوم|چهارم|پنجم|ششم|هفتم|هشتم|نهم|دهم|[0-9۰-۹]+)/);const n={'اول':1,'دوم':2,'سوم':3,'چهارم':4,'پنجم':5,'ششم':6,'هفتم':7,'هشتم':8,'نهم':9,'دهم':10};if(!m)return 999;const q=n[m[1]]||Number(String(m[1]).replace(/[۰-۹]/g,d=>'۰۱۲۳۴۵۶۷۸۹'.indexOf(d)));return Number.isFinite(q)&&q>0?q:999;};
