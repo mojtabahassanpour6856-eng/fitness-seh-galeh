@@ -94,6 +94,25 @@ const assert = require('node:assert/strict');
       assert.equal(rows[0].split(String.fromCharCode(9))[0], 'پرس سینه سریع');
       assert.equal(rows[1].split(String.fromCharCode(9))[0], 'لت سریع');
     });
+    await check('select all visible movements respects the session filter for bulk edits', async () => {
+      await page.locator('#count').selectOption('2');
+      await page.locator('#bulk').fill([
+        ['حرکت جلسه یک', '1', 'عادی', '—', '3', '10', '60'].join(String.fromCharCode(9)),
+        ['حرکت جلسه دو الف', '2', 'عادی', '—', '4', '12', '75'].join(String.fromCharCode(9)),
+        ['حرکت جلسه دو ب', '2', 'عادی', '—', '2', '15', '45'].join(String.fromCharCode(9))
+      ].join(String.fromCharCode(10)));
+      await page.locator('#managerSessionFilter').selectOption('2');
+      await page.locator('#selectVisibleMoves').click();
+      assert.equal(await page.locator('#selectedMoveCount').innerText(), 'انتخاب‌شده: 2');
+      await page.locator('#bulkEditReps').fill('9');
+      await page.locator('#applyBulkMovementEdits').click();
+      let rows = (await page.locator('#bulk').inputValue()).split(String.fromCharCode(10)).map(line => line.split(String.fromCharCode(9)));
+      assert.equal(rows[0][5], '10', 'movement outside the visible session must remain unchanged');
+      assert.equal(rows[1][5], '9');
+      assert.equal(rows[2][5], '9');
+      await page.locator('#deselectVisibleMoves').click();
+      assert.equal(await page.locator('#selectedMoveCount').innerText(), 'انتخاب‌شده: 0');
+    });
     await check('bulk edits update only selected movements and preserve their other details', async () => {
       await page.locator('#count').selectOption('2');
       await page.locator('#bulk').fill([
