@@ -327,6 +327,28 @@ const assert = require('node:assert/strict');
       assert.deepEqual(squat.slice(4, 7), ['4', '8', '90']);
       assert.ok((await page.locator('#quickStatus').innerText()).includes('2 حرکت'));
     });
+    await check('bulk movement editing changes only filled fields and rejects invalid values without modifying exercises', async () => {
+      await page.locator('#count').selectOption('2');
+      await page.locator('#split').selectOption('manual');
+      await page.locator('#bulk').fill([
+        ['حرکت انتخابی', '1', 'عادی', '—', '3', '12', '60'].join(String.fromCharCode(9)),
+        ['حرکت دست‌نخورده', '2', 'عادی', '—', '4', '8', '90'].join(String.fromCharCode(9))
+      ].join(String.fromCharCode(10)));
+      await page.getByRole('button', { name: 'اعتبارسنجی و پیش‌نمایش' }).click();
+      await page.locator('input[type="checkbox"][aria-label="انتخاب حرکت حرکت انتخابی"]').check();
+      await page.locator('#bulkEditSets').fill('5');
+      await page.locator('#bulkEditReps').fill('');
+      await page.locator('#bulkEditRest').fill('');
+      await page.locator('#applyBulkMovementEdits').click();
+      let rows = (await page.locator('#bulk').inputValue()).split(String.fromCharCode(10)).map(line => line.split(String.fromCharCode(9)));
+      assert.deepEqual(rows[0].slice(4, 7), ['5', '12', '60'], 'blank fields should preserve their existing values');
+      assert.deepEqual(rows[1].slice(4, 7), ['4', '8', '90'], 'unselected exercise should remain unchanged');
+      await page.locator('#bulkEditSets').fill('0');
+      await page.locator('#applyBulkMovementEdits').click();
+      rows = (await page.locator('#bulk').inputValue()).split(String.fromCharCode(10)).map(line => line.split(String.fromCharCode(9)));
+      assert.deepEqual(rows[0].slice(4, 7), ['5', '12', '60'], 'invalid input must not partially change selected exercise');
+      assert.match(await page.locator('#quickStatus').innerText(), /حداقل ۱|حداقل 1/);
+    });
     await check('all ready-made templates use supported session counts and pass validation', async () => {
       const expected = { chest: 2, back: 2, legs: 2, shoulders: 2, four: 4, five: 5 };
       for (const [preset, sessions] of Object.entries(expected)) {
