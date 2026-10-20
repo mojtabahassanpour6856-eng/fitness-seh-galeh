@@ -157,6 +157,12 @@ function renderMoveManager(){
   const row=document.createElement('div');row.className='move';row.style.display='flex';row.style.flexWrap='wrap';row.style.alignItems='center';row.style.justifyContent='space-between';row.style.gap='8px';
   const label=document.createElement('span');label.textContent=(index+1)+'. '+(parts[0]||'حرکت بدون نام')+' · جلسه '+(parts[1]||'۱')+' · '+(parts[2]||'عادی');row.appendChild(label);
   const actions=document.createElement('div');actions.style.display='flex';actions.style.gap='6px';
+  const up=document.createElement('button');up.type='button';up.className='secondary';up.textContent='↑ بالا';up.setAttribute('aria-label','انتقال حرکت به بالا');up.dataset.moveUp=String(index);up.disabled=index===0;up.addEventListener('click',()=>{
+   const current=rawLines();if(index<=0||index>=current.length)return;[current[index-1],current[index]]=[current[index],current[index-1]];$('bulk').value=current.join('\n');renderMoveManager();render();$('quickStatus').textContent='ترتیب حرکت تغییر کرد.';
+  });actions.appendChild(up);
+  const down=document.createElement('button');down.type='button';down.className='secondary';down.textContent='↓ پایین';down.setAttribute('aria-label','انتقال حرکت به پایین');down.dataset.moveDown=String(index);down.disabled=index===lines.length-1;down.addEventListener('click',()=>{
+   const current=rawLines();if(index<0||index>=current.length-1)return;[current[index],current[index+1]]=[current[index+1],current[index]];$('bulk').value=current.join('\n');renderMoveManager();render();$('quickStatus').textContent='ترتیب حرکت تغییر کرد.';
+  });actions.appendChild(down);
   const edit=document.createElement('button');edit.type='button';edit.className='secondary';edit.textContent='ویرایش';edit.addEventListener('click',()=>{
    $('quickName').value=parts[0]||'';$('quickSession').value=parts[1]||'1';$('quickSystem').value=parts[2]||'عادی';$('quickGroup').value=parts[3]||'—';$('quickSets').value=parts[4]||'3';$('quickReps').value=parts[5]||'12';$('quickRest').value=parts[6]||'60';
    $('quickSystem').dispatchEvent(new Event('change'));editingLine=index;$('addQuickMove').textContent='ذخیره ویرایش';$('quickStatus').textContent='در حال ویرایش: '+(parts[0]||'حرکت');$('quickName').focus();
