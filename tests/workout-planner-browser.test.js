@@ -75,9 +75,9 @@ const assert = require('node:assert/strict');
     await check('groups with the same label in different sessions are validated separately', async () => {
       await page.locator('#count').selectOption('2');
       await page.locator('#bulk').fill([
-        ['حرکت یک', '1', 'سوپرست', 'A', '3', '12', '60'].join('\\t'),
-        ['حرکت دو', '2', 'سوپرست', 'A', '3', '12', '60'].join('\\t')
-      ].join('\\n'));
+        ['حرکت یک', '1', 'سوپرست', 'A', '3', '12', '60'].join(String.fromCharCode(9)),
+        ['حرکت دو', '2', 'سوپرست', 'A', '3', '12', '60'].join(String.fromCharCode(9))
+      ].join(String.fromCharCode(10)));
       await page.getByRole('button', { name: 'اعتبارسنجی و پیش‌نمایش' }).click();
       const status = await page.locator('#status').innerText();
       assert.match(status, /جلسه 1/);
