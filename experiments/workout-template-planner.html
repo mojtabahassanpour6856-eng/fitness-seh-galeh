@@ -162,16 +162,22 @@ $('groupSelectedExercises').addEventListener('click',()=>{
 renderExerciseBank();
 let editingLine=-1;
 function rawLines(){return $('bulk').value.split(/\r?\n/).filter(line=>line.trim());}
+let selectedMoveIndices=new Set();
 function renderMoveManager(){
  const box=$('moveManager');box.innerHTML='';
  const lines=rawLines();
  const filter=$('managerSessionFilter')?.value||'all';const visible=lines.map((line,index)=>({line,index})).filter(item=>filter==='all'||String(Number((item.line.includes('\t')?item.line.split('\t'):item.line.split(/[;,]/))[1])||1)===filter);
  const title=document.createElement('h4');title.textContent='حرکات واردشده ('+visible.length+(filter==='all'?'':' در جلسه '+filter)+')';box.appendChild(title);
+ const toolbar=document.createElement('div');toolbar.className='row';toolbar.style.alignItems='center';toolbar.style.gap='8px';
+ const selectedCount=document.createElement('span');selectedCount.id='selectedMoveCount';selectedCount.textContent='انتخاب‌شده: '+selectedMoveIndices.size;toolbar.appendChild(selectedCount);
+ const target=document.createElement('select');target.id='bulkTargetSession';target.setAttribute('aria-label','جلسه مقصد برای حرکات انتخاب‌شده');for(let s=1;s<=n();s++){const option=document.createElement('option');option.value=String(s);option.textContent='انتقال به جلسه '+s;target.appendChild(option);}toolbar.appendChild(target);
+ const moveSelected=document.createElement('button');moveSelected.type='button';moveSelected.className='secondary';moveSelected.id='moveSelectedToSession';moveSelected.textContent='انتقال انتخاب‌شده‌ها';moveSelected.addEventListener('click',()=>{const chosen=[...selectedMoveIndices].filter(i=>i>=0&&i<rawLines().length);if(!chosen.length){$('quickStatus').textContent='ابتدا یک یا چند حرکت را انتخاب کن.';return;}const current=rawLines(),destination=Number(target.value);for(const index of chosen){const parts=current[index].split('\\t');while(parts.length<7)parts.push('');parts[1]=String(destination);current[index]=parts.join('\\t');} $('bulk').value=current.join('\\n');selectedMoveIndices.clear();renderMoveManager();render();$('quickStatus').textContent=chosen.length+' حرکت به جلسه '+destination+' منتقل شد.';});toolbar.appendChild(moveSelected);
+ const clearSelection=document.createElement('button');clearSelection.type='button';clearSelection.className='secondary';clearSelection.textContent='پاک‌کردن انتخاب';clearSelection.addEventListener('click',()=>{selectedMoveIndices.clear();renderMoveManager();});toolbar.appendChild(clearSelection);box.appendChild(toolbar);
  if(!visible.length){const p=document.createElement('p');p.className='muted';p.textContent='هنوز حرکتی وارد نشده است.';box.appendChild(p);return;}
  visible.forEach(({line,index})=>{
   const parts=line.split('\t').map(v=>v.trim());
   const row=document.createElement('div');row.className='move';row.style.display='flex';row.style.flexWrap='wrap';row.style.alignItems='center';row.style.justifyContent='space-between';row.style.gap='8px';
-  const label=document.createElement('span');label.textContent=(index+1)+'. '+(parts[0]||'حرکت بدون نام')+' · جلسه '+(parts[1]||'۱')+' · '+(parts[2]||'عادی');row.appendChild(label);
+  const selectLabel=document.createElement('label');selectLabel.style.display='inline-flex';selectLabel.style.alignItems='center';selectLabel.style.gap='8px';const checkbox=document.createElement('input');checkbox.type='checkbox';checkbox.checked=selectedMoveIndices.has(index);checkbox.setAttribute('aria-label','انتخاب حرکت '+(parts[0]||''));checkbox.addEventListener('change',()=>{if(checkbox.checked)selectedMoveIndices.add(index);else selectedMoveIndices.delete(index);const count=$('selectedMoveCount');if(count)count.textContent='انتخاب‌شده: '+selectedMoveIndices.size;});selectLabel.appendChild(checkbox);const label=document.createElement('span');label.textContent=(index+1)+'. '+(parts[0]||'حرکت بدون نام')+' · جلسه '+(parts[1]||'۱')+' · '+(parts[2]||'عادی');selectLabel.appendChild(label);row.appendChild(selectLabel);
   const actions=document.createElement('div');actions.style.display='flex';actions.style.gap='6px';
   const up=document.createElement('button');up.type='button';up.className='secondary';up.textContent='↑ بالا';up.setAttribute('aria-label','انتقال حرکت به بالا');up.dataset.moveUp=String(index);up.disabled=index===0;up.addEventListener('click',()=>{
    const current=rawLines();if(index<=0||index>=current.length)return;[current[index-1],current[index]]=[current[index],current[index-1]];$('bulk').value=current.join('\n');renderMoveManager();render();$('quickStatus').textContent='ترتیب حرکت تغییر کرد.';
