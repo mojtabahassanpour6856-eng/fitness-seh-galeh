@@ -19,17 +19,17 @@ jobs:
           const fs = require('fs');
           const { spawnSync } = require('child_process');
           const html = fs.readFileSync('index.html', 'utf8');
-          const scripts = [...html.matchAll(/<script\b([^>]*)>([\s\S]*?)<\/script\s*>/gi)];
+          const scripts = [...html.matchAll(/<script\\b([^>]*)>([\\s\\S]*?)<\\/script\\s*>/gi)];
           let failed = false, count = 0;
           for (const [i, match] of scripts.entries()) {
-            if (/\bsrc\s*=/.test(match[1]) || !match[2].trim()) continue;
+            if (/\\bsrc\\s*=/.test(match[1]) || !match[2].trim()) continue;
             count++;
             const file = `/tmp/inline-${i}.js`;
             fs.writeFileSync(file, match[2]);
             const result = spawnSync(process.execPath, ['--check', file], { encoding: 'utf8' });
             if (result.status !== 0) {
               failed = true;
-              const start = html.slice(0, match.index).split('\n').length;
+              const start = html.slice(0, match.index).split('\\n').length;
               console.error(`Syntax error in inline script starting at HTML line ${start}:`);
               console.error(result.stderr || result.stdout);
             }
@@ -37,16 +37,22 @@ jobs:
           console.log(`Checked ${count} inline scripts.`);
           if (failed) process.exit(1);
           NODE
-      - name: Guard workout movement numbering
+      - name: Guard workout movement numbering and grouping
         run: |
           node <<'NODE'
           const fs = require('fs');
           const html = fs.readFileSync('index.html', 'utf8');
           const checks = [
+            ['each session builds its own exercise-card list', 'const list = grouped.get(day)||[], cards=[];'],
+            ['superset and multi-move groups are collected into one card', 'const existing=groupable?cards.find(card=>card.key===key):null;'],
             ['numbering is based on each rendered exercise card', 'cards.map((entry,cardIndex)=>{'],
             ['numbering uses a digit-matching replacement', 'String(cardIndex+1).replace('],
             ['replacement maps digits to Persian numerals', "۰۱۲۳۴۵۶۷۸۹'[Number(d)]);"],
-            ['the Persian movement number is rendered in the card', "حرکت '+movementNumber"]
+            ['the Persian movement number is rendered in the card', "حرکت '+movementNumber"],
+            ['grouped movements use a plus separator', 'workout-group-plus'],
+            ['grouped movement output retains repetitions', "x.reps||'—'"],
+            ['grouped movement output retains sets', "x.sets??'—'"],
+            ['grouped movement output retains rest time', 'x.rest_seconds??0']
           ];
           const failed = checks.filter(([label, snippet]) => {
             const ok = html.includes(snippet);
