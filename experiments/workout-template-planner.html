@@ -134,11 +134,11 @@ $('groupSelectedExercises').addEventListener('click',()=>{
  if(selected.length!==minimum){$('bankStatus').textContent='برای '+system+' دقیقاً '+minimum+' حرکت انتخاب کن؛ اکنون '+selected.length+' حرکت انتخاب شده.';return;}
  const session=Number($('quickSession').value),sets=$('quickSets').value,reps=$('quickReps').value,rest=$('quickRest').value;
  if(session>n()){$('bankStatus').textContent='جلسه انتخاب‌شده از تعداد جلسات برنامه بیشتر است.';return;}
- if(!/^\\d+$/.test(sets)||Number(sets)<1||!/^\\d+$/.test(reps)||Number(reps)<1||!/^\\d+$/.test(rest)){$('bankStatus').textContent='ست و تکرار باید عدد مثبت و استراحت باید صفر یا بیشتر باشد.';return;}
+ if(!Number.isInteger(Number(sets))||Number(sets)<1||!Number.isInteger(Number(reps))||Number(reps)<1||!Number.isInteger(Number(rest))||Number(rest)<0){$('bankStatus').textContent='ست و تکرار باید عدد مثبت و استراحت باید صفر یا بیشتر باشد.';return;}
  const letters='ABCDEFGHIJKLMNOPQRSTUVWXYZ';const label=letters[nextGroupNumber%letters.length]+(nextGroupNumber>=letters.length?Math.floor(nextGroupNumber/letters.length):'');nextGroupNumber++;
  const lines=rawLines();
- selected.forEach(name=>lines.push([name,session,system,label,sets,reps,rest].join('\\t')));
- $('bulk').value=lines.join('\\n');$('quickSystem').value=system;$('quickGroup').value=label;$('quickSystem').dispatchEvent(new Event('change'));
+ selected.forEach(name=>lines.push([name,session,system,label,sets,reps,rest].join(String.fromCharCode(9))));
+ $('bulk').value=lines.join(String.fromCharCode(10));$('quickSystem').value=system;$('quickGroup').value=label;$('quickSystem').dispatchEvent(new Event('change'));
  document.querySelectorAll('.bankMoveCheck').forEach(x=>x.checked=false);
  renderMoveManager();render();
  $('bankStatus').textContent=selected.length+' حرکت به‌صورت '+system+' گروه «'+label+'» در جلسه '+session+' اضافه شد.';
