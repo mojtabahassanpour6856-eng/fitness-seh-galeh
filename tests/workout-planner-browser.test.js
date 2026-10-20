@@ -397,6 +397,21 @@ const assert = require('node:assert/strict');
         assert.ok((await page.locator('#bulk').inputValue()).includes(movement));
       }
     });
+    await check('save current workout as a reusable template in one click', async () => {
+      await page.locator('#gender').selectOption('women');
+      await page.locator('#count').selectOption('3');
+      await page.locator('#bulk').fill('هیپ تراست\t1\tعادی\t—\t3\t12\t60');
+      await page.locator('#customName').fill('قالب آزمایش ذخیره سریع');
+      await page.locator('#saveCurrentAsTemplate').click();
+      assert.equal(await page.locator('#savedTemplates').inputValue(), 'قالب آزمایش ذخیره سریع');
+      assert.ok((await page.locator('#templateStatus').innerText()).includes('ذخیره شد'));
+      await page.locator('#bulk').fill('حرکت تغییر یافته\t1\tعادی\t—\t2\t10\t60');
+      await page.locator('#loadTemplate').click();
+      assert.ok((await page.locator('#bulk').inputValue()).includes('هیپ تراست'));
+      assert.equal(await page.locator('#gender').inputValue(), 'women');
+      await page.locator('#saveCurrentAsTemplate').click();
+      assert.equal(await page.locator('#savedTemplates').inputValue(), 'قالب آزمایش ذخیره سریع (2)');
+    });
     await check('women template selection updates explanatory hint', async () => {
       await page.locator('#gender').selectOption('women');
       assert.ok((await page.locator('#templateHint').innerText()).includes('قالب خانم‌ها'));
