@@ -478,6 +478,34 @@ const assert = require('node:assert/strict');
       assert.ok((await page.locator('#bulk').inputValue()).includes('پرس سینه'));
       assert.ok(!(await page.locator('#bulk').inputValue()).includes('لت سیم‌کش'));
     });
+    await check('moving a grouped movement from preview transfers only its full matching group', async () => {
+      await page.locator('#count').selectOption('3');
+      await page.locator('#split').selectOption('manual');
+      await page.locator('#bulk').fill([
+        ['پرس گروهی الف', '1', 'سوپرست', 'A', '3', '12', '60'],
+        ['قفسه گروهی الف', '1', 'سوپرست', 'A', '3', '10', '60'],
+        ['پرس گروهی جلسه دو', '2', 'سوپرست', 'A', '4', '10', '75'],
+        ['قفسه گروهی جلسه دو', '2', 'سوپرست', 'A', '4', '12', '75'],
+        ['تری‌ست الف', '1', 'تری‌ست', 'A', '3', '12', '45'],
+        ['تری‌ست ب', '1', 'تری‌ست', 'A', '3', '10', '45'],
+        ['تری‌ست ج', '1', 'تری‌ست', 'A', '3', '8', '45'],
+        ['حرکت عادی', '1', 'عادی', '—', '2', '15', '30']
+      ].map(row => row.join(String.fromCharCode(9))).join(String.fromCharCode(10)));
+      await page.getByRole('button', { name: 'اعتبارسنجی و پیش‌نمایش' }).click();
+      await page.getByLabel('جلسه مقصد برای پرس گروهی الف').selectOption('3');
+      await page.getByRole('button', { name: 'انتقال از پیش‌نمایش پرس گروهی الف' }).click();
+      const trial = await page.evaluate(() => window.__trial);
+      const sessionOf = name => trial.moves.find(move => move.name === name).session;
+      assert.equal(sessionOf('پرس گروهی الف'), 3);
+      assert.equal(sessionOf('قفسه گروهی الف'), 3, 'the paired movement should move with the selected movement');
+      assert.equal(sessionOf('پرس گروهی جلسه دو'), 2, 'same group label in another session must stay put');
+      assert.equal(sessionOf('قفسه گروهی جلسه دو'), 2);
+      assert.equal(sessionOf('تری‌ست الف'), 1, 'a different system with the same label must stay put');
+      assert.equal(sessionOf('تری‌ست ب'), 1);
+      assert.equal(sessionOf('تری‌ست ج'), 1);
+      assert.equal(sessionOf('حرکت عادی'), 1, 'unrelated normal movement must stay put');
+      assert.match(await page.locator('#quickStatus').innerText(), /اعضای گروه هم همراه آن منتقل شدند/);
+    });
     await check('selected movements can have sets reps and rest edited in bulk', async () => {
       await page.locator('#count').selectOption('2');
       await page.locator('#split').selectOption('manual');
