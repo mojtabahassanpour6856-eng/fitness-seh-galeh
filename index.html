@@ -5561,7 +5561,7 @@ window.useLibraryExercise=async function(id){
               else cards.push({key,rows:[x]});
             });
             return '<section class="session-cell"><div class="session-heading">'+esc(day)+'</div><div class="session-exercises" style="--move-count:'+cards.length+'">'+cards.map((entry,cardIndex)=>{
-              const movementNumber=String(cardIndex+1).replace(/\\d/g,d=>'۰۱۲۳۴۵۶۷۸۹'[Number(d)]);
+              const movementNumber=String(cardIndex+1).replace(/\d/g,d=>'۰۱۲۳۴۵۶۷۸۹'[Number(d)]);
               const arr=entry.rows,first=arr[0],sys=String(first.training_system||'normal');
               const expected=sys==='superset'?2:((sys==='triset'||sys==='giant'||sys==='giant_set'||sys==='giant-set')?3:0);
               const isGiant=sys==='giant'||sys==='giant_set'||sys==='giant-set';
