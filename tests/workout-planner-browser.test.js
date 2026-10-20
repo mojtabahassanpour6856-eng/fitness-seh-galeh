@@ -381,6 +381,22 @@ const assert = require('node:assert/strict');
       assert.equal(await page.locator('#count').inputValue(),'4');
       assert.ok((await page.locator('#bulk').inputValue()).includes('پرس سینه هالتر'));
     });
+    await check('goal-based starter templates load editable movements and correct gender', async () => {
+      const cases = [
+        ['womenFatLoss','women','3','اسکوات جام'],
+        ['womenMuscle','women','4','هیپ تراست'],
+        ['menFatLoss','men','3','لانج'],
+        ['menMuscle','men','4','پرس سینه هالتر'],
+        ['beginner','men','2','نشستن و برخاستن از نیمکت']
+      ];
+      for (const [preset, gender, sessions, movement] of cases) {
+        await page.locator('#preset').selectOption(preset);
+        await page.getByRole('button', { name: 'بارگذاری قالب آماده' }).click();
+        assert.equal(await page.locator('#gender').inputValue(), gender);
+        assert.equal(await page.locator('#count').inputValue(), sessions);
+        assert.ok((await page.locator('#bulk').inputValue()).includes(movement));
+      }
+    });
     await check('women template selection updates explanatory hint', async () => {
       await page.locator('#gender').selectOption('women');
       assert.ok((await page.locator('#templateHint').innerText()).includes('قالب خانم‌ها'));
