@@ -56,7 +56,13 @@ function render(){
  const status=$('status');status.className='status '+(errors.length?'error':'success');status.textContent=errors.length?'خطاهای بررسی:\n• '+[...new Set(errors)].join('\n• '):'بررسی اولیه موفق بود: '+moves.length+' حرکت، '+n()+' جلسه. این فقط اعتبارسنجی نمونه مستقل است و ذخیره در اپ اصلی را آزمایش نمی‌کند.';
  window.__trial={gender:$('gender').value,sessions:n(),moves:arranged,errors};
 }
-$('build').addEventListener('click',()=>{render();});$('preview').addEventListener('click',render);$('gender').addEventListener('change',hint);$('count').addEventListener('change',()=>{hint();render();});$('split').addEventListener('change',render);$('example').addEventListener('click',()=>{$('bulk').value=example;render();});
+$('applyPreset').addEventListener('click',()=>{const p={
+chest:[2,'پرس سینه دمبل\t1\tسوپرست\tA\t3\t12\t60\nقفسه سیم‌کش\t1\tسوپرست\tA\t3\t12\t60\nپشت بازو سیم‌کش\t2\tعادی\t—\t3\t12\t60'],
+back:[2,'لت سیم‌کش\t1\tسوپرست\tA\t3\t12\t60\nقایقی سیم‌کش\t1\tسوپرست\tA\t3\t12\t60\nجلو بازو دمبل\t2\tعادی\t—\t3\t12\t60'],
+legs:[1,'اسکوات\t1\tعادی\t—\t4\t10\t90\nپرس پا\t1\tعادی\t—\t3\t12\t75\nجلو پا دستگاه\t1\tعادی\t—\t3\t12\t60'],
+shoulders:[2,'پرس سرشانه دمبل\t1\tعادی\t—\t3\t10\t75\nنشر جانب دمبل\t1\tعادی\t—\t3\t12\t60\nکرانچ شکم\t2\tعادی\t—\t3\t15\t45'],
+four:[4,'پرس سینه\t1\tعادی\t—\t3\t12\t60\nلت سیم‌کش\t2\tعادی\t—\t3\t12\t60\nاسکوات\t3\tعادی\t—\t3\t10\t90\nپرس سرشانه\t4\tعادی\t—\t3\t12\t60'],
+five:[5,'پرس سینه\t1\tعادی\t—\t3\t12\t60\nلت سیم‌کش\t2\tعادی\t—\t3\t12\t60\nپرس سرشانه\t3\tعادی\t—\t3\t12\t60\nاسکوات\t4\tعادی\t—\t3\t10\t90\nجلو بازو دمبل\t5\tعادی\t—\t3\t12\t60']};const x=p[$('preset').value];$('count').value=x[0];$('bulk').value=x[1];$('split').value='manual';hint();render();$('templateStatus').textContent='قالب آماده بارگذاری شد؛ قبل از استفاده بررسی کن.';});$('build').addEventListener('click',()=>{render();});$('preview').addEventListener('click',render);$('gender').addEventListener('change',hint);$('count').addEventListener('change',()=>{hint();render();});$('split').addEventListener('change',render);$('example').addEventListener('click',()=>{$('bulk').value=example;render();});
 $('export').addEventListener('click',()=>{render();const data=window.__trial;if(data.errors.length){$('status').textContent+='\nابتدا خطاها را اصلاح کن تا خروجی گرفته شود.';return;}const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='fitness-seh-galeh-workout-trial.json';a.click();URL.revokeObjectURL(a.href);});
 hint();
 })();
