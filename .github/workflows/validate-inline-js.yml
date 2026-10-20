@@ -60,7 +60,7 @@ jobs:
             ['superset validation requires two movements', "sys==='superset'?2"],
             ['triset and giant-set validation requires three movements', "sys==='triset'||sys==='giant'?3"],
             ['bulk save preserves the selected training system', 'training_system:item.training_system'],
-            ['bulk save preserves the group key', 'group_key:item.group_key']
+            ['bulk save preserves the group key', 'group_key:item.group_key||null']
           ];
           const failed = checks.filter(([label, snippet]) => {
             const ok = html.includes(snippet);
