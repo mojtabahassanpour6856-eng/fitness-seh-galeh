@@ -12098,6 +12098,12 @@ body.workout-output.workout-compact{
   if(!rows.length){status('این الگو حرکت قابل استفاده ندارد.');return;}
   if(!confirm('یک نسخه مستقل از «'+template.name+'» برای شاگرد «'+(currentClient.full_name||currentClient.name||'انتخاب‌شده')+'» ساخته شود؟ برنامه قبلی حذف نمی‌شود.'))return;
   const traineeId=String(currentClient.id);
+  // Snapshot the currently selected plan so a failed copy cannot leave the coach panel
+  // pointing at a plan that the rollback below removes.
+  const previousPlanId=currentWorkoutPlanId;
+  const previousPlanOwnerId=workoutPlanOwnerId;
+  const previousExercisesCache=Array.isArray(workoutExercisesCache)?workoutExercisesCache.slice():workoutExercisesCache;
+  const previousForm={title:el('workoutTitle')?.value||'',startDate:el('workoutStartDate')?.value||'',goal:el('workoutGoal')?.value||'',notes:el('workoutNotes')?.value||''};
   let newPlanId=null;
   try{
    status('در حال ساخت نسخه مستقل الگو…');
@@ -12126,8 +12132,24 @@ body.workout-output.workout-compact{
    if(typeof window.renderWorkoutList==='function')window.renderWorkoutList(createdRows,exerciseNames);else renderWorkoutList(createdRows,exerciseNames);
    status('نسخه مستقل الگوی «'+template.name+'» برای شاگرد ساخته شد. تغییرات بعدی روی همین نسخه اعمال می‌شود، نه روی الگوی اصلی.');
   }catch(e){
-   if(newPlanId){try{await sbWrite('/trainee_workout_exercises?workout_plan_id=eq.'+encodeURIComponent(newPlanId),'DELETE',{});}catch(cleanupError){}try{await sbWrite('/trainee_workout_plans?id=eq.'+encodeURIComponent(newPlanId),'DELETE',{});}catch(cleanupError){}}
-   status('ساخت نسخه انجام نشد: '+(e.message||String(e)));
+   let cleanupFailed=false;
+   if(newPlanId){
+    try{await sbWrite('/trainee_workout_exercises?workout_plan_id=eq.'+encodeURIComponent(newPlanId),'DELETE',{});}catch(cleanupError){cleanupFailed=true;}
+    try{await sbWrite('/trainee_workout_plans?id=eq.'+encodeURIComponent(newPlanId),'DELETE',{});}catch(cleanupError){cleanupFailed=true;}
+    // Restore the previous selection only if the coach has not navigated to another
+    // trainee/plan while the asynchronous operation was running.
+    if(currentClient&&same(currentClient.id,traineeId)&&same(currentWorkoutPlanId,newPlanId)){
+     currentWorkoutPlanId=previousPlanId;
+     workoutPlanOwnerId=previousPlanOwnerId;
+     workoutExercisesCache=previousExercisesCache;
+     if(el('workoutTitle'))el('workoutTitle').value=previousForm.title;
+     if(el('workoutStartDate'))el('workoutStartDate').value=previousForm.startDate;
+     if(el('workoutGoal'))el('workoutGoal').value=previousForm.goal;
+     if(el('workoutNotes'))el('workoutNotes').value=previousForm.notes;
+     if(typeof updateWorkoutStartDateFa==='function')updateWorkoutStartDateFa();
+    }
+   }
+   status('ساخت نسخه انجام نشد: '+(e.message||String(e))+(cleanupFailed?' هشدار: پاک‌سازی کامل نسخه ناقص تأیید نشد؛ فهرست برنامه‌ها را دوباره بارگذاری کنید.':''));
   }
  };
  function syncPanel(){
