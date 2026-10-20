@@ -25,6 +25,12 @@
 پول‌اور سیم‌کش	2	تری‌ست	2	3	15	45
 اسکوات جام	3	عادی	—	4	15	75
 </textarea>
+<div class="card" style="background:#fcfaf4;margin-top:10px" id="exerciseBankCard">
+<h3 style="margin-top:0">بانک حرکات آماده</h3>
+<p class="muted">گروه عضلانی را انتخاب یا نام حرکت را جست‌وجو کن؛ با لمس حرکت، نام آن در فرم ثبت می‌شود و بعد می‌توانی جلسه، سیستم و ست‌ها را تنظیم کنی.</p>
+<div class="row"><div class="field"><label for="bankCategory">گروه عضلانی</label><select id="bankCategory"><option value="همه">همه حرکات</option><option>سینه</option><option>پشت</option><option>پا</option><option>سرشانه</option><option>جلو بازو</option><option>پشت بازو</option><option>شکم</option><option>باسن</option><option>ساق</option></select></div>
+<div class="field"><label for="bankSearch">جست‌وجوی حرکت</label><input id="bankSearch" placeholder="مثلاً اسکوات یا پرس سینه"></div></div>
+<div id="exerciseBank" class="row" style="margin-top:10px" aria-live="polite"></div><p id="bankStatus" class="muted" role="status"></p></div>
 <div class="card" style="background:#fcfaf4;margin-top:10px">
 <h3 style="margin-top:0">افزودن سریع یک حرکت</h3>
 <p class="muted">حرکت را وارد کن و «افزودن به فهرست» را بزن؛ لازم نیست ستون‌ها را دستی تایپ کنی.</p>
@@ -99,6 +105,27 @@ $('quickSystem').addEventListener('change',()=>{
  if(normal)$('quickGroup').value='—';
  else if(!$('quickGroup').value||$('quickGroup').value==='—')$('quickGroup').value='A';
 });
+const exerciseLibrary={
+ 'سینه':['پرس سینه هالتر','پرس سینه دمبل','پرس بالاسینه دمبل','پرس بالاسینه دستگاه','قفسه سیم‌کش','قفسه دمبل','شنا سوئدی'],
+ 'پشت':['لت سیم‌کش از جلو','بارفیکس','قایقی سیم‌کش','پارویی دمبل تک‌دست','زیربغل هالتر خم','پول‌اور سیم‌کش','فیس‌پول'],
+ 'پا':['اسکوات هالتر','اسکوات جام','پرس پا','جلو پا دستگاه','پشت پا خوابیده','ددلیفت رومانیایی','لانج دمبل'],
+ 'سرشانه':['پرس سرشانه دمبل','پرس سرشانه دستگاه','نشر جانب دمبل','نشر خم دمبل','نشر جانب سیم‌کش','شراگ دمبل'],
+ 'جلو بازو':['جلو بازو هالتر','جلو بازو دمبل تناوبی','جلو بازو چکشی','جلو بازو لاری','جلو بازو سیم‌کش'],
+ 'پشت بازو':['پشت بازو سیم‌کش طناب','پشت بازو خوابیده هالتر','پشت بازو دمبل بالای سر','دیپ پشت بازو','پشت بازو تک‌دست سیم‌کش'],
+ 'شکم':['کرانچ','بالا آوردن پا','پلانک','کرانچ سیم‌کش','دوچرخه شکم'],
+ 'باسن':['هیپ تراست','پل باسن','کیک‌بک سیم‌کش','ابداکتور دستگاه','لانج معکوس'],
+ 'ساق':['ساق پا ایستاده','ساق پا نشسته','ساق پا دستگاه پرس']
+};
+function renderExerciseBank(){
+ const box=$('exerciseBank');box.innerHTML='';
+ const category=$('bankCategory').value,query=$('bankSearch').value.trim().toLocaleLowerCase('fa');
+ const entries=Object.entries(exerciseLibrary).filter(([cat])=>category==='همه'||cat===category).flatMap(([cat,names])=>names.filter(name=>name.toLocaleLowerCase('fa').includes(query)).map(name=>({cat,name})));
+ if(!entries.length){const p=document.createElement('p');p.className='muted';p.textContent='حرکتی پیدا نشد؛ نام حرکت را می‌توانی دستی وارد کنی.';box.appendChild(p);return;}
+ entries.forEach(item=>{const b=document.createElement('button');b.type='button';b.className='secondary';b.textContent=item.name;b.setAttribute('aria-label','انتخاب حرکت '+item.name);b.addEventListener('click',()=>{$('quickName').value=item.name;$('bankStatus').textContent='«'+item.name+'» انتخاب شد؛ جلسه و جزئیات را بررسی کن و افزودن به فهرست را بزن.';$('quickName').focus();});box.appendChild(b);});
+}
+$('bankCategory').addEventListener('change',renderExerciseBank);
+$('bankSearch').addEventListener('input',renderExerciseBank);
+renderExerciseBank();
 let editingLine=-1;
 function rawLines(){return $('bulk').value.split(/\r?\n/).filter(line=>line.trim());}
 function renderMoveManager(){
