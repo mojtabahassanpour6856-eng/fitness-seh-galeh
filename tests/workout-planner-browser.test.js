@@ -180,8 +180,8 @@ const assert = require('node:assert/strict');
     await check('exercise bank filters by muscle group and fills quick-entry name', async () => {
       await page.locator('#bankCategory').selectOption('پا');
       assert.ok((await page.locator('#exerciseBank').innerText()).includes('اسکوات هالتر'));
-      await page.locator('#bankCategory').selectOption('همه');
-      await page.locator('#bankSearch').fill('هیپ');
+      await page.locator('#bankCategory').selectOption('سینه');
+      await page.locator('#bankSearch').fill('پرس سینه');
       assert.ok((await page.locator('#exerciseBank').innerText()).includes('هیپ تراست'));
       await page.getByRole('button', { name: 'انتخاب حرکت هیپ تراست' }).click();
       assert.equal(await page.locator('#quickName').inputValue(), 'هیپ تراست');
@@ -191,17 +191,17 @@ const assert = require('node:assert/strict');
     await check('multiple bank movements can be added to a selected session with shared sets reps and rest', async () => {
       await page.locator('#bulk').fill('');
       await page.locator('#count').selectOption('2');
-      await page.locator('#bankCategory').selectOption('همه');
-      await page.locator('#bankSearch').fill('هیپ');
-      await page.locator('input.bankAddMoveCheck[aria-label="افزودن گروهی هیپ تراست"]').check();
-      await page.locator('input.bankAddMoveCheck[aria-label="افزودن گروهی کیک‌بک باسن"]').check();
+      await page.locator('#bankCategory').selectOption('سینه');
+      await page.locator('#bankSearch').fill('پرس سینه');
+      await page.locator('input.bankAddMoveCheck[aria-label="افزودن گروهی پرس سینه هالتر"]').check();
+      await page.locator('input.bankAddMoveCheck[aria-label="افزودن گروهی پرس سینه دمبل"]').check();
       await page.locator('#bankBulkSession').selectOption('2');
       await page.locator('#quickSets').fill('4');
       await page.locator('#quickReps').fill('15');
       await page.locator('#quickRest').fill('45');
       await page.locator('#addSelectedBankExercises').click();
       const rows=(await page.locator('#bulk').inputValue()).split(String.fromCharCode(10)).map(line=>line.split(String.fromCharCode(9)));
-      for (const name of ['هیپ تراست','کیک‌بک باسن']) {
+      for (const name of ['پرس سینه هالتر','پرس سینه دمبل']) {
         const row=rows.find(item=>item[0]===name);
         assert.ok(row, name+' should be added');
         assert.equal(row[1],'2');
