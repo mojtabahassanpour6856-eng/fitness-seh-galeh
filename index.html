@@ -5560,7 +5560,8 @@ window.useLibraryExercise=async function(id){
               if(existing)existing.rows.push(x);
               else cards.push({key,rows:[x]});
             });
-            return '<section class="session-cell"><div class="session-heading">'+esc(day)+'</div><div class="session-exercises" style="--move-count:'+cards.length+'">'+cards.map(entry=>{
+            return '<section class="session-cell"><div class="session-heading">'+esc(day)+'</div><div class="session-exercises" style="--move-count:'+cards.length+'">'+cards.map((entry,cardIndex)=>{
+              const movementNumber=String(cardIndex+1).replace(/\\d/g,d=>'۰۱۲۳۴۵۶۷۸۹'[Number(d)]);
               const arr=entry.rows,first=arr[0],sys=String(first.training_system||'normal');
               const expected=sys==='superset'?2:((sys==='triset'||sys==='giant'||sys==='giant_set'||sys==='giant-set')?3:0);
               const isGiant=sys==='giant'||sys==='giant_set'||sys==='giant-set';
@@ -5584,7 +5585,7 @@ window.useLibraryExercise=async function(id){
                   return '<div class="exercise-unit" style="display:grid;grid-template-columns:minmax(0,1fr) max-content;align-items:center;column-gap:8px;width:100%;padding:5px 2px;border-bottom:1px solid #e4d3a9;break-inside:avoid"><div class="exercise-name" style="--name-length:'+nameLength+'">'+movementName+'</div><div class="exercise-details">'+detail+'</div>'+note+'</div>';
                 }).join('');
               }
-              return '<div class="exercise-card" style="display:block;flex:0 0 auto;min-height:0;padding:3px 2px">'+movementHtml+'</div>';
+              return '<div class="exercise-card" style="display:block;flex:0 0 auto;min-height:0;padding:3px 2px"><div class="exercise-order" style="display:inline-block;margin:0 2px 2px 0;padding:1px 6px;border-radius:5px;background:#f4e6c2;color:#5b471c;font-size:9px;font-weight:800;line-height:1.5">حرکت '+movementNumber+'</div>'+movementHtml+'</div>';
             }).join('')+'</div></section>';
           };
           const count=sessions.length;
