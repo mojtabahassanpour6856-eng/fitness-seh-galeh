@@ -245,6 +245,23 @@ const assert = require('node:assert/strict');
       assert.match(await page.locator('#quickStatus').innerText(), /2 حرکت به جلسه 3 منتقل شد/);
       assert.equal(await page.locator('#selectedMoveCount').innerText(), 'انتخاب‌شده: 0');
     });
+    await check('movement can be edited directly from the full workout preview', async () => {
+      await page.locator('#count').selectOption('2');
+      await page.locator('#split').selectOption('manual');
+      await page.locator('#bulk').fill([
+        ['پرس سینه', '1', 'عادی', '—', '3', '12', '60'].join(String.fromCharCode(9)),
+        ['لت سیم‌کش', '2', 'عادی', '—', '3', '10', '60'].join(String.fromCharCode(9))
+      ].join(String.fromCharCode(10)));
+      await page.getByRole('button', { name: 'اعتبارسنجی و پیش‌نمایش' }).click();
+      await page.getByRole('button', { name: 'ویرایش از پیش‌نمایش پرس سینه' }).click();
+      assert.equal(await page.locator('#quickName').inputValue(), 'پرس سینه');
+      assert.equal(await page.locator('#quickSession').inputValue(), '1');
+      await page.locator('#quickName').fill('پرس سینه دستگاه');
+      await page.getByRole('button', { name: 'ذخیره ویرایش' }).click();
+      assert.ok((await page.locator('#bulk').inputValue()).includes('پرس سینه دستگاه'));
+      assert.ok((await page.locator('#bulk').inputValue()).includes('لت سیم‌کش'));
+      assert.equal(await page.evaluate(() => window.__trial.errors.length), 0);
+    });
     await check('all ready-made templates use supported session counts and pass validation', async () => {
       const expected = { chest: 2, back: 2, legs: 2, shoulders: 2, four: 4, five: 5 };
       for (const [preset, sessions] of Object.entries(expected)) {
