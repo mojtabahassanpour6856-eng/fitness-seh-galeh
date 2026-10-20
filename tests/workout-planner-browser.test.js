@@ -40,6 +40,23 @@ const assert = require('node:assert/strict');
       assert.match(await page.locator('#status').innerText(), /بررسی اولیه موفق بود/);
       assert.ok((await page.locator('#sessions').innerText()).includes('پرس سینه آزمایشی'));
     });
+    await check('movements can be edited and deleted from the manager list', async () => {
+      await page.locator('#bulk').fill('');
+      await page.locator('#count').selectOption('3');
+      await page.locator('#quickName').fill('حرکت اول');
+      await page.locator('#quickSession').selectOption('1');
+      await page.locator('#quickSystem').selectOption('عادی');
+      await page.getByRole('button', { name: 'افزودن به فهرست' }).click();
+      await page.locator('#quickName').fill('حرکت دوم');
+      await page.getByRole('button', { name: 'افزودن به فهرست' }).click();
+      await page.getByRole('button', { name: 'ویرایش' }).first().click();
+      await page.locator('#quickName').fill('حرکت اول ویرایش‌شده');
+      await page.getByRole('button', { name: 'ذخیره ویرایش' }).click();
+      assert.ok((await page.locator('#bulk').inputValue()).includes('حرکت اول ویرایش‌شده'));
+      await page.getByRole('button', { name: 'حذف' }).last().click();
+      assert.ok(!(await page.locator('#bulk').inputValue()).includes('حرکت دوم'));
+      assert.equal(await page.locator('#moveManager .move').count(), 1);
+    });
     await check('all ready-made templates use supported session counts and pass validation', async () => {
       const expected = { chest: 2, back: 2, legs: 2, shoulders: 2, four: 4, five: 5 };
       for (const [preset, sessions] of Object.entries(expected)) {
