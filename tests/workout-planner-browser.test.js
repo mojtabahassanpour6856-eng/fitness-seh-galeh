@@ -476,7 +476,7 @@ const assert = require('node:assert/strict');
       await page.locator('#saveTemplate').click();
       await page.locator('#templateImportFile').setInputFiles({ name: 'templates.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify(payload)) });
       const names = await page.locator('#savedTemplates option').allTextContents();
-      assert.ok(names.some(x => x.includes('قالب انتقالی (2)')), 'same-name import should preserve old template and add a unique name');
+      assert.ok(names.some(x => x.includes('قالب انتقالی (2)')), 'same-name import should preserve old template and add a unique name; status=' + await page.locator('#templateStatus').innerText() + '; options=' + JSON.stringify(names));
       const downloadPromise = page.waitForEvent('download');
       await page.locator('#exportTemplates').click();
       const download = await downloadPromise;
