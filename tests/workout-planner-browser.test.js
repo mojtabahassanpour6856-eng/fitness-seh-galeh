@@ -576,7 +576,7 @@ const assert = require('node:assert/strict');
       assert.match(comparison, /لت سیم‌کش/);
     });
     await check('loading a saved workout version restores its plan without deleting saved versions', async () => {
-      await page.locator('#workoutVersionSelect').selectOption({ label: /نسخه پایه آزمایشی/ });
+      await page.locator('#workoutVersionSelect').selectOption(await page.locator('#workoutVersionSelect option').nth(1).getAttribute('value'));
       await page.locator('#loadWorkoutVersion').click();
       const rows = (await page.locator('#bulk').inputValue()).split(String.fromCharCode(10)).map(line => line.split(String.fromCharCode(9)));
       assert.ok(rows.some(row => row[0] === 'پرس سینه' && row[4] === '3' && row[5] === '12' && row[6] === '60'));
