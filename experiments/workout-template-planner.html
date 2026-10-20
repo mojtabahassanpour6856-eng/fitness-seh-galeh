@@ -37,7 +37,8 @@
 <div class="field"><label for="quickReps">تکرار</label><input id="quickReps" type="number" min="1" value="12"></div>
 <div class="field"><label for="quickRest">استراحت (ثانیه)</label><input id="quickRest" type="number" min="0" value="60"></div>
 </div>
-<div class="row" style="margin-top:8px"><button id="addQuickMove" type="button">افزودن به فهرست</button><button id="clearQuickForm" type="button" class="secondary">پاک‌کردن نام و گروه</button></div>
+<div class="row" style="margin-top:8px"><button id="addQuickMove" type="button">افزودن به فهرست</button><button id="newQuickGroup" type="button" class="secondary">ساخت گروه جدید</button><button id="clearQuickForm" type="button" class="secondary">پاک‌کردن فرم</button></div>
+<p class="muted">روش سریع گروه‌بندی: سیستم را انتخاب کن، «ساخت گروه جدید» را بزن تا نام گروه تازه ساخته شود؛ سپس حرکات همان گروه را با همان نام اضافه کن.</p>
 <div id="quickStatus" class="status" role="status"></div>
 <div id="moveManager" style="margin-top:12px" aria-label="مدیریت حرکات"></div>
 </div>
@@ -61,8 +62,8 @@ function parse(){
   if(!/^\d+$/.test(String(sets))||!/^\d+$/.test(String(reps))||!/^\d+$/.test(String(rest)))errors.push('خط '+(i+1)+': ست، تکرار و استراحت باید عدد باشند.');
   moves.push({name,session,system,group,sets:Number(sets),reps:Number(reps),rest:Number(rest)});
  });
- const groups={}; moves.forEach((m,i)=>{if(m.system!=='عادی'&&m.system){const key=m.system+'|'+m.group;if(!m.group||m.group==='—')errors.push('حرکت «'+m.name+'»: برای '+m.system+' گروه مشخص کن.');(groups[key]||(groups[key]=[])).push(i);}});
- Object.entries(groups).forEach(([key,idx])=>{const typ=key.split('|')[0];const min=typ.startsWith('سوپر')?2:typ.startsWith('تری')?3:4;if(idx.length<min)errors.push('گروه «'+key.split('|')[1]+'» برای '+typ+' حداقل '+min+' حرکت لازم دارد.');});
+ const groups={}; moves.forEach((m,i)=>{if(m.system!=='عادی'&&m.system){const key=m.session+'|'+m.system+'|'+m.group;if(!m.group||m.group==='—')errors.push('حرکت «'+m.name+'»: برای '+m.system+' گروه مشخص کن.');(groups[key]||(groups[key]=[])).push(i);}});
+ Object.entries(groups).forEach(([key,idx])=>{const bits=key.split('|'),typ=bits[1],groupName=bits.slice(2).join('|');const min=typ.startsWith('سوپر')?2:typ.startsWith('تری')?3:4;if(idx.length<min)errors.push('جلسه '+bits[0]+'، گروه «'+groupName+'» برای '+typ+' حداقل '+min+' حرکت لازم دارد.');});
  return {moves,errors};
 }
 function render(){
@@ -120,6 +121,15 @@ function renderMoveManager(){
  });
 }
 function resetQuickEdit(){editingLine=-1;$('addQuickMove').textContent='افزودن به فهرست';}
+let nextGroupNumber=0;
+$('newQuickGroup').addEventListener('click',()=>{
+ const letters='ABCDEFGHIJKLMNOPQRSTUVWXYZ';const label=letters[nextGroupNumber%letters.length]+(nextGroupNumber>=letters.length?Math.floor(nextGroupNumber/letters.length):'');nextGroupNumber++;
+ if($('quickSystem').value==='عادی')$('quickSystem').value='سوپرست';
+ $('quickSystem').dispatchEvent(new Event('change'));
+ $('quickGroup').value=label;
+ $('quickStatus').textContent='گروه جدید «'+label+'» ساخته شد؛ حرکات این گروه را با همین نام اضافه کن.';
+ $('quickName').focus();
+});
 $('addQuickMove').addEventListener('click',()=>{
  const name=$('quickName').value.trim(),session=Number($('quickSession').value);
  const system=$('quickSystem').value,group=system==='عادی'?'—':$('quickGroup').value.trim();
