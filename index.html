@@ -6340,206 +6340,40 @@ else loadCoachExerciseListsWhenReady();
 <script id="FITNESS_FINAL_WORKOUT_SESSION_RENDERER">
 (function(){
   const esc=v=>typeof escf==='function'?escf(v):String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  const sysLabels={normal:'عادی',superset:'سوپرست',triset:'تری‌ست',giant:'جاینت‌ست','drop-set':'دراپ‌ست',dropset:'دراپ‌ست',drop:'دراپ‌ست',rest_pause:'استراحت-مکث',timed:'تایم‌دار',multi_stage:'چندمرحله‌ای',custom:'سفارشی'};
+  const groupable=new Set(['superset','triset','giant']);
+  const exerciseName=(x,names)=>((names&&(names[String(x.exercise_id)]||names[x.exercise_id]))||'حرکت');
+  const controls=x=>'<div class="workout-exercise-actions"><button class="mini secondary" onclick="editWorkoutExercise(\''+esc(x.id)+'\')" title="ویرایش">✏️</button><button class="mini secondary" onclick="moveWorkoutExercise(\''+esc(x.id)+'\',-1)" title="انتقال به بالا">⬆️</button><button class="mini secondary" onclick="moveWorkoutExercise(\''+esc(x.id)+'\',1)" title="انتقال به پایین">⬇️</button><button class="mini danger" onclick="deleteWorkoutExercise(\''+esc(x.id)+'\')" title="حذف">🗑</button></div>';
+  const rank=v=>{const t=String(v||'').trim();const m=t.match(/(اول|دوم|سوم|چهارم|پنجم|ششم|هفتم|هشتم|نهم|دهم|[0-9۰-۹]+)/);const n={'اول':1,'دوم':2,'سوم':3,'چهارم':4,'پنجم':5,'ششم':6,'هفتم':7,'هشتم':8,'نهم':9,'دهم':10};if(!m)return 999;const q=n[m[1]]||Number(String(m[1]).replace(/[۰-۹]/g,d=>'۰۱۲۳۴۵۶۷۸۹'.indexOf(d)));return Number.isFinite(q)&&q>0?q:999;};
   window.renderWorkoutList=function(rows,names){
     const box=document.getElementById('workoutList');if(!box)return;
     if(!Array.isArray(rows)||!rows.length){box.innerHTML='<p class="muted">هنوز حرکتی ثبت نشده است.</p>';return;}
-    const rank=v=>{const t=String(v||'').trim();const m=t.match(/(اول|دوم|سوم|چهارم|پنجم|ششم|هفتم|هشتم|نهم|دهم|[0-9۰-۹]+)/);const n={'اول':1,'دوم':2,'سوم':3,'چهارم':4,'پنجم':5,'ششم':6,'هفتم':7,'هشتم':8,'نهم':9,'دهم':10};if(!m)return 999;const q=n[m[1]]||Number(String(m[1]).replace(/[۰-۹]/g,d=>'۰۱۲۳۴۵۶۷۸۹'.indexOf(d)));return Number.isFinite(q)&&q>0?q:999;};
-    const sessions=new Map();rows.forEach((row,index)=>{const day=String(row.training_day||'').trim()||'جلسه بدون نام';if(!sessions.has(day))sessions.set(day,[]);sessions.get(day).push({...row,_renderIndex:index});});
+    const sessions=new Map();
+    rows.forEach((row,index)=>{const day=String(row.training_day||'').trim()||'جلسه بدون نام';if(!sessions.has(day))sessions.set(day,[]);sessions.get(day).push({...row,_renderIndex:index});});
     const ordered=[...sessions.entries()].sort((a,b)=>{const ra=rank(a[0]),rb=rank(b[0]);return ra===rb?Math.min(...a[1].map(x=>x._renderIndex))-Math.min(...b[1].map(x=>x._renderIndex)):ra-rb;});
-    
-    const html=ordered.map(([day,items])=>{const sd=items.filter(x=>x.is_completed===true).length;const cards=items.map(x=>{const exercise=(names&&(names[String(x.exercise_id)]||names[x.exercise_id]))||'حرکت',sys=String(x.training_system||'normal');const sysLabels={normal:'عادی',superset:'سوپرست',triset:'تری‌ست',giant:'جاینت‌ست','drop-set':'دراپ‌ست',dropset:'دراپ‌ست'};return '<article class="meal-card workout-session-exercise '+(x.is_completed===true?'v4-complete':'')+'" data-workout-id="'+esc(x.id)+'"><div class="meal-head"><h3>'+esc(x._renderIndex+1)+'. '+esc(exercise)+'</h3></div><div class="workout-exercise-meta"><strong>'+esc(x.sets??'—')+' ست × '+esc(x.reps||'—')+'</strong><span>استراحت '+esc(x.rest_seconds??0)+' ثانیه</span><span>'+esc(sysLabels[sys]||sys)+'</span></div>'+(x.group_key?'<div class="muted workout-group-tag">گروه '+esc(x.group_key)+'</div>':'')+(x.notes?'<div class="muted workout-exercise-note">'+esc(x.notes)+'</div>':'')+'<div class="workout-exercise-actions"><button class="mini secondary" onclick="editWorkoutExercise(\''+esc(x.id)+'\')" title="ویرایش">✏️</button><button class="mini secondary" onclick="moveWorkoutExercise(\''+esc(x.id)+'\',-1)" title="انتقال به بالا">⬆️</button><button class="mini secondary" onclick="moveWorkoutExercise(\''+esc(x.id)+'\',1)" title="انتقال به پایین">⬇️</button><button class="mini danger" onclick="deleteWorkoutExercise(\''+esc(x.id)+'\')" title="حذف">🗑</button></div></article>';}).join('');return '<section class="workout-session-group" data-session-name="'+esc(day)+'"><header class="workout-session-heading"><strong>🏋️ '+esc(day)+'</strong><span>'+items.length+' حرکت</span></header><div class="workout-session-exercises">'+cards+'</div></section>';}).join('');
+    const html=ordered.map(([day,items])=>{
+      const buckets=new Map(),orderedKeys=[];
+      items.forEach(x=>{
+        const sys=String(x.training_system||'normal'),canGroup=groupable.has(sys)&&!!x.group_key;
+        const key=canGroup?sys+'|'+String(x.group_key):'single|'+String(x.id);
+        if(!buckets.has(key)){buckets.set(key,[]);orderedKeys.push(key);}
+        buckets.get(key).push(x);
+      });
+      const cards=orderedKeys.map(key=>{
+        const group=buckets.get(key),first=group[0],sys=String(first.training_system||'normal'),grouped=groupable.has(sys)&&!!first.group_key&&group.length>1;
+        if(grouped){
+          const namesLine=group.map((x,i)=>(i?'<span class="workout-group-plus" aria-label="به‌علاوه"> + </span>':'')+'<strong>'+esc(exerciseName(x,names))+'</strong>').join('');
+          const allDone=group.every(x=>x.is_completed===true);
+          return '<article class="meal-card workout-session-exercise workout-grouped-exercises '+(allDone?'v4-complete':'')+'" data-workout-group="'+esc(first.group_key)+'"><div class="meal-head"><h3>'+namesLine+'</h3></div><div class="workout-exercise-meta"><strong>'+esc(first.sets??'—')+' ست × '+esc(first.reps||'—')+'</strong><span>استراحت '+esc(first.rest_seconds??0)+' ثانیه</span><span>'+esc(sysLabels[sys]||sys)+'</span><span>گروه '+esc(first.group_key)+'</span></div>'+group.filter(x=>x.notes).map(x=>'<div class="muted workout-exercise-note">'+esc(exerciseName(x,names))+': '+esc(x.notes)+'</div>').join('')+group.map(controls).join('')+'</article>';
+        }
+        const exercise=exerciseName(first,names);
+        return '<article class="meal-card workout-session-exercise '+(first.is_completed===true?'v4-complete':'')+'" data-workout-id="'+esc(first.id)+'"><div class="meal-head"><h3>'+esc(first._renderIndex+1)+'. '+esc(exercise)+'</h3></div><div class="workout-exercise-meta"><strong>'+esc(first.sets??'—')+' ست × '+esc(first.reps||'—')+'</strong><span>استراحت '+esc(first.rest_seconds??0)+' ثانیه</span><span>'+esc(sysLabels[sys]||sys)+'</span></div>'+(first.group_key?'<div class="muted workout-group-tag">گروه '+esc(first.group_key)+'</div>':'')+(first.notes?'<div class="muted workout-exercise-note">'+esc(first.notes)+'</div>':'')+controls(first)+'</article>';
+      }).join('');
+      return '<section class="workout-session-group" data-session-name="'+esc(day)+'"><header class="workout-session-heading"><strong>🏋️ '+esc(day)+'</strong><span>'+items.length+' حرکت</span></header><div class="workout-session-exercises">'+cards+'</div></section>';
+    }).join('');
     box.innerHTML=html;
   };
 })();
-
-/* ROLE ACCESS — separate coach-managed records from trainee self-reporting. */
-(function(){
- const isCoach=()=>typeof authProfile!=="undefined"&&authProfile?.role==="coach";
- const isTrainee=()=>typeof authProfile!=="undefined"&&authProfile?.role==="trainee";
- const deny=()=>{alert("این بخش فقط در دسترس مربی است.");return false;};
- function lockInputs(root,ids,hideButtons=true){
-  if(!root)return;
-  root.querySelectorAll("input,select,textarea").forEach(el=>{el.disabled=true;el.setAttribute("aria-disabled","true");});
-  if(hideButtons)root.querySelectorAll("button").forEach(b=>b.style.display="none");
- }
- function applyStudentCoachMessage(){
-   // پیام جداگانه کنار گذاشته شد؛ هدف عددی فقط در پنل مربی بماند.
-   const goal=document.getElementById("goalBox");
-   if(goal&&typeof authProfile!=="undefined"&&authProfile?.role==="trainee"){
-    goal.style.setProperty("display","none","important");
-    goal.setAttribute("aria-hidden","true");
-   }
-   const oldCard=document.getElementById("coachMessageNotice");
-   if(oldCard)oldCard.remove();
-  }
-  window.applyStudentCoachMessage=applyStudentCoachMessage;
-  window.refreshTraineeCoachMessage=applyStudentCoachMessage;
-  function applyRoleAccess(){
-  if(!isTrainee())return;
-  // ثبت آنالیز دستگاه فقط برای مربی است؛ شاگرد فقط تاریخچه نتایج ثبت‌شده را می‌بیند.
-  const analysisEntry=document.getElementById("bodyAnalysisEntryPanel");
-  if(analysisEntry){analysisEntry.style.setProperty("display","none","important");analysisEntry.setAttribute("aria-hidden","true");}
-  const progressEntry=document.getElementById("progressEntryPanel");
-  // شاگرد مجاز است وزن و اندازه‌های دوره‌ای خودش را ثبت کند؛ پنل آنالیز دستگاه همچنان فقط برای مربی است.
-  if(progressEntry){progressEntry.style.removeProperty("display");progressEntry.removeAttribute("aria-hidden");}
-  // هدف عددی فقط در پنل مربی نمایش داده می‌شود؛ شاگرد داشبورد ۹ بخشی را می‌بیند.
-  const traineeGoalBox=document.getElementById("goalBox");
-  if(traineeGoalBox){traineeGoalBox.style.setProperty("display","none","important");traineeGoalBox.setAttribute("aria-hidden","true");}
-  const nav=document.querySelector(".nav");
-  if(nav)nav.querySelectorAll("button").forEach(b=>{
-   // شاگرد پس از ورود فقط داشبورد ۹ بخشی را در نوار اصلی می‌بیند.
-   if(b.id==="navDash"){
-    b.style.display="";
-    b.classList.add("active");
-   }else{
-    b.style.display="none";
-    b.classList.remove("active");
-   }
-  });
-  const coachSection=document.getElementById("coach");
-  if(coachSection)coachSection.style.display="none";
-  const requests=document.getElementById("registrationRequestsPanel");
-  if(requests)requests.style.display="none";
-
-  const client=document.getElementById("client");
-  if(client){
-   const cards=client.querySelectorAll(":scope > .card");
-   if(cards[0]){
-    // شاگرد می‌تواند اطلاعات شخصی خودش را ویرایش کند؛ هدف و سطح تمرینی مربی‌محور و فقط‌خواندنی می‌ماند.
-    ["pn","pweight","pheight","ptype","pequipment","pbirth","pgender"].forEach(id=>{const el=document.getElementById(id);if(el){el.disabled=false;el.removeAttribute("disabled");el.removeAttribute("aria-disabled");el.style.pointerEvents="auto";}});
-    ["pgoal","plevel"].forEach(id=>{const el=document.getElementById(id);if(el){el.disabled=true;el.setAttribute("aria-disabled","true");}});
-    const saveBtn=cards[0].querySelector('button[onclick="saveProfile()"]');
-    if(saveBtn){saveBtn.style.display="";saveBtn.disabled=false;saveBtn.textContent="💾 ذخیره اطلاعات شخصی من";}
-    const mealBtn=cards[0].querySelector('button[onclick="openClientMealPlan()"]');
-    if(mealBtn)mealBtn.style.display="none";
-   }
-   // کارت‌ها با اضافه شدن نوع رژیم جابه‌جا شدند؛ هر بخش را با شناسه/عنوان پیدا کن، نه شماره ثابت.
-   const membershipCard=[...client.querySelectorAll(":scope > .card")].find(c=>c.querySelector("#subStart")||/عضویت باشگاه|عضویت و شهریه/.test(c.querySelector("h2")?.textContent||""));
-   if(membershipCard){membershipCard.style.display="block";membershipCard.hidden=false;membershipCard.classList.remove("hide");membershipCard.removeAttribute("aria-hidden");}
-   const goalsLimitCard=[...client.querySelectorAll(":scope > .card")].find(c=>/هدف و محدودیت‌ها/.test(c.querySelector("h2")?.textContent||""));
-   if(goalsLimitCard){goalsLimitCard.querySelectorAll("input,select,textarea,button").forEach(el=>el.style.display="none");}
-   const supplementsCard=[...client.querySelectorAll(":scope > .card")].find(c=>/مکمل‌ها/.test(c.querySelector("h2")?.textContent||""));
-   if(supplementsCard){supplementsCard.querySelectorAll("input,select,textarea,button").forEach(el=>el.style.display="none");const h=supplementsCard.querySelector("h2");if(h)h.textContent="💊 مکمل‌های ثبت‌شده توسط مربی";const intro=supplementsCard.querySelector("p.muted");if(intro)intro.style.display="none";}
-   const injuryCard=[...client.querySelectorAll(":scope > .card")].find(c=>c.querySelector("#injNote")||c.querySelector("#injStatus"));
-   if(injuryCard){const note=injuryCard.querySelector("#injNote");if(note)note.style.display="none";const status=injuryCard.querySelector("#injStatus");if(status)status.style.display="none";const btn=injuryCard.querySelector('button[onclick="saveInjury()"]');if(btn)btn.textContent="📨 ارسال گزارش آسیب به مربی";const h=injuryCard.querySelector("h2");if(h)h.textContent="⚠️ گزارش آسیب / محدودیت تمرینی";}
-   const schedule=document.getElementById("scheduleCard");
-   if(schedule){schedule.querySelectorAll("input,select,textarea,button").forEach(el=>el.style.display="none");}
-  }
-
-  const mealCoach=document.getElementById("mealCoachView");
-  const mealStudent=document.getElementById("mealStudentView");
-  const mealReport=document.getElementById("mealReportView");
-  if(mealCoach)mealCoach.style.display="none";
-  if(mealStudent){mealStudent.classList.remove("hide");mealStudent.style.display="block";}
-  if(mealReport)mealReport.style.display="none";
-  ["mealTabCoach","mealTabReport"].forEach(id=>{const el=document.getElementById(id);if(el)el.style.display="none";});
-  const mealTabStudent=document.getElementById("mealTabStudent");
-  if(mealTabStudent){mealTabStudent.style.display="inline-block";mealTabStudent.classList.add("active");}
-  if(typeof window.mealTab==="function"&&!window.__roleMealTabWrapped){
-   const original=window.mealTab;
-   window.mealTab=function(mode){return original(isTrainee()?"student":mode);};
-   window.__roleMealTabWrapped=true;
-  }
-
-  const workout=document.getElementById("workout");
-  if(workout){
-   const cards=workout.querySelectorAll(":scope > .card");
-   if(cards[0]){
-    cards[0].querySelectorAll("input,select,textarea").forEach(el=>{el.disabled=true;el.setAttribute("aria-disabled","true");});
-    cards[0].querySelectorAll("button").forEach(b=>b.style.display="none");
-   }
-   if(cards[1])cards[1].style.display="none";
-   if(cards[2])cards[2].style.display="none";
-   const list=document.getElementById("workoutList");
-   if(list)list.querySelectorAll('button[onclick*="deleteWorkoutExercise"],button[onclick*="editWorkoutExercise"],button[onclick*="moveWorkoutExercise"]').forEach(b=>b.style.display="none");
-  }
-  const progress=document.getElementById("progress");
-  if(progress){
-   const cards=progress.querySelectorAll(":scope > .card");
-   if(cards[1])cards[1].style.display="none"; // body analysis entry is coach-only
-   if(cards[2])cards[2].style.display="none"; // private coach notes
-  }
-  const food=document.getElementById("food");
-  if(food){
-   food.querySelectorAll('button[onclick="add()"],button[onclick="editFood()"],button[onclick="deleteFood()"],button[onclick="saveEdit()"]').forEach(b=>b.style.display="none");
-  }
- }
- // پروفایل شخصی شاگرد فقط برای رکورد متصل به حساب خودش ذخیره می‌شود.
- const previousSaveProfile=window.saveProfile;
- if(typeof previousSaveProfile==="function"&&!window.__traineeOwnProfileSave){
-  window.saveProfile=async function(){
-   if(!isTrainee())return previousSaveProfile.apply(this,arguments);
-   const traineeId=authProfile?.trainee_id;
-   if(!traineeId||!currentClient||String(currentClient.id)!==String(traineeId)){
-    alert("پروفایل به حساب شاگرد فعلی متصل نیست؛ برای امنیت، ذخیره انجام نشد.");return;
-   }
-   const birthRaw=(document.getElementById("pbirth")?.value||"").trim();
-   const birthISO=birthRaw&&typeof window.jalaliToISODate==="function"?window.jalaliToISODate(birthRaw):null;
-   if(birthRaw&&!birthISO){alert("تاریخ تولد را به صورت شمسی مانند ۱۴۰۵/۰۷/۱۸ وارد کنید.");return;}
-   const name=(document.getElementById("pn")?.value||"").trim();
-   if(name.length<2){alert("نام و نام خانوادگی را وارد کنید.");return;}
-   const payload={
-    full_name:name,
-    current_weight:Number(document.getElementById("pweight")?.value)||null,
-    height:Number(document.getElementById("pheight")?.value)||null,
-    training_type:document.getElementById("ptype")?.value||"gym",
-    home_equipment:(document.getElementById("pequipment")?.value||"").trim()||null,
-    birth_date:birthRaw?birthISO:null,
-    gender:document.getElementById("pgender")?.value||null
-   };
-   const btn=document.querySelector('#client button[onclick="saveProfile()"]');
-   if(btn){btn.disabled=true;btn.textContent="⏳ در حال ذخیره…";}
-   try{
-    await sbWrite("/trainees?id=eq."+encodeURIComponent(traineeId),"PATCH",payload);
-    const updated=await sbGet("/trainees?id=eq."+encodeURIComponent(traineeId)+"&select=*&limit=1");
-    if(!updated.length)throw new Error("ذخیره ارسال شد اما رکورد شاگرد از دیتابیس دوباره خوانده نشد.");
-    const c=updated[0];
-    currentClient={...currentClient,id:c.id,name:c.full_name,phone:c.phone,gender:c.gender,birth_date:c.birth_date,age:typeof calcAge==="function"?calcAge(c.birth_date):currentClient.age,weight:c.current_weight,height:c.height,goal:c.goal,level:c.training_level,training_type:c.training_type||"gym",home_equipment:c.home_equipment||"",training_days:c.training_days||"",training_time:c.training_time||"",weekly_sessions:c.weekly_sessions||null};
-    clients=clients.map(x=>String(x.id)===String(traineeId)?currentClient:x);
-    if(document.getElementById("pn"))document.getElementById("pn").value=c.full_name||"";
-    if(document.getElementById("pweight"))document.getElementById("pweight").value=c.current_weight||"";
-    if(document.getElementById("pheight"))document.getElementById("pheight").value=c.height||"";
-    if(document.getElementById("pbirth"))document.getElementById("pbirth").value=window.isoToJalaliDate(c.birth_date)||"";
-    if(document.getElementById("pgender"))document.getElementById("pgender").value=c.gender||"زن";
-    if(document.getElementById("authUserText"))document.getElementById("authUserText").textContent=(c.full_name||"شاگرد")+" | شاگرد";
-    alert("اطلاعات شخصی شما با موفقیت ذخیره و از دیتابیس دوباره بررسی شد.");
-    if(typeof loadDashboard==="function")await loadDashboard();
-   }catch(e){console.error("trainee own profile save",e);alert("ذخیره پروفایل انجام نشد. "+(e?.message||String(e)));}
-   finally{window.sehResetTurnstile?.(btn);if(btn){btn.disabled=false;btn.textContent="💾 ذخیره اطلاعات شخصی من";}}
-  };
-  window.__traineeOwnProfileSave=true;
- }
- const coachOnly=[
-  "saveProfileExtras","saveSubscription","saveSupplement",
-  "saveNutritionPlan","saveMealFood","deleteMealFood","saveLibraryExercise",
-  "saveWorkoutPlan","addWorkoutExercise","deleteWorkoutExercise","editWorkoutExercise",
-  "moveWorkoutExercise","saveAnalysis","saveNote","saveTrainingSchedule","addClient",
-  "add","editFood","deleteFood","saveEdit"
- ];
- coachOnly.forEach(name=>{
-  const original=window[name];
-  if(typeof original!=="function"||window["__roleGuard_"+name])return;
-  window[name]=function(...args){if(isTrainee())return deny();return original.apply(this,args);};
-  window["__roleGuard_"+name]=true;
- });
- const oldFinish=window.finishLogin;
- if(typeof oldFinish==="function"&&!window.__roleFinishWrapped){
-  window.finishLogin=async function(user){await oldFinish(user);applyRoleAccess();};
-  window.__roleFinishWrapped=true;
- }
- const oldShow=window.showSection;
- if(typeof oldShow==="function"&&!window.__roleShowWrapped){
-  window.showSection=function(id,btn){const out=oldShow(id,btn);applyRoleAccess();return out;};
-  window.__roleShowWrapped=true;
- }
- const list=document.getElementById("workoutList");
- if(list&&typeof MutationObserver!=="undefined"){
-  new MutationObserver(()=>{if(isTrainee())list.querySelectorAll('button[onclick*="deleteWorkoutExercise"],button[onclick*="editWorkoutExercise"],button[onclick*="moveWorkoutExercise"]').forEach(b=>b.style.display="none");}).observe(list,{childList:true,subtree:true});
- }
- document.addEventListener("DOMContentLoaded",applyRoleAccess);
- setTimeout(applyRoleAccess,800);
-})();
-
 </script>
 
 <style id="seh-galeh-trainee-workflow-style">
