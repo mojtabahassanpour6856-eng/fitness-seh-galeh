@@ -167,6 +167,14 @@ function renderMoveManager(){
    $('quickName').value=parts[0]||'';$('quickSession').value=parts[1]||'1';$('quickSystem').value=parts[2]||'عادی';$('quickGroup').value=parts[3]||'—';$('quickSets').value=parts[4]||'3';$('quickReps').value=parts[5]||'12';$('quickRest').value=parts[6]||'60';
    $('quickSystem').dispatchEvent(new Event('change'));editingLine=index;$('addQuickMove').textContent='ذخیره ویرایش';$('quickStatus').textContent='در حال ویرایش: '+(parts[0]||'حرکت');$('quickName').focus();
   });actions.appendChild(edit);
+  const copy=document.createElement('button');copy.type='button';copy.className='secondary';copy.textContent='کپی حرکت';copy.setAttribute('aria-label','کپی حرکت '+(parts[0]||''));
+  copy.addEventListener('click',()=>{
+   const current=rawLines();
+   const copyParts=[...parts];copyParts[2]='عادی';copyParts[3]='—';
+   current.splice(index+1,0,copyParts.join('\t'));
+   $('bulk').value=current.join('\n');renderMoveManager();render();
+   $('quickStatus').textContent='یک کپی از «'+(parts[0]||'حرکت')+'» اضافه شد؛ سیستم کپی‌شده عادی است و می‌توانی آن را ویرایش کنی.';
+  });actions.appendChild(copy);
   const del=document.createElement('button');del.type='button';del.className='danger';del.textContent='حذف';del.addEventListener('click',()=>{
    const current=rawLines();current.splice(index,1);$('bulk').value=current.join('\n');if(editingLine===index)resetQuickEdit();renderMoveManager();render();$('quickStatus').textContent='حرکت حذف شد.';
   });actions.appendChild(del);row.appendChild(actions);box.appendChild(row);
