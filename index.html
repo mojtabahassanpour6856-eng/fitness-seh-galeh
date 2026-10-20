@@ -5552,10 +5552,12 @@ window.useLibraryExercise=async function(id){
             const list = grouped.get(day)||[], cards=[];
             const groupableSystems = new Set(['superset','triset','giant','giant_set','giant-set']);
             list.forEach((x,idx)=>{
-              const sys=String(x.training_system||'normal'),groupable=groupableSystems.has(sys)&&!!x.group_key;
-              const key=groupable?sys+'|'+String(x.group_key):'single|'+String(x.id||idx);
-              const last=cards[cards.length-1];
-              if(groupable&&last&&last.key===key)last.rows.push(x);
+              const sys=String(x.training_system||'normal'),groupable=groupableSystems.has(sys)&&!!String(x.group_key||'').trim();
+              const key=groupable?sys+'|'+String(x.group_key).trim():'single|'+String(x.id||idx);
+              /* Legacy/imported data can place another movement between members of one group.
+                 Collect the full group within this session and keep its card at first occurrence. */
+              const existing=groupable?cards.find(card=>card.key===key):null;
+              if(existing)existing.rows.push(x);
               else cards.push({key,rows:[x]});
             });
             return '<section class="session-cell"><div class="session-heading">'+esc(day)+'</div><div class="session-exercises" style="--move-count:'+cards.length+'">'+cards.map(entry=>{
