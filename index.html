@@ -12258,7 +12258,8 @@ body.workout-output.workout-compact{
   let newPlanId=null;
   try{
    status('در حال ساخت نسخه مستقل الگو…');
-   const plan=await sbWrite('/trainee_workout_plans','POST',{trainee_id:currentClient.id,title:data.title||template.name,goal:data.goal||null,notes:data.notes||null,plan_date:el('workoutStartDate')?.value||dateKey()});
+   const newPlanDate=dateKey();
+   const plan=await sbWrite('/trainee_workout_plans','POST',{trainee_id:currentClient.id,title:data.title||template.name,goal:data.goal||null,notes:data.notes||null,plan_date:newPlanDate});
    newPlanId=plan?.[0]?.id;
    if(!newPlanId)throw new Error('شناسه برنامه جدید از پایگاه داده دریافت نشد.');
    const payload=rows.map((x,i)=>({workout_plan_id:newPlanId,exercise_id:x.exercise_id,sets:Number(x.sets)||3,reps:String(x.reps??'10'),rest_seconds:Number(x.rest_seconds)||0,notes:x.notes||null,sort_order:i+1,training_day:x.training_day||'جلسه اول',training_system:x.training_system||'normal',group_key:x.group_key||null,is_completed:false}));
@@ -12268,7 +12269,7 @@ body.workout-output.workout-compact{
    currentWorkoutPlanId=newPlanId;
    // Load the exact plan we just created; do not let "latest plan" sorting select another plan.
    $('workoutTitle').value=data.title||template.name;
-   $('workoutStartDate').value=el('workoutStartDate')?.value||dateKey();
+   $('workoutStartDate').value=newPlanDate;
    if(typeof updateWorkoutStartDateFa==='function')updateWorkoutStartDateFa();
    $('workoutGoal').value=data.goal||'';
    $('workoutNotes').value=data.notes||'';
