@@ -187,7 +187,7 @@ $('bankCategory').addEventListener('change',renderExerciseBank);
 $('bankSearch').addEventListener('input',renderExerciseBank);
 $('clearSelectedExercises').addEventListener('click',()=>{selectedBankAddNames.clear();selectedBankGroupNames.clear();document.querySelectorAll('.bankMoveCheck,.bankAddMoveCheck').forEach(x=>x.checked=false);$('bankStatus').textContent='انتخاب‌ها پاک شدند.';});
 $('groupSelectedExercises').addEventListener('click',()=>{
- const selected=Array.from(document.querySelectorAll('.bankMoveCheck:checked')).map(x=>x.value);
+ const selected=Array.from(selectedBankGroupNames);
  let system=$('quickSystem').value;
  if(system==='عادی')system='سوپرست';
  const minimum=system==='سوپرست'?2:system==='تری‌ست'?3:4;
@@ -199,7 +199,7 @@ $('groupSelectedExercises').addEventListener('click',()=>{
  const lines=rawLines();
  selected.forEach(name=>lines.push([name,session,system,label,sets,reps,rest].join(String.fromCharCode(9))));
  $('bulk').value=lines.join(String.fromCharCode(10));$('quickSystem').value=system;$('quickGroup').value=label;$('quickSystem').dispatchEvent(new Event('change'));
- document.querySelectorAll('.bankMoveCheck').forEach(x=>x.checked=false);
+ selectedBankGroupNames.clear();renderExerciseBank();
  renderMoveManager();render();
  $('bankStatus').textContent=selected.length+' حرکت به‌صورت '+system+' گروه «'+label+'» در جلسه '+session+' اضافه شد.';
 });
