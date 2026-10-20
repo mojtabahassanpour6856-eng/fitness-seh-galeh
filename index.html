@@ -2131,10 +2131,10 @@ function addBulkWorkoutRow(prefill={}){
 async function bulkAddWorkoutExercises(){
  if(!currentClient){alert('اول یک شاگرد را انتخاب کنید.');return;}
  const rows=Array.from(document.querySelectorAll('#bulkWorkoutRows .bulk-workout-row'));
- const entries=rows.map(row=>({exercise_id:row.querySelector('.bulk-exercise')?.value,training_day:row.querySelector('.bulk-day')?.value||'جلسه اول',training_system:row.querySelector('.bulk-system')?.value||'normal',group_key:row.querySelector('.bulk-group')?.value.trim()||null,sets:Number(row.querySelector('.bulk-sets')?.value),reps:row.querySelector('.bulk-reps')?.value.trim(),rest_seconds:Number(row.querySelector('.bulk-rest')?.value),notes:row.querySelector('.bulk-notes')?.value.trim()}));
- if(!entries.length){alert('حداقل یک ردیف حرکت اضافه کنید.');return;}
- const invalid=entries.findIndex(x=>!x.exercise_id||!Number.isFinite(x.sets)||x.sets<1||!x.reps||!Number.isFinite(x.rest_seconds)||x.rest_seconds<0);
- if(invalid>=0){alert('اطلاعات ردیف '+(invalid+1)+' ناقص یا نامعتبر است.');return;}
+ const entries=rows.map((row,index)=>({row_number:index+1,exercise_id:row.querySelector('.bulk-exercise')?.value,training_day:row.querySelector('.bulk-day')?.value||'جلسه اول',training_system:row.querySelector('.bulk-system')?.value||'normal',group_key:row.querySelector('.bulk-group')?.value.trim()||null,sets:Number(row.querySelector('.bulk-sets')?.value),reps:row.querySelector('.bulk-reps')?.value.trim(),rest_seconds:Number(row.querySelector('.bulk-rest')?.value),notes:row.querySelector('.bulk-notes')?.value.trim()})).filter(x=>x.exercise_id||x.notes||x.group_key||x.training_system!=='normal');
+ if(!entries.length){alert('حداقل یک حرکت را انتخاب کنید. ردیف‌های خالی نادیده گرفته می‌شوند.');return;}
+ const invalid=entries.find(x=>!x.exercise_id||!Number.isFinite(x.sets)||x.sets<1||!x.reps||!Number.isFinite(x.rest_seconds)||x.rest_seconds<0);
+ if(invalid){alert('اطلاعات ردیف '+invalid.row_number+' ناقص یا نامعتبر است.');return;}
  const grouped=entries.filter(x=>x.training_system!=='normal');
  for(const item of grouped){if(!item.group_key){alert('برای ردیف‌های سیستم گروهی، نام گروه وارد کنید؛ مثلاً A1. حرکت‌های هم‌گروه باید نام گروه یکسان داشته باشند.');return;}}
  const buckets=new Map();
