@@ -101,7 +101,7 @@ const assert = require('node:assert/strict');
       await page.locator('#quickSession').selectOption('1');
       await page.locator('#quickSystem').selectOption('تری‌ست');
       await page.locator('#bankCategory').selectOption('سینه');
-      await page.locator('.bankMoveCheck').filter({ has: page.locator('xpath=..') }).nth(0).check();
+      await page.locator('.bankMoveCheck').nth(0).check();
       await page.locator('.bankMoveCheck').nth(1).check();
       await page.locator('.bankMoveCheck').nth(2).check();
       await page.getByRole('button', { name: 'گروه‌بندی حرکات انتخاب‌شده' }).click();
