@@ -120,6 +120,27 @@ const assert = require('node:assert/strict');
       assert.ok((await page.locator('#sessions').innerText()).includes('جلسه 3'));
       assert.match(await page.locator('#quickStatus').innerText(), /به‌صورت جلسه 3 کپی شد/);
     });
+    await check('session editing shortcut filters the manager and edits only the selected session movement', async () => {
+      await page.locator('#count').selectOption('3');
+      await page.locator('#split').selectOption('manual');
+      await page.locator('#bulk').fill([
+        ['حرکت جلسه یک', '1', 'عادی', '—', '3', '10', '60'].join(String.fromCharCode(9)),
+        ['حرکت جلسه دو', '2', 'عادی', '—', '4', '12', '75'].join(String.fromCharCode(9)),
+        ['حرکت جلسه سه', '3', 'عادی', '—', '3', '15', '45'].join(String.fromCharCode(9))
+      ].join(String.fromCharCode(10)));
+      await page.getByRole('button', { name: 'اعتبارسنجی و پیش‌نمایش' }).click();
+      await page.getByRole('button', { name: 'ویرایش حرکات جلسه 2' }).click();
+      assert.equal(await page.locator('#managerSessionFilter').inputValue(), '2');
+      assert.equal(await page.locator('#moveManager .move').count(), 1);
+      assert.ok((await page.locator('#moveManager').innerText()).includes('حرکت جلسه دو'));
+      await page.locator('#moveManager').getByRole('button', { name: 'ویرایش' }).click();
+      await page.locator('#quickName').fill('حرکت جلسه دو اصلاح‌شده');
+      await page.getByRole('button', { name: 'ذخیره ویرایش' }).click();
+      assert.ok((await page.locator('#bulk').inputValue()).includes('حرکت جلسه دو اصلاح‌شده'));
+      assert.ok((await page.locator('#bulk').inputValue()).includes('حرکت جلسه یک'));
+      await page.getByRole('button', { name: 'نمایش همه حرکات' }).click();
+      assert.equal(await page.locator('#moveManager .move').count(), 3);
+    });
     await check('copy session is blocked at the six-session limit', async () => {
       await page.locator('#count').selectOption('6');
       await page.locator('#bulk').fill('حرکت نمونه\t1\tعادی\t—\t3\t10\t60');
