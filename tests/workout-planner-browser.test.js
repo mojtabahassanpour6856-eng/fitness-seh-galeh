@@ -462,6 +462,11 @@ const assert = require('node:assert/strict');
       assert.ok(!options.some(x => x.includes('بانوان کاهش وزن متوسط')));
     });
     await check('saved workout templates import without overwriting and export as JSON', async () => {
+      await page.locator('#templateSearch').fill('');
+      await page.locator('#templateGenderFilter').selectOption('all');
+      await page.locator('#templateGoalFilter').selectOption('all');
+      await page.locator('#templateLevelFilter').selectOption('all');
+      await page.locator('#templateSessionFilter').selectOption('all');
       const payload = { format: 'fitness-seh-galeh-templates', version: 1, templates: {
         'قالب انتقالی': { gender: 'women', count: '3', split: 'manual', bulk: 'اسکوات\t1\tعادی\t—\t3\t12\t60', goal: 'muscle', level: 'intermediate' }
       }};
