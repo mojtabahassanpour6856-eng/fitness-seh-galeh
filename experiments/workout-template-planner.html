@@ -253,7 +253,8 @@ $('newQuickGroup').addEventListener('click',()=>{
  const targetSystem=$('quickSystem').value==='عادی'?'سوپرست':$('quickSystem').value;
  const usedGroups=new Set(rawLines().map(line=>{const parts=line.split('\t');return String(Number(parts[1])||1)===targetSession&&parts[2]===targetSystem&&parts[3]&&parts[3]!=='—'?parts[3].trim().toLocaleUpperCase('en-US'):'';}).filter(Boolean));
  let label='';
- do{let value=nextGroupNumber;label='';do{label=letters[value%letters.length]+label;value=Math.floor(value/letters.length)-1;}while(value>=0);}while(usedGroups.has(label));
+ let nextGroupNumber=0;
+ do{let value=nextGroupNumber++;label='';do{label=letters[value%letters.length]+label;value=Math.floor(value/letters.length)-1;}while(value>=0);}while(usedGroups.has(label));
  if($('quickSystem').value==='عادی')$('quickSystem').value='سوپرست';
  $('quickSystem').dispatchEvent(new Event('change'));
  $('quickGroup').value=label;
