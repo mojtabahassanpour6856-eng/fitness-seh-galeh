@@ -180,8 +180,8 @@ const assert = require('node:assert/strict');
     await check('exercise bank filters by muscle group and fills quick-entry name', async () => {
       await page.locator('#bankCategory').selectOption('پا');
       assert.ok((await page.locator('#exerciseBank').innerText()).includes('اسکوات هالتر'));
-      await page.locator('#bankCategory').selectOption('سینه');
-      await page.locator('#bankSearch').fill('پرس سینه');
+      await page.locator('#bankCategory').selectOption('همه');
+      await page.locator('#bankSearch').fill('هیپ');
       assert.ok((await page.locator('#exerciseBank').innerText()).includes('هیپ تراست'));
       await page.getByRole('button', { name: 'انتخاب حرکت هیپ تراست' }).click();
       assert.equal(await page.locator('#quickName').inputValue(), 'هیپ تراست');
