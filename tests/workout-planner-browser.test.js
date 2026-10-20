@@ -79,6 +79,24 @@ const assert = require('node:assert/strict');
       assert.ok(!(await page.locator('#bulk').inputValue()).includes('حرکت دوم'));
       assert.equal(await page.locator('#moveManager .move').count(), 1);
     });
+    await check('movement can be duplicated safely with its training details', async () => {
+      await page.locator('#bulk').fill('');
+      await page.locator('#count').selectOption('2');
+      await page.locator('#quickName').fill('پرس دمبل');
+      await page.locator('#quickSession').selectOption('2');
+      await page.locator('#quickSystem').selectOption('عادی');
+      await page.locator('#quickSets').fill('4');
+      await page.locator('#quickReps').fill('10');
+      await page.locator('#quickRest').fill('75');
+      await page.getByRole('button', { name: 'افزودن به فهرست' }).click();
+      await page.getByRole('button', { name: 'کپی حرکت پرس دمبل' }).click();
+      const lines = (await page.locator('#bulk').inputValue()).split('\\n');
+      assert.equal(lines.length, 2);
+      assert.deepEqual(lines[1].split('\\t'), ['پرس دمبل', '2', 'عادی', '—', '4', '10', '75']);
+      assert.equal(await page.locator('#moveManager .move').count(), 2);
+      await page.getByRole('button', { name: 'اعتبارسنجی و پیش‌نمایش' }).click();
+      assert.ok((await page.locator('#sessions').innerText()).includes('پرس دمبل'));
+    });
     await check('quick group builder creates a named superset and previews its movements together', async () => {
       await page.locator('#bulk').fill('');
       await page.locator('#count').selectOption('3');
