@@ -195,7 +195,7 @@ $('groupSelectedExercises').addEventListener('click',()=>{
  const session=Number($('quickSession').value),sets=$('quickSets').value,reps=$('quickReps').value,rest=$('quickRest').value;
  if(session>n()){$('bankStatus').textContent='جلسه انتخاب‌شده از تعداد جلسات برنامه بیشتر است.';return;}
  if(!Number.isInteger(Number(sets))||Number(sets)<1||!Number.isInteger(Number(reps))||Number(reps)<1||!Number.isInteger(Number(rest))||Number(rest)<0){$('bankStatus').textContent='ست و تکرار باید عدد مثبت و استراحت باید صفر یا بیشتر باشد.';return;}
- const letters='ABCDEFGHIJKLMNOPQRSTUVWXYZ';const usedGroups=new Set(rawLines().map(line=>{const parts=line.split('\t');return Number((parts[1]||'').trim())===session&&(parts[2]||'').trim()===system&&(parts[3]||'').trim()&&(parts[3]||'').trim()!=='—'?(parts[3]||'').trim().toLocaleUpperCase('en-US'):''}).filter(Boolean));let label='',candidate=0;do{let value=candidate++;label='';do{label=letters[value%letters.length]+label;value=Math.floor(value/letters.length)-1;}while(value>=0);}while(usedGroups.has(label));
+ const letters='ABCDEFGHIJKLMNOPQRSTUVWXYZ';const usedGroups=new Set(rawLines().map(line=>{const parts=(line.includes('\t')?line.split('\t'):line.split(/[;,]/)).map(value=>value.trim());return Number(parts[1])===session&&(parts[2]||'').trim()===system&&(parts[3]||'').trim()&&(parts[3]||'').trim()!=='—'?(parts[3]||'').trim().toLocaleUpperCase('en-US'):''}).filter(Boolean));let label='',candidate=0;do{let value=candidate++;label='';do{label=letters[value%letters.length]+label;value=Math.floor(value/letters.length)-1;}while(value>=0);}while(usedGroups.has(label));
  const lines=rawLines();
  selected.forEach(name=>lines.push([name,session,system,label,sets,reps,rest].join(String.fromCharCode(9))));
  $('bulk').value=lines.join(String.fromCharCode(10));$('quickSystem').value=system;$('quickGroup').value=label;$('quickSystem').dispatchEvent(new Event('change'));
@@ -251,7 +251,7 @@ $('newQuickGroup').addEventListener('click',()=>{
  const letters='ABCDEFGHIJKLMNOPQRSTUVWXYZ';
  const targetSession=String($('quickSession').value);
  const targetSystem=$('quickSystem').value==='عادی'?'سوپرست':$('quickSystem').value;
- const usedGroups=new Set(rawLines().map(line=>{const parts=line.split('\t');return String(Number((parts[1]||'').trim())||1)===targetSession&&(parts[2]||'').trim()===targetSystem.trim()&&parts[3]&&(parts[3]||'').trim()!=='—'?(parts[3]||'').trim().toLocaleUpperCase('en-US'):'';}).filter(Boolean));
+ const usedGroups=new Set(rawLines().map(line=>{const parts=(line.includes('\t')?line.split('\t'):line.split(/[;,]/)).map(value=>value.trim());return String(Number(parts[1])||1)===targetSession&&(parts[2]||'').trim()===targetSystem.trim()&&parts[3]&&(parts[3]||'').trim()!=='—'?(parts[3]||'').trim().toLocaleUpperCase('en-US'):'';}).filter(Boolean));
  let label='';
  let nextGroupNumber=0;
  do{let value=nextGroupNumber++;label='';do{label=letters[value%letters.length]+label;value=Math.floor(value/letters.length)-1;}while(value>=0);}while(usedGroups.has(label));
