@@ -584,6 +584,16 @@ const assert = require('node:assert/strict');
       assert.equal(await page.locator('#workoutVersionSelect option').count(), 2, 'loading a version should preserve the saved version list');
       assert.match(await page.locator('#workoutVersionStatus').innerText(), /بارگذاری شد/);
     });
+    await check('deleting a selected workout version requires confirmation and preserves other versions', async () => {
+      await page.locator('#workoutVersionSelect').selectOption(await page.locator('#workoutVersionSelect option').nth(1).getAttribute('value'));
+      await page.evaluate(() => { window.confirm = () => false; });
+      await page.locator('#deleteWorkoutVersion').click();
+      assert.equal(await page.locator('#workoutVersionSelect option').count(), 2, 'cancel should preserve saved versions');
+      await page.evaluate(() => { window.confirm = () => true; });
+      await page.locator('#deleteWorkoutVersion').click();
+      assert.equal(await page.locator('#workoutVersionSelect option').count(), 1, 'confirmed deletion should remove only selected version');
+      assert.match(await page.locator('#workoutVersionStatus').innerText(), /حذف شد/);
+    });
     await check('women template selection updates explanatory hint', async () => {
       await page.locator('#gender').selectOption('women');
       assert.ok((await page.locator('#templateHint').innerText()).includes('قالب خانم‌ها'));
