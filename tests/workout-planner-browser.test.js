@@ -226,6 +226,25 @@ const assert = require('node:assert/strict');
       assert.equal(sessionOf('حرکت ناشناخته'), 3, 'unclassified movements should retain their manually assigned session');
       assert.equal(trial.sessions, 3);
     });
+    await check('multiple selected movements can be transferred to one destination session', async () => {
+      await page.locator('#count').selectOption('3');
+      await page.locator('#split').selectOption('manual');
+      await page.locator('#bulk').fill([
+        ['پرس سینه', '1', 'عادی', '—', '3', '12', '60'].join(String.fromCharCode(9)),
+        ['لت سیم‌کش', '1', 'عادی', '—', '3', '10', '60'].join(String.fromCharCode(9)),
+        ['اسکوات', '2', 'عادی', '—', '4', '10', '90'].join(String.fromCharCode(9))
+      ].join(String.fromCharCode(10)));
+      await page.getByRole('checkbox', { name: 'انتخاب حرکت پرس سینه' }).check();
+      await page.getByRole('checkbox', { name: 'انتخاب حرکت لت سیم‌کش' }).check();
+      await page.locator('#bulkTargetSession').selectOption('3');
+      await page.getByRole('button', { name: 'انتقال انتخاب‌شده‌ها' }).click();
+      const rows = (await page.locator('#bulk').inputValue()).split(/\\r?\\n/).map(line => line.split(String.fromCharCode(9)));
+      assert.equal(rows.find(row => row[0] === 'پرس سینه')[1], '3');
+      assert.equal(rows.find(row => row[0] === 'لت سیم‌کش')[1], '3');
+      assert.equal(rows.find(row => row[0] === 'اسکوات')[1], '2', 'unselected movement must remain in its original session');
+      assert.match(await page.locator('#quickStatus').innerText(), /2 حرکت به جلسه 3 منتقل شد/);
+      assert.equal(await page.locator('#selectedMoveCount').innerText(), 'انتخاب‌شده: 0');
+    });
     await check('all ready-made templates use supported session counts and pass validation', async () => {
       const expected = { chest: 2, back: 2, legs: 2, shoulders: 2, four: 4, five: 5 };
       for (const [preset, sessions] of Object.entries(expected)) {
