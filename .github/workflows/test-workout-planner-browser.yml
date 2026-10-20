@@ -1,0 +1,28 @@
+name: Browser test experimental workout planner
+on:
+  push:
+    branches:
+      - coach-workout-editor-experiment
+    paths:
+      - 'experiments/workout-template-planner.html'
+      - 'tests/workout-planner-browser.test.js'
+      - '.github/workflows/test-workout-planner-browser.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  browser-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install Playwright
+        run: |
+          npm install --no-save playwright
+          npx playwright install --with-deps chromium
+      - name: Serve repository files
+        run: python3 -m http.server 4173 --directory . >/tmp/workout-planner-http.log 2>&1 &
+      - name: Test planner in Chromium
+        run: node tests/workout-planner-browser.test.js
