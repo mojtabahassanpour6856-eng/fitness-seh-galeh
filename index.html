@@ -4411,7 +4411,7 @@ window.toggleExerciseFavorite=async function(id,value){try{await sbWrite(`/train
     if(!traineeId||!planId||!same(workoutPlanOwnerId,traineeId)){alert('ابتدا برنامه تمرینی شاگرد را بارگذاری کنید.');return;}
     const rows=[...(workoutExercisesCache||[])].filter(x=>same(x.workout_plan_id,planId)).sort((a,b)=>(+a.sort_order||0)-(+b.sort_order||0));
     const groupable=new Set(['superset','triset','giant','giant_set','giant-set']);
-    const unitKey=x=>groupable.has(String(x.training_system||'normal'))&&String(x.group_key||'').trim()!==''?'group|'+String(x.training_system)+'|'+String(x.group_key):'single|'+String(x.id);
+    const unitKey=x=>groupable.has(String(x.training_system||'normal'))&&String(x.group_key||'').trim()!==''?'group|'+String(x.training_day||'').trim()+'|'+String(x.training_system)+'|'+String(x.group_key):'single|'+String(x.id);
     const units=[],unitMap=new Map();
     rows.forEach(x=>{const key=unitKey(x);if(!unitMap.has(key)){const u={key,rows:[]};unitMap.set(key,u);units.push(u);}unitMap.get(key).rows.push(x);});
     const unitIndex=units.findIndex(u=>u.rows.some(x=>same(x.id,id)));
