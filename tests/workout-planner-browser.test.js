@@ -94,6 +94,25 @@ const assert = require('node:assert/strict');
       assert.equal(rows[0].split(String.fromCharCode(9))[0], 'پرس سینه سریع');
       assert.equal(rows[1].split(String.fromCharCode(9))[0], 'لت سریع');
     });
+    await check('bulk edits update only selected movements and preserve their other details', async () => {
+      await page.locator('#count').selectOption('2');
+      await page.locator('#bulk').fill([
+        ['حرکت گروهی الف', '1', 'عادی', '—', '3', '10', '60'].join(String.fromCharCode(9)),
+        ['حرکت گروهی ب', '2', 'عادی', '—', '4', '12', '75'].join(String.fromCharCode(9)),
+        ['حرکت بدون تغییر', '2', 'عادی', '—', '2', '15', '45'].join(String.fromCharCode(9))
+      ].join(String.fromCharCode(10)));
+      await page.locator('#moveManager').getByRole('checkbox', { name: 'انتخاب حرکت حرکت گروهی الف' }).check();
+      await page.locator('#moveManager').getByRole('checkbox', { name: 'انتخاب حرکت حرکت گروهی ب' }).check();
+      await page.locator('#bulkEditSets').fill('5');
+      await page.locator('#bulkEditReps').fill('8');
+      await page.locator('#bulkEditRest').fill('90');
+      await page.locator('#applyBulkMovementEdits').click();
+      const rows = (await page.locator('#bulk').inputValue()).split(String.fromCharCode(10)).map(line => line.split(String.fromCharCode(9)));
+      assert.deepEqual(rows[0], ['حرکت گروهی الف', '1', 'عادی', '—', '5', '8', '90']);
+      assert.deepEqual(rows[1], ['حرکت گروهی ب', '2', 'عادی', '—', '5', '8', '90']);
+      assert.deepEqual(rows[2], ['حرکت بدون تغییر', '2', 'عادی', '—', '2', '15', '45'], 'unselected movement must remain unchanged');
+      assert.match(await page.locator('#quickStatus').innerText(), /مشخصات 2 حرکت انتخاب‌شده به‌روزرسانی شد/);
+    });
     await check('movements can be edited and deleted from the manager list', async () => {
       await page.locator('#bulk').fill('');
       await page.locator('#count').selectOption('3');
