@@ -5533,7 +5533,7 @@ window.useLibraryExercise=async function(id){
               const expected=sys==='superset'?2:((sys==='triset'||sys==='giant'||sys==='giant_set'||sys==='giant-set')?3:0);
               const isGiant=sys==='giant'||sys==='giant_set'||sys==='giant-set';
               const isGroup=expected>0&&!!first.group_key&&(isGiant?arr.length>=3:arr.length===expected);
-              /* Keep every movement in a superset/triset visible with its OWN prescription.
+              /* Keep every movement in a superset/triset visible with its OWN prescription; giant sets may contain 3+ movements.
                  The old renderer joined all movement names but showed sets/reps/rest only for
                  the first movement, making sessions look incomplete in PNG/PDF exports. */
               let movementHtml='';
