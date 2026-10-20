@@ -359,11 +359,11 @@ body.locked{overflow:hidden!important}
 <style id="membership-card-style">.membership-card-visual{margin:12px 0 16px;padding:18px;border-radius:18px;background:linear-gradient(135deg,#f7ebc9,#d4b45e 48%,#8b6825);color:#17120a;box-shadow:0 10px 25px rgba(0,0,0,.22);border:1px solid rgba(255,255,255,.55);min-height:190px;position:relative;overflow:hidden}.membership-card-visual:after{content:"";position:absolute;right:-45px;bottom:-80px;width:210px;height:210px;border:1px solid rgba(255,255,255,.3);border-radius:50%}.mc-top{display:flex;justify-content:space-between;align-items:center;font-size:13px}.mc-top span{font-size:11px}.mc-chip{margin-top:17px;font-size:25px}.mc-number{font-size:18px;letter-spacing:2px;margin:5px 0 13px;direction:ltr;text-align:left}.mc-name{display:flex;flex-direction:column;gap:2px}.mc-name small,.mc-details small{font-size:9px;opacity:.78}.mc-name strong{font-size:14px}.mc-details{display:grid;grid-template-columns:1.35fr 1fr 1fr;gap:9px;margin-top:12px}.mc-details>div{display:flex;flex-direction:column;gap:2px;min-width:0}.mc-details strong{font-size:10px;white-space:nowrap}@media(max-width:600px){.mc-details{gap:5px}.mc-details strong{font-size:8px}}</style>
 <style id="bulk-workout-editor-styles">
 .bulk-workout-rows{display:grid;gap:10px}
-.bulk-workout-row{display:grid;grid-template-columns:minmax(220px,2fr) repeat(3,minmax(90px,.7fr)) minmax(170px,1.4fr) auto;gap:8px;align-items:end;padding:12px;border:1px solid #d8c18a;border-radius:12px;background:#fffaf0}
+.bulk-workout-row{display:grid;grid-template-columns:minmax(190px,2fr) minmax(120px,1fr) minmax(130px,1fr) minmax(130px,1fr) repeat(3,minmax(75px,.6fr)) minmax(150px,1.3fr) auto;gap:8px;align-items:end;padding:12px;border:1px solid #d8c18a;border-radius:12px;background:#fffaf0}
 .bulk-workout-row label{display:block;font-size:12px;margin-bottom:4px}
 .bulk-workout-row input,.bulk-workout-row select{width:100%;min-width:0;box-sizing:border-box}
 .bulk-workout-row .bulk-remove{min-height:38px;white-space:nowrap}
-@media(max-width:900px){.bulk-workout-row{grid-template-columns:repeat(2,minmax(0,1fr))}.bulk-workout-row .bulk-exercise-field{grid-column:1/-1}.bulk-workout-row .bulk-notes-field{grid-column:1/-1}.bulk-workout-row .bulk-remove{grid-column:1/-1}}
+@media(max-width:900px){.bulk-workout-row{grid-template-columns:repeat(2,minmax(0,1fr))}.bulk-workout-row .bulk-exercise-field,.bulk-workout-row .bulk-notes-field{grid-column:1/-1}.bulk-workout-row .bulk-remove{grid-column:1/-1}}
 @media(min-width:901px){#bulkWorkoutEditorCard{max-width:100%;overflow-x:auto}}
 </style>
 
@@ -812,6 +812,7 @@ body.locked{overflow:hidden!important}
 <p class="muted">برنامه چندجلسه‌ای را یک‌بار ذخیره کنید و بعد برای هر شاگرد، یک نسخه مستقل بسازید. تغییر نسخه شاگرد، الگوی اصلی را تغییر نمی‌دهد.</p>
 <div class="grid2">
 <div><label for="coachWorkoutTemplateName">نام الگو</label><input id="coachWorkoutTemplateName" maxlength="120" placeholder="مثلاً الگوی چهار جلسه‌ای سطح متوسط"></div>
+<div><label for="workoutTemplateGender">جنسیت الگو</label><select id="workoutTemplateGender"><option value="زن">بانوان</option><option value="مرد">آقایان</option><option value="عمومی">عمومی</option></select></div>
 <div><label for="savedWorkoutTemplates">الگوهای موجود</label><select id="savedWorkoutTemplates"><option value="">ابتدا الگوها را بارگذاری کنید</option></select></div>
 </div>
 <div class="row" style="gap:8px;flex-wrap:wrap;margin-top:10px">
@@ -2110,49 +2111,52 @@ async function saveWorkoutPlan(){
 function addBulkWorkoutRow(prefill={}){
  const host=$('bulkWorkoutRows');if(!host)return;
  const row=document.createElement('div');row.className='bulk-workout-row';
- const exerciseField=document.createElement('div');exerciseField.className='bulk-exercise-field';
- const exerciseLabel=document.createElement('label');exerciseLabel.textContent='حرکت';exerciseField.appendChild(exerciseLabel);
- const source=$('workoutExercise');const select=document.createElement('select');select.className='bulk-exercise';select.required=true;
- if(source){Array.from(source.options).forEach(o=>{const c=o.cloneNode(true);select.appendChild(c);});}
- if(prefill.exercise_id)select.value=String(prefill.exercise_id);
- exerciseField.appendChild(select);row.appendChild(exerciseField);
- const dayField=document.createElement('div');const dayLabel=document.createElement('label');dayLabel.textContent='جلسه تمرینی';const daySelect=document.createElement('select');daySelect.className='bulk-day';
- [['جلسه اول','جلسه اول'],['جلسه دوم','جلسه دوم'],['جلسه سوم','جلسه سوم'],['جلسه چهارم','جلسه چهارم'],['جلسه پنجم','جلسه پنجم'],['جلسه ششم','جلسه ششم']].forEach(([v,t])=>{const o=document.createElement('option');o.value=v;o.textContent=t;daySelect.appendChild(o);});
- daySelect.value=prefill.training_day||$('workoutDay')?.value||'جلسه اول';dayField.append(dayLabel,daySelect);row.appendChild(dayField);
+ const addLabel=(wrap,text)=>{const label=document.createElement('label');label.textContent=text;wrap.appendChild(label);};
+ const exerciseField=document.createElement('div');exerciseField.className='bulk-exercise-field';addLabel(exerciseField,'حرکت');
+ const source=$('workoutExercise'),select=document.createElement('select');select.className='bulk-exercise';select.required=true;
+ if(source)Array.from(source.options).forEach(o=>select.appendChild(o.cloneNode(true)));
+ if(prefill.exercise_id)select.value=String(prefill.exercise_id);exerciseField.appendChild(select);row.appendChild(exerciseField);
+ const dayField=document.createElement('div');addLabel(dayField,'جلسه تمرینی');const daySelect=document.createElement('select');daySelect.className='bulk-day';
+ ['جلسه اول','جلسه دوم','جلسه سوم','جلسه چهارم','جلسه پنجم','جلسه ششم'].forEach(v=>{const o=document.createElement('option');o.value=v;o.textContent=v;daySelect.appendChild(o);});
+ daySelect.value=prefill.training_day||$('workoutDay')?.value||'جلسه اول';dayField.appendChild(daySelect);row.appendChild(dayField);
+ const sysField=document.createElement('div');addLabel(sysField,'سیستم تمرین');const sys=document.createElement('select');sys.className='bulk-system';
+ [['normal','عادی'],['superset','سوپرست'],['triset','تری‌ست'],['giant','جاینت‌ست'],['drop','دراپ‌ست'],['rest_pause','رست‌پاز'],['timed','تایم‌دار'],['multi_stage','چندمرحله‌ای'],['custom','سفارشی']].forEach(([v,t])=>{const o=document.createElement('option');o.value=v;o.textContent=t;sys.appendChild(o);});
+ sys.value=prefill.training_system||$('workoutSystem')?.value||'normal';sysField.appendChild(sys);row.appendChild(sysField);
+ const groupField=document.createElement('div');addLabel(groupField,'گروه (مثلاً A1)');const group=document.createElement('input');group.className='bulk-group';group.value=prefill.group_key||'';group.placeholder='برای حرکت‌های مرتبط یکسان';groupField.appendChild(group);row.appendChild(groupField);
  const fields=[['ست','sets',prefill.sets??3,'number'],['تکرار','reps',prefill.reps??$('workoutReps')?.value??'10','text'],['استراحت (ثانیه)','rest',prefill.rest_seconds??$('workoutRest')?.value??60,'number']];
- fields.forEach(([labelText,key,value,type])=>{const wrap=document.createElement('div');const label=document.createElement('label');label.textContent=labelText;const input=document.createElement('input');input.className='bulk-'+key;input.type=type;input.value=value; if(type==='number'){input.min=key==='rest'?'0':'1';}wrap.append(label,input);row.appendChild(wrap);});
- const notesField=document.createElement('div');notesField.className='bulk-notes-field';const notesLabel=document.createElement('label');notesLabel.textContent='توضیحات (اختیاری)';const notes=document.createElement('input');notes.className='bulk-notes';notes.value=prefill.notes||'';notes.placeholder='مثلاً کنترل کامل حرکت';notesField.append(notesLabel,notes);row.appendChild(notesField);
- const remove=document.createElement('button');remove.type='button';remove.className='secondary bulk-remove';remove.textContent='حذف ردیف';remove.onclick=()=>{row.remove();};row.appendChild(remove);
- host.appendChild(row);
+ fields.forEach(([labelText,key,value,type])=>{const wrap=document.createElement('div');addLabel(wrap,labelText);const input=document.createElement('input');input.className='bulk-'+key;input.type=type;input.value=value;if(type==='number')input.min=key==='rest'?'0':'1';wrap.appendChild(input);row.appendChild(wrap);});
+ const notesField=document.createElement('div');notesField.className='bulk-notes-field';addLabel(notesField,'توضیحات (اختیاری)');const notes=document.createElement('input');notes.className='bulk-notes';notes.value=prefill.notes||'';notes.placeholder='مثلاً کنترل کامل حرکت';notesField.appendChild(notes);row.appendChild(notesField);
+ const remove=document.createElement('button');remove.type='button';remove.className='secondary bulk-remove';remove.textContent='حذف ردیف';remove.onclick=()=>row.remove();row.appendChild(remove);host.appendChild(row);
 }
 async function bulkAddWorkoutExercises(){
  if(!currentClient){alert('اول یک شاگرد را انتخاب کنید.');return;}
  const rows=Array.from(document.querySelectorAll('#bulkWorkoutRows .bulk-workout-row'));
- const entries=rows.map(row=>({exercise_id:row.querySelector('.bulk-exercise')?.value,training_day:row.querySelector('.bulk-day')?.value||'جلسه اول',sets:Number(row.querySelector('.bulk-sets')?.value),reps:row.querySelector('.bulk-reps')?.value.trim(),rest_seconds:Number(row.querySelector('.bulk-rest')?.value),notes:row.querySelector('.bulk-notes')?.value.trim()}));
+ const entries=rows.map(row=>({exercise_id:row.querySelector('.bulk-exercise')?.value,training_day:row.querySelector('.bulk-day')?.value||'جلسه اول',training_system:row.querySelector('.bulk-system')?.value||'normal',group_key:row.querySelector('.bulk-group')?.value.trim()||null,sets:Number(row.querySelector('.bulk-sets')?.value),reps:row.querySelector('.bulk-reps')?.value.trim(),rest_seconds:Number(row.querySelector('.bulk-rest')?.value),notes:row.querySelector('.bulk-notes')?.value.trim()}));
  if(!entries.length){alert('حداقل یک ردیف حرکت اضافه کنید.');return;}
  const invalid=entries.findIndex(x=>!x.exercise_id||!Number.isFinite(x.sets)||x.sets<1||!x.reps||!Number.isFinite(x.rest_seconds)||x.rest_seconds<0);
  if(invalid>=0){alert('اطلاعات ردیف '+(invalid+1)+' ناقص یا نامعتبر است.');return;}
+ const grouped=entries.filter(x=>x.training_system!=='normal');
+ for(const item of grouped){if(!item.group_key){alert('برای ردیف‌های سیستم گروهی، نام گروه وارد کنید؛ مثلاً A1. حرکت‌های هم‌گروه باید نام گروه یکسان داشته باشند.');return;}}
+ const buckets=new Map();
+ entries.forEach((x,i)=>{if(x.training_system==='normal')return;const k=x.training_day+'|'+x.training_system+'|'+x.group_key;if(!buckets.has(k))buckets.set(k,[]);buckets.get(k).push(i);});
+ for(const [k,idx] of buckets){const sys=entries[idx[0]].training_system;const need=sys==='superset'?2:(sys==='triset'||sys==='giant'?3:1);if(idx.length!==need){alert('گروه «'+entries[idx[0]].group_key+'» در '+entries[idx[0]].training_day+' برای سیستم انتخابی باید دقیقاً '+need+' حرکت داشته باشد.');return;}}
  if(!currentWorkoutPlanId){await saveWorkoutPlan();if(!currentWorkoutPlanId)return;}
  const btn=$('bulkWorkoutSaveBtn');if(btn)btn.disabled=true;
- const status=$('bulkWorkoutStatus');if(status)status.textContent='در حال افزودن حرکت‌ها…';
- let added=0;
+ const status=$('bulkWorkoutStatus');if(status)status.textContent='در حال افزودن حرکت‌ها…';let added=0;
  try{
   let nextOrder=workoutExercisesCache.length?Math.max(...workoutExercisesCache.map(x=>Number(x.sort_order)||0))+1:1;
-  const payloads=entries.map((item,index)=>({workout_plan_id:currentWorkoutPlanId,exercise_id:item.exercise_id,sets:item.sets,reps:item.reps,rest_seconds:item.rest_seconds,notes:item.notes||null,sort_order:nextOrder+index,training_day:item.training_day,training_system:'normal',group_key:null,is_completed:false}));
+  const payloads=entries.map((item,index)=>({workout_plan_id:currentWorkoutPlanId,exercise_id:item.exercise_id,sets:item.sets,reps:item.reps,rest_seconds:item.rest_seconds,notes:item.notes||null,sort_order:nextOrder+index,training_day:item.training_day,training_system:item.training_system,group_key:item.training_system==='normal'?null:item.group_key,is_completed:false}));
   const inserted=await sbWrite('/trainee_workout_exercises','POST',payloads);
   if(!Array.isArray(inserted)||inserted.length!==entries.length)throw new Error('پاسخ پایگاه داده تعداد حرکت‌های ثبت‌شده را تأیید نکرد.');
-  added=inserted.length;
-  await loadWorkoutForClient();
-  if(status)status.textContent=added+' حرکت با موفقیت به برنامه اضافه شد.';
-  $('bulkWorkoutRows').innerHTML='';addBulkWorkoutRow();
+  added=inserted.length;await loadWorkoutForClient();
+  if(status)status.textContent=added+' حرکت با موفقیت ثبت شد؛ سیستم و گروه هر حرکت نیز ذخیره شد.';
+  $('bulkWorkoutRows').innerHTML='';for(let i=0;i<9;i++)addBulkWorkoutRow();
  }catch(e){
   if(status)status.textContent='تعداد ثبت‌شده: '+added+' از '+entries.length+'. برای جلوگیری از تکرار، فهرست برنامه را بررسی کنید.';
-  alert('ثبت گروهی کامل نشد؛ '+added+' حرکت از '+entries.length+' ثبت شد.\n'+(e?.message||String(e)));
-  await loadWorkoutForClient();
+  alert('ثبت گروهی کامل نشد؛ '+added+' حرکت از '+entries.length+' ثبت شد.\\n'+(e?.message||String(e)));await loadWorkoutForClient();
  }finally{if(btn)btn.disabled=false;}
 }
-
-document.addEventListener('DOMContentLoaded',()=>{if($('bulkWorkoutRows')&&!$('bulkWorkoutRows').children.length)addBulkWorkoutRow();});
+document.addEventListener('DOMContentLoaded',()=>{if($('bulkWorkoutRows')&&!$('bulkWorkoutRows').children.length){for(let i=0;i<9;i++)addBulkWorkoutRow();}});
 async function addWorkoutExercise(){if(!currentClient){alert('اول شاگرد را انتخاب کنید.');return;}if(!currentWorkoutPlanId){await saveWorkoutPlan();if(!currentWorkoutPlanId)return;}const exerciseId=$('workoutExercise').value;if(!exerciseId){alert('حرکت را انتخاب کنید.');return;}const nextOrder=workoutExercisesCache.length?Math.max(...workoutExercisesCache.map(x=>Number(x.sort_order)||0))+1:1;try{await sbWrite('/trainee_workout_exercises','POST',{workout_plan_id:currentWorkoutPlanId,exercise_id:exerciseId,sets:Number($('workoutSets').value)||0,reps:$('workoutReps').value.trim()||null,rest_seconds:Number($('workoutRest').value)||0,notes:$('workoutExerciseNotes').value.trim()||null,sort_order:nextOrder,training_system:'normal',group_key:null});$('workoutExerciseNotes').value='';await loadWorkoutForClient();alert('حرکت به برنامه اضافه شد.');}catch(e){alert('افزودن حرکت انجام نشد.\n'+e.message);}}
 async function deleteWorkoutExercise(id){if(!confirm('این حرکت از برنامه حذف شود؟'))return;try{await sbWrite(`/trainee_workout_exercises?id=eq.${encodeURIComponent(id)}`,'DELETE',{});await loadWorkoutForClient();}catch(e){alert('حذف حرکت انجام نشد.\n'+e.message);}}
 
@@ -12224,7 +12228,7 @@ body.workout-output.workout-compact{
    const rows=await sbGet('/coach_workout_templates?select=id,name,description,template_kind,template_data,updated_at&order=updated_at.desc,created_at.desc');
    savedTemplates=Array.isArray(rows)?rows:[];
    const select=el('savedWorkoutTemplates');
-   if(select){select.innerHTML='<option value="">انتخاب الگو…</option>'+savedTemplates.map(t=>'<option value="'+String(t.id)+'">'+String(t.name||'الگوی بدون نام').replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]))+'</option>').join('');}
+   if(select){const target=el('workoutTemplateGender')?.value||'عمومی';const visible=savedTemplates.filter(t=>{const g=t.template_data?.audience_gender||'عمومی';return g==='عمومی'||target==='عمومی'||g===target;});select.innerHTML='<option value="">انتخاب الگو…</option>'+visible.map(t=>'<option value="'+String(t.id)+'">'+String(t.name||'الگوی بدون نام').replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]))+'</option>').join('');}
    status(savedTemplates.length?savedTemplates.length+' الگو از پایگاه داده بارگذاری شد؛ روی گوشی و لپ‌تاپ مشترک است.':'هنوز الگویی ذخیره نشده است.');
   }catch(e){status('بارگذاری الگوها انجام نشد: '+(e.message||String(e)));}
  };
@@ -12239,7 +12243,7 @@ body.workout-output.workout-compact{
    if(!plans.length)throw new Error('برنامه انتخاب‌شده متعلق به شاگرد فعلی نیست؛ دوباره بارگذاری کنید.');
    const rows=await sbGet('/trainee_workout_exercises?workout_plan_id=eq.'+encodeURIComponent(planId)+'&select=exercise_id,sets,reps,rest_seconds,notes,sort_order,training_day,training_system,group_key&order=sort_order.asc,created_at.asc');
    if(!rows.length)throw new Error('برنامه فعلی هنوز حرکتی ندارد؛ ابتدا حرکات را اضافه کنید.');
-   const data={title:plans[0].title||'برنامه تمرینی',goal:plans[0].goal||'',notes:plans[0].notes||'',exercises:rows.map(x=>({exercise_id:x.exercise_id,sets:x.sets,reps:x.reps,rest_seconds:x.rest_seconds,notes:x.notes||'',sort_order:x.sort_order,training_day:x.training_day||'جلسه اول',training_system:x.training_system||'normal',group_key:x.group_key||null}))};
+   const data={title:plans[0].title||'برنامه تمرینی',goal:plans[0].goal||'',notes:plans[0].notes||'',audience_gender:el('workoutTemplateGender')?.value||currentClient.gender||'عمومی',exercises:rows.map(x=>({exercise_id:x.exercise_id,sets:x.sets,reps:x.reps,rest_seconds:x.rest_seconds,notes:x.notes||'',sort_order:x.sort_order,training_day:x.training_day||'جلسه اول',training_system:x.training_system||'normal',group_key:x.group_key||null}))};
    await sbWrite('/coach_workout_templates','POST',{name,description:'ذخیره‌شده از برنامه '+data.title,template_kind:'multi_session',template_data:data});
    status('الگوی «'+name+'» ذخیره شد؛ نسخه اصلی و برنامه شاگرد دست‌نخورده ماندند.');
    await window.loadSavedWorkoutTemplates();
@@ -12252,6 +12256,8 @@ body.workout-output.workout-compact{
   const template=savedTemplates.find(t=>same(t.id,selected));
   if(!template){status('یک الگو را انتخاب کنید. اگر فهرست خالی است، ابتدا بارگذاری الگوها را بزنید.');return;}
   const data=template.template_data||{},rows=Array.isArray(data.exercises)?data.exercises:[];
+  const targetGender=String(currentClient.gender||'').trim(),audience=String(data.audience_gender||'عمومی');
+  if(audience!=='عمومی'&&targetGender&&audience!==targetGender){status('این الگو برای جنسیت دیگری ذخیره شده است؛ الگوی متناسب را انتخاب کنید.');return;}
   if(!rows.length){status('این الگو حرکت قابل استفاده ندارد.');return;}
   if(!confirm('یک نسخه مستقل از «'+template.name+'» برای شاگرد «'+(currentClient.full_name||currentClient.name||'انتخاب‌شده')+'» ساخته شود؟ برنامه قبلی حذف نمی‌شود.'))return;
   const traineeId=String(currentClient.id);
@@ -12294,6 +12300,7 @@ body.workout-output.workout-compact{
   if(coachReady()&&el('savedWorkoutTemplates')&&el('savedWorkoutTemplates').options.length<=1)window.loadSavedWorkoutTemplates();
  }
  document.addEventListener('DOMContentLoaded',function(){
+  const genderSelect=el('workoutTemplateGender');if(genderSelect)genderSelect.addEventListener('change',()=>window.loadSavedWorkoutTemplates());
   syncPanel();let attempts=0;
   const timer=setInterval(function(){syncPanel();attempts++;if(attempts>=40||coachReady())clearInterval(timer);},500);
  });
