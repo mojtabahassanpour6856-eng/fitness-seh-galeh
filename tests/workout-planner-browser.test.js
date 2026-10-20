@@ -240,6 +240,7 @@ const assert = require('node:assert/strict');
         ['حرکت گروه A', '1', 'سوپرست', 'A', '3', '10', '60'].join(String.fromCharCode(9)),
         ['حرکت گروه B', '1', 'سوپرست', 'B', '3', '10', '60'].join(String.fromCharCode(9))
       ].join(String.fromCharCode(10)));
+      await page.locator('#quickSession').selectOption('1');
       await page.locator('#quickSystem').selectOption('عادی');
       await page.getByRole('button', { name: 'ساخت گروه جدید' }).click();
       assert.equal(await page.locator('#quickSystem').inputValue(), 'سوپرست');
@@ -257,6 +258,7 @@ const assert = require('node:assert/strict');
       assert.equal(await page.locator('#quickGroup').inputValue(), 'A', 'a label used in another session or system should be reusable here');
     });
     await check('group selection is preserved across bank category filters', async () => {
+      await page.locator('#clearSelectedExercises').click();
       await page.locator('#bulk').fill('');
       await page.locator('#count').selectOption('2');
       await page.locator('#bankCategory').selectOption('سینه');
@@ -279,6 +281,7 @@ const assert = require('node:assert/strict');
       assert.ok((await page.locator('#sessions').innerText()).includes('پرس سینه هالتر + اسکوات جام'), 'preview should show selected movements together in selection order with a plus separator');
     });
     await check('quick bank grouping rejects the wrong number of selected movements without changing the plan', async () => {
+      await page.locator('#clearSelectedExercises').click();
       await page.locator('#bulk').fill('برنامه باید حفظ شود\\t1\\tعادی\\t—\\t3\\t10\\t60');
       await page.locator('#bankCategory').selectOption('سینه');
       await page.getByRole('checkbox', { name: 'گروه‌بندی پرس سینه هالتر' }).check();
@@ -335,6 +338,7 @@ const assert = require('node:assert/strict');
       assert.match(await page.locator('#bankStatus').innerText(),/2 حرکت به جلسه 2 اضافه شد/);
     });
     await check('selected bank movements can be grouped into a triset with plus preview', async () => {
+      await page.locator('#clearSelectedExercises').click();
       await page.locator('#bulk').fill('');
       await page.locator('#count').selectOption('3');
       await page.locator('#quickSession').selectOption('1');
