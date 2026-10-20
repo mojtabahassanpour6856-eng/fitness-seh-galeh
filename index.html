@@ -5519,16 +5519,19 @@ window.useLibraryExercise=async function(id){
         } else {
           const help = {superset:'دو حرکت را پشت سر هم انجام بده؛ بینشان استراحت نکن.',triset:'سه حرکت را پشت سر هم انجام بده؛ بینشان استراحت نکن.',giant:'سه حرکت یا بیشتر را پشت سر هم انجام بده.',giant_set:'سه حرکت یا بیشتر را پشت سر هم انجام بده.','giant-set':'سه حرکت یا بیشتر را پشت سر هم انجام بده.',drop:'یک حرکت؛ پس از خستگی وزنه را کم کن و تکرارها را ادامه بده.',drop_set:'یک حرکت؛ پس از خستگی وزنه را کم کن و تکرارها را ادامه بده.','drop-set':'یک حرکت؛ پس از خستگی وزنه را کم کن و تکرارها را ادامه بده.',rest_pause:'پس از مکث کوتاه، چند تکرار دیگر انجام بده.','rest-pause':'پس از مکث کوتاه، چند تکرار دیگر انجام بده.',timed:'حرکت را برای مدت زمان تعیین‌شده اجرا کن.',multi_stage:'حرکت را طبق مراحل ثبت‌شده اجرا کن.',pre_exhaust:'ابتدا حرکت تک‌مفصلی، سپس حرکت اصلی.',mechanical_drop:'با تغییر شکل حرکت، پس از خستگی ادامه بده.',pyramid:'وزنه و تکرارها به‌تدریج تغییر می‌کنند.',reverse_pyramid:'ابتدا سنگین‌تر؛ سپس وزنه کمتر می‌شود.',circuit:'حرکات را به‌ترتیب و با استراحت کم انجام بده.',custom:'طبق توضیح اختصاصی ثبت‌شده اجرا کن.'};
           const renderSession = day => {
-            const list = grouped.get(day)||[], cards=[], groupMap=new Map();
+            const list = grouped.get(day)||[], cards=[];
+            const groupableSystems = new Set(['superset','triset','giant','giant_set','giant-set']);
             list.forEach((x,idx)=>{
-              const sys=x.training_system||'normal';
-              const isGroup=sys!=='normal'&&!!x.group_key;
-              const key=isGroup?sys+'|'+String(x.group_key):'single|'+String(x.id||idx);
-              if(!groupMap.has(key)){groupMap.set(key,[]);cards.push(key);}
-              groupMap.get(key).push(x);
+              const sys=String(x.training_system||'normal'),groupable=groupableSystems.has(sys)&&!!x.group_key;
+              const key=groupable?sys+'|'+String(x.group_key):'single|'+String(x.id||idx);
+              const last=cards[cards.length-1];
+              if(groupable&&last&&last.key===key)last.rows.push(x);
+              else cards.push({key,rows:[x]});
             });
-            return '<section class="session-cell"><div class="session-heading">'+esc(day)+'</div><div class="session-exercises" style="--move-count:'+cards.length+'">'+cards.map(key=>{
-              const arr=groupMap.get(key),first=arr[0],sys=first.training_system||'normal',isGroup=sys!=='normal'&&!!first.group_key;
+            return '<section class="session-cell"><div class="session-heading">'+esc(day)+'</div><div class="session-exercises" style="--move-count:'+cards.length+'">'+cards.map(entry=>{
+              const arr=entry.rows,first=arr[0],sys=String(first.training_system||'normal');
+              const expected=sys==='superset'?2:((sys==='triset'||sys==='giant'||sys==='giant_set'||sys==='giant-set')?3:0);
+              const isGroup=expected>0&&!!first.group_key&&arr.length===expected;
               /* Keep every movement in a superset/triset visible with its OWN prescription.
                  The old renderer joined all movement names but showed sets/reps/rest only for
                  the first movement, making sessions look incomplete in PNG/PDF exports. */
