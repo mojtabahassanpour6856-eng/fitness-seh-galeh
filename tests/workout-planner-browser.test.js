@@ -50,8 +50,8 @@ const assert = require('node:assert/strict');
       assert.ok((await page.locator('#sessions').innerText()).includes('پرس سینه آزمایشی'));
     });
     await check('movements can be reordered and preview updates to match', async () => {
-      await page.locator('#bulk').fill('حرکت اول\t1\tعادی\t—\t3\t10\t60\nحرکت دوم\t1\tعادی\t—\t3\t12\t60');
       await page.locator('#count').selectOption('2');
+      await page.locator('#bulk').fill('حرکت اول\t1\tعادی\t—\t3\t10\t60\nحرکت دوم\t1\tعادی\t—\t3\t12\t60');
       await page.getByRole('button', { name: 'اعتبارسنجی و پیش‌نمایش' }).click();
       await page.locator('#moveManager').getByRole('button', { name: 'انتقال حرکت به پایین' }).first().waitFor({ state: 'visible' });
       assert.ok((await page.locator('#sessions').innerText()).indexOf('حرکت اول') < (await page.locator('#sessions').innerText()).indexOf('حرکت دوم'));
