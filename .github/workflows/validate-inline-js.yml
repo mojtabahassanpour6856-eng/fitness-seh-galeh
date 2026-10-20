@@ -3,6 +3,8 @@ on:
   push:
     paths:
       - 'index.html'
+      - 'workout-editor-preview.html'
+      - 'workout-editor-entry-preview.html'
       - '.github/workflows/validate-inline-js.yml'
   workflow_dispatch:
 jobs:
@@ -13,28 +15,31 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-      - name: Check every inline script in index.html
+      - name: Check every inline script in app and standalone previews
         run: |
           node <<'NODE'
           const fs = require('fs');
           const { spawnSync } = require('child_process');
-          const html = fs.readFileSync('index.html', 'utf8');
-          const scripts = [...html.matchAll(/<script\b([^>]*)>([\s\S]*?)<\/script\s*>/gi)];
           let failed = false, count = 0;
-          for (const [i, match] of scripts.entries()) {
-            if (/\bsrc\s*=/.test(match[1]) || !match[2].trim()) continue;
-            count++;
-            const file = `/tmp/inline-${i}.js`;
-            fs.writeFileSync(file, match[2]);
-            const result = spawnSync(process.execPath, ['--check', file], { encoding: 'utf8' });
-            if (result.status !== 0) {
-              failed = true;
-              const start = html.slice(0, match.index).split('\n').length;
-              console.error(`Syntax error in inline script starting at HTML line ${start}:`);
-              console.error(result.stderr || result.stdout);
+          for (const filename of ['index.html', 'workout-editor-preview.html', 'workout-editor-entry-preview.html']) {
+            if (!fs.existsSync(filename)) continue;
+            const html = fs.readFileSync(filename, 'utf8');
+            const scripts = [...html.matchAll(/<script\\b([^>]*)>([\\s\\S]*?)<\\/script\\s*>/gi)];
+            for (const [i, match] of scripts.entries()) {
+              if (/\\bsrc\\s*=/.test(match[1]) || !match[2].trim()) continue;
+              count++;
+              const file = `/tmp/${filename.replace(/[^a-z0-9]/gi, '-')}-inline-${i}.js`;
+              fs.writeFileSync(file, match[2]);
+              const result = spawnSync(process.execPath, ['--check', file], { encoding: 'utf8' });
+              if (result.status !== 0) {
+                failed = true;
+                const line = html.slice(0, match.index).split('\\n').length;
+                console.error(`Syntax error in ${filename}, inline script starting at HTML line ${line}:`);
+                console.error(result.stderr || result.stdout);
+              }
             }
           }
-          console.log(`Checked ${count} inline scripts.`);
+          console.log(`Checked ${count} inline scripts across app and previews.`);
           if (failed) process.exit(1);
           NODE
       - name: Guard workout movement numbering and grouping
