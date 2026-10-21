@@ -28,6 +28,9 @@ check('RPC checks authentication, coach role, and trainee access', () => {
 check('RPC serializes saves for the same trainee and guards expected plan id', () => {
   assert.match(sql, /pg_advisory_xact_lock/);
   assert.match(sql, /p_expected_plan_id/);
+  assert.match(sql, /p_expected_snapshot jsonb/);
+  assert.match(sql, /is distinct from v_current_snapshot/);
+  assert.match(sql, /plan_snapshot/);
   assert.match(sql, /Multiple existing workout plans found/);
 });
 
@@ -56,6 +59,7 @@ check('Checklist keeps staging rollback and concurrency tests as deployment bloc
   const checklist = fs.readFileSync('experiments/WORKOUT_SAVE_RPC_REVIEW_CHECKLIST.md', 'utf8');
   assert.match(checklist, /disposable\/staging Supabase project/i);
   assert.match(checklist, /forced failure/i);
+  assert.match(checklist, /full plan snapshot/i);
   assert.match(checklist, /simultaneous save attempts/i);
   assert.match(checklist, /explicit approval/i);
 });
