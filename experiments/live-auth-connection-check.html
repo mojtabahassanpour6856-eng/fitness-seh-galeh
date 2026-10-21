@@ -44,10 +44,23 @@ $('check').addEventListener('click',async()=>{
   const {data:profiles,error:profileError}=await client.from('profiles').select('id,full_name,role').eq('id',session.user.id).limit(1);
   if(profileError)throw profileError;
   if(!profiles||!profiles.length||profiles[0].role!=='coach'){say('نقش مربی تأیید نشد. برای جلوگیری از دسترسی اشتباه، بررسی متوقف شد.','err');return;}
-  const {data:trainees,error:traineeError}=await client.from('trainees').select('id,full_name,approval_status,archived_at').ilike('full_name','مجتبی حسن پور').limit(20);
-  if(traineeError)throw traineeError;
-  const target=(trainees||[]).find(t=>String(t.full_name||'').normalize('NFKC').replace(/[\\u200c\\s]/g,'')==='مجتبیحسنپور');
-  if(!target){say('نشست مربی معتبر است، اما شاگرد با تطبیق نام دقیق پیدا نشد. هیچ داده‌ای تغییر نکرده است.','err');return;}
+  // Use a broad read-only search, then normalize Persian/Arabic character variants locally.
+  const normalizeName=value=>String(value||'').normalize('NFKC')
+    .replace(/[\\u200c\\u200d\\s]/g,'')
+    .replace(/[يى]/g,'ی').replace(/ك/g,'ک');
+  let trainees=[];
+  for(const pattern of ['%مجتبی%','%مجتبي%']){
+   const {data,error}=await client.from('trainees').select('id,full_name,approval_status,archived_at').ilike('full_name',pattern).limit(50);
+   if(error)throw error;
+   trainees.push(...(data||[]));
+  }
+  trainees=[...new Map(trainees.map(t=>[t.id,t])).values()];
+  const target=trainees.find(t=>normalizeName(t.full_name)===normalizeName('مجتبی حسن پور'));
+  if(!target){
+   const candidates=trainees.filter(t=>normalizeName(t.full_name).includes(normalizeName('مجتبی'))||normalizeName(t.full_name).includes(normalizeName('مجتبي')));
+   const details=candidates.length?' نام‌های نزدیک پیدا شده: '+candidates.map(t=>'«'+t.full_name+'»').join('، '):' هیچ شاگردی با نام آغازشونده با «مجتبی» از طریق دسترسی فعلی خوانده نشد.';
+   say('نشست مربی معتبر است، اما تطبیق دقیق نام انجام نشد.'+details+'\\nهیچ داده‌ای تغییر نکرده است.','err');return;
+  }
   const {data:plans,error:plansError}=await client.from('trainee_workout_plans').select('id,title,plan_date,created_at').eq('trainee_id',target.id).order('created_at',{ascending:false}).limit(10);
   if(plansError)throw plansError;
   const planLines=[];
