@@ -998,8 +998,15 @@ const assert = require('node:assert/strict');
         for (const name of item.names) {
           await row.locator('.mobile-exercise-search').fill(name);
           const option = row.locator('.mobile-exercise-option').filter({ hasText: name }).first();
-          if (item.system === 'عادی') await option.click();
-          else await option.locator('input.mobile-exercise-check').click({ force: true });
+          if (item.system === 'عادی') {
+            await option.locator('span').click();
+          } else {
+            // Trigger the real checkbox change handler deterministically in Chromium's mobile viewport.
+            await option.locator('input.mobile-exercise-check').evaluate(el => {
+              el.checked = true;
+              el.dispatchEvent(new Event('change', { bubbles: true }));
+            });
+          }
         }
         const raw = await page.locator('#bulk').evaluate(el => el.value);
         const lines = raw.split(String.fromCharCode(10)).filter(Boolean).map(line => line.split(String.fromCharCode(9)));
