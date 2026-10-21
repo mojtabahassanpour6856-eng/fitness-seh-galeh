@@ -20,8 +20,8 @@ Branch: `coach-workout-editor-isolated-preview`.
 ## Required before any deployment
 1. Review SQL syntax and behavior in a disposable/staging Supabase project first.
 2. Confirm all needed schema/table privileges for `authenticated` and verify RLS behavior with the actual coach session. Do not weaken RLS to make the RPC pass.
-3. Add a snapshot/version check that detects edits made through the legacy app between preview and save. The current draft checks the expected plan id, but it cannot detect every concurrent edit from a separate code path that does not use this RPC.
-4. Add tests for: new plan; replacement of existing plan; invalid trainee; non-coach caller; inaccessible trainee; invalid/missing exercise id; empty/oversized exercise array; duplicate sort order; forced failure during exercise insert (must leave the original plan and rows intact); and two simultaneous save attempts.
+3. The draft now returns and requires a full plan snapshot (metadata plus ordered exercise-row values) for replacements, and rejects a save if any of those values changed since preview. This guards stale previews even when another code path edits the existing plan. Re-run the disposable PostgreSQL integration suite after any change.
+4. Automated disposable PostgreSQL tests cover: new plan; replacement; stale snapshot; invalid exercise id; non-coach caller; inaccessible trainee; and forced failure during exercise insert with rollback. Still add explicit invalid-trainee, empty/oversized array, duplicate sort order, and two simultaneous save-attempt tests before deployment.
 5. Confirm the exercise-system values and all payload fields against the production app's actual write/read paths.
 6. Check Supabase advisors and review function grants/schema exposure after deployment.
 7. Only after the staging tests pass, request explicit approval before deploying a migration or saving to the real test trainee.
