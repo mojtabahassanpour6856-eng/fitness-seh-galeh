@@ -1567,7 +1567,7 @@ const assert = require('node:assert/strict');
       assert.deepEqual(rows, [
         ['پرس سینه نسخه‌دار', '1', 'سوپرست', 'A', '4', '12', '60'],
         ['قفسه نسخه‌دار', '1', 'سوپرست', 'A', '4', '10', '60'],
-        ['اسکوات نسخه‌دار', '3', 'تری‌ست', 'A', '3', '8', '90']
+        ['اسکوات نسخه‌دار', '3', 'عادی', '—', '3', '8', '90']
       ], 'system, group labels, workout parameters, and session assignments should survive save/load');
       assert.ok((await page.locator('#sessions').innerText()).includes('اسکوات نسخه‌دار'), 'restored plan should render the last-session movement');
     });
