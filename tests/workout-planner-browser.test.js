@@ -1350,6 +1350,27 @@ const assert = require('node:assert/strict');
       }
       await page.setViewportSize({ width: 1280, height: 900 });
     });
+    await check('narrow-phone workflow can select a movement, add it to a session, and preview the result', async () => {
+      await page.setViewportSize({ width: 320, height: 740 });
+      await page.goto('http://127.0.0.1:4173/experiments/workout-template-planner.html');
+      await page.locator('#count').selectOption('2');
+      await page.locator('#bulk').fill('');
+      const row = page.locator('#mobileMoveRows .mobile-move-row').first();
+      await row.locator('select[id^="mobile_system_"]').selectOption('عادی');
+      await row.locator('summary.mobile-exercise-summary').click();
+      await row.locator('.mobile-exercise-search').fill('پرس سینه دمبل');
+      await row.locator('.mobile-exercise-option[data-name="پرس سینه دمبل"] span').click();
+      await page.locator('#mobileAddToSession').click();
+      assert.ok((await page.locator('#bulk').inputValue()).includes('پرس سینه دمبل'), 'selected movement should be added from the phone composer');
+      await page.locator('#mobilePreviewButton').click();
+      assert.ok((await page.locator('#sessions').innerText()).includes('پرس سینه دمبل'), 'the phone workflow should render the added movement in the preview');
+      const buttons = await page.locator('#mobileComposer button:visible').evaluateAll(els => els.map(el => {
+        const r = el.getBoundingClientRect();
+        return { text: el.innerText, left: r.left, right: r.right, width: r.width };
+      }));
+      assert.ok(buttons.every(b => b.left >= -1 && b.right <= 321), 'mobile composer buttons should remain inside the 320px viewport: ' + JSON.stringify(buttons));
+      await page.setViewportSize({ width: 1280, height: 900 });
+    });
     await check('women template selection updates explanatory hint', async () => {
       await page.locator('#gender').selectOption('women');
       assert.ok((await page.locator('#templateHint').innerText()).includes('قالب خانم‌ها'));
