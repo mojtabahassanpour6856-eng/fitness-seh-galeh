@@ -8,6 +8,9 @@ on:
       - 'fitness_seh_galeh_FINAL_CLEAN2.html'
       - 'experiments/workout-persistence-adapter.js'
       - 'tests/workout-planner-browser.test.js'
+      - 'tests/workout-save-sql-draft.test.js'
+      - 'experiments/sql/save_trainee_workout_plan_transaction.sql'
+      - 'experiments/WORKOUT_SAVE_RPC_REVIEW_CHECKLIST.md'
       - '.github/workflows/test-workout-planner-browser.yml'
   workflow_dispatch:
 permissions:
@@ -24,6 +27,8 @@ jobs:
         run: |
           npm install --no-save playwright
           npx playwright install --with-deps chromium
+      - name: Static guardrails for SQL draft (no database access)
+        run: node tests/workout-save-sql-draft.test.js
       - name: Serve repository files
         run: python3 -m http.server 4173 --directory . >/tmp/workout-planner-http.log 2>&1 &
       - name: Test planner in Chromium
