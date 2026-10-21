@@ -1350,6 +1350,17 @@ const assert = require('node:assert/strict');
       }
       await page.setViewportSize({ width: 1280, height: 900 });
     });
+    await check('desktop bank selection can be added with Enter without clicking the add button', async () => {
+      await page.setViewportSize({ width: 1280, height: 900 });
+      await page.goto('http://127.0.0.1:4173/experiments/workout-template-planner.html');
+      await page.locator('#bulk').evaluate(el => { el.value = ''; el.dispatchEvent(new Event('input', { bubbles: true })); });
+      await page.getByRole('button', { name: 'انتخاب حرکت پرس سینه دمبل' }).click();
+      assert.equal(await page.locator('#quickName').inputValue(), 'پرس سینه دمبل');
+      assert.equal(await page.evaluate(() => document.activeElement.id), 'quickName', 'bank selection should focus the quick-entry field');
+      await page.locator('#quickName').press('Enter');
+      assert.ok((await page.locator('#bulk').inputValue()).includes('پرس سینه دمبل'), 'Enter should add the selected bank movement');
+      assert.equal(await page.locator('#quickName').inputValue(), '', 'quick-entry field should be ready for the next movement');
+    });
     await check('desktop keyboard workflow adds a movement with Enter and clears the name field for the next movement', async () => {
       await page.setViewportSize({ width: 1280, height: 900 });
       await page.goto('http://127.0.0.1:4173/experiments/workout-template-planner.html');
