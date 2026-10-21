@@ -26,11 +26,11 @@ begin
     raise exception 'Authentication required' using errcode = '28000';
   end if;
 
-  if not private.is_coach() then
+  if coalesce(private.is_coach(), false) is not true then
     raise exception 'Coach role required' using errcode = '42501';
   end if;
 
-  if p_trainee_id is null or not private.can_access_trainee(p_trainee_id) then
+  if p_trainee_id is null or coalesce(private.can_access_trainee(p_trainee_id), false) is not true then
     raise exception 'Trainee is not accessible to this coach' using errcode = '42501';
   end if;
 
