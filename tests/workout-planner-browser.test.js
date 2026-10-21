@@ -982,6 +982,7 @@ const assert = require('node:assert/strict');
       assert.equal(await page.locator('#workoutVersionSelect option').count(), 2, 'invalid import should not change saved versions');
     });
     await check('mobile exercise picker auto-adds the exact movement count for normal, superset, triset, and giant-set', async () => {
+      await page.setViewportSize({ width: 390, height: 844 });
       const cases = [
         { system: 'عادی', names: ['پرس سینه دمبل'] },
         { system: 'سوپرست', names: ['پرس سینه دمبل', 'پرس بالاسینه دمبل'] },
@@ -1013,6 +1014,7 @@ const assert = require('node:assert/strict');
         assert.equal(await row.locator('.mobile-exercise-check:checked').count(), 0, 'checkboxes should reset after auto-add');
         assert.equal(await row.locator('details.mobile-exercise-picker').evaluate(el => el.open), false, 'picker should close after auto-add');
       }
+      await page.setViewportSize({ width: 1280, height: 900 });
     });
     await check('women template selection updates explanatory hint', async () => {
       await page.locator('#gender').selectOption('women');
