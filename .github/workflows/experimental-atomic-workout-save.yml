@@ -5,6 +5,8 @@ on:
       - coach-workout-editor-experiment
     paths:
       - 'experiments/sql/experimental_atomic_workout_save.sql'
+      - 'experiments/atomic-workout-rpc-adapter.js'
+      - 'experiments/workout-template-planner.html'
       - 'experiments/tests/**'
       - '.github/workflows/experimental-atomic-workout-save.yml'
   workflow_dispatch:
@@ -29,6 +31,8 @@ jobs:
           --health-retries 20
     steps:
       - uses: actions/checkout@v4
+      - name: Test atomic workout RPC adapter with mocked Supabase client
+        run: node experiments/tests/atomic-workout-rpc-adapter.test.js
       - name: Install PostgreSQL client
         run: sudo apt-get update && sudo apt-get install -y postgresql-client
       - name: Prepare disposable schema and mock auth/RLS
