@@ -1046,6 +1046,26 @@ const assert = require('node:assert/strict');
       }
       await page.setViewportSize({ width: 1280, height: 900 });
     });
+    await check('mobile picker hides checkboxes for normal training and reveals them for combination systems', async () => {
+      await page.setViewportSize({ width: 390, height: 844 });
+      await page.goto('http://127.0.0.1:4173/experiments/workout-template-planner.html');
+      await page.locator('#bulk').evaluate(el => { el.value = ''; el.dispatchEvent(new Event('input', { bubbles: true })); });
+      const row = page.locator('#mobileMoveRows .mobile-move-row').first();
+      const firstOption = row.locator('.mobile-exercise-option').filter({ hasText: 'پرس سینه دمبل' }).first();
+      await row.locator('summary.mobile-exercise-summary').click();
+      await row.locator('.mobile-exercise-search').fill('پرس سینه دمبل');
+      assert.equal(await firstOption.locator('.mobile-exercise-check').evaluate(el => getComputedStyle(el).display), 'none', 'normal mode should not show checkbox controls');
+      await firstOption.locator('span').click();
+      let lines = (await page.locator('#bulk').inputValue()).split(String.fromCharCode(10)).filter(Boolean);
+      assert.equal(lines.length, 1, 'tapping the exercise name in normal mode should add it immediately');
+      assert.equal(lines[0].split(String.fromCharCode(9))[3], '—', 'normal movement should not receive a combination label');
+      await row.locator('select[id^="mobile_system_"]').selectOption('سوپرست');
+      await row.locator('summary.mobile-exercise-summary').click();
+      await row.locator('.mobile-exercise-search').fill('پرس سینه دمبل');
+      const comboOption = row.locator('.mobile-exercise-option').filter({ hasText: 'پرس سینه دمبل' }).first();
+      assert.notEqual(await comboOption.locator('.mobile-exercise-check').evaluate(el => getComputedStyle(el).display), 'none', 'combination mode should show checkboxes');
+      await page.setViewportSize({ width: 1280, height: 900 });
+    });
     await check('gender-specific base, fat-loss, and muscle-building presets load the correct gender and session count', async () => {
       const presets = [
         { id: 'womenBase', gender: 'women', sessions: '3', move: 'هیپ تراست' },
