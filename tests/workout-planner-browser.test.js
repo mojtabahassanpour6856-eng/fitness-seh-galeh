@@ -1391,6 +1391,63 @@ const assert = require('node:assert/strict');
       assert.ok((await page.locator('#templateHint').innerText()).includes('قالب آقایان'), 'men template should show its own guidance');
       assert.equal(await page.locator('#bulk').inputValue(), before, 'switching back must preserve the workout rows');
     });
+    await check('movement ordering controls reorder the workout and preview in the same order', async () => {
+      await page.setViewportSize({ width: 1280, height: 900 });
+      await page.goto('http://127.0.0.1:4173/experiments/workout-template-planner.html');
+      await page.locator('#count').selectOption('2');
+      await page.locator('#bulk').fill([
+        ['پرس سینه', '1', 'عادی', '—', '3', '12', '60'],
+        ['لت سیم‌کش', '1', 'عادی', '—', '3', '10', '60'],
+        ['اسکوات', '1', 'عادی', '—', '4', '8', '90']
+      ].map(row => row.join(String.fromCharCode(9))).join(String.fromCharCode(10)));
+      await page.getByRole('button', { name: 'اعتبارسنجی و پیش‌نمایش' }).click();
+      await page.locator('#moveManager .move').nth(2).getByRole('button', { name: 'انتقال حرکت به بالا' }).click();
+      let names = (await page.locator('#bulk').inputValue()).split(String.fromCharCode(10)).map(line => line.split(String.fromCharCode(9))[0]);
+      assert.deepEqual(names, ['پرس سینه', 'اسکوات', 'لت سیم‌کش'], 'move-up should change the stored row order');
+      await page.locator('#moveManager .move').nth(0).getByRole('button', { name: 'انتقال حرکت به پایین' }).click();
+      names = (await page.locator('#bulk').inputValue()).split(String.fromCharCode(10)).map(line => line.split(String.fromCharCode(9))[0]);
+      assert.deepEqual(names, ['اسکوات', 'پرس سینه', 'لت سیم‌کش'], 'move-down should reorder the stored rows');
+      const preview = await page.locator('#sessions .session').first().innerText();
+      assert.ok(preview.indexOf('اسکوات') < preview.indexOf('پرس سینه'), 'preview should reflect the reordered workout');
+      assert.ok((await page.locator('#quickStatus').innerText()).includes('ترتیب حرکت تغییر کرد'));
+    });
+    await check('copying a grouped movement creates a separate normal movement without altering the original group', async () => {
+      await page.setViewportSize({ width: 1280, height: 900 });
+      await page.goto('http://127.0.0.1:4173/experiments/workout-template-planner.html');
+      await page.locator('#count').selectOption('2');
+      await page.locator('#bulk').fill([
+        ['پرس گروهی', '1', 'سوپرست', 'A', '3', '12', '60'],
+        ['قفسه گروهی', '1', 'سوپرست', 'A', '3', '10', '60']
+      ].map(row => row.join(String.fromCharCode(9))).join(String.fromCharCode(10)));
+      await page.getByRole('button', { name: 'اعتبارسنجی و پیش‌نمایش' }).click();
+      await page.locator('#moveManager .move').first().getByRole('button', { name: 'کپی حرکت پرس گروهی' }).click();
+      const rows = (await page.locator('#bulk').inputValue()).split(String.fromCharCode(10)).map(line => line.split(String.fromCharCode(9)));
+      assert.equal(rows.length, 3, 'copy should add exactly one row');
+      assert.deepEqual(rows[1], ['پرس گروهی', '1', 'عادی', '—', '3', '12', '60'], 'the duplicate should be normal so it does not silently join the original superset');
+      assert.deepEqual(rows[0], ['پرس گروهی', '1', 'سوپرست', 'A', '3', '12', '60'], 'the original movement should stay unchanged');
+      assert.deepEqual(rows[2], ['قفسه گروهی', '1', 'سوپرست', 'A', '3', '10', '60'], 'the paired movement should stay unchanged');
+      assert.equal(await page.evaluate(() => window.__trial.errors.length), 0, 'the copied workout should remain valid');
+    });
+    await check('bulk selection moves only selected normal movements and leaves other sessions unchanged', async () => {
+      await page.setViewportSize({ width: 1280, height: 900 });
+      await page.goto('http://127.0.0.1:4173/experiments/workout-template-planner.html');
+      await page.locator('#count').selectOption('3');
+      await page.locator('#bulk').fill([
+        ['حرکت الف', '1', 'عادی', '—', '3', '12', '60'],
+        ['حرکت ب', '1', 'عادی', '—', '3', '10', '60'],
+        ['حرکت ج', '2', 'عادی', '—', '4', '8', '90']
+      ].map(row => row.join(String.fromCharCode(9))).join(String.fromCharCode(10)));
+      await page.getByRole('button', { name: 'اعتبارسنجی و پیش‌نمایش' }).click();
+      await page.locator('input[type="checkbox"][aria-label="انتخاب حرکت حرکت الف"]').check();
+      await page.locator('#bulkTargetSession').selectOption('3');
+      await page.locator('#moveSelectedToSession').click();
+      const trial = await page.evaluate(() => window.__trial);
+      const sessionOf = name => trial.moves.find(move => move.name === name).session;
+      assert.equal(sessionOf('حرکت الف'), 3, 'selected movement should move to the chosen session');
+      assert.equal(sessionOf('حرکت ب'), 1, 'unselected movement in the same session should not move');
+      assert.equal(sessionOf('حرکت ج'), 2, 'movement in another session should not change');
+      assert.match(await page.locator('#quickStatus').innerText(), /1 حرکت به جلسه 3 منتقل شد/);
+    });
     await check('responsive layout fits narrow phones, standard phones, tablets, and laptops without horizontal page overflow', async () => {
       for (const viewport of [
         { width: 320, height: 740, mobile: true },
