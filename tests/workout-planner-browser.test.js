@@ -1350,6 +1350,41 @@ const assert = require('node:assert/strict');
       }
       await page.setViewportSize({ width: 1280, height: 900 });
     });
+    await check('desktop keyboard workflow adds a movement with Enter and clears the name field for the next movement', async () => {
+      await page.setViewportSize({ width: 1280, height: 900 });
+      await page.goto('http://127.0.0.1:4173/experiments/workout-template-planner.html');
+      await page.locator('#bulk').evaluate(el => { el.value = ''; el.dispatchEvent(new Event('input', { bubbles: true })); });
+      await page.locator('#quickName').fill('پرس سینه تست کیبورد');
+      await page.locator('#quickName').press('Enter');
+      assert.ok((await page.locator('#bulk').inputValue()).includes('پرس سینه تست کیبورد'), 'Enter should add the movement from the name field');
+      assert.equal(await page.locator('#quickName').inputValue(), '', 'name field should clear after adding');
+      assert.equal(await page.evaluate(() => document.activeElement.id), 'quickName', 'focus should return to the name field for rapid entry');
+      await page.locator('#quickName').fill('لت سیم‌کش تست کیبورد');
+      await page.locator('#quickName').press('Enter');
+      const lines = (await page.locator('#bulk').inputValue()).split(String.fromCharCode(10)).filter(Boolean);
+      assert.equal(lines.length, 2, 'two Enter presses should add two movements');
+      assert.ok(lines[1].includes('لت سیم‌کش تست کیبورد'), 'second movement should be retained');
+    });
+    await check('switching between phone and laptop widths preserves the workout and movement settings', async () => {
+      await page.setViewportSize({ width: 390, height: 844 });
+      await page.goto('http://127.0.0.1:4173/experiments/workout-template-planner.html');
+      await page.locator('#count').selectOption('3');
+      await page.locator('#gender').selectOption('women');
+      await page.locator('#bulk').evaluate(el => {
+        el.value = ['هیپ تراست حفظ‌شده\t1\tعادی\t—\t4\t12\t75','ابداکتور حفظ‌شده\t2\tعادی\t—\t3\t15\t45'].join(String.fromCharCode(10));
+        el.dispatchEvent(new Event('input', { bubbles: true }));
+      });
+      const before = await page.locator('#bulk').inputValue();
+      await page.setViewportSize({ width: 1280, height: 900 });
+      assert.equal(await page.locator('#bulk').inputValue(), before, 'resizing to laptop should not alter movement rows');
+      assert.equal(await page.locator('#count').inputValue(), '3', 'session count should survive resizing');
+      assert.equal(await page.locator('#gender').inputValue(), 'women', 'selected gender template should survive resizing');
+      await page.setViewportSize({ width: 360, height: 800 });
+      assert.equal(await page.locator('#bulk').inputValue(), before, 'resizing back to phone should preserve every movement setting');
+      await page.getByRole('button', { name: 'بازبینی خروجی برنامه' }).click();
+      const preview = await page.locator('#sessions').innerText();
+      assert.ok(preview.includes('هیپ تراست حفظ‌شده') && preview.includes('ابداکتور حفظ‌شده'), 'preview should retain both movements after switching device widths');
+    });
     await check('narrow-phone workflow can select a movement, add it to a session, and preview the result', async () => {
       await page.setViewportSize({ width: 320, height: 740 });
       await page.goto('http://127.0.0.1:4173/experiments/workout-template-planner.html');
