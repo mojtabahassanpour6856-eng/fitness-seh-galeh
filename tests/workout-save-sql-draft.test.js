@@ -14,6 +14,10 @@ check('SQL remains explicitly marked as a draft', () => {
   assert.match(sql, /DRAFT ONLY/i);
 });
 
+check('Draft SQL contains no destructive schema or function drops', () => {
+  assert.doesNotMatch(sql, /^\\s*drop\\s+(table|schema|function)\\b/im);
+});
+
 check('RPC is SECURITY INVOKER and does not use SECURITY DEFINER', () => {
   assert.match(sql, /security invoker/i);
   assert.doesNotMatch(sql, /security definer/i);
