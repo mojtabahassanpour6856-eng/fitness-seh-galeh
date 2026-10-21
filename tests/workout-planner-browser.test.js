@@ -1090,7 +1090,7 @@ const assert = require('node:assert/strict');
       await page.setViewportSize({ width: 390, height: 844 });
       await page.goto('http://127.0.0.1:4173/experiments/workout-template-planner.html');
       await page.locator('#count').selectOption('2');
-      await page.locator('#bulk').fill('');
+      await page.locator('#bulk').evaluate(el => { el.value = ''; el.dispatchEvent(new Event('input', { bubbles: true })); });
       const rows = page.locator('#mobileMoveRows .mobile-move-row');
       async function addCombo(rowIndex, system, names) {
         const row = rows.nth(rowIndex);
