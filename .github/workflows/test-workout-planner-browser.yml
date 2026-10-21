@@ -10,6 +10,7 @@ on:
       - 'tests/workout-planner-browser.test.js'
       - 'tests/workout-save-sql-draft.test.js'
       - 'tests/postgres-workout-save.integration.sql'
+      - 'tests/postgres-workout-save-concurrency.sh'
       - 'tests/postgres-workout-save-fixture.sql'
       - 'experiments/sql/save_trainee_workout_plan_transaction.sql'
       - 'experiments/WORKOUT_SAVE_RPC_REVIEW_CHECKLIST.md'
@@ -67,3 +68,5 @@ jobs:
         run: psql -v ON_ERROR_STOP=1 -f experiments/sql/save_trainee_workout_plan_transaction.sql
       - name: Test save, replacement, authorization, invalid exercise, and rollback
         run: psql -v ON_ERROR_STOP=1 -f tests/postgres-workout-save.integration.sql
+      - name: Test concurrent saves reject stale snapshot
+        run: bash tests/postgres-workout-save-concurrency.sh
