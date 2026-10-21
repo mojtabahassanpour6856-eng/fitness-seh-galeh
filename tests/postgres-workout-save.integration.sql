@@ -1,0 +1,97 @@
+\set ON_ERROR_STOP on
+set role authenticated;
+select set_config('request.jwt.claim.sub', 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', false);
+select set_config('test.is_coach', 'true', false);
+select set_config('test.trainee_id', '11111111-1111-4111-8111-111111111111', false);
+
+do $$
+declare
+ r jsonb;
+ v_plan_id bigint;
+ v_old_title text;
+ v_old_exercise_id bigint;
+ v_old_count integer;
+ v_failed boolean;
+begin
+ r := public.save_trainee_workout_plan_transaction(
+  '11111111-1111-4111-8111-111111111111', null,
+  '{"title":"پیش‌نویس آزمایشی","plan_date":"2026-10-21","goal":"قدرت","notes":null}'::jsonb,
+  '[{"exercise_id":101,"sets":3,"reps":"10","rest_seconds":60,"sort_order":1,"training_system":"normal","training_day":"جلسه اول","is_completed":false}]'::jsonb
+ );
+ v_plan_id := (r->>'plan_id')::bigint;
+ if (r->>'exercise_count')::integer <> 1 then raise exception 'create count mismatch'; end if;
+
+ r := public.save_trainee_workout_plan_transaction(
+  '11111111-1111-4111-8111-111111111111', v_plan_id,
+  '{"title":"برنامه جایگزین","plan_date":"2026-10-22","goal":"عضله‌سازی","notes":"نسخه دوم"}'::jsonb,
+  '[{"exercise_id":102,"sets":4,"reps":"8","rest_seconds":90,"sort_order":1,"training_system":"normal","training_day":"جلسه اول","is_completed":false}]'::jsonb
+ );
+ if (r->>'updated_existing_plan')::boolean is not true then raise exception 'update flag mismatch'; end if;
+ select title into v_old_title from public.trainee_workout_plans where id=v_plan_id;
+ select exercise_id into v_old_exercise_id from public.trainee_workout_exercises where workout_plan_id=v_plan_id;
+ if v_old_title <> 'برنامه جایگزین' or v_old_exercise_id <> 102 then raise exception 'replace failed'; end if;
+
+ v_failed := false;
+ begin
+  perform public.save_trainee_workout_plan_transaction(
+   '11111111-1111-4111-8111-111111111111', v_plan_id,
+   '{"title":"نباید ذخیره شود","plan_date":"2026-10-23"}'::jsonb,
+   '[{"exercise_id":999999,"sets":3,"reps":"10","rest_seconds":60,"sort_order":1,"training_system":"normal","training_day":"جلسه اول","is_completed":false}]'::jsonb
+  );
+ exception when others then v_failed := true;
+ end;
+ if not v_failed then raise exception 'invalid exercise unexpectedly accepted'; end if;
+ select title into v_old_title from public.trainee_workout_plans where id=v_plan_id;
+ if v_old_title <> 'برنامه جایگزین' then raise exception 'invalid exercise changed plan'; end if;
+
+ select title into v_old_title from public.trainee_workout_plans where id=v_plan_id;
+ select exercise_id into v_old_exercise_id from public.trainee_workout_exercises where workout_plan_id=v_plan_id;
+ select count(*) into v_old_count from public.trainee_workout_exercises where workout_plan_id=v_plan_id;
+ perform set_config('test.fail_exercise_insert', 'on', false);
+ v_failed := false;
+ begin
+  perform public.save_trainee_workout_plan_transaction(
+   '11111111-1111-4111-8111-111111111111', v_plan_id,
+   '{"title":"شکست اجباری","plan_date":"2026-10-24","goal":"نباید تغییر کند"}'::jsonb,
+   '[{"exercise_id":101,"sets":5,"reps":"5","rest_seconds":120,"sort_order":1,"training_system":"normal","training_day":"جلسه اول","is_completed":false}]'::jsonb
+  );
+ exception when others then
+  if sqlerrm not like '%TEST_FORCED_INSERT_FAILURE%' then raise; end if;
+  v_failed := true;
+ end;
+ perform set_config('test.fail_exercise_insert', 'off', false);
+ if not v_failed then raise exception 'forced failure did not occur'; end if;
+ select title into v_old_title from public.trainee_workout_plans where id=v_plan_id;
+ select exercise_id into v_old_exercise_id from public.trainee_workout_exercises where workout_plan_id=v_plan_id;
+ select count(*) into v_old_count from public.trainee_workout_exercises where workout_plan_id=v_plan_id;
+ if v_old_title <> 'برنامه جایگزین' or v_old_exercise_id <> 102 or v_old_count <> 1 then
+  raise exception 'ROLLBACK FAILED: original plan or exercise rows changed';
+ end if;
+
+ perform set_config('test.is_coach', 'false', false);
+ v_failed := false;
+ begin
+  perform public.save_trainee_workout_plan_transaction(
+   '11111111-1111-4111-8111-111111111111', v_plan_id,
+   '{"title":"غیرمجاز","plan_date":"2026-10-25"}'::jsonb,
+   '[{"exercise_id":101,"sets":3,"reps":"10","rest_seconds":60,"sort_order":1,"training_system":"normal","training_day":"جلسه اول","is_completed":false}]'::jsonb
+  );
+ exception when others then v_failed := true;
+ end;
+ if not v_failed then raise exception 'non-coach unexpectedly accepted'; end if;
+ perform set_config('test.is_coach', 'true', false);
+
+ v_failed := false;
+ begin
+  perform public.save_trainee_workout_plan_transaction(
+   '22222222-2222-4222-8222-222222222222', null,
+   '{"title":"شاگرد دیگر","plan_date":"2026-10-25"}'::jsonb,
+   '[{"exercise_id":101,"sets":3,"reps":"10","rest_seconds":60,"sort_order":1,"training_system":"normal","training_day":"جلسه اول","is_completed":false}]'::jsonb
+  );
+ exception when others then v_failed := true;
+ end;
+ if not v_failed then raise exception 'inaccessible trainee unexpectedly accepted'; end if;
+end $$;
+
+reset role;
+select 'PASS: PostgreSQL integration tests including forced transaction rollback' as result;
