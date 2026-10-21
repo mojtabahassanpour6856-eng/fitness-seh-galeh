@@ -151,7 +151,8 @@
         const suffix = rollback.error ? ' توجه: حذف برنامه ناقص هم ناموفق شد و باید در پنل مربی بررسی شود.' : ' برنامه ناقص پاک شد.';
         fail('ذخیره حرکات برنامه ناموفق بود: ' + exerciseResult.error.message + '.' + suffix);
       }
-      const restoredRows = await client.from('trainee_workout_exercises').insert(workoutRowsForRestore(oldExercises, planId));
+      const restoreRows = workoutRowsForRestore(oldExercises, planId);
+      const restoredRows = restoreRows.length ? await client.from('trainee_workout_exercises').insert(restoreRows) : { error: null };
       const restoredPlan = await client.from('trainee_workout_plans').update(oldPlan).eq('id', planId).eq('trainee_id', value.traineeId);
       const rollbackFailed = restoredRows.error || restoredPlan.error;
       fail('ذخیره حرکات جدید ناموفق بود: ' + exerciseResult.error.message + (rollbackFailed ? '. هشدار: بازگردانی کامل برنامه قبلی تأیید نشد؛ لطفاً برنامه این شاگرد را بررسی کن.' : '. برنامه قبلی بازگردانده شد.'));
