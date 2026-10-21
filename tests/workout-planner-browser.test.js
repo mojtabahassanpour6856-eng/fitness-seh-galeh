@@ -1325,6 +1325,31 @@ const assert = require('node:assert/strict');
       assert.ok(preview.includes('اسکوات هالتر + پرس پا + جلو پا دستگاه + پشت پا خوابیده'), 'giant-set should preview as one plus-separated group');
       await page.setViewportSize({ width: 1280, height: 900 });
     });
+    await check('responsive layout fits narrow phones, standard phones, tablets, and laptops without horizontal page overflow', async () => {
+      for (const viewport of [
+        { width: 320, height: 740, mobile: true },
+        { width: 360, height: 800, mobile: true },
+        { width: 390, height: 844, mobile: true },
+        { width: 768, height: 1024, mobile: false },
+        { width: 1280, height: 900, mobile: false }
+      ]) {
+        await page.setViewportSize({ width: viewport.width, height: viewport.height });
+        await page.goto('http://127.0.0.1:4173/experiments/workout-template-planner.html');
+        const layout = await page.evaluate(() => ({
+          viewport: document.documentElement.clientWidth,
+          document: document.documentElement.scrollWidth,
+          body: document.body.scrollWidth,
+          mobileComposer: getComputedStyle(document.querySelector('#mobileComposer')).display,
+          desktopMovementEntry: getComputedStyle(document.querySelector('#planMoves')).display,
+          setupVisible: document.querySelector('#planSetup').getBoundingClientRect().width > 0
+        }));
+        assert.ok(layout.document <= layout.viewport + 1, viewport.width + 'px layout should not overflow horizontally: ' + JSON.stringify(layout));
+        assert.ok(layout.body <= layout.viewport + 1, viewport.width + 'px body should not overflow horizontally: ' + JSON.stringify(layout));
+        assert.equal(layout.mobileComposer === 'block', viewport.mobile, viewport.width + 'px should show mobile composer only on phone breakpoints');
+        assert.ok(layout.setupVisible, viewport.width + 'px should keep program setup visible');
+      }
+      await page.setViewportSize({ width: 1280, height: 900 });
+    });
     await check('women template selection updates explanatory hint', async () => {
       await page.locator('#gender').selectOption('women');
       assert.ok((await page.locator('#templateHint').innerText()).includes('قالب خانم‌ها'));
