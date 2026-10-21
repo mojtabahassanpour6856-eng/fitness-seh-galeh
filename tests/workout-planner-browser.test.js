@@ -1654,6 +1654,49 @@ const assert = require('node:assert/strict');
       assert.equal(await page.locator('#workoutVersionSelect option').count(), before, 'invalid import should not delete or add any saved version');
       assert.equal(await page.locator('#workoutVersionSelect option').evaluateAll(options => options.some(option => option.textContent.includes('نسخه با جلسه نامعتبر'))), false);
     });
+    await check('blank workout version names are rejected without modifying saved versions', async () => {
+      const before = await page.locator('#workoutVersionSelect option').count();
+      await page.locator('#workoutVersionName').fill('   ');
+      await page.locator('#saveWorkoutVersion').click();
+      assert.match(await page.locator('#workoutVersionStatus').innerText(), /برای نسخه یک نام وارد کن/);
+      assert.equal(await page.locator('#workoutVersionSelect option').count(), before, 'blank name should not create a saved version');
+    });
+    await check('imported workout version with a duplicate name receives a new name without overwriting the original', async () => {
+      await page.locator('#count').selectOption('2');
+      await page.locator('#bulk').fill('حرکت اصلی نسخه تکراری\t1\tعادی\t—\t3\t10\t60');
+      await page.getByRole('button', { name: 'اعتبارسنجی و پیش‌نمایش' }).click();
+      await page.locator('#workoutVersionName').fill('نام نسخه تکراری');
+      await page.locator('#saveWorkoutVersion').click();
+      const originalId = await page.locator('#workoutVersionSelect option').evaluateAll(options => options.find(option => option.textContent.includes('نام نسخه تکراری'))?.value || '');
+      assert.ok(originalId, 'original named version should exist');
+      const payload = {
+        format: 'fitness-seh-galeh-workout-versions', version: 1,
+        versions: [{ id: 'duplicate-import-id', name: 'نام نسخه تکراری', createdAt: Date.now(), gender: 'men', sessions: 2,
+          moves: [{ name: 'حرکت وارداتی', session: 2, system: 'عادی', group: '—', sets: 4, reps: 8, rest: 90 }] }]
+      };
+      await page.evaluate(async payload => {
+        const input = document.querySelector('#workoutVersionsFile');
+        const transfer = new DataTransfer();
+        transfer.items.add(new File([JSON.stringify(payload)], 'duplicate-version.json', { type: 'application/json' }));
+        input.files = transfer.files;
+        input.dispatchEvent(new Event('change', { bubbles: true }));
+      }, payload);
+      await page.waitForFunction(() => document.querySelector('#workoutVersionStatus').textContent.includes('1 نسخه وارد شد'));
+      const options = await page.locator('#workoutVersionSelect option').evaluateAll(els => els.map(o => ({ value: o.value, text: o.textContent })));
+      assert.ok(options.some(o => o.value === originalId), 'original version identifier should be preserved');
+      assert.ok(options.some(o => o.text.includes('نام نسخه تکراری (2)')), 'imported duplicate should be renamed rather than overwriting');
+      assert.equal(options.filter(o => o.text.includes('نام نسخه تکراری')).length, 2, 'both original and imported versions should remain available');
+    });
+    await check('custom template names are rendered as text rather than interpreted as HTML', async () => {
+      await page.locator('#gender').selectOption('men');
+      await page.locator('#count').selectOption('2');
+      await page.locator('#bulk').fill('حرکت قالب امن\t1\tعادی\t—\t3\t10\t60');
+      await page.locator('#customName').fill('<img src=x onerror=alert(1)> قالب امن');
+      await page.getByRole('button', { name: 'ذخیره با نام دلخواه' }).click();
+      assert.equal(await page.locator('#savedTemplates option').filter({ hasText: '<img src=x onerror=alert(1)> قالب امن' }).count(), 1, 'custom label should be visible as literal text');
+      assert.equal(await page.locator('#savedTemplates img').count(), 0, 'template label must not create an image element');
+      assert.equal(await page.locator('img[src="x"]').count(), 0, 'template label must not inject HTML into the document');
+    });
     await check('women template selection updates explanatory hint', async () => {
       await page.locator('#gender').selectOption('women');
       assert.ok((await page.locator('#templateHint').innerText()).includes('قالب خانم‌ها'));
