@@ -563,6 +563,8 @@ $('export').addEventListener('click',()=>{render();const data=window.__trial;if(
     const button=$('sendToCoachApp'),oldText=button.textContent;button.disabled=true;button.textContent='در حال ذخیره امن برنامه…';
     try{
       if(!window.SehWorkoutPersistenceAdapter)throw new Error('ماژول ذخیره برنامه بارگذاری نشده است؛ صفحه را تازه‌سازی کن.');
+      const liveCheck=await window.SehWorkoutPersistenceAdapter.verifyLiveAccess({supabase:client,traineeId});
+      if(liveCheck.planCount>1)throw new Error('شاگرد بیش از یک برنامه دارد؛ برای جلوگیری از ترکیب حرکات قدیمی، هیچ تغییری ذخیره نشد. ابتدا برنامه‌های قبلی را بررسی کن.');
       const saved=await window.SehWorkoutPersistenceAdapter.saveToSupabase({supabase:client,traineeId,planDate,title,goal,notes,trial:data});
       if(window.opener.closed)throw new Error('پنل مربی هنگام ذخیره بسته شد.');
       if(typeof window.opener.loadWorkoutForClient==='function')await window.opener.loadWorkoutForClient();
