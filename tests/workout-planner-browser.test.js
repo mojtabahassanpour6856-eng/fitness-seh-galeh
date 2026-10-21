@@ -1148,6 +1148,67 @@ const assert = require('node:assert/strict');
         assert.equal(await page.locator('#sessions .session').count(), Number(preset.sessions), preset.id + ' should render every session');
       }
     });
+    await check('coach end-to-end workflow builds a three-session plan with superset and triset and exports the same grouped workout as PNG', async () => {
+      await page.setViewportSize({ width: 1280, height: 900 });
+      await page.locator('#gender').selectOption('women');
+      await page.locator('#count').selectOption('3');
+      await page.locator('#split').selectOption('manual');
+      await page.locator('#bulk').fill('');
+      async function addMovement(session, system, name, group) {
+        await page.locator('#quickSession').selectOption(String(session));
+        await page.locator('#quickSystem').selectOption(system);
+        if (group !== undefined) await page.locator('#quickGroup').selectOption(group);
+        await page.locator('#quickName').fill(name);
+        await page.getByRole('button', { name: 'افزودن به فهرست' }).click();
+      }
+      await page.locator('#quickSession').selectOption('1');
+      await page.locator('#quickSystem').selectOption('عادی');
+      await page.getByRole('button', { name: 'ساخت گروه جدید' }).click();
+      const supersetGroup = await page.locator('#quickGroup').inputValue();
+      await addMovement(1, 'سوپرست', 'پرس سینه دستگاه بانوان', supersetGroup);
+      await addMovement(1, 'سوپرست', 'قفسه دمبل بانوان', supersetGroup);
+      await addMovement(2, 'تری‌ست', 'اسکوات جام بانوان', 'A');
+      await addMovement(2, 'تری‌ست', 'لانج بانوان', 'A');
+      await addMovement(2, 'تری‌ست', 'پل باسن بانوان', 'A');
+      await addMovement(3, 'عادی', 'پرس سرشانه بانوان', '—');
+      const inputRows = (await page.locator('#bulk').inputValue()).split(String.fromCharCode(10)).map(line => line.split(String.fromCharCode(9)));
+      assert.equal(inputRows.length, 6, 'all six movements should be entered');
+      assert.ok(inputRows.every(row => row[1] >= '1' && row[1] <= '3'), 'every movement should belong to one of the configured sessions');
+      await page.getByRole('button', { name: 'اعتبارسنجی و پیش‌نمایش' }).click();
+      assert.match(await page.locator('#status').innerText(), /بررسی اولیه موفق بود/);
+      const preview = await page.locator('#sessions').innerText();
+      for (const name of ['پرس سینه دستگاه بانوان', 'قفسه دمبل بانوان', 'اسکوات جام بانوان', 'لانج بانوان', 'پل باسن بانوان', 'پرس سرشانه بانوان']) {
+        assert.ok(preview.includes(name), name + ' should appear in preview');
+      }
+      assert.ok(preview.includes('پرس سینه دستگاه بانوان + قفسه دمبل بانوان'), 'superset should be displayed as one plus-separated group');
+      assert.ok(preview.includes('اسکوات جام بانوان + لانج بانوان + پل باسن بانوان'), 'triset should be displayed as one plus-separated group');
+      assert.equal(await page.locator('#sessions .session').count(), 3, 'all three configured sessions should render');
+      await page.evaluate(() => {
+        window.__fullFlowExport = null;
+        window.html2canvas = async stage => {
+          window.__fullFlowExport = {
+            text: stage.innerText,
+            sessions: stage.querySelectorAll('.session').length,
+            controls: stage.querySelectorAll('.session button').length,
+            movements: [...stage.querySelectorAll('.move')].map(el => el.innerText)
+          };
+          return { toBlob: callback => callback(new Blob(['test-png'], { type: 'image/png' })) };
+        };
+      });
+      const downloadPromise = page.waitForEvent('download');
+      await page.locator('#downloadWorkoutImageButton').click();
+      const download = await downloadPromise;
+      assert.equal(download.suggestedFilename(), 'fitness-seh-galeh-workout.png');
+      const exported = await page.evaluate(() => window.__fullFlowExport);
+      assert.equal(exported.sessions, 3, 'PNG should contain all three sessions');
+      assert.equal(exported.controls, 0, 'PNG should not include editing controls');
+      assert.ok(exported.text.includes('ویژه بانوان · 3 جلسه'), 'PNG should preserve the selected women template');
+      assert.ok(exported.text.includes('پرس سینه دستگاه بانوان + قفسه دمبل بانوان'), 'PNG should preserve plus-separated superset formatting');
+      assert.ok(exported.text.includes('اسکوات جام بانوان + لانج بانوان + پل باسن بانوان'), 'PNG should preserve plus-separated triset formatting');
+      for (const name of ['پرس سینه دستگاه بانوان', 'قفسه دمبل بانوان', 'اسکوات جام بانوان', 'لانج بانوان', 'پل باسن بانوان', 'پرس سرشانه بانوان']) {
+        assert.ok(exported.text.includes(name), 'PNG should contain ' + name);
+      }
+    });
     await check('plans with 2 through 6 sessions render every session and export every movement without clipping the final session', async () => {
       await page.evaluate(() => {
         window.html2canvas = async stage => {
