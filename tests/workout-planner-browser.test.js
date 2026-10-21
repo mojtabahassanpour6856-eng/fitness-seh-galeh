@@ -106,6 +106,31 @@ const assert = require('node:assert/strict');
       assert.equal(exerciseInsert[2][0].exercise_id, 23);
       assert.equal(exerciseInsert[2][0].group_key, exerciseInsert[2][1].group_key);
     });
+    await check('live access verifier confirms authenticated session and selected trainee without writing', async () => {
+      const result = await page.evaluate(async () => {
+        const reads = [];
+        const client = {
+          auth:{getSession:async()=>({data:{session:{user:{id:'coach-uuid'}}},error:null})},
+          from(table){return {select(columns){reads.push(['select',table,columns]);const q={eq(){return this;},order(){return this;},limit(){return Promise.resolve({data:table==='trainees'?[{id:'trainee-uuid'}]:table==='trainee_workout_plans'?[{id:12}]:[{id:1,name:'اسکوات'}],error:null});}};return q;}};}
+        };
+        const result = await window.SehWorkoutPersistenceAdapter.verifyLiveAccess({supabase:client,traineeId:'trainee-uuid'});
+        return {result,reads};
+      });
+      assert.equal(result.result.userId,'coach-uuid');
+      assert.equal(result.result.traineeId,'trainee-uuid');
+      assert.equal(result.result.planCount,1);
+      assert.ok(result.reads.some(x=>x[1]==='trainees'));
+      assert.ok(result.reads.some(x=>x[1]==='trainee_workout_plans'));
+      assert.ok(result.reads.some(x=>x[1]==='exercises'));
+      assert.equal(result.reads.some(x=>x[0]==='insert'),false);
+    });
+    await check('live access verifier refuses to proceed without an authenticated session', async () => {
+      const message = await page.evaluate(async () => {
+        try { await window.SehWorkoutPersistenceAdapter.verifyLiveAccess({supabase:{auth:{getSession:async()=>({data:{session:null},error:null})},from(){throw new Error('should not query');}},traineeId:'trainee-uuid'}); }
+        catch(e) { return e.message; }
+      });
+      assert.match(message,/نشست ورود مربی معتبر نیست/);
+    });
     await check('Supabase save adapter updates the existing trainee plan instead of creating duplicate plans', async () => {
       const result = await page.evaluate(async () => {
         const calls = [];
@@ -218,11 +243,12 @@ const assert = require('node:assert/strict');
           window.__coachSaveCalls = [];
           window.__coachReloaded = false;
           window.loadWorkoutForClient = async () => { window.__coachReloaded = true; };
-          window.AUTH_SUPABASE = { from(table) {
+          window.AUTH_SUPABASE = { auth:{getSession:async()=>({data:{session:{user:{id:'test-coach-user'}}},error:null})}, from(table) {
             return { select(columns) {
               if (table === 'exercises') return Promise.resolve({data:[
                 {id:23,name:'پرس سینه دمبل'},{id:24,name:'قفسه سیم‌کش'},{id:25,name:'اسکوات'}
               ],error:null});
+              if (table === 'trainees') return {eq(){return this;},limit(){return Promise.resolve({data:[{id:'test-trainee-uuid'}],error:null});}};
               if (table === 'trainee_workout_plans') return {eq(){return this;},order(){return this;},limit(){return Promise.resolve({data:[],error:null});}};
               if (table === 'trainee_workout_exercises') return {eq(){return Promise.resolve({data:[],error:null});}};
             },
