@@ -14,6 +14,7 @@ declare
  v_failed boolean;
  v_snapshot jsonb;
  v_stale_snapshot jsonb;
+ v_big_exercises jsonb;
 begin
  r := public.save_trainee_workout_plan_transaction(
   '11111111-1111-4111-8111-111111111111', null, null,
@@ -111,7 +112,57 @@ begin
  exception when others then v_failed := true;
  end;
  if not v_failed then raise exception 'inaccessible trainee unexpectedly accepted'; end if;
-end $$;
+
+ -- Empty exercise arrays are rejected before any write.
+ v_failed := false;
+ begin
+  perform public.save_trainee_workout_plan_transaction(
+   '11111111-1111-4111-8111-111111111111', null, null,
+   '{"title":"بدون حرکت","plan_date":"2026-10-25"}'::jsonb, '[]'::jsonb
+  );
+ exception when others then v_failed := true;
+ end;
+ if not v_failed then raise exception 'empty exercise array unexpectedly accepted'; end if;
+
+ -- More than 100 exercises are rejected before writes.
+ select jsonb_agg(jsonb_build_object(
+   'exercise_id', 101, 'sets', 3, 'reps', '10', 'rest_seconds', 60,
+   'sort_order', n, 'training_day', 'روز۱'
+ )) into v_big_exercises from generate_series(1,101) n;
+ v_failed := false;
+ begin
+  perform public.save_trainee_workout_plan_transaction(
+   '11111111-1111-4111-8111-111111111111', null, null,
+   '{"title":"تعداد زیاد","plan_date":"2026-10-25"}'::jsonb, v_big_exercises
+  );
+ exception when others then v_failed := true;
+ end;
+ if not v_failed then raise exception 'oversized exercise array unexpectedly accepted'; end if;
+
+ -- Duplicate sort order is rejected.
+ v_failed := false;
+ begin
+  perform public.save_trainee_workout_plan_transaction(
+   '11111111-1111-4111-8111-111111111111', null, null,
+   '{"title":"ترتیب تکراری","plan_date":"2026-10-25"}'::jsonb,
+   '[{"exercise_id":101,"sets":3,"reps":"10","rest_seconds":60,"sort_order":1,"training_day":"روز۱"},{"exercise_id":102,"sets":3,"reps":"10","rest_seconds":60,"sort_order":1,"training_day":"روز۱"}]'::jsonb
+  );
+ exception when others then v_failed := true;
+ end;
+ if not v_failed then raise exception 'duplicate sort order unexpectedly accepted'; end if;
+
+ -- A trainee outside the coach's permitted scope is denied.
+ v_failed := false;
+ begin
+  perform public.save_trainee_workout_plan_transaction(
+   '99999999-9999-4999-8999-999999999999', null, null,
+   '{"title":"شاگرد نامعتبر","plan_date":"2026-10-25"}'::jsonb,
+   '[{"exercise_id":101,"sets":3,"reps":"10","rest_seconds":60,"sort_order":1,"training_day":"روز۱"}]'::jsonb
+  );
+ exception when others then v_failed := true;
+ end;
+ if not v_failed then raise exception 'invalid trainee unexpectedly accepted'; end if;
+end $;
 
 reset role;
 select 'PASS: PostgreSQL integration tests including forced transaction rollback' as result;
