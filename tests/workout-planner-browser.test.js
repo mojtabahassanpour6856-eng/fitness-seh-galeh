@@ -861,6 +861,7 @@ const assert = require('node:assert/strict');
     });
     await check('end-to-end three-session workout can be built, batch-edited, previewed, and downloaded as PNG', async () => {
       await page.locator('#bulk').fill('');
+      await page.locator('#gender').selectOption('men');
       await page.locator('#count').selectOption('3');
       await page.locator('#split').selectOption('manual');
       const moves = [
@@ -899,7 +900,8 @@ const assert = require('node:assert/strict');
             text: stage.innerText,
             style: stage.style.cssText,
             sessions: stage.querySelectorAll('.session').length,
-            controls: stage.querySelectorAll('.session button').length
+            controls: stage.querySelectorAll('.session button').length,
+            editActionDisplay: getComputedStyle(stage.querySelector('.move>div:nth-child(3)')).display
           };
           return { toBlob: callback => callback(new Blob(['test-png'], { type: 'image/png' })) };
         };
@@ -914,6 +916,8 @@ const assert = require('node:assert/strict');
       assert.equal(exported.sessions, 3, 'the PNG composition should include all three sessions');
       assert.equal(exported.controls, 0, 'edit and transfer controls should not appear in the PNG composition');
       assert.match(exported.text, /فیتنس سه‌قلعه/);
+      assert.match(exported.text, /ویژه آقایان · 3 جلسه/);
+      assert.equal(exported.editActionDisplay, 'none', 'edit and transfer controls must be hidden in the PNG composition');
       assert.match(exported.text, /مربی: مجتبی/);
       assert.match(exported.text, /FITNESS SEH GALEH/);
       assert.match(exported.text, /اسکوات مرحله نهایی/);
