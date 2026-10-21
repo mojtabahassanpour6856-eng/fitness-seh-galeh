@@ -162,7 +162,7 @@ begin
  exception when others then v_failed := true;
  end;
  if not v_failed then raise exception 'invalid trainee unexpectedly accepted'; end if;
-end $;
+end $$;
 
 reset role;
 select 'PASS: PostgreSQL integration tests including forced transaction rollback' as result;
