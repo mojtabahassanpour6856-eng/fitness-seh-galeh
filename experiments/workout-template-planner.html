@@ -280,6 +280,8 @@ function buildMobileComposer(){
     checked.forEach(item=>lines.push([item.value,session,system,group,sets,reps,rest].join('\t')));
     $('bulk').value=lines.join('\n');
     renderMoveManager();render();
+    const justAdded=checked.map(item=>item.value);
+    lastAddedSummary=justAdded.join(' + ');
     $('mobileComposerStatus').textContent=system==='عادی'?'حرکت «'+cb.value+'» فوراً به جلسه '+session+' اضافه شد.':checked.length+' حرکت به‌صورت '+system+' گروه '+group+' فوراً به جلسه '+session+' اضافه شد.';
     checks.querySelectorAll('.mobile-exercise-check').forEach(item=>item.checked=false);
     picker.open=false;
@@ -303,7 +305,8 @@ function buildMobileComposer(){
    });
   });
   menu.append(search,checks);picker.append(summary,menu);
-  function updatePickerSummary(){const picked=[...checks.querySelectorAll('.mobile-exercise-check:checked')].map(x=>x.value);summary.textContent=(i+1)+'. '+(picked.length?picked.join(' + '):'انتخاب حرکت')+' ('+picked.length+')';}
+  let lastAddedSummary='';
+  function updatePickerSummary(){const picked=[...checks.querySelectorAll('.mobile-exercise-check:checked')].map(x=>x.value);summary.textContent=(i+1)+'. '+(picked.length?picked.join(' + '):(lastAddedSummary||'انتخاب حرکت'))+' ('+picked.length+(lastAddedSummary&&!picked.length?' · ثبت شد':'')+')';}
   picker.updatePickerSummary=updatePickerSummary;
   const del=document.createElement('button');del.type='button';del.className='mobile-delete';del.textContent='🗑';del.setAttribute('aria-label','پاک‌کردن حرکت‌های ردیف '+(i+1));del.addEventListener('click',()=>{checks.querySelectorAll('.mobile-exercise-check').forEach(x=>x.checked=false);updatePickerSummary();updateMobileCount();});
   head.append(picker,del);
