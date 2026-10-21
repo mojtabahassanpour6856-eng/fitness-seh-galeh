@@ -1548,7 +1548,7 @@ const assert = require('node:assert/strict');
       await page.locator('#bulk').fill([
         ['پرس سینه نسخه‌دار', '1', 'سوپرست', 'A', '4', '12', '60'],
         ['قفسه نسخه‌دار', '1', 'سوپرست', 'A', '4', '10', '60'],
-        ['اسکوات نسخه‌دار', '3', 'تری‌ست', 'A', '3', '8', '90']
+        ['اسکوات نسخه‌دار', '3', 'عادی', '—', '3', '8', '90']
       ].map(row => row.join(String.fromCharCode(9))).join(String.fromCharCode(10)));
       await page.getByRole('button', { name: 'اعتبارسنجی و پیش‌نمایش' }).click();
       await page.locator('#workoutVersionName').fill('گردش کامل متادیتا');
