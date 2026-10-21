@@ -1,0 +1,45 @@
+name: Experimental atomic workout save tests
+on:
+  push:
+    branches:
+      - coach-workout-editor-experiment
+    paths:
+      - 'experiments/sql/experimental_atomic_workout_save.sql'
+      - 'experiments/tests/**'
+      - '.github/workflows/experimental-atomic-workout-save.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  postgres-integration:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: workout_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d workout_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install PostgreSQL client
+        run: sudo apt-get update && sudo apt-get install -y postgresql-client
+      - name: Prepare disposable schema and mock auth/RLS
+        env:
+          PGPASSWORD: postgres
+        run: psql -h localhost -U postgres -d workout_test -v ON_ERROR_STOP=1 -f experiments/tests/workout-rpc-harness.sql
+      - name: Install draft RPC into disposable database only
+        env:
+          PGPASSWORD: postgres
+        run: psql -h localhost -U postgres -d workout_test -v ON_ERROR_STOP=1 -f experiments/sql/experimental_atomic_workout_save.sql
+      - name: Run transactional, stale-write, and authorization tests
+        env:
+          PGPASSWORD: postgres
+        run: psql -h localhost -U postgres -d workout_test -v ON_ERROR_STOP=1 -f experiments/tests/workout-rpc-tests.sql
