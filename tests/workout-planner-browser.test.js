@@ -893,7 +893,16 @@ const assert = require('node:assert/strict');
       assert.equal(await page.locator('#sessions .session').count(), 3, 'all three sessions should be rendered');
       assert.match(await page.locator('#programSummary').innerText(), /3/);
       await page.evaluate(() => {
-        window.html2canvas = async () => ({ toBlob: callback => callback(new Blob(['test-png'], { type: 'image/png' })) });
+        window.__exportCapture = null;
+        window.html2canvas = async stage => {
+          window.__exportCapture = {
+            text: stage.innerText,
+            style: stage.style.cssText,
+            sessions: stage.querySelectorAll('.session').length,
+            controls: stage.querySelectorAll('.session button').length
+          };
+          return { toBlob: callback => callback(new Blob(['test-png'], { type: 'image/png' })) };
+        };
       });
       const downloadPromise = page.waitForEvent('download');
       await page.locator('#downloadWorkoutImageButton').click();
@@ -901,6 +910,15 @@ const assert = require('node:assert/strict');
       assert.equal(download.suggestedFilename(), 'fitness-seh-galeh-workout.png');
       assert.match(await page.locator('#status').innerText(), /عکس برنامه با موفقیت آماده شد/);
       assert.ok((await page.locator('#sessions').innerText()).includes('اسکوات مرحله نهایی'), 'the final session must remain present in the exported image');
+      const exported = await page.evaluate(() => window.__exportCapture);
+      assert.equal(exported.sessions, 3, 'the PNG composition should include all three sessions');
+      assert.equal(exported.controls, 0, 'edit and transfer controls should not appear in the PNG composition');
+      assert.match(exported.text, /فیتنس سه‌قلعه/);
+      assert.match(exported.text, /مربی: مجتبی/);
+      assert.match(exported.text, /FITNESS SEH GALEH/);
+      assert.match(exported.text, /اسکوات مرحله نهایی/);
+      assert.match(exported.style, /width:\s*1000px/);
+      assert.match(exported.style, /direction:\s*rtl/);
     });
     await check('PNG export replaces the removed PDF print button and keeps all workout sessions visible', async () => {
       assert.equal(await page.locator('#downloadWorkoutImageButton').count(), 1, 'PNG download button should be present');
