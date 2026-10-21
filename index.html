@@ -12202,7 +12202,7 @@ body.workout-output.workout-compact{
 <script id="seh-workout-planner-bridge">
 (function(){
  'use strict';
- function coachMode(){try{return !(typeof isTrainee==='function'&&isTrainee());}catch(_){return false;}}
+ function coachMode(){try{return typeof isTrainee==='function'&&!isTrainee();}catch(_){return false;}}
  function addLauncher(){
    if(!document.getElementById('workoutList')||document.getElementById('sehOpenWorkoutPlanner')||!coachMode())return;
    const btn=document.createElement('button');btn.id='sehOpenWorkoutPlanner';btn.type='button';btn.textContent='⚡ طراحی سریع برنامه (آزمایشی)';
