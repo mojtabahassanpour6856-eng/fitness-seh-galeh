@@ -1540,6 +1540,70 @@ const assert = require('node:assert/strict');
       assert.ok(buttons.every(b => b.left >= -1 && b.right <= 321), 'mobile composer buttons should remain inside the 320px viewport: ' + JSON.stringify(buttons));
       await page.setViewportSize({ width: 1280, height: 900 });
     });
+    await check('saved workout version round-trip preserves gender, session assignments, and grouped exercise metadata', async () => {
+      await page.setViewportSize({ width: 1280, height: 900 });
+      await page.locator('#gender').selectOption('women');
+      await page.locator('#count').selectOption('3');
+      await page.locator('#split').selectOption('manual');
+      await page.locator('#bulk').fill([
+        ['پرس سینه نسخه‌دار', '1', 'سوپرست', 'B', '4', '12', '60'],
+        ['قفسه نسخه‌دار', '1', 'سوپرست', 'B', '4', '10', '60'],
+        ['اسکوات نسخه‌دار', '3', 'تری‌ست', 'C', '3', '8', '90']
+      ].map(row => row.join(String.fromCharCode(9))).join(String.fromCharCode(10)));
+      await page.getByRole('button', { name: 'اعتبارسنجی و پیش‌نمایش' }).click();
+      await page.locator('#workoutVersionName').fill('گردش کامل متادیتا');
+      await page.locator('#saveWorkoutVersion').click();
+      const option = page.locator('#workoutVersionSelect option').filter({ hasText: 'گردش کامل متادیتا' });
+      assert.equal(await option.count(), 1, 'the newly saved version should appear exactly once');
+      await page.locator('#gender').selectOption('men');
+      await page.locator('#count').selectOption('2');
+      await page.locator('#bulk').fill('حرکت موقت\t1\tعادی\t—\t3\t10\t60');
+      await page.locator('#workoutVersionSelect').selectOption(await option.getAttribute('value'));
+      await page.locator('#loadWorkoutVersion').click();
+      assert.equal(await page.locator('#gender').inputValue(), 'women', 'saved gender template should be restored');
+      assert.equal(await page.locator('#count').inputValue(), '3', 'saved session count should be restored');
+      const rows = (await page.locator('#bulk').inputValue()).split(String.fromCharCode(10)).map(line => line.split(String.fromCharCode(9)));
+      assert.deepEqual(rows, [
+        ['پرس سینه نسخه‌دار', '1', 'سوپرست', 'B', '4', '12', '60'],
+        ['قفسه نسخه‌دار', '1', 'سوپرست', 'B', '4', '10', '60'],
+        ['اسکوات نسخه‌دار', '3', 'تری‌ست', 'C', '3', '8', '90']
+      ], 'system, group labels, workout parameters, and session assignments should survive save/load');
+      assert.ok((await page.locator('#sessions').innerText()).includes('اسکوات نسخه‌دار'), 'restored plan should render the last-session movement');
+    });
+    await check('PNG export after reordering reflects the final movement order and grouped plus-separated labels', async () => {
+      await page.setViewportSize({ width: 1280, height: 900 });
+      await page.evaluate(() => {
+        window.html2canvas = async stage => {
+          window.__orderedExportCapture = {
+            text: stage.innerText,
+            sessions: stage.querySelectorAll('.session').length,
+            moves: [...stage.querySelectorAll('.move')].map(el => el.innerText)
+          };
+          return { width: 2000, height: 1600, toBlob: callback => callback(new Blob(['test-png'], { type: 'image/png' })) };
+        };
+      });
+      await page.locator('#gender').selectOption('men');
+      await page.locator('#count').selectOption('2');
+      await page.locator('#bulk').fill([
+        ['حرکت ابتدا', '1', 'عادی', '—', '3', '12', '60'],
+        ['حرکت انتها', '1', 'عادی', '—', '3', '10', '60'],
+        ['سوپرست الف', '2', 'سوپرست', 'A', '4', '10', '60'],
+        ['سوپرست ب', '2', 'سوپرست', 'A', '4', '8', '60']
+      ].map(row => row.join(String.fromCharCode(9))).join(String.fromCharCode(10)));
+      await page.getByRole('button', { name: 'اعتبارسنجی و پیش‌نمایش' }).click();
+      await page.locator('#moveManager .move').nth(1).getByRole('button', { name: 'انتقال حرکت به بالا' }).click();
+      const preview = await page.locator('#sessions').innerText();
+      assert.ok(preview.indexOf('حرکت انتها') < preview.indexOf('حرکت ابتدا'), 'preview should show the reordered movement order');
+      const downloadPromise = page.waitForEvent('download');
+      await page.locator('#downloadWorkoutImageButton').click();
+      const download = await downloadPromise;
+      assert.equal(download.suggestedFilename(), 'fitness-seh-galeh-workout.png');
+      const capture = await page.evaluate(() => window.__orderedExportCapture);
+      assert.equal(capture.sessions, 2, 'PNG should retain both session cards');
+      assert.ok(capture.text.indexOf('حرکت انتها') < capture.text.indexOf('حرکت ابتدا'), 'PNG composition should use the reordered preview');
+      assert.ok(capture.text.includes('سوپرست الف + سوپرست ب'), 'PNG composition should keep the superset joined with plus separators');
+      assert.ok(capture.text.includes('مربی: مجتبی'), 'PNG composition should retain the coach footer');
+    });
     await check('women template selection updates explanatory hint', async () => {
       await page.locator('#gender').selectOption('women');
       assert.ok((await page.locator('#templateHint').innerText()).includes('قالب خانم‌ها'));
