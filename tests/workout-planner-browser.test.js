@@ -1117,6 +1117,40 @@ const assert = require('node:assert/strict');
       assert.ok(preview.includes('قفسه سیم‌کش + قفسه دمبل'), 'second superset should render on one plus-separated line');
       await page.setViewportSize({ width: 1280, height: 900 });
     });
+    await check('mobile combo labels restart per system and session for triset and giant-set', async () => {
+      await page.setViewportSize({ width: 390, height: 844 });
+      await page.goto('http://127.0.0.1:4173/experiments/workout-template-planner.html');
+      await page.locator('#count').selectOption('2');
+      await page.locator('#bulk').evaluate(el => { el.value = ''; el.dispatchEvent(new Event('input', { bubbles: true })); });
+      const rows = page.locator('#mobileMoveRows .mobile-move-row');
+      async function addCombo(rowIndex, system, names) {
+        const row = rows.nth(rowIndex);
+        await row.locator('select[id^="mobile_system_"]').selectOption(system);
+        await row.locator('summary.mobile-exercise-summary').click();
+        for (const name of names) {
+          await row.locator('.mobile-exercise-search').fill(name);
+          const option = row.locator('.mobile-exercise-option').filter({ hasText: name }).first();
+          await option.locator('input.mobile-exercise-check').evaluate(el => {
+            el.checked = true;
+            el.dispatchEvent(new Event('change', { bubbles: true }));
+          });
+        }
+      }
+      await addCombo(0, 'تری‌ست', ['پرس سینه هالتر', 'پرس سینه دمبل', 'پرس بالاسینه دمبل']);
+      await addCombo(1, 'جاینت‌ست', ['اسکوات هالتر', 'پرس پا', 'جلو پا دستگاه', 'پشت پا خوابیده']);
+      await page.locator('#mobileTargetSession').selectOption('2');
+      await addCombo(2, 'سوپرست', ['قفسه سیم‌کش', 'قفسه دمبل']);
+      const lines = (await page.locator('#bulk').inputValue()).split(String.fromCharCode(10)).filter(Boolean).map(line => line.split(String.fromCharCode(9)));
+      assert.equal(lines.length, 9, 'triset, giant-set, and second-session superset should add nine movements');
+      assert.ok(lines.slice(0, 3).every(line => line[2] === 'تری‌ست' && line[3] === 'A' && line[1] === '1'), 'triset should start with group A in session 1');
+      assert.ok(lines.slice(3, 7).every(line => line[2] === 'جاینت‌ست' && line[3] === 'A' && line[1] === '1'), 'giant-set should independently start with group A in session 1');
+      assert.ok(lines.slice(7, 9).every(line => line[2] === 'سوپرست' && line[3] === 'A' && line[1] === '2'), 'superset labels should restart at A in session 2');
+      await page.locator('#mobilePreviewButton').click();
+      const preview = await page.locator('#sessions').innerText();
+      assert.ok(preview.includes('پرس سینه هالتر + پرس سینه دمبل + پرس بالاسینه دمبل'), 'triset should preview as one plus-separated group');
+      assert.ok(preview.includes('اسکوات هالتر + پرس پا + جلو پا دستگاه + پشت پا خوابیده'), 'giant-set should preview as one plus-separated group');
+      await page.setViewportSize({ width: 1280, height: 900 });
+    });
     await check('women template selection updates explanatory hint', async () => {
       await page.locator('#gender').selectOption('women');
       assert.ok((await page.locator('#templateHint').innerText()).includes('قالب خانم‌ها'));
