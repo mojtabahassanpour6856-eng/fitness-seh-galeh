@@ -65,6 +65,10 @@ const assert = require('node:assert/strict');
       });
       assert.match(invalidSystem, /پشتیبانی‌نشده/);
     });
+    await check('Jalali workout start dates are converted to the corresponding Gregorian database date', async () => {
+      const converted = await page.evaluate(() => window.SehWorkoutPersistenceAdapter.normalizePlanDate('۱۴۰۵-۰۷-۲۹'));
+      assert.equal(converted, '2026-10-21');
+    });
     await check('Supabase save adapter resolves exact exercise names and inserts plan plus ordered exercise rows using mocked client only', async () => {
       const result = await page.evaluate(async () => {
         const calls = [];
