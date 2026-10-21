@@ -13,6 +13,7 @@ DECLARE
   pid bigint;
   n integer;
   failed boolean;
+  payload jsonb;
 BEGIN
   snap := public.experimental_workout_snapshot(trainee);
   IF (snap->>'plan_id') IS NOT NULL OR (snap->>'plan_count')::int <> 0 THEN
@@ -55,6 +56,59 @@ BEGIN
   END;
   IF NOT failed THEN RAISE EXCEPTION 'FAIL: duplicate sort order accepted'; END IF;
   RAISE NOTICE 'PASS: duplicate sort order rejected';
+
+  failed := false;
+  BEGIN
+    PERFORM public.experimental_save_trainee_workout(
+      trainee, pid, snap_after->>'fingerprint',
+      '{"title":"Unknown exercise","plan_date":"2026-10-22"}'::jsonb,
+      '[{"exercise_id":99999,"sets":1,"reps":"1","rest_seconds":1,"sort_order":1,"training_system":"normal"}]'::jsonb
+    );
+  EXCEPTION WHEN SQLSTATE '22023' THEN failed := true;
+  END;
+  IF NOT failed THEN RAISE EXCEPTION 'FAIL: unknown exercise id accepted'; END IF;
+  RAISE NOTICE 'PASS: unknown exercise id rejected';
+
+  failed := false;
+  BEGIN
+    PERFORM public.experimental_save_trainee_workout(
+      trainee, pid, snap_after->>'fingerprint',
+      '{"title":"Missing system","plan_date":"2026-10-22"}'::jsonb,
+      '[{"exercise_id":1,"sets":1,"reps":"1","rest_seconds":1,"sort_order":1}]'::jsonb
+    );
+  EXCEPTION WHEN SQLSTATE '22023' THEN failed := true;
+  END;
+  IF NOT failed THEN RAISE EXCEPTION 'FAIL: missing training system accepted'; END IF;
+  RAISE NOTICE 'PASS: missing training system rejected';
+
+  failed := false;
+  BEGIN
+    PERFORM public.experimental_save_trainee_workout(
+      trainee, pid, snap_after->>'fingerprint',
+      '{"title":"Empty exercises","plan_date":"2026-10-22"}'::jsonb,
+      '[]'::jsonb
+    );
+  EXCEPTION WHEN SQLSTATE '22023' THEN failed := true;
+  END;
+  IF NOT failed THEN RAISE EXCEPTION 'FAIL: empty exercise array accepted'; END IF;
+  RAISE NOTICE 'PASS: empty exercise array rejected by current policy';
+
+  SELECT jsonb_agg(jsonb_build_object(
+    'exercise_id', 1, 'sets', 1, 'reps', '1', 'rest_seconds', 1,
+    'sort_order', g, 'training_system', 'normal'
+  )) INTO payload
+  FROM generate_series(1, 201) AS g;
+  failed := false;
+  BEGIN
+    PERFORM public.experimental_save_trainee_workout(
+      trainee, pid, snap_after->>'fingerprint',
+      '{"title":"Too many exercises","plan_date":"2026-10-22"}'::jsonb,
+      payload
+    );
+  EXCEPTION WHEN SQLSTATE '22023' THEN failed := true;
+  END;
+  IF NOT failed THEN RAISE EXCEPTION 'FAIL: 201 exercise rows accepted'; END IF;
+  RAISE NOTICE 'PASS: more than 200 exercise rows rejected';
 
   PERFORM set_config('test.fail_insert', 'true', false);
   failed := false;
