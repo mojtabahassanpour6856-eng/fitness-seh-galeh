@@ -551,8 +551,11 @@ $('export').addEventListener('click',()=>{render();const data=window.__trial;if(
     let parentDoc,client,traineeId;
     try{
       if(window.opener.location.origin!==location.origin)throw new Error('پنل مربی باید در همین دامنه باز باشد.');
-      parentDoc=window.opener.document;client=window.opener.AUTH_SUPABASE;
-      traineeId=window.opener.eval('typeof currentClient !== "undefined" && currentClient ? String(currentClient.id || "") : ""');
+      if(typeof window.opener.getWorkoutPlannerContext!=='function')throw new Error('پل ارتباطی پنل مربی پیدا نشد؛ از دکمه طراحی سریع داخل پنل وارد شو.');
+      parentDoc=window.opener.document;
+      const context=window.opener.getWorkoutPlannerContext();
+      client=context&&context.supabase;
+      traineeId=context&&context.traineeId;
     }catch(e){$('status').textContent='دسترسی امن به پنل مربی ممکن نشد: '+(e.message||String(e));return;}
     if(!client||typeof client.from!=='function'){$('status').textContent='اتصال احرازشده پنل مربی پیدا نشد؛ ابتدا وارد پنل مربی شو.';return;}
     if(!traineeId){$('status').textContent='ابتدا یک شاگرد را در پنل مربی انتخاب کن.';return;}
