@@ -1553,7 +1553,7 @@ const assert = require('node:assert/strict');
       await page.getByRole('button', { name: 'اعتبارسنجی و پیش‌نمایش' }).click();
       await page.locator('#workoutVersionName').fill('گردش کامل متادیتا');
       await page.locator('#saveWorkoutVersion').click();
-      assert.match(await page.locator('#workoutVersionStatus').innerText(), /ذخیره شد/, 'saving should succeed before testing the saved version list');
+      assert.match(await page.locator('#workoutVersionStatus').innerText(), /ذخیره شد/, 'saving should succeed before testing the saved version list: ' + await page.locator('#workoutVersionStatus').innerText());
       const optionValue = await page.locator('#workoutVersionSelect option').evaluateAll(options => options.find(option => option.textContent.includes('گردش کامل متادیتا'))?.value || '');
       assert.ok(optionValue, 'the newly saved version should appear in the version selector');
       await page.locator('#gender').selectOption('men');
