@@ -1090,9 +1090,9 @@ const assert = require('node:assert/strict');
     await check('mobile composer blocks a session number that exceeds the configured workout sessions', async () => {
       await page.setViewportSize({ width: 390, height: 844 });
       await page.goto('http://127.0.0.1:4173/experiments/workout-template-planner.html');
-      await page.locator('#count').selectOption('1');
+      await page.locator('#count').selectOption('2');
       await page.locator('#bulk').evaluate(el => { el.value = ''; el.dispatchEvent(new Event('input', { bubbles: true })); });
-      await page.locator('#mobileTargetSession').selectOption('2');
+      await page.locator('#mobileTargetSession').selectOption('6');
       const row = page.locator('#mobileMoveRows .mobile-move-row').first();
       await row.locator('summary.mobile-exercise-summary').click();
       await row.locator('.mobile-exercise-search').fill('پرس سینه دمبل');
