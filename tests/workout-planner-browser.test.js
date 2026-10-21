@@ -106,6 +106,35 @@ const assert = require('node:assert/strict');
       assert.equal(exerciseInsert[2][0].exercise_id, 23);
       assert.equal(exerciseInsert[2][0].group_key, exerciseInsert[2][1].group_key);
     });
+    await check('Supabase save adapter updates the existing trainee plan instead of creating duplicate plans', async () => {
+      const result = await page.evaluate(async () => {
+        const calls = [];
+        const oldPlan = {id:88, trainee_id:'test-trainee-uuid', title:'برنامه قبلی', goal:'قدرت', notes:'یادداشت قبلی', plan_date:'2026-09-01'};
+        const oldExercise = {id:5,workout_plan_id:88,exercise_id:23,sets:2,reps:'10',rest_seconds:60,notes:null,sort_order:1,training_system:'normal',group_key:null,training_day:'جلسه 1',is_completed:false};
+        const client = { from(table) { return {
+          select(columns) {
+            if (table === 'exercises') return Promise.resolve({data:[{id:23,name:'اسکوات'}],error:null});
+            if (table === 'trainee_workout_plans') return {eq(){return this;},order(){return this;},limit(){return Promise.resolve({data:[oldPlan],error:null});}};
+            if (table === 'trainee_workout_exercises') return {eq(){return Promise.resolve({data:[oldExercise],error:null});}};
+          },
+          update(value) {
+            calls.push(['update',table,value]);
+            const q = {eq(){return this;},select(){return this;},single(){return Promise.resolve({data:{id:88},error:null});},then(resolve,reject){return Promise.resolve({data:null,error:null}).then(resolve,reject);}};
+            return q;
+          },
+          delete() { return {eq(col,id){calls.push(['delete',table,col,id]);return Promise.resolve({error:null});}}; },
+          insert(value) { calls.push(['insert',table,value]); return Promise.resolve({data:null,error:null}); }
+        }; }};
+        const saved = await window.SehWorkoutPersistenceAdapter.saveToSupabase({supabase:client,traineeId:'test-trainee-uuid',planDate:'2026-10-21',title:'برنامه جدید',trial:{sessions:1,moves:[{name:'اسکوات',session:1,system:'عادی',sets:3,reps:12,rest:45}]}});
+        return {saved,calls};
+      });
+      assert.deepEqual(result.saved, {planId:88,exerciseCount:1,traineeId:'test-trainee-uuid',updatedExistingPlan:true});
+      assert.ok(result.calls.some(c => c[0] === 'update' && c[1] === 'trainee_workout_plans'));
+      assert.ok(result.calls.some(c => c[0] === 'delete' && c[1] === 'trainee_workout_exercises' && c[3] === 88));
+      assert.equal(result.calls.filter(c => c[0] === 'insert' && c[1] === 'trainee_workout_plans').length, 0);
+      const newRows = result.calls.find(c => c[0] === 'insert' && c[1] === 'trainee_workout_exercises')[2];
+      assert.equal(newRows[0].workout_plan_id, 88);
+    });
     await check('Supabase save adapter refuses duplicate exercise names before any database write', async () => {
       const result = await page.evaluate(async () => {
         const writes = [];
