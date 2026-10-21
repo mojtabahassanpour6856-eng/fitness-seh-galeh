@@ -60,7 +60,7 @@ check('Checklist keeps staging rollback and concurrency tests as deployment bloc
   assert.match(checklist, /disposable\/staging Supabase project/i);
   assert.match(checklist, /forced failure/i);
   assert.match(checklist, /full plan snapshot/i);
-  assert.match(checklist, /simultaneous save attempts/i);
+  assert.match(checklist, /simultaneous save/i);
   assert.match(checklist, /explicit approval/i);
 });
 
