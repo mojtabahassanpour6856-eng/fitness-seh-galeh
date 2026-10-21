@@ -6,6 +6,36 @@
 <style>
 :root{font-family:Tahoma,Arial,sans-serif;color:#29251d;background:#faf7ef}*{box-sizing:border-box}.workflow{border:2px solid #d8bd7a;background:linear-gradient(135deg,#fffdf7,#f7f0df)}.workflow button{background:#8a6929;color:#fff;border-color:#8a6929}.workflow button:focus-visible{outline:3px solid #c79b3b;outline-offset:2px}section[id]{scroll-margin-top:16px}.program-summary{display:grid;grid-template-columns:repeat(auto-fit,minmax(145px,1fr));gap:8px;margin:10px 0 16px}.summary-tile{border:1px solid #ddc98e;border-radius:12px;background:#fffdf7;padding:10px}.summary-tile strong{display:block;font-size:1.2rem;color:#80601f}.summary-tile span{font-size:.9rem;color:#62583f}.session-counts{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}.session-counts .pill{background:#f5edda;color:#604a1a;border:1px solid #ddc98e}body{margin:0;padding:16px;max-width:1100px;margin:auto}h1{font-size:1.35rem;color:#8a6929}p{line-height:1.8}.card{background:#fff;border:1px solid #e6dcc6;border-radius:14px;padding:16px;margin:12px 0;box-shadow:0 2px 8px #00000008}.row{display:flex;gap:10px;flex-wrap:wrap;align-items:end}.field{display:flex;flex-direction:column;gap:6px;flex:1;min-width:150px}label{font-size:.9rem}input,select,textarea,button{font:inherit;border:1px solid #d8cdb7;border-radius:9px;padding:10px;background:#fff;max-width:100%}textarea{width:100%;min-height:145px;direction:rtl}button{cursor:pointer;background:#98732e;color:#fff;border:0}button.secondary{background:#eee7d8;color:#392f1b}button.danger{background:#a73b31}.muted{color:#6f6a60;font-size:.88rem}.sessions{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:10px}.session{border:1px solid #e5dcc9;border-radius:10px;padding:12px;background:#fffdf8}.session h3{margin-top:0;font-size:1rem}.move{padding:8px 0;border-bottom:1px solid #eee5d5;line-height:1.7}.move:last-child{border:0}.pill{display:inline-block;background:#f3ead4;border-radius:20px;padding:3px 8px;font-size:.8rem}.status{margin-top:10px;white-space:pre-wrap}.error{color:#a32921}.success{color:#28613a}@media(max-width:560px){body{padding:10px}.row{display:grid;grid-template-columns:1fr}.field{min-width:0}}
 
+
+/* Compact phone-first composer; desktop editor remains available unchanged. */
+.mobile-composer{display:none}
+@media(max-width:560px){
+ .mobile-composer{display:block;padding:12px;margin:10px 0}
+ .mobile-composer h2{font-size:1.05rem;margin:0 0 10px}
+ .mobile-top-controls{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px}
+ .mobile-top-controls label{display:flex;flex-direction:column;gap:4px;font-size:.82rem}
+ .mobile-top-controls select{width:100%;padding:8px 5px;font-size:.86rem;min-width:0}
+ .mobile-hint{font-size:.78rem;line-height:1.55;margin:6px 0 10px}
+ .mobile-move-rows{display:grid;gap:8px}
+ .mobile-move-row{border:1px solid #e4d6b8;border-radius:10px;padding:8px;background:#fffdf8;display:grid;gap:7px}
+ .mobile-move-row-head{display:grid;grid-template-columns:minmax(0,1fr) 34px;gap:6px;align-items:center}
+ .mobile-exercise-select{width:100%;min-width:0;padding:8px 5px;font-size:.86rem}
+ .mobile-delete{background:#a73b31;padding:7px 0;font-size:1rem;min-width:34px}
+ .mobile-controls-line{display:grid;grid-template-columns:1.25fr .8fr 1fr 1fr;gap:5px;align-items:end}
+ .mobile-control{min-width:0;display:flex;flex-direction:column;gap:3px;font-size:.72rem;color:#62583f}
+ .mobile-control select{width:100%;min-width:0;padding:7px 2px;font-size:.78rem;text-align:center}
+ .mobile-bottom{display:grid;grid-template-columns:auto minmax(0,1fr);align-items:center;gap:8px;margin-top:10px}
+ .mobile-bottom button{padding:11px 8px;font-size:.9rem}
+ .mobile-bottom .pill{white-space:nowrap;font-size:.74rem;text-align:center}
+ #mobileComposerStatus{font-size:.8rem;margin-bottom:0}
+ #planMoves{display:none!important}
+ #planSetup{padding:12px}
+ #planSetup h2{font-size:1.05rem}
+ #planSetup .row{display:grid;grid-template-columns:1fr 1fr;gap:7px}
+ #planSetup .field{min-width:0}
+ #planSetup select{width:100%;padding:8px 5px;font-size:.86rem}
+ #planSetup #build{margin-top:8px}
+}
 @media print{
  @page{size:A4;margin:12mm}
  html,body{background:#fff!important;color:#111!important;font-family:Tahoma,Arial,sans-serif!important;max-width:none!important;margin:0!important;padding:0!important;font-size:10.5pt!important}
@@ -33,6 +63,18 @@
 <div class="field"><label for="count">تعداد جلسات</label><select id="count"><option>2</option><option>3</option><option selected>4</option><option>5</option><option>6</option></select></div>
 <div class="field"><label for="split">روش تقسیم</label><select id="split"><option value="manual">جلسه از روی ستون ورودی</option><option value="round">تقسیم چرخشی بین جلسات</option><option value="muscle">تقسیم پیشنهادی بر اساس گروه عضلانی</option></select></div>
 </div><p id="templateHint" class="muted"></p><button id="build" type="button">ساخت / به‌روزرسانی جلسات</button></section>
+
+<section class="card mobile-composer" id="mobileComposer" aria-label="طراحی سریع برنامه تمرینی برای گوشی">
+ <h2>انتخاب سریع حرکات</h2>
+ <div class="mobile-top-controls">
+  <label>الگوی جلسه<select id="mobileTemplate"><option value="all">همه حرکات بانک</option><option value="سینه|جلو بازو">سینه + جلو بازو</option><option value="پشت|پشت بازو">پشت + پشت بازو</option><option value="پا|باسن|ساق">پا + باسن + ساق</option><option value="سرشانه|شکم">سرشانه + شکم</option><option value="سینه|پشت بازو">سینه + پشت بازو</option><option value="پشت|جلو بازو">پشت + جلو بازو</option></select></label>
+  <label>افزودن به<select id="mobileTargetSession"><option value="1">جلسه ۱</option><option value="2">جلسه ۲</option><option value="3">جلسه ۳</option><option value="4">جلسه ۴</option><option value="5">جلسه ۵</option><option value="6">جلسه ۶</option></select></label>
+ </div>
+ <p class="muted mobile-hint">حرکت را از بانک انتخاب کن؛ سیستم، ست، تکرار و استراحت را لمس کن. تا ۹ حرکت را با هم انتخاب کن.</p>
+ <div id="mobileMoveRows" class="mobile-move-rows"></div>
+ <div class="mobile-bottom"><span id="mobileSelectedCount" class="pill">۰ از ۹ حرکت انتخاب شده</span><button id="mobileAddToSession" type="button">افزودن همه به جلسه</button></div>
+ <p id="mobileComposerStatus" class="status muted" role="status" aria-live="polite"></p>
+</section>
 <section class="card" id="planMoves"><h2>۲) ورود گروهی حرکات</h2><p>هر حرکت را در یک خط وارد کن. حالت پیشرفته با Tab جدا می‌شود: <span class="pill">نام حرکت · جلسه · سیستم · گروه · ست · تکرار · استراحت</span></p>
 <p class="muted">نمونه را می‌توانی ویرایش کنی؛ ستون جلسه از ۱ شروع می‌شود. برای سیستم عادی، گروه را با — پر کن.</p>
 <p class="muted" id="keyboardShortcutHint">میانبر لپ‌تاپ: وقتی نشانگر داخل کادر حرکات است، با Ctrl + Enter برنامه را اعتبارسنجی و پیش‌نمایش کن.</p>
@@ -171,6 +213,46 @@ function renderExerciseBank(){
  if(!entries.length){const p=document.createElement('p');p.className='muted';p.textContent='حرکتی پیدا نشد؛ نام حرکت را می‌توانی دستی وارد کنی.';box.appendChild(p);return;}
  entries.forEach(item=>{const wrap=document.createElement('div');wrap.style.display='inline-flex';wrap.style.alignItems='center';wrap.style.gap='6px';wrap.style.border='1px solid #e6dcc6';wrap.style.borderRadius='9px';wrap.style.padding='6px 8px';const check=document.createElement('input');check.type='checkbox';check.className='bankMoveCheck';check.value=item.name;check.checked=selectedBankGroupNames.has(item.name);check.setAttribute('aria-label','گروه‌بندی '+item.name);check.addEventListener('change',()=>{if(check.checked)selectedBankGroupNames.add(item.name);else selectedBankGroupNames.delete(item.name);});const addCheck=document.createElement('input');addCheck.type='checkbox';addCheck.className='bankAddMoveCheck';addCheck.checked=selectedBankAddNames.has(item.name);addCheck.setAttribute('aria-label','افزودن گروهی '+item.name);addCheck.addEventListener('change',()=>{if(addCheck.checked)selectedBankAddNames.add(item.name);else selectedBankAddNames.delete(item.name);document.querySelectorAll('.bankAddMoveCheck').forEach(x=>{if(x.value===item.name)x.checked=addCheck.checked;});});addCheck.value=item.name;const b=document.createElement('button');b.type='button';b.className='secondary';b.textContent=item.name;b.setAttribute('aria-label','انتخاب حرکت '+item.name);b.addEventListener('click',()=>{$('quickName').value=item.name;$('bankStatus').textContent='«'+item.name+'» انتخاب شد؛ جلسه و جزئیات را بررسی کن و افزودن به فهرست را بزن.';$('quickName').focus();});wrap.append(check,addCheck,b);box.appendChild(wrap);});
 }
+
+function buildMobileComposer(){
+ const rows=$('mobileMoveRows');if(!rows)return;rows.innerHTML='';
+ const templates={'سینه|جلو بازو':['سینه','جلو بازو'],'پشت|پشت بازو':['پشت','پشت بازو'],'پا|باسن|ساق':['پا','باسن','ساق'],'سرشانه|شکم':['سرشانه','شکم'],'سینه|پشت بازو':['سینه','پشت بازو'],'پشت|جلو بازو':['پشت','جلو بازو']};
+ const template=$('mobileTemplate').value,preferred=template==='all'?[]:(templates[template]||template.split('|'));
+ const allEntries=Object.entries(exerciseLibrary).flatMap(([cat,names])=>names.map(name=>({cat,name})));
+ for(let i=0;i<9;i++){
+  const card=document.createElement('div');card.className='mobile-move-row';
+  const head=document.createElement('div');head.className='mobile-move-row-head';
+  const exercise=document.createElement('select');exercise.className='mobile-exercise-select';exercise.setAttribute('aria-label','انتخاب حرکت '+(i+1));
+  const placeholder=document.createElement('option');placeholder.value='';placeholder.textContent=(i+1)+'. انتخاب حرکت از بانک حرکات';exercise.appendChild(placeholder);
+  const ordered=allEntries.slice().sort((a,b)=>{const ap=preferred.indexOf(a.cat),bp=preferred.indexOf(b.cat);return (ap<0?999:ap)-(bp<0?999:bp)||a.cat.localeCompare(b.cat,'fa')||a.name.localeCompare(b.name,'fa');});
+  let currentCat='';
+  ordered.forEach(item=>{if(item.cat!==currentCat){currentCat=item.cat;const group=document.createElement('optgroup');group.label=item.cat;exercise.appendChild(group);}const option=document.createElement('option');option.value=item.name;option.textContent=item.name;exercise.lastElementChild.appendChild(option);});
+  const del=document.createElement('button');del.type='button';del.className='mobile-delete';del.textContent='🗑';del.setAttribute('aria-label','حذف حرکت '+(i+1));del.addEventListener('click',()=>{exercise.value='';updateMobileCount();});
+  head.append(exercise,del);
+  const line=document.createElement('div');line.className='mobile-controls-line';
+  function makeControl(label,id,values,initial){const wrap=document.createElement('label');wrap.className='mobile-control';wrap.textContent=label;const select=document.createElement('select');select.id='mobile_'+id+'_'+i;select.dataset.row=String(i);values.forEach(v=>{const opt=document.createElement('option');opt.value=String(v);opt.textContent=String(v);if(String(v)===String(initial))opt.selected=true;select.appendChild(opt);});wrap.appendChild(select);return wrap;}
+  line.append(makeControl('سیستم','system',['عادی','سوپرست','تری‌ست','جاینت‌ست'],'عادی'),makeControl('ست','sets',[2,3,4,5],3),makeControl('تکرار','reps',[6,8,10,12,15,20],12),makeControl('ثانیه','rest',[30,45,60,75],60));
+  card.append(head,line);rows.appendChild(card);exercise.addEventListener('change',updateMobileCount);
+ }
+ updateMobileCount();
+}
+function updateMobileCount(){const count=[...document.querySelectorAll('.mobile-exercise-select')].filter(x=>x.value).length;if($('mobileSelectedCount'))$('mobileSelectedCount').textContent=count+' از ۹ حرکت انتخاب شده';}
+$('mobileTemplate').addEventListener('change',buildMobileComposer);
+$('mobileAddToSession').addEventListener('click',()=>{
+ const selected=[...document.querySelectorAll('.mobile-move-row')].map(row=>({name:row.querySelector('.mobile-exercise-select').value,system:row.querySelector('[id^="mobile_system_"]').value,sets:row.querySelector('[id^="mobile_sets_"]').value,reps:row.querySelector('[id^="mobile_reps_"]').value,rest:row.querySelector('[id^="mobile_rest_"]').value})).filter(m=>m.name);
+ if(!selected.length){$('mobileComposerStatus').textContent='ابتدا حداقل یک حرکت را از بانک انتخاب کن.';return;}
+ const session=Number($('mobileTargetSession').value);if(session>n()){$('mobileComposerStatus').textContent='جلسه انتخابی بیشتر از تعداد جلسات برنامه است؛ تعداد جلسات را در تنظیم برنامه افزایش بده.';return;}
+ const grouped=[];let current=null;
+ selected.forEach(m=>{if(m.system==='عادی'){current=null;grouped.push({system:'عادی',moves:[m]});}else if(!current||current.system!==m.system){current={system:m.system,moves:[m]};grouped.push(current);}else current.moves.push(m);});
+ for(const g of grouped){if(g.system==='عادی')continue;const required=g.system==='سوپرست'?2:g.system==='تری‌ست'?3:4;if(g.moves.length!==required){$('mobileComposerStatus').textContent='برای '+g.system+' باید دقیقاً '+required+' حرکتِ پشت سر هم با همان سیستم انتخاب کنی؛ اکنون '+g.moves.length+' حرکت در این گروه است.';return;}}
+ const lines=rawLines();let nextGroup=1;const used=lines.map(line=>parseInt(((line.split('\t')[3]||'').match(/\d+/)||['0'])[0],10)||0);nextGroup=Math.max(0,...used)+1;
+ grouped.forEach(g=>{const label=g.system==='عادی'?'—':'M'+nextGroup++;g.moves.forEach(m=>lines.push([m.name,session,g.system,label,m.sets,m.reps,m.rest].join('\t')));});
+ $('bulk').value=lines.join('\n');renderMoveManager();render();
+ $('mobileComposerStatus').textContent=selected.length+' حرکت یکجا به جلسه '+session+' اضافه شد.';
+ document.querySelectorAll('.mobile-exercise-select').forEach(x=>x.value='');updateMobileCount();
+});
+buildMobileComposer();
+
 $('addSelectedBankExercises').addEventListener('click',()=>{
  const selected=[...selectedBankAddNames];
  if(!selected.length){$('bankStatus').textContent='ابتدا یک یا چند حرکت را برای افزودن گروهی انتخاب کن.';return;}
