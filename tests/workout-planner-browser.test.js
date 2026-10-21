@@ -1170,7 +1170,7 @@ const assert = require('node:assert/strict');
       await addMovement(2, 'تری‌ست', 'اسکوات جام بانوان', 'A');
       await addMovement(2, 'تری‌ست', 'لانج بانوان', 'A');
       await addMovement(2, 'تری‌ست', 'پل باسن بانوان', 'A');
-      await addMovement(3, 'عادی', 'پرس سرشانه بانوان', '—');
+      await addMovement(3, 'عادی', 'پرس سرشانه بانوان');
       const inputRows = (await page.locator('#bulk').inputValue()).split(String.fromCharCode(10)).map(line => line.split(String.fromCharCode(9)));
       assert.equal(inputRows.length, 6, 'all six movements should be entered');
       assert.ok(inputRows.every(row => row[1] >= '1' && row[1] <= '3'), 'every movement should belong to one of the configured sessions');
