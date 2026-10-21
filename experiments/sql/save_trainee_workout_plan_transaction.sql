@@ -1,6 +1,8 @@
 -- DRAFT ONLY: do not run against production until reviewed and approved.
 -- Atomic workout-plan save prototype for the isolated editor experiment.
 -- SECURITY INVOKER is intentional: RLS and table grants must still apply.
+-- Signature changes replace the old four-argument draft overload in a clean migration.
+drop function if exists public.save_trainee_workout_plan_transaction(uuid, bigint, jsonb, jsonb);
 -- One RPC call runs in one PostgreSQL transaction; any raised exception rolls it all back.
 
 create or replace function public.save_trainee_workout_plan_transaction(
