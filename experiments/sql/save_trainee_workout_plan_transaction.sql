@@ -5,9 +5,11 @@
 drop function if exists public.save_trainee_workout_plan_transaction(uuid, bigint, jsonb, jsonb);
 -- One RPC call runs in one PostgreSQL transaction; any raised exception rolls it all back.
 
+
 create or replace function public.save_trainee_workout_plan_transaction(
   p_trainee_id uuid,
   p_expected_plan_id bigint,
+  p_expected_snapshot jsonb,
   p_plan jsonb,
   p_exercises jsonb
 )
@@ -22,6 +24,7 @@ declare
   v_exercise_count integer;
   v_inserted_count integer;
   v_ids_count integer;
+  v_current_snapshot jsonb;
 begin
   -- Reject unauthenticated and non-coach callers before touching rows.
   if (select auth.uid()) is null then
@@ -91,6 +94,28 @@ begin
 
     if not found or v_plan.id <> p_expected_plan_id then
       raise exception 'Existing plan changed since preview; reload before saving' using errcode = '40001';
+    end if;
+
+    select jsonb_build_object(
+      'plan', jsonb_build_object(
+        'id', v_plan.id, 'title', v_plan.title,
+        'plan_date', to_char(v_plan.plan_date, 'YYYY-MM-DD'),
+        'goal', v_plan.goal, 'notes', v_plan.notes
+      ),
+      'exercises', coalesce(jsonb_agg(jsonb_build_object(
+        'id', e.id, 'exercise_id', e.exercise_id, 'sets', e.sets,
+        'reps', e.reps, 'rest_seconds', e.rest_seconds, 'notes', e.notes,
+        'sort_order', e.sort_order, 'training_system', e.training_system,
+        'group_key', e.group_key, 'training_day', e.training_day,
+        'is_completed', e.is_completed
+      ) order by e.sort_order, e.id), '[]'::jsonb)
+    )
+    into v_current_snapshot
+    from public.trainee_workout_exercises e
+    where e.workout_plan_id = v_plan.id;
+
+    if p_expected_snapshot is null or p_expected_snapshot is distinct from v_current_snapshot then
+      raise exception 'Plan or exercises changed since preview; reload before saving' using errcode = '40001';
     end if;
   end if;
 
@@ -199,11 +224,30 @@ begin
     raise exception 'Not all exercise rows were inserted' using errcode = '40001';
   end if;
 
+  select jsonb_build_object(
+    'plan', jsonb_build_object(
+      'id', v_plan.id, 'title', v_plan.title,
+      'plan_date', to_char(v_plan.plan_date, 'YYYY-MM-DD'),
+      'goal', v_plan.goal, 'notes', v_plan.notes
+    ),
+    'exercises', coalesce(jsonb_agg(jsonb_build_object(
+      'id', e.id, 'exercise_id', e.exercise_id, 'sets', e.sets,
+      'reps', e.reps, 'rest_seconds', e.rest_seconds, 'notes', e.notes,
+      'sort_order', e.sort_order, 'training_system', e.training_system,
+      'group_key', e.group_key, 'training_day', e.training_day,
+      'is_completed', e.is_completed
+    ) order by e.sort_order, e.id), '[]'::jsonb)
+  )
+  into v_current_snapshot
+  from public.trainee_workout_exercises e
+  where e.workout_plan_id = v_plan.id;
+
   return jsonb_build_object(
     'plan_id', v_plan.id,
     'trainee_id', v_plan.trainee_id,
     'exercise_count', v_inserted_count,
-    'updated_existing_plan', p_expected_plan_id is not null
+    'updated_existing_plan', p_expected_plan_id is not null,
+    'plan_snapshot', v_current_snapshot
   );
 end;
 $function$;
@@ -211,6 +255,6 @@ $function$;
 -- Keep the RPC callable only by signed-in clients. RLS remains in force because
 -- this function is SECURITY INVOKER. Review these grants and schema exposure
 -- before deployment; this draft is not applied to the live database.
-revoke all on function public.save_trainee_workout_plan_transaction(uuid, bigint, jsonb, jsonb) from public;
+revoke all on function public.save_trainee_workout_plan_transaction(uuid, bigint, jsonb, jsonb, jsonb) from public;
 revoke all on function public.save_trainee_workout_plan_transaction(uuid, bigint, jsonb, jsonb) from anon;
 grant execute on function public.save_trainee_workout_plan_transaction(uuid, bigint, jsonb, jsonb) to authenticated;
