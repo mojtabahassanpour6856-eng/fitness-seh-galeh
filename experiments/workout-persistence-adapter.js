@@ -79,6 +79,21 @@
     });
     return { plan, exercises, metadata: { gender: String(trial.gender || ''), sessions: Number(trial.sessions), exercise_count: exercises.length } };
   }
+  async function verifyLiveAccess(input) {
+    const value = input || {}, client = value.supabase;
+    if (!client || typeof client.from !== 'function' || !client.auth || typeof client.auth.getSession !== 'function') fail('اتصال احرازشده Supabase از پنل مربی در دسترس نیست.');
+    if (!value.traineeId) fail('ابتدا یک شاگرد را در پنل مربی انتخاب کن.');
+    const sessionResult = await client.auth.getSession();
+    if (sessionResult.error || !sessionResult.data || !sessionResult.data.session || !sessionResult.data.session.user) fail('نشست ورود مربی معتبر نیست؛ دوباره وارد پنل مربی شو.');
+    const traineeResult = await client.from('trainees').select('id').eq('id', value.traineeId).limit(1);
+    if (traineeResult.error) fail('دسترسی خواندن شاگرد از نشست فعلی تأیید نشد: ' + traineeResult.error.message);
+    if (!(traineeResult.data || []).some(row => String(row.id) === String(value.traineeId))) fail('شاگرد انتخاب‌شده از نشست فعلی قابل دسترسی نیست؛ هیچ تغییری انجام نشد.');
+    const plansResult = await client.from('trainee_workout_plans').select('id,trainee_id,title,plan_date,created_at').eq('trainee_id', value.traineeId).order('plan_date', {ascending:false, nullsFirst:false}).order('created_at', {ascending:false}).limit(10);
+    if (plansResult.error) fail('خواندن برنامه‌های شاگرد از نشست فعلی ناموفق بود: ' + plansResult.error.message);
+    const bankResult = await client.from('exercises').select('id,name').limit(500);
+    if (bankResult.error) fail('خواندن بانک حرکات از نشست فعلی ناموفق بود: ' + bankResult.error.message);
+    return { userId: sessionResult.data.session.user.id, traineeId: value.traineeId, planCount: (plansResult.data || []).length, exerciseCount: (bankResult.data || []).length };
+  }
   function workoutRowsForRestore(rows, planId) {
     return (rows || []).map(row => ({
       workout_plan_id: planId,
@@ -120,8 +135,9 @@
       .eq('trainee_id', value.traineeId)
       .order('plan_date', { ascending: false, nullsFirst: false })
       .order('created_at', { ascending: false })
-      .limit(1);
+      .limit(2);
     if (existingResult.error) fail('بررسی برنامه قبلی شاگرد ناموفق بود: ' + existingResult.error.message);
+    if ((existingResult.data || []).length > 1) fail('این شاگرد بیش از یک برنامه تمرینی دارد. برای جلوگیری از ترکیب حرکات قدیمی و جدید، هیچ تغییری انجام نشد؛ ابتدا باید برنامه‌های قبلی در پنل بررسی شوند.');
     const existing = (existingResult.data || [])[0] || null;
     let planId, oldExercises = [], oldPlan = null, createdNewPlan = false;
     if (existing) {
@@ -159,5 +175,5 @@
     }
     return { planId, exerciseCount: rows.length, traineeId: value.traineeId, updatedExistingPlan: !createdNewPlan };
   }
-  root.SehWorkoutPersistenceAdapter = Object.freeze({ buildPayload, saveToSupabase, normalizeName, normalizePlanDate });
+  root.SehWorkoutPersistenceAdapter = Object.freeze({ buildPayload, saveToSupabase, verifyLiveAccess, normalizeName, normalizePlanDate });
 })(typeof window !== 'undefined' ? window : globalThis);
