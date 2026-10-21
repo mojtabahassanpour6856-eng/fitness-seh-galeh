@@ -259,6 +259,14 @@ function buildMobileComposer(){
     if(cb.checked&&checked.length>limit){cb.checked=false;$('mobileComposerStatus').textContent='برای '+system+' حداکثر '+limit+' حرکت می‌توانی انتخاب کنی.';}
     updatePickerSummary();updateMobileCount();
    });
+   label.addEventListener('click',event=>{
+    if(card.querySelector('[id^="mobile_system_"]')?.value!=='عادی')return;
+    event.preventDefault();
+    const wasChecked=cb.checked;
+    checks.querySelectorAll('.mobile-exercise-check').forEach(other=>{other.checked=false;});
+    cb.checked=!wasChecked;
+    cb.dispatchEvent(new Event('change',{bubbles:true}));
+   });
    const textNode=document.createElement('span');textNode.textContent=item.name;label.append(cb,textNode);checks.appendChild(label);
   });
   search.addEventListener('input',()=>{
