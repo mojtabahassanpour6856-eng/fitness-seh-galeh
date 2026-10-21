@@ -67,3 +67,15 @@ GRANT INSERT, DELETE ON public.trainee_workout_exercises TO authenticated;
 GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO authenticated;
 INSERT INTO public.trainees(id) VALUES ('11111111-1111-4111-8111-111111111111');
 INSERT INTO public.exercises(id, name) VALUES (1, 'Squat'), (2, 'Row'), (3, 'Press');
+
+-- Test-only trigger used to force an error after the save RPC deletes old rows.
+CREATE FUNCTION public.test_reject_exercise_insert() RETURNS trigger LANGUAGE plpgsql AS $$
+BEGIN
+  IF coalesce(current_setting('test.fail_insert', true), 'false') = 'true' THEN
+    RAISE EXCEPTION 'intentional test failure';
+  END IF;
+  RETURN NEW;
+END $$;
+CREATE TRIGGER test_reject_exercise_insert
+BEFORE INSERT ON public.trainee_workout_exercises
+FOR EACH ROW EXECUTE FUNCTION public.test_reject_exercise_insert();
