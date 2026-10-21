@@ -1148,27 +1148,56 @@ const assert = require('node:assert/strict');
         assert.equal(await page.locator('#sessions .session').count(), Number(preset.sessions), preset.id + ' should render every session');
       }
     });
-    await check('plans with 2 through 6 sessions render every session and include them in PNG export', async () => {
+    await check('plans with 2 through 6 sessions render every session and export every movement without clipping the final session', async () => {
       await page.evaluate(() => {
         window.html2canvas = async stage => {
-          window.__exportCapture = { sessions: stage.querySelectorAll('.session').length, text: stage.innerText };
-          return { toBlob: callback => callback(new Blob(['test-png'], { type: 'image/png' })) };
+          window.__exportCapture = {
+            sessions: stage.querySelectorAll('.session').length,
+            text: stage.innerText,
+            width: stage.getBoundingClientRect().width,
+            height: stage.getBoundingClientRect().height,
+            allMoves: [...stage.querySelectorAll('.move')].map(el => el.innerText)
+          };
+          return { width: 2000, height: 1600, toBlob: callback => callback(new Blob(['test-png'], { type: 'image/png' })) };
         };
       });
       for (const count of [2, 3, 4, 5, 6]) {
         await page.locator('#count').selectOption(String(count));
         await page.locator('#split').selectOption('manual');
-        await page.locator('#bulk').fill(['حرکت آزمایشی\\t1\\tعادی\\t—\\t3\\t12\\t60'].join(''));
+        const rows = Array.from({ length: count }, (_, index) =>
+          ['حرکت آزمایشی جلسه ' + (index + 1), String(index + 1), 'عادی', '—', '3', '12', '60'].join(String.fromCharCode(9))
+        );
+        await page.locator('#bulk').fill(rows.join(String.fromCharCode(10)));
         await page.getByRole('button', { name: 'اعتبارسنجی و پیش‌نمایش' }).click();
-        assert.equal(await page.locator('#sessions .session').count(), count, count + '-session plan should render all session cards');
+        assert.equal(await page.locator('#sessions .session').count(), count, count + '-session plan should render every session');
         const downloadPromise = page.waitForEvent('download');
         await page.locator('#downloadWorkoutImageButton').click();
         const download = await downloadPromise;
         assert.equal(download.suggestedFilename(), 'fitness-seh-galeh-workout.png');
         const exported = await page.evaluate(() => window.__exportCapture);
         assert.equal(exported.sessions, count, count + '-session PNG should include all session cards');
+        assert.equal(exported.allMoves.length, count, count + '-session PNG should contain every movement');
         assert.ok(exported.text.includes('جلسه ' + count), count + '-session PNG should contain the final session heading');
+        for (let session = 1; session <= count; session++) {
+          assert.ok(exported.text.includes('حرکت آزمایشی جلسه ' + session), 'PNG should contain the movement assigned to session ' + session);
+        }
+        assert.equal(exported.width, 1000, 'export composition should retain its fixed 1000px layout');
+        assert.ok(exported.height > 0, 'export composition should have a measurable full height');
       }
+    });
+    await check('invalid incomplete combination groups are rejected before preview and image export', async () => {
+      await page.setViewportSize({ width: 1280, height: 900 });
+      await page.locator('#count').selectOption('2');
+      await page.locator('#bulk').fill([
+        ['پرس سینه دمبل', '1', 'سوپرست', 'A', '3', '12', '60'].join(String.fromCharCode(9))
+      ].join(String.fromCharCode(10)));
+      await page.getByRole('button', { name: 'اعتبارسنجی و پیش‌نمایش' }).click();
+      assert.ok((await page.locator('#status').innerText()).includes('حداقل 2 حرکت لازم دارد'), 'preview validation should explain that the superset is incomplete');
+      await page.evaluate(() => {
+        window.html2canvas = async () => { throw new Error('html2canvas must not run for invalid plans'); };
+      });
+      await page.locator('#downloadWorkoutImageButton').click();
+      assert.ok((await page.locator('#status').innerText()).includes('ابتدا خطاهای برنامه را اصلاح کن'), 'invalid plan should be blocked from PNG export');
     });
     await check('mobile picker automatically advances combo group labels and preserves plus-separated groups', async () => {
       await page.setViewportSize({ width: 390, height: 844 });
