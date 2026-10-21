@@ -1,8 +1,6 @@
 -- DRAFT ONLY: do not run against production until reviewed and approved.
 -- Atomic workout-plan save prototype for the isolated editor experiment.
 -- SECURITY INVOKER is intentional: RLS and table grants must still apply.
--- Signature changes replace the old four-argument draft overload in a clean migration.
-drop function if exists public.save_trainee_workout_plan_transaction(uuid, bigint, jsonb, jsonb, jsonb);
 -- One RPC call runs in one PostgreSQL transaction; any raised exception rolls it all back.
 
 
@@ -102,17 +100,19 @@ begin
         'plan_date', to_char(v_plan.plan_date, 'YYYY-MM-DD'),
         'goal', v_plan.goal, 'notes', v_plan.notes
       ),
-      'exercises', coalesce(jsonb_agg(jsonb_build_object(
-        'id', e.id, 'exercise_id', e.exercise_id, 'sets', e.sets,
-        'reps', e.reps, 'rest_seconds', e.rest_seconds, 'notes', e.notes,
-        'sort_order', e.sort_order, 'training_system', e.training_system,
-        'group_key', e.group_key, 'training_day', e.training_day,
-        'is_completed', e.is_completed
-      ) order by e.sort_order, e.id), '[]'::jsonb)
+      'exercises', coalesce((
+        select jsonb_agg(jsonb_build_object(
+          'id', e.id, 'exercise_id', e.exercise_id, 'sets', e.sets,
+          'reps', e.reps, 'rest_seconds', e.rest_seconds, 'notes', e.notes,
+          'sort_order', e.sort_order, 'training_system', e.training_system,
+          'group_key', e.group_key, 'training_day', e.training_day,
+          'is_completed', e.is_completed
+        ) order by e.sort_order, e.id)
+        from public.trainee_workout_exercises e
+        where e.workout_plan_id = v_plan.id
+      ), '[]'::jsonb)
     )
-    into v_current_snapshot
-    from public.trainee_workout_exercises e
-    where e.workout_plan_id = v_plan.id;
+    into v_current_snapshot;
 
     if p_expected_snapshot is null or p_expected_snapshot is distinct from v_current_snapshot then
       raise exception 'Plan or exercises changed since preview; reload before saving' using errcode = '40001';
@@ -230,17 +230,19 @@ begin
       'plan_date', to_char(v_plan.plan_date, 'YYYY-MM-DD'),
       'goal', v_plan.goal, 'notes', v_plan.notes
     ),
-    'exercises', coalesce(jsonb_agg(jsonb_build_object(
-      'id', e.id, 'exercise_id', e.exercise_id, 'sets', e.sets,
-      'reps', e.reps, 'rest_seconds', e.rest_seconds, 'notes', e.notes,
-      'sort_order', e.sort_order, 'training_system', e.training_system,
-      'group_key', e.group_key, 'training_day', e.training_day,
-      'is_completed', e.is_completed
-    ) order by e.sort_order, e.id), '[]'::jsonb)
+    'exercises', coalesce((
+      select jsonb_agg(jsonb_build_object(
+        'id', e.id, 'exercise_id', e.exercise_id, 'sets', e.sets,
+        'reps', e.reps, 'rest_seconds', e.rest_seconds, 'notes', e.notes,
+        'sort_order', e.sort_order, 'training_system', e.training_system,
+        'group_key', e.group_key, 'training_day', e.training_day,
+        'is_completed', e.is_completed
+      ) order by e.sort_order, e.id)
+      from public.trainee_workout_exercises e
+      where e.workout_plan_id = v_plan.id
+    ), '[]'::jsonb)
   )
-  into v_current_snapshot
-  from public.trainee_workout_exercises e
-  where e.workout_plan_id = v_plan.id;
+  into v_current_snapshot;
 
   return jsonb_build_object(
     'plan_id', v_plan.id,
