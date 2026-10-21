@@ -1046,6 +1046,46 @@ const assert = require('node:assert/strict');
       }
       await page.setViewportSize({ width: 1280, height: 900 });
     });
+    await check('gender-specific base, fat-loss, and muscle-building presets load the correct gender and session count', async () => {
+      const presets = [
+        { id: 'womenBase', gender: 'women', sessions: '3', move: 'هیپ تراست' },
+        { id: 'womenFatLoss', gender: 'women', sessions: '3', move: 'استپ‌آپ' },
+        { id: 'womenMuscle', gender: 'women', sessions: '4', move: 'هیپ تراست' },
+        { id: 'menBase', gender: 'men', sessions: '4', move: 'پرس سینه هالتر' },
+        { id: 'menFatLoss', gender: 'men', sessions: '3', move: 'لانج' },
+        { id: 'menMuscle', gender: 'men', sessions: '4', move: 'پرس بالا سینه دمبل' }
+      ];
+      for (const preset of presets) {
+        await page.locator('#preset').selectOption(preset.id);
+        await page.locator('#applyPreset').click();
+        assert.equal(await page.locator('#gender').inputValue(), preset.gender, preset.id + ' should set the matching gender');
+        assert.equal(await page.locator('#count').inputValue(), preset.sessions, preset.id + ' should set the intended session count');
+        assert.ok((await page.locator('#bulk').inputValue()).includes(preset.move), preset.id + ' should load its intended movement template');
+        assert.equal(await page.locator('#sessions .session').count(), Number(preset.sessions), preset.id + ' should render every session');
+      }
+    });
+    await check('plans with 2 through 6 sessions render every session and include them in PNG export', async () => {
+      await page.evaluate(() => {
+        window.html2canvas = async stage => {
+          window.__exportCapture = { sessions: stage.querySelectorAll('.session').length, text: stage.innerText };
+          return { toBlob: callback => callback(new Blob(['test-png'], { type: 'image/png' })) };
+        };
+      });
+      for (const count of [2, 3, 4, 5, 6]) {
+        await page.locator('#count').selectOption(String(count));
+        await page.locator('#split').selectOption('manual');
+        await page.locator('#bulk').fill(['حرکت آزمایشی\\t1\\tعادی\\t—\\t3\\t12\\t60'].join(''));
+        await page.getByRole('button', { name: 'اعتبارسنجی و پیش‌نمایش' }).click();
+        assert.equal(await page.locator('#sessions .session').count(), count, count + '-session plan should render all session cards');
+        const downloadPromise = page.waitForEvent('download');
+        await page.locator('#downloadWorkoutImageButton').click();
+        const download = await downloadPromise;
+        assert.equal(download.suggestedFilename(), 'fitness-seh-galeh-workout.png');
+        const exported = await page.evaluate(() => window.__exportCapture);
+        assert.equal(exported.sessions, count, count + '-session PNG should include all session cards');
+        assert.ok(exported.text.includes('جلسه ' + count), count + '-session PNG should contain the final session heading');
+      }
+    });
     await check('women template selection updates explanatory hint', async () => {
       await page.locator('#gender').selectOption('women');
       assert.ok((await page.locator('#templateHint').innerText()).includes('قالب خانم‌ها'));
