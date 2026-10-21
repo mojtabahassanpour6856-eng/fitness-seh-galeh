@@ -999,7 +999,7 @@ const assert = require('node:assert/strict');
           await row.locator('.mobile-exercise-search').fill(name);
           const option = row.locator('.mobile-exercise-option').filter({ hasText: name }).first();
           if (item.system === 'عادی') await option.click();
-          else await option.locator('input.mobile-exercise-check').check();
+          else await option.locator('input.mobile-exercise-check').click({ force: true });
         }
         const raw = await page.locator('#bulk').evaluate(el => el.value);
         const lines = raw.split(String.fromCharCode(10)).filter(Boolean).map(line => line.split(String.fromCharCode(9)));
