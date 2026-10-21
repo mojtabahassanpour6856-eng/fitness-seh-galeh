@@ -90,7 +90,7 @@
     if (!(traineeResult.data || []).some(row => String(row.id) === String(value.traineeId))) fail('شاگرد انتخاب‌شده از نشست فعلی قابل دسترسی نیست؛ هیچ تغییری انجام نشد.');
     const plansResult = await client.from('trainee_workout_plans').select('id,trainee_id,title,plan_date,created_at').eq('trainee_id', value.traineeId).order('plan_date', {ascending:false, nullsFirst:false}).order('created_at', {ascending:false}).limit(10);
     if (plansResult.error) fail('خواندن برنامه‌های شاگرد از نشست فعلی ناموفق بود: ' + plansResult.error.message);
-    const bankResult = await client.from('exercises').select('id,name').limit(500);
+    const bankResult = await client.from('exercises').select('id,name');
     if (bankResult.error) fail('خواندن بانک حرکات از نشست فعلی ناموفق بود: ' + bankResult.error.message);
     return { userId: sessionResult.data.session.user.id, traineeId: value.traineeId, planCount: (plansResult.data || []).length, exerciseCount: (bankResult.data || []).length };
   }
