@@ -11,6 +11,21 @@
   };
   function fail(message) { throw new Error(message); }
   function normalizeName(name) { return String(name || '').normalize('NFKC').replace(/[\u200c\u200f\u202a-\u202e]/g, '').replace(/\s+/g, ' ').trim().toLocaleLowerCase('fa'); }
+  function normalizePlanDate(value) {
+    let date = String(value || '').trim().replace(/[۰-۹]/g, ch => String('۰۱۲۳۴۵۶۷۸۹'.indexOf(ch))).replace(/[٠-٩]/g, ch => String('٠١٢٣٤٥٦٧٨٩'.indexOf(ch)));
+    if (/^\d{4}-\d{2}-\d{2}$/.test(date) && Number(date.slice(0, 4)) >= 1300 && Number(date.slice(0, 4)) <= 1500) {
+      const [jy, jm, jd] = date.split('-').map(Number);
+      const fmt = new Intl.DateTimeFormat('en-u-ca-persian', { year: 'numeric', month: 'numeric', day: 'numeric', timeZone: 'UTC' });
+      const base = Date.UTC(jy + 621, 2, 19);
+      for (let offset = -35; offset <= 370; offset++) {
+        const d = new Date(base + offset * 86400000), parts = {};
+        fmt.formatToParts(d).forEach(part => { if (part.type === 'year' || part.type === 'month' || part.type === 'day') parts[part.type] = Number(part.value); });
+        if (parts.year === jy && parts.month === jm && parts.day === jd) return d.toISOString().slice(0, 10);
+      }
+      fail('تبدیل تاریخ شمسی به میلادی ممکن نشد؛ تاریخ را دوباره بررسی کن.');
+    }
+    return date;
+  }
   function buildPayload(input) {
     const value = input || {};
     const trial = value.trial;
@@ -78,7 +93,7 @@
       if (!bank.has(key)) bank.set(key, []);
       bank.get(key).push(row.id);
     }
-    const payload = buildPayload(Object.assign({}, value, {
+    const payload = buildPayload(Object.assign({}, value, { planDate: normalizePlanDate(value.planDate),
       resolveExerciseId: name => {
         const ids = bank.get(normalizeName(name)) || [];
         if (ids.length > 1) fail('نام حرکت «' + name + '» در بانک تکراری است؛ برای جلوگیری از ثبت حرکت اشتباه، ابتدا باید نام‌ها یکتا شوند.');
@@ -97,5 +112,5 @@
     }
     return { planId, exerciseCount: rows.length, traineeId: value.traineeId };
   }
-  root.SehWorkoutPersistenceAdapter = Object.freeze({ buildPayload, saveToSupabase, normalizeName });
+  root.SehWorkoutPersistenceAdapter = Object.freeze({ buildPayload, saveToSupabase, normalizeName, normalizePlanDate });
 })(typeof window !== 'undefined' ? window : globalThis);
