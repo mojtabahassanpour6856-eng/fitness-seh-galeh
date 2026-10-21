@@ -1,0 +1,46 @@
+name: Build isolated workout planner preview bundle
+
+on:
+  push:
+    branches: ["coach-workout-editor-experiment"]
+    paths:
+      - "experiments/workout-template-planner.html"
+      - "experiments/workout-persistence-adapter.js"
+      - ".github/workflows/build-workout-planner-preview.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  package-preview:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout experimental branch only
+        uses: actions/checkout@v4
+        with:
+          ref: coach-workout-editor-experiment
+      - name: Prepare isolated static preview bundle
+        run: |
+          mkdir -p preview-bundle
+          cp experiments/workout-template-planner.html preview-bundle/index.html
+          cp experiments/workout-persistence-adapter.js preview-bundle/workout-persistence-adapter.js
+          cat > preview-bundle/README.txt <<'EOF'
+          Fitness Seh Galeh - experimental workout planner preview
+          
+          This bundle is built from branch coach-workout-editor-experiment.
+          It is an artifact only. This workflow does NOT deploy GitHub Pages,
+          does NOT modify main, and does NOT write to Supabase.
+          
+          The page is not an authenticated same-origin preview of the live coach
+          panel. Do not treat local opening as a real-session integration test.
+          Do not connect it to production data for save tests until a safe,
+          isolated preview origin and explicit test procedure are established.
+          EOF
+      - name: Upload preview bundle (no deployment)
+        uses: actions/upload-artifact@v4
+        with:
+          name: workout-planner-experiment-preview
+          path: preview-bundle/
+          if-no-files-found: error
+          retention-days: 7
