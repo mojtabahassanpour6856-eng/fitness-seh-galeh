@@ -1157,7 +1157,7 @@ const assert = require('node:assert/strict');
       async function addMovement(session, system, name, group) {
         await page.locator('#quickSession').selectOption(String(session));
         await page.locator('#quickSystem').selectOption(system);
-        if (group !== undefined) await page.locator('#quickGroup').selectOption(group);
+        if (group !== undefined) await page.locator('#quickGroup').fill(group);
         await page.locator('#quickName').fill(name);
         await page.getByRole('button', { name: 'افزودن به فهرست' }).click();
       }
