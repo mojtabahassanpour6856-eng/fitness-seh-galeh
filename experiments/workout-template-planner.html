@@ -244,6 +244,7 @@ function buildMobileComposer(){
   const menu=document.createElement('div');menu.className='mobile-exercise-menu';
   const search=document.createElement('input');search.type='search';search.className='mobile-exercise-search';search.placeholder='جست‌وجوی حرکت…';search.setAttribute('aria-label','جست‌وجوی حرکت '+(i+1));
   const checks=document.createElement('div');checks.className='mobile-exercise-checks';
+  let selectionOrder=0;
   const ordered=allEntries.slice().sort((a,b)=>{const ap=preferred.indexOf(a.cat),bp=preferred.indexOf(b.cat);return (ap<0?999:ap)-(bp<0?999:bp)||a.cat.localeCompare(b.cat,'fa')||a.name.localeCompare(b.name,'fa');});
   let currentCat='';
   ordered.forEach(item=>{
@@ -255,7 +256,8 @@ function buildMobileComposer(){
    cb.style.width='16px';cb.style.height='16px';
    cb.addEventListener('change',()=>{
     const system=card.querySelector('[id^="mobile_system_"]').value,limit=system==='عادی'?1:system==='سوپرست'?2:system==='تری‌ست'?3:4;
-    const checked=[...checks.querySelectorAll('.mobile-exercise-check:checked')];
+    if(cb.checked)cb.dataset.selectionOrder=String(++selectionOrder);
+    const checked=[...checks.querySelectorAll('.mobile-exercise-check:checked')].sort((a,b)=>Number(a.dataset.selectionOrder||0)-Number(b.dataset.selectionOrder||0));
     if(cb.checked&&checked.length>limit){cb.checked=false;$('mobileComposerStatus').textContent='برای '+system+' حداکثر '+limit+' حرکت می‌توانی انتخاب کنی.';updatePickerSummary();updateMobileCount();return;}
     updatePickerSummary();updateMobileCount();
     // انتخاب عادی همان لحظه ثبت می‌شود؛ سیستم‌های ترکیبی پس از تکمیل تعداد لازم ثبت می‌شوند.
@@ -283,7 +285,7 @@ function buildMobileComposer(){
     const justAdded=checked.map(item=>item.value);
     lastAddedSummary=justAdded.join(' + ');lastAddedCount=justAdded.length;
     $('mobileComposerStatus').textContent=system==='عادی'?'حرکت «'+cb.value+'» فوراً به جلسه '+session+' اضافه شد.':checked.length+' حرکت به‌صورت '+system+' گروه '+group+' فوراً به جلسه '+session+' اضافه شد.';
-    checks.querySelectorAll('.mobile-exercise-check').forEach(item=>item.checked=false);
+    checks.querySelectorAll('.mobile-exercise-check').forEach(item=>{item.checked=false;delete item.dataset.selectionOrder;});
     picker.open=false;
     updatePickerSummary();updateMobileCount();
    });
