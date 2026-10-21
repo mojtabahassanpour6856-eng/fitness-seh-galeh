@@ -1111,7 +1111,7 @@ const assert = require('node:assert/strict');
       assert.equal(lines.length, 4, 'two completed supersets should append exactly four movements');
       assert.ok(lines.slice(0, 2).every(line => line[3] === 'A'), 'first superset should use group A');
       assert.ok(lines.slice(2, 4).every(line => line[3] === 'B'), 'second superset in the same session should use group B');
-      await page.getByRole('button', { name: 'اعتبارسنجی و پیش‌نمایش' }).click();
+      await page.locator('#mobilePreviewButton').click();
       const preview = await page.locator('#sessions').innerText();
       assert.ok(preview.includes('پرس سینه دمبل + پرس بالاسینه دمبل'), 'first superset should render on one plus-separated line');
       assert.ok(preview.includes('قفسه سیم‌کش + قفسه دمبل'), 'second superset should render on one plus-separated line');
