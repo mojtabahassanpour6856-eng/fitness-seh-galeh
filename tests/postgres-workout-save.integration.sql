@@ -15,6 +15,7 @@ declare
  v_snapshot jsonb;
  v_stale_snapshot jsonb;
  v_big_exercises jsonb;
+ v_empty_plan_id bigint;
 begin
  r := public.save_trainee_workout_plan_transaction(
   '11111111-1111-4111-8111-111111111111', null, null,
@@ -162,7 +163,30 @@ begin
  exception when others then v_failed := true;
  end;
  if not v_failed then raise exception 'invalid trainee unexpectedly accepted'; end if;
-end $$;
+
+ -- Existing plan with zero exercise rows still gets a non-null, comparable snapshot.
+ perform set_config('test.trainee_id', '22222222-2222-4222-8222-222222222222', false);
+ insert into public.trainee_workout_plans(trainee_id,title,plan_date,goal,notes)
+ values ('22222222-2222-4222-8222-222222222222','empty-existing-plan','2026-10-25',null,null)
+ returning id into v_empty_plan_id;
+
+ r := public.save_trainee_workout_plan_transaction(
+  '22222222-2222-4222-8222-222222222222',
+  v_empty_plan_id,
+  jsonb_build_object(
+   'plan', jsonb_build_object(
+    'id',v_empty_plan_id,'title','empty-existing-plan',
+    'plan_date','2026-10-25','goal',null,'notes',null
+   ),
+   'exercises','[]'::jsonb
+  ),
+  '{"title":"empty-plan-replaced","plan_date":"2026-10-26"}'::jsonb,
+  '[{"exercise_id":101,"sets":3,"reps":"10","rest_seconds":60,"sort_order":1,"training_system":"normal","training_day":"جلسه اول","is_completed":false}]'::jsonb
+ );
+ if (r->>'exercise_count')::integer <> 1 then raise exception 'empty existing plan replacement failed'; end if;
+ select title into v_old_title from public.trainee_workout_plans where id=v_empty_plan_id;
+ if v_old_title <> 'empty-plan-replaced' then raise exception 'empty existing plan title not updated'; end if;
+end $;
 
 reset role;
 select 'PASS: PostgreSQL integration tests including forced transaction rollback' as result;
