@@ -270,6 +270,7 @@ const fs = require('node:fs');
             },
             delete() { return {eq(column,id) { window.__coachSaveCalls.push({table:'rollback',column,id}); return Promise.resolve({error:null}); }}; }
           }; }};
+          window.getWorkoutPlannerContext = () => ({ supabase: window.AUTH_SUPABASE, traineeId: window.currentClient ? String(window.currentClient.id || '') : '', title: 'برنامه آزمایشی', goal: 'قدرت', notes: 'تست اتصال' });
         });
         const childPromise = parent.waitForEvent('popup');
         await parent.evaluate(() => window.open('/experiments/workout-template-planner.html', '_blank'));
