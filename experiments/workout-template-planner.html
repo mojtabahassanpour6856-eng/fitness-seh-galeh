@@ -544,7 +544,32 @@ $('downloadWorkoutImageButton').addEventListener('click',async()=>{
  finally{if(stage)stage.remove();button.disabled=false;button.textContent=oldText;}
 });
 $('export').addEventListener('click',()=>{render();const data=window.__trial;if(data.errors.length){$('status').textContent+='\nابتدا خطاها را اصلاح کن تا خروجی گرفته شود.';return;}const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='fitness-seh-galeh-workout-trial.json';a.click();URL.revokeObjectURL(a.href);});
- $('sendToCoachApp').addEventListener('click',()=>{render();const data=window.__trial;if(data.errors.length){$('status').textContent='ابتدا خطاهای برنامه را اصلاح کن.';return;}if(!window.opener||window.opener.closed){$('status').textContent='این صفحه از پنل مربی باز نشده است؛ از داخل پنل مربی وارد شو.';return;}window.opener.postMessage({type:'fitness-seh-galeh:workout-plan-draft:v1',payload:{gender:data.gender,sessions:data.sessions,moves:data.moves.map(m=>({name:m.name,session:Number(m.session),system:m.system,group:m.group,sets:Number(m.sets),reps:String(m.reps),rest:Number(m.rest)}))}},location.origin);$('status').textContent='برنامه به پنل مربی ارسال شد؛ پنجره پنل را بررسی کن.';});
+ $('sendToCoachApp').addEventListener('click',async()=>{
+    render();const data=window.__trial;
+    if(data.errors.length){$('status').textContent='ابتدا خطاهای برنامه را اصلاح کن.';return;}
+    if(!window.opener||window.opener.closed){$('status').textContent='این صفحه از پنل مربی باز نشده است؛ از داخل پنل مربی وارد شو.';return;}
+    let parentDoc,client,traineeId;
+    try{
+      if(window.opener.location.origin!==location.origin)throw new Error('پنل مربی باید در همین دامنه باز باشد.');
+      parentDoc=window.opener.document;client=window.opener.AUTH_SUPABASE;
+      traineeId=window.opener.eval('typeof currentClient !== "undefined" && currentClient ? String(currentClient.id || "") : ""');
+    }catch(e){$('status').textContent='دسترسی امن به پنل مربی ممکن نشد: '+(e.message||String(e));return;}
+    if(!client||typeof client.from!=='function'){$('status').textContent='اتصال احرازشده پنل مربی پیدا نشد؛ ابتدا وارد پنل مربی شو.';return;}
+    if(!traineeId){$('status').textContent='ابتدا یک شاگرد را در پنل مربی انتخاب کن.';return;}
+    const title=String(parentDoc.getElementById('workoutTitle')?.value||'').trim()||'برنامه تمرینی';
+    const planDate=String(parentDoc.getElementById('workoutStartDate')?.value||'').trim()||new Date().toISOString().slice(0,10);
+    const goal=String(parentDoc.getElementById('workoutGoal')?.value||'').trim();
+    const notes=String(parentDoc.getElementById('workoutNotes')?.value||'').trim();
+    const button=$('sendToCoachApp'),oldText=button.textContent;button.disabled=true;button.textContent='در حال ذخیره امن برنامه…';
+    try{
+      if(!window.SehWorkoutPersistenceAdapter)throw new Error('ماژول ذخیره برنامه بارگذاری نشده است؛ صفحه را تازه‌سازی کن.');
+      const saved=await window.SehWorkoutPersistenceAdapter.saveToSupabase({supabase:client,traineeId,planDate,title,goal,notes,trial:data});
+      if(window.opener.closed)throw new Error('پنل مربی هنگام ذخیره بسته شد.');
+      if(typeof window.opener.loadWorkoutForClient==='function')await window.opener.loadWorkoutForClient();
+      $('status').textContent='برنامه با موفقیت در پایگاه داده ثبت شد: '+saved.exerciseCount+' حرکت برای شاگرد انتخاب‌شده. شناسه برنامه: '+saved.planId;
+    }catch(e){$('status').textContent='ذخیره برنامه انجام نشد: '+(e.message||String(e));}
+    finally{button.disabled=false;button.textContent=oldText;}
+  });
 hint();
 })();
 </script></body></html>
