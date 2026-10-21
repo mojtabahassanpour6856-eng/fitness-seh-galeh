@@ -1325,6 +1325,72 @@ const assert = require('node:assert/strict');
       assert.ok(preview.includes('اسکوات هالتر + پرس پا + جلو پا دستگاه + پشت پا خوابیده'), 'giant-set should preview as one plus-separated group');
       await page.setViewportSize({ width: 1280, height: 900 });
     });
+    await check('bank bulk-add uses shared set, rep, and rest values and avoids duplicates in the same session', async () => {
+      await page.setViewportSize({ width: 1280, height: 900 });
+      await page.goto('http://127.0.0.1:4173/experiments/workout-template-planner.html');
+      await page.locator('#count').selectOption('3');
+      await page.locator('#bulk').evaluate(el => { el.value = ''; el.dispatchEvent(new Event('input', { bubbles: true })); });
+      await page.locator('#bankSearch').fill('پرس سینه دمبل');
+      await page.locator('.bankAddMoveCheck').first().check();
+      await page.locator('#bankSearch').fill('قفسه سیم‌کش');
+      await page.locator('.bankAddMoveCheck').first().check();
+      await page.locator('#bankBulkSession').selectOption('2');
+      await page.locator('#quickSets').fill('4');
+      await page.locator('#quickReps').fill('10');
+      await page.locator('#quickRest').fill('75');
+      await page.locator('#addSelectedBankExercises').click();
+      let lines = (await page.locator('#bulk').inputValue()).split(String.fromCharCode(10)).filter(Boolean).map(line => line.split(String.fromCharCode(9)));
+      assert.equal(lines.length, 2, 'two selected bank exercises should be added');
+      assert.ok(lines.every(line => line[1] === '2' && line[2] === 'عادی' && line[4] === '4' && line[5] === '10' && line[6] === '75'), 'all added movements should share the chosen session and settings');
+      await page.locator('#bankSearch').fill('پرس سینه دمبل');
+      await page.locator('.bankAddMoveCheck').first().check();
+      await page.locator('#addSelectedBankExercises').click();
+      lines = (await page.locator('#bulk').inputValue()).split(String.fromCharCode(10)).filter(Boolean);
+      assert.equal(lines.length, 2, 'adding a movement already in the same session should not duplicate it');
+    });
+    await check('bank bulk-add rejects a destination session beyond the configured workout length', async () => {
+      await page.setViewportSize({ width: 1280, height: 900 });
+      await page.goto('http://127.0.0.1:4173/experiments/workout-template-planner.html');
+      await page.locator('#count').selectOption('2');
+      await page.locator('#bulk').evaluate(el => { el.value = ''; el.dispatchEvent(new Event('input', { bubbles: true })); });
+      await page.locator('#bankSearch').fill('پرس سینه دمبل');
+      await page.locator('.bankAddMoveCheck').first().check();
+      await page.locator('#bankBulkSession').selectOption('3');
+      await page.locator('#addSelectedBankExercises').click();
+      assert.equal((await page.locator('#bulk').inputValue()).trim(), '', 'invalid destination must not add any movement');
+      assert.ok((await page.locator('#bankStatus').innerText()).includes('بیشتر'), 'coach should receive a clear destination-session warning');
+    });
+    await check('exercise-bank grouping validates exact combo size and preserves selection order', async () => {
+      await page.setViewportSize({ width: 1280, height: 900 });
+      await page.goto('http://127.0.0.1:4173/experiments/workout-template-planner.html');
+      await page.locator('#count').selectOption('2');
+      await page.locator('#bulk').evaluate(el => { el.value = ''; el.dispatchEvent(new Event('input', { bubbles: true })); });
+      await page.locator('#quickSystem').selectOption('سوپرست');
+      await page.locator('#bankSearch').fill('پرس سینه دمبل');
+      await page.locator('.bankMoveCheck').first().check();
+      await page.locator('#groupSelectedExercises').click();
+      assert.equal((await page.locator('#bulk').inputValue()).trim(), '', 'a single movement must not be accepted as a superset');
+      assert.ok((await page.locator('#bankStatus').innerText()).includes('دقیقاً 2'), 'incomplete combo should explain the exact required count');
+      await page.locator('#bankSearch').fill('پرس بالاسینه دمبل');
+      await page.locator('.bankMoveCheck').first().check();
+      await page.locator('#groupSelectedExercises').click();
+      const lines = (await page.locator('#bulk').inputValue()).split(String.fromCharCode(10)).filter(Boolean).map(line => line.split(String.fromCharCode(9)));
+      assert.equal(lines.length, 2, 'exactly two selected exercises should create one superset');
+      assert.deepEqual(lines.map(line => line[0]), ['پرس سینه دمبل', 'پرس بالاسینه دمبل'], 'combo ordering should follow selection order');
+      assert.ok(lines.every(line => line[2] === 'سوپرست' && line[3] === 'A'), 'the pair should share one new superset label');
+    });
+    await check('gender template hint changes without rewriting movements or workout settings', async () => {
+      await page.setViewportSize({ width: 1280, height: 900 });
+      await page.goto('http://127.0.0.1:4173/experiments/workout-template-planner.html');
+      await page.locator('#bulk').evaluate(el => { el.value = 'اسکوات\t1\tعادی\t—\t4\t10\t75'; el.dispatchEvent(new Event('input', { bubbles: true })); });
+      const before = await page.locator('#bulk').inputValue();
+      await page.locator('#gender').selectOption('women');
+      assert.ok((await page.locator('#templateHint').innerText()).includes('قالب خانم‌ها'), 'women template should show its own guidance');
+      assert.equal(await page.locator('#bulk').inputValue(), before, 'changing the template label must not silently rewrite exercises');
+      await page.locator('#gender').selectOption('men');
+      assert.ok((await page.locator('#templateHint').innerText()).includes('قالب آقایان'), 'men template should show its own guidance');
+      assert.equal(await page.locator('#bulk').inputValue(), before, 'switching back must preserve the workout rows');
+    });
     await check('responsive layout fits narrow phones, standard phones, tablets, and laptops without horizontal page overflow', async () => {
       for (const viewport of [
         { width: 320, height: 740, mobile: true },
