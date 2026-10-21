@@ -32,7 +32,8 @@ const assert = require('node:assert/strict');
       assert.equal(payload.exercises[2].training_system, 'normal');
       assert.equal(payload.exercises[2].group_key, null);
       assert.equal(payload.exercises[2].is_completed, false);
-      assert.equal(payload.exercises[0]._plan_ref, 'new-plan');
+      assert.equal(payload.exercises[0].exercise_id, 101);
+      assert.equal(payload.exercises[0].workout_plan_id, undefined);
     });
     await check('persistence adapter refuses to build a payload without a selected trainee', async () => {
       const message = await page.evaluate(() => {
@@ -63,6 +64,74 @@ const assert = require('node:assert/strict');
         return '';
       });
       assert.match(invalidSystem, /پشتیبانی‌نشده/);
+    });
+    await check('Supabase save adapter resolves exact exercise names and inserts plan plus ordered exercise rows using mocked client only', async () => {
+      const result = await page.evaluate(async () => {
+        const calls = [];
+        const client = { from(table) {
+          return {
+            select() { calls.push(['select', table]); return Promise.resolve({ data: [
+              { id: 23, name: 'پرس سینه دمبل' }, { id: 24, name: 'قفسه سیم‌کش' }
+            ], error: null }); },
+            insert(value) {
+              calls.push(['insert', table, value]);
+              if (table === 'trainee_workout_plans') return { select() { return { single() { return Promise.resolve({ data: { id: 777 }, error: null }); } }; } };
+              return Promise.resolve({ data: null, error: null });
+            },
+            delete() { return { eq(column, value) { calls.push(['delete', table, column, value]); return Promise.resolve({ error: null }); } }; }
+          };
+        }};
+        const saved = await window.SehWorkoutPersistenceAdapter.saveToSupabase({
+          supabase: client, traineeId: 'test-trainee-uuid', planDate: '2026-10-21', title: 'آزمایش',
+          trial: { gender: 'male', sessions: 1, errors: [], moves: [
+            { name: 'پرس سینه دمبل', session: 1, system: 'سوپرست', group: 'A', sets: 3, reps: 12, rest: 60 },
+            { name: 'قفسه سیم‌کش', session: 1, system: 'سوپرست', group: 'A', sets: 3, reps: 12, rest: 60 }
+          ]}
+        });
+        return { saved, calls };
+      });
+      assert.deepEqual(result.saved, { planId: 777, exerciseCount: 2, traineeId: 'test-trainee-uuid' });
+      const planInsert = result.calls.find(c => c[0] === 'insert' && c[1] === 'trainee_workout_plans');
+      const exerciseInsert = result.calls.find(c => c[0] === 'insert' && c[1] === 'trainee_workout_exercises');
+      assert.equal(planInsert[2].trainee_id, 'test-trainee-uuid');
+      assert.equal(planInsert[2].plan_date, '2026-10-21');
+      assert.equal(exerciseInsert[2].length, 2);
+      assert.equal(exerciseInsert[2][0].workout_plan_id, 777);
+      assert.equal(exerciseInsert[2][0].exercise_id, 23);
+      assert.equal(exerciseInsert[2][0].group_key, exerciseInsert[2][1].group_key);
+    });
+    await check('Supabase save adapter refuses duplicate exercise names before any database write', async () => {
+      const result = await page.evaluate(async () => {
+        const writes = [];
+        const client = { from(table) { return {
+          select() { return Promise.resolve({ data: [{id: 1, name: 'اسکوات'}, {id: 2, name: 'اسکوات'}], error: null }); },
+          insert() { writes.push(table); return Promise.resolve({ data: null, error: null }); }
+        }; }};
+        try { await window.SehWorkoutPersistenceAdapter.saveToSupabase({ supabase: client, traineeId: 'test-trainee-uuid', planDate: '2026-10-21', trial: { sessions: 1, moves: [{name:'اسکوات',session:1,system:'عادی',sets:3,reps:10,rest:60}] } }); }
+        catch (e) { return { message: e.message, writes }; }
+        return { message: '', writes };
+      });
+      assert.match(result.message, /نام حرکت.*تکراری است/);
+      assert.deepEqual(result.writes, []);
+    });
+    await check('Supabase save adapter rolls back the newly created plan when exercise insertion fails', async () => {
+      const result = await page.evaluate(async () => {
+        const calls = [];
+        const client = { from(table) { return {
+          select() { return Promise.resolve({ data: [{id: 33, name: 'اسکوات'}], error: null }); },
+          insert(value) {
+            calls.push(['insert', table, value]);
+            if (table === 'trainee_workout_plans') return { select() { return { single() { return Promise.resolve({ data: {id: 778}, error: null }); } }; } };
+            return Promise.resolve({ error: { message: 'mock insert failure' } });
+          },
+          delete() { return { eq(col, id) { calls.push(['delete', table, col, id]); return Promise.resolve({ error: null }); } }; }
+        }; }};
+        try { await window.SehWorkoutPersistenceAdapter.saveToSupabase({supabase:client,traineeId:'test-trainee-uuid',planDate:'2026-10-21',trial:{sessions:1,moves:[{name:'اسکوات',session:1,system:'عادی',sets:3,reps:10,rest:60}]}}); }
+        catch (e) { return {message:e.message,calls}; }
+        return {message:'',calls};
+      });
+      assert.match(result.message, /برنامه ناقص پاک شد/);
+      assert.ok(result.calls.some(c => c[0] === 'delete' && c[1] === 'trainee_workout_plans' && c[3] === 778));
     });
     await check('guided workflow navigates to settings, movement entry, and full preview', async () => {
       await page.locator('[data-step="planSetup"]').click();
