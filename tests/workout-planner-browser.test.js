@@ -991,6 +991,7 @@ const assert = require('node:assert/strict');
       ];
       for (const item of cases) {
         await page.goto('http://127.0.0.1:4173/experiments/workout-template-planner.html');
+        await page.locator('[data-step="planMoves"]').click();
         await page.locator('#bulk').fill('');
         const row = page.locator('.mobile-move-row').first();
         await row.locator('select[id^="mobile_system_"]').selectOption(item.system);
