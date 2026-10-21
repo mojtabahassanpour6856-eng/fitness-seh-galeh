@@ -33,3 +33,29 @@ Do **not** connect this adapter to the live coach flow yet. Keep it isolated on 
 
 ## Decision
 **Not ready for production integration.** The table mapping is partly compatible, but the advertised stale-write protection and atomic rollback are not present in the currently fetched adapter. No production changes were made.
+
+
+## Follow-up verification (2026-10-21)
+
+The disposable PostgreSQL workflow now passes on the latest experiment commit, including:
+- plan creation and replacement;
+- snapshot response includes the existing plan metadata and exercise rows;
+- stale fingerprint rejection;
+- duplicate ordering, unknown exercise IDs, missing/unsupported training systems, negative sets/rest, empty exercise list, and more than 200 rows rejected;
+- forced child-insert failure rolls back the plan and exercise rows;
+- inaccessible-trainee and non-coach save attempts rejected;
+- two concurrent saves using one snapshot: the first commits and the stale second save is rejected.
+
+Latest workflow run: 11, `Expand workout RPC validation and authorization tests`, successful on commit `e01cac86a1095d6485d50a3db80f75df808db9d8`. The workflow only uses a fresh disposable PostgreSQL service and a mocked auth/RLS harness.
+
+The read-only live-schema inventory confirms the target tables and fields used by the draft exist in the production project. This is a schema-shape check only, not an authenticated end-to-end test against the production RLS/permissions. No experimental RPC exists in production, and none was installed.
+
+## Remaining blockers (still not ready for production)
+
+1. The planner adapter still calls direct multi-request writes and is not wired to the experimental RPC.
+2. The disposable harness is a simplified mock, not a clone of the production schema, grants, helper functions, constraints, and RLS behavior.
+3. A safe authenticated integration test needs a disposable Supabase project/database with matching schema/policies and throwaway coach/trainee identities; do not use production trainees.
+4. The browser planner needs end-to-end tests for load/edit/save/reload and output, including confirmation that the current coach path and trainee UI remain unchanged.
+5. Before wiring in the RPC, verify how the existing coach flow maps training days, exercise IDs, completion flags, and plan dates. Keep the production frontend, production SQL, and trainee-facing UI untouched until a separate explicit rollout approval.
+
+**Current decision remains: do not merge or deploy to production.**
