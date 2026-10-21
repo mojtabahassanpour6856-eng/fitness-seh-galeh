@@ -12198,6 +12198,68 @@ body.workout-output.workout-compact{
  });
 })();
 </script>
+
+<script id="seh-workout-planner-bridge">
+(function(){
+ 'use strict';
+ function coachMode(){try{return !(typeof isTrainee==='function'&&isTrainee());}catch(_){return false;}}
+ function addLauncher(){
+   if(!document.getElementById('workoutList')||document.getElementById('sehOpenWorkoutPlanner')||!coachMode())return;
+   const btn=document.createElement('button');btn.id='sehOpenWorkoutPlanner';btn.type='button';btn.textContent='⚡ طراحی سریع برنامه (آزمایشی)';
+   btn.style.cssText='margin:8px 0;padding:10px 14px;border:1px solid #b68b35;border-radius:10px;background:#fff4d8;color:#604719;font:inherit;font-weight:bold;cursor:pointer';
+   btn.addEventListener('click',function(){
+     if(typeof currentClient==='undefined'||!currentClient||!currentClient.id){alert('ابتدا شاگرد موردنظر را انتخاب کن.');return;}
+     window.__sehWorkoutPlannerTargetId=String(currentClient.id);
+     const url=new URL('experiments/workout-template-planner.html',location.href);
+     const pop=window.open(url.href,'sehWorkoutPlanner','width=1180,height=900,resizable=yes,scrollbars=yes');
+     if(!pop){alert('مرورگر پنجره آزمایشی را مسدود کرد؛ اجازه بازشدن پنجره را بده و دوباره تلاش کن.');return;}
+     window.__sehWorkoutPlannerWindow=pop;
+   });
+   const list=document.getElementById('workoutList');list.parentNode.insertBefore(btn,list);
+ }
+ async function receive(event){
+   if(event.origin!==location.origin||event.source!==window.__sehWorkoutPlannerWindow)return;
+   const msg=event.data;if(!msg||msg.type!=='fitness-seh-galeh:workout-plan-draft:v1'||!msg.payload)return;
+   const payload=msg.payload;
+   if(typeof currentClient==='undefined'||!currentClient||!currentClient.id||String(currentClient.id)!==String(window.__sehWorkoutPlannerTargetId)){alert('شاگرد انتخاب‌شده از زمان بازشدن برنامه‌ریز تغییر کرده است؛ برای جلوگیری از ثبت اشتباه، چیزی ذخیره نشد.');return;}
+   if(typeof isTrainee==='function'&&isTrainee()){alert('این عملیات فقط برای مربی مجاز است.');return;}
+   if(!Array.isArray(payload.moves)||!payload.moves.length||!Number.isInteger(Number(payload.sessions))||Number(payload.sessions)<1||Number(payload.sessions)>6){alert('داده‌های برنامه معتبر نیستند.');return;}
+   const traineeId=String(currentClient.id);
+   const title=prompt('عنوان برنامه برای '+String(currentClient.full_name||currentClient.name||'شاگرد')+' را وارد کن:','برنامه تمرینی جدید');
+   if(title===null)return;
+   const safeTitle=title.trim()||'برنامه تمرینی';
+   if(!confirm('برنامه جدید با '+payload.moves.length+' حرکت برای شاگرد انتخاب‌شده ثبت شود؟\nبرنامه قبلی حذف نمی‌شود.'))return;
+   const norm=s=>String(s||'').trim().normalize('NFC').replace(/\s+/g,' ');
+   const systemMap={'عادی':'normal','معمولی':'normal','سوپرست':'superset','تری‌ست':'triset','تری ست':'triset','جاینت‌ست':'giant','جاینت ست':'giant'};
+   try{
+     if(typeof window.sbGet!=='function'||typeof window.sbWrite!=='function')throw new Error('اتصال پایگاه داده پنل مربی در دسترس نیست.');
+     const exerciseRows=await window.sbGet('/exercises?select=id,name&limit=2000');
+     const byName=new Map((Array.isArray(exerciseRows)?exerciseRows:[]).map(x=>[norm(x.name),x.id]));
+     const missing=[...new Set(payload.moves.map(m=>norm(m.name)).filter(n=>!byName.has(n)))];
+     if(missing.length)throw new Error('این حرکات در بانک حرکات پنل پیدا نشدند؛ برنامه ثبت نشد:\n'+missing.join('، '));
+     const planDate=new Date().toISOString().slice(0,10);
+     const planRows=await window.sbWrite('/trainee_workout_plans','POST',{trainee_id:traineeId,title:safeTitle,plan_date:planDate,goal:null,notes:'ثبت از برنامه‌ریز آزمایشی'});
+     const savedPlan=Array.isArray(planRows)?planRows.find(x=>String(x.trainee_id)===traineeId):null;
+     if(!savedPlan||!savedPlan.id)throw new Error('پایگاه داده برنامه جدید را برنگرداند؛ ثبت حرکات متوقف شد.');
+     const grouped=new Map();
+     payload.moves.forEach(m=>{const sys=systemMap[norm(m.system)]||'normal';const group=norm(m.group);const key=sys!=='normal'&&group&&group!=='—'?String(m.session)+'|'+sys+'|'+group:null;if(key&&!grouped.has(key))grouped.set(key,'PLAN-'+String(m.session)+'-'+sys+'-'+group);m.__system=sys;m.__group=key?grouped.get(key):null;});
+     const rows=payload.moves.map((m,i)=>({workout_plan_id:savedPlan.id,exercise_id:byName.get(norm(m.name)),sets:Math.max(1,Number(m.sets)||3),reps:String(m.reps||'12'),rest_seconds:Math.max(0,Number(m.rest)||0),notes:null,sort_order:i+1,training_system:m.__system,group_key:m.__group,training_day:'جلسه '+Number(m.session),is_completed:false}));
+     try{
+       const inserted=await window.sbWrite('/trainee_workout_exercises','POST',rows);
+       if(!Array.isArray(inserted)||inserted.length!==rows.length)throw new Error('تعداد حرکات تأییدشده با تعداد حرکات برنامه برابر نیست.');
+     }catch(saveError){
+       try{await window.sbWrite('/trainee_workout_plans?id=eq.'+encodeURIComponent(savedPlan.id)+'&trainee_id=eq.'+encodeURIComponent(traineeId),'DELETE');}catch(rollbackError){console.error('Workout plan rollback failed',rollbackError);}
+       throw saveError;
+     }
+     if(String(currentClient.id)===traineeId&&typeof window.loadWorkoutForClient==='function')await window.loadWorkoutForClient();
+     alert('برنامه با موفقیت ثبت و تأیید شد. '+rows.length+' حرکت برای '+String(currentClient.full_name||currentClient.name||'شاگرد')+' ذخیره شد.');
+   }catch(e){alert('برنامه ثبت نشد. هیچ حرکت ناشناخته‌ای به‌صورت خودکار جایگزین نشد.\n'+(e.message||String(e)));}
+ }
+ window.addEventListener('message',receive);
+ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',addLauncher);else addLauncher();
+ setTimeout(addLauncher,1500);
+})();
+</script>
 </body></html>
 
 <!-- SEH COACH LOGIN VISIBLE DIAGNOSTIC -->
