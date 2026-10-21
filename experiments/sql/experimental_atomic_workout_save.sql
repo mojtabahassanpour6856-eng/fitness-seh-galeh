@@ -76,7 +76,7 @@ declare
   v_fingerprint text;
   v_new_id bigint;
   v_count integer;
-  v_invalid_count integer;
+  v_has_duplicate_order boolean;
 begin
   if auth.uid() is null or not private.is_coach()
      or not private.can_access_trainee(p_trainee_id) then
@@ -147,15 +147,17 @@ begin
     raise exception 'invalid exercise row or unknown exercise id' using errcode = '22023';
   end if;
 
-  select count(*) into v_invalid_count
-  from (
-    select (value->>'sort_order')::integer as sort_order
-    from jsonb_array_elements(p_exercises)
-  ) s
-  group by sort_order
-  having count(*) > 1;
+  select exists (
+    select 1
+    from (
+      select (value->>'sort_order')::integer as sort_order
+      from jsonb_array_elements(p_exercises)
+    ) s
+    group by sort_order
+    having count(*) > 1
+  ) into v_has_duplicate_order;
 
-  if coalesce(v_invalid_count, 0) > 0 then
+  if v_has_duplicate_order then
     raise exception 'duplicate exercise sort order' using errcode = '22023';
   end if;
 
