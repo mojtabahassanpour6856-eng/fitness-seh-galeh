@@ -1354,7 +1354,7 @@ const assert = require('node:assert/strict');
       await page.setViewportSize({ width: 320, height: 740 });
       await page.goto('http://127.0.0.1:4173/experiments/workout-template-planner.html');
       await page.locator('#count').selectOption('2');
-      await page.locator('#bulk').fill('');
+      await page.locator('#bulk').evaluate(el => { el.value = ''; el.dispatchEvent(new Event('input', { bubbles: true })); });
       const row = page.locator('#mobileMoveRows .mobile-move-row').first();
       await row.locator('select[id^="mobile_system_"]').selectOption('عادی');
       await row.locator('summary.mobile-exercise-summary').click();
