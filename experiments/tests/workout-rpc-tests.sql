@@ -19,6 +19,12 @@ BEGIN
   IF (snap->>'plan_id') IS NOT NULL OR (snap->>'plan_count')::int <> 0 THEN
     RAISE EXCEPTION 'FAIL: initial snapshot was not empty';
   END IF;
+  IF snap->'plan' IS DISTINCT FROM 'null'::jsonb
+     OR jsonb_typeof(snap->'exercises') <> 'array'
+     OR jsonb_array_length(snap->'exercises') <> 0 THEN
+    RAISE EXCEPTION 'FAIL: empty snapshot omitted plan/exercise data';
+  END IF;
+  RAISE NOTICE 'PASS: snapshot returns an explicit empty plan and exercise list';
 
   saved := public.experimental_save_trainee_workout(
     trainee, NULL, snap->>'fingerprint',
@@ -31,6 +37,12 @@ BEGIN
   RAISE NOTICE 'PASS: create plan and insert two exercises';
 
   snap_after := public.experimental_workout_snapshot(trainee);
+  IF snap_after->'plan'->>'title' <> 'Test plan'
+     OR jsonb_array_length(snap_after->'exercises') <> 2
+     OR snap_after->'exercises'->0->>'training_system' <> 'normal' THEN
+    RAISE EXCEPTION 'FAIL: snapshot did not return the saved plan and exercise rows';
+  END IF;
+  RAISE NOTICE 'PASS: snapshot returns existing plan metadata and exercise rows';
   failed := false;
   BEGIN
     PERFORM public.experimental_save_trainee_workout(
