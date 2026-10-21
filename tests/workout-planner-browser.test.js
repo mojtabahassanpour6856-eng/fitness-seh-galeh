@@ -124,7 +124,11 @@ const assert = require('node:assert/strict');
       const result = await page.evaluate(async () => {
         const calls = [];
         const client = { from(table) { return {
-          select() { return Promise.resolve({ data: [{id: 33, name: 'اسکوات'}], error: null }); },
+          select() {
+            if (table === 'exercises') return Promise.resolve({data:[{id:33,name:'اسکوات'}],error:null});
+            if (table === 'trainee_workout_plans') return {eq(){return this;},order(){return this;},limit(){return Promise.resolve({data:[],error:null});}};
+            if (table === 'trainee_workout_exercises') return {eq(){return Promise.resolve({data:[],error:null});}};
+          },
           insert(value) {
             calls.push(['insert', table, value]);
             if (table === 'trainee_workout_plans') return { select() { return { single() { return Promise.resolve({ data: {id: 778}, error: null }); } }; } };
