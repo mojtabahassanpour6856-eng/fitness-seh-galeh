@@ -37,6 +37,13 @@ jobs:
           Do not connect it to production data for save tests until a safe,
           isolated preview origin and explicit test procedure are established.
           EOF
+      - name: Validate preview bundle contents
+        run: |
+          test -s preview-bundle/index.html
+          test -s preview-bundle/workout-persistence-adapter.js
+          grep -q 'workout-persistence-adapter.js' preview-bundle/index.html
+          grep -q 'does NOT deploy GitHub Pages' preview-bundle/README.txt
+          echo "Preview bundle checks passed; deployment and Supabase writes are not performed."
       - name: Upload preview bundle (no deployment)
         uses: actions/upload-artifact@v4
         with:
