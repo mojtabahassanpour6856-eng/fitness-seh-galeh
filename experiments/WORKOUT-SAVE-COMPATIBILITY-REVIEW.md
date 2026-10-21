@@ -59,3 +59,20 @@ The read-only live-schema inventory confirms the target tables and fields used b
 5. Before wiring in the RPC, verify how the existing coach flow maps training days, exercise IDs, completion flags, and plan dates. Keep the production frontend, production SQL, and trainee-facing UI untouched until a separate explicit rollout approval.
 
 **Current decision remains: do not merge or deploy to production.**
+
+
+## Atomic adapter integration follow-up (2026-10-21)
+
+The experimental planner now loads `atomic-workout-rpc-adapter.js` and captures an authorized workout snapshot when the editor opens. Save uses the captured `plan_id` and fingerprint with `experimental_save_trainee_workout`, rather than the old multi-request `saveToSupabase` writer. If the selected trainee changes, the initial snapshot is unavailable, the coach session cannot verify access, or the database reports a stale fingerprint, the editor blocks the save and asks the coach to reopen the planner. This change is only in the experimental branch.
+
+Additional verification:
+- Node adapter tests passed with a mocked Supabase client.
+- Chromium browser integration test passed: snapshot captured at editor opening; save sent through the atomic RPC with the expected fingerprint and mapped exercise rows; no direct insert/update/delete calls were made to workout tables.
+- Inline JavaScript validation passed.
+- The disposable PostgreSQL transactional, authorization, and concurrency tests passed.
+
+Latest browser integration run: https://github.com/mojtabahassanpour6856-eng/fitness-seh-galeh/actions/runs/39668760646 (success).
+
+## Branch-isolation warning
+
+A GitHub compare of `main` and `coach-workout-editor-experiment` shows the experiment branch is historically diverged and includes other differences to app files. Although no changes from this work were made to the production `main` branch and no deployment was triggered, **do not merge the entire experiment branch**. Any future rollout must be prepared as a clean branch based on the then-current `main`, copying/cherry-picking only reviewed experimental components and separately approving any coach-panel launch integration.
