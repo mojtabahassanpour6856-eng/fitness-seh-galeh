@@ -133,6 +133,48 @@ const assert = require('node:assert/strict');
       assert.match(result.message, /برنامه ناقص پاک شد/);
       assert.ok(result.calls.some(c => c[0] === 'delete' && c[1] === 'trainee_workout_plans' && c[3] === 778));
     });
+    await check('send-to-coach button persists the selected trainee draft through a same-origin mocked coach session', async () => {
+      const parent = await browser.newPage();
+      try {
+        await parent.goto('http://127.0.0.1:4173/workout-editor-entry-preview.html');
+        await parent.evaluate(() => {
+          document.body.insertAdjacentHTML('beforeend', '<input id="workoutTitle" value="برنامه آزمایشی"><input id="workoutStartDate" value="2026-10-21"><input id="workoutGoal" value="قدرت"><input id="workoutNotes" value="تست اتصال">');
+          window.currentClient = { id: 'test-trainee-uuid' };
+          window.__coachSaveCalls = [];
+          window.__coachReloaded = false;
+          window.loadWorkoutForClient = async () => { window.__coachReloaded = true; };
+          window.AUTH_SUPABASE = { from(table) { return {
+            select() { return Promise.resolve({ data: [
+              {id: 23, name: 'پرس سینه دمبل'}, {id: 24, name: 'قفسه سیم‌کش'}, {id: 25, name: 'اسکوات'}
+            ], error: null }); },
+            insert(value) {
+              window.__coachSaveCalls.push({table, value});
+              if (table === 'trainee_workout_plans') return { select() { return { single() { return Promise.resolve({ data: {id: 9901}, error: null }); } }; } };
+              return Promise.resolve({data:null,error:null});
+            },
+            delete() { return {eq(column,id) { window.__coachSaveCalls.push({table:'rollback',column,id}); return Promise.resolve({error:null}); }}; }
+          }; }};
+        });
+        const [child] = await Promise.all([
+          browser.waitForEvent('page'),
+          parent.evaluate(() => window.open('/experiments/workout-template-planner.html', '_blank'))
+        ]);
+        await child.waitForLoadState('domcontentloaded');
+        await child.locator('#bulk').fill('پرس سینه دمبل\t1\tسوپرست\tA\t3\t12\t60\nقفسه سیم‌کش\t1\tسوپرست\tA\t3\t12\t60');
+        await child.locator('#count').selectOption('1');
+        await child.locator('#validate').click();
+        await child.locator('#sendToCoachApp').click();
+        await child.waitForFunction(() => document.getElementById('status')?.textContent.includes('برنامه با موفقیت در پایگاه داده ثبت شد'));
+        const state = await parent.evaluate(() => ({calls:window.__coachSaveCalls,reloaded:window.__coachReloaded}));
+        assert.equal(state.reloaded, true);
+        assert.equal(state.calls.find(x => x.table === 'trainee_workout_plans').value.trainee_id, 'test-trainee-uuid');
+        const rows = state.calls.find(x => x.table === 'trainee_workout_exercises').value;
+        assert.equal(rows.length, 2);
+        assert.equal(rows[0].workout_plan_id, 9901);
+        assert.equal(rows[0].group_key, rows[1].group_key);
+        await child.close();
+      } finally { await parent.close(); }
+    });
     await check('guided workflow navigates to settings, movement entry, and full preview', async () => {
       await page.locator('[data-step="planSetup"]').click();
       assert.equal(await page.locator('#planSetup').count(), 1);
