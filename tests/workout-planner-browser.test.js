@@ -11,6 +11,59 @@ const assert = require('node:assert/strict');
   }
   try {
     await page.goto('http://127.0.0.1:4173/experiments/workout-template-planner.html');
+    await check('persistence adapter maps a validated trial to the existing database schema without writing to the database', async () => {
+      const payload = await page.evaluate(() => window.SehWorkoutPersistenceAdapter.buildPayload({
+        traineeId: 'trainee-test-17',
+        planDate: '2026-10-21',
+        title: 'آزمایش برنامه',
+        trial: { gender: 'male', sessions: 2, errors: [], moves: [
+          { name: 'پرس سینه دمبل', session: 1, system: 'سوپرست', group: 'A', sets: 3, reps: '12', rest: 60 },
+          { name: 'قفسه سیم‌کش', session: 1, system: 'سوپرست', group: 'A', sets: 3, reps: '12', rest: 60 },
+          { name: 'اسکوات', session: 2, system: 'عادی', group: '—', sets: 4, reps: '10', rest: 90 }
+        ]},
+        resolveExerciseId: name => ({ 'پرس سینه دمبل': 101, 'قفسه سیم‌کش': 102, 'اسکوات': 103 })[name]
+      }));
+      assert.equal(payload.plan.trainee_id, 'trainee-test-17');
+      assert.equal(payload.plan.plan_date, '2026-10-21');
+      assert.equal(payload.exercises.length, 3);
+      assert.equal(payload.exercises[0].training_system, 'superset');
+      assert.equal(payload.exercises[0].group_key, payload.exercises[1].group_key);
+      assert.equal(payload.exercises[0].training_day, 'جلسه 1');
+      assert.equal(payload.exercises[2].training_system, 'normal');
+      assert.equal(payload.exercises[2].group_key, null);
+      assert.equal(payload.exercises[2].is_completed, false);
+      assert.equal(payload.exercises[0]._plan_ref, 'new-plan');
+    });
+    await check('persistence adapter refuses to build a payload without a selected trainee', async () => {
+      const message = await page.evaluate(() => {
+        try { window.SehWorkoutPersistenceAdapter.buildPayload({ planDate: '2026-10-21', trial: { sessions: 1, moves: [{ name: 'اسکوات', session: 1, system: 'عادی', sets: 3, rest: 60 }] }, resolveExerciseId: () => 103 }); }
+        catch (e) { return e.message; }
+        return '';
+      });
+      assert.match(message, /شناسه شاگرد الزامی/);
+    });
+    await check('persistence adapter refuses to map unknown exercise names instead of risking a wrong exercise', async () => {
+      const message = await page.evaluate(() => {
+        try { window.SehWorkoutPersistenceAdapter.buildPayload({ traineeId: 'trainee-test-17', planDate: '2026-10-21', trial: { sessions: 1, moves: [{ name: 'حرکت ناشناخته', session: 1, system: 'عادی', sets: 3, rest: 60 }] }, resolveExerciseId: () => null }); }
+        catch (e) { return e.message; }
+        return '';
+      });
+      assert.match(message, /در بانک حرکات پیدا نشد/);
+    });
+    await check('persistence adapter rejects invalid dates and unsupported training systems', async () => {
+      const invalidDate = await page.evaluate(() => {
+        try { window.SehWorkoutPersistenceAdapter.buildPayload({ traineeId: 'trainee-test-17', planDate: 'not-a-date', trial: { sessions: 1, moves: [{ name: 'اسکوات', session: 1, system: 'عادی', sets: 3, rest: 60 }] }, resolveExerciseId: () => 103 }); }
+        catch (e) { return e.message; }
+        return '';
+      });
+      assert.match(invalidDate, /تاریخ شروع/);
+      const invalidSystem = await page.evaluate(() => {
+        try { window.SehWorkoutPersistenceAdapter.buildPayload({ traineeId: 'trainee-test-17', planDate: '2026-10-21', trial: { sessions: 1, moves: [{ name: 'اسکوات', session: 1, system: 'سیستم ناشناخته', sets: 3, rest: 60 }] }, resolveExerciseId: () => 103 }); }
+        catch (e) { return e.message; }
+        return '';
+      });
+      assert.match(invalidSystem, /پشتیبانی‌نشده/);
+    });
     await check('guided workflow navigates to settings, movement entry, and full preview', async () => {
       await page.locator('[data-step="planSetup"]').click();
       assert.equal(await page.locator('#planSetup').count(), 1);
