@@ -5,6 +5,7 @@ on:
       - coach-workout-editor-experiment
     paths:
       - 'experiments/workout-template-planner.html'
+      - 'experiments/workout-persistence-adapter.js'
       - 'tests/workout-planner-browser.test.js'
       - '.github/workflows/test-workout-planner-browser.yml'
   workflow_dispatch:
