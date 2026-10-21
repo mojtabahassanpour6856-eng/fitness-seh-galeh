@@ -859,7 +859,7 @@ const assert = require('node:assert/strict');
       await page.waitForFunction(() => document.getElementById('previousWorkoutStatus').textContent.includes('فایل بارگذاری نشد'), { timeout: 3000 });
       assert.equal(await page.locator('#bulk').inputValue(), before);
     });
-    await check('end-to-end three-session workout can be built, batch-edited, previewed, and sent to print', async () => {
+    await check('end-to-end three-session workout can be built, batch-edited, previewed, and downloaded as PNG', async () => {
       await page.locator('#bulk').fill('');
       await page.locator('#count').selectOption('3');
       await page.locator('#split').selectOption('manual');
@@ -892,21 +892,23 @@ const assert = require('node:assert/strict');
       for (const move of moves) assert.ok(preview.includes(move.name), move.name + ' should appear in the full preview');
       assert.equal(await page.locator('#sessions .session').count(), 3, 'all three sessions should be rendered');
       assert.match(await page.locator('#programSummary').innerText(), /3/);
-      await page.evaluate(() => { window.__printCalled = 0; window.print = () => { window.__printCalled += 1; }; });
-      await page.locator('#printWorkoutButton').click();
-      assert.equal(await page.evaluate(() => window.__printCalled), 1, 'the completed workout should reach the print action');
-      assert.ok((await page.locator('#sessions').innerText()).includes('اسکوات مرحله نهایی'), 'the final session must remain present for printing');
+      await page.evaluate(() => {
+        window.html2canvas = async () => ({ toBlob: callback => callback(new Blob(['test-png'], { type: 'image/png' })) });
+      });
+      const downloadPromise = page.waitForEvent('download');
+      await page.locator('#downloadWorkoutImageButton').click();
+      const download = await downloadPromise;
+      assert.equal(download.suggestedFilename(), 'fitness-seh-galeh-workout.png');
+      assert.match(await page.locator('#status').innerText(), /عکس برنامه با موفقیت آماده شد/);
+      assert.ok((await page.locator('#sessions').innerText()).includes('اسکوات مرحله نهایی'), 'the final session must remain present in the exported image');
     });
-    await check('coach print action opens print dialog and print stylesheet isolates workout preview', async () => {
+    await check('PNG export replaces the removed PDF print button and keeps all workout sessions visible', async () => {
+      assert.equal(await page.locator('#downloadWorkoutImageButton').count(), 1, 'PNG download button should be present');
+      assert.equal(await page.locator('#printWorkoutButton').count(), 0, 'the old PDF/print button should be removed');
       const printCss = await page.locator('style').first().innerText();
       assert.match(printCss, /@media print/);
-      assert.ok(printCss.includes('@page{size:A4'), 'print page should use A4 paper');
-      assert.ok(printCss.includes('body>*{display:none!important}'), 'print should hide editor controls');
-      assert.equal(await page.locator('#printWorkoutButton').count(), 1);
-      await page.evaluate(() => { window.__printCalled = 0; window.print = () => { window.__printCalled += 1; }; });
-      await page.locator('#printWorkoutButton').click();
-      assert.equal(await page.evaluate(() => window.__printCalled), 1, 'print button should call window.print exactly once');
-      assert.ok((await page.locator('#sessions').innerText()).trim().length > 0, 'workout sessions remain rendered for printing');
+      assert.ok(printCss.includes('#downloadWorkoutImageButton,.no-print{display:none!important}'), 'the PNG button should not appear if the page is printed');
+      assert.ok((await page.locator('#sessions').innerText()).trim().length > 0, 'all workout sessions should remain rendered');
     });
     await check('workout versions can be saved locally and compared with the current plan', async () => {
       await page.locator('#count').selectOption('2');
