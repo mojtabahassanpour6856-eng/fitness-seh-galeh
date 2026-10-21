@@ -73,17 +73,19 @@ const assert = require('node:assert/strict');
       const result = await page.evaluate(async () => {
         const calls = [];
         const client = { from(table) {
-          return {
-            select() { calls.push(['select', table]); return Promise.resolve({ data: [
+          const q = { select(columns) {
+            calls.push(['select', table, columns]);
+            if (table === 'exercises') return Promise.resolve({ data: [
               { id: 23, name: 'پرس سینه دمبل' }, { id: 24, name: 'قفسه سیم‌کش' }
-            ], error: null }); },
-            insert(value) {
-              calls.push(['insert', table, value]);
-              if (table === 'trainee_workout_plans') return { select() { return { single() { return Promise.resolve({ data: { id: 777 }, error: null }); } }; } };
-              return Promise.resolve({ data: null, error: null });
-            },
-            delete() { return { eq(column, value) { calls.push(['delete', table, column, value]); return Promise.resolve({ error: null }); } }; }
-          };
+            ], error: null });
+            if (table === 'trainee_workout_plans') return { eq() { return this; }, order() { return this; }, limit() { return Promise.resolve({data:[],error:null}); } };
+            if (table === 'trainee_workout_exercises') return { eq() { return Promise.resolve({data:[],error:null}); } };
+          }, insert(value) {
+            calls.push(['insert', table, value]);
+            if (table === 'trainee_workout_plans') return { select() { return { single() { return Promise.resolve({ data: { id: 777 }, error: null }); } }; } };
+            return Promise.resolve({ data: null, error: null });
+          }, delete() { return { eq(column, value) { calls.push(['delete', table, column, value]); return Promise.resolve({ error: null }); } }; } };
+          return q;
         }};
         const saved = await window.SehWorkoutPersistenceAdapter.saveToSupabase({
           supabase: client, traineeId: 'test-trainee-uuid', planDate: '2026-10-21', title: 'آزمایش',
@@ -94,7 +96,7 @@ const assert = require('node:assert/strict');
         });
         return { saved, calls };
       });
-      assert.deepEqual(result.saved, { planId: 777, exerciseCount: 2, traineeId: 'test-trainee-uuid' });
+      assert.deepEqual(result.saved, { planId: 777, exerciseCount: 2, traineeId: 'test-trainee-uuid', updatedExistingPlan: false });
       const planInsert = result.calls.find(c => c[0] === 'insert' && c[1] === 'trainee_workout_plans');
       const exerciseInsert = result.calls.find(c => c[0] === 'insert' && c[1] === 'trainee_workout_exercises');
       assert.equal(planInsert[2].trainee_id, 'test-trainee-uuid');
@@ -147,13 +149,17 @@ const assert = require('node:assert/strict');
           window.__coachSaveCalls = [];
           window.__coachReloaded = false;
           window.loadWorkoutForClient = async () => { window.__coachReloaded = true; };
-          window.AUTH_SUPABASE = { from(table) { return {
-            select() { return Promise.resolve({ data: [
-              {id: 23, name: 'پرس سینه دمبل'}, {id: 24, name: 'قفسه سیم‌کش'}, {id: 25, name: 'اسکوات'}
-            ], error: null }); },
+          window.AUTH_SUPABASE = { from(table) {
+            return { select(columns) {
+              if (table === 'exercises') return Promise.resolve({data:[
+                {id:23,name:'پرس سینه دمبل'},{id:24,name:'قفسه سیم‌کش'},{id:25,name:'اسکوات'}
+              ],error:null});
+              if (table === 'trainee_workout_plans') return {eq(){return this;},order(){return this;},limit(){return Promise.resolve({data:[],error:null});}};
+              if (table === 'trainee_workout_exercises') return {eq(){return Promise.resolve({data:[],error:null});}};
+            },
             insert(value) {
               window.__coachSaveCalls.push({table, value});
-              if (table === 'trainee_workout_plans') return { select() { return { single() { return Promise.resolve({ data: {id: 9901}, error: null }); } }; } };
+              if (table === 'trainee_workout_plans') return { select() { return { single() { return Promise.resolve({data:{id:9901},error:null}); } }; } };
               return Promise.resolve({data:null,error:null});
             },
             delete() { return {eq(column,id) { window.__coachSaveCalls.push({table:'rollback',column,id}); return Promise.resolve({error:null}); }}; }
