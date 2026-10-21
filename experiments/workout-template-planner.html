@@ -18,10 +18,13 @@
  .mobile-hint{font-size:.78rem;line-height:1.55;margin:6px 0 10px}
  .mobile-move-rows{display:grid;gap:8px}
  .mobile-move-row{border:1px solid #e4d6b8;border-radius:10px;padding:8px;background:#fffdf8;display:grid;gap:7px}
- .mobile-move-row-head{display:grid;grid-template-columns:minmax(0,1fr) 34px;gap:6px;align-items:center}
- .mobile-exercise-select{width:100%;min-width:0;padding:8px 5px;font-size:.86rem}
- .mobile-delete{background:#a73b31;padding:7px 0;font-size:1rem;min-width:34px}
- .mobile-controls-line{display:grid;grid-template-columns:1.25fr .8fr 1fr 1fr;gap:5px;align-items:end}
+ .mobile-move-row{gap:8px}
+ .mobile-system-label{display:flex;flex-direction:column;gap:4px;font-size:.8rem;color:#62583f}
+ .mobile-system-label select{width:100%;padding:8px;font-size:.9rem}
+ .mobile-group-exercises{display:grid;gap:7px}
+ .mobile-exercise-slot{display:flex;flex-direction:column;gap:4px;font-size:.8rem;color:#62583f}
+ .mobile-exercise-select{width:100%;min-width:0;padding:9px 6px;font-size:.88rem}
+ .mobile-settings-line{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:5px;align-items:end}
  .mobile-control{min-width:0;display:flex;flex-direction:column;gap:3px;font-size:.72rem;color:#62583f}
  .mobile-control select{width:100%;min-width:0;padding:7px 2px;font-size:.78rem;text-align:center}
  .mobile-bottom{display:grid;grid-template-columns:auto minmax(0,1fr);align-items:center;gap:8px;margin-top:10px}
@@ -221,38 +224,55 @@ function buildMobileComposer(){
  const templates={'سینه|جلو بازو':['سینه','جلو بازو'],'پشت|پشت بازو':['پشت','پشت بازو'],'پا|باسن|ساق':['پا','باسن','ساق'],'سرشانه|شکم':['سرشانه','شکم'],'سینه|پشت بازو':['سینه','پشت بازو'],'پشت|جلو بازو':['پشت','جلو بازو']};
  const template=$('mobileTemplate').value,preferred=template==='all'?[]:(templates[template]||template.split('|'));
  const allEntries=Object.entries(exerciseLibrary).flatMap(([cat,names])=>names.map(name=>({cat,name})));
+ const ordered=allEntries.slice().sort((a,b)=>{const ap=preferred.indexOf(a.cat),bp=preferred.indexOf(b.cat);return (ap<0?999:ap)-(bp<0?999:bp)||a.cat.localeCompare(b.cat,'fa')||a.name.localeCompare(b.name,'fa');});
  for(let i=0;i<9;i++){
-  const card=document.createElement('div');card.className='mobile-move-row';
-  const head=document.createElement('div');head.className='mobile-move-row-head';
-  const exercise=document.createElement('select');exercise.className='mobile-exercise-select';exercise.setAttribute('aria-label','انتخاب حرکت '+(i+1));
-  const placeholder=document.createElement('option');placeholder.value='';placeholder.textContent=(i+1)+'. انتخاب حرکت از بانک حرکات';exercise.appendChild(placeholder);
-  const ordered=allEntries.slice().sort((a,b)=>{const ap=preferred.indexOf(a.cat),bp=preferred.indexOf(b.cat);return (ap<0?999:ap)-(bp<0?999:bp)||a.cat.localeCompare(b.cat,'fa')||a.name.localeCompare(b.name,'fa');});
-  let currentCat='';
-  ordered.forEach(item=>{if(item.cat!==currentCat){currentCat=item.cat;const group=document.createElement('optgroup');group.label=item.cat;exercise.appendChild(group);}const option=document.createElement('option');option.value=item.name;option.textContent=item.name;exercise.lastElementChild.appendChild(option);});
-  const del=document.createElement('button');del.type='button';del.className='mobile-delete';del.textContent='🗑';del.setAttribute('aria-label','حذف حرکت '+(i+1));del.addEventListener('click',()=>{exercise.value='';updateMobileCount();});
-  head.append(exercise,del);
-  const line=document.createElement('div');line.className='mobile-controls-line';
-  function makeControl(label,id,values,initial){const wrap=document.createElement('label');wrap.className='mobile-control';wrap.textContent=label;const select=document.createElement('select');select.id='mobile_'+id+'_'+i;select.dataset.row=String(i);values.forEach(v=>{const opt=document.createElement('option');opt.value=String(v);opt.textContent=String(v);if(String(v)===String(initial))opt.selected=true;select.appendChild(opt);});wrap.appendChild(select);return wrap;}
-  line.append(makeControl('سیستم','system',['عادی','سوپرست','تری‌ست','جاینت‌ست'],'عادی'),makeControl('گروه','group',['—','A','B','C','D'],'—'),makeControl('ست','sets',[2,3,4,5],3),makeControl('تکرار','reps',[6,8,10,12,15,20],12),makeControl('ثانیه','rest',[30,45,60,75],60));
-  card.append(head,line);rows.appendChild(card);exercise.addEventListener('change',updateMobileCount);
+  const card=document.createElement('div');card.className='mobile-move-row';card.dataset.groupIndex=String(i);
+  const title=document.createElement('strong');title.textContent='گروه تمرینی '+(i+1);card.appendChild(title);
+  const systemLabel=document.createElement('label');systemLabel.className='mobile-system-label';systemLabel.textContent='سیستم تمرین';
+  const system=document.createElement('select');system.id='mobile_system_'+i;
+  ['عادی','سوپرست','تری‌ست','جاینت‌ست'].forEach(v=>{const opt=document.createElement('option');opt.value=v;opt.textContent=v;system.appendChild(opt);});
+  systemLabel.appendChild(system);card.appendChild(systemLabel);
+  const exercises=document.createElement('div');exercises.className='mobile-group-exercises';card.appendChild(exercises);
+  function makeExerciseSelect(slot){
+   const wrap=document.createElement('label');wrap.className='mobile-exercise-slot';wrap.textContent='حرکت '+slot;
+   const select=document.createElement('select');select.className='mobile-exercise-select';select.setAttribute('aria-label','گروه '+(i+1)+' حرکت '+slot);
+   const placeholder=document.createElement('option');placeholder.value='';placeholder.textContent='انتخاب حرکت از بانک';select.appendChild(placeholder);
+   let currentCat='';ordered.forEach(item=>{if(item.cat!==currentCat){currentCat=item.cat;const optgroup=document.createElement('optgroup');optgroup.label=item.cat;select.appendChild(optgroup);}const option=document.createElement('option');option.value=item.name;option.textContent=item.name;select.lastElementChild.appendChild(option);});
+   select.addEventListener('change',updateMobileCount);wrap.appendChild(select);return wrap;
+  }
+  function updateExerciseSlots(){
+   const count=system.value==='سوپرست'?2:system.value==='تری‌ست'?3:system.value==='جاینت‌ست'?4:1;
+   const old=[...exercises.querySelectorAll('.mobile-exercise-select')].map(x=>x.value);exercises.innerHTML='';
+   for(let slot=1;slot<=count;slot++){const wrap=makeExerciseSelect(slot);wrap.querySelector('select').value=old[slot-1]||'';exercises.appendChild(wrap);}
+   updateMobileCount();
+  }
+  system.addEventListener('change',updateExerciseSlots);
+  const settings=document.createElement('div');settings.className='mobile-settings-line';
+  function makeSetting(label,id,values,initial){const wrap=document.createElement('label');wrap.className='mobile-control';wrap.textContent=label;const select=document.createElement('select');select.id='mobile_'+id+'_'+i;values.forEach(v=>{const opt=document.createElement('option');opt.value=String(v);opt.textContent=String(v);if(String(v)===String(initial))opt.selected=true;select.appendChild(opt);});wrap.appendChild(select);return wrap;}
+  settings.append(makeSetting('ست','sets',[2,3,4,5],3),makeSetting('تکرار','reps',[6,8,10,12,15,20],12),makeSetting('استراحت (ثانیه)','rest',[30,45,60,75],60));
+  card.appendChild(settings);updateExerciseSlots();rows.appendChild(card);
  }
  updateMobileCount();
 }
-function updateMobileCount(){const count=[...document.querySelectorAll('.mobile-exercise-select')].filter(x=>x.value).length;if($('mobileSelectedCount'))$('mobileSelectedCount').textContent=count+' از ۹ حرکت انتخاب شده';}
+function updateMobileCount(){const count=[...document.querySelectorAll('.mobile-exercise-select')].filter(x=>x.value).length;if($('mobileSelectedCount'))$('mobileSelectedCount').textContent=count+' حرکت انتخاب شده';}
 $('mobileTemplate').addEventListener('change',buildMobileComposer);
 $('mobilePreviewButton').addEventListener('click',()=>{render();$('planPreview').scrollIntoView({behavior:'smooth',block:'start'});});
 $('mobileAddToSession').addEventListener('click',()=>{
- const selected=[...document.querySelectorAll('.mobile-move-row')].map(row=>({name:row.querySelector('.mobile-exercise-select').value,system:row.querySelector('[id^="mobile_system_"]').value,group:row.querySelector('[id^="mobile_group_"]').value,sets:row.querySelector('[id^="mobile_sets_"]').value,reps:row.querySelector('[id^="mobile_reps_"]').value,rest:row.querySelector('[id^="mobile_rest_"]').value})).filter(m=>m.name);
+ const selected=[];
+ for(const card of document.querySelectorAll('.mobile-move-row')){
+  const chosen=[...card.querySelectorAll('.mobile-exercise-select')].map(x=>x.value),picked=chosen.filter(Boolean);if(!picked.length)continue;
+  const system=card.querySelector('[id^="mobile_system_"]').value,required=system==='سوپرست'?2:system==='تری‌ست'?3:system==='جاینت‌ست'?4:1;
+  if(picked.length!==required){$('mobileComposerStatus').textContent='گروه تمرینی '+(Number(card.dataset.groupIndex)+1)+' برای '+system+' باید '+(system==='عادی'?'یک حرکت':'دقیقاً '+required+' حرکت')+' داشته باشد؛ همه کادرهای حرکت را کامل کن.';return;}
+  const i=Number(card.dataset.groupIndex),session=Number($('mobileTargetSession').value),group=system==='عادی'?'—':'M'+(i+1);
+  const sets=card.querySelector('[id^="mobile_sets_"]').value,reps=card.querySelector('[id^="mobile_reps_"]').value,rest=card.querySelector('[id^="mobile_rest_"]').value;
+  picked.forEach(name=>selected.push({name,session,system,group,sets,reps,rest}));
+ }
  if(!selected.length){$('mobileComposerStatus').textContent='ابتدا حداقل یک حرکت را از بانک انتخاب کن.';return;}
  const session=Number($('mobileTargetSession').value);if(session>n()){$('mobileComposerStatus').textContent='جلسه انتخابی بیشتر از تعداد جلسات برنامه است؛ تعداد جلسات را در تنظیم برنامه افزایش بده.';return;}
- const groupMap=new Map();
- for(const m of selected){if(m.system==='عادی')continue;if(m.group==='—'){$('mobileComposerStatus').textContent='برای '+m.system+' یک گروه (A، B، C یا D) انتخاب کن؛ حرکت‌های هم‌گروه باید گروه یکسان داشته باشند.';return;}const key=m.system+'|'+m.group;if(!groupMap.has(key))groupMap.set(key,[]);groupMap.get(key).push(m);}
- for(const [key,moves] of groupMap){const system=key.split('|')[0],required=system==='سوپرست'?2:system==='تری‌ست'?3:4;if(moves.length!==required){$('mobileComposerStatus').textContent='گروه '+key.split('|')[1]+' برای '+system+' باید دقیقاً '+required+' حرکت داشته باشد؛ الان '+moves.length+' حرکت انتخاب شده.';return;}}
- const lines=rawLines();
- selected.forEach(m=>{const label=m.system==='عادی'?'—':m.group;lines.push([m.name,session,m.system,label,m.sets,m.reps,m.rest].join('\t'));});
+ const lines=rawLines();selected.forEach(m=>lines.push([m.name,session,m.system,m.group,m.sets,m.reps,m.rest].join('\t')));
  $('bulk').value=lines.join('\n');renderMoveManager();render();
- $('mobileComposerStatus').textContent=selected.length+' حرکت یکجا به جلسه '+session+' اضافه شد.';
- document.querySelectorAll('.mobile-exercise-select').forEach(x=>x.value='');updateMobileCount();
+ $('mobileComposerStatus').textContent=selected.length+' حرکت در '+new Set(selected.map(m=>m.group==='—'?'single-'+m.name:m.group)).size+' گروه به جلسه '+session+' اضافه شد.';
+ document.querySelectorAll('.mobile-move-row').forEach(card=>card.querySelectorAll('.mobile-exercise-select').forEach(x=>x.value=''));updateMobileCount();
 });
 buildMobileComposer();
 
