@@ -12,20 +12,25 @@ declare
  v_old_exercise_id bigint;
  v_old_count integer;
  v_failed boolean;
+ v_snapshot jsonb;
+ v_stale_snapshot jsonb;
 begin
  r := public.save_trainee_workout_plan_transaction(
-  '11111111-1111-4111-8111-111111111111', null,
+  '11111111-1111-4111-8111-111111111111', null, null,
   '{"title":"پیش‌نویس آزمایشی","plan_date":"2026-10-21","goal":"قدرت","notes":null}'::jsonb,
   '[{"exercise_id":101,"sets":3,"reps":"10","rest_seconds":60,"sort_order":1,"training_system":"normal","training_day":"جلسه اول","is_completed":false}]'::jsonb
  );
  v_plan_id := (r->>'plan_id')::bigint;
+ v_snapshot := r->'plan_snapshot';
+ v_stale_snapshot := v_snapshot;
  if (r->>'exercise_count')::integer <> 1 then raise exception 'create count mismatch'; end if;
 
  r := public.save_trainee_workout_plan_transaction(
-  '11111111-1111-4111-8111-111111111111', v_plan_id,
+  '11111111-1111-4111-8111-111111111111', v_plan_id, v_snapshot,
   '{"title":"برنامه جایگزین","plan_date":"2026-10-22","goal":"عضله‌سازی","notes":"نسخه دوم"}'::jsonb,
   '[{"exercise_id":102,"sets":4,"reps":"8","rest_seconds":90,"sort_order":1,"training_system":"normal","training_day":"جلسه اول","is_completed":false}]'::jsonb
  );
+ v_snapshot := r->'plan_snapshot';
  if (r->>'updated_existing_plan')::boolean is not true then raise exception 'update flag mismatch'; end if;
  select title into v_old_title from public.trainee_workout_plans where id=v_plan_id;
  select exercise_id into v_old_exercise_id from public.trainee_workout_exercises where workout_plan_id=v_plan_id;
@@ -49,7 +54,7 @@ begin
  v_failed := false;
  begin
   perform public.save_trainee_workout_plan_transaction(
-   '11111111-1111-4111-8111-111111111111', v_plan_id,
+   '11111111-1111-4111-8111-111111111111', v_plan_id, v_snapshot,
    '{"title":"نباید ذخیره شود","plan_date":"2026-10-23"}'::jsonb,
    '[{"exercise_id":999999,"sets":3,"reps":"10","rest_seconds":60,"sort_order":1,"training_system":"normal","training_day":"جلسه اول","is_completed":false}]'::jsonb
   );
@@ -66,7 +71,7 @@ begin
  v_failed := false;
  begin
   perform public.save_trainee_workout_plan_transaction(
-   '11111111-1111-4111-8111-111111111111', v_plan_id,
+   '11111111-1111-4111-8111-111111111111', v_plan_id, v_snapshot,
    '{"title":"شکست اجباری","plan_date":"2026-10-24","goal":"نباید تغییر کند"}'::jsonb,
    '[{"exercise_id":101,"sets":5,"reps":"5","rest_seconds":120,"sort_order":1,"training_system":"normal","training_day":"جلسه اول","is_completed":false}]'::jsonb
   );
@@ -87,7 +92,7 @@ begin
  v_failed := false;
  begin
   perform public.save_trainee_workout_plan_transaction(
-   '11111111-1111-4111-8111-111111111111', v_plan_id,
+   '11111111-1111-4111-8111-111111111111', v_plan_id, v_snapshot,
    '{"title":"غیرمجاز","plan_date":"2026-10-25"}'::jsonb,
    '[{"exercise_id":101,"sets":3,"reps":"10","rest_seconds":60,"sort_order":1,"training_system":"normal","training_day":"جلسه اول","is_completed":false}]'::jsonb
   );
@@ -99,7 +104,7 @@ begin
  v_failed := false;
  begin
   perform public.save_trainee_workout_plan_transaction(
-   '22222222-2222-4222-8222-222222222222', null,
+   '22222222-2222-4222-8222-222222222222', null, null,
    '{"title":"شاگرد دیگر","plan_date":"2026-10-25"}'::jsonb,
    '[{"exercise_id":101,"sets":3,"reps":"10","rest_seconds":60,"sort_order":1,"training_system":"normal","training_day":"جلسه اول","is_completed":false}]'::jsonb
   );
