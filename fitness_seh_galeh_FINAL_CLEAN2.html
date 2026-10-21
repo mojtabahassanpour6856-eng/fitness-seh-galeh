@@ -316,6 +316,8 @@ body.locked{overflow:hidden}
 </div>
 <label>توضیحات برنامه</label><textarea id="workoutNotes" placeholder="توضیحات مربی..."></textarea>
 <button onclick="saveWorkoutPlan()">💾 ذخیره برنامه تمرینی</button>
+<button class="secondary" type="button" onclick="openWorkoutPlannerExperiment()">⚡ طراحی سریع برنامه (آزمایشی)</button>
+<p class="muted">ابزار آزمایشی فقط در شاخه پیش‌نمایش فعال است؛ نسخه اصلی شاگردان تغییر نمی‌کند.</p>
 </div>
 <div class="card"><h2>📚 بانک حرکات مربی</h2><div class="grid2"><input id="libName" placeholder="نام حرکت"><input id="libMuscle" placeholder="عضله هدف"><select id="libCategory"><option>سینه</option><option>پشت</option><option>سرشانه</option><option>جلو بازو</option><option>پشت بازو</option><option>پا</option><option>شکم</option><option>کاردیو</option><option>اصلاحی</option><option>سایر</option></select><input id="libEquipment" placeholder="تجهیزات"><select id="libLevel"><option>مبتدی</option><option>متوسط</option><option>پیشرفته</option></select></div><input id="libNote" placeholder="نکته مربی"><button onclick="saveLibraryExercise()">💾 ذخیره حرکت در بانک مربی</button><input id="libSearch" placeholder="🔎 جستجوی حرکت" oninput="loadLibraryExercises()"><div id="libraryList" class="muted"></div></div>
 <div class="card">
@@ -765,6 +767,23 @@ async function loadActivityToday(){
 
 function esc(s){return String(s).replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[m]));}
 
+// Same-origin bridge for the isolated coach workout planner experiment.
+window.getWorkoutPlannerContext = function(){
+  return {
+    supabase: window.AUTH_SUPABASE,
+    traineeId: currentClient && currentClient.id ? String(currentClient.id) : '',
+    title: $('workoutTitle') ? $('workoutTitle').value : '',
+    goal: $('workoutGoal') ? $('workoutGoal').value : '',
+    notes: $('workoutNotes') ? $('workoutNotes').value : ''
+  };
+};
+function openWorkoutPlannerExperiment(){
+  if(!currentClient){alert('ابتدا یک شاگرد را انتخاب کنید.');return;}
+  const url = new URL('experiments/workout-template-planner.html', location.href);
+  const child = window.open(url.href, 'sehWorkoutPlannerExperiment', 'width=1200,height=900,resizable=yes,scrollbars=yes');
+  if(!child){alert('مرورگر پنجره آزمایشی را مسدود کرد؛ اجازه بازشدن پنجره را بدهید.');return;}
+  child.focus();
+}
 window.AUTH_SUPABASE=window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
 const AUTH_SUPABASE=window.AUTH_SUPABASE;const ORIGINAL_FETCH=window.fetch;
 
