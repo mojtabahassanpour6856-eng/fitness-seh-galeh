@@ -1066,6 +1066,41 @@ const assert = require('node:assert/strict');
       assert.notEqual(await comboOption.locator('.mobile-exercise-check').evaluate(el => getComputedStyle(el).display), 'none', 'combination mode should show checkboxes');
       await page.setViewportSize({ width: 1280, height: 900 });
     });
+    await check('mobile search filters exercises and selected session plus sets reps and rest are saved exactly', async () => {
+      await page.setViewportSize({ width: 390, height: 844 });
+      await page.goto('http://127.0.0.1:4173/experiments/workout-template-planner.html');
+      await page.locator('#count').selectOption('2');
+      await page.locator('#bulk').evaluate(el => { el.value = ''; el.dispatchEvent(new Event('input', { bubbles: true })); });
+      const row = page.locator('#mobileMoveRows .mobile-move-row').first();
+      await row.locator('select[id^="mobile_sets_"]').selectOption('4');
+      await row.locator('select[id^="mobile_reps_"]').selectOption('15');
+      await row.locator('select[id^="mobile_rest_"]').selectOption('75');
+      await page.locator('#mobileTargetSession').selectOption('2');
+      await row.locator('summary.mobile-exercise-summary').click();
+      await row.locator('.mobile-exercise-search').fill('پرس سینه دمبل');
+      const target = row.locator('.mobile-exercise-option').filter({ hasText: 'پرس سینه دمبل' }).first();
+      assert.equal(await target.isVisible(), true, 'search should show the matching movement');
+      assert.equal(await row.locator('.mobile-exercise-option').filter({ hasText: 'اسکوات هالتر' }).first().isVisible(), false, 'search should hide unrelated movements');
+      await target.locator('span').click();
+      const lines = (await page.locator('#bulk').inputValue()).split(String.fromCharCode(10)).filter(Boolean).map(line => line.split(String.fromCharCode(9)));
+      assert.equal(lines.length, 1, 'one normal movement should be appended');
+      assert.deepEqual(lines[0].slice(0, 7), ['پرس سینه دمبل', '2', 'عادی', '—', '4', '15', '75'], 'session and movement settings should be stored in the row');
+      await page.setViewportSize({ width: 1280, height: 900 });
+    });
+    await check('mobile composer blocks a session number that exceeds the configured workout sessions', async () => {
+      await page.setViewportSize({ width: 390, height: 844 });
+      await page.goto('http://127.0.0.1:4173/experiments/workout-template-planner.html');
+      await page.locator('#count').selectOption('1');
+      await page.locator('#bulk').evaluate(el => { el.value = ''; el.dispatchEvent(new Event('input', { bubbles: true })); });
+      await page.locator('#mobileTargetSession').selectOption('2');
+      const row = page.locator('#mobileMoveRows .mobile-move-row').first();
+      await row.locator('summary.mobile-exercise-summary').click();
+      await row.locator('.mobile-exercise-search').fill('پرس سینه دمبل');
+      await row.locator('.mobile-exercise-option').filter({ hasText: 'پرس سینه دمبل' }).first().locator('span').click();
+      assert.equal(await page.locator('#bulk').inputValue(), '', 'invalid session should not append a movement');
+      assert.ok((await page.locator('#mobileComposerStatus').innerText()).includes('تعداد جلسات برنامه'), 'the coach should be told to increase the configured session count');
+      await page.setViewportSize({ width: 1280, height: 900 });
+    });
     await check('gender-specific base, fat-loss, and muscle-building presets load the correct gender and session count', async () => {
       const presets = [
         { id: 'womenBase', gender: 'women', sessions: '3', move: 'هیپ تراست' },
