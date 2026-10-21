@@ -1086,6 +1086,37 @@ const assert = require('node:assert/strict');
         assert.ok(exported.text.includes('جلسه ' + count), count + '-session PNG should contain the final session heading');
       }
     });
+    await check('mobile picker automatically advances combo group labels and preserves plus-separated groups', async () => {
+      await page.setViewportSize({ width: 390, height: 844 });
+      await page.goto('http://127.0.0.1:4173/experiments/workout-template-planner.html');
+      await page.locator('#count').selectOption('2');
+      await page.locator('#bulk').fill('');
+      const rows = page.locator('#mobileMoveRows .mobile-move-row');
+      async function addCombo(rowIndex, system, names) {
+        const row = rows.nth(rowIndex);
+        await row.locator('select[id^="mobile_system_"]').selectOption(system);
+        await row.locator('summary.mobile-exercise-summary').click();
+        for (const name of names) {
+          await row.locator('.mobile-exercise-search').fill(name);
+          const option = row.locator('.mobile-exercise-option').filter({ hasText: name }).first();
+          await option.locator('input.mobile-exercise-check').evaluate(el => {
+            el.checked = true;
+            el.dispatchEvent(new Event('change', { bubbles: true }));
+          });
+        }
+      }
+      await addCombo(0, 'سوپرست', ['پرس سینه دمبل', 'پرس بالاسینه دمبل']);
+      await addCombo(1, 'سوپرست', ['قفسه سیم‌کش', 'قفسه دمبل']);
+      const lines = (await page.locator('#bulk').inputValue()).split(String.fromCharCode(10)).filter(Boolean).map(line => line.split(String.fromCharCode(9)));
+      assert.equal(lines.length, 4, 'two completed supersets should append exactly four movements');
+      assert.ok(lines.slice(0, 2).every(line => line[3] === 'A'), 'first superset should use group A');
+      assert.ok(lines.slice(2, 4).every(line => line[3] === 'B'), 'second superset in the same session should use group B');
+      await page.getByRole('button', { name: 'اعتبارسنجی و پیش‌نمایش' }).click();
+      const preview = await page.locator('#sessions').innerText();
+      assert.ok(preview.includes('پرس سینه دمبل + پرس بالاسینه دمبل'), 'first superset should render on one plus-separated line');
+      assert.ok(preview.includes('قفسه سیم‌کش + قفسه دمبل'), 'second superset should render on one plus-separated line');
+      await page.setViewportSize({ width: 1280, height: 900 });
+    });
     await check('women template selection updates explanatory hint', async () => {
       await page.locator('#gender').selectOption('women');
       assert.ok((await page.locator('#templateHint').innerText()).includes('قالب خانم‌ها'));
