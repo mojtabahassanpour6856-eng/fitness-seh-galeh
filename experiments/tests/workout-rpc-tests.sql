@@ -97,6 +97,42 @@ BEGIN
   BEGIN
     PERFORM public.experimental_save_trainee_workout(
       trainee, pid, snap_after->>'fingerprint',
+      '{"title":"Invalid system","plan_date":"2026-10-22"}'::jsonb,
+      '[{"exercise_id":1,"sets":1,"reps":"8","rest_seconds":30,"sort_order":1,"training_system":"made-up"}]'::jsonb
+    );
+  EXCEPTION WHEN SQLSTATE '22023' THEN failed := true;
+  END;
+  IF NOT failed THEN RAISE EXCEPTION 'FAIL: invalid training system accepted'; END IF;
+  RAISE NOTICE 'PASS: unsupported training system rejected';
+
+  failed := false;
+  BEGIN
+    PERFORM public.experimental_save_trainee_workout(
+      trainee, pid, snap_after->>'fingerprint',
+      '{"title":"Negative values","plan_date":"2026-10-22"}'::jsonb,
+      '[{"exercise_id":1,"sets":-1,"reps":"8","rest_seconds":30,"sort_order":1,"training_system":"normal"}]'::jsonb
+    );
+  EXCEPTION WHEN SQLSTATE '22023' THEN failed := true;
+  END;
+  IF NOT failed THEN RAISE EXCEPTION 'FAIL: negative sets accepted'; END IF;
+  RAISE NOTICE 'PASS: negative sets rejected';
+
+  failed := false;
+  BEGIN
+    PERFORM public.experimental_save_trainee_workout(
+      trainee, pid, snap_after->>'fingerprint',
+      '{"title":"Negative rest","plan_date":"2026-10-22"}'::jsonb,
+      '[{"exercise_id":1,"sets":1,"reps":"8","rest_seconds":-1,"sort_order":1,"training_system":"normal"}]'::jsonb
+    );
+  EXCEPTION WHEN SQLSTATE '22023' THEN failed := true;
+  END;
+  IF NOT failed THEN RAISE EXCEPTION 'FAIL: negative rest accepted'; END IF;
+  RAISE NOTICE 'PASS: negative rest rejected';
+
+  failed := false;
+  BEGIN
+    PERFORM public.experimental_save_trainee_workout(
+      trainee, pid, snap_after->>'fingerprint',
       '{"title":"Empty exercises","plan_date":"2026-10-22"}'::jsonb,
       '[]'::jsonb
     );
@@ -164,6 +200,40 @@ BEGIN
   END;
   IF NOT failed THEN RAISE EXCEPTION 'FAIL: unauthorized snapshot accepted'; END IF;
   RAISE NOTICE 'PASS: unauthorized snapshot rejected';
+
+  failed := false;
+  BEGIN
+    PERFORM public.experimental_workout_snapshot('22222222-2222-4222-8222-222222222222'::uuid);
+  EXCEPTION WHEN SQLSTATE '42501' THEN failed := true;
+  END;
+  IF NOT failed THEN RAISE EXCEPTION 'FAIL: snapshot for an inaccessible trainee accepted'; END IF;
+  RAISE NOTICE 'PASS: inaccessible trainee snapshot rejected';
+
+  failed := false;
+  BEGIN
+    PERFORM public.experimental_save_trainee_workout(
+      '22222222-2222-4222-8222-222222222222'::uuid, NULL,
+      'irrelevant-fingerprint',
+      '{"title":"Unauthorized","plan_date":"2026-10-22"}'::jsonb,
+      '[{"exercise_id":1,"sets":1,"reps":"8","rest_seconds":30,"sort_order":1,"training_system":"normal"}]'::jsonb
+    );
+  EXCEPTION WHEN SQLSTATE '42501' THEN failed := true;
+  END;
+  IF NOT failed THEN RAISE EXCEPTION 'FAIL: save for an inaccessible trainee accepted'; END IF;
+  RAISE NOTICE 'PASS: inaccessible trainee save rejected';
+
+  PERFORM set_config('test.is_coach', 'false', false);
+  failed := false;
+  BEGIN
+    PERFORM public.experimental_save_trainee_workout(
+      trainee, pid, 'irrelevant-fingerprint',
+      '{"title":"Non-coach save","plan_date":"2026-10-22"}'::jsonb,
+      '[{"exercise_id":1,"sets":1,"reps":"8","rest_seconds":30,"sort_order":1,"training_system":"normal"}]'::jsonb
+    );
+  EXCEPTION WHEN SQLSTATE '42501' THEN failed := true;
+  END;
+  IF NOT failed THEN RAISE EXCEPTION 'FAIL: non-coach save accepted'; END IF;
+  RAISE NOTICE 'PASS: non-coach save rejected';
 END
 $test$;
 RESET ROLE;
