@@ -1080,7 +1080,7 @@ const assert = require('node:assert/strict');
       await row.locator('.mobile-exercise-search').fill('پرس سینه دمبل');
       const target = row.locator('.mobile-exercise-option').filter({ hasText: 'پرس سینه دمبل' }).first();
       assert.equal(await target.isVisible(), true, 'search should show the matching movement');
-      assert.equal(await row.locator('.mobile-exercise-option').filter({ hasText: 'اسکوات هالتر' }).first().isVisible(), false, 'search should hide unrelated movements');
+      assert.equal(await row.locator('.mobile-exercise-option[data-name="اسکوات هالتر"]').evaluate(el => el.hidden), true, 'search should hide unrelated movements');
       await target.locator('span').click();
       const lines = (await page.locator('#bulk').inputValue()).split(String.fromCharCode(10)).filter(Boolean).map(line => line.split(String.fromCharCode(9)));
       assert.equal(lines.length, 1, 'one normal movement should be appended');
