@@ -135,6 +135,42 @@ const assert = require('node:assert/strict');
       const newRows = result.calls.find(c => c[0] === 'insert' && c[1] === 'trainee_workout_exercises')[2];
       assert.equal(newRows[0].workout_plan_id, 88);
     });
+    await check('Supabase save adapter restores the previous plan if replacing its movements fails', async () => {
+      const result = await page.evaluate(async () => {
+        const calls = [];
+        const oldPlan = {id:89,trainee_id:'test-trainee-uuid',title:'برنامه قدیمی',goal:'حفظ',notes:'یادداشت',plan_date:'2026-09-01'};
+        const oldExercise = {id:6,workout_plan_id:89,exercise_id:23,sets:2,reps:'10',rest_seconds:60,notes:null,sort_order:1,training_system:'normal',group_key:null,training_day:'جلسه 1',is_completed:false};
+        let movementInsertCount = 0;
+        const client = { from(table) { return {
+          select() {
+            if (table === 'exercises') return Promise.resolve({data:[{id:23,name:'اسکوات'}],error:null});
+            if (table === 'trainee_workout_plans') return {eq(){return this;},order(){return this;},limit(){return Promise.resolve({data:[oldPlan],error:null});}};
+            if (table === 'trainee_workout_exercises') return {eq(){return Promise.resolve({data:[oldExercise],error:null});}};
+          },
+          update(value) {
+            calls.push(['update',table,value]);
+            const q = {eq(){return this;},select(){return this;},single(){return Promise.resolve({data:{id:89},error:null});},then(resolve,reject){return Promise.resolve({data:null,error:null}).then(resolve,reject);}};
+            return q;
+          },
+          delete() { return {eq(col,id){calls.push(['delete',table,col,id]);return Promise.resolve({error:null});}}; },
+          insert(value) {
+            calls.push(['insert',table,value]);
+            if (table === 'trainee_workout_exercises' && movementInsertCount++ === 0) return Promise.resolve({error:{message:'simulated replacement failure'}});
+            return Promise.resolve({data:null,error:null});
+          }
+        }; }};
+        try {
+          await window.SehWorkoutPersistenceAdapter.saveToSupabase({supabase:client,traineeId:'test-trainee-uuid',planDate:'2026-10-21',title:'برنامه جدید',goal:'قدرت',trial:{sessions:1,moves:[{name:'اسکوات',session:1,system:'عادی',sets:3,reps:12,rest:45}]}});
+        } catch (e) { return {message:e.message,calls}; }
+        return {message:'',calls};
+      });
+      assert.match(result.message, /برنامه قبلی بازگردانده شد/);
+      const movementInserts = result.calls.filter(c => c[0] === 'insert' && c[1] === 'trainee_workout_exercises');
+      assert.equal(movementInserts.length, 2);
+      assert.equal(movementInserts[1][2][0].exercise_id, 23);
+      assert.equal(movementInserts[1][2][0].workout_plan_id, 89);
+      assert.equal(result.calls.filter(c => c[0] === 'update' && c[1] === 'trainee_workout_plans').length, 2);
+    });
     await check('Supabase save adapter refuses duplicate exercise names before any database write', async () => {
       const result = await page.evaluate(async () => {
         const writes = [];
