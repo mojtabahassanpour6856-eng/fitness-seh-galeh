@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>بررسی اتصال آزمایشی مربی | فیتنس سه‌قلعه</title>
+<style>
+:root{font-family:Tahoma,Arial,sans-serif;color:#302919;background:#faf7ef}body{max-width:900px;margin:0 auto;padding:16px}.card{background:#fff;border:1px solid #e2d4b5;border-radius:14px;padding:16px;margin:12px 0}h1{font-size:1.35rem;color:#8a6929}button{font:inherit;border:0;border-radius:9px;padding:11px 16px;background:#8a6929;color:white;cursor:pointer}.muted{color:#6f6a60;line-height:1.8}.status{white-space:pre-wrap;line-height:1.9}.ok{color:#28613a}.err{color:#a32921}input{font:inherit;border:1px solid #d8cdb7;border-radius:9px;padding:10px;width:min(100%,360px)}li{margin:8px 0}
+</style>
+</head>
+<body>
+<h1>فیتنس سه‌قلعه | آزمایش اتصال واقعی مربی</h1>
+<div class="card">
+<p class="muted">این صفحه فقط برای بررسی خواندن اطلاعات از نشست مربی است. در این مرحله هیچ برنامه‌ای ذخیره، ویرایش یا حذف نمی‌شود. برای خواندن نشست ورود، این صفحه باید روی همان مبدأ (origin) اپ اصلی میزبانی شود؛ بازکردن فایل دانلودی یا پیش‌نمایش شاخه‌ای جداگانه به نشست اپ دسترسی نخواهد داشت.</p>
+<button id="check" type="button">بررسی اتصال و برنامه شاگرد آزمایشی</button>
+<div id="status" class="status" role="status">هنوز بررسی شروع نشده است.</div>
+</div>
+<div class="card">
+<h2>محدوده بررسی</h2>
+<ul>
+<li>تأیید نشست واردشده در Supabase</li>
+<li>تأیید نقش مربی از جدول profiles</li>
+<li>یافتن شاگرد با نام «مجتبی حسن پور»</li>
+<li>خواندن تعداد برنامه‌ها و حرکات موجود</li>
+</ul>
+<p class="muted">این نسخه فقط خواندنی است و دکمه ذخیره ندارد.</p>
+</div>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49.1/dist/umd/supabase.min.js"></script>
+<script>
+(function(){
+'use strict';
+const URL='https://qfakyudgidsumeuoqoot.supabase.co';
+const KEY='sb_publishable_Z7-iwP8A1QQOlXpWIVtE2g_twXL-WNZ';
+const $=id=>document.getElementById(id);
+const client=window.supabase.createClient(URL,KEY);
+function say(message,kind){$('status').className='status '+(kind||'');$('status').textContent=message;}
+$('check').addEventListener('click',async()=>{
+ const btn=$('check');btn.disabled=true;say('در حال بررسی نشست... لطفاً صبر کن.');
+ try{
+  const {data:sessionData,error:sessionError}=await client.auth.getSession();
+  if(sessionError)throw sessionError;
+  const session=sessionData&&sessionData.session;
+  if(!session||!session.user){say('نشست ورود پیدا نشد. این معمولاً یعنی صفحه روی مبدأ جداگانه باز شده یا مربی در اپ اصلی وارد نشده است. هیچ داده‌ای تغییر نکرده است.','err');return;}
+  say('نشست پیدا شد؛ در حال بررسی نقش مربی...');
+  const {data:profiles,error:profileError}=await client.from('profiles').select('id,full_name,role').eq('id',session.user.id).limit(1);
+  if(profileError)throw profileError;
+  if(!profiles||!profiles.length||profiles[0].role!=='coach'){say('نقش مربی تأیید نشد. برای جلوگیری از دسترسی اشتباه، بررسی متوقف شد.','err');return;}
+  const {data:trainees,error:traineeError}=await client.from('trainees').select('id,full_name,approval_status,archived_at').ilike('full_name','مجتبی حسن پور').limit(20);
+  if(traineeError)throw traineeError;
+  const target=(trainees||[]).find(t=>String(t.full_name||'').normalize('NFKC').replace(/[\\u200c\\s]/g,'')==='مجتبیحسنپور');
+  if(!target){say('نشست مربی معتبر است، اما شاگرد با تطبیق نام دقیق پیدا نشد. هیچ داده‌ای تغییر نکرده است.','err');return;}
+  const {data:plans,error:plansError}=await client.from('trainee_workout_plans').select('id,title,plan_date,created_at').eq('trainee_id',target.id).order('created_at',{ascending:false}).limit(10);
+  if(plansError)throw plansError;
+  const planLines=[];
+  for(const plan of (plans||[])){
+   const {data:rows,error:rowsError}=await client.from('trainee_workout_exercises').select('id,exercise_id,sets,reps,rest_seconds,training_day,sort_order').eq('workout_plan_id',plan.id).order('sort_order',{ascending:true});
+   if(rowsError)throw rowsError;
+   planLines.push('• '+(plan.title||'برنامه تمرینی')+' | تاریخ: '+(plan.plan_date||'ثبت نشده')+' | حرکات: '+((rows||[]).length));
+  }
+  say('بررسی خواندنی موفق بود.\nنقش: مربی\nشاگرد: '+target.full_name+'\nتعداد برنامه‌ها: '+(plans||[]).length+'\n'+(planLines.join('\n')||'برنامه‌ای یافت نشد.')+'\n\nهیچ داده‌ای ذخیره یا تغییر داده نشد.','ok');
+ }catch(e){console.error(e);say('بررسی ناموفق بود: '+(e&&e.message?e.message:String(e))+'\nهیچ تغییری از این صفحه انجام نشده است.','err');}
+ finally{btn.disabled=false;}
+});
+})();
+</script>
+</body></html>
