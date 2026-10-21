@@ -991,18 +991,18 @@ const assert = require('node:assert/strict');
       ];
       for (const item of cases) {
         await page.goto('http://127.0.0.1:4173/experiments/workout-template-planner.html');
-        await page.locator('[data-step="planMoves"]').click();
-        await page.locator('#bulk').fill('');
-        const row = page.locator('.mobile-move-row').first();
+        await page.locator('#bulk').evaluate(el => { el.value = ''; el.dispatchEvent(new Event('input', { bubbles: true })); });
+        const row = page.locator('#mobileMoveRows .mobile-move-row').first();
         await row.locator('select[id^="mobile_system_"]').selectOption(item.system);
         await row.locator('summary.mobile-exercise-summary').click();
         for (const name of item.names) {
           await row.locator('.mobile-exercise-search').fill(name);
-          const option = row.locator('.mobile-exercise-option').filter({ hasText: name });
+          const option = row.locator('.mobile-exercise-option').filter({ has: row.locator('.mobile-exercise-option span').filter({ hasText: name }) }).first();
           if (item.system === 'عادی') await option.click();
           else await option.locator('input.mobile-exercise-check').check();
         }
-        const lines = (await page.locator('#bulk').inputValue()).split(String.fromCharCode(10)).filter(Boolean).map(line => line.split(String.fromCharCode(9)));
+        const raw = await page.locator('#bulk').evaluate(el => el.value);
+        const lines = raw.split(String.fromCharCode(10)).filter(Boolean).map(line => line.split(String.fromCharCode(9)));
         assert.equal(lines.length, item.names.length, item.system + ' should auto-add exactly the required number of movements');
         assert.deepEqual(lines.map(line => line[0]), item.names, item.system + ' should preserve selected movement order');
         assert.ok(lines.every(line => line[2] === item.system), item.system + ' should be stored on every selected movement');
