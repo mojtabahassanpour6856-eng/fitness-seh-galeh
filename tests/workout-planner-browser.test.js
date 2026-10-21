@@ -41,7 +41,7 @@ const assert = require('node:assert/strict');
       assert.ok((await page.locator('#sessions').innerText()).includes('پرس سینه دمبل + قفسه سیم‌کش'));
     });
     await check('quick entry appends a valid movement without manual tab formatting', async () => {
-      await page.locator('#bulk').fill('');
+      await page.locator('#bulk').evaluate(el => { el.value = ''; el.dispatchEvent(new Event('input', { bubbles: true })); });
       await page.locator('#count').selectOption('3');
       await page.locator('#quickSession').selectOption('2');
       await page.locator('#quickName').fill('پرس سینه آزمایشی');
