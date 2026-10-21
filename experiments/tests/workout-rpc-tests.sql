@@ -75,6 +75,21 @@ BEGIN
   IF n <> 2 THEN RAISE EXCEPTION 'FAIL: child rows were not rolled back, count %', n; END IF;
   RAISE NOTICE 'PASS: forced insert failure rolled back parent and children atomically';
 
+  -- A valid update after the rollback test must still succeed.
+  snap_after := public.experimental_workout_snapshot(trainee);
+  saved := public.experimental_save_trainee_workout(
+    trainee, pid, snap_after->>'fingerprint',
+    '{"title":"Updated test plan","goal":"hypertrophy","notes":"update succeeded","plan_date":"2026-10-22"}'::jsonb,
+    '[{"exercise_id":3,"sets":4,"reps":"12","rest_seconds":40,"sort_order":1,"training_system":"normal","training_day":"Session 1"}]'::jsonb
+  );
+  IF (saved->>'plan_id')::bigint <> pid THEN RAISE EXCEPTION 'FAIL: update changed plan identity'; END IF;
+  IF NOT EXISTS (SELECT 1 FROM public.trainee_workout_plans WHERE id = pid AND title = 'Updated test plan') THEN
+    RAISE EXCEPTION 'FAIL: valid update did not update plan metadata';
+  END IF;
+  SELECT count(*) INTO n FROM public.trainee_workout_exercises WHERE workout_plan_id = pid;
+  IF n <> 1 THEN RAISE EXCEPTION 'FAIL: valid update did not replace exercise rows'; END IF;
+  RAISE NOTICE 'PASS: valid update replaced plan metadata and exercises';
+
   PERFORM set_config('test.is_coach', 'false', false);
   failed := false;
   BEGIN
