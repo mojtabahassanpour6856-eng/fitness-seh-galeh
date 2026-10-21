@@ -34,7 +34,7 @@ check('RPC serializes saves for the same trainee and guards expected plan id', (
 check('SQL whitelist exactly covers the persistence adapter training-system values', () => {
   const adapterValues = [...adapter.matchAll(/^\s*['"][^'"]+['"]:\s*['"]([^'"]+)['"]/gm)]
     .map(match => match[1]);
-  const sqlWhitelistMatch = sql.match(/training_system\) not in \(([^)]+)\)/);
+  const sqlWhitelistMatch = sql.match(/coalesce\(e\.training_system,[^)]+\) not in \(([^)]+)\)/);
   assert.ok(sqlWhitelistMatch, 'SQL training-system whitelist must exist');
   const sqlValues = [...sqlWhitelistMatch[1].matchAll(/'([^']+)'/g)].map(match => match[1]);
   assert.deepEqual([...new Set(sqlValues)].sort(), [...new Set(adapterValues)].sort());
