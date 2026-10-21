@@ -981,6 +981,39 @@ const assert = require('node:assert/strict');
       assert.match(await page.locator('#workoutVersionStatus').innerText(), /ساختار فایل نسخه‌ها معتبر نیست/);
       assert.equal(await page.locator('#workoutVersionSelect option').count(), 2, 'invalid import should not change saved versions');
     });
+    await check('mobile exercise picker auto-adds the exact movement count for normal, superset, triset, and giant-set', async () => {
+      const cases = [
+        { system: 'عادی', names: ['پرس سینه دمبل'] },
+        { system: 'سوپرست', names: ['پرس سینه دمبل', 'پرس بالاسینه دمبل'] },
+        { system: 'تری‌ست', names: ['پرس سینه دمبل', 'پرس بالاسینه دمبل', 'قفسه سیم‌کش'] },
+        { system: 'جاینت‌ست', names: ['پرس سینه دمبل', 'پرس بالاسینه دمبل', 'قفسه سیم‌کش', 'قفسه دمبل'] }
+      ];
+      for (const item of cases) {
+        await page.goto('http://127.0.0.1:4173/experiments/workout-template-planner.html');
+        await page.locator('#bulk').fill('');
+        const row = page.locator('.mobile-move-row').first();
+        await row.locator('select[id^="mobile_system_"]').selectOption(item.system);
+        await row.locator('summary.mobile-exercise-summary').click();
+        for (const name of item.names) {
+          await row.locator('.mobile-exercise-search').fill(name);
+          const option = row.locator('.mobile-exercise-option').filter({ hasText: name });
+          if (item.system === 'عادی') await option.click();
+          else await option.locator('input.mobile-exercise-check').check();
+        }
+        const lines = (await page.locator('#bulk').inputValue()).split(String.fromCharCode(10)).filter(Boolean).map(line => line.split(String.fromCharCode(9)));
+        assert.equal(lines.length, item.names.length, item.system + ' should auto-add exactly the required number of movements');
+        assert.deepEqual(lines.map(line => line[0]), item.names, item.system + ' should preserve selected movement order');
+        assert.ok(lines.every(line => line[2] === item.system), item.system + ' should be stored on every selected movement');
+        if (item.system === 'عادی') {
+          assert.ok(lines.every(line => line[3] === '—'), 'normal movement should not receive a combination group');
+        } else {
+          assert.ok(lines.every(line => line[3] === 'A'), item.system + ' movements should share one automatically assigned group');
+        }
+        assert.ok((await row.locator('summary.mobile-exercise-summary').innerText()).includes(item.names[item.names.length - 1]), 'picker summary should keep the last added exercise name');
+        assert.equal(await row.locator('.mobile-exercise-check:checked').count(), 0, 'checkboxes should reset after auto-add');
+        assert.equal(await row.locator('details.mobile-exercise-picker').evaluate(el => el.open), false, 'picker should close after auto-add');
+      }
+    });
     await check('women template selection updates explanatory hint', async () => {
       await page.locator('#gender').selectOption('women');
       assert.ok((await page.locator('#templateHint').innerText()).includes('قالب خانم‌ها'));
