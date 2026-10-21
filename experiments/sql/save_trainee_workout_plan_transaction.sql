@@ -2,7 +2,7 @@
 -- Atomic workout-plan save prototype for the isolated editor experiment.
 -- SECURITY INVOKER is intentional: RLS and table grants must still apply.
 -- Signature changes replace the old four-argument draft overload in a clean migration.
-drop function if exists public.save_trainee_workout_plan_transaction(uuid, bigint, jsonb, jsonb);
+drop function if exists public.save_trainee_workout_plan_transaction(uuid, bigint, jsonb, jsonb, jsonb);
 -- One RPC call runs in one PostgreSQL transaction; any raised exception rolls it all back.
 
 
@@ -256,5 +256,5 @@ $function$;
 -- this function is SECURITY INVOKER. Review these grants and schema exposure
 -- before deployment; this draft is not applied to the live database.
 revoke all on function public.save_trainee_workout_plan_transaction(uuid, bigint, jsonb, jsonb, jsonb) from public;
-revoke all on function public.save_trainee_workout_plan_transaction(uuid, bigint, jsonb, jsonb) from anon;
-grant execute on function public.save_trainee_workout_plan_transaction(uuid, bigint, jsonb, jsonb) to authenticated;
+revoke all on function public.save_trainee_workout_plan_transaction(uuid, bigint, jsonb, jsonb, jsonb) from anon;
+grant execute on function public.save_trainee_workout_plan_transaction(uuid, bigint, jsonb, jsonb, jsonb) to authenticated;
