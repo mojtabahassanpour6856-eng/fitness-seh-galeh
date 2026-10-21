@@ -997,7 +997,7 @@ const assert = require('node:assert/strict');
         await row.locator('summary.mobile-exercise-summary').click();
         for (const name of item.names) {
           await row.locator('.mobile-exercise-search').fill(name);
-          const option = row.locator('.mobile-exercise-option').filter({ has: row.locator('.mobile-exercise-option span').filter({ hasText: name }) }).first();
+          const option = row.locator('.mobile-exercise-option').filter({ hasText: name }).first();
           if (item.system === 'عادی') await option.click();
           else await option.locator('input.mobile-exercise-check').check();
         }
