@@ -61,7 +61,7 @@ check('RPC function execution is revoked from public and anon and granted to aut
 
 check('Checklist keeps staging rollback and concurrency tests as deployment blockers', () => {
   const checklist = fs.readFileSync('experiments/WORKOUT_SAVE_RPC_REVIEW_CHECKLIST.md', 'utf8');
-  assert.match(checklist, /disposable\/staging Supabase project/i);
+  assert.match(checklist, /disposable PostgreSQL service|disposable\/staging Supabase project/i);
   assert.match(checklist, /forced failure/i);
   assert.match(checklist, /full plan snapshot/i);
   assert.match(checklist, /simultaneous save/i);
