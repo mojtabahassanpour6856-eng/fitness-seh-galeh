@@ -27,21 +27,25 @@ SNAPSHOT="$(psql "${DB_ARGS[@]}" -At -c "${AUTH_SETUP} SELECT public.experimenta
 PLAN_ID="$(printf '%s\n' "${SNAPSHOT}" | python3 -c 'import json,sys; print(json.loads(sys.stdin.read().strip().splitlines()[-1])["plan_id"])')"
 FINGERPRINT="$(printf '%s\n' "${SNAPSHOT}" | python3 -c 'import json,sys; print(json.loads(sys.stdin.read().strip().splitlines()[-1])["fingerprint"])')"
 
+# Use a shell placeholder instead of psql variables: psql does not interpolate
+# variables inside SQL passed via -c.
 SAVE_SQL="SELECT public.experimental_save_trainee_workout(
   '${TRAINEE}'::uuid,
   '${PLAN_ID}'::bigint,
   '${FINGERPRINT}',
-  jsonb_build_object('title', :'new_title', 'goal', 'concurrency-test', 'notes', null, 'plan_date', '2026-10-22'),
+  jsonb_build_object('title', '__TITLE__', 'goal', 'concurrency-test', 'notes', null, 'plan_date', '2026-10-22'),
   '[{\"exercise_id\":1,\"sets\":3,\"reps\":\"8\",\"rest_seconds\":60,\"sort_order\":1,\"training_system\":\"normal\",\"training_day\":\"Session 1\"}]'::jsonb
 );"
 
 # Both writers use the same snapshot. Writer A pauses inside its UPDATE while
 # holding the advisory lock; writer B must wait, then fail the stale snapshot check.
-psql "${DB_ARGS[@]}" -At -v new_title='Concurrent writer A' -c "${AUTH_SETUP} SELECT set_config('test.slow_update','true',false); ${SAVE_SQL}" > /tmp/workout-writer-a.log 2>&1 &
+SAVE_A="${SAVE_SQL/__TITLE__/Concurrent writer A}"
+psql "${DB_ARGS[@]}" -At -c "${AUTH_SETUP} SELECT set_config('test.slow_update','true',false); ${SAVE_A}" > /tmp/workout-writer-a.log 2>&1 &
 A_PID=$!
 sleep 1
+SAVE_B="${SAVE_SQL/__TITLE__/Concurrent writer B}"
 set +e
-psql "${DB_ARGS[@]}" -At -v new_title='Concurrent writer B' -c "${AUTH_SETUP} SELECT set_config('test.slow_update','false',false); ${SAVE_SQL}" > /tmp/workout-writer-b.log 2>&1
+psql "${DB_ARGS[@]}" -At -c "${AUTH_SETUP} SELECT set_config('test.slow_update','false',false); ${SAVE_B}" > /tmp/workout-writer-b.log 2>&1
 B_STATUS=$?
 wait "${A_PID}"
 A_STATUS=$?
