@@ -155,10 +155,9 @@ const assert = require('node:assert/strict');
             delete() { return {eq(column,id) { window.__coachSaveCalls.push({table:'rollback',column,id}); return Promise.resolve({error:null}); }}; }
           }; }};
         });
-        const [child] = await Promise.all([
-          browser.waitForEvent('page'),
-          parent.evaluate(() => window.open('/experiments/workout-template-planner.html', '_blank'))
-        ]);
+        const childPromise = parent.waitForEvent('popup');
+        await parent.evaluate(() => window.open('/experiments/workout-template-planner.html', '_blank'));
+        const child = await childPromise;
         await child.waitForLoadState('domcontentloaded');
         await child.locator('#bulk').fill('پرس سینه دمبل\t1\tسوپرست\tA\t3\t12\t60\nقفسه سیم‌کش\t1\tسوپرست\tA\t3\t12\t60');
         await child.locator('#count').selectOption('1');
