@@ -29,6 +29,8 @@
  .mobile-bottom .pill{white-space:nowrap;font-size:.74rem;text-align:center}
  #mobileComposerStatus{font-size:.8rem;margin-bottom:0}
  #planMoves{display:none!important}
+ #workoutVersionsCard{display:none!important}
+ #planMoves ~ section.card:not(#planPreview){display:none!important}
  #planSetup{padding:12px}
  #planSetup h2{font-size:1.05rem}
  #planSetup .row{display:grid;grid-template-columns:1fr 1fr;gap:7px}
@@ -73,7 +75,7 @@
  <p class="muted mobile-hint">حرکت را از بانک انتخاب کن؛ سیستم، ست، تکرار و استراحت را لمس کن. تا ۹ حرکت را با هم انتخاب کن.</p>
  <div id="mobileMoveRows" class="mobile-move-rows"></div>
  <div class="mobile-bottom"><span id="mobileSelectedCount" class="pill">۰ از ۹ حرکت انتخاب شده</span><button id="mobileAddToSession" type="button">افزودن همه به جلسه</button></div>
- <p id="mobileComposerStatus" class="status muted" role="status" aria-live="polite"></p>
+ <button id="mobilePreviewButton" type="button" class="secondary" style="width:100%;margin-top:8px">بازبینی خروجی برنامه</button><p id="mobileComposerStatus" class="status muted" role="status" aria-live="polite"></p>
 </section>
 <section class="card" id="planMoves"><h2>۲) ورود گروهی حرکات</h2><p>هر حرکت را در یک خط وارد کن. حالت پیشرفته با Tab جدا می‌شود: <span class="pill">نام حرکت · جلسه · سیستم · گروه · ست · تکرار · استراحت</span></p>
 <p class="muted">نمونه را می‌توانی ویرایش کنی؛ ستون جلسه از ۱ شروع می‌شود. برای سیستم عادی، گروه را با — پر کن.</p>
@@ -238,6 +240,7 @@ function buildMobileComposer(){
 }
 function updateMobileCount(){const count=[...document.querySelectorAll('.mobile-exercise-select')].filter(x=>x.value).length;if($('mobileSelectedCount'))$('mobileSelectedCount').textContent=count+' از ۹ حرکت انتخاب شده';}
 $('mobileTemplate').addEventListener('change',buildMobileComposer);
+$('mobilePreviewButton').addEventListener('click',()=>{render();$('planPreview').scrollIntoView({behavior:'smooth',block:'start'});});
 $('mobileAddToSession').addEventListener('click',()=>{
  const selected=[...document.querySelectorAll('.mobile-move-row')].map(row=>({name:row.querySelector('.mobile-exercise-select').value,system:row.querySelector('[id^="mobile_system_"]').value,sets:row.querySelector('[id^="mobile_sets_"]').value,reps:row.querySelector('[id^="mobile_reps_"]').value,rest:row.querySelector('[id^="mobile_rest_"]').value})).filter(m=>m.name);
  if(!selected.length){$('mobileComposerStatus').textContent='ابتدا حداقل یک حرکت را از بانک انتخاب کن.';return;}
