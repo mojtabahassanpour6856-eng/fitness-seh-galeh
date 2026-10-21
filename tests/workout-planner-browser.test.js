@@ -1605,6 +1605,55 @@ const assert = require('node:assert/strict');
       assert.ok(capture.text.includes('سوپرست الف + سوپرست ب'), 'PNG composition should keep the superset joined with plus separators');
       assert.ok(capture.text.includes('مربی: مجتبی'), 'PNG composition should retain the coach footer');
     });
+    await check('saved workout versions survive a full page reload and remain loadable', async () => {
+      await page.setViewportSize({ width: 1280, height: 900 });
+      await page.locator('#count').selectOption('2');
+      await page.locator('#gender').selectOption('men');
+      await page.locator('#bulk').fill([
+        ['نسخه پایدار پرس پا', '1', 'عادی', '—', '4', '12', '75'],
+        ['نسخه پایدار لت', '2', 'عادی', '—', '3', '10', '60']
+      ].map(row => row.join(String.fromCharCode(9))).join(String.fromCharCode(10)));
+      await page.getByRole('button', { name: 'اعتبارسنجی و پیش‌نمایش' }).click();
+      await page.locator('#workoutVersionName').fill('پایداری پس از بارگذاری');
+      await page.locator('#saveWorkoutVersion').click();
+      assert.match(await page.locator('#workoutVersionStatus').innerText(), /ذخیره شد/);
+      await page.reload();
+      const persistedValue = await page.locator('#workoutVersionSelect option').evaluateAll(options => options.find(option => option.textContent.includes('پایداری پس از بارگذاری'))?.value || '');
+      assert.ok(persistedValue, 'saved version should remain available after reloading the page');
+      await page.locator('#workoutVersionSelect').selectOption(persistedValue);
+      await page.locator('#loadWorkoutVersion').click();
+      assert.equal(await page.locator('#count').inputValue(), '2');
+      assert.equal(await page.locator('#gender').inputValue(), 'men');
+      assert.ok((await page.locator('#bulk').inputValue()).includes('نسخه پایدار پرس پا'));
+      assert.ok((await page.locator('#bulk').inputValue()).includes('نسخه پایدار لت'));
+      assert.ok((await page.locator('#sessions').innerText()).includes('نسخه پایدار لت'), 'persisted version should restore its second-session preview');
+    });
+    await check('import rejects invalid session bounds and keeps the existing version library intact', async () => {
+      const before = await page.locator('#workoutVersionSelect option').count();
+      const invalidPayload = {
+        format: 'fitness-seh-galeh-workout-versions',
+        version: 1,
+        versions: [{
+          id: 'invalid-session-bound',
+          name: 'نسخه با جلسه نامعتبر',
+          createdAt: Date.now(),
+          gender: 'men',
+          sessions: 7,
+          moves: [{ name: 'حرکت نامعتبر', session: 7, system: 'عادی', group: '—', sets: 3, reps: 12, rest: 60 }]
+        }]
+      };
+      await page.evaluate(async payload => {
+        const input = document.querySelector('#workoutVersionsFile');
+        const transfer = new DataTransfer();
+        transfer.items.add(new File([JSON.stringify(payload)], 'invalid-session-bound.json', { type: 'application/json' }));
+        input.files = transfer.files;
+        input.dispatchEvent(new Event('change', { bubbles: true }));
+      }, invalidPayload);
+      await page.waitForFunction(() => document.querySelector('#workoutVersionStatus').textContent.includes('نسخه معتبر'));
+      assert.match(await page.locator('#workoutVersionStatus').innerText(), /نسخه معتبر و قابل واردکردنی پیدا نشد/);
+      assert.equal(await page.locator('#workoutVersionSelect option').count(), before, 'invalid import should not delete or add any saved version');
+      assert.equal(await page.locator('#workoutVersionSelect option').evaluateAll(options => options.some(option => option.textContent.includes('نسخه با جلسه نامعتبر'))), false);
+    });
     await check('women template selection updates explanatory hint', async () => {
       await page.locator('#gender').selectOption('women');
       assert.ok((await page.locator('#templateHint').innerText()).includes('قالب خانم‌ها'));
