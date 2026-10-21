@@ -1,5 +1,6 @@
 const { chromium } = require('playwright');
 const assert = require('node:assert/strict');
+const fs = require('node:fs');
 
 (async () => {
   const browser = await chromium.launch({ headless: true });
@@ -11,6 +12,16 @@ const assert = require('node:assert/strict');
   }
   try {
     await page.goto('http://127.0.0.1:4173/experiments/workout-template-planner.html');
+    await check('coach app exposes an explicit same-origin launch bridge without changing trainee-facing files', async () => {
+      const coachApp = fs.readFileSync('fitness_seh_galeh_FINAL_CLEAN2.html', 'utf8');
+      const planner = fs.readFileSync('experiments/workout-template-planner.html', 'utf8');
+      assert.match(coachApp, /openWorkoutPlannerExperiment/);
+      assert.match(coachApp, /window\.getWorkoutPlannerContext\s*=\s*function/);
+      assert.match(coachApp, /experiments\/workout-template-planner\.html/);
+      assert.match(planner, /window\.opener\.getWorkoutPlannerContext\(\)/);
+      assert.doesNotMatch(planner, /window\.opener\.eval\(/, 'planner must not use eval to read coach state');
+      assert.match(planner, /verifyLiveAccess/);
+    });
     await check('persistence adapter maps a validated trial to the existing database schema without writing to the database', async () => {
       const payload = await page.evaluate(() => window.SehWorkoutPersistenceAdapter.buildPayload({
         traineeId: 'trainee-test-17',
