@@ -281,7 +281,7 @@ function buildMobileComposer(){
     $('bulk').value=lines.join('\n');
     renderMoveManager();render();
     const justAdded=checked.map(item=>item.value);
-    lastAddedSummary=justAdded.join(' + ');
+    lastAddedSummary=justAdded.join(' + ');lastAddedCount=justAdded.length;
     $('mobileComposerStatus').textContent=system==='عادی'?'حرکت «'+cb.value+'» فوراً به جلسه '+session+' اضافه شد.':checked.length+' حرکت به‌صورت '+system+' گروه '+group+' فوراً به جلسه '+session+' اضافه شد.';
     checks.querySelectorAll('.mobile-exercise-check').forEach(item=>item.checked=false);
     picker.open=false;
@@ -305,8 +305,8 @@ function buildMobileComposer(){
    });
   });
   menu.append(search,checks);picker.append(summary,menu);
-  let lastAddedSummary='';
-  function updatePickerSummary(){const picked=[...checks.querySelectorAll('.mobile-exercise-check:checked')].map(x=>x.value);summary.textContent=(i+1)+'. '+(picked.length?picked.join(' + '):(lastAddedSummary||'انتخاب حرکت'))+' ('+picked.length+(lastAddedSummary&&!picked.length?' · ثبت شد':'')+')';}
+  let lastAddedSummary='';let lastAddedCount=0;
+  function updatePickerSummary(){const picked=[...checks.querySelectorAll('.mobile-exercise-check:checked')].map(x=>x.value);const label=picked.length?picked.join(' + '):(lastAddedSummary||'انتخاب حرکت');const countText=picked.length?(picked.length+' انتخاب‌شده'):(lastAddedSummary?('ثبت شد؛ '+lastAddedCount+' حرکت'):'0 انتخاب‌شده');summary.textContent=(i+1)+'. '+label+' ('+countText+')';}
   picker.updatePickerSummary=updatePickerSummary;
   const del=document.createElement('button');del.type='button';del.className='mobile-delete';del.textContent='🗑';del.setAttribute('aria-label','پاک‌کردن حرکت‌های ردیف '+(i+1));del.addEventListener('click',()=>{checks.querySelectorAll('.mobile-exercise-check').forEach(x=>x.checked=false);updatePickerSummary();updateMobileCount();});
   head.append(picker,del);
