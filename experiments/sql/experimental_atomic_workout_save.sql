@@ -47,9 +47,13 @@ begin
     v_fingerprint := md5(jsonb_build_object('plan', v_plan, 'exercises', v_exercises)::text);
   end if;
 
+  -- Return the authorized snapshot data as well as its concurrency token,
+  -- so the experimental editor can load existing plan metadata and exercise rows.
   return jsonb_build_object(
     'plan_id', v_plan_id,
     'plan_count', v_plan_count,
+    'plan', v_plan,
+    'exercises', v_exercises,
     'fingerprint', v_fingerprint
   );
 end;
