@@ -160,7 +160,6 @@ const assert = require('node:assert/strict');
         const child = await childPromise;
         await child.waitForLoadState('domcontentloaded');
         await child.locator('#bulk').fill('پرس سینه دمبل\t1\tسوپرست\tA\t3\t12\t60\nقفسه سیم‌کش\t1\tسوپرست\tA\t3\t12\t60');
-        await child.locator('#count').selectOption('1');
         await child.locator('#validate').click();
         await child.locator('#sendToCoachApp').click();
         await child.waitForFunction(() => document.getElementById('status')?.textContent.includes('برنامه با موفقیت در پایگاه داده ثبت شد'));
