@@ -306,7 +306,7 @@ function buildMobileComposer(){
   });
   menu.append(search,checks);picker.append(summary,menu);
   let lastAddedSummary='';let lastAddedCount=0;
-  function updatePickerSummary(){const picked=[...checks.querySelectorAll('.mobile-exercise-check:checked')].map(x=>x.value);const label=picked.length?picked.join(' + '):(lastAddedSummary||'انتخاب حرکت');const countText=picked.length?(picked.length+' انتخاب‌شده'):(lastAddedSummary?('ثبت شد؛ '+lastAddedCount+' حرکت'):'0 انتخاب‌شده');summary.textContent=(i+1)+'. '+label+' ('+countText+')';}
+  function updatePickerSummary(){const picked=[...checks.querySelectorAll('.mobile-exercise-check:checked')].map(x=>x.value);const label=picked.length?picked.join(' + '):(lastAddedSummary||'انتخاب حرکت');summary.textContent=(i+1)+'. '+label;}
   picker.updatePickerSummary=updatePickerSummary;
   const del=document.createElement('button');del.type='button';del.className='mobile-delete';del.textContent='🗑';del.setAttribute('aria-label','پاک‌کردن حرکت‌های ردیف '+(i+1));del.addEventListener('click',()=>{checks.querySelectorAll('.mobile-exercise-check').forEach(x=>x.checked=false);updatePickerSummary();updateMobileCount();});
   head.append(picker,del);
