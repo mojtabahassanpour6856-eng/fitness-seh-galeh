@@ -142,6 +142,7 @@ begin
        or x.sort_order is null or x.sort_order < 1
        or x.sets is null or x.sets < 0
        or x.rest_seconds is null or x.rest_seconds < 0
+       or x.training_system is null
        or x.training_system not in ('normal','superset','triset','giant','drop-set')
   ) then
     raise exception 'invalid exercise row or unknown exercise id' using errcode = '22023';
