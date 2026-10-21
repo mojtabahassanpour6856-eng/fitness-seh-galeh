@@ -79,6 +79,21 @@
     });
     return { plan, exercises, metadata: { gender: String(trial.gender || ''), sessions: Number(trial.sessions), exercise_count: exercises.length } };
   }
+  function workoutRowsForRestore(rows, planId) {
+    return (rows || []).map(row => ({
+      workout_plan_id: planId,
+      exercise_id: row.exercise_id,
+      sets: row.sets,
+      reps: row.reps,
+      rest_seconds: row.rest_seconds,
+      notes: row.notes,
+      sort_order: row.sort_order,
+      training_system: row.training_system,
+      group_key: row.group_key,
+      training_day: row.training_day,
+      is_completed: row.is_completed
+    }));
+  }
   async function saveToSupabase(input) {
     const value = input || {};
     const client = value.supabase;
@@ -100,17 +115,48 @@
         return ids.length === 1 ? ids[0] : null;
       }
     }));
-    const planResult = await client.from('trainee_workout_plans').insert(payload.plan).select('id').single();
-    if (planResult.error || !planResult.data || planResult.data.id === undefined) fail('ذخیره مشخصات برنامه ناموفق بود: ' + (planResult.error && planResult.error.message || 'شناسه برنامه برنگشت.'));
-    const planId = planResult.data.id;
+    const existingResult = await client.from('trainee_workout_plans')
+      .select('id,trainee_id,title,goal,notes,plan_date')
+      .eq('trainee_id', value.traineeId)
+      .order('plan_date', { ascending: false, nullsFirst: false })
+      .order('created_at', { ascending: false })
+      .limit(1);
+    if (existingResult.error) fail('بررسی برنامه قبلی شاگرد ناموفق بود: ' + existingResult.error.message);
+    const existing = (existingResult.data || [])[0] || null;
+    let planId, oldExercises = [], oldPlan = null, createdNewPlan = false;
+    if (existing) {
+      planId = existing.id;
+      oldPlan = { title: existing.title, goal: existing.goal, notes: existing.notes, plan_date: existing.plan_date, trainee_id: existing.trainee_id };
+      const oldRowsResult = await client.from('trainee_workout_exercises').select('*').eq('workout_plan_id', planId);
+      if (oldRowsResult.error) fail('خواندن حرکات برنامه قبلی ناموفق بود؛ برنامه قبلی دست‌نخورده باقی ماند: ' + oldRowsResult.error.message);
+      oldExercises = oldRowsResult.data || [];
+      const updateResult = await client.from('trainee_workout_plans').update(payload.plan).eq('id', planId).eq('trainee_id', value.traineeId).select('id').single();
+      if (updateResult.error || !updateResult.data) fail('به‌روزرسانی مشخصات برنامه ناموفق بود: ' + (updateResult.error && updateResult.error.message || 'برنامه قابل تأیید نبود.'));
+      const deleteResult = await client.from('trainee_workout_exercises').delete().eq('workout_plan_id', planId);
+      if (deleteResult.error) {
+        const restorePlan = await client.from('trainee_workout_plans').update(oldPlan).eq('id', planId).eq('trainee_id', value.traineeId);
+        fail('پاک‌سازی حرکات قدیمی ناموفق بود: ' + deleteResult.error.message + (restorePlan.error ? ' همچنین بازگردانی مشخصات قبلی نیازمند بررسی است.' : ' مشخصات قبلی بازگردانده شد.'));
+      }
+    } else {
+      const planResult = await client.from('trainee_workout_plans').insert(payload.plan).select('id').single();
+      if (planResult.error || !planResult.data || planResult.data.id === undefined) fail('ذخیره مشخصات برنامه ناموفق بود: ' + (planResult.error && planResult.error.message || 'شناسه برنامه برنگشت.'));
+      planId = planResult.data.id;
+      createdNewPlan = true;
+    }
     const rows = payload.exercises.map(row => Object.assign({}, row, { workout_plan_id: planId }));
     const exerciseResult = await client.from('trainee_workout_exercises').insert(rows);
     if (exerciseResult.error) {
-      const rollback = await client.from('trainee_workout_plans').delete().eq('id', planId);
-      const suffix = rollback.error ? ' توجه: حذف برنامه ناقص هم ناموفق شد و باید در پنل مربی بررسی شود.' : ' برنامه ناقص پاک شد.';
-      fail('ذخیره حرکات برنامه ناموفق بود: ' + exerciseResult.error.message + '.' + suffix);
+      if (createdNewPlan) {
+        const rollback = await client.from('trainee_workout_plans').delete().eq('id', planId);
+        const suffix = rollback.error ? ' توجه: حذف برنامه ناقص هم ناموفق شد و باید در پنل مربی بررسی شود.' : ' برنامه ناقص پاک شد.';
+        fail('ذخیره حرکات برنامه ناموفق بود: ' + exerciseResult.error.message + '.' + suffix);
+      }
+      const restoredRows = await client.from('trainee_workout_exercises').insert(workoutRowsForRestore(oldExercises, planId));
+      const restoredPlan = await client.from('trainee_workout_plans').update(oldPlan).eq('id', planId).eq('trainee_id', value.traineeId);
+      const rollbackFailed = restoredRows.error || restoredPlan.error;
+      fail('ذخیره حرکات جدید ناموفق بود: ' + exerciseResult.error.message + (rollbackFailed ? '. هشدار: بازگردانی کامل برنامه قبلی تأیید نشد؛ لطفاً برنامه این شاگرد را بررسی کن.' : '. برنامه قبلی بازگردانده شد.'));
     }
-    return { planId, exerciseCount: rows.length, traineeId: value.traineeId };
+    return { planId, exerciseCount: rows.length, traineeId: value.traineeId, updatedExistingPlan: !createdNewPlan };
   }
   root.SehWorkoutPersistenceAdapter = Object.freeze({ buildPayload, saveToSupabase, normalizeName, normalizePlanDate });
 })(typeof window !== 'undefined' ? window : globalThis);
