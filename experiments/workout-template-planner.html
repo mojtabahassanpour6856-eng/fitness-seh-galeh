@@ -256,7 +256,33 @@ function buildMobileComposer(){
    cb.addEventListener('change',()=>{
     const system=card.querySelector('[id^="mobile_system_"]').value,limit=system==='عادی'?1:system==='سوپرست'?2:system==='تری‌ست'?3:4;
     const checked=[...checks.querySelectorAll('.mobile-exercise-check:checked')];
-    if(cb.checked&&checked.length>limit){cb.checked=false;$('mobileComposerStatus').textContent='برای '+system+' حداکثر '+limit+' حرکت می‌توانی انتخاب کنی.';}
+    if(cb.checked&&checked.length>limit){cb.checked=false;$('mobileComposerStatus').textContent='برای '+system+' حداکثر '+limit+' حرکت می‌توانی انتخاب کنی.';updatePickerSummary();updateMobileCount();return;}
+    updatePickerSummary();updateMobileCount();
+    // انتخاب عادی همان لحظه ثبت می‌شود؛ سیستم‌های ترکیبی پس از تکمیل تعداد لازم ثبت می‌شوند.
+    if(!cb.checked)return;
+    if(system!=='عادی'&&checked.length<limit)return;
+    const session=Number($('mobileTargetSession').value);
+    if(session>n()){$('mobileComposerStatus').textContent='جلسه انتخابی بیشتر از تعداد جلسات برنامه است؛ تعداد جلسات را در تنظیم برنامه افزایش بده.';return;}
+    const sets=card.querySelector('[id^="mobile_sets_"]').value;
+    const reps=card.querySelector('[id^="mobile_reps_"]').value;
+    const rest=card.querySelector('[id^="mobile_rest_"]').value;
+    let group='—';
+    if(system!=='عادی'){
+     const groupSelect=card.querySelector('[id^="mobile_group_"]');
+     group=groupSelect.value;
+     if(group==='—'){
+      const used=new Set(rawLines().map(line=>{const p=line.split('\t');return Number(p[1])===session&&p[2]===system?p[3]:'';}).filter(Boolean));
+      group=['A','B','C','D'].find(letter=>!used.has(letter))||'A';
+      groupSelect.value=group;
+     }
+    }
+    const lines=rawLines();
+    checked.forEach(item=>lines.push([item.value,session,system,group,sets,reps,rest].join('\t')));
+    $('bulk').value=lines.join('\n');
+    renderMoveManager();render();
+    $('mobileComposerStatus').textContent=system==='عادی'?'حرکت «'+cb.value+'» فوراً به جلسه '+session+' اضافه شد.':checked.length+' حرکت به‌صورت '+system+' گروه '+group+' فوراً به جلسه '+session+' اضافه شد.';
+    checks.querySelectorAll('.mobile-exercise-check').forEach(item=>item.checked=false);
+    picker.open=false;
     updatePickerSummary();updateMobileCount();
    });
    label.addEventListener('click',event=>{
