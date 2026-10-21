@@ -186,7 +186,7 @@ begin
  if (r->>'exercise_count')::integer <> 1 then raise exception 'empty existing plan replacement failed'; end if;
  select title into v_old_title from public.trainee_workout_plans where id=v_empty_plan_id;
  if v_old_title <> 'empty-plan-replaced' then raise exception 'empty existing plan title not updated'; end if;
-end $;
+end $$;
 
 reset role;
 select 'PASS: PostgreSQL integration tests including forced transaction rollback' as result;
