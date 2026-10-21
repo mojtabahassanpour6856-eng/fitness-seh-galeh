@@ -9,6 +9,8 @@ on:
       - 'experiments/workout-persistence-adapter.js'
       - 'tests/workout-planner-browser.test.js'
       - 'tests/workout-save-sql-draft.test.js'
+      - 'tests/postgres-workout-save.integration.sql'
+      - 'tests/postgres-workout-save-fixture.sql'
       - 'experiments/sql/save_trainee_workout_plan_transaction.sql'
       - 'experiments/WORKOUT_SAVE_RPC_REVIEW_CHECKLIST.md'
       - '.github/workflows/test-workout-planner-browser.yml'
@@ -33,3 +35,35 @@ jobs:
         run: python3 -m http.server 4173 --directory . >/tmp/workout-planner-http.log 2>&1 &
       - name: Test planner in Chromium
         run: node tests/workout-planner-browser.test.js
+
+  postgres-integration-test:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: workout_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d workout_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+    env:
+      PGPASSWORD: postgres
+      PGHOST: localhost
+      PGPORT: 5432
+      PGUSER: postgres
+      PGDATABASE: workout_test
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install PostgreSQL client
+        run: sudo apt-get update && sudo apt-get install -y postgresql-client
+      - name: Build disposable PostgreSQL fixture
+        run: psql -v ON_ERROR_STOP=1 -f tests/postgres-workout-save-fixture.sql
+      - name: Install draft function in disposable PostgreSQL only
+        run: psql -v ON_ERROR_STOP=1 -f experiments/sql/save_trainee_workout_plan_transaction.sql
+      - name: Test save, replacement, authorization, invalid exercise, and rollback
+        run: psql -v ON_ERROR_STOP=1 -f tests/postgres-workout-save.integration.sql
