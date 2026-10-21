@@ -137,6 +137,7 @@
 <section class="card"><h2>۳) قالب‌های آماده و ذخیره قالب شخصی</h2><p class="muted">این قابلیت آزمایشی است و با اپ اصلی یا پایگاه داده ارتباط ندارد.</p><div class="row"><div class="field"><label for="preset">قالب آماده</label><select id="preset"><option value="chest">سینه + پشت بازو</option><option value="back">پشت + جلو بازو</option><option value="legs">پا</option><option value="shoulders">سرشانه + شکم</option><option value="four">تقسیم چهارروزه</option><option value="five">تقسیم پنج‌روزه</option><option value="womenBase">قالب پایه بانوان (۳ جلسه)</option><option value="menBase">قالب پایه آقایان (۴ جلسه)</option><option value="womenFatLoss">چربی‌سوزی بانوان (۳ جلسه)</option><option value="womenMuscle">عضله‌سازی بانوان (۴ جلسه)</option><option value="menFatLoss">کاهش وزن آقایان (۳ جلسه)</option><option value="menMuscle">عضله‌سازی آقایان (۴ جلسه)</option><option value="beginner">شروع مبتدی (۲ جلسه)</option></select></div><button id="applyPreset" type="button">بارگذاری قالب آماده</button></div><hr><div class="row"><div class="field"><label for="customName">نام قالب شخصی</label><input id="customName" placeholder="مثلاً برنامه حجم ۴ روزه"></div><div class="field"><label for="templateGoal">هدف قالب</label><select id="templateGoal"><option value="general">عمومی</option><option value="fatloss">چربی‌سوزی / کاهش وزن</option><option value="muscle">عضله‌سازی / افزایش حجم</option><option value="strength">افزایش قدرت</option></select></div><div class="field"><label for="templateLevel">سطح قالب</label><select id="templateLevel"><option value="beginner">مبتدی</option><option value="intermediate">متوسط</option><option value="advanced">پیشرفته</option></select></div><button id="saveTemplate" type="button">ذخیره با نام دلخواه</button><button id="saveCurrentAsTemplate" type="button">ساخت قالب از برنامه فعلی</button></div><div class="row"><div class="field"><label for="templateSearch">جست‌وجوی قالب</label><input id="templateSearch" type="search" placeholder="نام قالب را بنویس…"></div><div class="field"><label for="templateGenderFilter">جنسیت</label><select id="templateGenderFilter"><option value="all">همه</option><option value="women">بانوان</option><option value="men">آقایان</option></select></div><div class="field"><label for="templateGoalFilter">فیلتر هدف</label><select id="templateGoalFilter"><option value="all">همه هدف‌ها</option><option value="general">عمومی</option><option value="fatloss">چربی‌سوزی / کاهش وزن</option><option value="muscle">عضله‌سازی / افزایش حجم</option><option value="strength">افزایش قدرت</option></select></div><div class="field"><label for="templateLevelFilter">فیلتر سطح</label><select id="templateLevelFilter"><option value="all">همه سطح‌ها</option><option value="beginner">مبتدی</option><option value="intermediate">متوسط</option><option value="advanced">پیشرفته</option></select></div><div class="field"><label for="templateSessionFilter">تعداد جلسات</label><select id="templateSessionFilter"><option value="all">همه</option><option value="2">۲ جلسه</option><option value="3">۳ جلسه</option><option value="4">۴ جلسه</option><option value="5">۵ جلسه</option><option value="6">۶ جلسه</option></select></div></div><div class="row"><button id="exportTemplates" type="button">خروجی گرفتن از همه قالب‌ها</button><button id="importTemplates" type="button" class="secondary">وارد کردن قالب‌ها از فایل</button><input id="templateImportFile" type="file" accept=".json,application/json" hidden></div><div class="row"><div class="field"><label for="savedTemplates">قالب‌های ذخیره‌شده</label><select id="savedTemplates"><option value="">— انتخاب قالب —</option></select></div><button id="loadTemplate" type="button" class="secondary">بارگذاری</button><button id="deleteTemplate" type="button" class="danger">حذف</button></div><div id="templateStatus" class="status" role="status"></div></section>
 <section class="card" id="planPreview"><h2>۴) پیش‌نمایش جلسات</h2><div class="row no-print" style="margin:8px 0 14px"><button id="downloadWorkoutImageButton" type="button">دانلود عکس برنامه (PNG)</button><span class="muted">خروجی تصویریِ خود برنامه، بدون دکمه‌ها و بخش‌های اضافی.</span></div><div id="programSummary" class="program-summary" aria-live="polite"><p class="muted">برای دیدن خلاصه، پیش‌نمایش را بزن.</p></div><div id="sessions" class="sessions"><p class="muted">برای دیدن جلسات، پیش‌نمایش را بزن.</p></div></section>
 <script src="./workout-persistence-adapter.js"></script>
+ <script src="./atomic-workout-rpc-adapter.js"></script>
 <script>
 (function(){
 const $=id=>document.getElementById(id);
@@ -544,37 +545,55 @@ $('downloadWorkoutImageButton').addEventListener('click',async()=>{
  finally{if(stage)stage.remove();button.disabled=false;button.textContent=oldText;}
 });
 $('export').addEventListener('click',()=>{render();const data=window.__trial;if(data.errors.length){$('status').textContent+='\nابتدا خطاها را اصلاح کن تا خروجی گرفته شود.';return;}const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='fitness-seh-galeh-workout-trial.json';a.click();URL.revokeObjectURL(a.href);});
- $('sendToCoachApp').addEventListener('click',async()=>{
-    render();const data=window.__trial;
+ // Capture the concurrency baseline as soon as this editor page opens.
+  // If the selected trainee changes in the parent window, saving is blocked.
+  const atomicEditorBaselinePromise = (async () => {
+    try {
+      if (!window.opener || window.opener.closed) return { error: 'این صفحه از پنل مربی باز نشده است؛ برای ذخیره، طراح را از داخل پنل مربی باز کن.' };
+      if (window.opener.location.origin !== location.origin) return { error: 'پنل مربی باید در همین دامنه باز باشد.' };
+      if (typeof window.opener.getWorkoutPlannerContext !== 'function') return { error: 'پل ارتباطی پنل مربی پیدا نشد؛ از دکمه طراحی سریع داخل پنل وارد شو.' };
+      const context = window.opener.getWorkoutPlannerContext();
+      const client = context && context.supabase;
+      const traineeId = context && context.traineeId;
+      if (!client || typeof client.rpc !== 'function' || typeof client.from !== 'function') return { error: 'اتصال احرازشده پنل مربی پیدا نشد؛ ابتدا وارد پنل مربی شو.' };
+      if (!traineeId) return { error: 'ابتدا یک شاگرد را در پنل مربی انتخاب کن.' };
+      if (!window.SehAtomicWorkoutAdapter) return { error: 'ماژول ذخیره اتمی بارگذاری نشده است؛ صفحه را تازه‌سازی کن.' };
+      const snapshot = await window.SehAtomicWorkoutAdapter.captureSnapshot({ supabase: client, traineeId });
+      return { client, traineeId: String(traineeId), snapshot };
+    } catch (e) {
+      return { error: e && e.message ? e.message : String(e) };
+    }
+  })();
+
+  $('sendToCoachApp').addEventListener('click',async()=>{
+    render();
+    const data=window.__trial;
     if(data.errors.length){$('status').textContent='ابتدا خطاهای برنامه را اصلاح کن.';return;}
-    if(!window.opener||window.opener.closed){$('status').textContent='این صفحه از پنل مربی باز نشده است؛ از داخل پنل مربی وارد شو.';return;}
-    let parentDoc,client,traineeId;
+    const button=$('sendToCoachApp'),oldText=button.textContent;
+    button.disabled=true;button.textContent='در حال ذخیره اتمی برنامه…';
     try{
-      if(window.opener.location.origin!==location.origin)throw new Error('پنل مربی باید در همین دامنه باز باشد.');
-      if(typeof window.opener.getWorkoutPlannerContext!=='function')throw new Error('پل ارتباطی پنل مربی پیدا نشد؛ از دکمه طراحی سریع داخل پنل وارد شو.');
-      parentDoc=window.opener.document;
-      const context=window.opener.getWorkoutPlannerContext();
-      client=context&&context.supabase;
-      traineeId=context&&context.traineeId;
-    }catch(e){$('status').textContent='دسترسی امن به پنل مربی ممکن نشد: '+(e.message||String(e));return;}
-    if(!client||typeof client.from!=='function'){$('status').textContent='اتصال احرازشده پنل مربی پیدا نشد؛ ابتدا وارد پنل مربی شو.';return;}
-    if(!traineeId){$('status').textContent='ابتدا یک شاگرد را در پنل مربی انتخاب کن.';return;}
-    const title=String(parentDoc.getElementById('workoutTitle')?.value||'').trim()||'برنامه تمرینی';
-    const planDate=String(parentDoc.getElementById('workoutStartDate')?.value||'').trim()||new Date().toISOString().slice(0,10);
-    const goal=String(parentDoc.getElementById('workoutGoal')?.value||'').trim();
-    const notes=String(parentDoc.getElementById('workoutNotes')?.value||'').trim();
-    const button=$('sendToCoachApp'),oldText=button.textContent;button.disabled=true;button.textContent='در حال ذخیره امن برنامه…';
-    try{
-      if(!window.SehWorkoutPersistenceAdapter)throw new Error('ماژول ذخیره برنامه بارگذاری نشده است؛ صفحه را تازه‌سازی کن.');
-      const liveCheck=await window.SehWorkoutPersistenceAdapter.verifyLiveAccess({supabase:client,traineeId});
+      const baseline=await atomicEditorBaselinePromise;
+      if(!baseline||baseline.error)throw new Error(baseline&&baseline.error||'نسخه اولیه برنامه در دسترس نیست؛ طراح را دوباره از پنل مربی باز کن.');
+      if(!window.opener||window.opener.closed)throw new Error('پنل مربی بسته شده است؛ هیچ تغییری ذخیره نشد.');
+      const currentContext=window.opener.getWorkoutPlannerContext();
+      if(!currentContext||String(currentContext.traineeId)!==baseline.traineeId)throw new Error('شاگرد انتخاب‌شده در پنل مربی تغییر کرده است؛ برای جلوگیری از ذخیره روی شاگرد اشتباه، طراح را ببند و دوباره باز کن.');
+      const parentDoc=window.opener.document;
+      const liveCheck=await window.SehWorkoutPersistenceAdapter.verifyLiveAccess({supabase:baseline.client,traineeId:baseline.traineeId});
       if(liveCheck.planCount>1)throw new Error('شاگرد بیش از یک برنامه دارد؛ برای جلوگیری از ترکیب حرکات قدیمی، هیچ تغییری ذخیره نشد. ابتدا برنامه‌های قبلی را بررسی کن.');
-      const saved=await window.SehWorkoutPersistenceAdapter.saveToSupabase({supabase:client,traineeId,planDate,title,goal,notes,trial:data});
-      if(window.opener.closed)throw new Error('پنل مربی هنگام ذخیره بسته شد.');
+      const title=String(parentDoc.getElementById('workoutTitle')?.value||'').trim()||'برنامه تمرینی';
+      const planDate=String(parentDoc.getElementById('workoutStartDate')?.value||'').trim()||new Date().toISOString().slice(0,10);
+      const goal=String(parentDoc.getElementById('workoutGoal')?.value||'').trim();
+      const notes=String(parentDoc.getElementById('workoutNotes')?.value||'').trim();
+      const saved=await window.SehAtomicWorkoutAdapter.saveAtomically({
+        supabase:baseline.client,traineeId:baseline.traineeId,snapshot:baseline.snapshot,
+        planDate,title,goal,notes,trial:data
+      });
+      if(window.opener.closed)throw new Error('پنل مربی هنگام ذخیره بسته شد؛ وضعیت ذخیره را در پنل مربی بررسی کن.');
       if(typeof window.opener.loadWorkoutForClient==='function')await window.opener.loadWorkoutForClient();
-      $('status').textContent='برنامه با موفقیت در پایگاه داده ثبت شد: '+saved.exerciseCount+' حرکت برای شاگرد انتخاب‌شده. شناسه برنامه: '+saved.planId;
+      $('status').textContent='برنامه به‌صورت اتمی ذخیره شد: '+saved.exerciseCount+' حرکت برای شاگرد انتخاب‌شده. شناسه برنامه: '+saved.planId;
     }catch(e){$('status').textContent='ذخیره برنامه انجام نشد: '+(e.message||String(e));}
     finally{button.disabled=false;button.textContent=oldText;}
   });
-hint();
+  hint();
 })();
 </script></body></html>
