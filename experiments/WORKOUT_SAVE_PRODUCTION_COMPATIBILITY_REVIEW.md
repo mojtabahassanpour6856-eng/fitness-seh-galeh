@@ -49,11 +49,12 @@ Do not modify the existing production writer as part of this review because the 
 
 ## Items still unverified — deployment blockers
 
-1. The live database's exact EXECUTE/USAGE grants for `private.is_coach()` and `private.can_access_trainee(uuid)` were not conclusively verified in this review. The function is `SECURITY INVOKER`; do not weaken RLS or switch to `SECURITY DEFINER` to work around a permission error.
+1. Read-only audit verified helper schema/function grants for `authenticated` and `anon`. The proposed RPC's own grants have not been installed or tested live because the RPC does not exist there. Do not weaken RLS or switch the proposed RPC to `SECURITY DEFINER` to work around a permission error.
 2. The draft has not been installed or run against the live Supabase database, and no separate Supabase staging project was created (to avoid charges).
-3. The browser editor/legacy adapter is not yet wired to call this RPC or pass `p_expected_snapshot`. Do not enable the experimental save button against real trainees.
-4. Live RLS behavior must be verified with the actual coach session and actual grants in a separate disposable environment before any production migration is considered.
-5. After any changes to the RPC or fixture, all CI jobs must finish successfully; a running workflow is not a passing workflow.
+3. The experimental editor now has a single-writer fail-closed guard and passes the expected snapshot to the atomic adapter only when an explicit context opt-in is true. The current coach context does not enable that opt-in, so no live save path is active.
+4. Live RLS behavior, trigger interaction, and a real authenticated coach-session save must be verified in a disposable environment before any production migration is considered. The disposable fixture is not a complete copy of the live security configuration.
+5. The legacy production REST writer does not use the RPC advisory lock; it must not race with RPC saves. A controlled all-at-once writer migration or a separately designed shared concurrency protocol remains mandatory.
+6. After any changes to the RPC or fixture, all CI jobs must finish successfully; a running workflow is not a passing workflow.
 
 ## Safe rollback plan for a future approved rollout
 
@@ -67,4 +68,4 @@ Preconditions: a reviewed migration, a known-good Git commit for the app, and an
 
 ## Decision
 
-**Not ready for production.** Schema column names/types appear compatible, but grants/RLS compatibility and application RPC wiring remain unverified. Production database and student-facing interface were not changed in this review.
+**Not ready for production.** Target columns and helper grants appear compatible based on read-only inspection, and the experimental editor is fail-closed. Live authenticated RPC/RLS/trigger behavior and the legacy-writer concurrency blocker remain unresolved. Production database and student-facing interface were not changed in this review.
