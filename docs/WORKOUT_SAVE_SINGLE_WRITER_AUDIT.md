@@ -94,3 +94,18 @@ This check confirms only column/type/trigger presence. It does **not** validate 
 ### Audit outcome
 
 The source-level mutation paths have now been enumerated and classified above. This **does not** clear the transfer gate: authenticated integration tests against a separate project are still unavailable; the actual schema/RLS/trigger behavior for the RPC has not been verified in staging; the database gate has not been security-reviewed; and the production-derived prototype is not a clean, tested patch based on the current `main` head. No production app, production database, trainee UI, or trainee data was changed. No merge or deployment is authorized.
+
+
+### Read-only RLS policy and table-grant check (2026-10-22)
+
+A separate, read-only query of `pg_policies` and `information_schema.role_table_grants` confirmed:
+
+- `trainee_workout_plans` has authenticated SELECT policy `private.can_access_trainee(trainee_id)`; INSERT requires both `private.is_coach()` and `private.can_access_trainee(trainee_id)`; UPDATE and DELETE are coach + trainee-scope restricted.
+- `trainee_workout_exercises` SELECT checks access through its parent plan; INSERT/UPDATE/DELETE require coach status and access to the parent plan. The existing update guard trigger separately protects the trainee completion-only update behavior.
+- `exercises` is readable to authenticated users; writes are coach-policy restricted.
+- The `authenticated` role currently has SELECT/INSERT/UPDATE/DELETE table grants on all three tables. The `anon` role did not appear in the filtered grant results.
+- No policies, grants, functions, or rows were changed by these queries.
+
+**Impact on RPC review:** SECURITY INVOKER is directionally appropriate because the RPC should remain subject to caller privileges and these RLS policies. However, this is not yet proof the function will succeed: the draft performs SELECT, INSERT, UPDATE, and DELETE on both workout tables, so each operation must be exercised as a real authenticated coach session in a separate project. In particular, confirm that the parent-plan RLS checks work during exercise-row replacement and that all row-level writes are permitted under the live policies. The current disposable PostgreSQL CI fixture is a simulated policy/trigger environment, not a substitute for a real Supabase authenticated-session integration test.
+
+This finding does not authorize installation of the RPC or a write gate. The direct table grants and existing legacy writers mean a server-enforced gate still needs a complete cutover design; installing only the RPC would not prevent old clients from writing directly.
