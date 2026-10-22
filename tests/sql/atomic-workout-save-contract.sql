@@ -35,16 +35,16 @@ create table public.trainee_workout_plans (
   notes text
 );
 
-create table public.exercise_library (
+create table public.exercises (
   id bigint primary key,
   name text not null
 );
-insert into public.exercise_library(id, name) values (101, 'Test squat'), (102, 'Test row');
+insert into public.exercises(id, name) values (101, 'Test squat'), (102, 'Test row');
 
 create table public.trainee_workout_exercises (
   id bigint primary key,
   workout_plan_id bigint not null references public.trainee_workout_plans(id) on delete cascade,
-  exercise_id bigint not null references public.exercise_library(id),
+  exercise_id bigint not null references public.exercises(id),
   sets integer,
   reps text,
   rest_seconds integer,
@@ -85,7 +85,7 @@ begin
 end $$;
 
 -- Verify update replaces the complete list and preserves grouped/day metadata.
-do $
+do $$
 declare
   v_plan_id bigint;
   n integer;
@@ -106,10 +106,34 @@ begin
   if not exists(select 1 from public.trainee_workout_plans where id=v_plan_id and title='Contract test updated' and plan_date='2026-10-23') then
     raise exception 'header update assertion failed';
   end if;
+end $$;
 
+-- Invalid exercise FK must roll back both header changes and child-list replacement.
+do $$
+declare
+  v_plan_id bigint;
+  n integer;
+  v_title text;
+begin
+  select id, title into v_plan_id, v_title from public.trainee_workout_plans where title='Contract test updated';
+  begin
+    perform public.save_trainee_workout_plan_atomic(
+      v_plan_id,
+      '{"trainee_id":"bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb","title":"Should roll back","plan_date":"2026-10-24"}'::jsonb,
+      '[{"exercise_id":999999,"sets":3,"reps":"10","sort_order":1}]'::jsonb
+    );
+    raise exception 'invalid exercise unexpectedly saved';
+  exception when foreign_key_violation then
+    null;
+  end;
+  select title into v_title from public.trainee_workout_plans where id=v_plan_id;
+  if v_title <> 'Contract test updated' then raise exception 'header was not rolled back'; end if;
+  select count(*) into n from public.trainee_workout_exercises where workout_plan_id=v_plan_id;
+  if n <> 2 then raise exception 'child rows were not rolled back; expected 2, got %', n; end if;
+end $$;
 
--- Empty full list is valid and clears all exercise rows atomically.
-do $
+-- Empty full list is valid and clears all exercise rows.
+do $$
 declare v_plan_id bigint; n integer;
 begin
   select id into v_plan_id from public.trainee_workout_plans where title='Contract test updated';
@@ -120,7 +144,7 @@ begin
   );
   select count(*) into n from public.trainee_workout_exercises where workout_plan_id=v_plan_id;
   if n <> 0 then raise exception 'empty exercise list did not clear rows'; end if;
-end $;
+end $$;
 
 -- Reject a coach attempting to access a different trainee.
 do $$
