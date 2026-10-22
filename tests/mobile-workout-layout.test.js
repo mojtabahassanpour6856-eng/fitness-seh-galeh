@@ -47,14 +47,14 @@ const assert = require('node:assert/strict');
     await page.locator('#mobileTargetSession').selectOption('2');
     const secondRow = page.locator('#mobileMoveRows .mobile-move-row').nth(1);
     await secondRow.locator('summary.mobile-exercise-summary').click();
-    await secondRow.locator('.mobile-exercise-search').fill('لت سیم‌کش');
-    await secondRow.locator('.mobile-exercise-option[data-name="لت سیم‌کش"] span').click();
+    await secondRow.locator('.mobile-exercise-search').fill('قایقی سیم‌کش');
+    await secondRow.locator('.mobile-exercise-option[data-name="قایقی سیم‌کش"] span').click();
     await page.locator('#mobileAddToSession').click();
 
     await page.locator('#mobilePreviewButton').click();
     const beforeSave = await page.locator('#sessions').innerText();
     assert.ok(beforeSave.includes('پرس سینه دمبل'), 'first movement should appear in the preview');
-    assert.ok(beforeSave.includes('لت سیم‌کش'), 'second movement should appear in the preview');
+    assert.ok(beforeSave.includes('قایقی سیم‌کش'), 'second movement should appear in the preview');
     assert.ok(beforeSave.includes('جلسه ۱') && beforeSave.includes('جلسه ۲'),
       'preview should show both workout sessions');
 
@@ -80,12 +80,12 @@ const assert = require('node:assert/strict');
 
     const restoredPreview = await page.locator('#sessions').innerText();
     assert.ok(restoredPreview.includes('پرس سینه دمبل'), 'first movement should restore after a full reload');
-    assert.ok(restoredPreview.includes('لت سیم‌کش'), 'second movement should restore after a full reload');
+    assert.ok(restoredPreview.includes('قایقی سیم‌کش'), 'second movement should restore after a full reload');
     assert.ok(restoredPreview.includes('جلسه ۱') && restoredPreview.includes('جلسه ۲'),
       'restored plan should preserve its separate session assignments');
     const restoredBulk = await page.locator('#bulk').inputValue();
     assert.match(restoredBulk, /پرس سینه دمبل\t1\tعادی\t—\t3\t12\t60/);
-    assert.match(restoredBulk, /لت سیم‌کش\t2\tعادی\t—\t3\t12\t60/);
+    assert.match(restoredBulk, /قایقی سیم‌کش\t2\tعادی\t—\t3\t12\t60/);
     console.log('PASS: 320px phone workflow validates blank names and saves/reloads/restores a multi-session workout');
   } finally {
     await browser.close();
