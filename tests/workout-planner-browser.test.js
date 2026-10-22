@@ -46,6 +46,63 @@ const fs = require('node:fs');
       assert.equal(payload.exercises[0].exercise_id, 101);
       assert.equal(payload.exercises[0].workout_plan_id, undefined);
     });
+    await check('atomic RPC adapter is disabled by default and performs no request', async () => {
+      const result = await page.evaluate(async () => {
+        let calls = 0;
+        const client = { from() { calls++; throw new Error('unexpected read'); }, rpc() { calls++; throw new Error('unexpected RPC'); } };
+        let message = '';
+        try {
+          await window.SehWorkoutPersistenceAdapter.saveToSupabaseAtomic({ supabase: client, traineeId: 'trainee-test-17' });
+        } catch (e) { message = e.message; }
+        return { calls, message };
+      });
+      assert.equal(result.calls, 0);
+      assert.match(result.message, /هنوز فعال نشده/);
+    });
+    await check('atomic RPC adapter builds an exact stale-snapshot guard without real database writes', async () => {
+      const result = await page.evaluate(async () => {
+        const traineeId = 'trainee-test-17';
+        const plan = { id: 5, trainee_id: traineeId, title: 'برنامه قبلی', goal: null, notes: null, plan_date: '2026-10-21', created_at: '2026-10-21T10:00:00Z' };
+        const exercise = { id: 9, workout_plan_id: 5, exercise_id: 101, sets: 3, reps: '10', rest_seconds: 60, notes: null, sort_order: 1, training_system: 'normal', group_key: null, training_day: 'جلسه 1', is_completed: false };
+        const tables = {
+          exercises: [{ id: 101, name: 'اسکوات' }],
+          trainee_workout_plans: [plan],
+          trainee_workout_exercises: [exercise]
+        };
+        let rpcCall = null;
+        const client = {
+          from(table) {
+            const query = {
+              select() { return query; }, eq() { return query; }, order() { return query; }, limit() { return query; },
+              then(resolve, reject) { return Promise.resolve({ data: tables[table] || [], error: null }).then(resolve, reject); }
+            };
+            return query;
+          },
+          async rpc(name, args) {
+            rpcCall = { name, args };
+            return { data: { plan_id: 5, trainee_id: traineeId, exercise_count: 1, updated_existing_plan: true, plan_snapshot: { plan: { id: 5 }, exercises: [exercise] } }, error: null };
+          }
+        };
+        const saved = await window.SehWorkoutPersistenceAdapter.saveToSupabaseAtomic({
+          enableAtomicRpc: true, supabase: client, traineeId, planDate: '2026-10-22',
+          title: 'برنامه جدید', trial: { gender: 'men', sessions: 1, errors: [], moves: [
+            { name: 'اسکوات', session: 1, system: 'عادی', group: '—', sets: 4, reps: '12', rest: 90 }
+          ] }
+        });
+        return { rpcCall, saved };
+      });
+      assert.equal(result.rpcCall.name, 'save_trainee_workout_plan_transaction');
+      assert.equal(result.rpcCall.args.p_trainee_id, 'trainee-test-17');
+      assert.equal(result.rpcCall.args.p_expected_plan_id, 5);
+      assert.deepEqual(result.rpcCall.args.p_expected_snapshot, {
+        plan: { id: 5, title: 'برنامه قبلی', plan_date: '2026-10-21', goal: null, notes: null },
+        exercises: [{ id: 9, exercise_id: 101, sets: 3, reps: '10', rest_seconds: 60, notes: null, sort_order: 1, training_system: 'normal', group_key: null, training_day: 'جلسه 1', is_completed: false }]
+      });
+      assert.equal(result.rpcCall.args.p_plan.title, 'برنامه جدید');
+      assert.equal(result.rpcCall.args.p_exercises[0].exercise_id, 101);
+      assert.equal(result.saved.exerciseCount, 1);
+      assert.equal(result.saved.updatedExistingPlan, true);
+    });
     await check('persistence adapter refuses to build a payload without a selected trainee', async () => {
       const message = await page.evaluate(() => {
         try { window.SehWorkoutPersistenceAdapter.buildPayload({ planDate: '2026-10-21', trial: { sessions: 1, moves: [{ name: 'اسکوات', session: 1, system: 'عادی', sets: 3, rest: 60 }] }, resolveExerciseId: () => 103 }); }
