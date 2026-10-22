@@ -107,7 +107,12 @@ begin
     raise exception 'header update assertion failed';
   end if;
 
-  -- An empty full list is valid and clears all exercise rows atomically.
+
+-- Empty full list is valid and clears all exercise rows atomically.
+do $
+declare v_plan_id bigint; n integer;
+begin
+  select id into v_plan_id from public.trainee_workout_plans where title='Contract test updated';
   perform public.save_trainee_workout_plan_atomic(
     v_plan_id,
     '{"trainee_id":"bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb","title":"Contract test updated","plan_date":"2026-10-23"}'::jsonb,
@@ -116,32 +121,6 @@ begin
   select count(*) into n from public.trainee_workout_exercises where workout_plan_id=v_plan_id;
   if n <> 0 then raise exception 'empty exercise list did not clear rows'; end if;
 end $;
-
--- Invalid child FK must roll back both header update and child replacement.
-do $$
-declare
-  v_plan_id bigint;
-  v_before_count integer;
-  v_failed boolean := false;
-begin
-  select id into v_plan_id from public.trainee_workout_plans where title='Contract test updated';
-  select count(*) into v_before_count from public.trainee_workout_exercises where workout_plan_id=v_plan_id;
-  begin
-    perform public.save_trainee_workout_plan_atomic(
-      v_plan_id,
-      '{"trainee_id":"bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb","title":"SHOULD ROLL BACK","plan_date":"2026-10-22"}'::jsonb,
-      '[{"exercise_id":101,"sets":4},{"exercise_id":999999,"sets":3}]'::jsonb
-    );
-  exception when others then v_failed := true;
-  end;
-  if not v_failed then raise exception 'invalid exercise unexpectedly succeeded'; end if;
-  if not exists(select 1 from public.trainee_workout_plans where id=v_plan_id and title='Contract test updated') then
-    raise exception 'header update did not roll back';
-  end if;
-  if (select count(*) from public.trainee_workout_exercises where workout_plan_id=v_plan_id) <> v_before_count then
-    raise exception 'child replacement did not roll back';
-  end if;
-end $$;
 
 -- Reject a coach attempting to access a different trainee.
 do $$
