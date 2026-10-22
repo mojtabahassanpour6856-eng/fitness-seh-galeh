@@ -313,4 +313,69 @@ begin
  if not found then raise exception 'coach update was not applied in trigger test'; end if;
 end $trigger_guard$;
 
-select 'PASS: PostgreSQL integration tests, rollback, and exercise-update trigger guard' as result;
+
+
+-- Production-shaped RLS parity: active trainee may read only their own scope.
+-- The disposable helper uses profile/ownership fields when use_live_identity=on.
+set role authenticated;
+select set_config('test.use_live_identity', 'on', false);
+select set_config('request.jwt.claim.sub', 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb', false);
+do $rls_trainee$
+declare
+  v_count integer;
+  v_failed boolean := false;
+  v_plan_id bigint;
+begin
+  select count(*) into v_count from public.trainee_workout_plans
+   where trainee_id='11111111-1111-4111-8111-111111111111';
+  if v_count < 1 then raise exception 'active trainee could not read own workout plan'; end if;
+
+  select count(*) into v_count from public.trainee_workout_plans
+   where trainee_id='22222222-2222-4222-8222-222222222222';
+  if v_count <> 0 then raise exception 'trainee read another trainee workout plan'; end if;
+
+  select count(*) into v_count
+    from public.trainee_workout_exercises e
+    join public.trainee_workout_plans p on p.id=e.workout_plan_id
+   where p.trainee_id='11111111-1111-4111-8111-111111111111';
+  if v_count < 1 then raise exception 'active trainee could not read own workout exercises'; end if;
+
+  select count(*) into v_count
+    from public.trainee_workout_exercises e
+    join public.trainee_workout_plans p on p.id=e.workout_plan_id
+   where p.trainee_id='22222222-2222-4222-8222-222222222222';
+  if v_count <> 0 then raise exception 'trainee read another trainee workout exercises'; end if;
+
+  select id into v_plan_id from public.trainee_workout_plans
+   where trainee_id='11111111-1111-4111-8111-111111111111' limit 1;
+  begin
+    perform public.save_trainee_workout_plan_transaction(
+      '11111111-1111-4111-8111-111111111111', v_plan_id, null,
+      '{"title":"unauthorized trainee save","plan_date":"2026-10-27"}'::jsonb,
+      '[{"exercise_id":101,"sets":3,"reps":"10","rest_seconds":60,"sort_order":1,"training_day":"جلسه اول"}]'::jsonb
+    );
+  exception when others then v_failed := true;
+  end;
+  if not v_failed then raise exception 'trainee unexpectedly invoked coach-only RPC'; end if;
+end $rls_trainee$;
+reset role;
+
+-- A different coach cannot write a plan for a trainee outside their assignment.
+set role authenticated;
+select set_config('request.jwt.claim.sub', 'dddddddd-dddd-4ddd-8ddd-dddddddddddd', false);
+select set_config('test.use_live_identity', 'on', false);
+do $rls_wrong_coach$
+declare
+  v_failed boolean := false;
+begin
+  begin
+    insert into public.trainee_workout_plans(trainee_id,title,plan_date)
+    values ('11111111-1111-4111-8111-111111111111','cross-tenant write','2026-10-27');
+  exception when others then v_failed := true;
+  end;
+  if not v_failed then raise exception 'unassigned coach wrote another coach trainee plan'; end if;
+end $rls_wrong_coach$;
+reset role;
+
+
+select 'PASS: PostgreSQL integration tests, rollback, trigger guard, and trainee RLS scope' as result;
