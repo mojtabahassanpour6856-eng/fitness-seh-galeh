@@ -4268,7 +4268,13 @@ window.toggleExerciseFavorite=async function(id,value){try{await sbWrite(`/train
     // Lock before any await, including plan creation, to prevent duplicate taps.
     window.__workoutAddBusy=true;
     if(!same(workoutPlanOwnerId,traineeId)||!currentWorkoutPlanId){
-      await window.saveWorkoutPlan();
+      try{
+        await window.saveWorkoutPlan();
+      }catch(saveError){
+        window.__workoutAddBusy=false;
+        alert('ذخیره برنامه پیش از افزودن حرکات انجام نشد. دوباره تلاش کنید.\\n'+(saveError?.message||String(saveError)));
+        return;
+      }
       if(!same(currentTraineeId(),traineeId)||!same(workoutPlanOwnerId,traineeId)||!currentWorkoutPlanId){
         window.__workoutAddBusy=false;return;
       }
