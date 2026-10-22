@@ -137,3 +137,5 @@ for each row execute function public.guard_trainee_workout_exercise_update();
 
 -- Policy-parity CI revision: isolated test fixture only.
 -- Candidate completion policy is installed only by the integration test, never here.
+
+-- CI retrigger marker for policy-parity verification; fixture remains disposable-only.
