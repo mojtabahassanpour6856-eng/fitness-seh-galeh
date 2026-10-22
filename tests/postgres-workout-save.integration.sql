@@ -283,7 +283,7 @@ reset role;
 -- the trigger's authorization behavior from the fixture's simplified RLS helper.
 select set_config('request.jwt.claim.sub', 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb', false);
 select set_config('test.is_coach', 'false', false);
-do $
+do $trigger_guard$
 declare
  v_failed boolean := false;
  v_plan_id bigint;
@@ -311,6 +311,6 @@ begin
     set sets = sets + 1
   where workout_plan_id = v_plan_id;
  if not found then raise exception 'coach update was not applied in trigger test'; end if;
-end $;
+end $trigger_guard$;
 
 select 'PASS: PostgreSQL integration tests, rollback, and exercise-update trigger guard' as result;
