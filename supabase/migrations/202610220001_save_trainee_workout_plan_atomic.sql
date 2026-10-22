@@ -54,9 +54,9 @@ begin
 
   if p_plan_id is null then
     insert into public.trainee_workout_plans
-      (trainee_id, title, plan_date, goal, notes)
+      (id, trainee_id, title, plan_date, goal, notes)
     values
-      (v_trainee_id,
+      (nextval('public.trainee_workout_plans_id_seq'::regclass), v_trainee_id,
        btrim(p_plan->>'title'),
        nullif(p_plan->>'plan_date','')::date,
        nullif(p_plan->>'goal',''),
@@ -93,10 +93,11 @@ begin
     end if;
 
     insert into public.trainee_workout_exercises
-      (workout_plan_id, exercise_id, sets, reps, rest_seconds, notes,
+      (id, workout_plan_id, exercise_id, sets, reps, rest_seconds, notes,
        sort_order, training_system, group_key, training_day, is_completed)
     values
-      (v_plan_id,
+      (nextval('public.trainee_workout_exercises_id_seq'::regclass),
+       v_plan_id,
        (v_item->>'exercise_id')::bigint,
        coalesce(nullif(v_item->>'sets','')::integer, 0),
        nullif(v_item->>'reps',''),
