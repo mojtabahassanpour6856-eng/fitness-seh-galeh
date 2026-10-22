@@ -1,4 +1,27 @@
 \set ON_ERROR_STOP on
+
+-- Verify least-privilege RPC grants and RLS posture in disposable PostgreSQL.
+do $$
+declare
+  v_signature text := 'public.save_trainee_workout_plan_transaction(uuid,bigint,jsonb,jsonb,jsonb)';
+begin
+  if not has_function_privilege('authenticated', v_signature, 'EXECUTE') then
+    raise exception 'authenticated role must be able to execute the RPC';
+  end if;
+  if has_function_privilege('anon', v_signature, 'EXECUTE') then
+    raise exception 'anon role must not be able to execute the RPC';
+  end if;
+  if (select p.prosecdef from pg_proc p where p.oid = v_signature::regprocedure) then
+    raise exception 'RPC must remain SECURITY INVOKER';
+  end if;
+  if not (select c.relrowsecurity from pg_class c where c.oid = 'public.trainee_workout_plans'::regclass) then
+    raise exception 'RLS must remain enabled on trainee_workout_plans';
+  end if;
+  if not (select c.relrowsecurity from pg_class c where c.oid = 'public.trainee_workout_exercises'::regclass) then
+    raise exception 'RLS must remain enabled on trainee_workout_exercises';
+  end if;
+end $$;
+
 set role authenticated;
 select set_config('request.jwt.claim.sub', 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', false);
 select set_config('test.is_coach', 'true', false);
