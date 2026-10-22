@@ -94,6 +94,17 @@ begin
       raise exception 'Existing plan changed since preview; reload before saving' using errcode = '40001';
     end if;
 
+    -- Lock current exercise rows before comparing the snapshot. A trainee's
+    -- completion PATCH updates these rows without locking the parent plan.
+    -- This makes the snapshot check observe any completion update that won the
+    -- row-lock race, rather than allowing a completion change between snapshot
+    -- comparison and replacement.
+    perform 1
+      from public.trainee_workout_exercises e
+     where e.workout_plan_id = v_plan.id
+     order by e.id
+     for update;
+
     select jsonb_build_object(
       'plan', jsonb_build_object(
         'id', v_plan.id, 'title', v_plan.title,
