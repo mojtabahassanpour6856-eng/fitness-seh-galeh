@@ -10,6 +10,7 @@ on:
 jobs:
   responsive-layout:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -18,8 +19,8 @@ jobs:
       - name: Install Playwright
         run: |
           npm init -y
-          npm install --save-dev playwright
-          npx playwright install --with-deps chromium
+          npm install --save-dev --no-audit --no-fund playwright
+          npx playwright install chromium
       - name: Verify desktop-only workout layout and capture previews
         run: |
           cat > layout-check.cjs <<'NODE'
