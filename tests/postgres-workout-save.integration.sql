@@ -278,4 +278,39 @@ begin
 end $$;
 
 reset role;
-select 'PASS: PostgreSQL integration tests including forced transaction rollback' as result;
+
+-- Exercise-update trigger parity test. Run as fixture owner so this isolates
+-- the trigger's authorization behavior from the fixture's simplified RLS helper.
+select set_config('request.jwt.claim.sub', 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb', false);
+select set_config('test.is_coach', 'false', false);
+do $
+declare
+ v_failed boolean := false;
+ v_plan_id bigint;
+begin
+ select id into v_plan_id from public.trainee_workout_plans where title='برنامه جایگزین';
+ if v_plan_id is null then raise exception 'trigger fixture plan missing'; end if;
+
+ update public.trainee_workout_exercises
+    set is_completed = true
+  where workout_plan_id = v_plan_id;
+ if not found then raise exception 'trainee could not update completion state in trigger test'; end if;
+
+ begin
+  update public.trainee_workout_exercises
+     set sets = sets + 1
+   where workout_plan_id = v_plan_id;
+ exception when others then
+  if sqlerrm not like '%Trainee may only update is_completed%' then raise; end if;
+  v_failed := true;
+ end;
+ if not v_failed then raise exception 'trainee unexpectedly changed workout prescription'; end if;
+
+ perform set_config('test.is_coach', 'true', false);
+ update public.trainee_workout_exercises
+    set sets = sets + 1
+  where workout_plan_id = v_plan_id;
+ if not found then raise exception 'coach update was not applied in trigger test'; end if;
+end $;
+
+select 'PASS: PostgreSQL integration tests, rollback, and exercise-update trigger guard' as result;
