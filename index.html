@@ -4303,7 +4303,7 @@ window.toggleExerciseFavorite=async function(id,value){try{await sbWrite(`/train
       alert(groupMode?('گروه '+(system==='superset'?'سوپرست':system==='triset'?'تری‌ست':'جاینت‌ست')+' با '+inserted.length+' حرکت ثبت شد.'):'حرکت به برنامه اضافه شد.');
     }catch(e){
       try{if(same(currentTraineeId(),traineeId)&&same(currentWorkoutPlanId,planId))await window.loadWorkoutForClient();}catch(_){}
-      alert('ثبت حرکات کامل تأیید نشد. فهرست را تازه‌سازی کنید.\\n'+(e.message||String(e)));
+      alert('ثبت حرکات کامل تأیید نشد. فهرست را تازه‌سازی کنید.\n'+(e.message||String(e)));
     }
   };
 
