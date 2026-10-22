@@ -56,3 +56,19 @@ for (const match of scriptBlocks) {
 }
 assert.ok(parsed > 0, 'at least one inline JavaScript block must be parsed');
 console.log('PASS: all inline JavaScript blocks parse without syntax errors (' + parsed + ' blocks)');
+
+
+const adapter = fs.readFileSync('experiments/workout-persistence-adapter.js', 'utf8');
+assert.match(adapter, /if\s*\(value\.enableAtomicRpc\s*!==\s*true\)\s*fail\(/,
+  'atomic adapter must fail closed unless explicit opt-in is enabled');
+const atomicStart = adapter.indexOf('async function saveToSupabaseAtomic(input)');
+const atomicEnd = adapter.indexOf('root.SehWorkoutPersistenceAdapter', atomicStart);
+assert.ok(atomicStart >= 0 && atomicEnd > atomicStart, 'atomic adapter function boundaries must exist');
+const atomicWriter = adapter.slice(atomicStart, atomicEnd);
+assert.match(atomicWriter, /client\.rpc\('save_trainee_workout_plan_transaction'/,
+  'atomic writer must call the reviewed RPC');
+assert.doesNotMatch(atomicWriter, /\.from\(['"]trainee_workout_(plans|exercises)['"]\)\s*\.((insert|update|delete))/,
+  'atomic writer must not fall back to legacy table mutations');
+assert.match(atomicWriter, /p_expected_snapshot:\s*expectedSnapshot/,
+  'atomic writer must pass the baseline snapshot for stale-write protection');
+console.log('PASS: adapter atomic writer is opt-in, RPC-only, and passes the stale-snapshot guard');
