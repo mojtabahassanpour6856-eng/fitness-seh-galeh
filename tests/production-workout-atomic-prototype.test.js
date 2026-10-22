@@ -30,7 +30,7 @@ assert.ok(saveStart >= 0 && addStart > saveStart && progressStart > addStart);
 const save = experiment.slice(saveStart, addStart);
 const addDelete = experiment.slice(addStart, progressStart);
 
-assert.match(save, /sbWrite\\('\/rpc\/save_trainee_workout_plan_transaction','POST',payload\\)/);
+assert.ok(save.includes("sbWrite('/rpc/save_trainee_workout_plan_transaction','POST',payload)"), 'save must call the atomic RPC');
 assert.match(save, /p_expected_snapshot:planId\?baseline:null/);
 assert.match(save, /currentWorkoutPlanBaseline/);
 assert.doesNotMatch(save, /sbWrite\(['"`]\/trainee_workout_plans/);
