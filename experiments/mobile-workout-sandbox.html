@@ -66,11 +66,13 @@ $('save').addEventListener('click',async()=>{
  const system=$('system').value,required=system==='normal'?1:system==='superset'?2:3;
  if(chosen.length!==required){show('برای این نوع ثبت باید دقیقاً '+required+' حرکت انتخاب کنی.');return}
  busy=true;$('save').disabled=true;
+ let plan=null,committed=false;
  try{
   const title=$('planTitle').value.trim()||'برنامه آزمایشی موبایل';
   const plans=await api('trainee_workout_plans?select=*',{method:'POST',body:JSON.stringify({trainee_id:FAKE_TRAINEE,title,plan_date:new Date().toISOString().slice(0,10)})});
-  if(!Array.isArray(plans)||plans.length!==1||!plans[0].id)throw new Error('شناسه برنامه از دیتابیس برنگشت.');
-  const plan=plans[0],groupKey=system==='normal'?null:system.toUpperCase()+'-'+Date.now().toString(36);
+  if(Array.isArray(plans)&&plans.length===1)plan=plans[0];
+  if(!plan||!plan.id)throw new Error('شناسه برنامه از دیتابیس برنگشت.');
+  const groupKey=system==='normal'?null:system.toUpperCase()+'-'+Date.now().toString(36);
   const payload=chosen.map((exercise_id,i)=>({workout_plan_id:plan.id,exercise_id,sets:Number($('sets').value)||3,reps:$('reps').value.trim()||'12',rest_seconds:Number($('rest').value)||0,sort_order:i+1,training_system:system,group_key:groupKey,training_day:$('day').value,is_completed:false}));
   let inserted;
   try{inserted=await api('trainee_workout_exercises?select=*',{method:'POST',body:JSON.stringify(payload)})}
@@ -79,9 +81,14 @@ $('save').addEventListener('click',async()=>{
   if(inserted.some(r=>String(r.workout_plan_id)!==String(plan.id)))throw new Error('برنامه برگشتی با برنامه انتخابی مطابقت ندارد.');
   const expected=payload.map(r=>String(r.exercise_id)).sort(),actual=inserted.map(r=>String(r.exercise_id)).sort();
   if(expected.some((id,i)=>id!==actual[i]))throw new Error('حرکات برگشتی با انتخاب‌ها مطابقت ندارد.');
+  committed=true;
   show('موفق: برنامه '+plan.id+' و '+inserted.length+' حرکت در یک عملیات ثبت شد. شناسه‌های حرکت: '+inserted.map(r=>r.id).join(', '),true);
   document.querySelectorAll('#exerciseList input').forEach(el=>el.checked=false);await refreshSaved();
- }catch(e){show('ذخیره کامل تأیید نشد: '+e.message+'\nبرای اطمینان، نتیجه را بازخوانی کن.')}
+ }catch(e){
+  let cleanup='';
+  if(plan&&plan.id&&!committed){try{await api('trainee_workout_plans?id=eq.'+plan.id,{method:'DELETE',headers:{Prefer:'return=minimal'}});cleanup='\nبرنامه ناقص آزمایشی پاک‌سازی شد.'}catch(cleanErr){cleanup='\nهشدار: پاک‌سازی خودکار برنامه ناقص تأیید نشد؛ شناسه برنامه '+plan.id+'.'}}
+  show('ذخیره کامل تأیید نشد: '+e.message+cleanup+'\nبرای اطمینان، نتیجه را بازخوانی کن.')
+ }
  finally{busy=false;$('save').disabled=false}
 });
 $('refresh').addEventListener('click',async()=>{try{await refreshSaved();show('بازخوانی از دیتابیس آزمایشی موفق بود.',true)}catch(e){show('خطا در بازخوانی: '+e.message)}});
