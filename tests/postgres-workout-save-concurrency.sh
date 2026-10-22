@@ -38,7 +38,8 @@ run_save() {
   touch "$GATE_DIR/$title.ready"
   # Both workers must reach this barrier before either RPC starts.
   while [[ ! -e "$GATE_DIR/go" ]]; do sleep 0.05; done
-  psql -X -v ON_ERROR_STOP=1 -v plan_id="$PLAN_ID" -v snapshot="$SNAPSHOT" >"/tmp/${title}.log" 2>&1 <<SQL
+  PGOPTIONS="-c statement_timeout=15000 -c lock_timeout=10000" \
+    psql -X -v ON_ERROR_STOP=1 -v plan_id="$PLAN_ID" -v snapshot="$SNAPSHOT" >"/tmp/${title}.log" 2>&1 <<SQL
 set role authenticated;
 select set_config('request.jwt.claim.sub', 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', false);
 select set_config('test.is_coach', 'true', false);
@@ -92,4 +93,23 @@ if ! grep -Eq "Plan or exercises changed since preview|Existing plan changed sin
   exit 1
 fi
 
-echo "PASS: concurrent saves using the same snapshot: exactly one succeeded; the stale save was rejected."
+# Assert the committed database state matches the successful writer.
+if [[ "$status_a" -eq 0 ]]; then
+  expected_title="Concurrent-A"
+else
+  expected_title="Concurrent-B"
+fi
+actual_title="$(PGOPTIONS="-c statement_timeout=10000" psql -X -At -v ON_ERROR_STOP=1 \
+  -c "select title from public.trainee_workout_plans where id=$PLAN_ID")"
+if [[ "$actual_title" != "$expected_title" ]]; then
+  echo "Final plan title mismatch: expected '$expected_title', got '$actual_title'" >&2
+  exit 1
+fi
+exercise_count="$(PGOPTIONS="-c statement_timeout=10000" psql -X -At -v ON_ERROR_STOP=1 \
+  -c "select count(*) from public.trainee_workout_exercises where workout_plan_id=$PLAN_ID")"
+if [[ "$exercise_count" != "1" ]]; then
+  echo "Expected exactly one final exercise row; got '$exercise_count'" >&2
+  exit 1
+fi
+
+echo "PASS: concurrent saves using the same snapshot: one winner, stale save rejected, final state verified."
