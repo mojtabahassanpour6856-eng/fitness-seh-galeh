@@ -7,6 +7,7 @@ Status: **NOT PASSED**. This document defines what must be proven before the ato
 - The RPC is SECURITY INVOKER; caller grants and RLS continue to apply.
 - It takes a transaction-scoped advisory lock keyed by trainee ID.
 - It checks the expected plan ID and compares the caller's preview snapshot with the current plan and ordered exercise rows.
+- The draft now locks existing exercise rows before constructing/comparing the snapshot. This matters because trainee completion updates lock exercise rows but do not lock the parent plan. If the trainee update commits first, the coach's old snapshot should be rejected; if the coach locks first, the trainee update waits for the plan replacement.
 - The write is a single database transaction, so a failure inserting replacement exercises should roll back the plan update and deletes.
 
 These are code-level properties, not proof that concurrent calls behave correctly in a real multi-connection test. The existing static assertion only checks that the lock expression remains in the function definition.
