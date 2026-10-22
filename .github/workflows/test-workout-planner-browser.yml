@@ -27,9 +27,9 @@ jobs:
       - name: Install Playwright package
         timeout-minutes: 8
         run: npm install --no-save --no-audit --no-fund playwright
-      - name: Install Chromium and system dependencies
-        timeout-minutes: 12
-        run: npx playwright install --with-deps chromium
+      - name: Install Chromium
+        timeout-minutes: 8
+        run: npx playwright install chromium
       - name: Serve repository files
         run: python3 -m http.server 4173 --directory . >/tmp/workout-planner-http.log 2>&1 &
       - name: Test planner in Chromium
