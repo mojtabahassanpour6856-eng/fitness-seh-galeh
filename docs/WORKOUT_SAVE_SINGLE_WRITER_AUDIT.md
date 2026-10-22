@@ -42,15 +42,14 @@ Use a server-enforced write gate as part of a controlled cutover, rather than re
 
 - There is only one connected Supabase project, the live production project. No separate Supabase project was found for authenticated integration testing.
 - The draft RPC and gate have not been installed anywhere in Supabase.
-- All production write call-sites still need a complete audit before deciding the exact trigger scope.
+- The production source write-path inventory is classified below, but still needs a second review and a search for any other deployed/cached versions before claiming complete coverage.
 - The RPC snapshot/data shape still needs authenticated testing against the actual schema, RLS policies, grants, and trigger behavior in an isolated Supabase environment.
-- A minimal transfer branch based on the current `main` head has not been created. The experiment branch must not be merged wholesale.
+- A clean branch `workout-save-audit-main-based` now exists and is based directly on `main`; it contains documentation only. No executable app patch has been prepared on this branch. The production-derived prototype remains an experiment and must not be merged wholesale.
 - No production migration or deployment is approved by this document.
 
 ## Safety boundary
 
 This document is a rollout design, not executable migration SQL. No production branch, deployed app, Supabase schema/data, or trainee record was changed while preparing it.
-
 
 ## Production-source mutation-path audit (2026-10-22)
 
