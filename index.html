@@ -4255,12 +4255,7 @@ window.toggleExerciseFavorite=async function(id,value){try{await sbWrite(`/train
   window.addWorkoutExercise=async function(){
     const traineeId=currentTraineeId();
     if(!traineeId){alert('اول شاگرد را انتخاب کنید.');return;}
-    if(!same(workoutPlanOwnerId,traineeId)||!currentWorkoutPlanId){
-      await window.saveWorkoutPlan();
-      if(!same(currentTraineeId(),traineeId)||!same(workoutPlanOwnerId,traineeId)||!currentWorkoutPlanId)return;
-    }
-    const planId=currentWorkoutPlanId;
-    if(!same(workoutPlanOwnerId,traineeId)){alert('برنامه متعلق به شاگرد انتخاب‌شده نیست. دوباره برنامه را بارگذاری کنید.');return;}
+    // Validate the complete selection before creating/saving a workout plan.
     const system=byId('workoutSystem')?.value||'normal';
     const groupMode=['superset','triset','giant'].includes(system);
     const chosen=groupMode
@@ -4270,6 +4265,19 @@ window.toggleExerciseFavorite=async function(id,value){try{await sbWrite(`/train
     if(system==='superset'&&chosen.length!==2){alert('برای سوپرست دقیقاً دو حرکت انتخاب کنید.');return;}
     if((system==='triset'||system==='giant')&&chosen.length!==3){alert('برای تری‌ست و جاینت‌ست دقیقاً سه حرکت انتخاب کنید.');return;}
     if(window.__workoutAddBusy)return;
+    // Lock before any await, including plan creation, to prevent duplicate taps.
+    window.__workoutAddBusy=true;
+    if(!same(workoutPlanOwnerId,traineeId)||!currentWorkoutPlanId){
+      await window.saveWorkoutPlan();
+      if(!same(currentTraineeId(),traineeId)||!same(workoutPlanOwnerId,traineeId)||!currentWorkoutPlanId){
+        window.__workoutAddBusy=false;return;
+      }
+    }
+    const planId=currentWorkoutPlanId;
+    if(!same(workoutPlanOwnerId,traineeId)){
+      window.__workoutAddBusy=false;
+      alert('برنامه متعلق به شاگرد انتخاب‌شده نیست. دوباره برنامه را بارگذاری کنید.');return;
+    }
     const rows=Array.isArray(workoutExercisesCache)?workoutExercisesCache:[];
     const baseOrder=rows.length?Math.max(...rows.map(x=>Number(x.sort_order)||0))+1:1;
     let groupKey=(byId('workoutGroup')?.value||'').trim()||null;
