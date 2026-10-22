@@ -432,7 +432,7 @@ begin
 
   v_failed := false;
   begin
-    update public.trainee_workout_exercises set exercise_id = 102 where workout_plan_id = v_plan_id;
+    update public.trainee_workout_exercises set exercise_id = 101 where workout_plan_id = v_plan_id;
   exception when others then
     if sqlerrm not like '%Trainee may only update is_completed%' then raise; end if;
     v_failed := true;
