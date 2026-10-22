@@ -13,6 +13,8 @@ The complete current `pg_policies` result for `public.trainee_workout_exercises`
 
 No separate trainee completion UPDATE policy appeared in the live policy list. The live trigger `guard_trainee_workout_exercise_update_trigger` calls `public.guard_trainee_workout_exercise_update()`, which is SECURITY INVOKER. Its body blocks a non-coach from changing any field other than `is_completed`.
 
+**Additional live privilege/trigger check:** the trigger is enabled (`tgenabled = O`) and SECURITY INVOKER. The `authenticated` role currently has table-level column UPDATE privileges across the workout-exercise columns, including prescription fields and `workout_plan_id`; therefore the trigger's column guard is security-critical if a trainee UPDATE policy is added. The candidate policy must never be deployed without validating this guard through authenticated REST requests.
+
 **Conclusion:** based on this live policy snapshot, a trainee's completion-only UPDATE is blocked by RLS before the trigger can permit it. The current app feature must not be assumed to work just because the trigger has a completion exception.
 
 ## Disposable CI evidence and limits
