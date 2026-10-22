@@ -7,12 +7,12 @@ Status: **NOT PASSED**. This document defines what must be proven before the ato
 - The RPC is SECURITY INVOKER; caller grants and RLS continue to apply.
 - It takes a transaction-scoped advisory lock keyed by trainee ID.
 - It checks the expected plan ID and compares the caller's preview snapshot with the current plan and ordered exercise rows.
-- The draft now locks existing exercise rows before constructing/comparing the snapshot. This matters because trainee completion updates lock exercise rows but do not lock the parent plan. If the trainee update commits first, the coach's old snapshot should be rejected; if the coach locks first, the trainee update waits for the plan replacement.
+- The draft locks existing exercise rows before constructing/comparing the snapshot, which helps the coach detect a completion update that committed first. **This does not yet guarantee a trainee completion toggle is preserved if the coach locks first**: the RPC replaces exercises by deleting and reinserting them, so a waiting PATCH against an old exercise-row ID may affect zero rows after the replacement commits. The trainee client must detect and handle a zero-row completion update (reload/retry against the new row ID), or the RPC design must preserve stable exercise-row IDs. This is a release blocker, not a solved race.
 - The write is a single database transaction, so a failure inserting replacement exercises should roll back the plan update and deletes.
 
 These are code-level properties, not proof that concurrent calls behave correctly in a real multi-connection test. The existing static assertion only checks that the lock expression remains in the function definition.
 
-The preview snapshot also includes each exercise's `is_completed` value. Therefore, if a trainee checks off a movement while the coach editor is open, a later coach save using the old snapshot should be rejected rather than silently resetting that newer completion state. A disposable integration regression now checks this behavior; it still needs to run in CI. Confirm this user-facing retry/reload behavior is acceptable before rollout.
+The preview snapshot also includes each exercise's `is_completed` value. If a trainee completion update commits before the coach obtains the exercise-row locks, the old coach snapshot should be rejected. The reverse ordering still needs a safe behavior for the trainee's waiting update, as described above. A disposable integration regression covers the stale-snapshot direction but has not run in CI; it does not prove the reverse race is safe.
 
 ## Required two-session race test
 
@@ -43,7 +43,8 @@ Before rollout:
 ## Release gate checklist
 
 - [ ] Existing disposable-DB integration suite passes after the latest commits.
-- [ ] Real two-connection stale-save race test passes repeatedly.
+- [ ] Real two-connection stale-save race test passes repeatedly, including trainee completion PATCH vs coach replace in both lock orders.
+- [ ] Trainee completion writes cannot silently disappear when the coach replaces a plan (stable exercise-row IDs or checked zero-row retry/reload).
 - [ ] Two different trainee IDs behave independently.
 - [ ] RLS/authorization tests cover coach, unrelated coach, trainee, anon, and unauthenticated roles.
 - [ ] Completion-only trainee update policy is tested with real authenticated JWTs in staging.
