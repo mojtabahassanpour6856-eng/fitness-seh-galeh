@@ -18,18 +18,23 @@ permissions:
 jobs:
   browser-test:
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-      - name: Install Playwright
-        run: |
-          npm install --no-save playwright
-          npx playwright install --with-deps chromium
+      - name: Install Playwright package
+        timeout-minutes: 8
+        run: npm install --no-save --no-audit --no-fund playwright
+      - name: Install Chromium and system dependencies
+        timeout-minutes: 12
+        run: npx playwright install --with-deps chromium
       - name: Serve repository files
         run: python3 -m http.server 4173 --directory . >/tmp/workout-planner-http.log 2>&1 &
       - name: Test planner in Chromium
+        timeout-minutes: 8
         run: node tests/workout-planner-browser.test.js
       - name: Check phone-width layout
+        timeout-minutes: 5
         run: node tests/mobile-workout-layout.test.js
