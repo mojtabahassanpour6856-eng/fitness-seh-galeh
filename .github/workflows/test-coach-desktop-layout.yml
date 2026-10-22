@@ -29,6 +29,8 @@ jobs:
             const browser = await chromium.launch({ headless: true });
             const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
             await page.goto('file://' + path.resolve('index.html'));
+            // This is a layout-only preview, not an authenticated app session. Hide the login overlay and reveal the workout section so screenshots show the layout under test.
+            await page.addStyleTag({ content: '#authScreen { display: none !important; }' });
             const desktop = await page.evaluate(() => {
               document.querySelector('#workout')?.classList.add('active');
               const section = document.querySelector('#workout');
