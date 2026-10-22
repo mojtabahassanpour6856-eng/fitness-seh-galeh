@@ -11,6 +11,8 @@ Status: **NOT PASSED**. This document defines what must be proven before the ato
 
 These are code-level properties, not proof that concurrent calls behave correctly in a real multi-connection test. The existing static assertion only checks that the lock expression remains in the function definition.
 
+The preview snapshot also includes each exercise's `is_completed` value. Therefore, if a trainee checks off a movement while the coach editor is open, a later coach save using the old snapshot should be rejected rather than silently resetting that newer completion state. A disposable integration regression now checks this behavior; it still needs to run in CI. Confirm this user-facing retry/reload behavior is acceptable before rollout.
+
 ## Required two-session race test
 
 Run only against a disposable PostgreSQL database seeded with synthetic users, trainees, exercise-bank rows, and the draft function. Never point the harness at the live Supabase URL.
