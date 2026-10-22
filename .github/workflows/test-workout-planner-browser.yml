@@ -3,6 +3,7 @@ on:
   push:
     branches:
       - coach-workout-editor-isolated-preview
+      - workout-save-policy-parity-ci-v2
     paths:
       - 'experiments/workout-template-planner.html'
       - 'fitness_seh_galeh_FINAL_CLEAN2.html'
