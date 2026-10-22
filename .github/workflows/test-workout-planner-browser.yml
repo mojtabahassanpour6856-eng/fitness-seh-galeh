@@ -16,6 +16,8 @@ on:
       - 'experiments/WORKOUT_SAVE_RPC_REVIEW_CHECKLIST.md'
       - 'experiments/WORKOUT_SAVE_AUTOMATED_TEST_RUN_REVIEW.md'
       - 'experiments/PRODUCTION_WORKOUT_SAVE_CALLSITE_AUDIT.md'
+      - 'experiments/production-derived-index.html'
+      - 'tests/production-workout-atomic-prototype.test.js'
       - '.github/workflows/test-workout-planner-browser.yml'
   workflow_dispatch:
 permissions:
@@ -34,6 +36,8 @@ jobs:
           npx playwright install --with-deps chromium
       - name: Static guardrails for SQL draft (no database access)
         run: node tests/workout-save-sql-draft.test.js
+      - name: Verify production-derived atomic save prototype and unchanged surrounding app
+        run: node tests/production-workout-atomic-prototype.test.js
       - name: Serve repository files
         run: python3 -m http.server 4173 --directory . >/tmp/workout-planner-http.log 2>&1 &
       - name: Test planner in Chromium
