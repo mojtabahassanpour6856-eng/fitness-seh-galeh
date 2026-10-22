@@ -198,10 +198,55 @@ begin
       raise exception 'Plan update did not affect exactly one row' using errcode = '40001';
     end if;
 
-    delete from public.trainee_workout_exercises
-     where workout_plan_id = v_plan.id;
   end if;
 
+  if p_expected_plan_id is not null then
+    -- Preserve row IDs only when the same exercise remains in the same slot.
+    -- A trainee PATCH waiting on a retained row lock can then safely apply to
+    -- that same movement after this transaction commits.
+    delete from public.trainee_workout_exercises old_e
+     where old_e.workout_plan_id = v_plan.id
+       and not exists (
+         select 1
+           from jsonb_to_recordset(p_exercises) as incoming(
+             exercise_id bigint, sort_order integer
+           )
+          where incoming.exercise_id = old_e.exercise_id
+            and incoming.sort_order = old_e.sort_order
+       );
+
+    update public.trainee_workout_exercises old_e
+       set sets = incoming.sets,
+           reps = nullif(btrim(incoming.reps), ''),
+           rest_seconds = incoming.rest_seconds,
+           notes = nullif(btrim(incoming.notes), ''),
+           training_system = coalesce(nullif(btrim(incoming.training_system), ''), 'normal'),
+           group_key = nullif(btrim(incoming.group_key), ''),
+           training_day = btrim(incoming.training_day)
+      from jsonb_to_recordset(p_exercises) as incoming(
+        exercise_id bigint,
+        sets integer,
+        reps text,
+        rest_seconds integer,
+        notes text,
+        sort_order integer,
+        training_system text,
+        group_key text,
+        training_day text,
+        is_completed boolean
+      )
+     where old_e.workout_plan_id = v_plan.id
+       and old_e.exercise_id = incoming.exercise_id
+       and old_e.sort_order = incoming.sort_order;
+
+    get diagnostics v_inserted_count = row_count;
+  else
+    v_inserted_count := 0;
+  end if;
+
+  -- Insert new plans' rows and any replacement/new rows while retaining IDs
+  -- for unchanged exercise+slot pairs. Never copy the stale preview's
+  -- is_completed value over the live value of a retained row.
   insert into public.trainee_workout_exercises
     (workout_plan_id, exercise_id, sets, reps, rest_seconds, notes,
      sort_order, training_system, group_key, training_day, is_completed)
@@ -228,11 +273,19 @@ begin
       training_day text,
       is_completed boolean
     )
+   where not exists (
+     select 1
+       from public.trainee_workout_exercises existing_e
+      where existing_e.workout_plan_id = v_plan.id
+        and existing_e.exercise_id = e.exercise_id
+        and existing_e.sort_order = e.sort_order
+   )
    order by e.sort_order;
 
-  get diagnostics v_inserted_count = row_count;
+  get diagnostics v_ids_count = row_count;
+  v_inserted_count := v_inserted_count + v_ids_count;
   if v_inserted_count <> v_exercise_count then
-    raise exception 'Not all exercise rows were inserted' using errcode = '40001';
+    raise exception 'Not all exercise rows were inserted or updated' using errcode = '40001';
   end if;
 
   select jsonb_build_object(
