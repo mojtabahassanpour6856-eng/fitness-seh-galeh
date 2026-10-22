@@ -401,14 +401,97 @@ begin
   get diagnostics v_count = row_count;
   if v_count < 1 then raise exception 'candidate policy did not allow completion-state update'; end if;
 
+  -- Every prescription/identity field must be protected by the live-shaped trigger.
+  -- Reset the flag for each attempted write so one rejected update cannot mask another.
+  v_failed := false;
   begin
-    update public.trainee_workout_exercises
-       set sets = sets + 1 where workout_plan_id = v_plan_id;
+    update public.trainee_workout_exercises set sets = sets + 1 where workout_plan_id = v_plan_id;
   exception when others then
     if sqlerrm not like '%Trainee may only update is_completed%' then raise; end if;
     v_failed := true;
   end;
-  if not v_failed then raise exception 'candidate policy allowed prescription edit by trainee'; end if;
+  if not v_failed then raise exception 'candidate policy allowed sets edit by trainee'; end if;
+
+  v_failed := false;
+  begin
+    update public.trainee_workout_exercises set reps = reps || '-tamper' where workout_plan_id = v_plan_id;
+  exception when others then
+    if sqlerrm not like '%Trainee may only update is_completed%' then raise; end if;
+    v_failed := true;
+  end;
+  if not v_failed then raise exception 'candidate policy allowed reps edit by trainee'; end if;
+
+  v_failed := false;
+  begin
+    update public.trainee_workout_exercises set rest_seconds = rest_seconds + 1 where workout_plan_id = v_plan_id;
+  exception when others then
+    if sqlerrm not like '%Trainee may only update is_completed%' then raise; end if;
+    v_failed := true;
+  end;
+  if not v_failed then raise exception 'candidate policy allowed rest edit by trainee'; end if;
+
+  v_failed := false;
+  begin
+    update public.trainee_workout_exercises set exercise_id = 102 where workout_plan_id = v_plan_id;
+  exception when others then
+    if sqlerrm not like '%Trainee may only update is_completed%' then raise; end if;
+    v_failed := true;
+  end;
+  if not v_failed then raise exception 'candidate policy allowed exercise id edit by trainee'; end if;
+
+  v_failed := false;
+  begin
+    update public.trainee_workout_exercises set sort_order = sort_order + 1 where workout_plan_id = v_plan_id;
+  exception when others then
+    if sqlerrm not like '%Trainee may only update is_completed%' then raise; end if;
+    v_failed := true;
+  end;
+  if not v_failed then raise exception 'candidate policy allowed ordering edit by trainee'; end if;
+
+  v_failed := false;
+  begin
+    update public.trainee_workout_exercises set training_system = 'superset' where workout_plan_id = v_plan_id;
+  exception when others then
+    if sqlerrm not like '%Trainee may only update is_completed%' then raise; end if;
+    v_failed := true;
+  end;
+  if not v_failed then raise exception 'candidate policy allowed training system edit by trainee'; end if;
+
+  v_failed := false;
+  begin
+    update public.trainee_workout_exercises set group_key = 'tamper-group' where workout_plan_id = v_plan_id;
+  exception when others then
+    if sqlerrm not like '%Trainee may only update is_completed%' then raise; end if;
+    v_failed := true;
+  end;
+  if not v_failed then raise exception 'candidate policy allowed grouping edit by trainee'; end if;
+
+  v_failed := false;
+  begin
+    update public.trainee_workout_exercises set training_day = 'tamper-day' where workout_plan_id = v_plan_id;
+  exception when others then
+    if sqlerrm not like '%Trainee may only update is_completed%' then raise; end if;
+    v_failed := true;
+  end;
+  if not v_failed then raise exception 'candidate policy allowed training day edit by trainee'; end if;
+
+  v_failed := false;
+  begin
+    update public.trainee_workout_exercises set notes = 'tampered' where workout_plan_id = v_plan_id;
+  exception when others then
+    if sqlerrm not like '%Trainee may only update is_completed%' then raise; end if;
+    v_failed := true;
+  end;
+  if not v_failed then raise exception 'candidate policy allowed notes edit by trainee'; end if;
+
+  v_failed := false;
+  begin
+    update public.trainee_workout_exercises set workout_plan_id = workout_plan_id + 1 where workout_plan_id = v_plan_id;
+  exception when others then
+    if sqlerrm not like '%Trainee may only update is_completed%' then raise; end if;
+    v_failed := true;
+  end;
+  if not v_failed then raise exception 'candidate policy allowed moving exercise to another plan'; end if;
 end $completion_candidate$;
 reset role;
 
