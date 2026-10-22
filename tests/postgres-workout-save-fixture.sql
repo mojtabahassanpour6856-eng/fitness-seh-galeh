@@ -82,7 +82,7 @@ for each row execute function public.test_fail_exercise_insert();
 -- This disposable-only copy protects trainee edits to completion state only.
 create function public.guard_trainee_workout_exercise_update() returns trigger language plpgsql
 set search_path = 'pg_catalog', 'public', 'pg_temp'
-as $
+as $guard$
 begin
  if auth.uid() is not null and not private.is_coach()
     and (to_jsonb(new) - 'is_completed') is distinct from (to_jsonb(old) - 'is_completed') then
@@ -90,6 +90,6 @@ begin
  end if;
  return new;
 end;
-$;
+$guard$;
 create trigger guard_trainee_workout_exercise_update_trigger before update on public.trainee_workout_exercises
 for each row execute function public.guard_trainee_workout_exercise_update();
