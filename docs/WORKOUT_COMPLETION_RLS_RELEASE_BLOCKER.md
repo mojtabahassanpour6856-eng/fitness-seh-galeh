@@ -101,3 +101,31 @@ The same main-branch file also contains coach-side direct writes for adding exer
 ## Latest disposable CI status (2026-10-22)
 
 Run `39727719937` completed with both `browser-test` and `postgres-integration-test` successful. This remains disposable PostgreSQL evidence; it is not a Supabase REST/JWT staging test.
+
+
+## Coach workout write-path inventory (main branch, read-only)
+
+Static inspection of `fitness_seh_galeh_FINAL_CLEAN2.html` on `main` (blob SHA `f01fc7ee9ad0cabfa26d6356dd54be1675a22e0c`) found these direct REST write paths in the coach workout workflow:
+
+| Operation | Current direct write | Rollout concern |
+| --- | --- | --- |
+| Save plan metadata | PATCH `/trainee_workout_plans?id=eq...` or POST `/trainee_workout_plans` | Must map to atomic save payload and preserve current plan fields/date behavior. |
+| Add exercise | POST `/trainee_workout_exercises` | Separate insert can leave a partial plan if later steps fail. |
+| Delete exercise | DELETE `/trainee_workout_exercises?id=eq...` | Must be represented in the full replacement payload or deliberately retained as a supported legacy operation during transition. |
+| Edit prescription | PATCH exercise row with `sets`, `reps`, `rest_seconds`, `notes` | Must not be silently broken by a coach-save gate. |
+| Reorder exercises | Two separate PATCH requests changing `sort_order` | Best-effort sequence is not atomic; partial success can leave order inconsistent. |
+| Copy plan | POST plan metadata, then POST copied exercise rows | Multi-request flow can create an incomplete copy. |
+| Mark exercise complete | PATCH exercise row with only `is_completed` | Trainee-specific authorization blocker documented above; keep separate from coach atomic-save RPC. |
+
+This is a source-level inventory of the main-branch file, not a runtime request capture. The editor experiment and other branches may contain additional paths; before rollout, repeat the inventory across the exact release commit and search all callers of these functions.
+
+## Safe migration sequence (no production changes performed)
+
+1. Keep the existing production write paths unchanged while developing and testing the RPC in disposable CI.
+2. Add tests for create, update, delete, reorder, copy, invalid payload rollback, stale snapshot conflict, and concurrent saves.
+3. Define an adapter that translates the existing coach form state to one complete plan + exercise payload; preserve the trainee completion field and all currently supported exercise attributes.
+4. Switch only the isolated coach editor to the RPC and verify its output before considering any production client rollout.
+5. Only after a release build is proven compatible, plan a versioned rollout that accounts for cached/installed PWAs and has a reversible fallback. Do not revoke direct-write permissions globally as part of the first release.
+6. Keep trainee completion RLS policy work separate; it requires authenticated REST/JWT testing in a zero-cost isolated environment before production approval.
+
+No production code, database policy, RPC, grant, or trainee data was changed by this inventory.
