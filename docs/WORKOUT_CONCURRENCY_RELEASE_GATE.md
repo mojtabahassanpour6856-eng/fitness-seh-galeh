@@ -44,7 +44,7 @@ Before rollout:
 
 - [ ] Existing disposable-DB integration suite passes after the latest commits.
 - [ ] Real two-connection stale-save race test passes repeatedly, including trainee completion PATCH vs coach replace in both lock orders.
-- [ ] Trainee completion writes cannot silently disappear when the coach replaces a plan (stable exercise-row IDs or checked zero-row retry/reload).
+- [ ] For unchanged exercise+slot pairs, the RPC preserves the exercise row ID and never overwrites `is_completed` from the coach's stale payload. For replaced/removed movements, the trainee client must detect a zero-row completion update and reload rather than silently report success; verify this with the real authenticated client.
 - [ ] Two different trainee IDs behave independently.
 - [ ] RLS/authorization tests cover coach, unrelated coach, trainee, anon, and unauthenticated roles.
 - [ ] Completion-only trainee update policy is tested with real authenticated JWTs in staging.
