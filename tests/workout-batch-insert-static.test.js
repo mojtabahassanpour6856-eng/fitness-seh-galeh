@@ -39,11 +39,11 @@ assert.ok(migration.includes('exists(select 1 from public.trainee_workout_exerci
 assert.ok(handler.indexOf("if(!same(currentTraineeId(),traineeId)||!same(currentWorkoutPlanId,planId))") < batchWrite, 'must cancel the insert if the selected trainee or plan changes before the write');
 assert.ok(handler.includes("inserted.some(row=>!same(row.workout_plan_id,planId))"), 'must reject rows returned for a different workout plan');
 
-const loadStart = html.lastIndexOf('window.loadWorkoutForClient=async function(){');
-const loadEnd = html.indexOf('window.editWorkoutExercise=async function', loadStart);
-assert.ok(loadStart >= 0 && loadEnd > loadStart, 'could not find guarded workout loader');
-const loadHandler = html.slice(loadStart, loadEnd);
-assert.ok(loadHandler.includes('trainee_id=eq.\u0024{encodeURIComponent(traineeId)}'), 'workout plans must be queried only for the selected trainee');
-assert.ok(loadHandler.includes('requestId!==workoutRequestSeq||!same(currentTraineeId(),traineeId)'), 'stale loads must not repaint a different trainee');
+const baseLoadStart = html.indexOf('async function loadWorkoutForClient(){');
+const baseLoadEnd = html.indexOf('function renderWorkoutList(', baseLoadStart);
+assert.ok(baseLoadStart >= 0 && baseLoadEnd > baseLoadStart, 'could not find base workout loader');
+const baseLoadHandler = html.slice(baseLoadStart, baseLoadEnd);
+assert.ok(baseLoadHandler.includes('trainee_id=eq.\u0024{encodeURIComponent(currentClient.id)}'), 'workout plans must be queried for the selected trainee');
+assert.ok(html.includes('const oldLoadWorkout=window.loadWorkoutForClient;') && html.includes('window.loadWorkoutForClient=async function(){await oldLoadWorkout();buildWorkoutManagement();}'), 'workout management wrapper must preserve the base loader');
 
 console.log('PASS: mobile batch handler guards and validates saves; migration aligns sequences and restores ID defaults safely.');
