@@ -2,6 +2,7 @@ const fs = require('node:fs');
 const assert = require('node:assert/strict');
 
 const html = fs.readFileSync('index.html', 'utf8');
+const idDefaultsMigration = fs.readFileSync('supabase/migrations/202610220002_restore_workout_id_defaults.sql', 'utf8');
 const start = html.lastIndexOf('const chosen=groupMode');
 assert.notEqual(start, -1, 'could not find the latest workout exercise save handler');
 const end = html.indexOf('window.deleteWorkoutExercise', start);
