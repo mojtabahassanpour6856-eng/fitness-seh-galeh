@@ -38,15 +38,18 @@ create function auth.uid() returns uuid language sql stable
 as $$ select nullif(current_setting('request.jwt.claim.sub', true), '')::uuid $$;
 create function private.is_coach() returns boolean language sql stable security definer
 set search_path = ''
-as $
+as $helper$
+
  select case when current_setting('test.use_live_identity', true) = 'on' then
    exists (select 1 from public.profiles p where p.id = auth.uid() and p.role = 'coach')
  else coalesce(nullif(current_setting('test.is_coach', true), '')::boolean, false)
  end
-$;
+
+$helper$;
 create function private.can_access_trainee(p_trainee_id uuid) returns boolean language sql stable security definer
 set search_path = ''
-as $
+as $helper$
+
  select case when current_setting('test.use_live_identity', true) = 'on' then
    exists (
      select 1 from public.trainees t
@@ -57,7 +60,8 @@ as $
  else coalesce(nullif(current_setting('test.is_coach', true), '')::boolean, false)
       and nullif(current_setting('test.trainee_id', true), '')::uuid = p_trainee_id
  end
-$;
+
+$helper$;
 
 alter table public.trainee_workout_plans enable row level security;
 alter table public.trainee_workout_exercises enable row level security;
