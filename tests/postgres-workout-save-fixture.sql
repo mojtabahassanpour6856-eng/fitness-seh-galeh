@@ -134,3 +134,5 @@ end;
 $guard$;
 create trigger guard_trainee_workout_exercise_update_trigger before update on public.trainee_workout_exercises
 for each row execute function public.guard_trainee_workout_exercise_update();
+
+-- Policy-parity CI revision: isolated test fixture only.
