@@ -19,6 +19,8 @@ on:
       - 'experiments/PRODUCTION_WORKOUT_SAVE_CALLSITE_AUDIT.md'
       - 'experiments/production-derived-index.html'
       - 'tests/production-workout-atomic-prototype.test.js'
+      - 'docs/WORKOUT_CONCURRENCY_RELEASE_GATE.md'
+      - 'docs/WORKOUT_COMPLETION_POLICY_TEST_MATRIX.md'
       - '.github/workflows/test-workout-planner-browser.yml'
   pull_request:
     branches:
