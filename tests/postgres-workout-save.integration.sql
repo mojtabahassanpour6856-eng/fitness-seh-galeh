@@ -114,6 +114,72 @@ begin
  end;
  if not v_failed then raise exception 'inaccessible trainee unexpectedly accepted'; end if;
 
+
+ -- Explicitly reject unauthenticated callers, not just authenticated non-coaches.
+ perform set_config('request.jwt.claim.sub', '', false);
+ v_failed := false;
+ begin
+  perform public.save_trainee_workout_plan_transaction(
+   '11111111-1111-4111-8111-111111111111', v_plan_id, v_snapshot,
+   '{"title":"بدون ورود","plan_date":"2026-10-25"}'::jsonb,
+   '[{"exercise_id":101,"sets":3,"reps":"10","rest_seconds":60,"sort_order":1,"training_day":"جلسه اول"}]'::jsonb
+  );
+ exception when others then v_failed := true;
+ end;
+ if not v_failed then raise exception 'unauthenticated caller unexpectedly accepted'; end if;
+ perform set_config('request.jwt.claim.sub', 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', false);
+
+ -- Invalid dates and numeric/system fields must fail without changing the saved plan.
+ v_failed := false;
+ begin
+  perform public.save_trainee_workout_plan_transaction(
+   '11111111-1111-4111-8111-111111111111', v_plan_id, v_snapshot,
+   '{"title":"تاریخ نامعتبر","plan_date":"2026-02-30"}'::jsonb,
+   '[{"exercise_id":101,"sets":3,"reps":"10","rest_seconds":60,"sort_order":1,"training_day":"جلسه اول"}]'::jsonb
+  );
+ exception when others then v_failed := true;
+ end;
+ if not v_failed then raise exception 'invalid calendar date unexpectedly accepted'; end if;
+
+ v_failed := false;
+ begin
+  perform public.save_trainee_workout_plan_transaction(
+   '11111111-1111-4111-8111-111111111111', v_plan_id, v_snapshot,
+   '{"title":"ست منفی","plan_date":"2026-10-25"}'::jsonb,
+   '[{"exercise_id":101,"sets":-1,"reps":"10","rest_seconds":60,"sort_order":1,"training_day":"جلسه اول"}]'::jsonb
+  );
+ exception when others then v_failed := true;
+ end;
+ if not v_failed then raise exception 'negative sets unexpectedly accepted'; end if;
+
+ v_failed := false;
+ begin
+  perform public.save_trainee_workout_plan_transaction(
+   '11111111-1111-4111-8111-111111111111', v_plan_id, v_snapshot,
+   '{"title":"استراحت منفی","plan_date":"2026-10-25"}'::jsonb,
+   '[{"exercise_id":101,"sets":3,"reps":"10","rest_seconds":-1,"sort_order":1,"training_day":"جلسه اول"}]'::jsonb
+  );
+ exception when others then v_failed := true;
+ end;
+ if not v_failed then raise exception 'negative rest unexpectedly accepted'; end if;
+
+ v_failed := false;
+ begin
+  perform public.save_trainee_workout_plan_transaction(
+   '11111111-1111-4111-8111-111111111111', v_plan_id, v_snapshot,
+   '{"title":"سیستم ناشناخته","plan_date":"2026-10-25"}'::jsonb,
+   '[{"exercise_id":101,"sets":3,"reps":"10","rest_seconds":60,"sort_order":1,"training_system":"unknown-system","training_day":"جلسه اول"}]'::jsonb
+  );
+ exception when others then v_failed := true;
+ end;
+ if not v_failed then raise exception 'unsupported training system unexpectedly accepted'; end if;
+
+ select title into v_old_title from public.trainee_workout_plans where id=v_plan_id;
+ select exercise_id into v_old_exercise_id from public.trainee_workout_exercises where workout_plan_id=v_plan_id;
+ if v_old_title <> 'برنامه جایگزین' or v_old_exercise_id <> 102 then
+  raise exception 'invalid payload changed the existing plan';
+ end if;
+
  -- Empty exercise arrays are rejected before any write.
  v_failed := false;
  begin
