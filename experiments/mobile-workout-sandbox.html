@@ -48,7 +48,8 @@ async function api(path,options={}) {
 function show(message,ok=false){$('status').textContent=message;$('status').className='status '+(ok?'ok':'bad')}
 async function loadExercises(){
  exercises=await api('exercises?select=id,name&order=id.asc');
- $('exerciseList').innerHTML=exercises.map((e,i)=>'<div class="exercise"><input type="checkbox" id="ex'+e.id+'" value="'+e.id+'"><label for="ex'+e.id+'">'+e.name+'</label></div>').join('');
+ const list=$('exerciseList'); list.replaceChildren();
+ exercises.forEach(e=>{const row=document.createElement('div');row.className='exercise';const input=document.createElement('input');input.type='checkbox';input.id='ex'+e.id;input.value=String(e.id);const label=document.createElement('label');label.htmlFor=input.id;label.textContent=String(e.name??('حرکت '+e.id));row.append(input,label);list.append(row)});
  show('اتصال موفق؛ '+exercises.length+' حرکت ساختگی بارگذاری شد.',true);
 }
 async function refreshSaved(){
@@ -65,6 +66,10 @@ $('save').addEventListener('click',async()=>{
  if(busy)return;const chosen=[...document.querySelectorAll('#exerciseList input:checked')].map(el=>Number(el.value));
  const system=$('system').value,required=system==='normal'?1:system==='superset'?2:3;
  if(chosen.length!==required){show('برای این نوع ثبت باید دقیقاً '+required+' حرکت انتخاب کنی.');return}
+ const sets=Number($('sets').value),rest=Number($('rest').value),reps=$('reps').value.trim();
+ if(!Number.isInteger(sets)||sets<1||sets>20){show('تعداد ست باید عدد صحیح بین ۱ تا ۲۰ باشد.');return}
+ if(!Number.isInteger(rest)||rest<0||rest>3600){show('استراحت باید عدد صحیح بین صفر تا ۳۶۰۰ ثانیه باشد.');return}
+ if(!reps||reps.length>30){show('تکرار را وارد کن (حداکثر ۳۰ نویسه).');return}
  busy=true;$('save').disabled=true;
  let plan=null,committed=false;
  try{
@@ -73,7 +78,7 @@ $('save').addEventListener('click',async()=>{
   if(Array.isArray(plans)&&plans.length===1)plan=plans[0];
   if(!plan||!plan.id)throw new Error('شناسه برنامه از دیتابیس برنگشت.');
   const groupKey=system==='normal'?null:system.toUpperCase()+'-'+Date.now().toString(36);
-  const payload=chosen.map((exercise_id,i)=>({workout_plan_id:plan.id,exercise_id,sets:Number($('sets').value)||3,reps:$('reps').value.trim()||'12',rest_seconds:Number($('rest').value)||0,sort_order:i+1,training_system:system,group_key:groupKey,training_day:$('day').value,is_completed:false}));
+  const payload=chosen.map((exercise_id,i)=>({workout_plan_id:plan.id,exercise_id,sets, reps, rest_seconds:rest,sort_order:i+1,training_system:system,group_key:groupKey,training_day:$('day').value,is_completed:false}));
   let inserted;
   try{inserted=await api('trainee_workout_exercises?select=*',{method:'POST',body:JSON.stringify(payload)})}
   catch(e){if(!/training_day|is_completed/i.test(e.message))throw e;const fallback=payload.map(({training_day,is_completed,...r})=>r);inserted=await api('trainee_workout_exercises?select=*',{method:'POST',body:JSON.stringify(fallback)})}
@@ -82,7 +87,7 @@ $('save').addEventListener('click',async()=>{
   const expected=payload.map(r=>String(r.exercise_id)).sort(),actual=inserted.map(r=>String(r.exercise_id)).sort();
   if(expected.some((id,i)=>id!==actual[i]))throw new Error('حرکات برگشتی با انتخاب‌ها مطابقت ندارد.');
   committed=true;
-  show('موفق: برنامه '+plan.id+' و '+inserted.length+' حرکت در یک عملیات ثبت شد. شناسه‌های حرکت: '+inserted.map(r=>r.id).join(', '),true);
+  show('موفق: برنامه '+plan.id+' و '+inserted.length+' حرکت ذخیره شدند و پاسخ دیتابیس بررسی شد. شناسه‌های حرکت: '+inserted.map(r=>r.id).join(', '),true);
   document.querySelectorAll('#exerciseList input').forEach(el=>el.checked=false);await refreshSaved();
  }catch(e){
   let cleanup='';
