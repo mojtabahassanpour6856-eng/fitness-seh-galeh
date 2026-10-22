@@ -77,3 +77,27 @@ Rollback disables trainee completion updates again; it does not change existing 
 ## Current release status
 
 **BLOCKED / NOT DEPLOYED.** The live policy audit confirms a likely completion-write RLS blocker. The candidate policy passed the disposable CI simulation, but authenticated Supabase REST verification and final security review are still outstanding.
+
+
+## Client payload review (main branch, read-only)
+
+The currently published main-branch HTML defines the trainee completion handler as:
+
+```js
+window.toggleWorkoutComplete = async function(id, checked) {
+  try {
+    await sbWrite(`/trainee_workout_exercises?id=eq.${encodeURIComponent(id)}`, 'PATCH', {is_completed: checked});
+    await loadWorkoutForClient();
+  } catch (e) {
+    alert('ثبت وضعیت حرکت انجام نشد.\\n' + e.message);
+  }
+};
+```
+
+The completion handler's PATCH payload contains only `is_completed`, which matches the intended column-level guard. This is a static source review, not a live browser/network capture, and it does not resolve the RLS blocker.
+
+The same main-branch file also contains coach-side direct writes for adding exercises, copying plans, and other plan-edit operations. Therefore the atomic RPC draft cannot yet be treated as the sole writer. A rollout must inventory and migrate each coach-side write path, account for installed/cached older PWA versions, and preserve the existing trainee UI. Do not add a global write gate or revoke direct writes until compatibility and rollback have been tested.
+
+## Latest disposable CI status (2026-10-22)
+
+Run `39727719937` completed with both `browser-test` and `postgres-integration-test` successful. This remains disposable PostgreSQL evidence; it is not a Supabase REST/JWT staging test.
