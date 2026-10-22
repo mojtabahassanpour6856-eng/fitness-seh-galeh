@@ -17,6 +17,14 @@ begin
   if position('hashtextextended(p_trainee_id::text, 0)' in v_definition) = 0 then
     raise exception 'RPC advisory lock is not keyed by trainee id';
   end if;
+  if position('pg_advisory_xact_lock' in v_definition) >
+     position('select count(*)::integer' in v_definition) then
+    raise exception 'RPC must acquire the trainee lock before checking existing plans';
+  end if;
+  if position('pg_advisory_xact_lock' in v_definition) >
+     position('insert into public.trainee_workout_plans' in v_definition) then
+    raise exception 'RPC must acquire the trainee lock before any plan insert';
+  end if;
 end
 $lock_contract$;
 
