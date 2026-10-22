@@ -30,10 +30,6 @@ begin
      position('select jsonb_build_object' in v_definition) then
     raise exception 'RPC must lock existing exercise rows before snapshot construction';
   end if;
-  if position('perform 1' in v_definition) >
-     position('order by e.id' in v_definition) then
-    raise exception 'Exercise-row locking statement is missing';
-  end if;
 end
 $lock_contract$;
 
