@@ -1,6 +1,25 @@
 \set ON_ERROR_STOP on
 
 -- Verify least-privilege RPC grants and RLS posture in disposable PostgreSQL.
+-- Guard the per-trainee transaction-lock contract against accidental removal.
+-- This is a static regression assertion, NOT a multi-session concurrency test.
+do $lock_contract$
+declare
+  v_definition text;
+begin
+  select pg_get_functiondef(
+    'public.save_trainee_workout_plan_transaction(uuid,bigint,jsonb,jsonb,jsonb)'::regprocedure
+  ) into v_definition;
+
+  if position('pg_advisory_xact_lock' in v_definition) = 0 then
+    raise exception 'RPC is missing its transaction-scoped advisory lock';
+  end if;
+  if position('hashtextextended(p_trainee_id::text, 0)' in v_definition) = 0 then
+    raise exception 'RPC advisory lock is not keyed by trainee id';
+  end if;
+end
+$lock_contract$;
+
 do $$
 declare
   v_signature text := 'public.save_trainee_workout_plan_transaction(uuid,bigint,jsonb,jsonb,jsonb)';
