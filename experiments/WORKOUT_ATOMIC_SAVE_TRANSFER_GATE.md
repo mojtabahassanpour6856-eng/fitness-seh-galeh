@@ -16,12 +16,14 @@ Production branch: `main`
 - The adapter fails closed unless `enableAtomicRpc === true`; the current app launch context does not enable that flag.
 - The disposable PostgreSQL test suite has passed on a previously recorded commit, but that is not equivalent to a fresh pass on the current branch head or a test against production RLS/triggers.
 
-## Verification evidence
+## Verification evidence (updated 2026-10-22)
 
-- Source isolation: the production-derived copy was checked against the production `index.html`; after normalizing the two added state variables and replacing the specifically targeted coach workout-editor section, all remaining content was byte-for-byte identical at the time of that check.
-- SQL fixture tests previously passed for save/replacement, validation, authorization, rollback, and concurrent stale-snapshot rejection in disposable PostgreSQL.
-- The CI workflow now includes a guard asserting that the atomic adapter is opt-in, calls the RPC only, passes the expected snapshot, and does not fall back to legacy table mutations. A fresh run on the current head must be confirmed before this gate can be marked complete.
-- Read-only live-schema review found the expected tables/columns and helper grants, but did not execute DDL/DML in production.
+- Source isolation: the production-derived copy was checked against `index.html`; after normalizing the two added state variables and replacing the specifically targeted coach workout-editor section, all remaining content was byte-for-byte identical. Comparing `main` against the isolated branch's base showed the two commits on `main` only add `experiments/live-auth-connection-check.html`; the production `index.html` was not changed by those commits.
+- Fresh GitHub Actions run **39723548040** completed successfully on the isolated validation PR: both `browser-test` and `postgres-integration-test` passed. The run includes the production-derived source-isolation guard, fail-closed/RPC-only adapter assertions, JavaScript parsing, SQL draft guardrails, save/replacement, authorization, invalid exercise, rollback after forced insert failure, and concurrent stale-snapshot rejection in disposable PostgreSQL. [View run](https://github.com/mojtabahassanpour6856-eng/fitness-seh-galeh/actions/runs/39723548040).
+- Read-only live Supabase review confirmed: the proposed RPC is not installed; `private.is_coach()` and `private.can_access_trainee(uuid)` exist and authenticated can execute them; authenticated has schema usage and SELECT/INSERT/UPDATE/DELETE grants on the three relevant public tables; the actual RLS policies restrict plan and exercise mutations to coaches with access to the trainee; and the existing exercise update trigger only guards UPDATEs. No production DDL/DML was executed.
+- Supabase security advisor currently reports leaked-password protection disabled (unrelated to this RPC). Performance advisor reports an unindexed FK on `coach_workout_templates.coach_user_id` (also unrelated to this RPC).
+- The CI suite uses a disposable PostgreSQL fixture that mirrors the relevant access model; it is not an authenticated browser test against a separate Supabase project. Live grants/policies were inspected read-only, but the RPC has not been run against the production database or a separate Supabase project.
+- A test-only draft PR was created solely to trigger the fresh CI run, with base `coach-workout-editor-isolated-preview`, not `main`: [PR #12](https://github.com/mojtabahassanpour6856-eng/fitness-seh-galeh/pull/12). It is not a production PR and must not be merged to `main`.
 
 ## Mandatory gates before any production transfer
 
