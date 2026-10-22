@@ -44,17 +44,17 @@ const assert = require('node:assert/strict');
     await page.locator('#mobilePreviewButton').click();
     assert.ok((await page.locator('#sessions').innerText()).includes('پرس سینه دمبل'),
       'phone-added movement should appear in the preview before saving');
-    await page.locator('#workoutVersionName').fill('تست ذخیره موبایل');
-    await page.locator('#saveWorkoutVersion').click();
-    assert.match(await page.locator('#workoutVersionStatus').innerText(), /ذخیره شد/,
+    await page.locator('#mobileVersionName').fill('تست ذخیره موبایل');
+    await page.locator('#mobileSaveVersion').click();
+    assert.match(await page.locator('#mobileVersionStatus').innerText(), /ذخیره شد/,
       'saving a plan from a 320px viewport should succeed');
     await page.reload();
-    const savedOption = page.locator('#workoutVersionSelect option').filter({ hasText: 'تست ذخیره موبایل' }).first();
+    const savedOption = page.locator('#mobileVersionSelect option').filter({ hasText: 'تست ذخیره موبایل' }).first();
     await savedOption.waitFor({ state: 'attached' });
     const savedValue = await savedOption.getAttribute('value');
     assert.ok(savedValue, 'saved phone workout should remain in local storage after reload');
-    await page.locator('#workoutVersionSelect').selectOption(savedValue);
-    await page.locator('#loadWorkoutVersion').click();
+    await page.locator('#mobileVersionSelect').selectOption(savedValue);
+    await page.locator('#mobileLoadVersion').click();
     await page.locator('#mobilePreviewButton').click();
     assert.ok((await page.locator('#sessions').innerText()).includes('پرس سینه دمبل'),
       'the saved phone workout should load and preview after a full reload');
