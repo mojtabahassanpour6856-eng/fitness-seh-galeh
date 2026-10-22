@@ -175,5 +175,106 @@
     }
     return { planId, exerciseCount: rows.length, traineeId: value.traineeId, updatedExistingPlan: !createdNewPlan };
   }
-  root.SehWorkoutPersistenceAdapter = Object.freeze({ buildPayload, saveToSupabase, verifyLiveAccess, normalizeName, normalizePlanDate });
+
+  function safeJsonInteger(value, label) {
+    const n = Number(value);
+    if (!Number.isSafeInteger(n)) fail(label + ' خارج از محدوده عدد امن است؛ هیچ تغییری انجام نشد.');
+    return n;
+  }
+  function makeExpectedSnapshot(plan, rows) {
+    if (!plan) return null;
+    const date = String(plan.plan_date || '');
+    if (!/^\\d{4}-\\d{2}-\\d{2}$/.test(date)) fail('تاریخ برنامه قبلی برای مقایسه امن معتبر نیست.');
+    const ordered = (rows || []).slice().sort((a, b) =>
+      safeJsonInteger(a.sort_order, 'ترتیب حرکت') - safeJsonInteger(b.sort_order, 'ترتیب حرکت') ||
+      safeJsonInteger(a.id, 'شناسه حرکت') - safeJsonInteger(b.id, 'شناسه حرکت'));
+    return {
+      plan: {
+        id: safeJsonInteger(plan.id, 'شناسه برنامه'),
+        title: plan.title,
+        plan_date: date,
+        goal: plan.goal == null ? null : plan.goal,
+        notes: plan.notes == null ? null : plan.notes
+      },
+      exercises: ordered.map(row => ({
+        id: safeJsonInteger(row.id, 'شناسه حرکت'),
+        exercise_id: safeJsonInteger(row.exercise_id, 'شناسه بانک حرکت'),
+        sets: row.sets == null ? null : safeJsonInteger(row.sets, 'تعداد ست'),
+        reps: row.reps == null ? null : String(row.reps),
+        rest_seconds: row.rest_seconds == null ? null : safeJsonInteger(row.rest_seconds, 'زمان استراحت'),
+        notes: row.notes == null ? null : row.notes,
+        sort_order: row.sort_order == null ? null : safeJsonInteger(row.sort_order, 'ترتیب حرکت'),
+        training_system: row.training_system == null ? null : row.training_system,
+        group_key: row.group_key == null ? null : row.group_key,
+        training_day: row.training_day == null ? null : row.training_day,
+        is_completed: row.is_completed == null ? null : Boolean(row.is_completed)
+      }))
+    };
+  }
+  async function saveToSupabaseAtomic(input) {
+    const value = input || {};
+    // Deliberately opt-in: the experimental editor must not call an RPC that
+    // has not been deployed/reviewed. The current UI does not enable this flag.
+    if (value.enableAtomicRpc !== true) fail('ذخیره اتمی هنوز فعال نشده است؛ هیچ تغییری انجام نشد.');
+    const client = value.supabase;
+    if (!client || typeof client.from !== 'function' || typeof client.rpc !== 'function') fail('اتصال Supabase برای ذخیره اتمی در دسترس نیست.');
+    if (!value.traineeId) fail('ابتدا یک شاگرد را در پنل مربی انتخاب کن.');
+    const bankResult = await client.from('exercises').select('id,name');
+    if (bankResult.error) fail('دریافت بانک حرکات ناموفق بود: ' + bankResult.error.message);
+    const bank = new Map();
+    for (const row of (bankResult.data || [])) {
+      const key = normalizeName(row.name);
+      if (!key) continue;
+      if (!bank.has(key)) bank.set(key, []);
+      bank.get(key).push(row.id);
+    }
+    const payload = buildPayload(Object.assign({}, value, {
+      planDate: normalizePlanDate(value.planDate),
+      resolveExerciseId: name => {
+        const ids = bank.get(normalizeName(name)) || [];
+        if (ids.length > 1) fail('نام حرکت «' + name + '» در بانک تکراری است؛ هیچ تغییری انجام نشد.');
+        return ids.length === 1 ? ids[0] : null;
+      }
+    }));
+    const existingResult = await client.from('trainee_workout_plans')
+      .select('id,trainee_id,title,goal,notes,plan_date,created_at')
+      .eq('trainee_id', value.traineeId)
+      .order('plan_date', { ascending: false, nullsFirst: false })
+      .order('created_at', { ascending: false })
+      .limit(2);
+    if (existingResult.error) fail('بررسی برنامه قبلی شاگرد ناموفق بود: ' + existingResult.error.message);
+    const existingRows = existingResult.data || [];
+    if (existingRows.length > 1) fail('این شاگرد بیش از یک برنامه دارد؛ هیچ تغییری انجام نشد.');
+    const existing = existingRows[0] || null;
+    let expectedSnapshot = null;
+    if (existing) {
+      const oldRowsResult = await client.from('trainee_workout_exercises')
+        .select('id,workout_plan_id,exercise_id,sets,reps,rest_seconds,notes,sort_order,training_system,group_key,training_day,is_completed')
+        .eq('workout_plan_id', existing.id);
+      if (oldRowsResult.error) fail('خواندن حرکات برنامه قبلی ناموفق بود؛ هیچ تغییری انجام نشد: ' + oldRowsResult.error.message);
+      expectedSnapshot = makeExpectedSnapshot(existing, oldRowsResult.data || []);
+    }
+    const rpcArgs = {
+      p_trainee_id: value.traineeId,
+      p_expected_plan_id: existing ? safeJsonInteger(existing.id, 'شناسه برنامه') : null,
+      p_expected_snapshot: expectedSnapshot,
+      p_plan: { title: payload.plan.title, plan_date: payload.plan.plan_date, goal: payload.plan.goal, notes: payload.plan.notes },
+      p_exercises: payload.exercises
+    };
+    const result = await client.rpc('save_trainee_workout_plan_transaction', rpcArgs);
+    if (result.error) fail('ذخیره اتمی انجام نشد؛ برنامه قبلی باید بدون تغییر مانده باشد: ' + result.error.message);
+    const data = result.data;
+    if (!data || data.trainee_id !== value.traineeId || data.plan_id == null ||
+        Number(data.exercise_count) !== payload.exercises.length || !data.plan_snapshot) {
+      fail('پاسخ ذخیره اتمی قابل تأیید نیست؛ پیش از تلاش دوباره برنامه شاگرد را بازخوانی کن.');
+    }
+    return {
+      planId: data.plan_id,
+      exerciseCount: Number(data.exercise_count),
+      traineeId: data.trainee_id,
+      updatedExistingPlan: Boolean(data.updated_existing_plan),
+      planSnapshot: data.plan_snapshot
+    };
+  }
+\n  root.SehWorkoutPersistenceAdapter = Object.freeze({ buildPayload, saveToSupabase, saveToSupabaseAtomic, makeExpectedSnapshot, verifyLiveAccess, normalizeName, normalizePlanDate });
 })(typeof window !== 'undefined' ? window : globalThis);
