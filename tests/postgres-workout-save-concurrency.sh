@@ -29,8 +29,15 @@ select jsonb_build_object(
 )::text from public.trainee_workout_plans p where p.id=${PLAN_ID}
 ")"
 
+GATE_DIR="$(mktemp -d)"
+cleanup() { rm -rf "$GATE_DIR"; }
+trap cleanup EXIT
+
 run_save() {
   local title="$1"
+  touch "$GATE_DIR/$title.ready"
+  # Both workers must reach this barrier before either RPC starts.
+  while [[ ! -e "$GATE_DIR/go" ]]; do sleep 0.05; done
   psql -X -v ON_ERROR_STOP=1 -v plan_id="$PLAN_ID" -v snapshot="$SNAPSHOT" >"/tmp/${title}.log" 2>&1 <<SQL
 set role authenticated;
 select set_config('request.jwt.claim.sub', 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', false);
@@ -48,6 +55,23 @@ SQL
 set +e
 run_save "Concurrent-A" & pid_a=$!
 run_save "Concurrent-B" & pid_b=$!
+
+# Explicit readiness barrier: both sessions hold the same preloaded snapshot.
+# Fail closed if either worker never reaches the barrier.
+for _ in $(seq 1 200); do
+  if [[ -e "$GATE_DIR/Concurrent-A.ready" && -e "$GATE_DIR/Concurrent-B.ready" ]]; then
+    break
+  fi
+  sleep 0.05
+done
+if [[ ! -e "$GATE_DIR/Concurrent-A.ready" || ! -e "$GATE_DIR/Concurrent-B.ready" ]]; then
+  echo "Timed out waiting for both concurrent-save workers to reach the barrier" >&2
+  touch "$GATE_DIR/go"
+  wait "$pid_a"; wait "$pid_b"
+  exit 1
+fi
+touch "$GATE_DIR/go"
+
 wait "$pid_a"; status_a=$?
 wait "$pid_b"; status_b=$?
 set -e
