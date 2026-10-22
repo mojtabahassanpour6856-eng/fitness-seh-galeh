@@ -2183,7 +2183,24 @@ window.fetch=async function(input,init={}){
   const url=typeof input==="string"?input:input?.url;
   if(url && url.startsWith(SUPABASE_URL+"/rest/v1/")){
     const session=await __fitnessGetApiSession();
-    const headers=new Headers(init.headers || (typeof input!=="string"?input.headers:{}) || {});
+    // Copy headers without passing a Headers object to the Headers constructor.
+    // Some browser/WebView contexts throw "The provided callback is no longer runnable"
+    // when that constructor internally calls Headers.forEach on a cross-context object.
+    const sourceHeaders=init.headers || (typeof input!=="string" ? input?.headers : null) || null;
+    const headers=new Headers();
+    if(sourceHeaders){
+      if(typeof sourceHeaders.entries==="function"){
+        for(const pair of sourceHeaders.entries()){
+          if(pair && pair.length>=2) headers.set(String(pair[0]),String(pair[1]));
+        }
+      }else if(Array.isArray(sourceHeaders)){
+        for(const pair of sourceHeaders){
+          if(pair && pair.length>=2) headers.set(String(pair[0]),String(pair[1]));
+        }
+      }else if(typeof sourceHeaders==="object"){
+        for(const key of Object.keys(sourceHeaders)) headers.set(key,String(sourceHeaders[key]));
+      }
+    }
     headers.set("apikey",SUPABASE_KEY);
     headers.set("Authorization","Bearer "+(session?.access_token||SUPABASE_KEY));
     init={...init,headers};
