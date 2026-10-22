@@ -42,6 +42,7 @@
  .mobile-control select{width:100%;min-width:0;padding:7px 2px;font-size:.78rem;text-align:center}
  .mobile-bottom{display:grid;grid-template-columns:auto minmax(0,1fr);align-items:center;gap:8px;margin-top:10px}
  .mobile-bottom button{padding:11px 8px;font-size:.9rem}
+ #mobileSendToCoachApp{font-weight:700;min-height:44px}
  .mobile-bottom .pill{white-space:nowrap;font-size:.74rem;text-align:center}
  #mobileComposerStatus{font-size:.8rem;margin-bottom:0}
  #planMoves{display:none!important}
@@ -91,7 +92,7 @@
  <p class="muted mobile-hint">حرکت را از بانک انتخاب کن؛ سیستم، ست، تکرار و استراحت را لمس کن. تا ۹ حرکت را با هم انتخاب کن.</p>
  <div id="mobileMoveRows" class="mobile-move-rows"></div>
  <div class="mobile-bottom"><span id="mobileSelectedCount" class="pill">۰ از ۹ حرکت انتخاب شده</span><button id="mobileAddToSession" type="button">افزودن همه به جلسه</button></div>
- <button id="mobilePreviewButton" type="button" class="secondary" style="width:100%;margin-top:8px">بازبینی خروجی برنامه</button><p id="mobileComposerStatus" class="status muted" role="status" aria-live="polite"></p>
+ <button id="mobilePreviewButton" type="button" class="secondary" style="width:100%;margin-top:8px">بازبینی خروجی برنامه</button><button id="mobileSendToCoachApp" type="button" style="width:100%;margin-top:8px">ارسال برنامه به پنل مربی</button><p id="mobileComposerStatus" class="status muted" role="status" aria-live="polite"></p>
 </section>
 <section class="card" id="planMoves"><h2>۲) ورود گروهی حرکات</h2><p>هر حرکت را در یک خط وارد کن. حالت پیشرفته با Tab جدا می‌شود: <span class="pill">نام حرکت · جلسه · سیستم · گروه · ست · تکرار · استراحت</span></p>
 <p class="muted">نمونه را می‌توانی ویرایش کنی؛ ستون جلسه از ۱ شروع می‌شود. برای سیستم عادی، گروه را با — پر کن.</p>
@@ -335,6 +336,21 @@ function buildMobileComposer(){
 function updateMobileCount(){const count=[...document.querySelectorAll('.mobile-exercise-check:checked')].length;if($('mobileSelectedCount'))$('mobileSelectedCount').textContent=count+' از ۹ حرکت انتخاب شده';}
 $('mobileTemplate').addEventListener('change',buildMobileComposer);
 $('mobilePreviewButton').addEventListener('click',()=>{render();$('planPreview').scrollIntoView({behavior:'smooth',block:'start'});});
+$('mobileSendToCoachApp').addEventListener('click',()=>{
+ const sendButton=$('sendToCoachApp');
+ if(!sendButton){$('mobileComposerStatus').textContent='دکمهٔ ذخیره اصلی پیدا نشد؛ صفحه را از داخل پنل مربی دوباره باز کن.';return;}
+ sendButton.click();
+ $('mobileComposerStatus').textContent='در حال ارسال برنامه به پنل مربی…';
+ const started=Date.now();
+ const timer=setInterval(()=>{
+  const status=$('status')?.textContent||'';
+  if(!sendButton.disabled || Date.now()-started>120000){
+   clearInterval(timer);
+   $('mobileComposerStatus').textContent=status||'فرایند ارسال پایان یافت؛ وضعیت ذخیره را بررسی کن.';
+   $('mobileComposerStatus').className='status '+(status.includes('ذخیره شد')?'success':status.includes('انجام نشد')?'error':'muted');
+  }
+ },250);
+});
 $('mobileAddToSession').addEventListener('click',()=>{
  const selected=[];
  document.querySelectorAll('.mobile-move-row').forEach(row=>{
