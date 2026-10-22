@@ -88,6 +88,31 @@ begin
  select exercise_id into v_old_exercise_id from public.trainee_workout_exercises where workout_plan_id=v_plan_id;
  if v_old_title <> 'برنامه جایگزین' or v_old_exercise_id <> 102 then raise exception 'replace failed'; end if;
 
+ -- An exercise-only change must invalidate the preview snapshot too.
+ -- This covers a trainee completion toggle occurring while a coach editor is open.
+ update public.trainee_workout_exercises
+    set is_completed = true
+  where workout_plan_id = v_plan_id;
+ v_failed := false;
+ begin
+  perform public.save_trainee_workout_plan_transaction(
+   '11111111-1111-4111-8111-111111111111', v_plan_id, v_snapshot,
+   '{"title":"ذخیره پس از تغییر انجام تمرین","plan_date":"2026-10-23"}'::jsonb,
+   '[{"exercise_id":101,"sets":3,"reps":"10","rest_seconds":60,"sort_order":1,"training_system":"normal","training_day":"جلسه اول","is_completed":false}]'::jsonb
+  );
+ exception when others then v_failed := true;
+ end;
+ if not v_failed then raise exception 'snapshot with stale exercise completion state unexpectedly accepted'; end if;
+ select title into v_old_title from public.trainee_workout_plans where id=v_plan_id;
+ if v_old_title <> 'برنامه جایگزین' then raise exception 'stale exercise snapshot changed plan metadata'; end if;
+ if not (select is_completed from public.trainee_workout_exercises where workout_plan_id=v_plan_id) then
+  raise exception 'stale exercise snapshot overwrote the newer completion state';
+ end if;
+ -- Restore the fixture to the original snapshot so following tests stay independent.
+ update public.trainee_workout_exercises
+    set is_completed = false
+  where workout_plan_id = v_plan_id;
+
  -- A correct snapshot must not authorize writing to a different plan id.
  v_failed := false;
  begin
