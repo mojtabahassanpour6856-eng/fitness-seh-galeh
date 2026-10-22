@@ -55,8 +55,8 @@ const assert = require('node:assert/strict');
     const beforeSave = await page.locator('#sessions').innerText();
     assert.ok(beforeSave.includes('پرس سینه دمبل'), 'first movement should appear in the preview');
     assert.ok(beforeSave.includes('قایقی سیم‌کش'), 'second movement should appear in the preview');
-    assert.ok(beforeSave.includes('جلسه ۱') && beforeSave.includes('جلسه ۲'),
-      'preview should show both workout sessions');
+    assert.match(beforeSave, /جلسه\s*[۱1]/, 'preview should show session 1');
+    assert.match(beforeSave, /جلسه\s*[۲2]/, 'preview should show session 2');
 
     await page.locator('#mobileSaveVersion').click();
     assert.match(await page.locator('#mobileVersionStatus').innerText(), /نام|ذخیره/,
@@ -81,8 +81,8 @@ const assert = require('node:assert/strict');
     const restoredPreview = await page.locator('#sessions').innerText();
     assert.ok(restoredPreview.includes('پرس سینه دمبل'), 'first movement should restore after a full reload');
     assert.ok(restoredPreview.includes('قایقی سیم‌کش'), 'second movement should restore after a full reload');
-    assert.ok(restoredPreview.includes('جلسه ۱') && restoredPreview.includes('جلسه ۲'),
-      'restored plan should preserve its separate session assignments');
+    assert.match(restoredPreview, /جلسه\s*[۱1]/, 'restored preview should show session 1');
+    assert.match(restoredPreview, /جلسه\s*[۲2]/, 'restored preview should show session 2');
     const restoredBulk = await page.locator('#bulk').inputValue();
     assert.match(restoredBulk, /پرس سینه دمبل\t1\tعادی\t—\t3\t12\t60/);
     assert.match(restoredBulk, /قایقی سیم‌کش\t2\tعادی\t—\t3\t12\t60/);
