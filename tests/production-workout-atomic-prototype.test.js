@@ -7,8 +7,8 @@ const experiment = fs.readFileSync('experiments/production-derived-index.html', 
 
 function normalizeForComparison(source) {
   source = source.replace(
-    'let currentWorkoutPlanId=null;\\nlet workoutExercisesCache=[];\\nlet currentWorkoutPlanBaseline=null;\\nlet workoutPlanSaveBusy=false;',
-    'let currentWorkoutPlanId=null;\\nlet workoutExercisesCache=[];'
+    'let currentWorkoutPlanId=null;\nlet workoutExercisesCache=[];\nlet currentWorkoutPlanBaseline=null;\nlet workoutPlanSaveBusy=false;',
+    'let currentWorkoutPlanId=null;\nlet workoutExercisesCache=[];'
   );
   const start = source.indexOf('async function loadWorkoutForClient()');
   const end = source.indexOf('async function saveProgress()', start);
