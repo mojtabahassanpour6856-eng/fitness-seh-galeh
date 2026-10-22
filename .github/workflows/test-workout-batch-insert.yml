@@ -1,0 +1,57 @@
+name: Workout group batch insert integration test
+
+on:
+  push:
+    branches:
+      - test/workout-save-batch-insert
+    paths:
+      - '.github/workflows/test-workout-batch-insert.yml'
+      - 'tests/workout-batch-insert.integration.sql'
+      - 'tests/workout-batch-insert-static.test.js'
+      - 'index.html'
+  pull_request:
+    branches:
+      - main
+    paths:
+      - '.github/workflows/test-workout-batch-insert.yml'
+      - 'tests/workout-batch-insert.integration.sql'
+      - 'tests/workout-batch-insert-static.test.js'
+      - 'index.html'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  postgres-batch-insert:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: workout_batch_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d workout_batch_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+    env:
+      PGPASSWORD: postgres
+      PGHOST: localhost
+      PGPORT: 5432
+      PGUSER: postgres
+      PGDATABASE: workout_batch_test
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Check actual app handler submits one multi-row request
+        run: node tests/workout-batch-insert-static.test.js
+      - name: Install PostgreSQL client
+        run: sudo apt-get update && sudo apt-get install -y postgresql-client
+      - name: Test batch commit and all-or-nothing rollback in disposable PostgreSQL
+        run: psql -v ON_ERROR_STOP=1 -f tests/workout-batch-insert.integration.sql
