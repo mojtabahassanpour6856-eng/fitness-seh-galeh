@@ -25,6 +25,15 @@ begin
      position('insert into public.trainee_workout_plans' in v_definition) then
     raise exception 'RPC must acquire the trainee lock before any plan insert';
   end if;
+  if position('for update' in v_definition) = 0 or
+     position('from public.trainee_workout_exercises e' in v_definition) >
+     position('for update' in v_definition) then
+    raise exception 'RPC must lock existing exercise rows before snapshot comparison';
+  end if;
+  if position('for update' in v_definition) >
+     position('select jsonb_build_object' in v_definition) then
+    raise exception 'Exercise-row lock must precede snapshot construction';
+  end if;
 end
 $lock_contract$;
 
