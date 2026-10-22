@@ -35,4 +35,15 @@ assert.ok(migration.includes('alter column id set default nextval'), 'must resto
 assert.ok(migration.includes('exists(select 1 from public.trainee_workout_plans)'), 'empty plan table must reset sequence safely');
 assert.ok(migration.includes('exists(select 1 from public.trainee_workout_exercises)'), 'empty exercise table must reset sequence safely');
 
+
+assert.ok(handler.indexOf("if(!same(currentTraineeId(),traineeId)||!same(currentWorkoutPlanId,planId))") < batchWrite, 'must cancel the insert if the selected trainee or plan changes before the write');
+assert.ok(handler.includes("inserted.some(row=>!same(row.workout_plan_id,planId))"), 'must reject rows returned for a different workout plan');
+
+const loadStart = html.lastIndexOf('window.loadWorkoutForClient=async function(){');
+const loadEnd = html.indexOf('window.saveWorkoutPlan=async function(){', loadStart);
+assert.ok(loadStart >= 0 && loadEnd > loadStart, 'could not find guarded workout loader');
+const loadHandler = html.slice(loadStart, loadEnd);
+assert.ok(loadHandler.includes('trainee_id=eq.\u0024{encodeURIComponent(traineeId)}'), 'workout plans must be queried only for the selected trainee');
+assert.ok(loadHandler.includes('requestId!==workoutRequestSeq||!same(currentTraineeId(),traineeId)'), 'stale loads must not repaint a different trainee');
+
 console.log('PASS: mobile batch handler guards and validates saves; migration aligns sequences and restores ID defaults safely.');
