@@ -61,6 +61,7 @@ select setval('public.trainee_workout_plans_id_seq', 1, false);
 select setval('public.trainee_workout_exercises_id_seq', 1, false);
 
 \i supabase/migrations/202610220001_save_trainee_workout_plan_atomic.sql
+\i supabase/migrations/202610220002_experimental_workout_rpc_compat.sql
 
 select set_config('app.test_uid', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', false);
 select set_config('app.test_is_coach', 'true', false);
@@ -194,4 +195,47 @@ begin
   if not v_failed then raise exception 'unauthenticated save unexpectedly succeeded'; end if;
 end $$;
 
-select 'PASS: atomic save contract tests' as result;
+
+-- Test the exact RPC names used by the isolated planner and stale-write rejection.
+select set_config('app.test_uid', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', false);
+select set_config('app.test_is_coach', 'true', false);
+select set_config('app.test_trainee_id', 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb', false);
+do $
+declare
+  v_before jsonb;
+  v_after jsonb;
+  v_plan_id bigint;
+  v_failed boolean := false;
+begin
+  v_before := public.experimental_workout_snapshot('bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb');
+  v_plan_id := nullif(v_before->>'plan_id','')::bigint;
+  perform public.experimental_save_trainee_workout(
+    'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb',
+    v_plan_id,
+    v_before->>'fingerprint',
+    '{"title":"RPC compatibility test","goal":"strength","notes":"round trip","plan_date":"2026-10-24"}'::jsonb,
+    '[{"exercise_id":101,"sets":3,"reps":"10","rest_seconds":60,"sort_order":1,"training_system":"superset","group_key":"SUPERSET-1-1","training_day":"جلسه 1","is_completed":false},{"exercise_id":102,"sets":3,"reps":"12","rest_seconds":60,"sort_order":2,"training_system":"superset","group_key":"SUPERSET-1-1","training_day":"جلسه 1","is_completed":false}]'::jsonb
+  );
+  v_after := public.experimental_workout_snapshot('bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb');
+  if (v_after->>'plan_count')::integer <> 1 then raise exception 'RPC snapshot plan count failed'; end if;
+  if jsonb_array_length(v_after->'exercises') <> 2 then raise exception 'RPC exercise round trip failed'; end if;
+  if v_after->'exercises'->0->>'group_key' <> 'SUPERSET-1-1' then raise exception 'RPC superset group key round trip failed'; end if;
+  if v_after->>'fingerprint' = v_before->>'fingerprint' then raise exception 'RPC fingerprint did not change after save'; end if;
+
+  begin
+    perform public.experimental_save_trainee_workout(
+      'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb',
+      v_plan_id,
+      v_before->>'fingerprint',
+      '{"title":"STALE WRITE MUST FAIL","plan_date":"2026-10-25"}'::jsonb,
+      '[]'::jsonb
+    );
+  exception when sqlstate '40001' then v_failed := true;
+  end;
+  if not v_failed then raise exception 'stale concurrent save was not rejected'; end if;
+  if not exists(select 1 from public.trainee_workout_plans where id=v_plan_id and title='RPC compatibility test') then
+    raise exception 'stale save unexpectedly changed plan header';
+  end if;
+end $;
+
+select 'PASS: atomic save and planner RPC compatibility tests' as result;
