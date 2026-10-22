@@ -14,6 +14,7 @@ on:
       - 'tests/postgres-workout-save-fixture.sql'
       - 'experiments/sql/save_trainee_workout_plan_transaction.sql'
       - 'experiments/WORKOUT_SAVE_RPC_REVIEW_CHECKLIST.md'
+      - 'experiments/WORKOUT_SAVE_AUTOMATED_TEST_RUN_REVIEW.md'
       - '.github/workflows/test-workout-planner-browser.yml'
   workflow_dispatch:
 permissions:
