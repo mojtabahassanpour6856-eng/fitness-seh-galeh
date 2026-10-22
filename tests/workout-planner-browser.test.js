@@ -309,7 +309,7 @@ const fs = require('node:fs');
       assert.match(result.message, /برنامه ناقص پاک شد/);
       assert.ok(result.calls.some(c => c[0] === 'delete' && c[1] === 'trainee_workout_plans' && c[3] === 778));
     });
-    await check('send-to-coach button persists the selected trainee draft through a same-origin mocked coach session', async () => {
+    await check('send-to-coach button fails closed until the atomic RPC is explicitly enabled', async () => {
       const parent = await browser.newPage();
       try {
         await parent.goto('http://127.0.0.1:4173/workout-editor-entry-preview.html');
@@ -317,41 +317,34 @@ const fs = require('node:fs');
           document.body.insertAdjacentHTML('beforeend', '<input id="workoutTitle" value="برنامه آزمایشی"><input id="workoutStartDate" value="2026-10-21"><input id="workoutGoal" value="قدرت"><input id="workoutNotes" value="تست اتصال">');
           window.currentClient = { id: 'test-trainee-uuid' };
           window.__coachSaveCalls = [];
+          window.__coachReadCalls = [];
           window.__coachReloaded = false;
           window.loadWorkoutForClient = async () => { window.__coachReloaded = true; };
           window.AUTH_SUPABASE = { auth:{getSession:async()=>({data:{session:{user:{id:'test-coach-user'}}},error:null})}, from(table) {
-            return { select(columns) {
-              if (table === 'exercises') return Promise.resolve({data:[
-                {id:23,name:'پرس سینه دمبل'},{id:24,name:'قفسه سیم‌کش'},{id:25,name:'اسکوات'}
-              ],error:null});
+            window.__coachReadCalls.push(table);
+            return { select() {
+              if (table === 'exercises') return Promise.resolve({data:[{id:23,name:'پرس سینه دمبل'},{id:24,name:'قفسه سیم‌کش'}],error:null});
               if (table === 'trainees') return {eq(){return this;},limit(){return Promise.resolve({data:[{id:'test-trainee-uuid'}],error:null});}};
               if (table === 'trainee_workout_plans') return {eq(){return this;},order(){return this;},limit(){return Promise.resolve({data:[],error:null});}};
               if (table === 'trainee_workout_exercises') return {eq(){return Promise.resolve({data:[],error:null});}};
             },
-            insert(value) {
-              window.__coachSaveCalls.push({table, value});
-              if (table === 'trainee_workout_plans') return { select() { return { single() { return Promise.resolve({data:{id:9901},error:null}); } }; } };
-              return Promise.resolve({data:null,error:null});
-            },
+            insert(value) { window.__coachSaveCalls.push({table,value}); return Promise.resolve({data:null,error:null}); },
             delete() { return {eq(column,id) { window.__coachSaveCalls.push({table:'rollback',column,id}); return Promise.resolve({error:null}); }}; }
           }; }};
-          window.getWorkoutPlannerContext = () => ({ supabase: window.AUTH_SUPABASE, traineeId: window.currentClient ? String(window.currentClient.id || '') : '', title: 'برنامه آزمایشی', goal: 'قدرت', notes: 'تست اتصال' });
+          window.getWorkoutPlannerContext = () => ({ supabase: window.AUTH_SUPABASE, traineeId: 'test-trainee-uuid' });
         });
         const childPromise = parent.waitForEvent('popup');
         await parent.evaluate(() => window.open('/experiments/workout-template-planner.html', '_blank'));
         const child = await childPromise;
         await child.waitForLoadState('domcontentloaded');
-        await child.locator('#bulk').fill('پرس سینه دمبل\t1\tسوپرست\tA\t3\t12\t60\nقفسه سیم‌کش\t1\tسوپرست\tA\t3\t12\t60');
+        await child.locator('#bulk').fill('پرس سینه دمبل\\t1\\tسوپرست\\tA\\t3\\t12\\t60\\nقفسه سیم‌کش\\t1\\tسوپرست\\tA\\t3\\t12\\t60');
         await child.getByRole('button', { name: 'اعتبارسنجی و پیش‌نمایش' }).click();
         await child.locator('#sendToCoachApp').click();
-        await child.waitForFunction(() => document.getElementById('status')?.textContent.includes('برنامه با موفقیت در پایگاه داده ثبت شد'));
-        const state = await parent.evaluate(() => ({calls:window.__coachSaveCalls,reloaded:window.__coachReloaded}));
-        assert.equal(state.reloaded, true);
-        assert.equal(state.calls.find(x => x.table === 'trainee_workout_plans').value.trainee_id, 'test-trainee-uuid');
-        const rows = state.calls.find(x => x.table === 'trainee_workout_exercises').value;
-        assert.equal(rows.length, 2);
-        assert.equal(rows[0].workout_plan_id, 9901);
-        assert.equal(rows[0].group_key, rows[1].group_key);
+        await child.waitForFunction(() => document.getElementById('status')?.textContent.includes('ذخیره مستقیم فعلاً غیرفعال است'));
+        const state = await parent.evaluate(() => ({writes:window.__coachSaveCalls,reads:window.__coachReadCalls,reloaded:window.__coachReloaded}));
+        assert.deepEqual(state.writes, []);
+        assert.deepEqual(state.reads, []);
+        assert.equal(state.reloaded, false);
         await child.close();
       } finally { await parent.close(); }
     });
