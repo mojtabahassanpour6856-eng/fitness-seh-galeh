@@ -19,6 +19,9 @@ on:
       - 'experiments/production-derived-index.html'
       - 'tests/production-workout-atomic-prototype.test.js'
       - '.github/workflows/test-workout-planner-browser.yml'
+  pull_request:
+    branches:
+      - coach-workout-editor-isolated-preview
   workflow_dispatch:
 permissions:
   contents: read
