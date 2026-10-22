@@ -12,6 +12,11 @@ The current app uses `public.trainee_workout_plans` and `public.trainee_workout_
 - The isolated desktop-editor branch has a similar plan header save/load flow, but does not contain the newer `window.__workoutAddBusy` guard found in main. Copying its file wholesale would regress that safety guard and is therefore not acceptable.
 - Saving the plan header and saving its exercise rows are still separate operations. A true all-or-nothing save of a complete plan requires a transaction-capable server-side operation, plus client wiring and tests; simply switching the UI to the experimental branch would not provide that guarantee.
 
+## Additional migration safety finding (read-only check)
+- Live `information_schema.columns` reports `id` as `bigint NOT NULL` with `column_default = NULL` for both workout tables. `pg_get_serial_sequence(...)` confirms the backing sequences exist (`trainee_workout_plans_id_seq` and `trainee_workout_exercises_id_seq`); observed max IDs were 12 and 158 at inspection time.
+- The proposed RPC initially omitted explicit IDs, which would fail against this live schema because the columns have no defaults. The migration on this feature branch was corrected to call `nextval(...)` for both IDs. This is a code-level correction only; it has NOT been applied or runtime-tested against any database.
+- Because sequence defaults are absent, any client/editor payload assumptions about who allocates IDs must be reconciled before UI integration. Do not copy the migration to production or connect the editor until a no-cost isolated test path exists and concurrency/version-conflict behavior is decided.
+
 ## Required before production merge
 1. Implement the full-plan transaction on an isolated Supabase development branch, enforcing the existing coach/trainee authorization checks.
 2. Validate the payload before writes; ensure a failed exercise row rolls back the plan header and all exercise rows.
@@ -21,4 +26,4 @@ The current app uses `public.trainee_workout_plans` and `public.trainee_workout_
 6. Merge to production only after the test run is green and the rollback commit is recorded.
 
 ## Current status
-Checkpoint and schema/code audit only. No claim is made that the atomic full-plan save is implemented or that the new editor has been published.
+Checkpoint and schema/code audit only. The migration has a reviewed ID-sequence correction on this feature branch, but it has NOT been applied or runtime-tested. The new editor is NOT wired to this RPC and has NOT been published.
