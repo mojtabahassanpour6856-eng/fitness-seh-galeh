@@ -57,10 +57,19 @@ async function refreshSaved(){
  if(!plans.length){$('savedRows').textContent='هنوز برنامه‌ای ذخیره نشده است.';return}
  const ids=plans.map(p=>p.id).join(',');
  const rows=await api('trainee_workout_exercises?select=*&workout_plan_id=in.('+ids+')&order=sort_order.asc');
- $('savedRows').innerHTML=plans.map(p=>{
- const children=rows.filter(r=>String(r.workout_plan_id)===String(p.id));
- return '<div style="padding:10px 0;border-bottom:1px solid #e7d8b8"><b>'+p.title+'</b> · شناسه برنامه '+p.id+'<br>'+children.map(r=>'<span class="pill">'+(exercises.find(e=>String(e.id)===String(r.exercise_id))?.name||('حرکت '+r.exercise_id))+' · '+r.sets+'×'+r.reps+' · '+r.training_system+(r.group_key?' ('+r.group_key+')':'')+'</span>').join('')+'</div>';
- }).join('');
+ const container=$('savedRows');container.replaceChildren();
+ plans.forEach(p=>{
+  const block=document.createElement('div');block.style.cssText='padding:10px 0;border-bottom:1px solid #e7d8b8';
+  const title=document.createElement('b');title.textContent=String(p.title??'برنامه بدون نام');block.append(title,document.createTextNode(' · شناسه برنامه '+p.id));
+  block.append(document.createElement('br'));
+  rows.filter(r=>String(r.workout_plan_id)===String(p.id)).forEach(r=>{
+   const pill=document.createElement('span');pill.className='pill';
+   const name=exercises.find(e=>String(e.id)===String(r.exercise_id))?.name||('حرکت '+r.exercise_id);
+   pill.textContent=String(name)+' · '+r.sets+'×'+r.reps+' · '+r.training_system+(r.group_key?' ('+r.group_key+')':'');
+   block.append(pill);
+  });
+  container.append(block);
+ });
 }
 $('save').addEventListener('click',async()=>{
  if(busy)return;const chosen=[...document.querySelectorAll('#exerciseList input:checked')].map(el=>Number(el.value));
