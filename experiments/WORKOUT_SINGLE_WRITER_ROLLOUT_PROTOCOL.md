@@ -7,9 +7,22 @@ Status: design gate only — no production change authorized.
 
 The atomic RPC serializes new saves with a per-trainee advisory transaction lock and rejects stale snapshots. The existing production writer does not acquire that lock. Therefore the RPC lock alone does **not** prevent an older installed PWA/browser from issuing legacy REST writes at the same time.
 
+## Confirmed writer inventory from production blob
+
+The exact production `main/index.html` blob was re-read directly (SHA `659096df630de2654d8c32725c80d00a5c5db666`, 1,038,026 characters). This review found more than the primary editor writer. The following mutation paths must be included in any write-gate design:
+
+- **Primary coach editor:** plan metadata INSERT/PATCH; add single exercise; delete exercise.
+- **Alternate/guarded coach editor implementation:** plan metadata INSERT/PATCH; add one or multiple/grouped exercises; delete, edit, reorder exercises; copy an existing workout plan and its exercise rows.
+- **Other plan-copy path:** copy previous plan by inserting a new plan and then inserting exercise rows.
+- **Exercise-bank/template selection or bulk add flow:** batch INSERT of exercise rows, with a compatibility fallback that omits optional columns.
+- **Trainee completion flow:** PATCH of only `is_completed` on `trainee_workout_exercises`. This must remain supported and must not be accidentally blocked by a general coach-writer gate.
+- **Read-only/reporting flows:** many additional references to the tables are reads and should not be changed.
+
+This is a concrete partial call-site audit, not yet proof that every possible mutation path across every deployed/cached client has been exhausted. It demonstrates that a blanket trigger gate on both tables would break legitimate existing operations unless they are explicitly migrated or safely exempted.
+
 ## Recommended safety strategy
 
-Use a server-enforced write gate as part of a controlled cutover, rather than relying on clients to self-report their version.
+Use a server-enforced write gate as part of a controlled cutover, rather than relying on clients to self-report their version. Do not write or install the gate until every mutation path above has a tested disposition.
 
 1. **Inventory all writers first.** Search the exact current `main/index.html` and related deployed code for every INSERT/PATCH/DELETE to `trainee_workout_plans` and `trainee_workout_exercises`, including create, edit, delete/archive, template-copy, and any other coach workflows. Document which flows must remain supported. The known editor save/add/delete paths are not sufficient evidence that all writers have been found.
 2. **Design (do not yet install) a transaction-local database gate.** The candidate design is to have the atomic RPC set a transaction-local marker immediately before its DML, and have reviewed database triggers reject direct legacy writes to the protected workout tables when that marker is absent. The marker must be transaction-local, the trigger must cover every relevant mutation event/table, and security review must verify that clients cannot bypass it through another exposed function. The existing trainee completion-state trigger must remain intact.
