@@ -2,7 +2,7 @@ name: Atomic workout-save contract tests
 
 on:
   pull_request:
-    branches: [main, feature/atomic-workout-editor-integration-20261022]
+    branches: [main, feature/atomic-workout-editor-integration-20261022, coach-workout-editor-experiment]
     paths:
       - 'supabase/migrations/202610220001_save_trainee_workout_plan_atomic.sql'
       - 'supabase/migrations/202610220002_experimental_workout_rpc_compat.sql'
