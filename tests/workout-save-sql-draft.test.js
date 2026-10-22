@@ -57,10 +57,10 @@ check('RPC retains row IDs for unchanged exercise+slot pairs and does not overwr
   assert.match(sql, /Preserve row IDs only when the same exercise remains in the same slot/);
   assert.match(sql, /old_e\.exercise_id = incoming\.exercise_id/);
   assert.match(sql, /old_e\.sort_order = incoming\.sort_order/);
-  const updateBlock = sql.match(/update public\.trainee_workout_exercises old_e([\\s\\S]*?)get diagnostics v_inserted_count/);
+  const updateBlock = sql.match(/update public\.trainee_workout_exercises old_e([\s\S]*?)get diagnostics v_inserted_count/);
   assert.ok(updateBlock, 'existing exercise rows should be updated in place');
-  assert.doesNotMatch(updateBlock[1], /is_completed\\s*=/, 'stale coach payload must not overwrite trainee completion state');
-  assert.match(sql, /where not exists \\([\\s\\S]*existing_e\.exercise_id = e\.exercise_id[\\s\\S]*existing_e\.sort_order = e\.sort_order/);
+  assert.doesNotMatch(updateBlock[1], /is_completed\s*=/, 'stale coach payload must not overwrite trainee completion state');
+  assert.match(sql, /where not exists \([\s\S]*existing_e\.exercise_id = e\.exercise_id[\s\S]*existing_e\.sort_order = e\.sort_order/);
 });
 
 check('RPC function execution is revoked from public and anon and granted to authenticated', () => {
