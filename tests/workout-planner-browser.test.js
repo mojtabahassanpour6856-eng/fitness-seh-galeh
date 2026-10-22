@@ -22,6 +22,14 @@ const fs = require('node:fs');
       assert.doesNotMatch(planner, /window\.opener\.eval\(/, 'planner must not use eval to read coach state');
       assert.match(planner, /verifyLiveAccess/);
     });
+    await check('experimental planner fails closed and never falls back to the legacy multi-request writer', async () => {
+      const planner = fs.readFileSync('experiments/workout-template-planner.html', 'utf8');
+      const saveHandler = planner.slice(planner.indexOf("$('sendToCoachApp').addEventListener"));
+      assert.match(saveHandler, /enableAtomicWorkoutSave===true/, 'atomic save must require explicit coach-context opt-in');
+      assert.match(saveHandler, /saveToSupabaseAtomic\(\{enableAtomicRpc:true/, 'the only database save path must be the atomic RPC adapter');
+      assert.doesNotMatch(saveHandler, /\.saveToSupabase\(/, 'legacy multi-request writer must never be called by this editor');
+      assert.match(saveHandler, /ذخیره مستقیم فعلاً غیرفعال است/, 'save must stop before database access unless the atomic RPC is explicitly enabled');
+    });
     await check('persistence adapter maps a validated trial to the existing database schema without writing to the database', async () => {
       const payload = await page.evaluate(() => window.SehWorkoutPersistenceAdapter.buildPayload({
         traineeId: 'trainee-test-17',
