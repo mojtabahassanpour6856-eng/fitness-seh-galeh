@@ -61,6 +61,23 @@ begin
  select exercise_id into v_old_exercise_id from public.trainee_workout_exercises where workout_plan_id=v_plan_id;
  if v_old_title <> 'برنامه جایگزین' or v_old_exercise_id <> 102 then raise exception 'replace failed'; end if;
 
+ -- A correct snapshot must not authorize writing to a different plan id.
+ v_failed := false;
+ begin
+  perform public.save_trainee_workout_plan_transaction(
+   '11111111-1111-4111-8111-111111111111', v_plan_id + 999, v_snapshot,
+   '{"title":"شناسه برنامه اشتباه","plan_date":"2026-10-23"}'::jsonb,
+   '[{"exercise_id":101,"sets":3,"reps":"10","rest_seconds":60,"sort_order":1,"training_system":"normal","training_day":"جلسه اول","is_completed":false}]'::jsonb
+  );
+ exception when others then v_failed := true;
+ end;
+ if not v_failed then raise exception 'mismatched expected plan id unexpectedly accepted'; end if;
+ select title into v_old_title from public.trainee_workout_plans where id=v_plan_id;
+ select exercise_id into v_old_exercise_id from public.trainee_workout_exercises where workout_plan_id=v_plan_id;
+ if v_old_title <> 'برنامه جایگزین' or v_old_exercise_id <> 102 then
+  raise exception 'mismatched plan id changed the existing plan';
+ end if;
+
  -- A stale preview snapshot must be rejected even though the plan id is unchanged.
  v_failed := false;
  begin
