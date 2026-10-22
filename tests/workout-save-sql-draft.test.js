@@ -72,8 +72,8 @@ check('Concurrency harness has bounded waits and verifies the committed winner s
   const race = fs.readFileSync('tests/postgres-workout-save-concurrency.sh', 'utf8');
   assert.match(race, /statement_timeout=15000/);
   assert.match(race, /lock_timeout=10000/);
-  assert.match(race, /Concurrent-A\\.ready/);
-  assert.match(race, /Concurrent-B\\.ready/);
+  assert.match(race, /Concurrent-A[.]ready/);
+  assert.match(race, /Concurrent-B[.]ready/);
   assert.match(race, /Final plan title mismatch/);
   assert.match(race, /Expected exactly one final exercise row/);
 });
