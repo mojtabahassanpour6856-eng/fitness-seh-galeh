@@ -786,6 +786,7 @@ body.locked{overflow:hidden!important}
 </div>
 <label>توضیحات برنامه</label><textarea id="workoutNotes" placeholder="توضیحات مربی..."></textarea>
 <button onclick="saveWorkoutPlan()">💾 ذخیره برنامه تمرینی</button>
+<button type="button" onclick="openSehWorkoutPlanner()">🧩 طراحی سریع برنامه (سوپرست/تری‌ست)</button>
 
 </div>
 </div>
@@ -12168,6 +12169,27 @@ body.workout-output.workout-compact{
 })();
 </script>
 
+<script>
+(function(){
+  window.getWorkoutPlannerContext = function(){
+    var client = window.AUTH_SUPABASE;
+    var trainee = (typeof currentClient !== 'undefined' && currentClient) ? currentClient : window.currentClient;
+    var targetId = String(window.__sehWorkoutPlannerTargetId || '');
+    if (!trainee || !trainee.id) throw new Error('ابتدا شاگرد را در پنل مربی انتخاب کن.');
+    if (!targetId || String(trainee.id) !== targetId) throw new Error('شاگرد انتخاب‌شده تغییر کرده است؛ طراح را ببند و دوباره باز کن.');
+    if (!client || !client.auth || typeof client.rpc !== 'function' || typeof client.from !== 'function') throw new Error('اتصال احرازشده پایگاه داده آماده نیست؛ دوباره وارد پنل مربی شو.');
+    return { supabase: client, traineeId: targetId };
+  };
+  window.openSehWorkoutPlanner = function(){
+    var trainee = (typeof currentClient !== 'undefined' && currentClient) ? currentClient : window.currentClient;
+    if (!trainee || !trainee.id) { alert('ابتدا یک شاگرد را انتخاب کن.'); return; }
+    window.__sehWorkoutPlannerTargetId = String(trainee.id);
+    var url = new URL('./experiments/workout-template-planner.html', window.location.href).href;
+    var popup = window.open(url, 'sehWorkoutPlanner', 'popup=yes,width=1280,height=900,resizable=yes,scrollbars=yes');
+    if (!popup) alert('مرورگر پنجره طراحی را مسدود کرد؛ اجازه بازشدن پنجره را بده و دوباره بزن.');
+  };
+})();
+</script>
 </body></html>
 
 <!-- SEH COACH LOGIN VISIBLE DIAGNOSTIC -->
