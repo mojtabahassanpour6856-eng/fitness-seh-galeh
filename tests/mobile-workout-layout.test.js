@@ -45,9 +45,10 @@ const assert = require('node:assert/strict');
     await page.locator('#mobileAddToSession').click();
 
     await page.locator('#mobileTargetSession').selectOption('2');
-    await row.locator('summary.mobile-exercise-summary').click();
-    await row.locator('.mobile-exercise-search').fill('لت سیم‌کش');
-    await row.locator('.mobile-exercise-option[data-name="لت سیم‌کش"] span').click();
+    const secondRow = page.locator('#mobileMoveRows .mobile-move-row').nth(1);
+    await secondRow.locator('summary.mobile-exercise-summary').click();
+    await secondRow.locator('.mobile-exercise-search').fill('لت سیم‌کش');
+    await secondRow.locator('.mobile-exercise-option[data-name="لت سیم‌کش"] span').click();
     await page.locator('#mobileAddToSession').click();
 
     await page.locator('#mobilePreviewButton').click();
