@@ -57,8 +57,8 @@ create table public.trainee_workout_exercises (
 );
 
 -- Align sequences with the explicit IDs used by the migration.
-select setval('public.trainee_workout_plans_id_seq', 0, false);
-select setval('public.trainee_workout_exercises_id_seq', 0, false);
+select setval('public.trainee_workout_plans_id_seq', 1, false);
+select setval('public.trainee_workout_exercises_id_seq', 1, false);
 
 \i supabase/migrations/202610220001_save_trainee_workout_plan_atomic.sql
 
