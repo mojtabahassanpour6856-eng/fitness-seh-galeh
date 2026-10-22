@@ -21,6 +21,13 @@ begin
     raise exception 'not authorized to access this trainee workout' using errcode = '42501';
   end if;
 
+  -- Serialize the multi-statement snapshot with saves for this trainee.
+  -- Under READ COMMITTED, separate SELECT statements can otherwise observe
+  -- different committed versions if a save finishes between them.
+  perform pg_catalog.pg_advisory_xact_lock(
+    pg_catalog.hashtextextended(p_trainee_id::text, 0)
+  );
+
   select count(*) into v_plan_count
   from public.trainee_workout_plans p
   where p.trainee_id = p_trainee_id;
