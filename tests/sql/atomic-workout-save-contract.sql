@@ -84,6 +84,39 @@ begin
   if n <> 1 then raise exception 'create exercise assertion failed'; end if;
 end $$;
 
+-- Verify update replaces the complete list and preserves grouped/day metadata.
+do $
+declare
+  v_plan_id bigint;
+  n integer;
+  v_group text;
+  v_day text;
+begin
+  select id into v_plan_id from public.trainee_workout_plans where title = 'Contract test';
+  perform public.save_trainee_workout_plan_atomic(
+    v_plan_id,
+    '{"trainee_id":"bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb","title":"Contract test updated","plan_date":"2026-10-23","goal":"strength","notes":"updated"}'::jsonb,
+    '[{"exercise_id":101,"sets":4,"reps":"8","sort_order":1,"training_system":"superset","group_key":"A","training_day":"day2"},{"exercise_id":102,"sets":4,"reps":"12","sort_order":2,"training_system":"superset","group_key":"A","training_day":"day2"}]'::jsonb
+  );
+  select count(*) into n from public.trainee_workout_exercises where workout_plan_id=v_plan_id;
+  if n <> 2 then raise exception 'full-list replacement assertion failed: expected 2 rows, got %', n; end if;
+  select group_key, training_day into v_group, v_day
+    from public.trainee_workout_exercises where workout_plan_id=v_plan_id order by sort_order limit 1;
+  if v_group <> 'A' or v_day <> 'day2' then raise exception 'group/day metadata readback failed'; end if;
+  if not exists(select 1 from public.trainee_workout_plans where id=v_plan_id and title='Contract test updated' and plan_date='2026-10-23') then
+    raise exception 'header update assertion failed';
+  end if;
+
+  -- An empty full list is valid and clears all exercise rows atomically.
+  perform public.save_trainee_workout_plan_atomic(
+    v_plan_id,
+    '{"trainee_id":"bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb","title":"Contract test updated","plan_date":"2026-10-23"}'::jsonb,
+    '[]'::jsonb
+  );
+  select count(*) into n from public.trainee_workout_exercises where workout_plan_id=v_plan_id;
+  if n <> 0 then raise exception 'empty exercise list did not clear rows'; end if;
+end $;
+
 -- Invalid child FK must roll back both header update and child replacement.
 do $$
 declare
