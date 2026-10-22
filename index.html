@@ -4274,25 +4274,36 @@ window.toggleExerciseFavorite=async function(id,value){try{await sbWrite(`/train
     let groupKey=(byId('workoutGroup')?.value||'').trim()||null;
     if(groupMode&&!groupKey)groupKey=(system==='superset'?'SS':system==='triset'?'TS':'GS')+'-'+Date.now().toString(36).toUpperCase();
     const base={workout_plan_id:planId,sets:+(byId('workoutSets')?.value)||0,reps:(byId('workoutReps')?.value||'').trim()||null,rest_seconds:+(byId('workoutRest')?.value)||0,notes:(byId('workoutExerciseNotes')?.value||'').trim()||null,training_system:system,group_key:groupKey,training_day:byId('workoutDay')?.value||null,is_completed:false};
-    let added=0;
+    const payloads=chosen.map((exerciseId,i)=>({...base,exercise_id:exerciseId,sort_order:baseOrder+i}));
     try{
-      for(let i=0;i<chosen.length;i++){
-        if(!same(currentTraineeId(),traineeId)||!same(currentWorkoutPlanId,planId)){throw new Error('شاگرد یا برنامه هنگام ثبت تغییر کرده است؛ برای جلوگیری از ثبت در برنامه اشتباه، عملیات متوقف شد.');}
-        const body={...base,exercise_id:chosen[i],sort_order:baseOrder+i};
-        try{await sbWrite('/trainee_workout_exercises','POST',body);}
-        catch(e){
-          if(/training_day|is_completed/i.test(e.message||'')){const fallback={...body};delete fallback.training_day;delete fallback.is_completed;await sbWrite('/trainee_workout_exercises','POST',fallback);}
-          else throw e;
-        }
-        added++;
+      if(!same(currentTraineeId(),traineeId)||!same(currentWorkoutPlanId,planId)){
+        throw new Error('شاگرد یا برنامه هنگام ثبت تغییر کرده است؛ عملیات لغو شد.');
+      }
+      let inserted;
+      try{
+        // A single multi-row INSERT prevents a group from being partly saved.
+        inserted=await sbWrite('/trainee_workout_exercises','POST',payloads);
+      }catch(e){
+        if(!/training_day|is_completed/i.test(e.message||''))throw e;
+        // Compatibility fallback for deployments without these optional columns.
+        const fallback=payloads.map(row=>{
+          const copy={...row};delete copy.training_day;delete copy.is_completed;return copy;
+        });
+        inserted=await sbWrite('/trainee_workout_exercises','POST',fallback);
+      }
+      if(!Array.isArray(inserted)||inserted.length!==payloads.length){
+        throw new Error('تعداد حرکات تأییدشده با تعداد انتخابی برابر نیست؛ فهرست را تازه‌سازی کنید.');
+      }
+      if(inserted.some(row=>!same(row.workout_plan_id,planId))){
+        throw new Error('پاسخ دیتابیس با برنامه انتخاب‌شده مطابقت ندارد؛ فهرست را بررسی کنید.');
       }
       if(byId('workoutExerciseNotes'))byId('workoutExerciseNotes').value='';
-      if(groupMode)document.querySelectorAll('#workoutGroupPicker input[name="groupExercise"]').forEach(el=>el.checked=false);
+      if(groupMode)document.querySelectorAll('#workoutGroupPicker input[name="groupExercise"]:checked').forEach(el=>el.checked=false);
       if(same(currentTraineeId(),traineeId)&&same(currentWorkoutPlanId,planId))await window.loadWorkoutForClient();
-      alert(groupMode?('گروه '+(system==='superset'?'سوپرست':system==='triset'?'تری‌ست':'جاینت‌ست')+' با '+added+' حرکت انتخاب‌شده ثبت شد.'):'حرکت به برنامه اضافه شد.');
+      alert(groupMode?('گروه '+(system==='superset'?'سوپرست':system==='triset'?'تری‌ست':'جاینت‌ست')+' با '+inserted.length+' حرکت ثبت شد.'):'حرکت به برنامه اضافه شد.');
     }catch(e){
       try{if(same(currentTraineeId(),traineeId)&&same(currentWorkoutPlanId,planId))await window.loadWorkoutForClient();}catch(_){}
-      alert('ثبت حرکت کامل نشد؛ '+added+' حرکت از '+chosen.length+' حرکت ثبت شد.\n'+(e.message||String(e)));
+      alert('ثبت حرکات کامل تأیید نشد. فهرست را تازه‌سازی کنید.\\n'+(e.message||String(e)));
     }
   };
 
