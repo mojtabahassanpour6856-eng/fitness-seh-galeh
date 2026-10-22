@@ -68,4 +68,14 @@ check('Checklist keeps staging rollback and concurrency tests as deployment bloc
   assert.match(checklist, /explicit approval/i);
 });
 
+check('Concurrency harness has bounded waits and verifies the committed winner state', () => {
+  const race = fs.readFileSync('tests/postgres-workout-save-concurrency.sh', 'utf8');
+  assert.match(race, /statement_timeout=15000/);
+  assert.match(race, /lock_timeout=10000/);
+  assert.match(race, /Concurrent-A\\.ready/);
+  assert.match(race, /Concurrent-B\\.ready/);
+  assert.match(race, /Final plan title mismatch/);
+  assert.match(race, /Expected exactly one final exercise row/);
+});
+
 console.log('Static draft checks passed. No SQL was parsed or executed; no database was contacted.');
