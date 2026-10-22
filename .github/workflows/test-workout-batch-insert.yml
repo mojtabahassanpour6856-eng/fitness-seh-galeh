@@ -18,6 +18,7 @@ on:
       - 'tests/workout-batch-insert.integration.sql'
       - 'tests/workout-batch-insert-static.test.js'
       - 'index.html'
+      - 'supabase/migrations/202610220002_restore_workout_id_defaults.sql'
   workflow_dispatch:
 
 permissions:
@@ -50,7 +51,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-      - name: Check actual app handler submits one multi-row request
+      - name: Check actual app handler and migration safety
         run: node tests/workout-batch-insert-static.test.js
       - name: Install PostgreSQL client
         run: sudo apt-get update && sudo apt-get install -y postgresql-client
