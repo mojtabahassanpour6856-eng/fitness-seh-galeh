@@ -5,10 +5,11 @@ on:
     branches: [main]
     paths:
       - 'supabase/migrations/202610220001_save_trainee_workout_plan_atomic.sql'
+      - 'supabase/migrations/202610220002_experimental_workout_rpc_compat.sql'
       - 'tests/sql/atomic-workout-save-contract.sql'
       - '.github/workflows/atomic-workout-save-test.yml'
   push:
-    branches: [feature/atomic-workout-editor-integration-20261022]
+    branches: [feature/atomic-workout-editor-integration-20261022, fix/atomic-workout-editor-rpc-contract]
     paths:
       - 'supabase/migrations/202610220001_save_trainee_workout_plan_atomic.sql'
       - 'tests/sql/atomic-workout-save-contract.sql'
