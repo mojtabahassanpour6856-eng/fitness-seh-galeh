@@ -91,7 +91,14 @@ $('save').addEventListener('click',async()=>{
   document.querySelectorAll('#exerciseList input').forEach(el=>el.checked=false);await refreshSaved();
  }catch(e){
   let cleanup='';
-  if(plan&&plan.id&&!committed){try{await api('trainee_workout_plans?id=eq.'+plan.id,{method:'DELETE',headers:{Prefer:'return=minimal'}});cleanup='\nبرنامه ناقص آزمایشی پاک‌سازی شد.'}catch(cleanErr){cleanup='\nهشدار: پاک‌سازی خودکار برنامه ناقص تأیید نشد؛ شناسه برنامه '+plan.id+'.'}}
+  if(plan&&plan.id&&!committed){
+   try{
+    await api('trainee_workout_exercises?workout_plan_id=eq.'+plan.id,{method:'DELETE',headers:{Prefer:'return=minimal'}});
+    await api('trainee_workout_plans?id=eq.'+plan.id,{method:'DELETE',headers:{Prefer:'return=minimal'}});
+    const check=await api('trainee_workout_plans?select=id&id=eq.'+plan.id);
+    cleanup=Array.isArray(check)&&check.length===0?'\\nبرنامه ناقص آزمایشی پاک‌سازی و بررسی شد.':'\\nهشدار: پاک‌سازی برنامه تأیید نشد؛ شناسه '+plan.id+'.';
+   }catch(cleanErr){cleanup='\\nهشدار: پاک‌سازی خودکار تأیید نشد؛ شناسه برنامه '+plan.id+'.'}
+  }
   show('ذخیره کامل تأیید نشد: '+e.message+cleanup+'\nبرای اطمینان، نتیجه را بازخوانی کن.')
  }
  finally{busy=false;$('save').disabled=false}
