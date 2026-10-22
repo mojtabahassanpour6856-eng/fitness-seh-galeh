@@ -348,6 +348,17 @@ begin
 
   select id into v_plan_id from public.trainee_workout_plans
    where trainee_id='11111111-1111-4111-8111-111111111111' limit 1;
+
+  -- Current production-shaped policy permits only coach UPDATE. The trigger's
+  -- is_completed exception does not grant RLS access; prove the current denial.
+  update public.trainee_workout_exercises
+     set is_completed = not is_completed
+   where workout_plan_id = v_plan_id;
+  get diagnostics v_count = row_count;
+  if v_count <> 0 then
+    raise exception 'fixture mismatch: trainee completion update unexpectedly passed current coach-only UPDATE policy';
+  end if;
+
   begin
     perform public.save_trainee_workout_plan_transaction(
       '11111111-1111-4111-8111-111111111111', v_plan_id, null,
@@ -358,6 +369,47 @@ begin
   end;
   if not v_failed then raise exception 'trainee unexpectedly invoked coach-only RPC'; end if;
 end $rls_trainee$;
+reset role;
+
+-- Candidate policy experiment, disposable DB only: an access-scoped UPDATE
+-- policy lets the trigger's column guard permit is_completed but reject edits
+-- to prescription fields. This policy is NOT installed in production.
+create policy trainee_completion_update_candidate
+on public.trainee_workout_exercises for update to authenticated
+using (exists (
+  select 1 from public.trainee_workout_plans p
+  where p.id = workout_plan_id and private.can_access_trainee(p.trainee_id)
+))
+with check (exists (
+  select 1 from public.trainee_workout_plans p
+  where p.id = workout_plan_id and private.can_access_trainee(p.trainee_id)
+));
+
+set role authenticated;
+select set_config('test.use_live_identity', 'on', false);
+select set_config('request.jwt.claim.sub', 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb', false);
+do $completion_candidate$
+declare
+  v_plan_id bigint;
+  v_count integer;
+  v_failed boolean := false;
+begin
+  select id into v_plan_id from public.trainee_workout_plans
+   where trainee_id='11111111-1111-4111-8111-111111111111' limit 1;
+  update public.trainee_workout_exercises
+     set is_completed = true where workout_plan_id = v_plan_id;
+  get diagnostics v_count = row_count;
+  if v_count < 1 then raise exception 'candidate policy did not allow completion-state update'; end if;
+
+  begin
+    update public.trainee_workout_exercises
+       set sets = sets + 1 where workout_plan_id = v_plan_id;
+  exception when others then
+    if sqlerrm not like '%Trainee may only update is_completed%' then raise; end if;
+    v_failed := true;
+  end;
+  if not v_failed then raise exception 'candidate policy allowed prescription edit by trainee'; end if;
+end $completion_candidate$;
 reset role;
 
 -- A different coach cannot write a plan for a trainee outside their assignment.
