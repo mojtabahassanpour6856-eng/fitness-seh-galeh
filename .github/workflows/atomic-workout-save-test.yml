@@ -1,0 +1,41 @@
+name: Atomic workout-save contract tests
+
+on:
+  pull_request:
+    branches: [main, feature/atomic-workout-editor-integration-20261022]
+    paths:
+      - 'supabase/migrations/202610220001_save_trainee_workout_plan_atomic.sql'
+      - 'supabase/migrations/202610220002_experimental_workout_rpc_compat.sql'
+      - 'tests/sql/atomic-workout-save-contract.sql'
+      - '.github/workflows/atomic-workout-save-test.yml'
+  push:
+    branches: [feature/atomic-workout-editor-integration-20261022, fix/atomic-workout-editor-rpc-contract, test/workout-rpc-compat-20261022]
+    paths:
+      - 'supabase/migrations/202610220001_save_trainee_workout_plan_atomic.sql'
+      - 'supabase/migrations/202610220002_experimental_workout_rpc_compat.sql'
+      - 'tests/sql/atomic-workout-save-contract.sql'
+      - '.github/workflows/atomic-workout-save-test.yml'
+
+jobs:
+  postgres-contract:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: fitness_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d fitness_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run isolated PostgreSQL contract tests
+        env:
+          PGPASSWORD: postgres
+        run: |
+          psql -h localhost -U postgres -d fitness_test -v ON_ERROR_STOP=1 -f tests/sql/atomic-workout-save-contract.sql
