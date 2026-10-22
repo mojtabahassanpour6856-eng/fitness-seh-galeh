@@ -25,9 +25,19 @@ begin
      position('insert into public.trainee_workout_plans' in v_definition) then
     raise exception 'RPC must acquire the trainee lock before any plan insert';
   end if;
-  if position('order by e.id' in v_definition) = 0 or
-     position('order by e.id' in v_definition) >
-     position('select jsonb_build_object' in v_definition) then
+  v_definition := regexp_replace(lower(v_definition), '\s+', ' ', 'g');
+  if position('from public.trainee_workout_exercises e where e.workout_plan_id = v_plan.id' in v_definition) = 0 then
+    -- The exact plan variable name may differ in future refactors; the stronger
+    -- semantic check below is the actual release guard.
+    if position('from public.trainee_workout_exercises e' in v_definition) = 0 then
+      raise exception 'RPC must query existing exercise rows before snapshot construction';
+    end if;
+  end if;
+  if position('order by e.id for update' in v_definition) = 0 then
+    raise exception 'RPC must use FOR UPDATE on existing exercise rows, not only order them';
+  end if;
+  if position('order by e.id for update' in v_definition) >
+     position('select jsonb_build_object(' in v_definition) then
     raise exception 'RPC must lock existing exercise rows before snapshot construction';
   end if;
 end
