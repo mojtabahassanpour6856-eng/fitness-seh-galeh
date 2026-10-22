@@ -4,16 +4,19 @@
 -- do not use a production database for this integration test.
 create schema if not exists workout_batch_test;
 
+create sequence workout_batch_test.trainee_workout_plans_id_seq start 1;
+create sequence workout_batch_test.trainee_workout_exercises_id_seq start 1;
+
 create table workout_batch_test.exercises (
   id bigint primary key,
   name text not null
 );
 create table workout_batch_test.trainee_workout_plans (
-  id bigint primary key,
+  id bigint primary key default nextval('workout_batch_test.trainee_workout_plans_id_seq'::regclass),
   trainee_id uuid not null
 );
 create table workout_batch_test.trainee_workout_exercises (
-  id bigint generated always as identity primary key,
+  id bigint primary key default nextval('workout_batch_test.trainee_workout_exercises_id_seq'::regclass),
   workout_plan_id bigint not null references workout_batch_test.trainee_workout_plans(id),
   exercise_id bigint not null references workout_batch_test.exercises(id),
   sets integer not null,
@@ -21,8 +24,16 @@ create table workout_batch_test.trainee_workout_exercises (
 );
 
 insert into workout_batch_test.exercises(id,name) values (101,'Exercise A'),(102,'Exercise B');
-insert into workout_batch_test.trainee_workout_plans(id,trainee_id)
-values (1,'11111111-1111-4111-8111-111111111111');
+insert into workout_batch_test.trainee_workout_plans(trainee_id)
+values ('11111111-1111-4111-8111-111111111111');
+
+do $assert_id_defaults$
+begin
+  if (select id from workout_batch_test.trainee_workout_plans limit 1) <> 1 then
+    raise exception 'FAIL: plan ID default did not allocate the first sequence value';
+  end if;
+end
+$assert_id_defaults$;
 
 -- Case 1: a selected group is sent as one multi-row INSERT and both rows commit.
 begin;
