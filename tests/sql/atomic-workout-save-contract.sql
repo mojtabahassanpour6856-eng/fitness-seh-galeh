@@ -124,7 +124,7 @@ declare
   v_before_count integer;
   v_failed boolean := false;
 begin
-  select id into v_plan_id from public.trainee_workout_plans where title='Contract test';
+  select id into v_plan_id from public.trainee_workout_plans where title='Contract test updated';
   select count(*) into v_before_count from public.trainee_workout_exercises where workout_plan_id=v_plan_id;
   begin
     perform public.save_trainee_workout_plan_atomic(
@@ -135,7 +135,7 @@ begin
   exception when others then v_failed := true;
   end;
   if not v_failed then raise exception 'invalid exercise unexpectedly succeeded'; end if;
-  if not exists(select 1 from public.trainee_workout_plans where id=v_plan_id and title='Contract test') then
+  if not exists(select 1 from public.trainee_workout_plans where id=v_plan_id and title='Contract test updated') then
     raise exception 'header update did not roll back';
   end if;
   if (select count(*) from public.trainee_workout_exercises where workout_plan_id=v_plan_id) <> v_before_count then
