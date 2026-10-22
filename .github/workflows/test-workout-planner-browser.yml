@@ -3,12 +3,14 @@ on:
   push:
     branches:
       - coach-workout-editor-experiment
+      - coach-workout-mobile-stabilization-20261022
     paths:
       - 'experiments/workout-template-planner.html'
       - 'fitness_seh_galeh_FINAL_CLEAN2.html'
       - 'experiments/workout-persistence-adapter.js'
       - 'experiments/atomic-workout-rpc-adapter.js'
       - 'tests/workout-planner-browser.test.js'
+      - 'tests/mobile-workout-layout.test.js'
       - '.github/workflows/test-workout-planner-browser.yml'
   workflow_dispatch:
 permissions:
@@ -29,3 +31,5 @@ jobs:
         run: python3 -m http.server 4173 --directory . >/tmp/workout-planner-http.log 2>&1 &
       - name: Test planner in Chromium
         run: node tests/workout-planner-browser.test.js
+      - name: Check phone-width layout
+        run: node tests/mobile-workout-layout.test.js
