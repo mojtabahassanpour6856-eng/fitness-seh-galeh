@@ -35,12 +35,12 @@ Use a server-enforced write gate as part of a controlled cutover, rather than re
 
 - The existing writer does not share the advisory lock.
 - Deploying only the RPC leaves old clients able to bypass it.
-- Deploying a client-side feature flag alone is not a security boundary because cached clients can keep using old code.
+- A client-side feature flag alone is not a security boundary because cached clients can keep using old code.
 - A database gate can prevent mixed writes, but may temporarily reject old clients and any un-audited legitimate write path. That impact must be tested and approved first.
 
 ## Current blockers / next checks
 
-- There is only one connected Supabase project, the live production project. No separate Supabase project was found for authenticated integration testing.
+- There is only one connected Supabase project, the live production project. A fresh project listing returned only this project, and its development-branch listing returned no branches.
 - The draft RPC and gate have not been installed anywhere in Supabase.
 - The production source write-path inventory is classified below, but still needs a second review and a search for any other deployed/cached versions before claiming complete coverage.
 - The RPC snapshot/data shape still needs authenticated testing against the actual schema, RLS policies, grants, and trigger behavior in an isolated Supabase environment.
@@ -54,6 +54,19 @@ This document is a rollout design, not executable migration SQL. No production b
 ## Production-source mutation-path audit (2026-10-22)
 
 Audited the full 1,038,026-character production `main/index.html` blob at `659096df630de2654d8c32725c80d00a5c5db666` (13,454 lines). The scan found 114 total `sbWrite(` calls across the app and workout-table references; direct Supabase SDK use against `trainee_workout_plans` found was a dashboard SELECT, not a write. This is a source-level audit of that exact blob, not a guarantee about old cached clients or other deployed versions.
+
+### Read-only production schema check (2026-10-22)
+
+Read-only Supabase metadata queries confirmed the live tables currently expose the columns expected by the prototype for its core plan/exercise fields:
+
+- `trainee_workout_plans`: `id` (bigint), `trainee_id` (uuid), `title` (text), `goal`, `notes`, `plan_date` (date), `created_at`.
+- `trainee_workout_exercises`: `id`, `workout_plan_id`, `exercise_id`, `sets`, `reps`, `rest_seconds`, `notes`, `sort_order`, `training_system`, `group_key`, `training_day`, `is_completed`, `created_at`.
+- `exercises.id` is bigint, matching the prototype's exercise ID type.
+- RLS is enabled on all three tables. The existing `guard_trainee_workout_exercise_update_trigger` is present on `trainee_workout_exercises`.
+- The private helper functions `private.is_coach()` and `private.can_access_trainee(uuid)` exist. The target RPC `public.save_trainee_workout_plan_transaction(...)` is absent.
+- No development branches were returned for the production project.
+
+This check confirms only column/type/trigger presence. It does **not** validate the candidate RPC's behavior under real authenticated sessions, every RLS policy, grants, concurrent writes, rollback, or all client payloads. No SQL schema or data was changed. The live production project was queried read-only only.
 
 ### Write-path disposition matrix
 
