@@ -9,6 +9,7 @@ on:
       - 'tests/workout-batch-insert.integration.sql'
       - 'tests/workout-batch-insert-static.test.js'
       - 'index.html'
+      - 'supabase/migrations/202610220002_restore_workout_id_defaults.sql'
   pull_request:
     branches:
       - main
