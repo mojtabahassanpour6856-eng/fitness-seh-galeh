@@ -1,0 +1,75 @@
+name: Coach desktop workout layout responsive test
+
+on:
+  pull_request:
+    paths:
+      - 'index.html'
+      - '.github/workflows/test-coach-desktop-layout.yml'
+  workflow_dispatch:
+
+jobs:
+  responsive-layout:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Install Playwright
+        run: |
+          npm init -y
+          npm install --save-dev playwright
+          npx playwright install --with-deps chromium
+      - name: Verify desktop-only workout layout and capture previews
+        run: |
+          cat > layout-check.cjs <<'NODE'
+          const { chromium } = require('playwright');
+          const path = require('path');
+          (async () => {
+            const browser = await chromium.launch({ headless: true });
+            const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
+            await page.goto('file://' + path.resolve('index.html'));
+            const desktop = await page.evaluate(() => {
+              document.querySelector('#workout')?.classList.add('active');
+              const section = document.querySelector('#workout');
+              const grid = section?.querySelector('.grid2');
+              return {
+                mediaMatches: matchMedia('(min-width: 1100px) and (hover: hover) and (pointer: fine)').matches,
+                maxWidth: getComputedStyle(document.querySelector('.page')).maxWidth,
+                columns: grid ? getComputedStyle(grid).gridTemplateColumns.split(' ').length : 0,
+                sectionExists: !!section
+              };
+            });
+            if (!desktop.sectionExists) throw new Error('Workout section not found');
+            if (!desktop.mediaMatches) throw new Error('Desktop media query did not match');
+            if (desktop.maxWidth !== '1450px') throw new Error('Desktop page width override missing: ' + desktop.maxWidth);
+            if (desktop.columns !== 4) throw new Error('Desktop workout grid is not four columns: ' + desktop.columns);
+            await page.screenshot({ path: 'coach-layout-desktop.png', fullPage: true });
+            await page.setViewportSize({ width: 390, height: 844 });
+            const mobile = await page.evaluate(() => {
+              const section = document.querySelector('#workout');
+              const grid = section?.querySelector('.grid2');
+              return {
+                maxWidth: getComputedStyle(document.querySelector('.page')).maxWidth,
+                columns: grid ? getComputedStyle(grid).gridTemplateColumns.split(' ').length : 0,
+                mediaMatches: matchMedia('(min-width: 1100px) and (hover: hover) and (pointer: fine)').matches
+              };
+            });
+            if (mobile.mediaMatches) throw new Error('Desktop media query unexpectedly matches mobile viewport');
+            if (mobile.maxWidth === '1450px') throw new Error('Desktop width override leaked into mobile');
+            if (mobile.columns === 4) throw new Error('Four-column desktop grid leaked into mobile');
+            await page.screenshot({ path: 'coach-layout-mobile.png', fullPage: true });
+            console.log(JSON.stringify({desktop, mobile}, null, 2));
+            await browser.close();
+          })().catch(e => { console.error(e); process.exit(1); });
+          NODE
+          node layout-check.cjs
+      - name: Upload responsive screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coach-workout-layout-preview
+          path: |
+            coach-layout-desktop.png
+            coach-layout-mobile.png
+          if-no-files-found: ignore
