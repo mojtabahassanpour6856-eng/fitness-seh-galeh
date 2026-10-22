@@ -184,7 +184,7 @@
   function makeExpectedSnapshot(plan, rows) {
     if (!plan) return null;
     const date = String(plan.plan_date || '');
-    if (!/^\\d{4}-\\d{2}-\\d{2}$/.test(date)) fail('تاریخ برنامه قبلی برای مقایسه امن معتبر نیست.');
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) fail('تاریخ برنامه قبلی برای مقایسه امن معتبر نیست.');
     const ordered = (rows || []).slice().sort((a, b) =>
       safeJsonInteger(a.sort_order, 'ترتیب حرکت') - safeJsonInteger(b.sort_order, 'ترتیب حرکت') ||
       safeJsonInteger(a.id, 'شناسه حرکت') - safeJsonInteger(b.id, 'شناسه حرکت'));
@@ -276,5 +276,6 @@
       planSnapshot: data.plan_snapshot
     };
   }
-\n  root.SehWorkoutPersistenceAdapter = Object.freeze({ buildPayload, saveToSupabase, saveToSupabaseAtomic, makeExpectedSnapshot, verifyLiveAccess, normalizeName, normalizePlanDate });
+
+  root.SehWorkoutPersistenceAdapter = Object.freeze({ buildPayload, saveToSupabase, saveToSupabaseAtomic, makeExpectedSnapshot, verifyLiveAccess, normalizeName, normalizePlanDate });
 })(typeof window !== 'undefined' ? window : globalThis);
