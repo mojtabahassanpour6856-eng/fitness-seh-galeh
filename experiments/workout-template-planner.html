@@ -548,7 +548,7 @@ $('export').addEventListener('click',()=>{render();const data=window.__trial;if(
     render();const data=window.__trial;
     if(data.errors.length){$('status').textContent='ابتدا خطاهای برنامه را اصلاح کن.';return;}
     if(!window.opener||window.opener.closed){$('status').textContent='این صفحه از پنل مربی باز نشده است؛ از داخل پنل مربی وارد شو.';return;}
-    let parentDoc,client,traineeId;
+    let parentDoc,client,traineeId,atomicSaveEnabled=false;
     try{
       if(window.opener.location.origin!==location.origin)throw new Error('پنل مربی باید در همین دامنه باز باشد.');
       if(typeof window.opener.getWorkoutPlannerContext!=='function')throw new Error('پل ارتباطی پنل مربی پیدا نشد؛ از دکمه طراحی سریع داخل پنل وارد شو.');
@@ -556,6 +556,7 @@ $('export').addEventListener('click',()=>{render();const data=window.__trial;if(
       const context=window.opener.getWorkoutPlannerContext();
       client=context&&context.supabase;
       traineeId=context&&context.traineeId;
+      atomicSaveEnabled=!!(context&&context.enableAtomicWorkoutSave===true);
     }catch(e){$('status').textContent='دسترسی امن به پنل مربی ممکن نشد: '+(e.message||String(e));return;}
     if(!client||typeof client.from!=='function'){$('status').textContent='اتصال احرازشده پنل مربی پیدا نشد؛ ابتدا وارد پنل مربی شو.';return;}
     if(!traineeId){$('status').textContent='ابتدا یک شاگرد را در پنل مربی انتخاب کن.';return;}
@@ -565,10 +566,12 @@ $('export').addEventListener('click',()=>{render();const data=window.__trial;if(
     const notes=String(parentDoc.getElementById('workoutNotes')?.value||'').trim();
     const button=$('sendToCoachApp'),oldText=button.textContent;button.disabled=true;button.textContent='در حال ذخیره امن برنامه…';
     try{
+      if(!atomicSaveEnabled)throw new Error('ذخیره مستقیم فعلاً غیرفعال است تا تابع ذخیره اتمی در Supabase نصب و بررسی شود؛ هیچ تغییری در اطلاعات شاگرد انجام نشد.');
       if(!window.SehWorkoutPersistenceAdapter)throw new Error('ماژول ذخیره برنامه بارگذاری نشده است؛ صفحه را تازه‌سازی کن.');
+      if(typeof client.rpc!=='function')throw new Error('اتصال RPC امن در دسترس نیست؛ هیچ تغییری انجام نشد.');
       const liveCheck=await window.SehWorkoutPersistenceAdapter.verifyLiveAccess({supabase:client,traineeId});
       if(liveCheck.planCount>1)throw new Error('شاگرد بیش از یک برنامه دارد؛ برای جلوگیری از ترکیب حرکات قدیمی، هیچ تغییری ذخیره نشد. ابتدا برنامه‌های قبلی را بررسی کن.');
-      const saved=await window.SehWorkoutPersistenceAdapter.saveToSupabase({supabase:client,traineeId,planDate,title,goal,notes,trial:data});
+      const saved=await window.SehWorkoutPersistenceAdapter.saveToSupabaseAtomic({enableAtomicRpc:true,supabase:client,traineeId,planDate,title,goal,notes,trial:data});
       if(window.opener.closed)throw new Error('پنل مربی هنگام ذخیره بسته شد.');
       if(typeof window.opener.loadWorkoutForClient==='function')await window.opener.loadWorkoutForClient();
       $('status').textContent='برنامه با موفقیت در پایگاه داده ثبت شد: '+saved.exerciseCount+' حرکت برای شاگرد انتخاب‌شده. شناسه برنامه: '+saved.planId;
