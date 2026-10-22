@@ -16,6 +16,11 @@ const batchWrite = handler.indexOf("inserted=await sbWrite('/trainee_workout_exe
 assert.ok(payload >= 0, 'selected exercises should be converted into a row payload');
 assert.ok(guard > payload, 'save lock should be enabled after payload preparation');
 assert.ok(batchWrite > guard, 'one batch write should be sent after the save lock');
+const groupValidation = handler.indexOf("if((system==='triset'||system==='giant')&&chosen.length!==3)");
+const planSave = handler.indexOf('await window.saveWorkoutPlan()');
+const firstLock = handler.indexOf('window.__workoutAddBusy=true');
+assert.ok(groupValidation >= 0 && groupValidation < planSave, 'invalid group selection must be rejected before creating/saving a plan');
+assert.ok(firstLock >= 0 && firstLock < planSave, 'save lock must be enabled before awaiting plan creation to prevent duplicate taps');
 assert.ok(handler.includes('inserted.length!==payloads.length'), 'must validate returned row count');
 assert.ok(handler.includes('same(row.workout_plan_id,planId)'), 'must validate returned plan ownership');
 assert.ok(handler.includes('expectedIds.some((id,i)=>id!==returnedIds[i])'), 'must validate returned exercise IDs');
