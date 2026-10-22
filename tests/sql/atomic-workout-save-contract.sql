@@ -200,7 +200,7 @@ end $$;
 select set_config('app.test_uid', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', false);
 select set_config('app.test_is_coach', 'true', false);
 select set_config('app.test_trainee_id', 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb', false);
-do $
+do $$
 declare
   v_before jsonb;
   v_after jsonb;
@@ -236,6 +236,6 @@ begin
   if not exists(select 1 from public.trainee_workout_plans where id=v_plan_id and title='RPC compatibility test') then
     raise exception 'stale save unexpectedly changed plan header';
   end if;
-end $;
+end $$;
 
 select 'PASS: atomic save and planner RPC compatibility tests' as result;
