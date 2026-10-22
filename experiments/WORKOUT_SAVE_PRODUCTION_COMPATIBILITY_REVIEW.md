@@ -15,6 +15,19 @@ The live schema exposes these columns:
 
 The draft writes only columns present in the live schema. It keeps the trainee UUID separate from the JSON plan metadata, uses a bigint plan ID and bigint exercise IDs, and maps the adapter's fields to the live exercise columns. The draft normalizes an empty optional goal/notes value to SQL NULL. The current legacy adapter still performs separate REST writes and compensating restoration; it is not atomic.
 
+## Live security and compatibility checks completed
+
+A second read-only audit was run against the live Supabase project after checking the current draft and adapter. No SQL DDL or DML was executed.
+
+- The proposed RPC name is still absent from the live database.
+- Both target tables have RLS enabled. Existing policies constrain workout-plan access using `private.can_access_trainee(trainee_id)`, and exercise-row access through the parent plan; writes additionally require `private.is_coach()`.
+- `authenticated` has the needed table privileges on the target tables; `anon` has no SELECT/INSERT privileges on these target tables.
+- `authenticated` has USAGE on `private` and EXECUTE on the existing helper functions `private.is_coach()` and `private.can_access_trainee(uuid)`; `anon` has neither private-schema USAGE nor EXECUTE on those helpers.
+- Both existing helpers are `SECURITY DEFINER` with a restricted `search_path`. The proposed save RPC itself remains `SECURITY INVOKER`; it must not be changed to SECURITY DEFINER to work around permissions.
+- A BEFORE UPDATE trigger on `trainee_workout_exercises` prevents non-coaches from changing exercise fields other than `is_completed`. The RPC replaces rows via DELETE/INSERT, and its coach-role check plus RLS policies are expected to govern that path; this still needs an authenticated integration test that mirrors the live policy/trigger behavior.
+- Live schema permits NULL in `plan_date`, `sets`, `rest_seconds`, and `sort_order`; the RPC deliberately validates new payloads before writing. Existing rows with a NULL `plan_date` will fail the adapter's safe snapshot check instead of being overwritten silently.
+- The disposable fixture's target columns already allow NULL where the live schema does, but it does not fully reproduce every live policy, helper, and trigger. It is a behavioral fixture, not a byte-for-byte schema clone.
+
 ## Correctness improvement made
 
 Snapshot aggregation now uses a scalar aggregate subquery with an empty-array fallback. This is important because an existing plan with zero exercise rows must still produce a non-null snapshot, otherwise the stale-snapshot guard would prevent that plan from being replaced.
