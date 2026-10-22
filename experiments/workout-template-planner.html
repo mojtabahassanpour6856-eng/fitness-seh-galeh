@@ -342,7 +342,7 @@ $('mobileAddToSession').addEventListener('click',()=>{
   const sets=row.querySelector('[id^="mobile_sets_"]').value,reps=row.querySelector('[id^="mobile_reps_"]').value,rest=row.querySelector('[id^="mobile_rest_"]').value;
   [...row.querySelectorAll('.mobile-exercise-check:checked')].forEach(cb=>selected.push({name:cb.value,system,group,sets,reps,rest}));
  });
- if(!selected.length){const alreadyAdded=Number(lastAddedCount||0);$('mobileComposerStatus').textContent=alreadyAdded>0?'حرکت‌ها هنگام انتخاب به فهرست برنامه اضافه شده‌اند؛ برای بررسی و ذخیره، «بازبینی خروجی برنامه» و سپس «ارسال به پنل مربی» را بزن.':'ابتدا کادر انتخاب حرکت را باز کن و حرکت‌ها را انتخاب کن؛ حرکت‌ها پس از تکمیل تعداد لازم به‌طور خودکار به فهرست اضافه می‌شوند.';return;}
+ if(!selected.length){const existingLines=rawLines();$('mobileComposerStatus').textContent=existingLines.length>0?'حرکت‌ها از قبل به فهرست برنامه اضافه شده‌اند؛ این دکمه برای انتخاب‌های تیک‌خورده است. حالا «بازبینی خروجی برنامه» را بزن و در صورت درست بودن، «ارسال به پنل مربی» را انتخاب کن.':'برای افزودن حرکت، کادر انتخاب را باز کن. حرکت عادی با انتخاب یک حرکت و سوپرست/تری‌ست با تکمیل تعداد لازم، خودکار اضافه می‌شود.';return;}
  const session=Number($('mobileTargetSession').value);if(session>n()){$('mobileComposerStatus').textContent='جلسه انتخابی بیشتر از تعداد جلسات برنامه است؛ تعداد جلسات را در تنظیم برنامه افزایش بده.';return;}
  const groupMap=new Map();
  for(const m of selected){if(m.system==='عادی')continue;if(m.group==='—'){$('mobileComposerStatus').textContent='برای '+m.system+' یک گروه (A، B، C یا D) انتخاب کن.';return;}const key=m.system+'|'+m.group;if(!groupMap.has(key))groupMap.set(key,[]);groupMap.get(key).push(m);}
