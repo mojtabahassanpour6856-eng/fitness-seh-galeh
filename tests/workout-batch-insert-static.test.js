@@ -10,7 +10,7 @@ assert.notEqual(end, -1, 'could not find end of workout exercise save handler');
 const handler = html.slice(start, end);
 
 const payload = handler.indexOf('const payloads=chosen.map');
-const guard = handler.indexOf('window.__workoutAddBusy=true');
+const guard = handler.lastIndexOf('window.__workoutAddBusy=true');
 const batchWrite = handler.indexOf("inserted=await sbWrite('/trainee_workout_exercises','POST',payloads)");
 
 assert.ok(payload >= 0, 'selected exercises should be converted into a row payload');
