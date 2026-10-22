@@ -21,6 +21,19 @@ Snapshot aggregation now uses a scalar aggregate subquery with an empty-array fa
 
 The SQL file no longer includes a statement that could remove a function with the new five-argument signature before recreating it. The draft remains a SQL artifact only.
 
+## Additional blocker found during legacy-vs-RPC comparison
+
+The legacy `saveToSupabase` path performs multiple independent REST operations (plan update/insert, exercise delete, exercise insert, and compensating restoration on failure). The draft RPC serializes calls with a PostgreSQL advisory transaction lock, but the legacy path does not acquire that lock and cannot participate in the RPC transaction.
+
+**Therefore the advisory lock and snapshot guard do not prevent a legacy save from racing with an RPC save.** If both paths are ever enabled for the same trainee, a legacy write could occur between the RPC's reads/writes or after its transaction commits. This is a deployment blocker, not a theoretical guarantee of safety.
+
+Safe choices before rollout:
+- Keep the RPC opt-in disabled and do not expose it to real trainee saves; or
+- Move all writes for the relevant editor to the RPC in one controlled rollout, with no fallback to the legacy multi-request writer once RPC saving is enabled; or
+- Design and test a shared concurrency protocol used by every write path. Merely adding a client-side lock is insufficient across devices/sessions.
+
+Do not modify the existing production writer as part of this review because the coach and trainee flows are to remain unchanged until a separately reviewed rollout is approved.
+
 ## Items still unverified — deployment blockers
 
 1. The live database's exact EXECUTE/USAGE grants for `private.is_coach()` and `private.can_access_trainee(uuid)` were not conclusively verified in this review. The function is `SECURITY INVOKER`; do not weaken RLS or switch to `SECURITY DEFINER` to work around a permission error.
