@@ -62,6 +62,20 @@ button:active,.client:active,.meal-card:active,.badge:active{transform:scale(.98
 .workout-session-mission-controls{display:flex;flex-direction:column;gap:7px;margin-top:10px}
 .workout-session-mission-controls button{min-height:38px;white-space:normal}
 .workout-session-mission-controls button:disabled{opacity:.72;cursor:default}
+
+/* FITNESS_SEH_GALEH_COACH_DESKTOP_WORKOUT_LAYOUT_20261022
+   Desktop-only layout for the coach workout editor. Trainee UI and mobile layout stay unchanged. */
+@media (min-width: 1100px) and (hover: hover) and (pointer: fine) {
+  body:has(#workout.active) .page { max-width: 1450px; }
+  body:has(#workout.active) #workout { width: 100%; }
+  body:has(#workout.active) #workout > .card { padding: 20px; }
+  body:has(#workout.active) #workout .grid2 { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
+  body:has(#workout.active) #workout .workout-add-fields { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  body:has(#workout.active) #workout input,
+  body:has(#workout.active) #workout select,
+  body:has(#workout.active) #workout textarea { font-size: 15px; }
+  body:has(#workout.active) #workout #workoutList .meal-card { margin-bottom: 12px; }
+}
 </style>
 <style>
 #authScreen{position:fixed;inset:0;background:#050a11;z-index:999;display:flex;align-items:center;justify-content:center;padding:16px}
