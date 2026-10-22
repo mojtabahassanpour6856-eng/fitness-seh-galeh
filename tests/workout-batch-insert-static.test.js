@@ -16,10 +16,16 @@ const batchWrite = handler.indexOf("inserted=await sbWrite('/trainee_workout_exe
 assert.ok(payload >= 0, 'selected exercises should be converted into a row payload');
 assert.ok(guard > payload, 'save lock should be enabled after payload preparation');
 assert.ok(batchWrite > guard, 'one batch write should be sent after the save lock');
-assert.match(handler, /inserted\.length!==payloads\.length/, 'must validate returned row count');
-assert.match(handler, /same\(row\.workout_plan_id,planId\)/, 'must validate returned plan ownership');
-assert.match(handler, /expectedIds\.some\(\(id,i\)=>id!==returnedIds\[i\]\)/, 'must validate returned exercise IDs');
-assert.match(handler, /window\.__workoutAddBusy=false/, 'must release save lock');
-assert.match(handler, /training_day\|is_completed/i, 'must retain optional-column compatibility fallback');
+assert.match(handler, /inserted\\.length!==payloads\\.length/, 'must validate returned row count');
+assert.match(handler, /same\\(row\\.workout_plan_id,planId\\)/, 'must validate returned plan ownership');
+assert.match(handler, /expectedIds\\.some\\(\\(id,i\\)=>id!==returnedIds\\[i\\]\\)/, 'must validate returned exercise IDs');
+assert.match(handler, /window\\.__workoutAddBusy=false/, 'must release save lock');
+assert.match(handler, /training_day\\|is_completed/i, 'must retain optional-column compatibility fallback');
 
-console.log('PASS: latest app handler submits the selected group as one multi-row REST insert and validates the response.');
+assert.match(idDefaultsMigration, /setval\\([\\s\\S]*trainee_workout_plans_id_seq/i, 'must align plan sequence to existing IDs');
+assert.match(idDefaultsMigration, /setval\\([\\s\\S]*trainee_workout_exercises_id_seq/i, 'must align exercise sequence to existing IDs');
+assert.match(idDefaultsMigration, /alter column id set default nextval/i, 'must restore sequence-backed ID defaults');
+assert.match(idDefaultsMigration, /exists\\(select 1 from public\\.trainee_workout_plans\\)/i, 'empty plan table must reset sequence safely');
+assert.match(idDefaultsMigration, /exists\\(select 1 from public\\.trainee_workout_exercises\\)/i, 'empty exercise table must reset sequence safely');
+
+console.log('PASS: mobile batch handler guards and validates saves; migration aligns sequences and restores ID defaults safely.');
