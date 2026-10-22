@@ -4269,8 +4269,7 @@ window.toggleExerciseFavorite=async function(id,value){try{await sbWrite(`/train
     if(!chosen.length){alert(groupMode?'حرکت‌های گروه را انتخاب کنید.':'حرکت را انتخاب کنید.');return;}
     if(system==='superset'&&chosen.length!==2){alert('برای سوپرست دقیقاً دو حرکت انتخاب کنید.');return;}
     if((system==='triset'||system==='giant')&&chosen.length!==3){alert('برای تری‌ست و جاینت‌ست دقیقاً سه حرکت انتخاب کنید.');return;}
-   if(window.__workoutAddBusy)return;
-  window.__workoutAddBusy=true;
+    if(window.__workoutAddBusy)return;
     const rows=Array.isArray(workoutExercisesCache)?workoutExercisesCache:[];
     const baseOrder=rows.length?Math.max(...rows.map(x=>Number(x.sort_order)||0))+1:1;
     let groupKey=(byId('workoutGroup')?.value||'').trim()||null;
@@ -4278,6 +4277,8 @@ window.toggleExerciseFavorite=async function(id,value){try{await sbWrite(`/train
     const base={workout_plan_id:planId,sets:+(byId('workoutSets')?.value)||0,reps:(byId('workoutReps')?.value||'').trim()||null,rest_seconds:+(byId('workoutRest')?.value)||0,notes:(byId('workoutExerciseNotes')?.value||'').trim()||null,training_system:system,group_key:groupKey,training_day:byId('workoutDay')?.value||null,is_completed:false};
     const payloads=chosen.map((exerciseId,i)=>({...base,exercise_id:exerciseId,sort_order:baseOrder+i}));
     try{
+      // Set the guard only after payload construction, but before the first await.
+      window.__workoutAddBusy=true;
       if(!same(currentTraineeId(),traineeId)||!same(currentWorkoutPlanId,planId)){
         throw new Error('شاگرد یا برنامه هنگام ثبت تغییر کرده است؛ عملیات لغو شد.');
       }
