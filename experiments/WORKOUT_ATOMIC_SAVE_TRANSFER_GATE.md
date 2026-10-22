@@ -23,7 +23,7 @@ Production branch: `main`
 - Read-only live Supabase review confirmed: the proposed RPC is not installed; `private.is_coach()` and `private.can_access_trainee(uuid)` exist and authenticated can execute them; authenticated has schema usage and SELECT/INSERT/UPDATE/DELETE grants on the three relevant public tables; the actual RLS policies restrict plan and exercise mutations to coaches with access to the trainee; and the existing exercise update trigger only guards UPDATEs. No production DDL/DML was executed.
 - Supabase security advisor currently reports leaked-password protection disabled (unrelated to this RPC). Performance advisor reports an unindexed FK on `coach_workout_templates.coach_user_id` (also unrelated to this RPC).
 - The CI suite uses a disposable PostgreSQL fixture that mirrors the relevant access model; it is not an authenticated browser test against a separate Supabase project. Live grants/policies were inspected read-only, but the RPC has not been run against the production database or a separate Supabase project.
-- A test-only draft PR was created solely to trigger the fresh CI run, with base `coach-workout-editor-isolated-preview`, not `main`: [PR #12](https://github.com/mojtabahassanpour6856-eng/fitness-seh-galeh/pull/12). It is not a production PR and must not be merged to `main`.
+- A test-only draft PR was created solely to trigger the fresh CI run, with base `coach-workout-editor-isolated-preview`, not `main`; both checks passed, then the PR was closed without merging: [PR #12](https://github.com/mojtabahassanpour6856-eng/fitness-seh-galeh/pull/12).
 
 ## Mandatory gates before any production transfer
 
