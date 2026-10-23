@@ -296,15 +296,14 @@ function buildMobileComposer(){
     updatePickerSummary();updateMobileCount();
    });
    const textNode=document.createElement('span');textNode.textContent=item.name;
-   textNode.style.cursor='pointer';
-   textNode.addEventListener('click',event=>{
+   label.addEventListener('click',event=>{
     if(card.querySelector('[id^="mobile_system_"]')?.value!=='عادی')return;
     event.preventDefault();event.stopPropagation();
     const wasChecked=cb.checked;
     checks.querySelectorAll('.mobile-exercise-check').forEach(other=>{other.checked=false;});
     cb.checked=!wasChecked;
     cb.dispatchEvent(new Event('change',{bubbles:true}));
-   });
+   },true);
    label.append(cb,textNode);checks.appendChild(label);
   });
   search.addEventListener('input',()=>{
