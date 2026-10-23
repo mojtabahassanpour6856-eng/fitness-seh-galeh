@@ -1,0 +1,103 @@
+name: Nine-row workout table browser test
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'index.html'
+      - '.github/workflows/test-nine-row-workout-table.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  workout-table-browser:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install Playwright Chromium
+        run: |
+          npm init -y
+          npm install --save-dev --no-audit --no-fund playwright
+          npx playwright install --with-deps chromium
+      - name: Verify nine-row table in desktop and mobile browser
+        run: |
+          cat > nine-row-check.cjs <<'NODE'
+          const { chromium } = require('playwright');
+          const path = require('node:path');
+          const assert = require('node:assert/strict');
+          (async () => {
+            const browser = await chromium.launch({ headless: true });
+            const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
+            await page.goto('file://' + path.resolve('index.html'), { waitUntil: 'domcontentloaded' });
+            await page.addStyleTag({ content: '#authScreen { display:none !important; }' });
+            const section = page.locator('#workout');
+            await section.evaluate(el => el.classList.add('active'));
+            const table = page.locator('#workoutNineTable');
+            await table.waitFor();
+            assert.equal(await table.locator('tbody tr').count(), 9, 'table must contain exactly nine rows');
+            const expected = ['normal','superset','triset','giant','drop','rest_pause','timed','multi_stage','custom'];
+            for (const row of await table.locator('tbody tr').all()) {
+              const systems = await row.locator('select.w9-system option').evaluateAll(opts => opts.map(o => o.value));
+              assert.deepEqual(systems, expected, 'each row must expose all nine training systems');
+              assert.equal(await row.locator('select.w9-exercise').count(), 1);
+              assert.equal(await row.locator('input.w9-rest').count(), 1);
+              assert.equal(await row.locator('input.w9-reps').count(), 1);
+              assert.equal(await row.locator('input.w9-sets').count(), 1);
+            }
+            // Simulate the exercise list becoming available; the table should mirror its options.
+            await page.locator('#workoutExercise').evaluate(sel => {
+              const opt = document.createElement('option');
+              opt.value = 'test-exercise-id';
+              opt.textContent = 'حرکت آزمایشی';
+              sel.appendChild(opt);
+            });
+            await page.waitForFunction(() => {
+              const sel = document.querySelector('#workoutNineTable .w9-exercise');
+              return !!sel && Array.from(sel.options).some(o => o.value === 'test-exercise-id');
+            });
+            await page.setViewportSize({ width: 390, height: 844 });
+            const mobile = await page.locator('.workout-nine-table-scroll').evaluate(el => ({
+              overflowX: getComputedStyle(el).overflowX,
+              clientWidth: el.clientWidth,
+              scrollWidth: el.scrollWidth
+            }));
+            assert.ok(['auto','scroll'].includes(mobile.overflowX), 'mobile table wrapper must allow horizontal scrolling');
+            await page.screenshot({ path: 'nine-row-table-mobile.png', fullPage: false });
+            await page.setViewportSize({ width: 1440, height: 1000 });
+            await page.screenshot({ path: 'nine-row-table-desktop.png', fullPage: false });
+            console.log(JSON.stringify({ rows: 9, systems: expected, movementOptionsSync: true, mobile }, null, 2));
+            await browser.close();
+          })().catch(err => { console.error(err); process.exit(1); });
+          NODE
+          node nine-row-check.cjs
+      - name: Verify save handler safeguards and batch insert
+        run: |
+          node - <<'NODE'
+          const fs = require('node:fs');
+          const assert = require('node:assert/strict');
+          const html = fs.readFileSync('index.html', 'utf8');
+          const start = html.lastIndexOf('window.saveWorkoutNineTable=async function');
+          assert.ok(start >= 0, 'nine-row save handler must exist');
+          const end = html.indexOf('};', start);
+          const handler = html.slice(start, end);
+          assert.match(handler, /workout_plan_id:currentWorkoutPlanId/, 'must use current plan id, not a window property');
+          assert.match(handler, /sbWrite\('\/trainee_workout_exercises','POST',payloads\)/, 'must use one multi-row insert');
+          assert.match(handler, /inserted\.length!==payloads\.length/, 'must check all rows were returned');
+          assert.match(handler, /training_day\|is_completed/i, 'must retain optional-column compatibility fallback');
+          console.log('PASS: nine-row save handler uses the corrected plan ID and batch-insert safeguards.');
+          NODE
+      - name: Upload browser screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: nine-row-workout-table-preview
+          path: |
+            nine-row-table-mobile.png
+            nine-row-table-desktop.png
+          if-no-files-found: ignore
