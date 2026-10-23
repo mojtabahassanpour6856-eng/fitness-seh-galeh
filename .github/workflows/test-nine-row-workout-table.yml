@@ -126,12 +126,17 @@ jobs:
               window.loadWorkoutForClient = async () => {};
             });
             const rows = await page.locator('#workoutNineTable tbody tr').all();
-            const systems = ['normal','superset','superset','triset','triset','triset','drop','rest_pause','custom'];
+            const systems = ['normal','superset','triset','giant','drop','rest_pause','timed','multi_stage','custom'];
+            const rowExercises = [['test-exercise-1'],['test-exercise-2','test-exercise-3'],['test-exercise-4','test-exercise-5','test-exercise-6'],['test-exercise-7','test-exercise-8','test-exercise-9'],['test-exercise-1'],['test-exercise-2'],['test-exercise-3'],['test-exercise-4'],['test-exercise-5']];
             for (let i = 0; i < rows.length; i++) {
-              await rows[i].locator('.w9-exercise').selectOption('test-exercise-' + (i + 1));
               await rows[i].locator('.w9-system').selectOption(systems[i]);
+              if (['superset','triset','giant'].includes(systems[i])) {
+                for (const id of rowExercises[i]) await rows[i].locator('.w9-exercise-check[value="' + id + '"]').check();
+              } else {
+                await rows[i].locator('.w9-exercise').selectOption(rowExercises[i][0]);
+              }
               await rows[i].locator('.w9-rest').fill(String(30 + i));
-              await rows[i].locator('.w9-reps').fill(i === 6 ? '12+8+6' : String(8 + i));
+              await rows[i].locator('.w9-reps').fill(i === 4 ? '12+8+6' : String(8 + i));
               await rows[i].locator('.w9-sets').fill(String(2 + (i % 3)));
             }
             const first = await page.evaluate(async () => {
@@ -142,21 +147,25 @@ jobs:
             });
             assert.equal(first.url, '/trainee_workout_exercises');
             assert.equal(first.method, 'POST');
-            assert.equal(first.payload.length, 9, 'all nine selected movements must be sent together');
-            assert.deepEqual(first.payload.map(x => x.training_system), systems);
-            assert.deepEqual(first.payload.map(x => x.exercise_id), Array.from({length:9},(_,i)=>'test-exercise-'+(i+1)));
-            assert.deepEqual(first.payload.map(x => x.rest_seconds), Array.from({length:9},(_,i)=>30+i));
-            assert.deepEqual(first.payload.map(x => x.reps), ['8','9','10','11','12','13','12+8+6','15','16']);
+            const expectedIds = rowExercises.flat();
+            const expectedSystems = systems.flatMap(s => [s === 'superset' ? 'superset' : s, ...(s === 'superset' ? ['superset'] : s === 'triset' || s === 'giant' ? [s,s] : [])]);
+            assert.equal(first.payload.length, 14, 'same-row grouped movements must all be sent together');
+            assert.deepEqual(first.payload.map(x => x.training_system), expectedSystems);
+            assert.deepEqual(first.payload.map(x => x.exercise_id), expectedIds);
             assert.ok(first.payload.every(x => x.workout_plan_id === 123));
-            assert.equal(first.payload[1].group_key, first.payload[2].group_key, 'superset rows must share a group key');
-            assert.equal(first.payload[3].group_key, first.payload[4].group_key);
-            assert.equal(first.payload[4].group_key, first.payload[5].group_key, 'triset rows must share one group key');
+            assert.equal(first.payload[1].group_key, first.payload[2].group_key, 'two same-row superset movements must share a group key');
+            assert.equal(first.payload[3].group_key, first.payload[5].group_key, 'three same-row triset movements must share a group key');
+            assert.equal(first.payload[6].group_key, first.payload[8].group_key, 'three same-row giant-set movements must share a group key');
             assert.equal(first.payload[0].group_key, null);
-            assert.equal(first.payload[6].group_key, null);
+            assert.equal(first.payload[9].group_key, null);
             // Refill after success and verify the optional-column fallback path too.
             for (let i = 0; i < rows.length; i++) {
-              await rows[i].locator('.w9-exercise').selectOption('test-exercise-' + (i + 1));
               await rows[i].locator('.w9-system').selectOption(systems[i]);
+              if (['superset','triset','giant'].includes(systems[i])) {
+                for (const id of rowExercises[i]) await rows[i].locator('.w9-exercise-check[value="' + id + '"]').check();
+              } else {
+                await rows[i].locator('.w9-exercise').selectOption(rowExercises[i][0]);
+              }
             }
             const fallback = await page.evaluate(async () => {
               let calls = 0, retryPayload;
@@ -170,7 +179,7 @@ jobs:
               return { calls, retryPayload };
             });
             assert.equal(fallback.calls, 2, 'optional-column error should trigger one compatibility retry');
-            assert.equal(fallback.retryPayload.length, 9);
+            assert.equal(fallback.retryPayload.length, 14);
             assert.ok(fallback.retryPayload.every(x => !('training_day' in x) && !('is_completed' in x)));
             console.log('PASS: actual save handler validated 9-row payload, training-system values, rest/reps/sets, grouping keys, and optional-column retry using mocked storage only.');
             await browser.close();
