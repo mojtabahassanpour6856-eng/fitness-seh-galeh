@@ -606,6 +606,20 @@ $('export').addEventListener('click',()=>{render();const data=window.__trial;if(
         if (!groups[category].includes(name)) groups[category].push(name);
       });
       exerciseLibrary = groups;
+      // If the editor still contains its untouched demo rows, replace demo names
+      // with real names from the coach's bank so a default save never references
+      // an exercise that only exists in the hard-coded demo list.
+      const demoNames = ['پرس سینه دمبل','بالاسینه دستگاه','قفسه سیم‌کش','لت سیم‌کش','قایقی','فیس‌پول','پول‌اور سیم‌کش','اسکوات جام'];
+      const currentLines = $('bulk').value.split(/\\r?\\n/).filter(line => line.trim());
+      const untouchedDemo = currentLines.length === demoNames.length &&
+        currentLines.every((line,index) => line.split('\\t')[0].trim() === demoNames[index]);
+      const uniqueNames = [...new Set(rows.map(row => String(row.name || '').trim()).filter(Boolean))];
+      if (untouchedDemo && uniqueNames.length >= demoNames.length) {
+        $('bulk').value = currentLines.map((line,index) =>
+          [uniqueNames[index], ...line.split('\\t').slice(1)].join('\\t')
+        ).join('\\n');
+        render();
+      }
       const select = $('bankCategory');
       const existing = new Set(Array.from(select.options).map(option => option.value));
       Object.keys(groups).sort((a,b)=>a.localeCompare(b,'fa')).forEach(category => {
