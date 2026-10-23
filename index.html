@@ -802,6 +802,17 @@ body.locked{overflow:hidden!important}
 <p id="workoutTemplateStatus" class="muted" style="margin:5px 0 0">با انتخاب الگو، حرکات گروه‌های مربوط به همان جلسه در فهرست نمایش داده می‌شوند؛ سپس حرکت‌ها را به برنامه اضافه کنید.</p>
 </div>
 <div id="workoutExerciseCount" class="muted" style="margin:6px 0 10px">در حال دریافت حرکات…</div>
+<div class="workout-nine-table-wrap">
+<p class="muted">۹ ردیف برای ثبت سریع حرکات همین جلسه. ردیف‌های خالی نادیده گرفته می‌شوند.</p>
+<div class="workout-nine-table-scroll">
+<table id="workoutNineTable" class="workout-nine-table">
+<thead><tr><th>حرکت</th><th>سیستم تمرینی</th><th>استراحت (ثانیه)</th><th>تکرار</th><th>ست</th></tr></thead>
+<tbody>
+<tr data-row="1"><td><select class="w9-exercise" aria-label="حرکت 1"><option value="">انتخاب حرکت…</option></select></td><td><select class="w9-system" aria-label="سیستم تمرینی 1"><option value="normal">نرمال</option><option value="superset">سوپرست</option><option value="triset">تری‌ست</option><option value="giant">جاینت‌ست</option><option value="drop">دراپ‌ست</option><option value="rest_pause">رست‌پاز</option><option value="timed">تایم‌دار</option><option value="multi_stage">چندمرحله‌ای</option><option value="custom">سفارشی</option></select></td><td><input class="w9-rest" type="number" min="0" value="60" aria-label="استراحت ثانیه ردیف 1"></td><td><input class="w9-reps" type="text" value="10" maxlength="30" aria-label="تکرار ردیف 1"></td><td><input class="w9-sets" type="number" min="1" value="3" aria-label="ست ردیف 1"></td></tr><tr data-row="2"><td><select class="w9-exercise" aria-label="حرکت 2"><option value="">انتخاب حرکت…</option></select></td><td><select class="w9-system" aria-label="سیستم تمرینی 2"><option value="normal">نرمال</option><option value="superset">سوپرست</option><option value="triset">تری‌ست</option><option value="giant">جاینت‌ست</option><option value="drop">دراپ‌ست</option><option value="rest_pause">رست‌پاز</option><option value="timed">تایم‌دار</option><option value="multi_stage">چندمرحله‌ای</option><option value="custom">سفارشی</option></select></td><td><input class="w9-rest" type="number" min="0" value="60" aria-label="استراحت ثانیه ردیف 2"></td><td><input class="w9-reps" type="text" value="10" maxlength="30" aria-label="تکرار ردیف 2"></td><td><input class="w9-sets" type="number" min="1" value="3" aria-label="ست ردیف 2"></td></tr><tr data-row="3"><td><select class="w9-exercise" aria-label="حرکت 3"><option value="">انتخاب حرکت…</option></select></td><td><select class="w9-system" aria-label="سیستم تمرینی 3"><option value="normal">نرمال</option><option value="superset">سوپرست</option><option value="triset">تری‌ست</option><option value="giant">جاینت‌ست</option><option value="drop">دراپ‌ست</option><option value="rest_pause">رست‌پاز</option><option value="timed">تایم‌دار</option><option value="multi_stage">چندمرحله‌ای</option><option value="custom">سفارشی</option></select></td><td><input class="w9-rest" type="number" min="0" value="60" aria-label="استراحت ثانیه ردیف 3"></td><td><input class="w9-reps" type="text" value="10" maxlength="30" aria-label="تکرار ردیف 3"></td><td><input class="w9-sets" type="number" min="1" value="3" aria-label="ست ردیف 3"></td></tr><tr data-row="4"><td><select class="w9-exercise" aria-label="حرکت 4"><option value="">انتخاب حرکت…</option></select></td><td><select class="w9-system" aria-label="سیستم تمرینی 4"><option value="normal">نرمال</option><option value="superset">سوپرست</option><option value="triset">تری‌ست</option><option value="giant">جاینت‌ست</option><option value="drop">دراپ‌ست</option><option value="rest_pause">رست‌پاز</option><option value="timed">تایم‌دار</option><option value="multi_stage">چندمرحله‌ای</option><option value="custom">سفارشی</option></select></td><td><input class="w9-rest" type="number" min="0" value="60" aria-label="استراحت ثانیه ردیف 4"></td><td><input class="w9-reps" type="text" value="10" maxlength="30" aria-label="تکرار ردیف 4"></td><td><input class="w9-sets" type="number" min="1" value="3" aria-label="ست ردیف 4"></td></tr><tr data-row="5"><td><select class="w9-exercise" aria-label="حرکت 5"><option value="">انتخاب حرکت…</option></select></td><td><select class="w9-system" aria-label="سیستم تمرینی 5"><option value="normal">نرمال</option><option value="superset">سوپرست</option><option value="triset">تری‌ست</option><option value="giant">جاینت‌ست</option><option value="drop">دراپ‌ست</option><option value="rest_pause">رست‌پاز</option><option value="timed">تایم‌دار</option><option value="multi_stage">چندمرحله‌ای</option><option value="custom">سفارشی</option></select></td><td><input class="w9-rest" type="number" min="0" value="60" aria-label="استراحت ثانیه ردیف 5"></td><td><input class="w9-reps" type="text" value="10" maxlength="30" aria-label="تکرار ردیف 5"></td><td><input class="w9-sets" type="number" min="1" value="3" aria-label="ست ردیف 5"></td></tr><tr data-row="6"><td><select class="w9-exercise" aria-label="حرکت 6"><option value="">انتخاب حرکت…</option></select></td><td><select class="w9-system" aria-label="سیستم تمرینی 6"><option value="normal">نرمال</option><option value="superset">سوپرست</option><option value="triset">تری‌ست</option><option value="giant">جاینت‌ست</option><option value="drop">دراپ‌ست</option><option value="rest_pause">رست‌پاز</option><option value="timed">تایم‌دار</option><option value="multi_stage">چندمرحله‌ای</option><option value="custom">سفارشی</option></select></td><td><input class="w9-rest" type="number" min="0" value="60" aria-label="استراحت ثانیه ردیف 6"></td><td><input class="w9-reps" type="text" value="10" maxlength="30" aria-label="تکرار ردیف 6"></td><td><input class="w9-sets" type="number" min="1" value="3" aria-label="ست ردیف 6"></td></tr><tr data-row="7"><td><select class="w9-exercise" aria-label="حرکت 7"><option value="">انتخاب حرکت…</option></select></td><td><select class="w9-system" aria-label="سیستم تمرینی 7"><option value="normal">نرمال</option><option value="superset">سوپرست</option><option value="triset">تری‌ست</option><option value="giant">جاینت‌ست</option><option value="drop">دراپ‌ست</option><option value="rest_pause">رست‌پاز</option><option value="timed">تایم‌دار</option><option value="multi_stage">چندمرحله‌ای</option><option value="custom">سفارشی</option></select></td><td><input class="w9-rest" type="number" min="0" value="60" aria-label="استراحت ثانیه ردیف 7"></td><td><input class="w9-reps" type="text" value="10" maxlength="30" aria-label="تکرار ردیف 7"></td><td><input class="w9-sets" type="number" min="1" value="3" aria-label="ست ردیف 7"></td></tr><tr data-row="8"><td><select class="w9-exercise" aria-label="حرکت 8"><option value="">انتخاب حرکت…</option></select></td><td><select class="w9-system" aria-label="سیستم تمرینی 8"><option value="normal">نرمال</option><option value="superset">سوپرست</option><option value="triset">تری‌ست</option><option value="giant">جاینت‌ست</option><option value="drop">دراپ‌ست</option><option value="rest_pause">رست‌پاز</option><option value="timed">تایم‌دار</option><option value="multi_stage">چندمرحله‌ای</option><option value="custom">سفارشی</option></select></td><td><input class="w9-rest" type="number" min="0" value="60" aria-label="استراحت ثانیه ردیف 8"></td><td><input class="w9-reps" type="text" value="10" maxlength="30" aria-label="تکرار ردیف 8"></td><td><input class="w9-sets" type="number" min="1" value="3" aria-label="ست ردیف 8"></td></tr><tr data-row="9"><td><select class="w9-exercise" aria-label="حرکت 9"><option value="">انتخاب حرکت…</option></select></td><td><select class="w9-system" aria-label="سیستم تمرینی 9"><option value="normal">نرمال</option><option value="superset">سوپرست</option><option value="triset">تری‌ست</option><option value="giant">جاینت‌ست</option><option value="drop">دراپ‌ست</option><option value="rest_pause">رست‌پاز</option><option value="timed">تایم‌دار</option><option value="multi_stage">چندمرحله‌ای</option><option value="custom">سفارشی</option></select></td><td><input class="w9-rest" type="number" min="0" value="60" aria-label="استراحت ثانیه ردیف 9"></td><td><input class="w9-reps" type="text" value="10" maxlength="30" aria-label="تکرار ردیف 9"></td><td><input class="w9-sets" type="number" min="1" value="3" aria-label="ست ردیف 9"></td></tr>
+</tbody></table></div>
+<button type="button" onclick="saveWorkoutNineTable()">💾 ثبت حرکات جدول در برنامه</button>
+</div>
+<div id="legacyWorkoutControls" style="display:none">
 <div class="grid2 workout-add-fields">
 <div><label>حرکت</label><select id="workoutExercise"></select></div>
 <div><label>ست</label><input id="workoutSets" type="number" value="3" min="1"></div>
@@ -810,6 +821,7 @@ body.locked{overflow:hidden!important}
 </div>
 <label>توضیحات حرکت</label><input id="workoutExerciseNotes" placeholder="مثلاً کنترل کامل حرکت">
 <button onclick="window.addWorkoutExercise()">＋ افزودن به برنامه</button>
+</div>
 </div>
 <div class="card">
 <h2>📋 حرکات برنامه</h2>
@@ -2850,7 +2862,7 @@ window.loadDashboard = loadDashboard;
       wrap.className='grid2';
       wrap.innerHTML=`<div><label>جلسه تمرینی</label><select id="workoutDay"><option value="جلسه اول">جلسه اول</option><option value="جلسه دوم">جلسه دوم</option><option value="جلسه سوم">جلسه سوم</option><option value="جلسه چهارم">جلسه چهارم</option><option value="جلسه پنجم">جلسه پنجم</option><option value="جلسه ششم">جلسه ششم</option></select></div><div><label>سیستم تمرینی</label><select id="workoutSystem"><option value="normal">نرمال</option><option value="superset">سوپرست</option><option value="triset">تری‌ست</option><option value="giant">جاینت‌ست</option><option value="drop">دراپ‌ست</option><option value="rest_pause">رست‌پاز</option><option value="timed">تایم‌دار</option><option value="multi_stage">چندمرحله‌ای</option><option value="custom">سفارشی</option></select></div><div><label>گروه سیستم</label><input id="workoutGroup" placeholder="مثلاً A1"></div>`;
       const notesLabel=$id('workoutExerciseNotes')?.previousElementSibling;
-      if(notesLabel&&notesLabel.parentElement===card)card.insertBefore(wrap,notesLabel);else card.appendChild(wrap);
+      if(notesLabel&&(notesLabel.parentElement===card||notesLabel.closest('#legacyWorkoutControls')))notesLabel.parentElement.insertBefore(wrap,notesLabel);else card.appendChild(wrap);
     }
     const exercise=$id('workoutExercise'), system=$id('workoutSystem');
     if(!exercise||!system)return;
@@ -4340,7 +4352,7 @@ window.toggleExerciseFavorite=async function(id,value){try{await sbWrite(`/train
       if(byId('workoutExerciseNotes'))byId('workoutExerciseNotes').value='';
       if(groupMode)document.querySelectorAll('#workoutGroupPicker input[name="groupExercise"]:checked').forEach(el=>el.checked=false);
       if(same(currentTraineeId(),traineeId)&&same(currentWorkoutPlanId,planId)){
-  try{await window.loadWorkoutForClient();}
+  try{await loadWorkoutForClient();}
   catch(refreshError){
     window.__workoutAddBusy=false;
     alert('حرکات ذخیره شدند، اما تازه‌سازی فهرست انجام نشد. فهرست را دستی تازه‌سازی کنید.');
@@ -12240,6 +12252,96 @@ body.workout-output.workout-compact{
     var popup = window.open(url, 'sehWorkoutPlanner', 'popup=yes,width=1280,height=900,resizable=yes,scrollbars=yes');
     if (!popup) alert('مرورگر پنجره طراحی را مسدود کرد؛ اجازه بازشدن پنجره را بده و دوباره بزن.');
   };
+})();
+</script>
+
+<style id="workout-nine-table-css">
+.workout-nine-table-wrap{margin:12px 0;padding:10px;border:1px solid #d8c79d;border-radius:12px;background:#fffaf0;color:#302719}
+.workout-nine-table-scroll{width:100%;overflow-x:auto;-webkit-overflow-scrolling:touch}
+.workout-nine-table{width:100%;min-width:620px;border-collapse:separate;border-spacing:0 5px;table-layout:fixed}
+.workout-nine-table th{padding:8px 5px;background:#e9d8a8;color:#302719;font-size:12px;text-align:center;white-space:normal}
+.workout-nine-table td{padding:4px;background:#fffdf7;border-top:1px solid #eadfbe;border-bottom:1px solid #eadfbe}
+.workout-nine-table td:first-child{border-right:1px solid #eadfbe;border-radius:0 8px 8px 0}
+.workout-nine-table td:last-child{border-left:1px solid #eadfbe;border-radius:8px 0 0 8px}
+.workout-nine-table select,.workout-nine-table input{width:100%;min-width:0;box-sizing:border-box;padding:8px 4px;margin:0;font-size:12px;border:1px solid #cfc3a5;border-radius:7px;background:#fff;color:#29251c}
+.workout-nine-table th:nth-child(1){width:31%}.workout-nine-table th:nth-child(2){width:23%}.workout-nine-table th:nth-child(3){width:17%}.workout-nine-table th:nth-child(4){width:15%}.workout-nine-table th:nth-child(5){width:14%}
+@media(max-width:480px){.workout-nine-table-wrap{padding:7px}.workout-nine-table{min-width:590px}.workout-nine-table th{font-size:11px}}
+</style>
+
+<script id="workout-nine-table-logic">
+(function(){
+ const systems=new Set(['normal','superset','triset','giant','drop','rest_pause','timed','multi_stage','custom']);
+ function syncNineMovementOptions(){
+   const source=document.getElementById('workoutExercise');
+   if(!source)return;
+   document.querySelectorAll('#workoutNineTable .w9-exercise').forEach(sel=>{
+     const previous=sel.value;
+     const options=Array.from(source.options).map(o=>({value:o.value,text:o.textContent||''}));
+     sel.innerHTML='<option value="">انتخاب حرکت…</option>'+options.filter(o=>o.value).map(o=>'<option value="'+String(o.value).replace(/&/g,'&amp;').replace(/"/g,'&quot;')+'">'+String(o.text).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')+'</option>').join('');
+     if(options.some(o=>o.value===previous))sel.value=previous;
+   });
+ }
+ window.saveWorkoutNineTable=async function(){
+   if(!currentClient)return alert('اول شاگرد را انتخاب کنید.');
+   const table=document.getElementById('workoutNineTable');
+   if(!table)return;
+   syncNineMovementOptions();
+   const rows=Array.from(table.querySelectorAll('tbody tr')).map((tr,index)=>({
+     index,exerciseId:tr.querySelector('.w9-exercise').value,
+     system:tr.querySelector('.w9-system').value,
+     restRaw:tr.querySelector('.w9-rest').value,
+     reps:tr.querySelector('.w9-reps').value.trim(),
+     setsRaw:tr.querySelector('.w9-sets').value
+   })).filter(r=>r.exerciseId);
+   if(!rows.length)return alert('حداقل یک حرکت را در جدول انتخاب کنید.');
+   for(const r of rows){
+     if(!systems.has(r.system))return alert('سیستم تمرینی ردیف '+(r.index+1)+' معتبر نیست.');
+     if(!r.reps)return alert('تکرار ردیف '+(r.index+1)+' را وارد کنید.');
+     if(!Number.isFinite(Number(r.setsRaw))||Number(r.setsRaw)<1)return alert('تعداد ست ردیف '+(r.index+1)+' باید حداقل ۱ باشد.');
+     if(!Number.isFinite(Number(r.restRaw))||Number(r.restRaw)<0)return alert('استراحت ردیف '+(r.index+1)+' معتبر نیست.');
+   }
+   // Group systems must be consecutive and have the exact number of movement rows.
+   for(let i=0;i<rows.length;){
+     const r=rows[i],needed=r.system==='superset'?2:(r.system==='triset'||r.system==='giant'?3:1);
+     if(needed===1){i++;continue;}
+     let j=i+1;while(j<rows.length&&rows[j].system===r.system)j++;
+     if(j-i!==needed)return alert((r.system==='superset'?'سوپرست':r.system==='triset'?'تری‌ست':'جاینت‌ست')+' باید در ردیف‌های پشت‌سرهم دقیقاً '+needed+' حرکت داشته باشد. ردیف‌های '+(r.index+1)+' به بعد را بررسی کنید.');
+     i=j;
+   }
+   try{
+     if(!currentWorkoutPlanId){await saveWorkoutPlan();if(!currentWorkoutPlanId)return;}
+     const cached=Array.isArray(workoutExercisesCache)?workoutExercisesCache:[];
+     const baseOrder=cached.length?Math.max(...cached.map(x=>Number(x.sort_order)||0))+1:1;
+     const payloads=[];
+     for(let i=0;i<rows.length;){
+       const r=rows[i],groupMode=['superset','triset','giant'].includes(r.system);
+       const groupSize=r.system==='superset'?2:(r.system==='triset'||r.system==='giant'?3:1);
+       const groupKey=groupMode?(r.system==='superset'?'SS':r.system==='triset'?'TS':'GS')+'-'+Date.now().toString(36).toUpperCase()+'-'+i:null;
+       for(let k=0;k<groupSize;k++){
+         const item=rows[i+k];
+         payloads.push({workout_plan_id:currentWorkoutPlanId,exercise_id:item.exerciseId,sets:Number(item.setsRaw),reps:item.reps,rest_seconds:Number(item.restRaw),notes:null,sort_order:baseOrder+payloads.length,training_system:item.system,group_key:groupKey,training_day:document.getElementById('workoutDay')?.value||null,is_completed:false});
+       }
+       i+=groupSize;
+     }
+     let inserted;
+     try{inserted=await sbWrite('/trainee_workout_exercises','POST',payloads);}
+     catch(e){
+       if(!/training_day|is_completed/i.test(e.message||''))throw e;
+       inserted=await sbWrite('/trainee_workout_exercises','POST',payloads.map(row=>{const copy={...row};delete copy.training_day;delete copy.is_completed;return copy;}));
+     }
+     if(!Array.isArray(inserted)||inserted.length!==payloads.length)throw new Error('پاسخ ذخیره‌سازی همه حرکت‌ها را تأیید نکرد؛ فهرست را بررسی کنید.');
+     await window.loadWorkoutForClient();
+     table.querySelectorAll('tbody tr').forEach(tr=>{tr.querySelector('.w9-exercise').value='';tr.querySelector('.w9-system').value='normal';tr.querySelector('.w9-rest').value='60';tr.querySelector('.w9-reps').value='10';tr.querySelector('.w9-sets').value='3';});
+     alert(rows.length+' حرکت با موفقیت در برنامه ثبت شد.');
+   }catch(e){try{await window.loadWorkoutForClient();}catch(_){}alert('ثبت جدول کامل نشد.\n'+(e?.message||String(e)));}
+ };
+ function start(){
+   syncNineMovementOptions();
+   const source=document.getElementById('workoutExercise');
+   if(source&&!source.dataset.w9Sync){new MutationObserver(syncNineMovementOptions).observe(source,{childList:true,subtree:true});source.dataset.w9Sync='1';}
+   // Rows are fixed; observe only the source list to avoid a mutation loop while syncing options.
+ }
+ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start,{once:true});else start();
 })();
 </script>
 </body></html>
