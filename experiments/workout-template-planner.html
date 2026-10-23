@@ -643,7 +643,8 @@ $('export').addEventListener('click',()=>{render();const data=window.__trial;if(
       const currentContext=window.opener.getWorkoutPlannerContext();
       if(!currentContext||String(currentContext.traineeId)!==baseline.traineeId)throw new Error('شاگرد انتخاب‌شده در پنل مربی تغییر کرده است؛ برای جلوگیری از ذخیره روی شاگرد اشتباه، طراح را ببند و دوباره باز کن.');
       const parentDoc=window.opener.document;
-      const liveCheck=await window.SehWorkoutPersistenceAdapter.verifyLiveAccess({supabase:baseline.client,traineeId:baseline.traineeId});
+      // Access was already verified by the authenticated atomic snapshot RPC when the editor opened.
+      // Avoid direct trainee-table reads here: production RLS intentionally restricts those reads.
       
       const title=String(parentDoc.getElementById('workoutTitle')?.value||'').trim()||'برنامه تمرینی';
       const planDate=String(parentDoc.getElementById('workoutStartDate')?.value||'').trim()||new Date().toISOString().slice(0,10);
