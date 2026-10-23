@@ -2186,7 +2186,15 @@ window.fetch=async function(input,init={}){
     // Avoid Headers(existingHeaders): some WebView/PWA contexts throw a stale-callback error inside Headers.forEach.
     const source=init.headers!==undefined?init.headers:(typeof input!=="string"?input?.headers:undefined);
     const headers=new Headers();
-    if(source && typeof source!=="string" && typeof source[Symbol.iterator]==="function"){
+    // Some mobile WebViews expose a Headers iterator that fails with
+    // "The provided callback is no longer runnable". Copy via get() instead.
+    if(source && typeof source.get==="function" && typeof source.has==="function"){
+      const knownHeaderNames=["apikey","authorization","content-type","prefer","accept","range","if-match","if-none-match","x-client-info","cache-control"];
+      for(const name of knownHeaderNames){
+        const value=source.get(name);
+        if(value!==null && value!==undefined) headers.set(name,value);
+      }
+    }else if(source && typeof source!=="string" && typeof source[Symbol.iterator]==="function"){
       for(const pair of source){
         if(pair && pair.length>=2) headers.set(String(pair[0]),String(pair[1]));
       }
@@ -5451,8 +5459,16 @@ window.useLibraryExercise=async function(id){
         else { var supplementHtml='<section class="supplement-plan supplement-empty"><h3>ویتامین‌ها و مکمل‌ها</h3><p>مکمل یا ویتامینی برای نمایش ثبت نشده است.</p></section>'; }
         body+='<div class="meal-bottom-grid">'+nutritionSummaryHtml+supplementHtml+'</div>';
       } else {
-        const allPlans = await sbGet('/trainee_workout_plans?trainee_id=eq.'+encodeURIComponent(trainee.id)+'&select=*&order=created_at.desc');
-        p = (allPlans||[])[0];
+        // Prefer the plan currently selected in the coach editor; otherwise use the latest saved plan.
+        const selectedWorkoutPlanId = (typeof currentWorkoutPlanId !== 'undefined' && currentWorkoutPlanId) ? currentWorkoutPlanId : null;
+        if(selectedWorkoutPlanId){
+          const selectedPlans = await sbGet('/trainee_workout_plans?id=eq.'+encodeURIComponent(selectedWorkoutPlanId)+'&trainee_id=eq.'+encodeURIComponent(trainee.id)+'&select=*&limit=1');
+          p = (selectedPlans||[])[0] || null;
+          if(!p) throw new Error('برنامه انتخاب‌شده برای این شاگرد پیدا نشد؛ برنامه را دوباره بارگذاری کنید.');
+        }else{
+          const allPlans = await sbGet('/trainee_workout_plans?trainee_id=eq.'+encodeURIComponent(trainee.id)+'&select=*&order=created_at.desc&limit=1');
+          p = (allPlans||[])[0] || null;
+        }
         if(!p) throw new Error('برنامه تمرینی ذخیره‌شده‌ای برای این شاگرد پیدا نشد.');
         workoutPlanTitle = esc(p.title||title);
         workoutNotes = String(p.notes||'').trim();
@@ -5468,10 +5484,32 @@ window.useLibraryExercise=async function(id){
           if(orderA!==orderB)return orderA-orderB;
           return String(a.created_at||'').localeCompare(String(b.created_at||''));
         });
-        const ids = [...new Set(rows.map(x=>x.exercise_id).filter(x=>x!==null&&x!==undefined&&x!==''))];
-        const ex = ids.length ? await sbGet('/exercises?id=in.('+ids.join(',')+')&select=id,name') : [];
-        const names = Object.fromEntries(ex.map(x=>[String(x.id),x.name]));
-        const systems = {normal:'معمولی',superset:'سوپرست','super-set':'سوپرست',triset:'تری‌ست','tri-set':'تری‌ست',giant:'جاینت‌ست',giant_set:'جاینت‌ست','giant-set':'جاینت‌ست',drop:'دراپ‌ست',drop_set:'دراپ‌ست','drop-set':'دراپ‌ست',dropset:'دراپ‌ست',rest_pause:'رست‌پاز','rest-pause':'رست‌پاز',restpause:'رست‌پاز',timed:'تایم‌دار',time_based:'تایم‌دار','time-based':'تایم‌دار',multi_stage:'چندمرحله‌ای','multi-stage':'چندمرحله‌ای',pre_exhaust:'پیش‌خستگی','pre-exhaust':'پیش‌خستگی',mechanical_drop:'دراپ‌ست مکانیکی','mechanical-drop':'دراپ‌ست مکانیکی',pyramid:'هرمی',reverse_pyramid:'هرمی معکوس','reverse-pyramid':'هرمی معکوس',circuit:'دایره‌ای',custom:'سفارشی',failure:'تا ناتوانی',to_failure:'تا ناتوانی','to-failure':'تا ناتوانی','forced-reps':'تکرار اجباری',forced_reps:'تکرار اجباری',forcedreps:'تکرار اجباری','negative-reps':'تکرار منفی',negative_reps:'تکرار منفی',negativereps:'تکرار منفی','partial-reps':'نیم‌تکرار',partial_reps:'نیم‌تکرار',partialreps:'نیم‌تکرار','myo-reps':'مایو رپس',myo_reps:'مایو رپس',myoreps:'مایو رپس'};
+        const ids = [...new Set(rows.map(x=>x.exercise_id).filter(x=>x!==null&&x!==undefined&&x!==''))];const normalizeSystem=value=>String(value||'normal').toLowerCase().trim().replace(/[\s-]+/g,'_');
+          const systemLabelFor=value=>{
+            const raw=String(value||'normal').toLowerCase().trim();
+            const norm=normalizeSystem(raw);
+            const compact=norm.replace(/_/g,'');
+            const aliases={
+              supersets:'superset',super_set:'superset',superset:'superset',
+              tri_set:'triset',triset:'triset',giantset:'giant_set',
+              drop_set:'drop_set',dropset:'drop_set',drop:'drop_set',
+              restpause:'rest_pause',rest_pause:'rest_pause',
+              timebased:'time_based',time_based:'time_based',
+              multistage:'multi_stage',multi_stage:'multi_stage',
+              preexhaust:'pre_exhaust',pre_exhaust:'pre_exhaust',
+              mechanicaldrop:'mechanical_drop',mechanical_drop:'mechanical_drop',
+              reversepyramid:'reverse_pyramid',reverse_pyramid:'reverse_pyramid',
+              forcedreps:'forced_reps',forced_reps:'forced_reps',
+              negativereps:'negative_reps',negative_reps:'negative_reps',
+              partialreps:'partial_reps',partial_reps:'partial_reps',
+              myoreps:'myo_reps',myo_reps:'myo_reps',
+              tofailure:'to_failure',to_failure:'to_failure'
+            };
+            const canonical=aliases[raw]||aliases[norm]||aliases[compact]||norm;
+            return systems[raw]||systems[norm]||systems[canonical]||systems[canonical.replace(/_/g,'-')]||'';
+          };
+          const groupedSystem=value=>['superset','triset','giant','giant_set'].includes(normalizeSystem(value));
+          set:'دراپ‌ست',rest_pause:'رست‌پاز','rest-pause':'رست‌پاز',restpause:'رست‌پاز',timed:'تایم‌دار',time_based:'تایم‌دار','time-based':'تایم‌دار',multi_stage:'چندمرحله‌ای','multi-stage':'چندمرحله‌ای',pre_exhaust:'پیش‌خستگی','pre-exhaust':'پیش‌خستگی',mechanical_drop:'دراپ‌ست مکانیکی','mechanical-drop':'دراپ‌ست مکانیکی',pyramid:'هرمی',reverse_pyramid:'هرمی معکوس','reverse-pyramid':'هرمی معکوس',circuit:'دایره‌ای',custom:'سفارشی',failure:'تا ناتوانی',to_failure:'تا ناتوانی','to-failure':'تا ناتوانی','forced-reps':'تکرار اجباری',forced_reps:'تکرار اجباری',forcedreps:'تکرار اجباری','negative-reps':'تکرار منفی',negative_reps:'تکرار منفی',negativereps:'تکرار منفی','partial-reps':'نیم‌تکرار',partial_reps:'نیم‌تکرار',partialreps:'نیم‌تکرار','myo-reps':'مایو رپس',myo_reps:'مایو رپس',myoreps:'مایو رپس'};
          const normalizeSystem=value=>String(value||'normal').toLowerCase().trim().replace(/[\s-]+/g,'_');
          const systemLabelFor=value=>{const raw=String(value||'normal').toLowerCase().trim();const norm=normalizeSystem(raw);return systems[raw]||systems[norm]||systems[raw.replace(/_/g,'-')]||'';};
          const groupedSystem=value=>['superset','triset','giant','giant_set'].includes(normalizeSystem(value));
