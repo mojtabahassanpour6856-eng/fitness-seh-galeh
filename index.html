@@ -12382,16 +12382,13 @@ body.workout-output.workout-compact{
    Existing inputs/selects remain the source of truth for save/export logic. */
 (function(){
  const specs=[
-  {selector:'#workoutSets',values:[2,3,4,5,6,7],label:'انتخاب تعداد ست'},
-  {selector:'#workoutReps',values:[6,8,10,12,16,20,60],label:'انتخاب تعداد تکرار'},
-  {selector:'#workoutRest',values:[30,45,60,75,90],label:'انتخاب استراحت به ثانیه'}
+  {selector:'#workoutSets,.w9-sets',values:[2,3,4,5,6,7],label:'انتخاب تعداد ست'},
+  {selector:'#workoutReps,.w9-reps',values:[6,8,10,12,16,20,60],label:'انتخاب تعداد تکرار'},
+  {selector:'#workoutRest,.w9-rest',values:[30,45,60,75,90],label:'انتخاب استراحت به ثانیه'}
  ];
  function add(input,spec){
   if(!input||input.dataset.sehTouchChoices==='1')return;
   input.dataset.sehTouchChoices='1';
-  if(input.tagName==='SELECT'&&!Array.from(input.options).some(o=>o.value==='60')){
-   const opt=document.createElement('option');opt.value='60';opt.textContent='۶۰ تکرار';input.appendChild(opt);
-  }
   const group=document.createElement('div');group.className='seh-touch-choice-group';group.setAttribute('role','group');group.setAttribute('aria-label',spec.label);
   spec.values.forEach(value=>{
    const btn=document.createElement('button');btn.type='button';btn.className='seh-touch-choice';btn.textContent=String(value);
@@ -12408,9 +12405,8 @@ body.workout-output.workout-compact{
  }
  function update(){
   specs.forEach(spec=>document.querySelectorAll(spec.selector).forEach(input=>{
-   /* Avoid adding these controls to a trainee-facing duplicate field, if any. */
-   const coachArea=input.closest('#coachWorkoutSection,#coachWorkoutCard,#workoutEditor,#workout')||input.closest('.coach-panel');
-   if(coachArea||input.id==='workoutSets'||input.id==='workoutReps'||input.id==='workoutRest')add(input,spec);
+   /* Active coach editor uses .w9-* fields; legacy inputs are hidden. */
+   if(input.matches('.w9-sets,.w9-reps,.w9-rest')||input.id==='workoutSets'||input.id==='workoutReps'||input.id==='workoutRest')add(input,spec);
   }));
  }
  function start(){update();new MutationObserver(update).observe(document.body,{childList:true,subtree:true});}
