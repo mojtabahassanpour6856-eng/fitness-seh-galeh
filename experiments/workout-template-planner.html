@@ -95,17 +95,9 @@
  <button id="mobilePreviewButton" type="button" class="secondary" style="width:100%;margin-top:8px">بازبینی خروجی برنامه</button><button id="mobileSendToCoachApp" type="button" style="width:100%;margin-top:8px">ارسال برنامه به پنل مربی</button><p id="mobileComposerStatus" class="status muted" role="status" aria-live="polite"></p>
 </section>
 <section class="card" id="planMoves"><h2>۲) ورود گروهی حرکات</h2><p>هر حرکت را در یک خط وارد کن. حالت پیشرفته با Tab جدا می‌شود: <span class="pill">نام حرکت · جلسه · سیستم · گروه · ست · تکرار · استراحت</span></p>
-<p class="muted">نمونه را می‌توانی ویرایش کنی؛ ستون جلسه از ۱ شروع می‌شود. برای سیستم عادی، گروه را با — پر کن.</p>
+<p class="muted">این بخش از ابتدا خالی است تا هیچ حرکت نمونه‌ای ناخواسته وارد برنامه نشود. حرکت‌ها را از بانک شخصی مربی انتخاب کن؛ ستون جلسه از ۱ شروع می‌شود. برای سیستم عادی، گروه را با — پر کن.</p>
 <p class="muted" id="keyboardShortcutHint">میانبر لپ‌تاپ: وقتی نشانگر داخل کادر حرکات است، با Ctrl + Enter برنامه را اعتبارسنجی و پیش‌نمایش کن.</p>
-<textarea id="bulk" spellcheck="false">پرس سینه دمبل	1	عادی	—	3	12	60
-بالاسینه دستگاه	1	سوپرست	1	3	12	60
-قفسه سیم‌کش	1	سوپرست	1	3	12	60
-لت سیم‌کش	2	عادی	—	3	12	60
-قایقی	2	تری‌ست	2	3	12	60
-فیس‌پول	2	تری‌ست	2	3	15	45
-پول‌اور سیم‌کش	2	تری‌ست	2	3	15	45
-اسکوات جام	3	عادی	—	4	15	75
-</textarea>
+<textarea id="bulk" spellcheck="false" placeholder="ابتدا بانک حرکات شخصی مربی بارگذاری می‌شود؛ سپس حرکت‌ها را فقط از همان بانک انتخاب و به جلسه اضافه کن."></textarea>
 <div class="card" style="background:#fcfaf4;margin-top:10px" id="exerciseBankCard">
 <h3 style="margin-top:0">بانک حرکات آماده</h3>
 <p class="muted">گروه عضلانی را انتخاب یا نام حرکت را جست‌وجو کن؛ با لمس حرکت، نام آن در فرم ثبت می‌شود و بعد می‌توانی جلسه، سیستم و ست‌ها را تنظیم کنی.</p>
@@ -214,17 +206,7 @@ $('quickSystem').addEventListener('change',()=>{
  if(normal)$('quickGroup').value='—';
  else if(!$('quickGroup').value||$('quickGroup').value==='—')$('quickGroup').value='A';
 });
-const exerciseLibrary={
- 'سینه':['پرس سینه هالتر','پرس سینه دمبل','پرس بالاسینه دمبل','پرس بالاسینه دستگاه','قفسه سیم‌کش','قفسه دمبل','شنا سوئدی'],
- 'پشت':['لت سیم‌کش از جلو','بارفیکس','قایقی سیم‌کش','پارویی دمبل تک‌دست','زیربغل هالتر خم','پول‌اور سیم‌کش','فیس‌پول'],
- 'پا':['اسکوات هالتر','اسکوات جام','پرس پا','جلو پا دستگاه','پشت پا خوابیده','ددلیفت رومانیایی','لانج دمبل'],
- 'سرشانه':['پرس سرشانه دمبل','پرس سرشانه دستگاه','نشر جانب دمبل','نشر خم دمبل','نشر جانب سیم‌کش','شراگ دمبل'],
- 'جلو بازو':['جلو بازو هالتر','جلو بازو دمبل تناوبی','جلو بازو چکشی','جلو بازو لاری','جلو بازو سیم‌کش'],
- 'پشت بازو':['پشت بازو سیم‌کش طناب','پشت بازو خوابیده هالتر','پشت بازو دمبل بالای سر','دیپ پشت بازو','پشت بازو تک‌دست سیم‌کش'],
- 'شکم':['کرانچ','بالا آوردن پا','پلانک','کرانچ سیم‌کش','دوچرخه شکم'],
- 'باسن':['هیپ تراست','پل باسن','کیک‌بک سیم‌کش','ابداکتور دستگاه','لانج معکوس'],
- 'ساق':['ساق پا ایستاده','ساق پا نشسته','ساق پا دستگاه پرس']
-};
+let exerciseLibrary={}; // Filled only from the authenticated coach's trainer_exercises bank.
 let selectedBankAddNames=new Set();
 let selectedBankGroupNames=new Set();
 function renderExerciseBank(){
@@ -580,6 +562,69 @@ $('export').addEventListener('click',()=>{render();const data=window.__trial;if(
       return { error: e && e.message ? e.message : String(e) };
     }
   })();
+
+  // Replace the demo list with the authenticated coach's personal exercise bank.
+  atomicEditorBaselinePromise.then(async baseline => {
+    if (!baseline || baseline.error) {
+      $('bankStatus').textContent = 'برای نمایش بانک تمرین شخصی، طراح را از پنل مربی باز کن.';
+      return;
+    }
+    try {
+      const result = await baseline.client.from('trainer_exercises')
+        .select('id,name,target_muscle,category,equipment,coach_note')
+        .order('name', { ascending: true });
+      if (result.error) throw result.error;
+      const rows = result.data || [];
+      if (!rows.length) {
+        exerciseLibrary = {};
+        renderExerciseBank();
+        $('bankStatus').textContent = 'بانک تمرین شخصی خالی است یا دسترسی به آن تأیید نشد.';
+        return;
+      }
+      const groups = {};
+      const classify = row => {
+        const raw = String(row.target_muscle || row.category || 'سایر').trim();
+        const s = raw.toLocaleLowerCase('fa');
+        if (s.includes('سینه') || s.includes('chest')) return 'سینه';
+        if (s.includes('پشت') || s.includes('زیربغل') || s.includes('back')) return 'پشت';
+        if (s.includes('پا') || s.includes('leg') || s.includes('quad') || s.includes('hamstring')) return 'پا';
+        if (s.includes('سرشانه') || s.includes('شانه') || s.includes('shoulder')) return 'سرشانه';
+        if (s.includes('جلو بازو') || s.includes('biceps')) return 'جلو بازو';
+        if (s.includes('پشت بازو') || s.includes('triceps')) return 'پشت بازو';
+        if (s.includes('شکم') || s.includes('abs')) return 'شکم';
+        if (s.includes('باسن') || s.includes('glute')) return 'باسن';
+        if (s.includes('ساق') || s.includes('calf')) return 'ساق';
+        return raw || 'سایر';
+      };
+      rows.forEach(row => {
+        const name = String(row.name || '').trim();
+        if (!name) return;
+        const category = classify(row);
+        if (!groups[category]) groups[category] = [];
+        if (!groups[category].includes(name)) groups[category].push(name);
+      });
+      exerciseLibrary = groups;
+      // The planner must never inject demo movements into a real coach's workout.
+      // The textarea starts empty; all new movements are chosen from trainer_exercises.
+      const uniqueNames = [...new Set(rows.map(row => String(row.name || '').trim()).filter(Boolean))];
+      const select = $('bankCategory');
+      const existing = new Set(Array.from(select.options).map(option => option.value));
+      Object.keys(groups).sort((a,b)=>a.localeCompare(b,'fa')).forEach(category => {
+        if (category !== 'همه' && !existing.has(category)) {
+          const option = document.createElement('option');
+          option.value = category;
+          option.textContent = category;
+          select.appendChild(option);
+        }
+      });
+      if (!Object.keys(groups).includes(select.value) && select.value !== 'همه') select.value = 'همه';
+      renderExerciseBank();
+      buildMobileComposer();
+      $('bankStatus').textContent = 'بانک تمرین شخصی مربی بارگذاری شد: ' + rows.length + ' حرکت. انتخاب حرکت‌ها از همین بانک انجام می‌شود.';
+    } catch (error) {
+      $('bankStatus').textContent = 'خواندن بانک تمرین شخصی ناموفق بود: ' + (error && error.message || String(error));
+    }
+  });
 
   $('sendToCoachApp').addEventListener('click',async()=>{
     render();
