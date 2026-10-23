@@ -295,15 +295,17 @@ function buildMobileComposer(){
     }
     updatePickerSummary();updateMobileCount();
    });
-   label.addEventListener('click',event=>{
+   const textNode=document.createElement('span');textNode.textContent=item.name;
+   textNode.style.cursor='pointer';
+   textNode.addEventListener('click',event=>{
     if(card.querySelector('[id^="mobile_system_"]')?.value!=='عادی')return;
-    event.preventDefault();
+    event.preventDefault();event.stopPropagation();
     const wasChecked=cb.checked;
     checks.querySelectorAll('.mobile-exercise-check').forEach(other=>{other.checked=false;});
     cb.checked=!wasChecked;
     cb.dispatchEvent(new Event('change',{bubbles:true}));
    });
-   const textNode=document.createElement('span');textNode.textContent=item.name;label.append(cb,textNode);checks.appendChild(label);
+   label.append(cb,textNode);checks.appendChild(label);
   });
   search.addEventListener('input',()=>{
    const q=search.value.trim().toLocaleLowerCase('fa');let lastHeading=null;
