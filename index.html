@@ -12230,7 +12230,7 @@ body.workout-output.workout-compact{
    const safeTitle=title.trim()||'برنامه تمرینی';
    if(!confirm('برنامه جدید با '+payload.moves.length+' حرکت برای شاگرد انتخاب‌شده ثبت شود؟\nبرنامه قبلی حذف نمی‌شود.'))return;
    const norm=s=>String(s||'').trim().normalize('NFC').replace(/\s+/g,' ');
-   const systemMap={'عادی':'normal','معمولی':'normal','سوپرست':'superset','تری‌ست':'triset','تری ست':'triset','جاینت‌ست':'giant','جاینت ست':'giant'};
+   const systemMap={'عادی':'normal','معمولی':'normal','normal':'normal','سوپرست':'superset','superset':'superset','تری‌ست':'triset','تری ست':'triset','triset':'triset','جاینت‌ست':'giant','جاینت ست':'giant','giant':'giant','جاینت‌ست':'giant','دراپ‌ست':'drop','دراپ ست':'drop','drop':'drop','drop_set':'drop','دراپ‌ست مکانیکی':'mechanical_drop','دراپ ست مکانیکی':'mechanical_drop','mechanical_drop':'mechanical_drop','رست‌پاز':'rest_pause','رست پاز':'rest_pause','استراحت-مکث':'rest_pause','rest_pause':'rest_pause','تایم‌دار':'timed','زمان‌دار':'timed','timed':'timed','چندمرحله‌ای':'multi_stage','چند مرحله‌ای':'multi_stage','multi_stage':'multi_stage','هرمی':'pyramid','pyramid':'pyramid','هرمی معکوس':'reverse_pyramid','reverse_pyramid':'reverse_pyramid','پیش‌خستگی':'pre_exhaust','پیش خستگی':'pre_exhaust','pre_exhaust':'pre_exhaust','دایره‌ای':'circuit','circuit':'circuit','سفارشی':'custom','custom':'custom'};
    try{
      if(typeof window.sbGet!=='function'||typeof window.sbWrite!=='function')throw new Error('اتصال پایگاه داده پنل مربی در دسترس نیست.');
      const exerciseRows=await window.sbGet('/exercises?select=id,name&limit=2000');
@@ -12243,7 +12243,7 @@ body.workout-output.workout-compact{
      if(!savedPlan||!savedPlan.id)throw new Error('پایگاه داده برنامه جدید را برنگرداند؛ ثبت حرکات متوقف شد.');
      const grouped=new Map();
      payload.moves.forEach(m=>{const sys=systemMap[norm(m.system)]||'normal';const group=norm(m.group);const key=sys!=='normal'&&group&&group!=='—'?String(m.session)+'|'+sys+'|'+group:null;if(key&&!grouped.has(key))grouped.set(key,'PLAN-'+String(m.session)+'-'+sys+'-'+group);m.__system=sys;m.__group=key?grouped.get(key):null;});
-     const rows=payload.moves.map((m,i)=>({workout_plan_id:savedPlan.id,exercise_id:byName.get(norm(m.name)),sets:Math.max(1,Number(m.sets)||3),reps:String(m.reps||'12'),rest_seconds:Math.max(0,Number(m.rest)||0),notes:null,sort_order:i+1,training_system:m.__system,group_key:m.__group,training_day:'جلسه '+Number(m.session),is_completed:false}));
+     const rows=payload.moves.map((m,i)=>{const setsRaw=Number(m.sets),restRaw=Number(m.rest),repsRaw=String(m.reps??'').trim();if(!Number.isFinite(setsRaw)||setsRaw<1||!repsRaw||!Number.isFinite(restRaw)||restRaw<0)throw new Error('ست، تکرار و ثانیه استراحت برای حرکت «'+m.name+'» معتبر نیست؛ برنامه ثبت نشد.');return {workout_plan_id:savedPlan.id,exercise_id:byName.get(norm(m.name)),sets:Math.trunc(setsRaw),reps:repsRaw,rest_seconds:Math.trunc(restRaw),notes:null,sort_order:i+1,training_system:m.__system,group_key:m.__group,training_day:'جلسه '+Number(m.session),is_completed:false};});
      try{
        const inserted=await window.sbWrite('/trainee_workout_exercises','POST',rows);
        if(!Array.isArray(inserted)||inserted.length!==rows.length)throw new Error('تعداد حرکات تأییدشده با تعداد حرکات برنامه برابر نیست.');
