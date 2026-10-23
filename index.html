@@ -13800,7 +13800,7 @@ body.workout-output.workout-compact{
    }));
  }
  function checkClient(){
-   const now=window.currentClient&&window.currentClient.id!=null?String(window.currentClient.id):'';
+   const now=typeof currentClient!=='undefined'&&currentClient&&currentClient.id!=null?String(currentClient.id):'';
    if(clientKey!==now){
      clientKey=now;active=0;for(let i=0;i<6;i++)drafts[i]=null;
      const t=table();if(t)t.querySelectorAll('tbody tr').forEach(resetRow);
@@ -13850,7 +13850,7 @@ body.workout-output.workout-compact{
        const before=Array.from(table()?.querySelectorAll('tbody tr')||[]).some(tr=>tr.querySelector('.w9-exercise')?.value||tr.querySelector('.w9-exercise-check:checked'));
        await original.apply(this,arguments);
        const after=Array.from(table()?.querySelectorAll('tbody tr')||[]).some(tr=>tr.querySelector('.w9-exercise')?.value||tr.querySelector('.w9-exercise-check:checked'));
-       if(before&&!after){drafts[active]=null;renderTabs();}
+       if(before&&!after){drafts[active]=null;restore();renderTabs();}
        else capture();
        updateButton();
      };
