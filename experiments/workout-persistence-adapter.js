@@ -7,7 +7,15 @@
     'تری ست': 'triset',
     'جاینت‌ست': 'giant',
     'جاینت ست': 'giant',
-    'دراپ‌ست': 'drop-set'
+    'دراپ‌ست': 'drop-set',
+    'رست‌پاز': 'rest-pause',
+    'هرمی': 'pyramid',
+    'هرمی معکوس': 'reverse-pyramid',
+    'تکرار منفی': 'negative-reps',
+    'تکرار اجباری': 'forced-reps',
+    'تا ناتوانی': 'failure',
+    'نیم‌تکرار': 'partial-reps',
+    'مایو رپس': 'myo-reps'
   };
   function fail(message) { throw new Error(message); }
   function normalizeName(name) { return String(name || '').normalize('NFKC').replace(/[\u200c\u200f\u202a-\u202e]/g, '').replace(/\s+/g, ' ').trim().toLocaleLowerCase('fa'); }
