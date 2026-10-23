@@ -89,7 +89,7 @@
   <label>الگوی جلسه<select id="mobileTemplate"><option value="all">همه حرکات بانک</option><option value="سینه|جلو بازو">سینه + جلو بازو</option><option value="پشت|پشت بازو">پشت + پشت بازو</option><option value="پا|باسن|ساق">پا + باسن + ساق</option><option value="سرشانه|شکم">سرشانه + شکم</option><option value="سینه|پشت بازو">سینه + پشت بازو</option><option value="پشت|جلو بازو">پشت + جلو بازو</option></select></label>
   <label>افزودن به<select id="mobileTargetSession"><option value="1">جلسه ۱</option><option value="2">جلسه ۲</option><option value="3">جلسه ۳</option><option value="4">جلسه ۴</option><option value="5">جلسه ۵</option><option value="6">جلسه ۶</option></select></label>
  </div>
- <p class="muted mobile-hint">حرکت را از بانک انتخاب کن؛ سیستم، ست، تکرار و استراحت را لمس کن. تا ۹ حرکت را با هم انتخاب کن.</p>
+ <p class="muted mobile-hint">حرکت‌ها را انتخاب کن، سپس سیستم، ست، تکرار و استراحت را تنظیم کن و در پایان «افزودن همه به جلسه» را بزن. تا ۹ حرکت را با هم انتخاب کن.</p>
  <div id="mobileMoveRows" class="mobile-move-rows"></div>
  <div class="mobile-bottom"><span id="mobileSelectedCount" class="pill">۰ از ۹ حرکت انتخاب شده</span><button id="mobileAddToSession" type="button">افزودن همه به جلسه</button></div>
  <button id="mobilePreviewButton" type="button" class="secondary" style="width:100%;margin-top:8px">بازبینی خروجی برنامه</button><button id="mobileSendToCoachApp" type="button" style="width:100%;margin-top:8px">ارسال برنامه به پنل مربی</button><p id="mobileComposerStatus" class="status muted" role="status" aria-live="polite"></p>
@@ -137,13 +137,32 @@ const $=id=>document.getElementById(id);
 const example=$('bulk').value;
 function hint(){const g=$('gender').value; $('templateHint').textContent=g==='women'?'قالب خانم‌ها انتخاب شده؛ این انتخاب فقط برچسب قالب است و نسخه تمرین یا شدت را خودکار تغییر نمی‌دهد.':'قالب آقایان انتخاب شده؛ حرکات و شدت بر اساس نیاز شاگرد باید توسط مربی تنظیم شود.';}
 function n(){return Number($('count').value)||4}
+function normalizeTrainingSystem(value){
+ const raw=String(value||'عادی').trim().toLocaleLowerCase('fa').replace(/[\u200c\s_-]+/g,'');
+ const aliases={
+  'عادی':'عادی','normal':'عادی','نرمال':'عادی',
+  'دراپست':'دراپ‌ست','dropset':'دراپ‌ست','drop':'دراپ‌ست',
+  'رستپاز':'رست‌پاز','restpause':'رست‌پاز','restpauses':'رست‌پاز',
+  'هرمی':'هرمی','pyramid':'هرمی',
+  'هرمیمعکوس':'هرمی معکوس','reversepyramid':'هرمی معکوس',
+  'تکرارمنفی':'تکرار منفی','negativereps':'تکرار منفی',
+  'تکراراجباری':'تکرار اجباری','forcedreps':'تکرار اجباری',
+  'تانانوانی':'تا ناتوانی','failure':'تا ناتوانی','tofailure':'تا ناتوانی',
+  'نیمتکرار':'نیم‌تکرار','partialreps':'نیم‌تکرار',
+  'مایورپس':'مایو رپس','myoreps':'مایو رپس',
+  'سوپرست':'سوپرست','superset':'سوپرست',
+  'تریست':'تری‌ست','triset':'تری‌ست','triplett':'تری‌ست',
+  'جاینتست':'جاینت‌ست','giantset':'جاینت‌ست','giant':'جاینت‌ست'
+ };
+ return aliases[raw]||String(value||'عادی').trim();
+}
 function parse(){
  const lines=$('bulk').value.split(/\r?\n/).map(x=>x.trim()).filter(Boolean), moves=[], errors=[];
  lines.forEach((line,i)=>{
   const p=line.includes('\t')?line.split('\t').map(x=>x.trim()):line.split(/[;,]/).map(x=>x.trim());
   if(p.length<1||!p[0]){errors.push('خط '+(i+1)+': نام حرکت خالی است.');return;}
-  let name=p[0],session=Number(p[1])||1,system=p[2]||'عادی',group=p[3]||'—',sets=p[4]||'3',reps=p[5]||'12',rest=p[6]||'60';
-  if(!['عادی','دراپ‌ست','drop-set','رست‌پاز','هرمی','هرمی معکوس','تکرار منفی','تکرار اجباری','تا ناتوانی','نیم‌تکرار','مایو رپس','سوپرست','تری‌ست','تری ست','جاینت‌ست','جاینت ست'].includes(system)){errors.push('خط '+(i+1)+': سیستم تمرین ناشناخته است («'+system+'»).');}
+  let name=p[0],session=Number(p[1])||1,system=normalizeTrainingSystem(p[2]||'عادی'),group=p[3]||'—',sets=p[4]||'3',reps=p[5]||'12',rest=p[6]||'60';
+  if(!['عادی','دراپ‌ست','رست‌پاز','هرمی','هرمی معکوس','تکرار منفی','تکرار اجباری','تا ناتوانی','نیم‌تکرار','مایو رپس','سوپرست','تری‌ست','جاینت‌ست'].includes(system)){errors.push('خط '+(i+1)+': سیستم تمرین ناشناخته است («'+system+'»).');}
   if(!Number.isInteger(session)||session<1||session>n())errors.push('خط '+(i+1)+': شماره جلسه باید بین ۱ تا '+n()+' باشد.');
   if(!/^\d+$/.test(String(sets))||!/^\d+$/.test(String(reps))||!/^\d+$/.test(String(rest)))errors.push('خط '+(i+1)+': ست، تکرار و استراحت باید عدد باشند.');
   moves.push({name,session,system,group,sets:Number(sets),reps:Number(reps),rest:Number(rest)});
@@ -218,6 +237,7 @@ function renderExerciseBank(){
  entries.forEach(item=>{const wrap=document.createElement('div');wrap.style.display='inline-flex';wrap.style.alignItems='center';wrap.style.gap='6px';wrap.style.border='1px solid #e6dcc6';wrap.style.borderRadius='9px';wrap.style.padding='6px 8px';const check=document.createElement('input');check.type='checkbox';check.className='bankMoveCheck';check.value=item.name;check.checked=selectedBankGroupNames.has(item.name);check.setAttribute('aria-label','گروه‌بندی '+item.name);check.addEventListener('change',()=>{if(check.checked)selectedBankGroupNames.add(item.name);else selectedBankGroupNames.delete(item.name);});const addCheck=document.createElement('input');addCheck.type='checkbox';addCheck.className='bankAddMoveCheck';addCheck.checked=selectedBankAddNames.has(item.name);addCheck.setAttribute('aria-label','افزودن گروهی '+item.name);addCheck.addEventListener('change',()=>{if(addCheck.checked)selectedBankAddNames.add(item.name);else selectedBankAddNames.delete(item.name);document.querySelectorAll('.bankAddMoveCheck').forEach(x=>{if(x.value===item.name)x.checked=addCheck.checked;});});addCheck.value=item.name;const b=document.createElement('button');b.type='button';b.className='secondary';b.textContent=item.name;b.setAttribute('aria-label','انتخاب حرکت '+item.name);b.addEventListener('click',()=>{$('quickName').value=item.name;$('bankStatus').textContent='«'+item.name+'» انتخاب شد؛ جلسه و جزئیات را بررسی کن و افزودن به فهرست را بزن.';$('quickName').focus();});wrap.append(check,addCheck,b);box.appendChild(wrap);});
 }
 
+let mobileSelectionSequence=0;
 function buildMobileComposer(){
  const rows=$('mobileMoveRows');if(!rows)return;rows.innerHTML='';
  const templates={'سینه|جلو بازو':['سینه','جلو بازو'],'پشت|پشت بازو':['پشت','پشت بازو'],'پا|باسن|ساق':['پا','باسن','ساق'],'سرشانه|شکم':['سرشانه','شکم'],'سینه|پشت بازو':['سینه','پشت بازو'],'پشت|جلو بازو':['پشت','جلو بازو']};
@@ -231,7 +251,6 @@ function buildMobileComposer(){
   const menu=document.createElement('div');menu.className='mobile-exercise-menu';
   const search=document.createElement('input');search.type='search';search.className='mobile-exercise-search';search.placeholder='جست‌وجوی حرکت…';search.setAttribute('aria-label','جست‌وجوی حرکت '+(i+1));
   const checks=document.createElement('div');checks.className='mobile-exercise-checks';
-  let selectionOrder=0;
   const ordered=allEntries.slice().sort((a,b)=>{const ap=preferred.indexOf(a.cat),bp=preferred.indexOf(b.cat);return (ap<0?999:ap)-(bp<0?999:bp)||a.cat.localeCompare(b.cat,'fa')||a.name.localeCompare(b.name,'fa');});
   let currentCat='';
   ordered.forEach(item=>{
@@ -243,37 +262,14 @@ function buildMobileComposer(){
    cb.style.width='16px';cb.style.height='16px';
    cb.addEventListener('change',()=>{
     const system=card.querySelector('[id^="mobile_system_"]').value,limit=['عادی','دراپ‌ست','drop-set','رست‌پاز','هرمی','هرمی معکوس','تکرار منفی','تکرار اجباری','تا ناتوانی','نیم‌تکرار','مایو رپس'].includes(system)?1:system==='سوپرست'?2:system==='تری‌ست'?3:4;
-    if(cb.checked)cb.dataset.selectionOrder=String(++selectionOrder);
+    if(cb.checked)cb.dataset.selectionOrder=String(++mobileSelectionSequence);
     const checked=[...checks.querySelectorAll('.mobile-exercise-check:checked')].sort((a,b)=>Number(a.dataset.selectionOrder||0)-Number(b.dataset.selectionOrder||0));
     if(cb.checked&&checked.length>limit){cb.checked=false;$('mobileComposerStatus').textContent='برای '+system+' حداکثر '+limit+' حرکت می‌توانی انتخاب کنی.';updatePickerSummary();updateMobileCount();return;}
     updatePickerSummary();updateMobileCount();
-    // انتخاب عادی همان لحظه ثبت می‌شود؛ سیستم‌های ترکیبی پس از تکمیل تعداد لازم ثبت می‌شوند.
+    // انتخاب فقط در فرم نگه داشته می‌شود؛ ثبت نهایی با دکمه «افزودن همه به جلسه» انجام می‌شود تا ست/تکرار/استراحتِ آخرین تنظیمات ذخیره شوند.
     if(!cb.checked)return;
     if(!['عادی','دراپ‌ست','drop-set','رست‌پاز','هرمی','هرمی معکوس','تکرار منفی','تکرار اجباری','تا ناتوانی','نیم‌تکرار','مایو رپس'].includes(system)&&checked.length<limit)return;
-    const session=Number($('mobileTargetSession').value);
-    if(session>n()){$('mobileComposerStatus').textContent='جلسه انتخابی بیشتر از تعداد جلسات برنامه است؛ تعداد جلسات را در تنظیم برنامه افزایش بده.';return;}
-    const sets=card.querySelector('[id^="mobile_sets_"]').value;
-    const reps=card.querySelector('[id^="mobile_reps_"]').value;
-    const rest=card.querySelector('[id^="mobile_rest_"]').value;
-    let group='—';
-    if(!['عادی','دراپ‌ست','drop-set','رست‌پاز','هرمی','هرمی معکوس','تکرار منفی','تکرار اجباری','تا ناتوانی','نیم‌تکرار','مایو رپس'].includes(system)){
-     const groupSelect=card.querySelector('[id^="mobile_group_"]');
-     group=groupSelect.value;
-     if(group==='—'){
-      const used=new Set(rawLines().map(line=>{const p=line.split('\t');return Number(p[1])===session&&p[2]===system?p[3]:'';}).filter(Boolean));
-      group=['A','B','C','D'].find(letter=>!used.has(letter))||'A';
-      groupSelect.value=group;
-     }
-    }
-    const lines=rawLines();
-    checked.forEach(item=>lines.push([item.value,session,system,group,sets,reps,rest].join('\t')));
-    $('bulk').value=lines.join('\n');
-    renderMoveManager();render();
-    const justAdded=checked.map(item=>item.value);
-    lastAddedSummary=justAdded.join(' + ');lastAddedCount=justAdded.length;
-    $('mobileComposerStatus').textContent=['عادی','دراپ‌ست','drop-set'].includes(system)?'حرکت «'+cb.value+'» با سیستم '+system+' فوراً به جلسه '+session+' اضافه شد.':checked.length+' حرکت به‌صورت '+system+' گروه '+group+' فوراً به جلسه '+session+' اضافه شد.';
-    checks.querySelectorAll('.mobile-exercise-check').forEach(item=>{item.checked=false;delete item.dataset.selectionOrder;});
-    picker.open=false;
+    $('mobileComposerStatus').textContent='حرکت انتخاب شد؛ سیستم، ست، تکرار و استراحت را تنظیم کن و سپس «افزودن همه به جلسه» را بزن.';
     updatePickerSummary();updateMobileCount();
    });
    label.addEventListener('click',event=>{
@@ -342,12 +338,13 @@ $('mobileAddToSession').addEventListener('click',()=>{
  document.querySelectorAll('.mobile-move-row').forEach(row=>{
   const system=row.querySelector('[id^="mobile_system_"]').value,group=row.querySelector('[id^="mobile_group_"]').value;
   const sets=row.querySelector('[id^="mobile_sets_"]').value,reps=row.querySelector('[id^="mobile_reps_"]').value,rest=row.querySelector('[id^="mobile_rest_"]').value;
-  [...row.querySelectorAll('.mobile-exercise-check:checked')].forEach(cb=>selected.push({name:cb.value,system,group,sets,reps,rest}));
+  [...row.querySelectorAll('.mobile-exercise-check:checked')].forEach(cb=>selected.push({name:cb.value,system,group,sets,reps,rest,selectionOrder:Number(cb.dataset.selectionOrder)||0}));
  });
- if(!selected.length){const existingLines=rawLines();$('mobileComposerStatus').textContent=existingLines.length>0?'حرکت‌ها از قبل به فهرست برنامه اضافه شده‌اند؛ این دکمه برای انتخاب‌های تیک‌خورده است. حالا «بازبینی خروجی برنامه» را بزن و در صورت درست بودن، «ارسال به پنل مربی» را انتخاب کن.':'برای افزودن حرکت، کادر انتخاب را باز کن. حرکت عادی با انتخاب یک حرکت و سوپرست/تری‌ست با تکمیل تعداد لازم، خودکار اضافه می‌شود.';return;}
+ if(!selected.length){const existingLines=rawLines();$('mobileComposerStatus').textContent=existingLines.length>0?'حرکت‌ها از قبل به فهرست برنامه اضافه شده‌اند؛ این دکمه برای انتخاب‌های تیک‌خورده است. حالا «بازبینی خروجی برنامه» را بزن و در صورت درست بودن، «ارسال به پنل مربی» را انتخاب کن.':'برای افزودن حرکت، کادر انتخاب را باز کن. انتخاب حرکت‌ها به‌تنهایی آن‌ها را ثبت نمی‌کند؛ پس از تنظیم سیستم، ست، تکرار و استراحت، «افزودن همه به جلسه» را بزن.';return;}
+ selected.sort((a,b)=>a.selectionOrder-b.selectionOrder);
  const session=Number($('mobileTargetSession').value);if(session>n()){$('mobileComposerStatus').textContent='جلسه انتخابی بیشتر از تعداد جلسات برنامه است؛ تعداد جلسات را در تنظیم برنامه افزایش بده.';return;}
  const groupMap=new Map();
- for(const m of selected){if(m.system==='عادی')continue;if(m.group==='—'){$('mobileComposerStatus').textContent='برای '+m.system+' یک گروه (A، B، C یا D) انتخاب کن.';return;}const key=m.system+'|'+m.group;if(!groupMap.has(key))groupMap.set(key,[]);groupMap.get(key).push(m);}
+ for(const m of selected){if(!['سوپرست','تری‌ست','جاینت‌ست'].includes(m.system))continue;if(m.group==='—'){$('mobileComposerStatus').textContent='برای '+m.system+' یک گروه (A، B، C یا D) انتخاب کن.';return;}const key=m.system+'|'+m.group;if(!groupMap.has(key))groupMap.set(key,[]);groupMap.get(key).push(m);}
  for(const [key,moves] of groupMap){const system=key.split('|')[0],required=system==='سوپرست'?2:system==='تری‌ست'?3:4;if(moves.length!==required){$('mobileComposerStatus').textContent='گروه '+key.split('|')[1]+' برای '+system+' باید دقیقاً '+required+' حرکت داشته باشد؛ الان '+moves.length+' حرکت انتخاب شده.';return;}}
  const lines=rawLines();
  selected.forEach(m=>{const label=m.system==='عادی'?'—':m.group;lines.push([m.name,session,m.system,label,m.sets,m.reps,m.rest].join('\t'));});
@@ -643,8 +640,7 @@ $('export').addEventListener('click',()=>{render();const data=window.__trial;if(
       const currentContext=window.opener.getWorkoutPlannerContext();
       if(!currentContext||String(currentContext.traineeId)!==baseline.traineeId)throw new Error('شاگرد انتخاب‌شده در پنل مربی تغییر کرده است؛ برای جلوگیری از ذخیره روی شاگرد اشتباه، طراح را ببند و دوباره باز کن.');
       const parentDoc=window.opener.document;
-      // Access was already verified by the authenticated atomic snapshot RPC when the editor opened.
-      // Avoid direct trainee-table reads here: production RLS intentionally restricts those reads.
+      const liveCheck=await window.SehWorkoutPersistenceAdapter.verifyLiveAccess({supabase:baseline.client,traineeId:baseline.traineeId});
       
       const title=String(parentDoc.getElementById('workoutTitle')?.value||'').trim()||'برنامه تمرینی';
       const planDate=String(parentDoc.getElementById('workoutStartDate')?.value||'').trim()||new Date().toISOString().slice(0,10);
