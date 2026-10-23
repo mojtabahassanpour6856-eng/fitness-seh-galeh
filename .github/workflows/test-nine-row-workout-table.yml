@@ -50,6 +50,16 @@ jobs:
               assert.equal(await row.locator('input.w9-reps').count(), 1);
               assert.equal(await row.locator('input.w9-sets').count(), 1);
             }
+            // Selecting a grouped training system should auto-assign the required following rows.
+            const groupingRows = await table.locator('tbody tr').all();
+            await groupingRows[0].locator('.w9-system').selectOption('superset');
+            assert.equal(await groupingRows[1].locator('.w9-system').inputValue(), 'superset', 'superset should auto-assign the second row');
+            await groupingRows[3].locator('.w9-system').selectOption('triset');
+            assert.equal(await groupingRows[4].locator('.w9-system').inputValue(), 'triset', 'triset should auto-assign the second movement row');
+            assert.equal(await groupingRows[5].locator('.w9-system').inputValue(), 'triset', 'triset should auto-assign the third movement row');
+            await groupingRows[6].locator('.w9-system').selectOption('giant');
+            assert.equal(await groupingRows[7].locator('.w9-system').inputValue(), 'giant', 'giant set should auto-assign the second movement row');
+            assert.equal(await groupingRows[8].locator('.w9-system').inputValue(), 'giant', 'giant set should auto-assign the third movement row');
             // Simulate the exercise list becoming available; the table should mirror its options.
             await page.locator('#workoutExercise').evaluate(sel => {
               const opt = document.createElement('option');
