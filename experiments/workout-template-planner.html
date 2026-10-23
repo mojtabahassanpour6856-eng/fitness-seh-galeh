@@ -266,10 +266,26 @@ function buildMobileComposer(){
     const checked=[...checks.querySelectorAll('.mobile-exercise-check:checked')].sort((a,b)=>Number(a.dataset.selectionOrder||0)-Number(b.dataset.selectionOrder||0));
     if(cb.checked&&checked.length>limit){cb.checked=false;$('mobileComposerStatus').textContent='برای '+system+' حداکثر '+limit+' حرکت می‌توانی انتخاب کنی.';updatePickerSummary();updateMobileCount();return;}
     updatePickerSummary();updateMobileCount();
-    // انتخاب فقط در فرم نگه داشته می‌شود؛ ثبت نهایی با دکمه «افزودن همه به جلسه» انجام می‌شود تا ست/تکرار/استراحتِ آخرین تنظیمات ذخیره شوند.
     if(!cb.checked)return;
-    if(!['عادی','دراپ‌ست','drop-set','رست‌پاز','هرمی','هرمی معکوس','تکرار منفی','تکرار اجباری','تا ناتوانی','نیم‌تکرار','مایو رپس'].includes(system)&&checked.length<limit)return;
-    $('mobileComposerStatus').textContent='حرکت انتخاب شد؛ سیستم، ست، تکرار و استراحت را تنظیم کن و سپس «افزودن همه به جلسه» را بزن.';
+    const singleMoveSystems=['عادی','دراپ‌ست','drop-set','رست‌پاز','هرمی','هرمی معکوس','تکرار منفی','تکرار اجباری','تا ناتوانی','نیم‌تکرار','مایو رپس'];
+    if(singleMoveSystems.includes(system)){
+     const targetSession=Number($('mobileTargetSession').value);
+     const setsValue=Number(card.querySelector('[id^="mobile_sets_"]').value);
+     const repsValue=Number(card.querySelector('[id^="mobile_reps_"]').value);
+     const restValue=Number(card.querySelector('[id^="mobile_rest_"]').value);
+     if(!Number.isInteger(targetSession)||targetSession<1||targetSession>n()){$('mobileComposerStatus').textContent='ابتدا جلسهٔ مقصد را معتبر انتخاب کن.';cb.checked=false;updatePickerSummary();updateMobileCount();return;}
+     if(!Number.isInteger(setsValue)||setsValue<1||!Number.isInteger(repsValue)||repsValue<1||!Number.isInteger(restValue)||restValue<0){$('mobileComposerStatus').textContent='ست و تکرار باید عدد مثبت و استراحت باید صفر یا بیشتر باشد.';cb.checked=false;updatePickerSummary();updateMobileCount();return;}
+     const current=rawLines();
+     current.push([cb.value,targetSession,system,'—',setsValue,repsValue,restValue].join('\t'));
+     $('bulk').value=current.join('\n');
+     lastAddedSummary=cb.value+' · '+system+' · '+setsValue+'×'+repsValue+' · '+restValue+' ثانیه';
+     cb.checked=false;picker.open=false;
+     updatePickerSummary();updateMobileCount();renderMoveManager();render();
+     $('mobileComposerStatus').textContent='«'+cb.value+'» با یک لمس به جلسهٔ '+targetSession+' اضافه شد؛ '+setsValue+' ست، '+repsValue+' تکرار و '+restValue+' ثانیه استراحت.';
+     return;
+    }
+    if(checked.length<limit){$('mobileComposerStatus').textContent='برای '+system+' هنوز '+(limit-checked.length)+' حرکت دیگر انتخاب کن.';return;}
+    $('mobileComposerStatus').textContent='حرکت‌های گروه انتخاب شدند؛ حالا «افزودن همه به جلسه» را بزن.';
     updatePickerSummary();updateMobileCount();
    });
    label.addEventListener('click',event=>{
@@ -293,10 +309,12 @@ function buildMobileComposer(){
   let lastAddedSummary='';let lastAddedCount=0;
   function updatePickerSummary(){const picked=[...checks.querySelectorAll('.mobile-exercise-check:checked')].map(x=>x.value);const label=picked.length?picked.join(' + '):(lastAddedSummary||'انتخاب حرکت');summary.textContent=(i+1)+'. '+label;}
   picker.updatePickerSummary=updatePickerSummary;
+  picker.setLastAddedSummary=function(value){lastAddedSummary=String(value||'');updatePickerSummary();};
   const del=document.createElement('button');del.type='button';del.className='mobile-delete';del.textContent='🗑';del.setAttribute('aria-label','پاک‌کردن حرکت‌های ردیف '+(i+1));del.addEventListener('click',()=>{checks.querySelectorAll('.mobile-exercise-check').forEach(x=>x.checked=false);updatePickerSummary();updateMobileCount();});
   head.append(picker,del);
   const line=document.createElement('div');line.className='mobile-controls-line';
   function makeControl(label,id,values,initial){const wrap=document.createElement('label');wrap.className='mobile-control';wrap.textContent=label;const select=document.createElement('select');select.id='mobile_'+id+'_'+i;select.dataset.row=String(i);values.forEach(v=>{const opt=document.createElement('option');opt.value=String(v);opt.textContent=String(v);if(String(v)===String(initial))opt.selected=true;select.appendChild(opt);});wrap.appendChild(select);return wrap;}
+  function makeNumericControl(label,id,initial,min){const wrap=document.createElement('label');wrap.className='mobile-control';wrap.textContent=label;const input=document.createElement('input');input.type='number';input.id='mobile_'+id+'_'+i;input.dataset.row=String(i);input.min=String(min);input.step='1';input.value=String(initial);input.inputMode='numeric';input.style.width='76px';input.setAttribute('aria-label',label+' حرکت '+(i+1));wrap.appendChild(input);return wrap;}
   const systemControl=makeControl('سیستم','system',["عادی","دراپ‌ست","رست‌پاز","هرمی","هرمی معکوس","تکرار منفی","تکرار اجباری","تا ناتوانی","نیم‌تکرار","مایو رپس","سوپرست","تری‌ست","جاینت‌ست"],'عادی');
   const mobileGroupControl=makeControl('گروه','group',['—','A','B','C','D'],'—');
   function syncCheckboxMode(){
@@ -310,7 +328,7 @@ function buildMobileComposer(){
   }
   systemControl.querySelector('select').addEventListener('change',()=>{const system=systemControl.querySelector('select').value,limit=['عادی','دراپ‌ست','drop-set','رست‌پاز','هرمی','هرمی معکوس','تکرار منفی','تکرار اجباری','تا ناتوانی','نیم‌تکرار','مایو رپس'].includes(system)?1:system==='سوپرست'?2:system==='تری‌ست'?3:4;[...checks.querySelectorAll('.mobile-exercise-check:checked')].slice(limit).forEach(x=>x.checked=false);syncCheckboxMode();updatePickerSummary();updateMobileCount();});
   syncCheckboxMode();
-  line.append(systemControl,mobileGroupControl,makeControl('ست','sets',[2,3,4,5],3),makeControl('تکرار','reps',[6,8,10,12,15,20],12),makeControl('ثانیه','rest',[30,45,60,75],60));
+  line.append(systemControl,mobileGroupControl,makeNumericControl('ست','sets',3,1),makeNumericControl('تکرار','reps',12,1),makeNumericControl('ثانیه','rest',60,0));
   card.append(head,line);rows.appendChild(card);
  }
  updateMobileCount();
@@ -338,7 +356,7 @@ $('mobileAddToSession').addEventListener('click',()=>{
  document.querySelectorAll('.mobile-move-row').forEach(row=>{
   const system=row.querySelector('[id^="mobile_system_"]').value,group=row.querySelector('[id^="mobile_group_"]').value;
   const sets=row.querySelector('[id^="mobile_sets_"]').value,reps=row.querySelector('[id^="mobile_reps_"]').value,rest=row.querySelector('[id^="mobile_rest_"]').value;
-  [...row.querySelectorAll('.mobile-exercise-check:checked')].forEach(cb=>selected.push({name:cb.value,system,group,sets,reps,rest,selectionOrder:Number(cb.dataset.selectionOrder)||0}));
+  [...row.querySelectorAll('.mobile-exercise-check:checked')].forEach(cb=>selected.push({name:cb.value,system,group,sets,reps,rest,selectionOrder:Number(cb.dataset.selectionOrder)||0,picker:row.querySelector('.mobile-exercise-picker')}));
  });
  if(!selected.length){const existingLines=rawLines();$('mobileComposerStatus').textContent=existingLines.length>0?'حرکت‌ها از قبل به فهرست برنامه اضافه شده‌اند؛ این دکمه برای انتخاب‌های تیک‌خورده است. حالا «بازبینی خروجی برنامه» را بزن و در صورت درست بودن، «ارسال به پنل مربی» را انتخاب کن.':'برای افزودن حرکت، کادر انتخاب را باز کن. انتخاب حرکت‌ها به‌تنهایی آن‌ها را ثبت نمی‌کند؛ پس از تنظیم سیستم، ست، تکرار و استراحت، «افزودن همه به جلسه» را بزن.';return;}
  selected.sort((a,b)=>a.selectionOrder-b.selectionOrder);
@@ -347,9 +365,16 @@ $('mobileAddToSession').addEventListener('click',()=>{
  for(const m of selected){if(!['سوپرست','تری‌ست','جاینت‌ست'].includes(m.system))continue;if(m.group==='—'){$('mobileComposerStatus').textContent='برای '+m.system+' یک گروه (A، B، C یا D) انتخاب کن.';return;}const key=m.system+'|'+m.group;if(!groupMap.has(key))groupMap.set(key,[]);groupMap.get(key).push(m);}
  for(const [key,moves] of groupMap){const system=key.split('|')[0],required=system==='سوپرست'?2:system==='تری‌ست'?3:4;if(moves.length!==required){$('mobileComposerStatus').textContent='گروه '+key.split('|')[1]+' برای '+system+' باید دقیقاً '+required+' حرکت داشته باشد؛ الان '+moves.length+' حرکت انتخاب شده.';return;}}
  const lines=rawLines();
- selected.forEach(m=>{const label=m.system==='عادی'?'—':m.group;lines.push([m.name,session,m.system,label,m.sets,m.reps,m.rest].join('\t'));});
- $('bulk').value=lines.join('\n');renderMoveManager();render();
- $('mobileComposerStatus').textContent=selected.length+' حرکت یکجا به جلسه '+session+' اضافه شد.';
+ const summaries=new Map();
+ selected.forEach(m=>{
+  const label=m.system==='عادی'?'—':m.group;
+  lines.push([m.name,session,m.system,label,m.sets,m.reps,m.rest].join('\t'));
+  if(m.picker){const old=summaries.get(m.picker)||[];old.push(m.name);summaries.set(m.picker,old);}
+ });
+ $('bulk').value=lines.join('\n');
+ for(const [picker,names] of summaries){const first=selected.find(m=>m.picker===picker);picker.setLastAddedSummary&&picker.setLastAddedSummary(names.join(' + ')+' · '+first.system+' · '+first.sets+'×'+first.reps+' · '+first.rest+' ثانیه');picker.open=false;}
+ renderMoveManager();render();
+ $('mobileComposerStatus').textContent=selected.length+' حرکت یکجا به جلسه '+session+' اضافه شد؛ ترتیب و تنظیمات حفظ شد.';
  document.querySelectorAll('.mobile-exercise-check').forEach(x=>x.checked=false);
  document.querySelectorAll('.mobile-exercise-picker').forEach(p=>{p.updatePickerSummary&&p.updatePickerSummary();});
  updateMobileCount();
