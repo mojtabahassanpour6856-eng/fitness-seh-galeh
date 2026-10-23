@@ -12270,7 +12270,7 @@ body.workout-output.workout-compact{
 .workout-nine-table td:first-child{border-right:1px solid #eadfbe;border-radius:0 8px 8px 0}
 .workout-nine-table td:last-child{border-left:1px solid #eadfbe;border-radius:8px 0 0 8px}
 .workout-nine-table select,.workout-nine-table input{width:100%;min-width:0;box-sizing:border-box;padding:8px 4px;margin:0;font-size:12px;border:1px solid #cfc3a5;border-radius:7px;background:#fff;color:#29251c}
-.workout-nine-table th:nth-child(1){width:31%}.w9-movement-picker{min-width:150px}.w9-movement-checklist{max-height:none;overflow:visible;text-align:right;border:0;border-radius:0;padding:0;background:transparent;color:#242424}.w9-movement-checklist label{display:flex;align-items:center;gap:6px;font-size:12px;padding:3px 0;white-space:normal;border-bottom:1px solid #f0e7d2}.w9-movement-checklist label:last-child{border-bottom:0}.w9-movement-checklist input{width:auto;min-width:auto;margin-top:2px}.w9-movement-hint{display:block;color:#8a6b25;font-size:10px;line-height:1.6}.w9-movement-picker select{width:100%}.w9-movement-checklist[hidden],.w9-movement-hint[hidden]{display:none!important}.workout-nine-table th:nth-child(2){width:23%}.workout-nine-table th:nth-child(3){width:17%}.workout-nine-table th:nth-child(4){width:15%}.workout-nine-table th:nth-child(5){width:14%}
+.workout-nine-table th:nth-child(1){width:31%}.w9-movement-picker{min-width:150px;position:relative}.w9-group-movement-toggle{width:100%;box-sizing:border-box;padding:8px 5px;border:1px solid #cfc3a5;border-radius:7px;background:#fff;color:#29251c;font-size:12px;text-align:right;cursor:pointer}.w9-movement-checklist{position:absolute;z-index:1000;top:calc(100% + 3px);right:0;width:max-content;min-width:100%;max-width:260px;max-height:190px;overflow:auto;text-align:right;border:1px solid #c7a45a;border-radius:8px;padding:6px;background:#fffaf0;color:#242424;box-shadow:0 5px 16px rgba(50,38,12,.18)}.w9-movement-checklist label{display:flex;align-items:center;gap:6px;font-size:12px;padding:5px 2px;white-space:normal;border-bottom:1px solid #f0e7d2}.w9-movement-checklist label:last-child{border-bottom:0}.w9-movement-checklist input{width:auto;min-width:auto;margin-top:2px}.w9-movement-hint{display:block;color:#8a6b25;font-size:10px;line-height:1.6}.w9-movement-picker select{width:100%}.w9-movement-checklist[hidden],.w9-movement-hint[hidden]{display:none!important}.workout-nine-table th:nth-child(2){width:23%}.workout-nine-table th:nth-child(3){width:17%}.workout-nine-table th:nth-child(4){width:15%}.workout-nine-table th:nth-child(5){width:14%}
 @media(max-width:480px){.workout-nine-table-wrap{padding:7px}.workout-nine-table{min-width:590px}.workout-nine-table th{font-size:11px}}
 </style>
 
@@ -12313,7 +12313,7 @@ body.workout-output.workout-compact{
    if(!rows.length)return alert('حداقل یک حرکت را در جدول انتخاب کنید.');
    for(const r of rows){
      if(!systems.has(r.system))return alert('سیستم تمرینی ردیف '+(r.index+1)+' معتبر نیست.');
-     const needed=r.system==='superset'?2:(r.system==='triset'||r.system==='giant'?3:1);
+     const needed=r.system==='superset'?2:(r.system==='triset'?3:(r.system==='giant'?4:1));
      if(r.exerciseIds.length!==needed)return alert((r.system==='superset'?'سوپرست':r.system==='triset'?'تری‌ست':r.system==='giant'?'جاینت‌ست':'این سیستم')+' در ردیف '+(r.index+1)+' باید دقیقاً '+needed+' حرکت انتخاب‌شده داشته باشد.');
      if(new Set(r.exerciseIds).size!==r.exerciseIds.length)return alert('در ردیف '+(r.index+1)+' یک حرکت را دوبار انتخاب نکنید.');
      if(!r.reps)return alert('تکرار ردیف '+(r.index+1)+' را وارد کنید.');
@@ -12351,16 +12351,68 @@ body.workout-output.workout-compact{
    table.querySelectorAll('tbody tr').forEach(tr=>{
      const systemSelect=tr.querySelector('.w9-system');
      const select=tr.querySelector('.w9-exercise');
+     const picker=tr.querySelector('.w9-movement-picker');
      const box=tr.querySelector('.w9-movement-checklist');
      const hint=tr.querySelector('.w9-movement-hint');
-     if(!systemSelect||!select||!box)return;
-     const update=()=>{
-       const grouped=['superset','triset','giant'].includes(systemSelect.value);
-       select.hidden=grouped;box.hidden=!grouped;hint.hidden=!grouped;
-       if(!grouped)box.querySelectorAll('input').forEach(i=>i.checked=false);
+     if(!systemSelect||!select||!picker||!box)return;
+     let toggle=picker.querySelector('.w9-group-movement-toggle');
+     if(!toggle){
+       toggle=document.createElement('button');
+       toggle.type='button';toggle.className='w9-group-movement-toggle';
+       toggle.textContent='انتخاب حرکت';
+       toggle.hidden=true;
+       toggle.setAttribute('aria-expanded','false');
+       picker.insertBefore(toggle,box);
+     }
+     const needed=()=>systemSelect.value==='superset'?2:(systemSelect.value==='triset'?3:(systemSelect.value==='giant'?4:1));
+     const grouped=()=>['superset','triset','giant'].includes(systemSelect.value);
+     const refresh=()=>{
+       const checks=Array.from(box.querySelectorAll('.w9-exercise-check:checked'));
+       const names=checks.map(x=>x.parentElement?.querySelector('span')?.textContent?.trim()||x.value);
+       toggle.textContent=names.length?names.join(' + '):'انتخاب حرکت';
+       toggle.setAttribute('aria-expanded',String(!box.hidden));
+       toggle.setAttribute('aria-label',names.length?('حرکت‌های انتخاب‌شده: '+names.join('، ')):'انتخاب حرکت');
+       select.hidden=grouped();toggle.hidden=!grouped();
+       if(!grouped()){box.hidden=true;toggle.setAttribute('aria-expanded','false');if(hint)hint.hidden=true;}
+       else if(hint)hint.hidden=true;
      };
-     systemSelect.addEventListener('change',update);
-     update();
+     toggle.addEventListener('click',()=>{
+       if(!grouped())return;
+       box.hidden=!box.hidden;
+       toggle.setAttribute('aria-expanded',String(!box.hidden));
+     });
+     box.addEventListener('change',event=>{
+       if(!event.target.matches('.w9-exercise-check'))return;
+       const selected=box.querySelectorAll('.w9-exercise-check:checked').length;
+       if(selected>needed()){event.target.checked=false;}
+       const count=box.querySelectorAll('.w9-exercise-check:checked').length;
+       refresh();
+       if(count===needed()){box.hidden=true;toggle.setAttribute('aria-expanded','false');}
+     });
+     systemSelect.addEventListener('change',()=>{
+       box.hidden=true;
+       toggle.setAttribute('aria-expanded','false');
+       const n=needed(),checked=Array.from(box.querySelectorAll('.w9-exercise-check:checked'));
+       if(checked.length>n)checked.slice(n).forEach(x=>x.checked=false);
+       refresh();
+     });
+     document.addEventListener('click',event=>{
+       if(!picker.contains(event.target)){box.hidden=true;toggle.setAttribute('aria-expanded','false');}
+     });
+     window.__sehRefreshNinePicker=window.__sehRefreshNinePicker||function(row){
+       const b=row?.querySelector('.w9-group-movement-toggle');
+       const s=row?.querySelector('.w9-system');
+       const list=row?.querySelector('.w9-movement-checklist');
+       if(!b||!s||!list)return;
+       const isGroup=['superset','triset','giant'].includes(s.value);
+       const checked=Array.from(list.querySelectorAll('.w9-exercise-check:checked'));
+       b.textContent=checked.map(x=>x.parentElement?.querySelector('span')?.textContent?.trim()||x.value).join(' + ')||'انتخاب حرکت';
+       b.hidden=!isGroup;select.hidden=isGroup;
+       if(!isGroup)list.hidden=true;
+       b.setAttribute('aria-expanded',String(!list.hidden));
+     };
+     updateInitial();
+     function updateInitial(){refresh();}
    });
  }
  function start(){
@@ -13830,8 +13882,10 @@ body.workout-output.workout-compact{
        box.querySelectorAll('.w9-exercise-check').forEach(x=>x.checked=wanted.has(x.value));
        box.hidden=!['superset','triset','giant'].includes(r.system);
      }
-     const hint=tr.querySelector('.w9-movement-hint');if(hint)hint.hidden=!['superset','triset','giant'].includes(r.system);
+     const hint=tr.querySelector('.w9-movement-hint');if(hint)hint.hidden=true;
+     if(box)box.hidden=true;
      setField(tr,'w9-rest',r.rest||'60');setField(tr,'w9-reps',r.reps||'10');setField(tr,'w9-sets',r.sets||'3');
+     if(window.__sehRefreshNinePicker)window.__sehRefreshNinePicker(tr);
    });
    ensureDay();
  }
