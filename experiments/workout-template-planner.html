@@ -271,13 +271,13 @@ function buildMobileComposer(){
     renderMoveManager();render();
     const justAdded=checked.map(item=>item.value);
     lastAddedSummary=justAdded.join(' + ');lastAddedCount=justAdded.length;
-    $('mobileComposerStatus').textContent=['عادی','دراپ‌ست','drop-set'].includes(system)?'حرکت «'+cb.value+'» با سیستم '+system+' فوراً به جلسه '+session+' اضافه شد.':checked.length+' حرکت به‌صورت '+system+' گروه '+group+' فوراً به جلسه '+session+' اضافه شد.
+    $('mobileComposerStatus').textContent=['عادی','دراپ‌ست','drop-set'].includes(system)?'حرکت «'+cb.value+'» با سیستم '+system+' فوراً به جلسه '+session+' اضافه شد.':checked.length+' حرکت به‌صورت '+system+' گروه '+group+' فوراً به جلسه '+session+' اضافه شد.';
     checks.querySelectorAll('.mobile-exercise-check').forEach(item=>{item.checked=false;delete item.dataset.selectionOrder;});
     picker.open=false;
     updatePickerSummary();updateMobileCount();
    });
    label.addEventListener('click',event=>{
-    if(card.querySelector('[id^="mobile_system_"]')?.value!=='عادی')return;
+    if(!['عادی','دراپ‌ست','drop-set'].includes(card.querySelector('[id^="mobile_system_"]')?.value))return;
     event.preventDefault();
     const wasChecked=cb.checked;
     checks.querySelectorAll('.mobile-exercise-check').forEach(other=>{other.checked=false;});
