@@ -282,8 +282,8 @@ function buildMobileComposer(){
     }
     const lines=rawLines();
     checked.forEach(item=>lines.push([item.value,session,system,group,sets,reps,rest].join('\t')));
-    row.dataset.addedNames=JSON.stringify(checked.map(item=>item.value));
-    row.dataset.addedSession=String(session);row.dataset.addedSystem=system;row.dataset.addedGroup=group;
+    card.dataset.addedNames=JSON.stringify(checked.map(item=>item.value));
+    card.dataset.addedSession=String(session);card.dataset.addedSystem=system;card.dataset.addedGroup=group;
     $('bulk').value=lines.join('\n');
     renderMoveManager();render();
     const justAdded=checked.map(item=>item.value);
