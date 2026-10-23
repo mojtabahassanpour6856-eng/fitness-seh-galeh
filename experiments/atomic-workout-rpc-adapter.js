@@ -88,19 +88,12 @@
       if (matches.length > 1) fail('برای حرکت «' + name + '» چند شناسه در بانک سازگار برنامه وجود دارد؛ ذخیره متوقف شد تا حرکت اشتباه انتخاب نشود.');
       if (matches.length === 1) return matches[0].id;
 
-      const personal = personalRows[0];
-      const inserted = await client.from('exercises').insert({
-        name: String(personal.name).trim(),
-        category: personal.category || null,
-        muscle_group: personal.target_muscle || null,
-        equipment: personal.equipment || null,
-        instructions: personal.coach_note || null
-      }).select('id,name,category,muscle_group,equipment,instructions').single();
-      if (inserted.error || !inserted.data || inserted.data.id == null) {
-        fail('حرکت «' + name + '» در بانک شخصی وجود دارد، اما ساخت شناسه سازگار برای برنامه شاگرد ناموفق شد: ' + (inserted.error && inserted.error.message || 'شناسه برنگشت'));
-      }
-      publicBank.set(key, [inserted.data]);
-      return inserted.data.id;
+      // Do not copy personal movements into public.exercises: that table is
+      // readable by all authenticated users and has no owner column. The
+      // current trainee-workout schema requires a public exercise FK, so a
+      // private-only movement cannot safely be saved until the schema/UI
+      // support trainer_exercise_id.
+      fail('حرکت «' + name + '» در بانک شخصی تو هست، اما هنوز شناسه سازگار در بانک عمومی برنامه ندارد. برای جلوگیری از انتشار ناخواسته حرکت شخصی، ذخیره متوقف شد؛ ابتدا باید اتصال امن شناسه حرکت شخصی به برنامه شاگرد تکمیل شود.');
     };
 
     const trial = value.trial;
