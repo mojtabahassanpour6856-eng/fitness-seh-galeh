@@ -164,7 +164,7 @@ function parse(){
   let name=p[0],session=Number(p[1])||1,system=normalizeTrainingSystem(p[2]||'عادی'),group=p[3]||'—',sets=p[4]||'3',reps=p[5]||'12',rest=p[6]||'60';
   if(!['عادی','دراپ‌ست','رست‌پاز','هرمی','هرمی معکوس','تکرار منفی','تکرار اجباری','تا ناتوانی','نیم‌تکرار','مایو رپس','سوپرست','تری‌ست','جاینت‌ست'].includes(system)){errors.push('خط '+(i+1)+': سیستم تمرین ناشناخته است («'+system+'»).');}
   if(!Number.isInteger(session)||session<1||session>n())errors.push('خط '+(i+1)+': شماره جلسه باید بین ۱ تا '+n()+' باشد.');
-  if(!/^\d+$/.test(String(sets))||!/^\d+$/.test(String(reps))||!/^\d+$/.test(String(rest)))errors.push('خط '+(i+1)+': ست، تکرار و استراحت باید عدد باشند.');
+  if(!/^\d+$/.test(String(sets))||Number(sets)<1||!/^\d+$/.test(String(reps))||Number(reps)<1||!/^\d+$/.test(String(rest))||Number(rest)<0)errors.push('خط '+(i+1)+': ست و تکرار باید عدد صحیح مثبت و استراحت باید صفر یا بیشتر باشد.');
   moves.push({name,session,system,group,sets:Number(sets),reps:Number(reps),rest:Number(rest),sourceIndex:i});
  });
  const groupedSystem=system=>['سوپرست','تری‌ست','تری ست','جاینت‌ست','جاینت ست'].includes(system);
