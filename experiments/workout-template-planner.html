@@ -285,7 +285,7 @@ function buildMobileComposer(){
    cb.style.width='16px';cb.style.height='16px';
    cb.addEventListener('change',()=>{
     const system=card.querySelector('[id^="mobile_system_"]').value,limit=system==='عادی'?1:system==='سوپرست'?2:system==='تری‌ست'?3:4;
-    // انتخاب عادی با چک‌باکس بومی مرورگر انجام می‌شود؛ در هر ردیف فقط یک حرکت عادی می‌ماند.
+    // در حالت عادی فقط یک حرکت در این ردیف انتخاب می‌شود؛ از رفتار استاندارد checkbox استفاده می‌کنیم.
     if(cb.checked&&system==='عادی')checks.querySelectorAll('.mobile-exercise-check').forEach(other=>{if(other!==cb)other.checked=false;});
     if(cb.checked)cb.dataset.selectionOrder=String(++selectionOrder);
     const checked=[...checks.querySelectorAll('.mobile-exercise-check:checked')].sort((a,b)=>Number(a.dataset.selectionOrder||0)-Number(b.dataset.selectionOrder||0));
@@ -294,7 +294,7 @@ function buildMobileComposer(){
     if(cb.checked)$('mobileComposerStatus').textContent='حرکت انتخاب شد؛ پس از انتخاب حرکت‌ها، دکمه «افزودن همه به جلسه» را بزن.';
    });
    const textNode=document.createElement('span');textNode.textContent=item.name;
-   // انتخاب با رفتار استاندارد checkbox/label؛ بدون کلیک‌گیر سفارشی.
+   // انتخاب با رفتار استاندارد checkbox/label انجام می‌شود؛ کلیک‌گیر سفارشی نداریم.
    label.append(cb,textNode);checks.appendChild(label);
   });
   search.addEventListener('input',()=>{
@@ -317,13 +317,14 @@ function buildMobileComposer(){
    const normal=!isGroupedSystem(systemControl.querySelector('select').value);
    checks.querySelectorAll('.mobile-exercise-check').forEach(cb=>{
     cb.style.display=normal?'none':'inline-block';
-    cb.setAttribute('aria-label',normal?'انتخاب حرکت':'تیک  function syncCheckboxMode(){
-   // چک‌باکس همیشه دیده می‌شود تا انتخاب عادی هم با کنترل بومی و قابل‌اعتماد انجام شود.
+    cb.setAttribute('aria-label'  function syncCheckboxMode(){
+   // چک‌باکس همیشه دیده می‌شود؛ انتخاب عادی و گروهی هر دو با کنترل بومی انجام می‌شوند.
    checks.querySelectorAll('.mobile-exercise-check').forEach(cb=>{
     cb.style.display='inline-block';
     cb.setAttribute('aria-label','انتخاب حرکت');
    });
-  }lice(limit).forEach(x=>x.checked=false);syncCheckboxMode();updatePickerSummary();updateMobileCount();});
+  }
+ercise-check:checked')].slice(limit).forEach(x=>x.checked=false);syncCheckboxMode();updatePickerSummary();updateMobileCount();});
   syncCheckboxMode();
   line.append(systemControl,makeControl('گروه','group',['—','A','B','C','D'],'—'),makeControl('ست','sets',[2,3,4,5],3),makeControl('تکرار','reps',[6,8,10,12,15,20],12),makeControl('ثانیه','rest',[30,45,60,75],60));
   card.append(head,line);rows.appendChild(card);
