@@ -12339,8 +12339,7 @@ body.workout-output.workout-compact{
    syncNineMovementOptions();
    const source=document.getElementById('workoutExercise');
    if(source&&!source.dataset.w9Sync){new MutationObserver(syncNineMovementOptions).observe(source,{childList:true,subtree:true});source.dataset.w9Sync='1';}
-   const observer=new MutationObserver(syncNineMovementOptions);
-   const root=document.getElementById('workoutNineTable');if(root)observer.observe(root,{childList:true,subtree:true});
+   // Rows are fixed; observe only the source list to avoid a mutation loop while syncing options.
  }
  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start,{once:true});else start();
 })();
