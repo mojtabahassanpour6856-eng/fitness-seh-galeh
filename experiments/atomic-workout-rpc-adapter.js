@@ -64,8 +64,9 @@
       personalBank.get(key).push(row);
     }
 
-    // trainee_workout_exercises references public.exercises. Create a compatible
-    // row only for an exercise explicitly present in the coach's personal bank.
+    // Existing workout rows require a public.exercises FK. Resolve by normalized
+    // name only when the same movement exists in both the personal and shared
+    // catalogs; never create shared rows from private-bank data.
     const publicResult = await client.from('exercises')
       .select('id,name,category,muscle_group,equipment,instructions');
     if (publicResult.error) fail('خواندن شناسه‌های سازگار با برنامه شاگرد ناموفق بود: ' + publicResult.error.message);
