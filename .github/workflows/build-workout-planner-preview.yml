@@ -25,6 +25,7 @@ jobs:
         run: |
           mkdir -p preview-bundle
           cp experiments/workout-template-planner.html preview-bundle/index.html
+          cp experiments/workout-template-planner.html preview-bundle/workout-template-planner.html
           cp experiments/workout-persistence-adapter.js preview-bundle/workout-persistence-adapter.js
           cp experiments/test-coach-host.html preview-bundle/test-coach-host.html
           cat > preview-bundle/README.txt <<'EOF'
@@ -41,6 +42,7 @@ jobs:
       - name: Validate preview bundle contents
         run: |
           test -s preview-bundle/index.html
+          test -s preview-bundle/workout-template-planner.html
           test -s preview-bundle/workout-persistence-adapter.js
           test -s preview-bundle/test-coach-host.html
           grep -q 'workout-persistence-adapter.js' preview-bundle/index.html
