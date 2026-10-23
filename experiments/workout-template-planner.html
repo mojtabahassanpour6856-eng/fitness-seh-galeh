@@ -289,33 +289,10 @@ function buildMobileComposer(){
     const checked=[...checks.querySelectorAll('.mobile-exercise-check:checked')].sort((a,b)=>Number(a.dataset.selectionOrder||0)-Number(b.dataset.selectionOrder||0));
     if(cb.checked&&checked.length>limit){cb.checked=false;$('mobileComposerStatus').textContent='برای '+system+' حداکثر '+limit+' حرکت می‌توانی انتخاب کنی.';updatePickerSummary();updateMobileCount();return;}
     updatePickerSummary();updateMobileCount();
-    // انتخاب عادی همان لحظه ثبت می‌شود؛ سیستم‌های ترکیبی پس از تکمیل تعداد لازم ثبت می‌شوند.
-    if(!cb.checked)return;
-    if(isGroupedSystem(system)&&checked.length<limit)return;
-    const session=Number($('mobileTargetSession').value);
-    if(session>n()){$('mobileComposerStatus').textContent='جلسه انتخابی بیشتر از تعداد جلسات برنامه است؛ تعداد جلسات را در تنظیم برنامه افزایش بده.';return;}
-    const sets=card.querySelector('[id^="mobile_sets_"]').value;
-    const reps=card.querySelector('[id^="mobile_reps_"]').value;
-    const rest=card.querySelector('[id^="mobile_rest_"]').value;
-    let group='—';
-    if(isGroupedSystem(system)){
-     const groupSelect=card.querySelector('[id^="mobile_group_"]');
-     group=groupSelect.value;
-     if(group==='—'){
-      const used=new Set(rawLines().map(line=>{const p=line.split('\t');return Number(p[1])===session&&p[2]===system?p[3]:'';}).filter(Boolean));
-      group=['A','B','C','D'].find(letter=>!used.has(letter))||'A';
-      groupSelect.value=group;
-     }
+    // انتخاب حرکت فقط در کادر نگه داشته می‌شود؛ افزودن به برنامه با دکمه «افزودن حرکات این جلسه» انجام می‌شود.
+    if(cb.checked){
+     $('mobileComposerStatus').textContent='حرکت انتخاب شد؛ پس از انتخاب حرکت‌ها، دکمه «افزودن حرکات این جلسه به برنامه تمرینی» را بزن.';
     }
-    const lines=rawLines();
-    checked.forEach(item=>lines.push([item.value,session,system,group,sets,reps,rest].join('\t')));
-    $('bulk').value=lines.join('\n');
-    renderMoveManager();render();
-    const justAdded=checked.map(item=>item.value);
-    lastAddedSummary=justAdded.join(' + ');lastAddedCount=justAdded.length;
-    $('mobileComposerStatus').textContent=system==='عادی'?'حرکت «'+cb.value+'» فوراً به جلسه '+session+' اضافه شد.':checked.length+' حرکت به‌صورت '+system+' گروه '+group+' فوراً به جلسه '+session+' اضافه شد.';
-    checks.querySelectorAll('.mobile-exercise-check').forEach(item=>{item.checked=false;delete item.dataset.selectionOrder;});
-    picker.open=false;
     updatePickerSummary();updateMobileCount();
    });
    label.addEventListener('click',event=>{
