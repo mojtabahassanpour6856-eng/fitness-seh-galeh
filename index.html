@@ -372,12 +372,9 @@ body.locked{overflow:hidden!important}
 </script>
 <style id="membership-card-style">.membership-card-visual{margin:12px 0 16px;padding:18px;border-radius:18px;background:linear-gradient(135deg,#f7ebc9,#d4b45e 48%,#8b6825);color:#17120a;box-shadow:0 10px 25px rgba(0,0,0,.22);border:1px solid rgba(255,255,255,.55);min-height:190px;position:relative;overflow:hidden}.membership-card-visual:after{content:"";position:absolute;right:-45px;bottom:-80px;width:210px;height:210px;border:1px solid rgba(255,255,255,.3);border-radius:50%}.mc-top{display:flex;justify-content:space-between;align-items:center;font-size:13px}.mc-top span{font-size:11px}.mc-chip{margin-top:17px;font-size:25px}.mc-number{font-size:18px;letter-spacing:2px;margin:5px 0 13px;direction:ltr;text-align:left}.mc-name{display:flex;flex-direction:column;gap:2px}.mc-name small,.mc-details small{font-size:9px;opacity:.78}.mc-name strong{font-size:14px}.mc-details{display:grid;grid-template-columns:1.35fr 1fr 1fr;gap:9px;margin-top:12px}.mc-details>div{display:flex;flex-direction:column;gap:2px;min-width:0}.mc-details strong{font-size:10px;white-space:nowrap}@media(max-width:600px){.mc-details{gap:5px}.mc-details strong{font-size:8px}}</style>
 <style id="seh-coach-workout-touch-choices-css">
-/* Coach workout prescription touch buttons only; no trainee UI selectors. */
-#coachWorkoutSection .seh-touch-choice-group,
-#workout .seh-touch-choice-group,
-.seh-touch-choice-group{display:flex;flex-wrap:wrap;gap:7px;margin:7px 0 12px}
-.seh-touch-choice{width:auto;min-width:42px;min-height:42px;margin:0;padding:8px 12px;border:1px solid #b99543;border-radius:11px;background:#fff8e6;color:#463515;font-size:15px;font-weight:700;touch-action:manipulation}
-.seh-touch-choice[aria-pressed="true"]{background:#ffbd16;color:#111;border-color:#9b7418;box-shadow:0 0 0 2px #f0d88f}
+/* Compact dropdown controls for coach prescription fields only. */
+.seh-touch-choice-select{display:block;box-sizing:border-box;width:100%;min-width:0;max-width:100%;height:34px;margin:3px 0 5px;padding:4px 24px 4px 8px;border:1px solid #b99543;border-radius:8px;background:#fffaf0;color:#463515;font-size:14px;font-weight:700;line-height:1.2}
+.seh-touch-choice-hidden-source{display:none!important}
 </style>
 </head>
 <body class="locked">
@@ -12378,34 +12375,39 @@ body.workout-output.workout-compact{
 </script>
 
 <script id="seh-coach-workout-touch-choices">
-/* Add tappable choices beside the coach's existing prescription fields.
-   Existing inputs/selects remain the source of truth for save/export logic. */
+/* Compact dropdowns beside existing coach prescription fields; source inputs stay authoritative. */
 (function(){
  const specs=[
-  {selector:'#workoutSets,.w9-sets',values:[2,3,4,5,6,7],label:'انتخاب تعداد ست'},
-  {selector:'#workoutReps,.w9-reps',values:[6,8,10,12,16,20,60],label:'انتخاب تعداد تکرار'},
-  {selector:'#workoutRest,.w9-rest',values:[30,45,60,75,90],label:'انتخاب استراحت به ثانیه'}
+  {selector:'#workoutSets,.w9-sets',values:[2,3,4,5,6,7],fallback:'3',label:'انتخاب تعداد ست'},
+  {selector:'#workoutReps,.w9-reps',values:[6,8,10,12,16,20,60],fallback:'12',label:'انتخاب تعداد تکرار'},
+  {selector:'#workoutRest,.w9-rest',values:[30,45,60,75,90],fallback:'60',label:'انتخاب استراحت به ثانیه',suffix:' ثانیه'}
  ];
  function add(input,spec){
   if(!input||input.dataset.sehTouchChoices==='1')return;
   input.dataset.sehTouchChoices='1';
-  const group=document.createElement('div');group.className='seh-touch-choice-group';group.setAttribute('role','group');group.setAttribute('aria-label',spec.label);
+  const select=document.createElement('select');
+  select.className='seh-touch-choice-select';
+  select.setAttribute('aria-label',spec.label);
+  select.title=spec.label;
   spec.values.forEach(value=>{
-   const btn=document.createElement('button');btn.type='button';btn.className='seh-touch-choice';btn.textContent=String(value);
-   btn.setAttribute('aria-pressed',String(String(input.value)===String(value)));
-   btn.addEventListener('click',()=>{
-    input.value=String(value);
-    input.dispatchEvent(new Event('input',{bubbles:true}));
-    input.dispatchEvent(new Event('change',{bubbles:true}));
-    group.querySelectorAll('button').forEach(b=>b.setAttribute('aria-pressed',String(b.textContent===String(value))));
-   });
-   group.appendChild(btn);
+   const option=document.createElement('option');
+   option.value=String(value);
+   option.textContent=String(value)+(spec.suffix||'');
+   select.appendChild(option);
   });
-  input.insertAdjacentElement('afterend',group);
+  const current=String(input.value||'').trim();
+  select.value=spec.values.some(v=>String(v)===current)?current:spec.fallback;
+  input.value=select.value;
+  input.classList.add('seh-touch-choice-hidden-source');
+  select.addEventListener('change',()=>{
+   input.value=select.value;
+   input.dispatchEvent(new Event('input',{bubbles:true}));
+   input.dispatchEvent(new Event('change',{bubbles:true}));
+  });
+  input.insertAdjacentElement('afterend',select);
  }
  function update(){
   specs.forEach(spec=>document.querySelectorAll(spec.selector).forEach(input=>{
-   /* Active coach editor uses .w9-* fields; legacy inputs are hidden. */
    if(input.matches('.w9-sets,.w9-reps,.w9-rest')||input.id==='workoutSets'||input.id==='workoutReps'||input.id==='workoutRest')add(input,spec);
   }));
  }
