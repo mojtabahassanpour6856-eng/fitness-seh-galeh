@@ -556,7 +556,7 @@ $('downloadWorkoutImageButton').addEventListener('click',async()=>{
   const sessions=$('sessions').cloneNode(true);
   summary.querySelectorAll('button').forEach(el=>el.remove());
   sessions.querySelectorAll('button').forEach(el=>el.remove());
-  sessions.querySelectorAll('.move').forEach(move=>{const detail=move.children[1];if(detail&&detail.textContent)detail.textContent=detail.textContent.replace(/\s*·\s*استراحت\s*/,'  |  استراحت ');});
+  sessions.querySelectorAll('.move').forEach(move=>{const detail=move.querySelector('.move-detail');if(detail&&detail.textContent)detail.textContent=detail.textContent.replace(/\s*·\s*استراحت\s*/g,'  |  استراحت ');const badge=move.querySelector('.system-badge');if(badge){badge.style.setProperty('display','inline-block','important');badge.style.setProperty('color','#29251d','important');badge.style.setProperty('background','#f3ead4','important');badge.style.setProperty('border','1px solid #d8bd7a','important');badge.style.setProperty('font-weight','700','important');}});
    stage.append(title,subtitle,summary,sessions);
   const footer=document.createElement('div');
   footer.textContent='مربی: مجتبی  |  FITNESS SEH GALEH';
