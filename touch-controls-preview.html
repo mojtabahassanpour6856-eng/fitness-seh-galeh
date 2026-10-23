@@ -1,0 +1,21 @@
+<!doctype html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#f7f0df"><title>آزمایش دکمه‌های برنامه تمرینی | فیتنس سه‌قلعه</title>
+<style>
+*{box-sizing:border-box}body{margin:0;background:#f7f0df;color:#302819;font-family:Tahoma,Arial,sans-serif;padding:18px;line-height:1.8}.wrap{max-width:620px;margin:auto}.card{background:#fffdf7;border:1px solid #d7bd79;border-radius:18px;padding:18px;margin:14px 0;box-shadow:0 5px 18px #60451512}h1{font-size:22px;margin:0;color:#72551b}h2{font-size:18px;margin:0 0 10px}.sub{color:#756b58;font-size:13px}.label{font-weight:bold;margin:14px 0 7px}.choices{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}.choice{min-height:46px;border:1px solid #d9c99f;border-radius:12px;background:#fff;color:#342c1e;font-size:16px;font-weight:bold;touch-action:manipulation}.choice[aria-pressed=true]{background:#806020;color:white;border-color:#806020;box-shadow:0 0 0 2px #e8d6a8}.selected{font-size:13px;color:#67501f;margin-top:6px}.summary{background:#f2e5c4;border-radius:12px;padding:12px;font-size:16px;font-weight:bold}.reset{background:transparent;border:1px solid #a88b4d;border-radius:10px;padding:10px 16px;color:#5b451b;font-size:14px}.warn{font-size:12px;color:#766d5c}
+@media(max-width:380px){body{padding:10px}.choices{grid-template-columns:repeat(3,minmax(0,1fr))}.card{padding:13px}}
+</style></head>
+<body><main class="wrap">
+<header><h1>باشگاه فیتنس سه‌قلعه</h1><div class="sub">آزمایش لمسی انتخاب ست، تکرار و استراحت</div></header>
+<section class="card"><h2>مشخصات حرکت آزمایشی</h2>
+<div class="label">تعداد ست</div><div class="choices" id="sets"></div><div class="selected" id="setsOut"></div>
+<div class="label">تعداد تکرار</div><div class="choices" id="reps"></div><div class="selected" id="repsOut"></div>
+<div class="label">استراحت (ثانیه)</div><div class="choices" id="rest"></div><div class="selected" id="restOut"></div>
+</section><section class="card"><h2>پیش‌نمایش انتخاب شما</h2><div class="summary" id="summary" aria-live="polite"></div><p class="warn">این صفحه فقط برای آزمایش دکمه‌های لمسی است؛ برنامه‌ای ذخیره یا به پنل مربی ارسال نمی‌شود.</p><button class="reset" id="reset">بازگردانی مقادیر پیش‌فرض</button></section>
+</main><script>
+const config=[{id:'sets',values:[2,3,4,5,6,7],initial:3,label:'ست'},{id:'reps',values:[6,8,10,12,16,20,60],initial:12,label:'تکرار'},{id:'rest',values:[30,45,60,75,90],initial:60,label:'ثانیه استراحت'}];const state={};
+function render(){config.forEach(c=>{const host=document.getElementById(c.id);host.replaceChildren();c.values.forEach(v=>{const b=document.createElement('button');b.type='button';b.className='choice';b.textContent=v;b.setAttribute('aria-pressed',String(state[c.id]===v));b.addEventListener('click',()=>{state[c.id]=v;render()});host.appendChild(b)});document.getElementById(c.id+'Out').textContent='انتخاب‌شده: '+state[c.id]+(c.id==='rest'?' ثانیه':' '+c.label)});document.getElementById('summary').textContent=state.sets+' ست × '+state.reps+' تکرار | استراحت '+state.rest+' ثانیه'}
+function reset(){config.forEach(c=>state[c.id]=c.initial);render()}document.getElementById('reset').addEventListener('click',reset);reset();
+</script></body></html>
