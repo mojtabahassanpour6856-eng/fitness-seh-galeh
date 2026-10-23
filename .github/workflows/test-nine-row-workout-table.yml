@@ -84,7 +84,7 @@ jobs:
           const html = fs.readFileSync('index.html', 'utf8');
           const start = html.lastIndexOf('window.saveWorkoutNineTable=async function');
           assert.ok(start >= 0, 'nine-row save handler must exist');
-          const end = html.indexOf('\\n };\\n function start()', start);
+          const end = html.indexOf('function start(){', start);
           assert.ok(end > start, 'could not find end of nine-row save handler');
           const handler = html.slice(start, end);
           assert.match(handler, /workout_plan_id:currentWorkoutPlanId/, 'must use current plan id, not a window property');
