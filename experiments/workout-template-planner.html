@@ -95,17 +95,9 @@
  <button id="mobilePreviewButton" type="button" class="secondary" style="width:100%;margin-top:8px">بازبینی خروجی برنامه</button><button id="mobileSendToCoachApp" type="button" style="width:100%;margin-top:8px">ارسال برنامه به پنل مربی</button><p id="mobileComposerStatus" class="status muted" role="status" aria-live="polite"></p>
 </section>
 <section class="card" id="planMoves"><h2>۲) ورود گروهی حرکات</h2><p>هر حرکت را در یک خط وارد کن. حالت پیشرفته با Tab جدا می‌شود: <span class="pill">نام حرکت · جلسه · سیستم · گروه · ست · تکرار · استراحت</span></p>
-<p class="muted">نمونه را می‌توانی ویرایش کنی؛ ستون جلسه از ۱ شروع می‌شود. برای سیستم عادی، گروه را با — پر کن.</p>
+<p class="muted">این بخش از ابتدا خالی است تا هیچ حرکت نمونه‌ای ناخواسته وارد برنامه نشود. حرکت‌ها را از بانک شخصی مربی انتخاب کن؛ ستون جلسه از ۱ شروع می‌شود. برای سیستم عادی، گروه را با — پر کن.</p>
 <p class="muted" id="keyboardShortcutHint">میانبر لپ‌تاپ: وقتی نشانگر داخل کادر حرکات است، با Ctrl + Enter برنامه را اعتبارسنجی و پیش‌نمایش کن.</p>
-<textarea id="bulk" spellcheck="false">پرس سینه دمبل	1	عادی	—	3	12	60
-بالاسینه دستگاه	1	سوپرست	1	3	12	60
-قفسه سیم‌کش	1	سوپرست	1	3	12	60
-لت سیم‌کش	2	عادی	—	3	12	60
-قایقی	2	تری‌ست	2	3	12	60
-فیس‌پول	2	تری‌ست	2	3	15	45
-پول‌اور سیم‌کش	2	تری‌ست	2	3	15	45
-اسکوات جام	3	عادی	—	4	15	75
-</textarea>
+<textarea id="bulk" spellcheck="false" placeholder="ابتدا بانک حرکات شخصی مربی بارگذاری می‌شود؛ سپس حرکت‌ها را فقط از همان بانک انتخاب و به جلسه اضافه کن."></textarea>
 <div class="card" style="background:#fcfaf4;margin-top:10px" id="exerciseBankCard">
 <h3 style="margin-top:0">بانک حرکات آماده</h3>
 <p class="muted">گروه عضلانی را انتخاب یا نام حرکت را جست‌وجو کن؛ با لمس حرکت، نام آن در فرم ثبت می‌شود و بعد می‌توانی جلسه، سیستم و ست‌ها را تنظیم کنی.</p>
@@ -622,52 +614,9 @@ $('export').addEventListener('click',()=>{render();const data=window.__trial;if(
         if (!groups[category].includes(name)) groups[category].push(name);
       });
       exerciseLibrary = groups;
-      const demoNames = ['پرس سینه دمبل','بالاسینه دستگاه','قفسه سیم‌کش','لت سیم‌کش','قایقی','فیس‌پول','پول‌اور سیم‌کش','اسکوات جام'];
-      const currentLines = $('bulk').value.split(/\\r?\\n/).filter(line => line.trim());
-      const untouchedDemo = currentLines.length === demoNames.length &&
-        currentLines.every((line,index) => line.split('\\t')[0].trim() === demoNames[index]);
+      // The planner must never inject demo movements into a real coach's workout.
+      // The textarea starts empty; all new movements are chosen from trainer_exercises.
       const uniqueNames = [...new Set(rows.map(row => String(row.name || '').trim()).filter(Boolean))];
-      // Replace only known starter-template placeholders that do not exist in the coach's bank.
-      // This prevents a leftover demo name (e.g. "بالاسینه دستگاه") from blocking the entire save.
-      // Never replace an arbitrary custom movement or a name that already exists in the personal bank.
-      const bankNameKey = name => String(name || '').normalize('NFKC')
-        .replace(/[\u200c\u200f\u202a-\u202e]/g, '').replace(/\s+/g, ' ').trim().toLocaleLowerCase('fa');
-      const personalNameKeys = new Set(uniqueNames.map(bankNameKey));
-      const starterFallbacks = new Map([
-        ['بالاسینه دستگاه', 'پرس بالا سینه اسمیت'],
-        ['قفسه سیم‌کش', 'کراس اور'],
-        ['لت سیم‌کش', 'زیربغل لت از جلو'],
-        ['پول‌اور سیم‌کش', 'پلاور سیمکش خوابیده'],
-        ['اسکوات جام', 'اسکات دمبل جفتی'],
-        ['قایقی', 'زیربغل قایقی'],
-        ['فیس‌پول', 'فیس پول']
-      ]);
-      let starterNamesReplaced = 0;
-      const updatedLines = $('bulk').value.split(/\r?\n/).map(line => {
-        if (!line.trim()) return line;
-        const parts = line.split('\t');
-        const oldName = String(parts[0] || '').trim();
-        const fallback = starterFallbacks.get(oldName);
-        if (fallback && !personalNameKeys.has(bankNameKey(oldName)) &&
-            personalNameKeys.has(bankNameKey(fallback))) {
-          parts[0] = fallback;
-          starterNamesReplaced++;
-          return parts.join('\t');
-        }
-        return line;
-      });
-      if (starterNamesReplaced) {
-        $('bulk').value = updatedLines.join('\n');
-        $('quickStatus').textContent = starterNamesReplaced +
-          ' حرکت نمونه‌ای که در بانک شخصی نبود، با نام معتبر موجود در بانک جایگزین شد. قبل از ذخیره، حرکات را بررسی کن.';
-        render();
-      }
-      if (untouchedDemo && uniqueNames.length >= demoNames.length) {
-        $('bulk').value = currentLines.map((line,index) =>
-          [uniqueNames[index], ...line.split('\\t').slice(1)].join('\\t')
-        ).join('\\n');
-        render();
-      }
       const select = $('bankCategory');
       const existing = new Set(Array.from(select.options).map(option => option.value));
       Object.keys(groups).sort((a,b)=>a.localeCompare(b,'fa')).forEach(category => {
