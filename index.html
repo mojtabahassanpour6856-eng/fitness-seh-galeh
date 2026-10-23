@@ -803,7 +803,7 @@ body.locked{overflow:hidden!important}
 </div>
 <div id="workoutExerciseCount" class="muted" style="margin:6px 0 10px">در حال دریافت حرکات…</div>
 <div class="workout-nine-table-wrap">
-<p class="muted">۹ ردیف برای ثبت سریع حرکات همین جلسه. ردیف‌های خالی نادیده گرفته می‌شوند.</p>
+<p class="muted">۹ ردیف برای ثبت سریع حرکات همین جلسه. ردیف‌های خالی نادیده گرفته می‌شوند. برای سوپرست، تری‌ست یا جاینت‌ست، سیستم را فقط در ردیف اول گروه انتخاب کنید؛ سیستم ردیف‌های بعدی به‌صورت خودکار هماهنگ می‌شود و هر حرکت را در یک ردیف جدا انتخاب کنید.</p>
 <div class="workout-nine-table-scroll">
 <table id="workoutNineTable" class="workout-nine-table">
 <thead><tr><th>حرکت</th><th>سیستم تمرینی</th><th>استراحت (ثانیه)</th><th>تکرار</th><th>ست</th></tr></thead>
@@ -12335,8 +12335,29 @@ body.workout-output.workout-compact{
      alert(rows.length+' حرکت با موفقیت در برنامه ثبت شد.');
    }catch(e){try{await window.loadWorkoutForClient();}catch(_){}alert('ثبت جدول کامل نشد.\n'+(e?.message||String(e)));}
  };
+ function bindNineSystemGrouping(){
+   const table=document.getElementById('workoutNineTable');
+   if(!table||table.dataset.w9GroupingBound)return;
+   table.dataset.w9GroupingBound='1';
+   const rows=Array.from(table.querySelectorAll('tbody tr'));
+   rows.forEach((tr,index)=>{
+     const systemSelect=tr.querySelector('.w9-system');
+     if(!systemSelect)return;
+     systemSelect.addEventListener('change',()=>{
+       const count=systemSelect.value==='superset'?2:(systemSelect.value==='triset'||systemSelect.value==='giant'?3:1);
+       if(count===1)return;
+       for(let offset=1;offset<count;offset++){
+         const next=rows[index+offset];
+         if(!next)break;
+         const nextSystem=next.querySelector('.w9-system');
+         if(nextSystem)nextSystem.value=systemSelect.value;
+       }
+     });
+   });
+ }
  function start(){
    syncNineMovementOptions();
+   bindNineSystemGrouping();
    const source=document.getElementById('workoutExercise');
    if(source&&!source.dataset.w9Sync){new MutationObserver(syncNineMovementOptions).observe(source,{childList:true,subtree:true});source.dataset.w9Sync='1';}
    // Rows are fixed; observe only the source list to avoid a mutation loop while syncing options.
