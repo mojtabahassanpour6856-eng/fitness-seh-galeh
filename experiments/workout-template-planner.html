@@ -285,25 +285,16 @@ function buildMobileComposer(){
    cb.style.width='16px';cb.style.height='16px';
    cb.addEventListener('change',()=>{
     const system=card.querySelector('[id^="mobile_system_"]').value,limit=system==='عادی'?1:system==='سوپرست'?2:system==='تری‌ست'?3:4;
+    // انتخاب عادی با چک‌باکس بومی مرورگر انجام می‌شود؛ در هر ردیف فقط یک حرکت عادی می‌ماند.
+    if(cb.checked&&system==='عادی')checks.querySelectorAll('.mobile-exercise-check').forEach(other=>{if(other!==cb)other.checked=false;});
     if(cb.checked)cb.dataset.selectionOrder=String(++selectionOrder);
     const checked=[...checks.querySelectorAll('.mobile-exercise-check:checked')].sort((a,b)=>Number(a.dataset.selectionOrder||0)-Number(b.dataset.selectionOrder||0));
     if(cb.checked&&checked.length>limit){cb.checked=false;$('mobileComposerStatus').textContent='برای '+system+' حداکثر '+limit+' حرکت می‌توانی انتخاب کنی.';updatePickerSummary();updateMobileCount();return;}
     updatePickerSummary();updateMobileCount();
-    // انتخاب حرکت فقط در کادر نگه داشته می‌شود؛ افزودن به برنامه با دکمه «افزودن حرکات این جلسه» انجام می‌شود.
-    if(cb.checked){
-     $('mobileComposerStatus').textContent='حرکت انتخاب شد؛ پس از انتخاب حرکت‌ها، دکمه «افزودن حرکات این جلسه به برنامه تمرینی» را بزن.';
-    }
-    updatePickerSummary();updateMobileCount();
+    if(cb.checked)$('mobileComposerStatus').textContent='حرکت انتخاب شد؛ پس از انتخاب حرکت‌ها، دکمه «افزودن همه به جلسه» را بزن.';
    });
    const textNode=document.createElement('span');textNode.textContent=item.name;
-   label.addEventListener('click',event=>{
-    if(card.querySelector('[id^="mobile_system_"]')?.value!=='عادی')return;
-    event.preventDefault();event.stopPropagation();
-    const wasChecked=cb.checked;
-    checks.querySelectorAll('.mobile-exercise-check').forEach(other=>{other.checked=false;});
-    cb.checked=!wasChecked;
-    cb.dispatchEvent(new Event('change',{bubbles:true}));
-   },true);
+   // انتخاب با رفتار استاندارد checkbox/label انجام می‌شود؛ کلیک‌گیر سفارشی نداریم.
    label.append(cb,textNode);checks.appendChild(label);
   });
   search.addEventListener('input',()=>{
@@ -326,10 +317,13 @@ function buildMobileComposer(){
    const normal=!isGroupedSystem(systemControl.querySelector('select').value);
    checks.querySelectorAll('.mobile-exercise-check').forEach(cb=>{
     cb.style.display=normal?'none':'inline-block';
-    cb.setAttribute('aria-label',normal?'انتخاب حرکت':'تیک حرکت برای گروه ترکیبی');
+    cb.setAttribute('aria-label',normal?'انتخfunction syncCheckboxMode(){
+   // چک‌باکس همیشه دیده می‌شود تا انتخاب عادی و گروهی با کنترل بومی انجام شود.
+   checks.querySelectorAll('.mobile-exercise-check').forEach(cb=>{
+    cb.style.display='inline-block';
+    cb.setAttribute('aria-label','انتخاب حرکت');
    });
-  }
-  systemControl.querySelector('select').addEventListener('change',()=>{const system=canonicalSystem(systemControl.querySelector('select').value),limit=isGroupedSystem(system)?(system==='سوپرست'?2:system==='تری‌ست'?3:4):1;[...checks.querySelectorAll('.mobile-exercise-check:checked')].slice(limit).forEach(x=>x.checked=false);syncCheckboxMode();updatePickerSummary();updateMobileCount();});
+  }ck:checked')].slice(limit).forEach(x=>x.checked=false);syncCheckboxMode();updatePickerSummary();updateMobileCount();});
   syncCheckboxMode();
   line.append(systemControl,makeControl('گروه','group',['—','A','B','C','D'],'—'),makeControl('ست','sets',[2,3,4,5],3),makeControl('تکرار','reps',[6,8,10,12,15,20],12),makeControl('ثانیه','rest',[30,45,60,75],60));
   card.append(head,line);rows.appendChild(card);
