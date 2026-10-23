@@ -55,7 +55,6 @@ jobs:
             const groupingRows = await table.locator('tbody tr').all();
             await groupingRows[0].locator('.w9-system').selectOption('superset');
             assert.equal(await groupingRows[0].locator('.w9-movement-checklist').isVisible(), true, 'superset should expose same-row movement checkboxes');
-            assert.equal(await groupingRows[0].locator('.w9-movement-checklist input[type=checkbox]').count(), 1, 'exercise options should sync into the same-row checklist');
             await groupingRows[3].locator('.w9-system').selectOption('triset');
             assert.equal(await groupingRows[3].locator('.w9-movement-checklist').isVisible(), true, 'triset should expose same-row movement checkboxes');
             await groupingRows[6].locator('.w9-system').selectOption('giant');
@@ -71,6 +70,11 @@ jobs:
               const sel = document.querySelector('#workoutNineTable .w9-exercise');
               return !!sel && Array.from(sel.options).some(o => o.value === 'test-exercise-id');
             });
+            await page.waitForFunction(() => {
+              const box = document.querySelector('#workoutNineTable .w9-movement-checklist');
+              return !!box && Array.from(box.querySelectorAll('input')).some(o => o.value === 'test-exercise-id');
+            });
+            assert.equal(await table.locator('tbody tr').first().locator('.w9-movement-checklist input[value="test-exercise-id"]').count(), 1, 'exercise options should sync into the same-row checklist');
             await page.setViewportSize({ width: 390, height: 844 });
             const mobile = await page.locator('.workout-nine-table-scroll').evaluate(el => ({
               overflowX: getComputedStyle(el).overflowX,
