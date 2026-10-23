@@ -108,6 +108,11 @@
 
     const trial = value.trial;
     if (!trial || !Array.isArray(trial.moves)) fail('فهرست حرکات برنامه معتبر نیست.');
+    // Validate all non-bank fields before creating any compatibility rows.
+    legacy.buildPayload(Object.assign({}, value, {
+      planDate: legacy.normalizePlanDate(value.planDate),
+      resolveExerciseId: () => 1
+    }));
     const resolved = new Map();
     for (const move of trial.moves) {
       const name = String(move && move.name || '').trim();
