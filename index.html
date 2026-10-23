@@ -5471,7 +5471,10 @@ window.useLibraryExercise=async function(id){
         const ids = [...new Set(rows.map(x=>x.exercise_id).filter(x=>x!==null&&x!==undefined&&x!==''))];
         const ex = ids.length ? await sbGet('/exercises?id=in.('+ids.join(',')+')&select=id,name') : [];
         const names = Object.fromEntries(ex.map(x=>[String(x.id),x.name]));
-        const systems = {normal:'معمولی',superset:'سوپرست','super-set':'سوپرست',triset:'تری‌ست','tri-set':'تری‌ست',giant:'جاینت‌ست',giant_set:'جاینت‌ست','giant-set':'جاینت‌ست',drop:'دراپ‌ست',drop_set:'دراپ‌ست','drop-set':'دراپ‌ست',rest_pause:'رست‌پاز','rest-pause':'رست‌پاز',timed:'تایم‌دار',time_based:'تایم‌دار','time-based':'تایم‌دار',multi_stage:'چندمرحله‌ای','multi-stage':'چندمرحله‌ای',pre_exhaust:'پیش‌خستگی','pre-exhaust':'پیش‌خستگی',mechanical_drop:'دراپ‌ست مکانیکی','mechanical-drop':'دراپ‌ست مکانیکی',pyramid:'هرمی',reverse_pyramid:'هرمی معکوس','reverse-pyramid':'هرمی معکوس',circuit:'دایره‌ای',custom:'سفارشی',failure:'تا ناتوانی',to_failure:'تا ناتوانی','to-failure':'تا ناتوانی','forced-reps':'تکرار اجباری',forced_reps:'تکرار اجباری','negative-reps':'تکرار منفی',negative_reps:'تکرار منفی','partial-reps':'نیم‌تکرار',partial_reps:'نیم‌تکرار','myo-reps':'مایو رپس',myo_reps:'مایو رپس'};
+        const systems = {normal:'معمولی',superset:'سوپرست','super-set':'سوپرست',triset:'تری‌ست','tri-set':'تری‌ست',giant:'جاینت‌ست',giant_set:'جاینت‌ست','giant-set':'جاینت‌ست',drop:'دراپ‌ست',drop_set:'دراپ‌ست','drop-set':'دراپ‌ست',dropset:'دراپ‌ست',rest_pause:'رست‌پاز','rest-pause':'رست‌پاز',restpause:'رست‌پاز',timed:'تایم‌دار',time_based:'تایم‌دار','time-based':'تایم‌دار',multi_stage:'چندمرحله‌ای','multi-stage':'چندمرحله‌ای',pre_exhaust:'پیش‌خستگی','pre-exhaust':'پیش‌خستگی',mechanical_drop:'دراپ‌ست مکانیکی','mechanical-drop':'دراپ‌ست مکانیکی',pyramid:'هرمی',reverse_pyramid:'هرمی معکوس','reverse-pyramid':'هرمی معکوس',circuit:'دایره‌ای',custom:'سفارشی',failure:'تا ناتوانی',to_failure:'تا ناتوانی','to-failure':'تا ناتوانی','forced-reps':'تکرار اجباری',forced_reps:'تکرار اجباری',forcedreps:'تکرار اجباری','negative-reps':'تکرار منفی',negative_reps:'تکرار منفی',negativereps:'تکرار منفی','partial-reps':'نیم‌تکرار',partial_reps:'نیم‌تکرار',partialreps:'نیم‌تکرار','myo-reps':'مایو رپس',myo_reps:'مایو رپس',myoreps:'مایو رپس'};
+         const normalizeSystem=value=>String(value||'normal').toLowerCase().trim().replace(/[\\s-]+/g,'_');
+         const systemLabelFor=value=>{const raw=String(value||'normal').toLowerCase().trim();const norm=normalizeSystem(raw);return systems[raw]||systems[norm]||systems[raw.replace(/_/g,'-')]||'';};
+         const groupedSystem=value=>['superset','triset','giant','giant_set'].includes(normalizeSystem(value));
         const sessions = [];
         const grouped = new Map();
         rows.forEach(x => {
@@ -5489,19 +5492,19 @@ window.useLibraryExercise=async function(id){
             const list = grouped.get(day)||[], cards=[], groupMap=new Map();
             list.forEach((x,idx)=>{
               const sys=x.training_system||'normal';
-              const isGroup=sys!=='normal'&&!!x.group_key;
-              const key=isGroup?sys+'|'+String(x.group_key):'single|'+String(x.id||idx);
+              const isGroup=groupedSystem(sys)&&!!x.group_key;
+              const key=isGroup?normalizeSystem(sys)+'|'+String(x.group_key):'single|'+String(x.id||idx);
               if(!groupMap.has(key)){groupMap.set(key,[]);cards.push(key);}
               groupMap.get(key).push(x);
             });
             return '<section class="session-cell"><div class="session-heading">'+esc(day)+'</div><div class="session-exercises" style="--move-count:'+cards.length+'">'+cards.map(key=>{
-              const arr=groupMap.get(key),first=arr[0],sys=first.training_system||'normal',isGroup=sys!=='normal'&&!!first.group_key;
+              const arr=groupMap.get(key),first=arr[0],sys=first.training_system||'normal',isGroup=groupedSystem(sys)&&!!first.group_key;
               /* Keep every movement in a superset/triset visible with its OWN prescription.
                  The old renderer joined all movement names but showed sets/reps/rest only for
                  the first movement, making sessions look incomplete in PNG/PDF exports. */
               let movementHtml='';
               if(isGroup){
-                const groupNames=arr.map(x=>esc(names[String(x.exercise_id)]||'حرکت ثبت‌شده')).join(' <span class="workout-group-plus" style="display:inline-block;color:#9b6b0c;font-family:Arial,sans-serif!important;font-weight:900;font-size:1em;line-height:1;vertical-align:middle;min-width:1em;text-align:center">＋</span> ');const groupRaw=String(first.training_system||'normal').toLowerCase().trim();const groupLabel=systems[groupRaw]||systems[groupRaw.replace(/_/g,'-')]||systems[groupRaw.replace(/-/g,'_')]||'';const groupBadge=groupLabel?'<span class="movement-system-badge group-system-badge" style="display:inline-block;vertical-align:middle;margin:2px 4px;padding:1px 6px;border:1px solid #c69b43;border-radius:5px;background:#fff0bd;color:#68470a;font-size:10px;font-weight:800;line-height:1.6;white-space:nowrap">('+esc(groupLabel)+')</span>':'';
+                const groupNames=arr.map(x=>esc(names[String(x.exercise_id)]||'حرکت ثبت‌شده')).join(' <span class="workout-group-plus" style="display:inline-block;color:#9b6b0c;font-family:Arial,sans-serif!important;font-weight:900;font-size:1em;line-height:1;vertical-align:middle;min-width:1em;text-align:center">＋</span> ');const groupLabel=systemLabelFor(first.training_system);const groupBadge=groupLabel?'<span class="movement-system-badge group-system-badge" style="display:inline-block;vertical-align:middle;margin:2px 4px;padding:1px 6px;border:1px solid #c69b43;border-radius:5px;background:#fff0bd;color:#68470a;font-size:10px;font-weight:800;line-height:1.6;white-space:nowrap">('+esc(groupLabel)+')</span>':'';
                 const first=arr[0];
                 const groupDetail='<span class="rx">'+esc(first.reps||'—')+'×'+esc(first.sets??'—')+'</span>'+'<span class="rest">S'+esc(first.rest_seconds??0)+'</span>';
                 const groupNotes=arr.map(x=>x.notes?esc(x.notes):'').filter(Boolean);
@@ -5511,7 +5514,7 @@ window.useLibraryExercise=async function(id){
                 movementHtml=arr.map(x=>{
                   const movementName=esc(names[String(x.exercise_id)]||'حرکت ثبت‌شده');
                   const rawSystem=String(x.training_system||'normal').toLowerCase().trim();
-                  const systemLabel=systems[rawSystem]||systems[rawSystem.replace(/_/g,'-')]||systems[rawSystem.replace(/-/g,'_')]||'';
+                  const systemLabel=systemLabelFor(rawSystem);
                   const systemBadge=rawSystem!=='normal'&&systemLabel?'<span class="movement-system-badge" style="display:inline-block;vertical-align:middle;margin:2px 4px;padding:1px 6px;border:1px solid #c69b43;border-radius:5px;background:#fff0bd;color:#68470a;font-size:10px;font-weight:800;line-height:1.6;white-space:nowrap">'+esc(systemLabel)+'</span>':'';
                   const nameLength=String(names[String(x.exercise_id)]||'حرکت ثبت‌شده').length;
                   const detail='<span class="rx">'+esc(x.reps||'—')+'×'+esc(x.sets??'—')+'</span>'+'<span class="rest">S'+esc(x.rest_seconds??0)+'</span>';
