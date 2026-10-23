@@ -12955,7 +12955,7 @@ body.workout-output.workout-compact{
    refresh the list once and retry by stable trainee ID. */
 (function(){
   'use strict';
-  let lockedId=null, lockUntil=0, guardTimer=null;
+  let lockedId=null, lockUntil=0, guardTimer=null, navigationEpoch=0;
   const byId=id=>document.getElementById(id);
   function isCoachRole(){
     try{if(typeof authProfile!=='undefined'&&authProfile&&authProfile.role)return String(authProfile.role).toLowerCase()==='coach';}catch(e){}
@@ -13023,8 +13023,13 @@ body.workout-output.workout-compact{
   }
   function startGuard(id){
     lockedId=String(id);lockUntil=Date.now()+5000;
-    [0,80,180,350,650,1100,1800,2800,4000,4900].forEach(ms=>setTimeout(keepSelectedProfile,ms));
-    clearTimeout(guardTimer);guardTimer=setTimeout(()=>{lockedId=null;},5200);
+    const selectionToken=++navigationEpoch;
+    [0,80,180,350,650,1100,1800,2800,4000,4900].forEach(ms=>setTimeout(()=>{
+      if(navigationEpoch===selectionToken&&lockedId===String(id))keepSelectedProfile();
+    },ms));
+    clearTimeout(guardTimer);guardTimer=setTimeout(()=>{
+      if(navigationEpoch===selectionToken)lockedId=null;
+    },5200);
   }
   async function handleSelection(button){
     const id=button.getAttribute('data-trainee-id');
@@ -13054,8 +13059,10 @@ body.workout-output.workout-compact{
     }catch(e){console.error('اجرای مسیر انتخاب شاگرد ناموفق بود:',e);}
     // Do not repeatedly reopen an already-visible profile: doing so races with
     // async card loaders and causes visible layout/scroll jumps for several seconds.
+    const selectionToken=navigationEpoch;
     [100,350,800,1500,2600,4200].forEach(ms=>setTimeout(()=>{
-      if(!profileIsAlreadyVisible(id))openProfile(id);
+      // Restore the profile only if the coach has not navigated elsewhere since selection.
+      if(navigationEpoch===selectionToken&&lockedId===String(id)&&!profileIsAlreadyVisible(id))openProfile(id);
     },ms));
   }
   // One document-level delegated handler covers dynamic lists after every login,
@@ -13069,11 +13076,13 @@ body.workout-output.workout-compact{
   const oldShow=window.showSection;
   if(typeof oldShow==='function'&&!oldShow.__sehProfileGuardV6){
     const guarded=function(id,button){
-      // The coach selection lock must never redirect trainee dashboard cards to the profile.
-      if(isCoachRole()&&lockedId&&Date.now()<lockUntil&&String(id)!=='client'){
-        return oldShow.call(this,'client',clientNav());
+      // An explicit move to another section cancels profile recovery; never hijack navigation.
+      if(isCoachRole()&&lockedId&&String(id)!=='client'){
+        navigationEpoch++;
+        lockedId=null;lockUntil=0;
+        clearTimeout(guardTimer);guardTimer=null;
       }
-      if(!isCoachRole()&&lockedId){lockedId=null;clearTimeout(guardTimer);}
+      if(!isCoachRole()&&lockedId){navigationEpoch++;lockedId=null;lockUntil=0;clearTimeout(guardTimer);guardTimer=null;}
       return oldShow.apply(this,arguments);
     };
     guarded.__sehProfileGuardV6=true;
