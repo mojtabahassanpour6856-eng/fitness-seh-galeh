@@ -24,7 +24,7 @@ jobs:
         run: |
           npm init -y
           npm install --save-dev --no-audit --no-fund playwright
-          npx playwright install --with-deps chromium
+          npx playwright install chromium
       - name: Verify nine-row table in desktop and mobile browser
         run: |
           cat > nine-row-check.cjs <<'NODE'
