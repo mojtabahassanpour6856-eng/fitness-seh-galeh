@@ -282,6 +282,8 @@ function buildMobileComposer(){
     }
     const lines=rawLines();
     checked.forEach(item=>lines.push([item.value,session,system,group,sets,reps,rest].join('\t')));
+    row.dataset.addedNames=JSON.stringify(checked.map(item=>item.value));
+    row.dataset.addedSession=String(session);row.dataset.addedSystem=system;row.dataset.addedGroup=group;
     $('bulk').value=lines.join('\n');
     renderMoveManager();render();
     const justAdded=checked.map(item=>item.value);
@@ -326,7 +328,21 @@ function buildMobileComposer(){
   }
   systemControl.querySelector('select').addEventListener('change',()=>{const system=systemControl.querySelector('select').value,limit=system==='عادی'?1:system==='سوپرست'?2:system==='تری‌ست'?3:4;[...checks.querySelectorAll('.mobile-exercise-check:checked')].slice(limit).forEach(x=>x.checked=false);syncCheckboxMode();updatePickerSummary();updateMobileCount();});
   syncCheckboxMode();
-  line.append(systemControl,makeControl('گروه','group',['—','A','B','C','D'],'—'),makeControl('ست','sets',[2,3,4,5],3),makeControl('تکرار','reps',[6,8,10,12,15,20],12),makeControl('ثانیه','rest',[30,45,60,75],60));
+  const groupControl=makeControl('گروه','group',['—','A','B','C','D'],'—');
+  const setsControl=makeControl('ست','sets',[2,3,4,5],3);
+  const repsControl=makeControl('تکرار','reps',[6,8,10,12,15,20],12);
+  const restControl=makeControl('ثانیه','rest',[30,45,60,75],60);
+  line.append(systemControl,groupControl,setsControl,repsControl,restControl);
+  function syncAddedRowValues(){
+   let names=[];try{names=JSON.parse(card.dataset.addedNames||'[]')}catch(e){}
+   if(!names.length)return;
+   const session=Number(card.dataset.addedSession),system=card.dataset.addedSystem||systemControl.querySelector('select').value,group=card.dataset.addedGroup||groupControl.querySelector('select').value;
+   const sets=setsControl.querySelector('select').value,reps=repsControl.querySelector('select').value,rest=restControl.querySelector('select').value;
+   const lines=rawLines();let changed=0;
+   lines.forEach((raw,index)=>{const p=raw.split('\t');while(p.length<7)p.push('');if(names.includes(p[0])&&Number(p[1])===session&&p[2]===system&&p[3]===group){p[4]=sets;p[5]=reps;p[6]=rest;lines[index]=p.join('\t');changed++;}});
+   if(changed){$('bulk').value=lines.join('\n');renderMoveManager();render();}
+  }
+  [setsControl,repsControl,restControl].forEach(wrap=>wrap.querySelector('select').addEventListener('change',syncAddedRowValues));
   card.append(head,line);rows.appendChild(card);
  }
  updateMobileCount();
@@ -348,6 +364,7 @@ $('mobileAddToSession').addEventListener('click',()=>{
  for(const [key,moves] of groupMap){const system=key.split('|')[0],required=system==='سوپرست'?2:system==='تری‌ست'?3:4;if(moves.length!==required){$('mobileComposerStatus').textContent='گروه '+key.split('|')[1]+' برای '+system+' باید دقیقاً '+required+' حرکت داشته باشد؛ الان '+moves.length+' حرکت انتخاب شده.';return;}}
  const lines=rawLines();
  selected.forEach(m=>{const label=m.system==='عادی'?'—':m.group;lines.push([m.name,session,m.system,label,m.sets,m.reps,m.rest].join('\t'));});
+ document.querySelectorAll('.mobile-move-row').forEach(row=>{const names=selected.filter(m=>m.name&&row.querySelectorAll('.mobile-exercise-check').length&&[...row.querySelectorAll('.mobile-exercise-check')].some(cb=>cb.value===m.name)).map(m=>m.name);if(names.length){row.dataset.addedNames=JSON.stringify(names);row.dataset.addedSession=String(session);row.dataset.addedSystem=selected.find(m=>names.includes(m.name)).system;row.dataset.addedGroup=selected.find(m=>names.includes(m.name)).group==='—'?'—':selected.find(m=>names.includes(m.name)).group;}});
  $('bulk').value=lines.join('\n');renderMoveManager();render();
  $('mobileComposerStatus').textContent=selected.length+' حرکت یکجا به جلسه '+session+' اضافه شد.';
  document.querySelectorAll('.mobile-exercise-check').forEach(x=>x.checked=false);
