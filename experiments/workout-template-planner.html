@@ -213,7 +213,7 @@ $('quickSystem').addEventListener('change',()=>{
  if(normal)$('quickGroup').value='—';
  else if(!$('quickGroup').value||$('quickGroup').value==='—')$('quickGroup').value='A';
 });
-const exerciseLibrary={
+let exerciseLibrary={
  'سینه':['پرس سینه هالتر','پرس سینه دمبل','پرس بالاسینه دمبل','پرس بالاسینه دستگاه','قفسه سیم‌کش','قفسه دمبل','شنا سوئدی'],
  'پشت':['لت سیم‌کش از جلو','بارفیکس','قایقی سیم‌کش','پارویی دمبل تک‌دست','زیربغل هالتر خم','پول‌اور سیم‌کش','فیس‌پول'],
  'پا':['اسکوات هالتر','اسکوات جام','پرس پا','جلو پا دستگاه','پشت پا خوابیده','ددلیفت رومانیایی','لانج دمبل'],
@@ -564,6 +564,65 @@ $('export').addEventListener('click',()=>{render();const data=window.__trial;if(
       return { error: e && e.message ? e.message : String(e) };
     }
   })();
+
+  // Replace the demo list with the authenticated coach's personal exercise bank.
+  atomicEditorBaselinePromise.then(async baseline => {
+    if (!baseline || baseline.error) {
+      $('bankStatus').textContent = 'برای نمایش بانک تمرین شخصی، طراح را از پنل مربی باز کن.';
+      return;
+    }
+    try {
+      const result = await baseline.client.from('trainer_exercises')
+        .select('id,name,target_muscle,category,equipment,coach_note')
+        .order('name', { ascending: true });
+      if (result.error) throw result.error;
+      const rows = result.data || [];
+      if (!rows.length) {
+        exerciseLibrary = {};
+        renderExerciseBank();
+        $('bankStatus').textContent = 'بانک تمرین شخصی خالی است یا دسترسی به آن تأیید نشد.';
+        return;
+      }
+      const groups = {};
+      const classify = row => {
+        const raw = String(row.target_muscle || row.category || 'سایر').trim();
+        const s = raw.toLocaleLowerCase('fa');
+        if (s.includes('سینه') || s.includes('chest')) return 'سینه';
+        if (s.includes('پشت') || s.includes('زیربغل') || s.includes('back')) return 'پشت';
+        if (s.includes('پا') || s.includes('leg') || s.includes('quad') || s.includes('hamstring')) return 'پا';
+        if (s.includes('سرشانه') || s.includes('شانه') || s.includes('shoulder')) return 'سرشانه';
+        if (s.includes('جلو بازو') || s.includes('biceps')) return 'جلو بازو';
+        if (s.includes('پشت بازو') || s.includes('triceps')) return 'پشت بازو';
+        if (s.includes('شکم') || s.includes('abs')) return 'شکم';
+        if (s.includes('باسن') || s.includes('glute')) return 'باسن';
+        if (s.includes('ساق') || s.includes('calf')) return 'ساق';
+        return raw || 'سایر';
+      };
+      rows.forEach(row => {
+        const name = String(row.name || '').trim();
+        if (!name) return;
+        const category = classify(row);
+        if (!groups[category]) groups[category] = [];
+        if (!groups[category].includes(name)) groups[category].push(name);
+      });
+      exerciseLibrary = groups;
+      const select = $('bankCategory');
+      const existing = new Set(Array.from(select.options).map(option => option.value));
+      Object.keys(groups).sort((a,b)=>a.localeCompare(b,'fa')).forEach(category => {
+        if (category !== 'همه' && !existing.has(category)) {
+          const option = document.createElement('option');
+          option.value = category;
+          option.textContent = category;
+          select.appendChild(option);
+        }
+      });
+      if (!Object.keys(groups).includes(select.value) && select.value !== 'همه') select.value = 'همه';
+      renderExerciseBank();
+      $('bankStatus').textContent = 'بانک تمرین شخصی مربی بارگذاری شد: ' + rows.length + ' حرکت. انتخاب حرکت‌ها از همین بانک انجام می‌شود.';
+    } catch (error) {
+      $('bankStatus').textContent = 'خواندن بانک تمرین شخصی ناموفق بود: ' + (error && error.message || String(error));
+    }
+  });
 
   $('sendToCoachApp').addEventListener('click',async()=>{
     render();
