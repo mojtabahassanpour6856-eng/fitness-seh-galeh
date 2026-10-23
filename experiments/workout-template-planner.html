@@ -631,7 +631,7 @@ $('export').addEventListener('click',()=>{render();const data=window.__trial;if(
       // This prevents a leftover demo name (e.g. "بالاسینه دستگاه") from blocking the entire save.
       // Never replace an arbitrary custom movement or a name that already exists in the personal bank.
       const bankNameKey = name => String(name || '').normalize('NFKC')
-        .replace(/[\\u200c\\u200f\\u202a-\\u202e]/g, '').replace(/\\s+/g, ' ').trim().toLocaleLowerCase('fa');
+        .replace(/[\u200c\u200f\u202a-\u202e]/g, '').replace(/\s+/g, ' ').trim().toLocaleLowerCase('fa');
       const personalNameKeys = new Set(uniqueNames.map(bankNameKey));
       const starterFallbacks = new Map([
         ['بالاسینه دستگاه', 'پرس بالا سینه اسمیت'],
@@ -643,21 +643,21 @@ $('export').addEventListener('click',()=>{render();const data=window.__trial;if(
         ['فیس‌پول', 'فیس پول']
       ]);
       let starterNamesReplaced = 0;
-      const updatedLines = $('bulk').value.split(/\\r?\\n/).map(line => {
+      const updatedLines = $('bulk').value.split(/\r?\n/).map(line => {
         if (!line.trim()) return line;
-        const parts = line.split('\\t');
+        const parts = line.split('\t');
         const oldName = String(parts[0] || '').trim();
         const fallback = starterFallbacks.get(oldName);
         if (fallback && !personalNameKeys.has(bankNameKey(oldName)) &&
             personalNameKeys.has(bankNameKey(fallback))) {
           parts[0] = fallback;
           starterNamesReplaced++;
-          return parts.join('\\t');
+          return parts.join('\t');
         }
         return line;
       });
       if (starterNamesReplaced) {
-        $('bulk').value = updatedLines.join('\\n');
+        $('bulk').value = updatedLines.join('\n');
         $('quickStatus').textContent = starterNamesReplaced +
           ' حرکت نمونه‌ای که در بانک شخصی نبود، با نام معتبر موجود در بانک جایگزین شد. قبل از ذخیره، حرکات را بررسی کن.';
         render();
