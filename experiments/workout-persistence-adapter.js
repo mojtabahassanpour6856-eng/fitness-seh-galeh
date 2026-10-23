@@ -79,20 +79,47 @@
     });
     return { plan, exercises, metadata: { gender: String(trial.gender || ''), sessions: Number(trial.sessions), exercise_count: exercises.length } };
   }
+  async function directRestRead(client, table, query) {
+    const base = String(client && client.supabaseUrl || '').replace(/\/$/, '');
+    const key = String(client && client.supabaseKey || '');
+    if (!base || !key || !client.auth || typeof client.auth.getSession !== 'function') fail('اتصال مستقیم امن برای بررسی دسترسی در دسترس نیست.');
+    const sessionResult = await client.auth.getSession();
+    const token = sessionResult && sessionResult.data && sessionResult.data.session && sessionResult.data.session.access_token;
+    if (sessionResult.error || !token) fail('نشست ورود مربی معتبر نیست؛ دوباره وارد پنل مربی شو.');
+    const response = await fetch(base + '/rest/v1/' + table + '?' + query, {
+      method: 'GET',
+      headers: { apikey: key, Authorization: 'Bearer ' + token, Accept: 'application/json' },
+      cache: 'no-store'
+    });
+    const body = await response.text();
+    if (!response.ok) fail('بررسی مستقیم جدول ' + table + ' ناموفق بود (' + response.status + '): ' + body.slice(0, 400));
+    try { return JSON.parse(body); } catch (_) { fail('پاسخ جدول ' + table + ' قابل‌خواندن نیست.'); }
+  }
   async function verifyLiveAccess(input) {
     const value = input || {}, client = value.supabase;
     if (!client || typeof client.from !== 'function' || !client.auth || typeof client.auth.getSession !== 'function') fail('اتصال احرازشده Supabase از پنل مربی در دسترس نیست.');
     if (!value.traineeId) fail('ابتدا یک شاگرد را در پنل مربی انتخاب کن.');
     const sessionResult = await client.auth.getSession();
     if (sessionResult.error || !sessionResult.data || !sessionResult.data.session || !sessionResult.data.session.user) fail('نشست ورود مربی معتبر نیست؛ دوباره وارد پنل مربی شو.');
+    let traineeRows, planRows, bankRows;
+    const isHeadersCallbackError = error => /Headers.*forEach|forEach.*Headers|callback is no longer runnable/i.test(String(error && error.message || error || ''));
     const traineeResult = await client.from('trainees').select('id').eq('id', value.traineeId).limit(1);
-    if (traineeResult.error) fail('دسترسی خواندن شاگرد از نشست فعلی تأیید نشد: ' + traineeResult.error.message);
-    if (!(traineeResult.data || []).some(row => String(row.id) === String(value.traineeId))) fail('شاگرد انتخاب‌شده از نشست فعلی قابل دسترسی نیست؛ هیچ تغییری انجام نشد.');
+    if (traineeResult.error) {
+      if (!isHeadersCallbackError(traineeResult.error)) fail('دسترسی خواندن شاگرد از نشست فعلی تأیید نشد: ' + traineeResult.error.message);
+      traineeRows = await directRestRead(client, 'trainees', 'select=id&id=eq.' + encodeURIComponent(String(value.traineeId)) + '&limit=1');
+    } else traineeRows = traineeResult.data || [];
+    if (!traineeRows.some(row => String(row.id) === String(value.traineeId))) fail('شاگرد انتخاب‌شده از نشست فعلی قابل دسترسی نیست؛ هیچ تغییری انجام نشد.');
     const plansResult = await client.from('trainee_workout_plans').select('id,trainee_id,title,plan_date,created_at').eq('trainee_id', value.traineeId).order('plan_date', {ascending:false, nullsFirst:false}).order('created_at', {ascending:false}).limit(10);
-    if (plansResult.error) fail('خواندن برنامه‌های شاگرد از نشست فعلی ناموفق بود: ' + plansResult.error.message);
+    if (plansResult.error) {
+      if (!isHeadersCallbackError(plansResult.error)) fail('خواندن برنامه‌های شاگرد از نشست فعلی ناموفق بود: ' + plansResult.error.message);
+      planRows = await directRestRead(client, 'trainee_workout_plans', 'select=id,trainee_id,title,plan_date,created_at&trainee_id=eq.' + encodeURIComponent(String(value.traineeId)) + '&order=plan_date.desc.nullslast,created_at.desc&limit=10');
+    } else planRows = plansResult.data || [];
     const bankResult = await client.from('exercises').select('id,name');
-    if (bankResult.error) fail('خواندن بانک حرکات از نشست فعلی ناموفق بود: ' + bankResult.error.message);
-    return { userId: sessionResult.data.session.user.id, traineeId: value.traineeId, planCount: (plansResult.data || []).length, exerciseCount: (bankResult.data || []).length };
+    if (bankResult.error) {
+      if (!isHeadersCallbackError(bankResult.error)) fail('خواندن بانک حرکات از نشست فعلی ناموفق بود: ' + bankResult.error.message);
+      bankRows = await directRestRead(client, 'exercises', 'select=id,name');
+    } else bankRows = bankResult.data || [];
+    return { userId: sessionResult.data.session.user.id, traineeId: value.traineeId, planCount: planRows.length, exerciseCount: bankRows.length };
   }
   function workoutRowsForRestore(rows, planId) {
     return (rows || []).map(row => ({
