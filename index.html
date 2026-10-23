@@ -12407,7 +12407,7 @@ body.workout-output.workout-compact{
        const isGroup=['superset','triset','giant'].includes(s.value);
        const checked=Array.from(list.querySelectorAll('.w9-exercise-check:checked'));
        b.textContent=checked.map(x=>x.parentElement?.querySelector('span')?.textContent?.trim()||x.value).join(' + ')||'انتخاب حرکت';
-       b.hidden=!isGroup;select.hidden=isGroup;
+       b.hidden=!isGroup;const rowSelect=row.querySelector('.w9-exercise');if(rowSelect)rowSelect.hidden=isGroup;
        if(!isGroup)list.hidden=true;
        b.setAttribute('aria-expanded',String(!list.hidden));
      };
