@@ -12319,7 +12319,7 @@ body.workout-output.workout-compact{
        const groupKey=groupMode?(r.system==='superset'?'SS':r.system==='triset'?'TS':'GS')+'-'+Date.now().toString(36).toUpperCase()+'-'+i:null;
        for(let k=0;k<groupSize;k++){
          const item=rows[i+k];
-         payloads.push({workout_plan_id:window.currentWorkoutPlanId,exercise_id:item.exerciseId,sets:Number(item.setsRaw),reps:item.reps,rest_seconds:Number(item.restRaw),notes:null,sort_order:baseOrder+payloads.length,training_system:item.system,group_key:groupKey,training_day:document.getElementById('workoutDay')?.value||null,is_completed:false});
+         payloads.push({workout_plan_id:currentWorkoutPlanId,exercise_id:item.exerciseId,sets:Number(item.setsRaw),reps:item.reps,rest_seconds:Number(item.restRaw),notes:null,sort_order:baseOrder+payloads.length,training_system:item.system,group_key:groupKey,training_day:document.getElementById('workoutDay')?.value||null,is_completed:false});
        }
        i+=groupSize;
      }
