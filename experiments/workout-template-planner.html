@@ -351,7 +351,7 @@ function buildMobileComposer(){
     cb.setAttribute('aria-label',normal?'انتخاب حرکت':'تیک حرکت برای گروه ترکیبی');
    });
   }
-  systemControl.querySelector('select').addEventListener('change',()=>{const system=systemControl.querySelector('select').value,limit=system==='عادی'?1:system==='سوپرست'?2:system==='تری‌ست'?3:4;[...checks.querySelectorAll('.mobile-exercise-check:checked')].slice(limit).forEach(x=>x.checked=false);syncCheckboxMode();updatePickerSummary();updateMobileCount();});
+  systemControl.querySelector('select').addEventListener('change',()=>{const system=canonicalSystem(systemControl.querySelector('select').value),limit=isGroupedSystem(system)?(system==='سوپرست'?2:system==='تری‌ست'?3:4):1;[...checks.querySelectorAll('.mobile-exercise-check:checked')].slice(limit).forEach(x=>x.checked=false);syncCheckboxMode();updatePickerSummary();updateMobileCount();});
   syncCheckboxMode();
   line.append(systemControl,makeControl('گروه','group',['—','A','B','C','D'],'—'),makeControl('ست','sets',[2,3,4,5],3),makeControl('تکرار','reps',[6,8,10,12,15,20],12),makeControl('ثانیه','rest',[30,45,60,75],60));
   card.append(head,line);rows.appendChild(card);
@@ -371,10 +371,10 @@ $('mobileAddToSession').addEventListener('click',()=>{
  if(!selected.length){$('mobileComposerStatus').textContent='ابتدا از کادر انتخاب حرکت، یک یا چند حرکت را تیک بزن.';return;}
  const session=Number($('mobileTargetSession').value);if(session>n()){$('mobileComposerStatus').textContent='جلسه انتخابی بیشتر از تعداد جلسات برنامه است؛ تعداد جلسات را در تنظیم برنامه افزایش بده.';return;}
  const groupMap=new Map();
- for(const m of selected){if(m.system==='عادی')continue;if(m.group==='—'){$('mobileComposerStatus').textContent='برای '+m.system+' یک گروه (A، B، C یا D) انتخاب کن.';return;}const key=m.system+'|'+m.group;if(!groupMap.has(key))groupMap.set(key,[]);groupMap.get(key).push(m);}
+ for(const m of selected){if(!isGroupedSystem(m.system))continue;if(m.group==='—'){$('mobileComposerStatus').textContent='برای '+m.system+' یک گروه (A، B، C یا D) انتخاب کن.';return;}const key=m.system+'|'+m.group;if(!groupMap.has(key))groupMap.set(key,[]);groupMap.get(key).push(m);}
  for(const [key,moves] of groupMap){const system=key.split('|')[0],required=system==='سوپرست'?2:system==='تری‌ست'?3:4;if(moves.length!==required){$('mobileComposerStatus').textContent='گروه '+key.split('|')[1]+' برای '+system+' باید دقیقاً '+required+' حرکت داشته باشد؛ الان '+moves.length+' حرکت انتخاب شده.';return;}}
  const lines=rawLines();
- selected.forEach(m=>{const label=m.system==='عادی'?'—':m.group;lines.push([m.name,session,m.system,label,m.sets,m.reps,m.rest].join('\t'));});
+ selected.forEach(m=>{const system=canonicalSystem(m.system);const label=isGroupedSystem(system)?m.group:'—';lines.push([m.name,session,system,label,m.sets,m.reps,m.rest].join('\t'));});
  $('bulk').value=lines.join('\n');renderMoveManager();render();
  $('mobileComposerStatus').textContent=selected.length+' حرکت یکجا به جلسه '+session+' اضافه شد.';
  document.querySelectorAll('.mobile-exercise-check').forEach(x=>x.checked=false);
