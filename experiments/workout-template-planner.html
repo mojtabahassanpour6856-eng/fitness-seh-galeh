@@ -619,6 +619,7 @@ $('export').addEventListener('click',()=>{render();const data=window.__trial;if(
       });
       if (!Object.keys(groups).includes(select.value) && select.value !== 'همه') select.value = 'همه';
       renderExerciseBank();
+      buildMobileComposer();
       $('bankStatus').textContent = 'بانک تمرین شخصی مربی بارگذاری شد: ' + rows.length + ' حرکت. انتخاب حرکت‌ها از همین بانک انجام می‌شود.';
     } catch (error) {
       $('bankStatus').textContent = 'خواندن بانک تمرین شخصی ناموفق بود: ' + (error && error.message || String(error));
