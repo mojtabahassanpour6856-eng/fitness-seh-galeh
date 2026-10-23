@@ -89,7 +89,7 @@
   <label>الگوی جلسه<select id="mobileTemplate"><option value="all">همه حرکات بانک</option><option value="سینه|جلو بازو">سینه + جلو بازو</option><option value="پشت|پشت بازو">پشت + پشت بازو</option><option value="پا|باسن|ساق">پا + باسن + ساق</option><option value="سرشانه|شکم">سرشانه + شکم</option><option value="سینه|پشت بازو">سینه + پشت بازو</option><option value="پشت|جلو بازو">پشت + جلو بازو</option></select></label>
   <label>افزودن به<select id="mobileTargetSession"><option value="1">جلسه ۱</option><option value="2">جلسه ۲</option><option value="3">جلسه ۳</option><option value="4">جلسه ۴</option><option value="5">جلسه ۵</option><option value="6">جلسه ۶</option></select></label>
  </div>
- <p class="muted mobile-hint">حرکت را از بانک انتخاب کن؛ سیستم، ست، تکرار و استراحت را لمس کن. تا ۹ حرکت را با هم انتخاب کن.</p>
+ <p class="muted mobile-hint">حرکت‌ها را انتخاب کن، سپس سیستم، ست، تکرار و استراحت را تنظیم کن و در پایان «افزودن همه به جلسه» را بزن. تا ۹ حرکت را با هم انتخاب کن.</p>
  <div id="mobileMoveRows" class="mobile-move-rows"></div>
  <div class="mobile-bottom"><span id="mobileSelectedCount" class="pill">۰ از ۹ حرکت انتخاب شده</span><button id="mobileAddToSession" type="button">افزودن همه به جلسه</button></div>
  <button id="mobilePreviewButton" type="button" class="secondary" style="width:100%;margin-top:8px">بازبینی خروجی برنامه</button><button id="mobileSendToCoachApp" type="button" style="width:100%;margin-top:8px">ارسال برنامه به پنل مربی</button><p id="mobileComposerStatus" class="status muted" role="status" aria-live="polite"></p>
@@ -247,33 +247,10 @@ function buildMobileComposer(){
     const checked=[...checks.querySelectorAll('.mobile-exercise-check:checked')].sort((a,b)=>Number(a.dataset.selectionOrder||0)-Number(b.dataset.selectionOrder||0));
     if(cb.checked&&checked.length>limit){cb.checked=false;$('mobileComposerStatus').textContent='برای '+system+' حداکثر '+limit+' حرکت می‌توانی انتخاب کنی.';updatePickerSummary();updateMobileCount();return;}
     updatePickerSummary();updateMobileCount();
-    // انتخاب عادی همان لحظه ثبت می‌شود؛ سیستم‌های ترکیبی پس از تکمیل تعداد لازم ثبت می‌شوند.
+    // انتخاب فقط در فرم نگه داشته می‌شود؛ ثبت نهایی با دکمه «افزودن همه به جلسه» انجام می‌شود تا ست/تکرار/استراحتِ آخرین تنظیمات ذخیره شوند.
     if(!cb.checked)return;
     if(!['عادی','دراپ‌ست','drop-set','رست‌پاز','هرمی','هرمی معکوس','تکرار منفی','تکرار اجباری','تا ناتوانی','نیم‌تکرار','مایو رپس'].includes(system)&&checked.length<limit)return;
-    const session=Number($('mobileTargetSession').value);
-    if(session>n()){$('mobileComposerStatus').textContent='جلسه انتخابی بیشتر از تعداد جلسات برنامه است؛ تعداد جلسات را در تنظیم برنامه افزایش بده.';return;}
-    const sets=card.querySelector('[id^="mobile_sets_"]').value;
-    const reps=card.querySelector('[id^="mobile_reps_"]').value;
-    const rest=card.querySelector('[id^="mobile_rest_"]').value;
-    let group='—';
-    if(!['عادی','دراپ‌ست','drop-set','رست‌پاز','هرمی','هرمی معکوس','تکرار منفی','تکرار اجباری','تا ناتوانی','نیم‌تکرار','مایو رپس'].includes(system)){
-     const groupSelect=card.querySelector('[id^="mobile_group_"]');
-     group=groupSelect.value;
-     if(group==='—'){
-      const used=new Set(rawLines().map(line=>{const p=line.split('\t');return Number(p[1])===session&&p[2]===system?p[3]:'';}).filter(Boolean));
-      group=['A','B','C','D'].find(letter=>!used.has(letter))||'A';
-      groupSelect.value=group;
-     }
-    }
-    const lines=rawLines();
-    checked.forEach(item=>lines.push([item.value,session,system,group,sets,reps,rest].join('\t')));
-    $('bulk').value=lines.join('\n');
-    renderMoveManager();render();
-    const justAdded=checked.map(item=>item.value);
-    lastAddedSummary=justAdded.join(' + ');lastAddedCount=justAdded.length;
-    $('mobileComposerStatus').textContent=['عادی','دراپ‌ست','drop-set'].includes(system)?'حرکت «'+cb.value+'» با سیستم '+system+' فوراً به جلسه '+session+' اضافه شد.':checked.length+' حرکت به‌صورت '+system+' گروه '+group+' فوراً به جلسه '+session+' اضافه شد.';
-    checks.querySelectorAll('.mobile-exercise-check').forEach(item=>{item.checked=false;delete item.dataset.selectionOrder;});
-    picker.open=false;
+    $('mobileComposerStatus').textContent='حرکت انتخاب شد؛ سیستم، ست، تکرار و استراحت را تنظیم کن و سپس «افزودن همه به جلسه» را بزن.';
     updatePickerSummary();updateMobileCount();
    });
    label.addEventListener('click',event=>{
@@ -344,7 +321,7 @@ $('mobileAddToSession').addEventListener('click',()=>{
   const sets=row.querySelector('[id^="mobile_sets_"]').value,reps=row.querySelector('[id^="mobile_reps_"]').value,rest=row.querySelector('[id^="mobile_rest_"]').value;
   [...row.querySelectorAll('.mobile-exercise-check:checked')].forEach(cb=>selected.push({name:cb.value,system,group,sets,reps,rest}));
  });
- if(!selected.length){const existingLines=rawLines();$('mobileComposerStatus').textContent=existingLines.length>0?'حرکت‌ها از قبل به فهرست برنامه اضافه شده‌اند؛ این دکمه برای انتخاب‌های تیک‌خورده است. حالا «بازبینی خروجی برنامه» را بزن و در صورت درست بودن، «ارسال به پنل مربی» را انتخاب کن.':'برای افزودن حرکت، کادر انتخاب را باز کن. حرکت عادی با انتخاب یک حرکت و سوپرست/تری‌ست با تکمیل تعداد لازم، خودکار اضافه می‌شود.';return;}
+ if(!selected.length){const existingLines=rawLines();$('mobileComposerStatus').textContent=existingLines.length>0?'حرکت‌ها از قبل به فهرست برنامه اضافه شده‌اند؛ این دکمه برای انتخاب‌های تیک‌خورده است. حالا «بازبینی خروجی برنامه» را بزن و در صورت درست بودن، «ارسال به پنل مربی» را انتخاب کن.':'برای افزودن حرکت، کادر انتخاب را باز کن. انتخاب حرکت‌ها به‌تنهایی آن‌ها را ثبت نمی‌کند؛ پس از تنظیم سیستم، ست، تکرار و استراحت، «افزودن همه به جلسه» را بزن.';return;}
  const session=Number($('mobileTargetSession').value);if(session>n()){$('mobileComposerStatus').textContent='جلسه انتخابی بیشتر از تعداد جلسات برنامه است؛ تعداد جلسات را در تنظیم برنامه افزایش بده.';return;}
  const groupMap=new Map();
  for(const m of selected){if(m.system==='عادی')continue;if(m.group==='—'){$('mobileComposerStatus').textContent='برای '+m.system+' یک گروه (A، B، C یا D) انتخاب کن.';return;}const key=m.system+'|'+m.group;if(!groupMap.has(key))groupMap.set(key,[]);groupMap.get(key).push(m);}
