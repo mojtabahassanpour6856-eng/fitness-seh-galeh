@@ -45,29 +45,81 @@
 
   async function buildRpcPayload(value) {
     const client = value.supabase;
-    const bankResult = await client.from('exercises').select('id,name');
-    if (bankResult.error) fail('خواندن بانک حرکات ناموفق بود: ' + bankResult.error.message);
-    const normalizeName = root.SehWorkoutPersistenceAdapter &&
-      root.SehWorkoutPersistenceAdapter.normalizeName;
-    if (typeof normalizeName !== 'function') fail('ماژول تبدیل نام حرکات بارگذاری نشده است.');
-    const bank = new Map();
-    for (const row of (bankResult.data || [])) {
+    const legacy = root.SehWorkoutPersistenceAdapter;
+    const normalizeName = legacy && legacy.normalizeName;
+    if (typeof normalizeName !== 'function' || !legacy || typeof legacy.buildPayload !== 'function') {
+      fail('ماژول اعتبارسنجی برنامه بارگذاری نشده است.');
+    }
+
+    // The coach's own exercise bank is the source of truth.
+    const personalResult = await client.from('trainer_exercises')
+      .select('id,name,target_muscle,category,equipment,coach_note')
+      .order('name', { ascending: true });
+    if (personalResult.error) fail('خواندن بانک تمرین شخصی مربی ناموفق بود: ' + personalResult.error.message);
+    const personalBank = new Map();
+    for (const row of (personalResult.data || [])) {
       const key = normalizeName(row.name);
       if (!key) continue;
-      if (!bank.has(key)) bank.set(key, []);
-      bank.get(key).push(row.id);
+      if (!personalBank.has(key)) personalBank.set(key, []);
+      personalBank.get(key).push(row);
     }
-    const legacy = root.SehWorkoutPersistenceAdapter;
-    if (!legacy || typeof legacy.buildPayload !== 'function') fail('ماژول اعتبارسنجی برنامه بارگذاری نشده است.');
-    const payload = legacy.buildPayload(Object.assign({}, value, {
-      planDate: legacy.normalizePlanDate(value.planDate),
-      resolveExerciseId: name => {
-        const ids = bank.get(normalizeName(name)) || [];
-        if (ids.length > 1) fail('نام حرکت «' + name + '» در بانک تکراری است؛ برای جلوگیری از ثبت حرکت اشتباه، ابتدا باید نام‌ها یکتا شوند.');
-        return ids.length === 1 ? ids[0] : null;
+
+    // trainee_workout_exercises references public.exercises. Create a compatible
+    // row only for an exercise explicitly present in the coach's personal bank.
+    const publicResult = await client.from('exercises')
+      .select('id,name,category,muscle_group,equipment,instructions');
+    if (publicResult.error) fail('خواندن شناسه‌های سازگار با برنامه شاگرد ناموفق بود: ' + publicResult.error.message);
+    const publicBank = new Map();
+    for (const row of (publicResult.data || [])) {
+      const key = normalizeName(row.name);
+      if (!key) continue;
+      if (!publicBank.has(key)) publicBank.set(key, []);
+      publicBank.get(key).push(row);
+    }
+
+    const resolveExerciseId = async name => {
+      const key = normalizeName(name);
+      const personalRows = personalBank.get(key) || [];
+      if (personalRows.length !== 1) {
+        if (personalRows.length > 1) fail('نام حرکت «' + name + '» در بانک تمرین شخصی تکراری است؛ ابتدا همان بانک را اصلاح کن.');
+        fail('حرکت «' + name + '» در بانک تمرین شخصی تو پیدا نشد؛ از بانک خودت انتخابش کن یا ابتدا آن را به بانک شخصی اضافه کن.');
       }
+      const matches = publicBank.get(key) || [];
+      if (matches.length > 1) fail('برای حرکت «' + name + '» چند شناسه در بانک سازگار برنامه وجود دارد؛ ذخیره متوقف شد تا حرکت اشتباه انتخاب نشود.');
+      if (matches.length === 1) return matches[0].id;
+
+      const personal = personalRows[0];
+      const inserted = await client.from('exercises').insert({
+        name: String(personal.name).trim(),
+        category: personal.category || null,
+        muscle_group: personal.target_muscle || null,
+        equipment: personal.equipment || null,
+        instructions: personal.coach_note || null
+      }).select('id,name,category,muscle_group,equipment,instructions').single();
+      if (inserted.error || !inserted.data || inserted.data.id == null) {
+        fail('حرکت «' + name + '» در بانک شخصی وجود دارد، اما ساخت شناسه سازگار برای برنامه شاگرد ناموفق شد: ' + (inserted.error && inserted.error.message || 'شناسه برنگشت'));
+      }
+      publicBank.set(key, [inserted.data]);
+      return inserted.data.id;
+    };
+
+    const trial = value.trial;
+    if (!trial || !Array.isArray(trial.moves)) fail('فهرست حرکات برنامه معتبر نیست.');
+    // Validate all non-bank fields before creating compatibility rows.
+    legacy.buildPayload(Object.assign({}, value, {
+      planDate: legacy.normalizePlanDate(value.planDate),
+      resolveExerciseId: () => 1
     }));
-    return payload;
+    const resolved = new Map();
+    for (const move of trial.moves) {
+      const name = String(move && move.name || '').trim();
+      if (!name) fail('یک حرکت بدون نام در برنامه وجود دارد.');
+      if (!resolved.has(name)) resolved.set(name, await resolveExerciseId(name));
+    }
+    return legacy.buildPayload(Object.assign({}, value, {
+      planDate: legacy.normalizePlanDate(value.planDate),
+      resolveExerciseId: name => resolved.get(String(name || '').trim()) ?? null
+    }));
   }
 
   async function saveAtomically(input) {
