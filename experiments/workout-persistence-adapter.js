@@ -213,11 +213,12 @@
   }
   async function saveToSupabaseAtomic(input) {
     const value = input || {};
-    if (value.enableAtomicRpc !== true) fail('ذخیره اتمی فعال نشده است؛ هیچ تغییری انجام نشد.');
+    // Deliberately opt-in: the experimental editor must not call an RPC that
+    // has not been deployed/reviewed. The current UI does not enable this flag.
+    if (value.enableAtomicRpc !== true) fail('ذخیره اتمی هنوز فعال نشده است؛ هیچ تغییری انجام نشد.');
     const client = value.supabase;
     if (!client || typeof client.from !== 'function' || typeof client.rpc !== 'function') fail('اتصال Supabase برای ذخیره اتمی در دسترس نیست.');
-    if (!value.traineeId) fail('ابتدا یک شاگرد آزمایشی را انتخاب کن.');
-
+    if (!value.traineeId) fail('ابتدا یک شاگرد را در پنل مربی انتخاب کن.');
     const bankResult = await client.from('exercises').select('id,name');
     if (bankResult.error) fail('دریافت بانک حرکات ناموفق بود: ' + bankResult.error.message);
     const bank = new Map();
@@ -235,35 +236,44 @@
         return ids.length === 1 ? ids[0] : null;
       }
     }));
-
-    const baselineResult = await client.rpc('experimental_workout_snapshot', { p_trainee_id: value.traineeId });
-    if (baselineResult.error) fail('گرفتن نسخه پایه از پایگاه داده آزمایشی ناموفق بود: ' + baselineResult.error.message);
-    const baseline = baselineResult.data;
-    if (!baseline || !Object.prototype.hasOwnProperty.call(baseline, 'fingerprint') ||
-        !Object.prototype.hasOwnProperty.call(baseline, 'plan_count')) {
-      fail('پاسخ نسخه پایه قابل تأیید نیست؛ هیچ تغییری انجام نشد.');
+    const existingResult = await client.from('trainee_workout_plans')
+      .select('id,trainee_id,title,goal,notes,plan_date,created_at')
+      .eq('trainee_id', value.traineeId)
+      .order('plan_date', { ascending: false, nullsFirst: false })
+      .order('created_at', { ascending: false })
+      .limit(2);
+    if (existingResult.error) fail('بررسی برنامه قبلی شاگرد ناموفق بود: ' + existingResult.error.message);
+    const existingRows = existingResult.data || [];
+    if (existingRows.length > 1) fail('این شاگرد بیش از یک برنامه دارد؛ هیچ تغییری انجام نشد.');
+    const existing = existingRows[0] || null;
+    let expectedSnapshot = null;
+    if (existing) {
+      const oldRowsResult = await client.from('trainee_workout_exercises')
+        .select('id,workout_plan_id,exercise_id,sets,reps,rest_seconds,notes,sort_order,training_system,group_key,training_day,is_completed')
+        .eq('workout_plan_id', existing.id);
+      if (oldRowsResult.error) fail('خواندن حرکات برنامه قبلی ناموفق بود؛ هیچ تغییری انجام نشد: ' + oldRowsResult.error.message);
+      expectedSnapshot = makeExpectedSnapshot(existing, oldRowsResult.data || []);
     }
-    if (Number(baseline.plan_count) > 1) fail('شاگرد آزمایشی بیش از یک برنامه دارد؛ ذخیره متوقف شد.');
-
-    const result = await client.rpc('experimental_save_trainee_workout', {
+    const rpcArgs = {
       p_trainee_id: value.traineeId,
-      p_expected_plan_id: baseline.plan_id == null ? null : Number(baseline.plan_id),
-      p_expected_fingerprint: baseline.fingerprint,
-      p_plan: payload.plan,
+      p_expected_plan_id: existing ? safeJsonInteger(existing.id, 'شناسه برنامه') : null,
+      p_expected_snapshot: expectedSnapshot,
+      p_plan: { title: payload.plan.title, plan_date: payload.plan.plan_date, goal: payload.plan.goal, notes: payload.plan.notes },
       p_exercises: payload.exercises
-    });
-    if (result.error) fail('ذخیره اتمی برنامه آزمایشی ناموفق بود؛ تغییرات نیمه‌کاره ثبت نمی‌شود: ' + result.error.message);
+    };
+    const result = await client.rpc('save_trainee_workout_plan_transaction', rpcArgs);
+    if (result.error) fail('ذخیره اتمی انجام نشد؛ برنامه قبلی باید بدون تغییر مانده باشد: ' + result.error.message);
     const data = result.data;
-    if (!data || String(data.trainee_id) !== String(value.traineeId) ||
-        data.plan_id == null || Number(data.exercise_count) !== payload.exercises.length) {
-      fail('پاسخ ذخیره قابل تأیید نیست؛ پیش از تلاش دوباره برنامه آزمایشی را بازخوانی کن.');
+    if (!data || data.trainee_id !== value.traineeId || data.plan_id == null ||
+        Number(data.exercise_count) !== payload.exercises.length || !data.plan_snapshot) {
+      fail('پاسخ ذخیره اتمی قابل تأیید نیست؛ پیش از تلاش دوباره برنامه شاگرد را بازخوانی کن.');
     }
     return {
       planId: data.plan_id,
       exerciseCount: Number(data.exercise_count),
       traineeId: data.trainee_id,
-      updatedExistingPlan: baseline.plan_id != null,
-      planDate: data.plan_date
+      updatedExistingPlan: Boolean(data.updated_existing_plan),
+      planSnapshot: data.plan_snapshot
     };
   }
 
