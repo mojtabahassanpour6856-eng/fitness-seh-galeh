@@ -2183,7 +2183,16 @@ window.fetch=async function(input,init={}){
   const url=typeof input==="string"?input:input?.url;
   if(url && url.startsWith(SUPABASE_URL+"/rest/v1/")){
     const session=await __fitnessGetApiSession();
-    const headers=new Headers(init.headers || (typeof input!=="string"?input.headers:{}) || {});
+    // Avoid Headers(existingHeaders): some WebView/PWA contexts throw a stale-callback error inside Headers.forEach.
+    const source=init.headers!==undefined?init.headers:(typeof input!=="string"?input?.headers:undefined);
+    const headers=new Headers();
+    if(source && typeof source!=="string" && typeof source[Symbol.iterator]==="function"){
+      for(const pair of source){
+        if(pair && pair.length>=2) headers.set(String(pair[0]),String(pair[1]));
+      }
+    }else if(source && typeof source==="object"){
+      Object.keys(source).forEach(key=>headers.set(key,String(source[key])));
+    }
     headers.set("apikey",SUPABASE_KEY);
     headers.set("Authorization","Bearer "+(session?.access_token||SUPABASE_KEY));
     init={...init,headers};
