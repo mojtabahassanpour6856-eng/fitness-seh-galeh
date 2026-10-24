@@ -97,12 +97,9 @@ jobs:
             await preserveRow.locator('.w9-group-movement-toggle').click();
             await preserveRow.locator('.w9-movement-checklist input[value="preserve-a"]').check();
             await preserveRow.locator('.w9-movement-checklist input[value="preserve-b"]').check();
-            await preserveRow.locator('.w9-rest').fill('45');
-            await preserveRow.locator('.w9-rest').evaluate(el => { if (el.nextElementSibling?.classList.contains('seh-touch-choice-select')) el.nextElementSibling.value = '45'; });
-            await preserveRow.locator('.w9-reps').fill('12');
-            await preserveRow.locator('.w9-reps').evaluate(el => { if (el.nextElementSibling?.classList.contains('seh-touch-choice-select')) el.nextElementSibling.value = '12'; });
-            await preserveRow.locator('.w9-sets').fill('4');
-            await preserveRow.locator('.w9-sets').evaluate(el => { if (el.nextElementSibling?.classList.contains('seh-touch-choice-select')) el.nextElementSibling.value = '4'; });
+            await preserveRow.locator('.w9-rest').evaluate(el => { el.value = '45'; if (el.nextElementSibling?.classList.contains('seh-touch-choice-select')) el.nextElementSibling.value = '45'; });
+            await preserveRow.locator('.w9-reps').evaluate(el => { el.value = '12'; if (el.nextElementSibling?.classList.contains('seh-touch-choice-select')) el.nextElementSibling.value = '12'; });
+            await preserveRow.locator('.w9-sets').evaluate(el => { el.value = '4'; if (el.nextElementSibling?.classList.contains('seh-touch-choice-select')) el.nextElementSibling.value = '4'; });
             await source.evaluate(sel => { sel.innerHTML = '<option value="">انتخاب حرکت…</option><option value="new-filter-only">حرکت فیلتر جدید</option>'; });
             await page.waitForFunction(() => {
               const box = document.querySelector('#workoutNineTable tbody tr .w9-movement-checklist');
