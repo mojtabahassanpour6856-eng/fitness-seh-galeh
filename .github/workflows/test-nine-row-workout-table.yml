@@ -102,7 +102,7 @@ jobs:
           const fs = require('node:fs');
           const assert = require('node:assert/strict');
           const html = fs.readFileSync('index.html', 'utf8');
-          const start = html.lastIndexOf('window.saveWorkoutNineTable=async function');
+          const start = html.indexOf('window.saveWorkoutNineTable=async function');
           assert.ok(start >= 0, 'nine-row save handler must exist');
           const end = html.indexOf('function start(){', start);
           assert.ok(end > start, 'could not find end of nine-row save handler');
