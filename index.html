@@ -12316,11 +12316,16 @@ body.workout-output.workout-compact{
    if(!currentClient)return alert('اول شاگرد را انتخاب کنید.');
    const table=document.getElementById('workoutNineTable');
    if(!table)return;
-   syncNineMovementOptions();
+   // Snapshot selected checkbox IDs BEFORE syncing/rebuilding the checklist DOM.
+   // Rebuilding options at save time can otherwise make the selected set appear empty
+   // on mobile when the exercise source list has just been refreshed.
+   const selectedByRow=Array.from(table.querySelectorAll('tbody tr')).map(tr=>
+     Array.from(tr.querySelectorAll('.w9-exercise-check:checked')).map(i=>String(i.value))
+   );
    const rows=Array.from(table.querySelectorAll('tbody tr')).map((tr,index)=>{
      const system=tr.querySelector('.w9-system').value;
      const groupMode=['superset','triset','giant'].includes(system);
-     const checked=Array.from(tr.querySelectorAll('.w9-exercise-check:checked')).map(i=>i.value);
+     const checked=selectedByRow[index]||[];
      const single=tr.querySelector('.w9-exercise').value;
      return {index,system,groupMode,exerciseIds:groupMode?checked:(single?[single]:[]),
        restRaw:tr.querySelector('.w9-rest').value,
