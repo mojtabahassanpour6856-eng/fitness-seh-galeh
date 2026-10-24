@@ -54,11 +54,17 @@ jobs:
             // Group systems should reveal checkboxes on the same row, with the required selection count.
             const groupingRows = await table.locator('tbody tr').all();
             await groupingRows[0].locator('.w9-system').selectOption('superset');
-            assert.equal(await groupingRows[0].locator('.w9-movement-checklist').isVisible(), true, 'superset should expose same-row movement checkboxes');
+            assert.equal(await groupingRows[0].locator('.w9-group-movement-toggle').isVisible(), true, 'superset should expose the same-row movement picker');
+            await groupingRows[0].locator('.w9-group-movement-toggle').click();
+            assert.equal(await groupingRows[0].locator('.w9-movement-checklist').isVisible(), true, 'superset movement checklist should open on demand');
             await groupingRows[3].locator('.w9-system').selectOption('triset');
-            assert.equal(await groupingRows[3].locator('.w9-movement-checklist').isVisible(), true, 'triset should expose same-row movement checkboxes');
+            assert.equal(await groupingRows[3].locator('.w9-group-movement-toggle').isVisible(), true, 'triset should expose the same-row movement picker');
+            await groupingRows[3].locator('.w9-group-movement-toggle').click();
+            assert.equal(await groupingRows[3].locator('.w9-movement-checklist').isVisible(), true, 'triset movement checklist should open on demand');
             await groupingRows[6].locator('.w9-system').selectOption('giant');
-            assert.equal(await groupingRows[6].locator('.w9-movement-checklist').isVisible(), true, 'giant set should expose same-row movement checkboxes');
+            assert.equal(await groupingRows[6].locator('.w9-group-movement-toggle').isVisible(), true, 'giant set should expose the same-row movement picker');
+            await groupingRows[6].locator('.w9-group-movement-toggle').click();
+            assert.equal(await groupingRows[6].locator('.w9-movement-checklist').isVisible(), true, 'giant-set movement checklist should open on demand');
             // Simulate the exercise list becoming available; the table should mirror its options.
             await page.locator('#workoutExercise').evaluate(sel => {
               const opt = document.createElement('option');
