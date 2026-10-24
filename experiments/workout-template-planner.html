@@ -366,7 +366,25 @@ function buildMobileComposer(){
  updateMobileCount();
 }
 function updateMobileCount(){const count=[...document.querySelectorAll('.mobile-exercise-check:checked')].length;if($('mobileSelectedCount'))$('mobileSelectedCount').textContent=count+' از ۹ حرکت انتخاب شده';}
-$('mobileTemplate').addEventListener('change',buildMobileComposer);
+function reorderMobileExerciseCategories(){
+ const template=$('mobileTemplate')?.value||'all';
+ const templates={'سینه|جلو بازو':['سینه','جلو بازو'],'پشت|پشت بازو':['پشت','پشت بازو'],'پا|باسن|ساق':['پا','باسن','ساق'],'سرشانه|شکم':['سرشانه','شکم'],'سینه|پشت بازو':['سینه','پشت بازو'],'پشت|جلو بازو':['پشت','جلو بازو']};
+ const preferred=template==='all'?[]:(templates[template]||template.split('|'));
+ document.querySelectorAll('#mobileMoveRows .mobile-exercise-checks').forEach(checks=>{
+  const groups=[];let current=null;
+  Array.from(checks.children).forEach(node=>{
+   if(node.classList.contains('mobile-exercise-category')){
+    current={category:node.dataset.category||node.textContent.trim(),nodes:[node]};groups.push(current);
+   }else if(current){current.nodes.push(node);}
+  });
+  groups.sort((a,b)=>{
+   const ai=preferred.indexOf(a.category),bi=preferred.indexOf(b.category);
+   return (ai<0?999:ai)-(bi<0?999:bi)||a.category.localeCompare(b.category,'fa');
+  });
+  groups.forEach(group=>group.nodes.forEach(node=>checks.appendChild(node)));
+ });
+}
+$('mobileTemplate').addEventListener('change',reorderMobileExerciseCategories);
 $('mobilePreviewButton').addEventListener('click',()=>{render();$('planPreview').scrollIntoView({behavior:'smooth',block:'start'});});
 $('mobileSendToCoachApp').addEventListener('click',()=>{
  const sendButton=$('sendToCoachApp');
