@@ -261,6 +261,14 @@ function renderExerciseBank(){
 }
 
 function buildMobileComposer(){
+ const previousRows=[...document.querySelectorAll('.mobile-move-row')].map(row=>({
+  selected:[...row.querySelectorAll('.mobile-exercise-check:checked')].map(cb=>cb.value),
+  system:row.querySelector('[id^="mobile_system_"]')?.value||'عادی',
+  group:row.querySelector('[id^="mobile_group_"]')?.value||'—',
+  sets:row.querySelector('[id^="mobile_sets_"]')?.value||'3',
+  reps:row.querySelector('[id^="mobile_reps_"]')?.value||'12',
+  rest:row.querySelector('[id^="mobile_rest_"]')?.value||'60'
+ }));
  const rows=$('mobileMoveRows');if(!rows)return;rows.innerHTML='';
  const templates={'سینه|جلو بازو':['سینه','جلو بازو'],'پشت|پشت بازو':['پشت','پشت بازو'],'پا|باسن|ساق':['پا','باسن','ساق'],'سرشانه|شکم':['سرشانه','شکم'],'سینه|پشت بازو':['سینه','پشت بازو'],'پشت|جلو بازو':['پشت','جلو بازو']};
  const template=$('mobileTemplate').value,preferred=template==='all'?[]:(templates[template]||template.split('|'));
@@ -280,6 +288,9 @@ function buildMobileComposer(){
    if(item.cat!==currentCat){currentCat=item.cat;const heading=document.createElement('strong');heading.className='mobile-exercise-category';heading.textContent=item.cat;heading.dataset.category=item.cat;checks.appendChild(heading);}
    const label=document.createElement('label');label.className='mobile-exercise-option';label.dataset.name=item.name;label.dataset.category=item.cat;
    const cb=document.createElement('input');cb.type='checkbox';cb.className='mobile-exercise-check';cb.value=item.name;
+    const previousSelection=previousRows[i]?.selected||[];
+    cb.checked=previousSelection.includes(item.name);
+    if(cb.checked)cb.dataset.selectionOrder=String(previousSelection.indexOf(item.name)+1);
    // در سیستم عادی انتخاب حرکت با لمس نام انجام می‌شود و تیک نمایش داده نمی‌شود؛
    // در سیستم‌های ترکیبی، تیک‌ها برای انتخاب تعداد حرکت لازم دیده می‌شوند.
    cb.style.width='16px';cb.style.height='16px';
@@ -310,7 +321,8 @@ function buildMobileComposer(){
   head.append(picker,del);
   const line=document.createElement('div');line.className='mobile-controls-line';
   function makeControl(label,id,values,initial){const wrap=document.createElement('label');wrap.className='mobile-control';wrap.textContent=label;const select=document.createElement('select');select.id='mobile_'+id+'_'+i;select.dataset.row=String(i);values.forEach(v=>{const opt=document.createElement('option');opt.value=String(v);opt.textContent=String(v);if(String(v)===String(initial))opt.selected=true;select.appendChild(opt);});wrap.appendChild(select);return wrap;}
-  const systemControl=makeControl('سیستم','system',['عادی','سوپرست','تری‌ست','جاینت‌ست','دراپ‌ست','دراپ‌ست مکانیکی','رست‌پاز','تکرار تا ناتوانی','تکرار منفی','تکرار اجباری','هرمی','هرمی معکوس','پیش‌خستگی','تمرین مداری','تمرین زمان‌دار','چندمرحله‌ای','سیستم دلخواه'],'عادی');
+  const prior=previousRows[i]||{};
+   const systemControl=makeControl('سیستم','system',['عادی','سوپرست','تری‌ست','جاینت‌ست','دراپ‌ست','دراپ‌ست مکانیکی','رست‌پاز','تکرار تا ناتوانی','تکرار منفی','تکرار اجباری','هرمی','هرمی معکوس','پیش‌خستگی','تمرین مداری','تمرین زمان‌دار','چندمرحله‌ای','سیستم دلخواه'],prior.system||'عادی');
   function syncCheckboxMode(){
    // چک‌باکس همیشه دیده می‌شود تا انتخاب عادی و گروهی با کنترل بومی انجام شود.
    checks.querySelectorAll('.mobile-exercise-check').forEach(cb=>{
@@ -320,8 +332,9 @@ function buildMobileComposer(){
   }
   systemControl.querySelector('select').addEventListener('change',()=>{const system=canonicalSystem(systemControl.querySelector('select').value),limit=isGroupedSystem(system)?(system==='سوپرست'?2:system==='تری‌ست'?3:4):1;[...checks.querySelectorAll('.mobile-exercise-check:checked')].slice(limit).forEach(x=>x.checked=false);syncCheckboxMode();updatePickerSummary();updateMobileCount();});
   syncCheckboxMode();
-  line.append(systemControl,makeControl('گروه','group',['—','A','B','C','D'],'—'),makeControl('ست','sets',[2,3,4,5],3),makeControl('تکرار','reps',[6,8,10,12,15,20],12),makeControl('ثانیه','rest',[30,45,60,75],60));
+  line.append(systemControl,makeControl('گروه','group',['—','A','B','C','D'],prior.group||'—'),makeControl('ست','sets',[2,3,4,5],prior.sets||3),makeControl('تکرار','reps',[6,8,10,12,15,20],prior.reps||12),makeControl('ثانیه','rest',[30,45,60,75],prior.rest||60));
   card.append(head,line);rows.appendChild(card);
+  picker.updatePickerSummary();
  }
  updateMobileCount();
 }
