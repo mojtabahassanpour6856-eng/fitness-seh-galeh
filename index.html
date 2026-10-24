@@ -5544,14 +5544,12 @@ window.useLibraryExercise=async function(id){
           body += '<p>برای این برنامه هنوز حرکتی ثبت نشده است.</p>';
         } else {
           const help = {superset:'دو حرکت را پشت سر هم انجام بده؛ بینشان استراحت نکن.',triset:'سه حرکت را پشت سر هم انجام بده؛ بینشان استراحت نکن.',giant:'سه حرکت یا بیشتر را پشت سر هم انجام بده.',giant_set:'سه حرکت یا بیشتر را پشت سر هم انجام بده.','giant-set':'سه حرکت یا بیشتر را پشت سر هم انجام بده.',drop:'یک حرکت؛ پس از خستگی وزنه را کم کن و تکرارها را ادامه بده.',drop_set:'یک حرکت؛ پس از خستگی وزنه را کم کن و تکرارها را ادامه بده.','drop-set':'یک حرکت؛ پس از خستگی وزنه را کم کن و تکرارها را ادامه بده.',rest_pause:'پس از مکث کوتاه، چند تکرار دیگر انجام بده.','rest-pause':'پس از مکث کوتاه، چند تکرار دیگر انجام بده.',timed:'حرکت را برای مدت زمان تعیین‌شده اجرا کن.',multi_stage:'حرکت را طبق مراحل ثبت‌شده اجرا کن.',pre_exhaust:'ابتدا حرکت تک‌مفصلی، سپس حرکت اصلی.',mechanical_drop:'با تغییر شکل حرکت، پس از خستگی ادامه بده.',pyramid:'وزنه و تکرارها به‌تدریج تغییر می‌کنند.',reverse_pyramid:'ابتدا سنگین‌تر؛ سپس وزنه کمتر می‌شود.',circuit:'حرکات را به‌ترتیب و با استراحت کم انجام بده.',custom:'طبق توضیح اختصاصی ثبت‌شده اجرا کن.',failure:'ست را تا ناتوانی عضلانی کنترل‌شده ادامه بده.', 'forced-reps':'با کمک کنترل‌شده، تکرارهای پایانی را انجام بده.',forced_reps:'با کمک کنترل‌شده، تکرارهای پایانی را انجام بده.','negative-reps':'بخش منفی حرکت را آهسته و کنترل‌شده اجرا کن.',negative_reps:'بخش منفی حرکت را آهسته و کنترل‌شده اجرا کن.','partial-reps':'تکرارهای ناقص را در دامنه کنترل‌شده انجام بده.',partial_reps:'تکرارهای ناقص را در دامنه کنترل‌شده انجام بده.','myo-reps':'تکرارهای کوتاه با مکث‌های کوتاه انجام بده.',myo_reps:'تکرارهای کوتاه با مکث‌های کوتاه انجام بده.','to-failure':'ست را تا ناتوانی عضلانی کنترل‌شده ادامه بده.',to_failure:'ست را تا ناتوانی عضلانی کنترل‌شده ادامه بده.'};
-          // Normalize legacy rows whose set/repetition fields were accidentally reversed,
-          // and render drop-set stages with a dash (not a superset plus sign).
+          // Always display the saved fields in the intended order: sets × reps.
+          // Do not guess or swap numeric values: 3 sets of 10 reps must remain 3×10.
+          // Drop-set stages use dashes; other compound repetition formats are spaced consistently.
           const prescriptionFor = x => {
-            let sets=String(x.sets??'—').trim()||'—';
+            const sets=String(x.sets??'—').trim()||'—';
             let reps=String(x.reps??'').trim()||'—';
-            if(/^\d+$/.test(sets)&&/^\d+$/.test(reps)&&Number(sets)>=8&&Number(reps)>=1&&Number(reps)<=5){
-              [sets,reps]=[reps,sets];
-            }
             const sys=normalizeSystem(x.training_system);
             if(['drop','drop_set','mechanical_drop'].includes(sys)&&reps!=='—'){
               reps=reps.replace(/\s*(?:,|;|\+|\/|−|–|—)\s*/g,' - ').replace(/\s*-\s*/g,' - ');
