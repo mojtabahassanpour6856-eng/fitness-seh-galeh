@@ -13885,8 +13885,13 @@ body.workout-output.workout-compact{
  function checkClient(){
    const now=typeof currentClient!=='undefined'&&currentClient&&currentClient.id!=null?String(currentClient.id):'';
    if(clientKey!==now){
+     // When the first trainee is selected, do not clear movements the coach has
+     // just entered. Clear the table only when leaving an already active trainee.
+     const hadPreviousClient=!!clientKey;
      clientKey=now;active=0;for(let i=0;i<6;i++)drafts[i]=null;
-     const t=table();if(t)t.querySelectorAll('tbody tr').forEach(resetRow);
+     if(hadPreviousClient){
+       const t=table();if(t)t.querySelectorAll('tbody tr').forEach(resetRow);
+     }
    }
  }
  function resetRow(tr){
