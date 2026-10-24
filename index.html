@@ -5567,14 +5567,14 @@ window.useLibraryExercise=async function(id){
               if(!groupMap.has(key)){groupMap.set(key,[]);cards.push(key);}
               groupMap.get(key).push(x);
             });
-            return '<section class="session-cell"><div class="session-heading">'+esc(day)+'</div><div class="session-exercises" style="--move-count:'+cards.length+'">'+cards.map(key=>{
+            let movementNumber=0;return '<section class="session-cell"><div class="session-heading">'+esc(day)+'</div><div class="session-exercises" style="--move-count:'+cards.length+'">'+cards.map(key=>{
               const arr=groupMap.get(key),first=arr[0],sys=first.training_system||'normal',isGroup=groupedSystem(sys)&&!!first.group_key;
               /* Keep every movement in a superset/triset visible with its OWN prescription.
                  The old renderer joined all movement names but showed sets/reps/rest only for
                  the first movement, making sessions look incomplete in PNG/PDF exports. */
               let movementHtml='';
               if(isGroup){
-                const groupNames=arr.map(x=>esc(names[String(x.exercise_id)]||'حرکت ثبت‌شده')).join(' <span class="workout-group-plus" style="display:inline-block;color:#9b6b0c;font-family:Arial,sans-serif!important;font-weight:900;font-size:1em;line-height:1;vertical-align:middle;min-width:1em;text-align:center">＋</span> ');const groupLabel=systemLabelFor(first.training_system);const groupBadge=groupLabel?'<span class="movement-system-badge group-system-badge" style="display:inline-block;vertical-align:middle;margin:2px 4px;padding:1px 6px;border:1px solid #c69b43;border-radius:5px;background:#fff0bd;color:#68470a;font-size:10px;font-weight:800;line-height:1.6;white-space:nowrap">('+esc(groupLabel)+')</span>':'';
+                const groupNames=arr.map(x=>(++movementNumber)+'- '+esc(names[String(x.exercise_id)]||'حرکت ثبت‌شده')).join(' <span class="workout-group-plus" style="display:inline-block;color:#9b6b0c;font-family:Arial,sans-serif!important;font-weight:900;font-size:1em;line-height:1;vertical-align:middle;min-width:1em;text-align:center">＋</span> ');const groupLabel=systemLabelFor(first.training_system);const groupBadge=groupLabel?'<span class="movement-system-badge group-system-badge" style="display:inline-block;vertical-align:middle;margin:2px 4px;padding:1px 6px;border:1px solid #c69b43;border-radius:5px;background:#fff0bd;color:#68470a;font-size:10px;font-weight:800;line-height:1.6;white-space:nowrap">('+esc(groupLabel)+')</span>':'';
                 const groupPrescriptions=arr.map(prescriptionFor);const firstGroupPrescription=groupPrescriptions[0]||{reps:'—',sets:'—'};const groupDetail='<span class="rx">'+groupPrescriptions.map(v=>esc(v.reps)).join(' + ')+'×'+esc(firstGroupPrescription.sets)+'</span>'+'<span class="rest">S'+esc(first.rest_seconds??0)+'</span>';
                 const groupNotes=arr.map(x=>x.notes?esc(x.notes):'').filter(Boolean);
                 const note=groupNotes.length?'<div class="exercise-extra" style="grid-column:1/-1">'+groupNotes.join(' | ')+'</div>':'';
@@ -5588,7 +5588,7 @@ window.useLibraryExercise=async function(id){
                   const nameLength=String(names[String(x.exercise_id)]||'حرکت ثبت‌شده').length;
                   const prescription=prescriptionFor(x);const isDropSet=['drop','drop_set','mechanical_drop'].includes(normalizeSystem(x.training_system));const rxText=isDropSet?esc(prescription.reps)+' - '+esc(prescription.reps)+'×'+esc(prescription.sets):esc(prescription.reps)+'×'+esc(prescription.sets);const detail='<span class="rx">'+rxText+'</span>'+'<span class="rest">S'+esc(x.rest_seconds??0)+'</span>';
                   const note=x.notes?'<div class="exercise-extra" style="grid-column:1/-1">'+esc(x.notes)+'</div>':'';
-                  return '<div class="exercise-unit" style="display:grid;grid-template-columns:minmax(0,1fr) max-content;align-items:center;column-gap:8px;width:100%;padding:5px 2px;border-bottom:1px solid #e4d3a9;break-inside:avoid"><div class="exercise-name" style="--name-length:'+nameLength+'">'+movementName+systemBadge+'</div><div class="exercise-details">'+detail+'</div>'+note+'</div>';
+                  return '<div class="exercise-unit" style="display:grid;grid-template-columns:minmax(0,1fr) max-content;align-items:center;column-gap:8px;width:100%;padding:5px 2px;border-bottom:1px solid #e4d3a9;break-inside:avoid"><div class="exercise-name" style="--name-length:'+nameLength+'">'+(++movementNumber)+'- '+movementName+systemBadge+'</div><div class="exercise-details">'+detail+'</div>'+note+'</div>';
                 }).join('');
               }
               return '<div class="exercise-card" style="display:block;flex:0 0 auto;min-height:0;padding:3px 2px">'+movementHtml+'</div>';
