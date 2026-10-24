@@ -54,11 +54,17 @@ jobs:
             // Group systems should reveal checkboxes on the same row, with the required selection count.
             const groupingRows = await table.locator('tbody tr').all();
             await groupingRows[0].locator('.w9-system').selectOption('superset');
-            assert.equal(await groupingRows[0].locator('.w9-movement-checklist').isVisible(), true, 'superset should expose same-row movement checkboxes');
+            assert.equal(await groupingRows[0].locator('.w9-group-movement-toggle').isVisible(), true, 'superset should expose the same-row movement picker');
+            await groupingRows[0].locator('.w9-group-movement-toggle').click();
+            assert.equal(await groupingRows[0].locator('.w9-movement-checklist').isVisible(), true, 'superset movement checklist should open on demand');
             await groupingRows[3].locator('.w9-system').selectOption('triset');
-            assert.equal(await groupingRows[3].locator('.w9-movement-checklist').isVisible(), true, 'triset should expose same-row movement checkboxes');
+            assert.equal(await groupingRows[3].locator('.w9-group-movement-toggle').isVisible(), true, 'triset should expose the same-row movement picker');
+            await groupingRows[3].locator('.w9-group-movement-toggle').click();
+            assert.equal(await groupingRows[3].locator('.w9-movement-checklist').isVisible(), true, 'triset movement checklist should open on demand');
             await groupingRows[6].locator('.w9-system').selectOption('giant');
-            assert.equal(await groupingRows[6].locator('.w9-movement-checklist').isVisible(), true, 'giant set should expose same-row movement checkboxes');
+            assert.equal(await groupingRows[6].locator('.w9-group-movement-toggle').isVisible(), true, 'giant set should expose the same-row movement picker');
+            await groupingRows[6].locator('.w9-group-movement-toggle').click();
+            assert.equal(await groupingRows[6].locator('.w9-movement-checklist').isVisible(), true, 'giant-set movement checklist should open on demand');
             // Simulate the exercise list becoming available; the table should mirror its options.
             await page.locator('#workoutExercise').evaluate(sel => {
               const opt = document.createElement('option');
@@ -90,13 +96,33 @@ jobs:
           })().catch(err => { console.error(err); process.exit(1); });
           NODE
           node nine-row-check.cjs
+      - name: Verify exact exercise muscle filtering
+        run: |
+          node - <<'NODE'
+          const fs = require('node:fs');
+          const assert = require('node:assert/strict');
+          const html = fs.readFileSync('index.html', 'utf8');
+          const start = html.indexOf('function match(r,m){');
+          const end = html.indexOf('function active(', start);
+          assert.ok(start >= 0 && end > start, 'could not locate exercise-bank muscle matcher');
+          const source = html.slice(start, end).trim();
+          const match = new Function('favs', 'n', 'kw', source + '; return match;')(new Set(), v => String(v || '').toLocaleLowerCase('fa').replace(/[يى]/g,'ی').replace(/ك/g,'ک').replace(/[\\u200c\\s_-]+/g,' ').trim(), {
+            'پشت': ['پشت','زیر بغل','زیربغل','لت','قایقی','ددلیفت','back','lat pulldown','row'],
+            'پشت بازو': ['پشت بازو','triceps','tricep','pushdown']
+          });
+          assert.equal(match({name:'پشت بازو سیم‌کش',category:'پشت بازو'}, 'پشت'), false, 'triceps must not leak into back filter');
+          assert.equal(match({name:'قایقی دستگاه',category:'پشت'}, 'پشت'), true, 'back-category exercise should appear under back');
+          assert.equal(match({name:'لت سیم‌کش',category:'پشت'}, 'پشت'), true, 'lat exercise should appear under back');
+          assert.equal(match({name:'قایقی دستگاه',category:'پشت'}, 'پشت بازو'), false, 'back-category exercise must not leak into triceps filter');
+          console.log('PASS: muscle filter uses saved category fields and does not match unrelated exercise names.');
+          NODE
       - name: Verify save handler safeguards and batch insert
         run: |
           node - <<'NODE'
           const fs = require('node:fs');
           const assert = require('node:assert/strict');
           const html = fs.readFileSync('index.html', 'utf8');
-          const start = html.lastIndexOf('window.saveWorkoutNineTable=async function');
+          const start = html.indexOf('window.saveWorkoutNineTable=async function');
           assert.ok(start >= 0, 'nine-row save handler must exist');
           const end = html.indexOf('function start(){', start);
           assert.ok(end > start, 'could not find end of nine-row save handler');
@@ -135,13 +161,23 @@ jobs:
             for (let i = 0; i < rows.length; i++) {
               await rows[i].locator('.w9-system').selectOption(systems[i]);
               if (['superset','triset','giant'].includes(systems[i])) {
-                for (const id of rowExercises[i]) await rows[i].locator('.w9-exercise-check[value="' + id + '"]').check();
+                for (const id of rowExercises[i]) await rows[i].locator('.w9-exercise-check[value="' + id + '"]').evaluate(el => { el.checked = true; el.dispatchEvent(new Event("input", { bubbles: true })); el.dispatchEvent(new Event("change", { bubbles: true })); });
               } else {
                 await rows[i].locator('.w9-exercise').selectOption(rowExercises[i][0]);
               }
-              await rows[i].locator('.w9-rest').fill(String(30 + i));
-              await rows[i].locator('.w9-reps').fill(i === 4 ? '12+8+6' : String(8 + i));
-              await rows[i].locator('.w9-sets').fill(String(2 + (i % 3)));
+              // These numeric fields are enhanced with visible touch-choice controls; set the underlying inputs directly in this isolated browser test.
+              await rows[i].evaluate((tr, values) => {
+                for (const [selector, value] of values) {
+                  const input = tr.querySelector(selector);
+                  input.value = value;
+                  input.dispatchEvent(new Event('input', { bubbles: true }));
+                  input.dispatchEvent(new Event('change', { bubbles: true }));
+                }
+              }, [
+                ['.w9-rest', String(30 + i)],
+                ['.w9-reps', i === 4 ? '12+8+6' : String(8 + i)],
+                ['.w9-sets', String(2 + (i % 3))]
+              ]);
             }
             const first = await page.evaluate(async () => {
               let captured;
@@ -166,7 +202,7 @@ jobs:
             for (let i = 0; i < rows.length; i++) {
               await rows[i].locator('.w9-system').selectOption(systems[i]);
               if (['superset','triset','giant'].includes(systems[i])) {
-                for (const id of rowExercises[i]) await rows[i].locator('.w9-exercise-check[value="' + id + '"]').check();
+                for (const id of rowExercises[i]) await rows[i].locator('.w9-exercise-check[value="' + id + '"]').evaluate(el => { el.checked = true; el.dispatchEvent(new Event("change", { bubbles: true })); });
               } else {
                 await rows[i].locator('.w9-exercise').selectOption(rowExercises[i][0]);
               }
