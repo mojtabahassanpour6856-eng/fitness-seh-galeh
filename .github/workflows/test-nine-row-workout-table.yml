@@ -81,6 +81,40 @@ jobs:
               return !!box && Array.from(box.querySelectorAll('input')).some(o => o.value === 'test-exercise-id');
             });
             assert.equal(await table.locator('tbody tr').first().locator('.w9-movement-checklist input[value="test-exercise-id"]').count(), 1, 'exercise options should sync into the same-row checklist');
+
+            // A muscle/template change can replace the source bank options. Selected row
+            // movements and prescription values must survive even when absent from the new filter.
+            const source = page.locator('#workoutExercise');
+            await source.evaluate(sel => {
+              sel.innerHTML = '<option value="">انتخاب حرکت…</option><option value="preserve-a">حرکت حفظ‌شونده الف</option><option value="preserve-b">حرکت حفظ‌شونده ب</option>';
+            });
+            await page.waitForFunction(() => {
+              const box = document.querySelector('#workoutNineTable tbody tr .w9-movement-checklist');
+              return box && box.querySelector('input[value="preserve-a"]') && box.querySelector('input[value="preserve-b"]');
+            });
+            const preserveRow = table.locator('tbody tr').first();
+            await preserveRow.locator('.w9-system').selectOption('superset');
+            await preserveRow.locator('.w9-group-movement-toggle').click();
+            await preserveRow.locator('.w9-movement-checklist input[value="preserve-a"]').check();
+            await preserveRow.locator('.w9-movement-checklist input[value="preserve-b"]').check();
+            await preserveRow.locator('.w9-rest').fill('45');
+            await preserveRow.locator('.w9-rest').evaluate(el => { if (el.nextElementSibling?.classList.contains('seh-touch-choice-select')) el.nextElementSibling.value = '45'; });
+            await preserveRow.locator('.w9-reps').fill('12');
+            await preserveRow.locator('.w9-reps').evaluate(el => { if (el.nextElementSibling?.classList.contains('seh-touch-choice-select')) el.nextElementSibling.value = '12'; });
+            await preserveRow.locator('.w9-sets').fill('4');
+            await preserveRow.locator('.w9-sets').evaluate(el => { if (el.nextElementSibling?.classList.contains('seh-touch-choice-select')) el.nextElementSibling.value = '4'; });
+            await source.evaluate(sel => { sel.innerHTML = '<option value="">انتخاب حرکت…</option><option value="new-filter-only">حرکت فیلتر جدید</option>'; });
+            await page.waitForFunction(() => {
+              const box = document.querySelector('#workoutNineTable tbody tr .w9-movement-checklist');
+              return box && box.querySelector('input[value="new-filter-only"]');
+            });
+            assert.equal(await preserveRow.locator('.w9-movement-checklist input[value="preserve-a"]').isChecked(), true, 'first selected movement must survive a template/filter change');
+            assert.equal(await preserveRow.locator('.w9-movement-checklist input[value="preserve-b"]').isChecked(), true, 'second selected movement must survive a template/filter change');
+            assert.equal(await preserveRow.locator('.w9-system').inputValue(), 'superset', 'selected training system must survive a template/filter change');
+            assert.equal(await preserveRow.locator('.w9-rest').inputValue(), '45', 'rest setting must survive a template/filter change');
+            assert.equal(await preserveRow.locator('.w9-reps').inputValue(), '12', 'reps setting must survive a template/filter change');
+            assert.equal(await preserveRow.locator('.w9-sets').inputValue(), '4', 'sets setting must survive a template/filter change');
+
             await page.setViewportSize({ width: 390, height: 844 });
             const mobile = await page.locator('.workout-nine-table-scroll').evaluate(el => ({
               overflowX: getComputedStyle(el).overflowX,
