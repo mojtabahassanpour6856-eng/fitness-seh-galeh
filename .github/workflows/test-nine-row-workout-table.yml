@@ -81,6 +81,37 @@ jobs:
               return !!box && Array.from(box.querySelectorAll('input')).some(o => o.value === 'test-exercise-id');
             });
             assert.equal(await table.locator('tbody tr').first().locator('.w9-movement-checklist input[value="test-exercise-id"]').count(), 1, 'exercise options should sync into the same-row checklist');
+
+            // A muscle/template change can replace the source bank options. Selected row
+            // movements and prescription values must survive even when absent from the new filter.
+            const source = page.locator('#workoutExercise');
+            await source.evaluate(sel => {
+              sel.innerHTML = '<option value="">انتخاب حرکت…</option><option value="preserve-a">حرکت حفظ‌شونده الف</option><option value="preserve-b">حرکت حفظ‌شونده ب</option>';
+            });
+            await page.waitForFunction(() => {
+              const box = document.querySelector('#workoutNineTable tbody tr .w9-movement-checklist');
+              return box && box.querySelector('input[value="preserve-a"]') && box.querySelector('input[value="preserve-b"]');
+            });
+            const preserveRow = table.locator('tbody tr').first();
+            await preserveRow.locator('.w9-system').selectOption('superset');
+            await preserveRow.locator('.w9-group-movement-toggle').click();
+            await preserveRow.locator('.w9-movement-checklist input[value="preserve-a"]').check();
+            await preserveRow.locator('.w9-movement-checklist input[value="preserve-b"]').check();
+            await preserveRow.locator('.w9-rest').evaluate(el => { el.value = '45'; if (el.nextElementSibling?.classList.contains('seh-touch-choice-select')) el.nextElementSibling.value = '45'; });
+            await preserveRow.locator('.w9-reps').evaluate(el => { el.value = '12'; if (el.nextElementSibling?.classList.contains('seh-touch-choice-select')) el.nextElementSibling.value = '12'; });
+            await preserveRow.locator('.w9-sets').evaluate(el => { el.value = '4'; if (el.nextElementSibling?.classList.contains('seh-touch-choice-select')) el.nextElementSibling.value = '4'; });
+            await source.evaluate(sel => { sel.innerHTML = '<option value="">انتخاب حرکت…</option><option value="new-filter-only">حرکت فیلتر جدید</option>'; });
+            await page.waitForFunction(() => {
+              const box = document.querySelector('#workoutNineTable tbody tr .w9-movement-checklist');
+              return box && box.querySelector('input[value="new-filter-only"]');
+            });
+            assert.equal(await preserveRow.locator('.w9-movement-checklist input[value="preserve-a"]').isChecked(), true, 'first selected movement must survive a template/filter change');
+            assert.equal(await preserveRow.locator('.w9-movement-checklist input[value="preserve-b"]').isChecked(), true, 'second selected movement must survive a template/filter change');
+            assert.equal(await preserveRow.locator('.w9-system').inputValue(), 'superset', 'selected training system must survive a template/filter change');
+            assert.equal(await preserveRow.locator('.w9-rest').inputValue(), '45', 'rest setting must survive a template/filter change');
+            assert.equal(await preserveRow.locator('.w9-reps').inputValue(), '12', 'reps setting must survive a template/filter change');
+            assert.equal(await preserveRow.locator('.w9-sets').inputValue(), '4', 'sets setting must survive a template/filter change');
+
             await page.setViewportSize({ width: 390, height: 844 });
             const mobile = await page.locator('.workout-nine-table-scroll').evaluate(el => ({
               overflowX: getComputedStyle(el).overflowX,
@@ -148,16 +179,20 @@ jobs:
             await page.locator('#workout').evaluate(el => el.classList.add('active'));
             await page.evaluate(() => {
               const source = document.querySelector('#workoutExercise');
-              for (let i = 1; i <= 9; i++) {
+              for (let i = 1; i <= 10; i++) {
                 const o = document.createElement('option'); o.value = 'test-exercise-' + i; o.textContent = 'حرکت آزمایشی ' + i; source.appendChild(o);
               }
               // Assign the app's top-level lexical state without authenticating or touching Supabase.
               eval('currentClient = { id: "test-trainee" }; currentWorkoutPlanId = 123; workoutExercisesCache = [];');
               window.loadWorkoutForClient = async () => {};
             });
+            await page.waitForFunction(() => {
+              const boxes = Array.from(document.querySelectorAll('#workoutNineTable tbody tr .w9-movement-checklist'));
+              return boxes.length === 9 && boxes.every(box => Array.from({length: 10}, (_,i) => 'test-exercise-' + (i + 1)).every(id => box.querySelector('input[value="' + id + '"]')));
+            });
             const rows = await page.locator('#workoutNineTable tbody tr').all();
             const systems = ['normal','superset','triset','giant','drop','rest_pause','timed','multi_stage','custom'];
-            const rowExercises = [['test-exercise-1'],['test-exercise-2','test-exercise-3'],['test-exercise-4','test-exercise-5','test-exercise-6'],['test-exercise-7','test-exercise-8','test-exercise-9'],['test-exercise-1'],['test-exercise-2'],['test-exercise-3'],['test-exercise-4'],['test-exercise-5']];
+            const rowExercises = [['test-exercise-1'],['test-exercise-2','test-exercise-3'],['test-exercise-4','test-exercise-5','test-exercise-6'],['test-exercise-7','test-exercise-8','test-exercise-9','test-exercise-10'],['test-exercise-1'],['test-exercise-2'],['test-exercise-3'],['test-exercise-4'],['test-exercise-5']];
             for (let i = 0; i < rows.length; i++) {
               await rows[i].locator('.w9-system').selectOption(systems[i]);
               if (['superset','triset','giant'].includes(systems[i])) {
@@ -188,16 +223,16 @@ jobs:
             assert.equal(first.url, '/trainee_workout_exercises');
             assert.equal(first.method, 'POST');
             const expectedIds = rowExercises.flat();
-            const expectedSystems = systems.flatMap(s => [s === 'superset' ? 'superset' : s, ...(s === 'superset' ? ['superset'] : s === 'triset' || s === 'giant' ? [s,s] : [])]);
-            assert.equal(first.payload.length, 14, 'same-row grouped movements must all be sent together');
+            const expectedSystems = systems.flatMap(s => [s, ...(s === 'superset' ? [s] : s === 'triset' ? [s,s] : s === 'giant' ? [s,s,s] : [])]);
+            assert.equal(first.payload.length, 15, 'same-row grouped movements must all be sent together');
             assert.deepEqual(first.payload.map(x => x.training_system), expectedSystems);
             assert.deepEqual(first.payload.map(x => x.exercise_id), expectedIds);
             assert.ok(first.payload.every(x => x.workout_plan_id === 123));
             assert.equal(first.payload[1].group_key, first.payload[2].group_key, 'two same-row superset movements must share a group key');
             assert.equal(first.payload[3].group_key, first.payload[5].group_key, 'three same-row triset movements must share a group key');
-            assert.equal(first.payload[6].group_key, first.payload[8].group_key, 'three same-row giant-set movements must share a group key');
+            assert.equal(first.payload[6].group_key, first.payload[9].group_key, 'four same-row giant-set movements must share a group key');
             assert.equal(first.payload[0].group_key, null);
-            assert.equal(first.payload[9].group_key, null);
+            assert.equal(first.payload[10].group_key, null);
             // Refill after success and verify the optional-column fallback path too.
             for (let i = 0; i < rows.length; i++) {
               await rows[i].locator('.w9-system').selectOption(systems[i]);
@@ -219,7 +254,7 @@ jobs:
               return { calls, retryPayload };
             });
             assert.equal(fallback.calls, 2, 'optional-column error should trigger one compatibility retry');
-            assert.equal(fallback.retryPayload.length, 14);
+            assert.equal(fallback.retryPayload.length, 15);
             assert.ok(fallback.retryPayload.every(x => !('training_day' in x) && !('is_completed' in x)));
             console.log('PASS: actual save handler validated 9-row payload, training-system values, rest/reps/sets, grouping keys, and optional-column retry using mocked storage only.');
             await browser.close();

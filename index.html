@@ -12280,18 +12280,35 @@ body.workout-output.workout-compact{
  function syncNineMovementOptions(){
    const source=document.getElementById('workoutExercise');
    if(!source)return;
-   const options=Array.from(source.options).filter(o=>o.value).map(o=>({value:o.value,text:o.textContent||''}));
+   const sourceOptions=Array.from(source.options).filter(o=>o.value).map(o=>({value:o.value,text:o.textContent||''}));
+   const escapeValue=v=>String(v).replace(/&/g,'&amp;').replace(/"/g,'&quot;');
+   const escapeText=v=>String(v).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
    document.querySelectorAll('#workoutNineTable tbody tr').forEach(tr=>{
      const sel=tr.querySelector('.w9-exercise'),box=tr.querySelector('.w9-movement-checklist');
+     const rowOptions=sourceOptions.slice();
+     const addPreserved=(value,text)=>{
+       if(!value||rowOptions.some(o=>String(o.value)===String(value)))return;
+       rowOptions.push({value:String(value),text:String(text||value)});
+     };
+     // Keep a row's selected movement available even when a new muscle/template filter
+     // removes it from the source list. Only the current row's chosen movements are added.
+     if(sel&&sel.value){
+       const option=sel.options[sel.selectedIndex];
+       addPreserved(sel.value,option?.textContent||sel.value);
+     }
+     const checkedBefore=box?Array.from(box.querySelectorAll('input.w9-exercise-check:checked')).map(i=>({
+       value:i.value,text:i.parentElement?.querySelector('span')?.textContent?.trim()||i.value
+     })):[];
+     checkedBefore.forEach(o=>addPreserved(o.value,o.text));
      if(sel){
        const previous=sel.value;
-       sel.innerHTML='<option value="">انتخاب حرکت…</option>'+options.map(o=>'<option value="'+String(o.value).replace(/&/g,'&amp;').replace(/"/g,'&quot;')+'">'+String(o.text).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')+'</option>').join('');
-       if(options.some(o=>o.value===previous))sel.value=previous;
+       sel.innerHTML='<option value="">انتخاب حرکت…</option>'+rowOptions.map(o=>'<option value="'+escapeValue(o.value)+'">'+escapeText(o.text)+'</option>').join('');
+       if(rowOptions.some(o=>String(o.value)===String(previous)))sel.value=previous;
      }
      if(box){
-       const selected=new Set(Array.from(box.querySelectorAll('input:checked')).map(i=>i.value));
-       box.innerHTML=options.map(o=>'<label><input type="checkbox" class="w9-exercise-check" value="'+String(o.value).replace(/&/g,'&amp;').replace(/"/g,'&quot;')+'"><span>'+String(o.text).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')+'</span></label>').join('');
-       box.querySelectorAll('input').forEach(i=>{i.checked=selected.has(i.value);});
+       const selected=new Set(checkedBefore.map(i=>i.value));
+       box.innerHTML=rowOptions.map(o=>'<label><input type="checkbox" class="w9-exercise-check" value="'+escapeValue(o.value)+'"><span>'+escapeText(o.text)+'</span></label>').join('');
+       box.querySelectorAll('input.w9-exercise-check').forEach(i=>{i.checked=selected.has(i.value);});
      }
    });
  }
