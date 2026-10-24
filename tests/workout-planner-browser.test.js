@@ -1295,6 +1295,33 @@ const fs = require('node:fs');
       assert.match(await page.locator('#workoutVersionStatus').innerText(), /ساختار فایل نسخه‌ها معتبر نیست/);
       assert.equal(await page.locator('#workoutVersionSelect option').count(), 2, 'invalid import should not change saved versions');
     });
+    await check('changing the mobile workout template preserves selected movements and row settings', async () => {
+      await page.setViewportSize({ width: 390, height: 844 });
+      await page.goto('http://127.0.0.1:4173/experiments/workout-template-planner.html');
+      const row = page.locator('#mobileMoveRows .mobile-move-row').first();
+      await row.locator('select[id^="mobile_system_"]').selectOption('سوپرست');
+      await row.locator('select[id^="mobile_group_"]').selectOption('B');
+      await row.locator('select[id^="mobile_sets_"]').selectOption('4');
+      await row.locator('select[id^="mobile_reps_"]').selectOption('15');
+      await row.locator('select[id^="mobile_rest_"]').selectOption('75');
+      await row.locator('summary.mobile-exercise-summary').click();
+      for (const name of ['پرس سینه دمبل', 'پرس بالاسینه دمبل']) {
+        await row.locator('.mobile-exercise-option').filter({ hasText: name }).first().locator('input.mobile-exercise-check').evaluate(el => {
+          el.checked = true;
+          el.dispatchEvent(new Event('change', { bubbles: true }));
+        });
+      }
+      await page.locator('#mobileTemplate').selectOption('پشت|پشت بازو');
+      assert.equal(await row.locator('.mobile-exercise-check:checked').count(), 2, 'changing template should keep both selected movements');
+      assert.deepEqual(await row.locator('.mobile-exercise-check:checked').evaluateAll(els => els.map(el => el.value).sort()), ['پرس بالاسینه دمبل', 'پرس سینه دمبل'].sort());
+      assert.equal(await row.locator('select[id^="mobile_system_"]').inputValue(), 'سوپرست');
+      assert.equal(await row.locator('select[id^="mobile_group_"]').inputValue(), 'B');
+      assert.equal(await row.locator('select[id^="mobile_sets_"]').inputValue(), '4');
+      assert.equal(await row.locator('select[id^="mobile_reps_"]').inputValue(), '15');
+      assert.equal(await row.locator('select[id^="mobile_rest_"]').inputValue(), '75');
+      assert.ok((await row.locator('summary.mobile-exercise-summary').innerText()).includes('پرس سینه دمبل'), 'picker summary should show retained movements');
+      await page.setViewportSize({ width: 1280, height: 900 });
+    });
     await check('mobile exercise picker auto-adds the exact movement count for normal, superset, triset, and giant-set', async () => {
       await page.setViewportSize({ width: 390, height: 844 });
       const cases = [
