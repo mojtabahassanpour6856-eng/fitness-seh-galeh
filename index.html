@@ -13949,9 +13949,31 @@ body.workout-output.workout-compact{
    return true;
  }
  function start(){
-   if(install())return;
-   const mo=new MutationObserver(()=>{if(install())mo.disconnect();});
-   mo.observe(document.body,{childList:true,subtree:true});
+   if(!install()){
+     const mo=new MutationObserver(()=>{if(install())mo.disconnect();});
+     mo.observe(document.body,{childList:true,subtree:true});
+   }
+   // Track trainee changes when they happen, not for the first time during Save.
+   // This prevents checkClient() from clearing a freshly selected movement on Save.
+   if(!window.__sehWorkoutClientChangeWatcher){
+     window.__sehWorkoutClientChangeWatcher=true;
+     let lastId=typeof currentClient!=='undefined'&&currentClient&&currentClient.id!=null?String(currentClient.id):'';
+     const checkSelection=()=>{
+       const now=typeof currentClient!=='undefined'&&currentClient&&currentClient.id!=null?String(currentClient.id):'';
+       if(now!==lastId){
+         lastId=now;
+         checkClient();
+       }
+     };
+     document.addEventListener('click',event=>{
+       if(event.target&&event.target.closest&&event.target.closest('.coach-name-cell,[data-trainee-id]')){
+         setTimeout(checkSelection,0);
+         setTimeout(checkSelection,80);
+       }
+     },true);
+     // Fallback for selection paths that update currentClient without a click target.
+     setInterval(checkSelection,350);
+   }
  }
  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start,{once:true});else start();
 })();
