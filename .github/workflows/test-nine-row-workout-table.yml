@@ -145,9 +145,19 @@ jobs:
               } else {
                 await rows[i].locator('.w9-exercise').selectOption(rowExercises[i][0]);
               }
-              await rows[i].locator('.w9-rest').fill(String(30 + i));
-              await rows[i].locator('.w9-reps').fill(i === 4 ? '12+8+6' : String(8 + i));
-              await rows[i].locator('.w9-sets').fill(String(2 + (i % 3)));
+              // These numeric fields are enhanced with visible touch-choice controls; set the underlying inputs directly in this isolated browser test.
+              await rows[i].evaluate((tr, values) => {
+                for (const [selector, value] of values) {
+                  const input = tr.querySelector(selector);
+                  input.value = value;
+                  input.dispatchEvent(new Event('input', { bubbles: true }));
+                  input.dispatchEvent(new Event('change', { bubbles: true }));
+                }
+              }, [
+                ['.w9-rest', String(30 + i)],
+                ['.w9-reps', i === 4 ? '12+8+6' : String(8 + i)],
+                ['.w9-sets', String(2 + (i % 3))]
+              ]);
             }
             const first = await page.evaluate(async () => {
               let captured;
