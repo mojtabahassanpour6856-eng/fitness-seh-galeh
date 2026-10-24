@@ -141,7 +141,7 @@ jobs:
             for (let i = 0; i < rows.length; i++) {
               await rows[i].locator('.w9-system').selectOption(systems[i]);
               if (['superset','triset','giant'].includes(systems[i])) {
-                for (const id of rowExercises[i]) await rows[i].locator('.w9-exercise-check[value="' + id + '"]').check();
+                for (const id of rowExercises[i]) await rows[i].locator('.w9-exercise-check[value="' + id + '"]').evaluate(el => { el.checked = true; el.dispatchEvent(new Event("change", { bubbles: true })); });
               } else {
                 await rows[i].locator('.w9-exercise').selectOption(rowExercises[i][0]);
               }
@@ -182,7 +182,7 @@ jobs:
             for (let i = 0; i < rows.length; i++) {
               await rows[i].locator('.w9-system').selectOption(systems[i]);
               if (['superset','triset','giant'].includes(systems[i])) {
-                for (const id of rowExercises[i]) await rows[i].locator('.w9-exercise-check[value="' + id + '"]').check();
+                for (const id of rowExercises[i]) await rows[i].locator('.w9-exercise-check[value="' + id + '"]').evaluate(el => { el.checked = true; el.dispatchEvent(new Event("change", { bubbles: true })); });
               } else {
                 await rows[i].locator('.w9-exercise').selectOption(rowExercises[i][0]);
               }
