@@ -291,6 +291,7 @@ function buildMobileComposer(){
     const previousSelection=previousRows[i]?.selected||[];
     cb.checked=previousSelection.includes(item.name);
     if(cb.checked)cb.dataset.selectionOrder=String(previousSelection.indexOf(item.name)+1);
+    selectionOrder=Math.max(selectionOrder,previousSelection.length);
    // در سیستم عادی انتخاب حرکت با لمس نام انجام می‌شود و تیک نمایش داده نمی‌شود؛
    // در سیستم‌های ترکیبی، تیک‌ها برای انتخاب تعداد حرکت لازم دیده می‌شوند.
    cb.style.width='16px';cb.style.height='16px';
