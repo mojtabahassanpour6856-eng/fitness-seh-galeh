@@ -186,6 +186,10 @@ jobs:
               eval('currentClient = { id: "test-trainee" }; currentWorkoutPlanId = 123; workoutExercisesCache = [];');
               window.loadWorkoutForClient = async () => {};
             });
+            await page.waitForFunction(() => {
+              const boxes = Array.from(document.querySelectorAll('#workoutNineTable tbody tr .w9-movement-checklist'));
+              return boxes.length === 9 && boxes.every(box => Array.from({length: 10}, (_,i) => 'test-exercise-' + (i + 1)).every(id => box.querySelector('input[value="' + id + '"]')));
+            });
             const rows = await page.locator('#workoutNineTable tbody tr').all();
             const systems = ['normal','superset','triset','giant','drop','rest_pause','timed','multi_stage','custom'];
             const rowExercises = [['test-exercise-1'],['test-exercise-2','test-exercise-3'],['test-exercise-4','test-exercise-5','test-exercise-6'],['test-exercise-7','test-exercise-8','test-exercise-9','test-exercise-10'],['test-exercise-1'],['test-exercise-2'],['test-exercise-3'],['test-exercise-4'],['test-exercise-5']];
