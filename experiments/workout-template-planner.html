@@ -239,7 +239,18 @@ function renderExerciseBank(){
 
 let mobileSelectionSequence=0;
 function buildMobileComposer(){
- const rows=$('mobileMoveRows');if(!rows)return;rows.innerHTML='';
+ const rows=$('mobileMoveRows');if(!rows)return;
+ // Preserve in-progress work when the coach changes the muscle-group template.
+ const previous=Array.from(rows.querySelectorAll('.mobile-move-row')).map(card=>({
+  selected:Array.from(card.querySelectorAll('.mobile-exercise-check:checked')).map(cb=>cb.value),
+  search:card.querySelector('.mobile-exercise-search')?.value||'',
+  system:card.querySelector('[id^="mobile_system_"]')?.value||'عادی',
+  group:card.querySelector('[id^="mobile_group_"]')?.value||'—',
+  sets:card.querySelector('[id^="mobile_sets_"]')?.value||'3',
+  reps:card.querySelector('[id^="mobile_reps_"]')?.value||'12',
+  rest:card.querySelector('[id^="mobile_rest_"]')?.value||'60'
+ }));
+ rows.innerHTML='';
  const templates={'سینه|جلو بازو':['سینه','جلو بازو'],'پشت|پشت بازو':['پشت','پشت بازو'],'پا|باسن|ساق':['پا','باسن','ساق'],'سرشانه|شکم':['سرشانه','شکم'],'سینه|پشت بازو':['سینه','پشت بازو'],'پشت|جلو بازو':['پشت','جلو بازو']};
  const template=$('mobileTemplate').value,preferred=template==='all'?[]:(templates[template]||template.split('|'));
  const allEntries=Object.entries(exerciseLibrary).flatMap(([cat,names])=>names.map(name=>({cat,name})));
@@ -331,6 +342,27 @@ function buildMobileComposer(){
   line.append(systemControl,mobileGroupControl,makeNumericControl('ست','sets',[1,2,3,4,5,6,7,8,9,10],3),makeNumericControl('تکرار','reps',Array.from({length:100},(_,j)=>j+1),12),makeNumericControl('ثانیه','rest',[0,10,15,20,30,45,60,75,90,120,150,180,240],60));
   card.append(head,line);rows.appendChild(card);
  }
+ // Restore each card's selections and settings after rebuilding the picker.
+ Array.from(rows.querySelectorAll('.mobile-move-row')).forEach((card,index)=>{
+  const saved=previous[index];if(!saved)return;
+  const system=card.querySelector('[id^="mobile_system_"]');
+  const group=card.querySelector('[id^="mobile_group_"]');
+  const sets=card.querySelector('[id^="mobile_sets_"]');
+  const reps=card.querySelector('[id^="mobile_reps_"]');
+  const rest=card.querySelector('[id^="mobile_rest_"]');
+  if(system)system.value=saved.system;
+  if(group)group.value=saved.group;
+  if(sets)sets.value=saved.sets;
+  if(reps)reps.value=saved.reps;
+  if(rest)rest.value=saved.rest;
+  const wanted=new Set(saved.selected);
+  card.querySelectorAll('.mobile-exercise-check').forEach(cb=>{
+   cb.checked=wanted.has(cb.value);
+   if(cb.checked)cb.dataset.selectionOrder=String(++mobileSelectionSequence);
+  });
+  const search=card.querySelector('.mobile-exercise-search');
+  if(search&&saved.search){search.value=saved.search;search.dispatchEvent(new Event('input',{bubbles:true}));}
+ });
  updateMobileCount();
 }
 function updateMobileCount(){const count=[...document.querySelectorAll('.mobile-exercise-check:checked')].length;if($('mobileSelectedCount'))$('mobileSelectedCount').textContent=count+' از ۹ حرکت انتخاب شده';}
