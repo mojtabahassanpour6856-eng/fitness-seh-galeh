@@ -2751,7 +2751,7 @@ window.loadDashboard = loadDashboard;
     const btn=$id('traineeLoginBox')?.querySelector('.trainee-auth-block button');
     if(btn){btn.disabled=true;btn.textContent='⏳ در حال ارسال درخواست…';}
     try{
-      const turnstile_token=window.sehGetTurnstileToken(btn);if(!turnstile_token)throw new Error("لطفاً تأیید امنیتی Cloudflare را تکمیل کنید و دوباره دکمهٔ ارسال را بزنید.");const {data,error}=await AUTH_SUPABASE.functions.invoke('trainee-registration-request',{body:{full_name:name,phone,weekly_sessions,training_days,training_time,password,turnstile_token}});
+      const {data,error}=await AUTH_SUPABASE.functions.invoke('trainee-registration-request',{body:{full_name:name,phone,weekly_sessions,training_days,training_time,password}});
       if(error)throw error;
       if(data?.error)throw new Error(data.error);
       showAuthError('✅ درخواست ثبت‌نام بدون رمز برای مربی ارسال شد. پس از تأیید مربی، فعلاً از روش ورود فعلی استفاده کنید.');
@@ -6622,7 +6622,7 @@ else loadCoachExerciseListsWhenReady();
   const btn=document.querySelector('#traineeLoginBox button[onclick="registerTraineePhone()"]');
   if(btn){btn.disabled=true;btn.textContent="⏳ در حال ارسال درخواست…";}
   try{
-   const turnstile_token=window.sehGetTurnstileToken(btn);if(!turnstile_token)throw new Error("لطفاً تأیید امنیتی Cloudflare را تکمیل کنید و دوباره دکمهٔ ارسال را بزنید.");const {data,error}=await AUTH_SUPABASE.functions.invoke("trainee-registration-request",{body:{full_name:name,phone,weekly_sessions,training_days,training_time,password,turnstile_token}});
+   const {data,error}=await AUTH_SUPABASE.functions.invoke("trainee-registration-request",{body:{full_name:name,phone,weekly_sessions,training_days,training_time,password}});
    if(error)throw error;if(data?.error)throw new Error(data.error);
    showAuthError("✅ درخواست ثبت‌نام بدون رمز برای مربی ارسال شد. پس از تأیید مربی، روش ورود فعلی موقتاً برقرار است؛ ورود بدون رمز در مرحله بعد فعال می‌شود.");
    ["traineeRegName","traineeRegPhone","traineeRegSessions","traineeRegDays","traineeRegTime"].forEach(id=>{if($(id))$(id).value="";});
@@ -9257,7 +9257,7 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
     if(!window.AUTH_SUPABASE?.functions?.invoke){msg.textContent='ارتباط با سامانه آماده نیست. صفحه را تازه‌سازی و دوباره امتحان کنید.';return;}
     btn.disabled=true;btn.textContent='⏳ در حال ارسال…';
     try{
-      const turnstile_token=window.sehGetTurnstileToken(btn);if(!turnstile_token)throw new Error("لطفاً تأیید امنیتی Cloudflare را تکمیل کنید و دوباره دکمهٔ ارسال را بزنید.");const {data,error}=await window.AUTH_SUPABASE.functions.invoke('trainee-registration-request',{body:{full_name:name,phone,weekly_sessions,training_days,training_time,password,turnstile_token}});
+      const {data,error}=await window.AUTH_SUPABASE.functions.invoke('trainee-registration-request',{body:{full_name:name,phone,weekly_sessions,training_days,training_time,password}});
       if(error)throw error;if(data?.error)throw new Error(data.error);
       msg.style.color='#9be2b0';msg.textContent='✅ درخواست ثبت شد و برای تأیید مربی ارسال شد.';
       form.reset();
@@ -9409,7 +9409,7 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
     const btn=$("traineeLoginBox")?.querySelector('.trainee-auth-block button[onclick*="registerTraineePhone"]');
     if(btn){btn.disabled=true;btn.textContent="⏳ در حال ارسال…";}
     try{
-      const turnstile_token=window.sehGetTurnstileToken(btn);if(!turnstile_token)throw new Error("لطفاً تأیید امنیتی Cloudflare را تکمیل کنید و دوباره دکمهٔ ارسال را بزنید.");const {data,error}=await AUTH_SUPABASE.functions.invoke("trainee-registration-request",{body:{full_name:name,phone,weekly_sessions,training_days,training_time,password,turnstile_token}});
+      const {data,error}=await AUTH_SUPABASE.functions.invoke("trainee-registration-request",{body:{full_name:name,phone,weekly_sessions,training_days,training_time,password}});
       if(error)throw error;if(data?.error)throw new Error(data.error);
       ["traineeRegName","traineeRegPhone","traineeRegSessions","traineeRegDays","traineeRegTime","traineeRegPassword","traineeRegPasswordConfirm"].forEach(id=>{const el=visibleField(id);if(el)el.value="";});
       message("sehRegistrationLoginStatus","درخواست عضویت «"+name+"» ثبت شد. پس از تأیید مربی، با همین شماره و رمزی که تعیین کردید وارد شوید.",true);
@@ -12184,73 +12184,11 @@ body.workout-output.workout-compact{
 </script>
 
 
-<script id="seh-turnstile-registration-v1">
-(function(){
-  'use strict';
-  var SITEKEY="0x4AAAAAAFYzBIRGmV67b_Dh";
-  function rootFor(button){
-    return button && (button.closest('#sehAddTraineeForm') || button.closest('.trainee-auth-block') || button.closest('form') || button.parentElement);
-  }
-  function boxFor(button){
-    var root=rootFor(button); if(!root)return null;
-    var box=root.querySelector('.seh-turnstile-widget');
-    if(!box){
-      box=document.createElement('div');
-      box.className='seh-turnstile-widget';
-      box.style.cssText='display:block;min-height:65px;margin:10px 0;max-width:100%;overflow:visible';
-      if(button.parentNode)button.parentNode.insertBefore(box,button);
-      else root.appendChild(box);
-    }
-    return box;
-  }
-  function renderBox(box){
-    if(!box || !window.turnstile || box.dataset.widgetId)return;
-    try{
-      var id=window.turnstile.render(box,{
-        sitekey:SITEKEY,theme:'dark',
-        callback:function(token){box.dataset.token=token;},
-        'expired-callback':function(){delete box.dataset.token;},
-        'error-callback':function(){delete box.dataset.token;}
-      });
-      box.dataset.widgetId=String(id);
-    }catch(error){console.warn('[Turnstile] widget render failed',error);}
-  }
-  function scan(){
-    var buttons=document.querySelectorAll('#traineeLoginBox .trainee-auth-block button[onclick*="registerTraineePhone"], button[onclick*="registerTraineePhone"], #sehAddTraineeSubmit');
-    buttons.forEach(function(button){var box=boxFor(button);renderBox(box);});
-  }
-  window.sehGetTurnstileToken=function(button){
-    if(!button)button=document.querySelector('#traineeLoginBox .trainee-auth-block button[onclick*="registerTraineePhone"]');
-    var box=boxFor(button);renderBox(box);
-    return box && box.dataset.token ? box.dataset.token : '';
-  };
-  window.sehResetTurnstile=function(button){
-    var box=boxFor(button);
-    if(!box || !box.dataset.token)return;
-    delete box.dataset.token;
-    if(window.turnstile && box.dataset.widgetId){
-      try{window.turnstile.reset(box.dataset.widgetId);}catch(error){console.warn('[Turnstile] reset failed',error);}
-    }
-  };
-  if(!document.getElementById('seh-turnstile-style')){
-    var style=document.createElement('style');style.id='seh-turnstile-style';
-    style.textContent='.seh-turnstile-widget{width:100%;min-width:0}.seh-turnstile-widget iframe{max-width:100%}';
-    document.head.appendChild(style);
-  }
-  function loadApi(){
-    if(window.turnstile){scan();return;}
-    if(document.querySelector('script[data-seh-turnstile-api]'))return;
-    var script=document.createElement('script');
-    script.src='https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit';
-    script.async=true;script.defer=true;script.dataset.sehTurnstileApi='1';
-    script.onload=scan;
-    script.onerror=function(){console.error('[Turnstile] API could not load');};
-    document.head.appendChild(script);
-  }
-  var observer=new MutationObserver(function(){scan();});
-  function start(){loadApi();scan();observer.observe(document.documentElement,{childList:true,subtree:true});}
-  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start,{once:true});else start();
-})();
+<script id="seh-turnstile-disabled-v1">
+// Cloudflare Turnstile was removed from trainee registration.
+// Keep compatibility hooks for older UI handlers; they do not load external scripts.
+window.sehGetTurnstileToken=function(){return "";};
+window.sehResetTurnstile=function(){};
 </script>
 
 <script>
