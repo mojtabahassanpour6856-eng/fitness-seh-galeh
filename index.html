@@ -12441,6 +12441,7 @@ window.sehResetTurnstile=function(){};
    if(input.matches('.w9-sets,.w9-reps,.w9-rest')||input.id==='workoutSets'||input.id==='workoutReps'||input.id==='workoutRest')add(input,spec);
   }));
  }
+ window.__sehUpdateTouchChoices=update;
  function start(){update();new MutationObserver(update).observe(document.body,{childList:true,subtree:true});}
  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start,{once:true});else start();
 })();
@@ -13808,7 +13809,7 @@ window.sehResetTurnstile=function(){};
    const input=tr.querySelector('.'+cls);if(!input)return;
    input.value=String(value??'');
    const next=input.nextElementSibling;
-   if(next&&next.classList.contains('seh-touch-choice-select'))next.value=String(value??'');
+   if(next&&next.classList.contains('seh-touch-choice-select')){const v=String(value??'');if(!Array.from(next.options).some(o=>o.value===v)){const option=document.createElement('option');option.value=v;option.textContent=v;next.appendChild(option);}next.value=v;}
    input.dispatchEvent(new Event('input',{bubbles:true}));
    input.dispatchEvent(new Event('change',{bubbles:true}));
  }
@@ -13885,6 +13886,7 @@ window.sehResetTurnstile=function(){};
    }
    while(body.rows.length>target)body.deleteRow(body.rows.length-1);
    if(window.__sehSyncNineMovementOptions)window.__sehSyncNineMovementOptions();
+   if(window.__sehUpdateTouchChoices)window.__sehUpdateTouchChoices();
    if(window.__sehBindNineSystemGrouping)window.__sehBindNineSystemGrouping();
  }
  window.__sehEnsureWorkoutRows=ensureTableRows;
