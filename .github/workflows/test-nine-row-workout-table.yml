@@ -216,7 +216,16 @@ jobs:
             }
             const first = await page.evaluate(async () => {
               let captured;
-              window.sbWrite = async (url, method, payload) => { captured = { url, method, payload }; return payload.map((x,i) => ({...x,id:i+1})); };
+              window.__mockSavedRows = null;
+              window.sbGet = async url => {
+                if (url.includes('training_day=eq.') && window.__mockSavedRows) return window.__mockSavedRows;
+                return [];
+              };
+              window.sbWrite = async (url, method, payload) => {
+                captured = { url, method, payload };
+                window.__mockSavedRows = payload.map((x,i) => ({...x,id:i+1}));
+                return window.__mockSavedRows;
+              };
               await window.saveWorkoutNineTable();
               return captured;
             });
@@ -243,20 +252,17 @@ jobs:
               }
             }
             const fallback = await page.evaluate(async () => {
-              let calls = 0, retryPayload;
-              window.sbWrite = async (url, method, payload) => {
-                calls++;
-                if (calls === 1) throw new Error('column training_day does not exist');
-                retryPayload = payload;
-                return payload.map((x,i) => ({...x,id:i+1}));
+              let writes = 0;
+              window.sbGet = async url => {
+                if (url.includes('/trainee_workout_exercises')) throw new Error('column training_day does not exist');
+                return [];
               };
+              window.sbWrite = async () => { writes++; return []; };
               await window.saveWorkoutNineTable();
-              return { calls, retryPayload };
+              return { writes };
             });
-            assert.equal(fallback.calls, 2, 'optional-column error should trigger one compatibility retry');
-            assert.equal(fallback.retryPayload.length, 15);
-            assert.ok(fallback.retryPayload.every(x => !('training_day' in x) && !('is_completed' in x)));
-            console.log('PASS: actual save handler validated 9-row payload, training-system values, rest/reps/sets, grouping keys, and optional-column retry using mocked storage only.');
+            assert.equal(fallback.writes, 0, 'when session identity cannot be read, the editor must stop before writing to avoid duplicate or misplaced movements');
+            console.log('PASS: actual save handler validated 9-row payload, grouped systems, and safe no-write behavior when session metadata is unavailable; mocked storage only.');
             await browser.close();
           })().catch(err => { console.error(err); process.exit(1); });
           NODE
