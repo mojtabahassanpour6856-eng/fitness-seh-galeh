@@ -13790,7 +13790,7 @@ window.sehResetTurnstile=function(){};
 (function(){
  const names=['جلسه اول','جلسه دوم','جلسه سوم','جلسه چهارم','جلسه پنجم','جلسه ششم'];
  const drafts=Array.from({length:6},()=>null);
- let active=0, clientKey=null, hydrating=false, legacyUnassignedRows=false, legacyUnassignedCount=0, legacyPreviewOnly=false;
+ let active=0, clientKey=null, hydrating=false, legacyUnassignedRows=false, legacyUnassignedCount=0, legacyPreviewOnly=false;const overflowSessions={};
  const exerciseLabels={};
  const $=id=>document.getElementById(id);
  const same=(a,b)=>String(a??'')===String(b??'');
@@ -13830,7 +13830,7 @@ window.sehResetTurnstile=function(){};
  }
  function renderTabs(){
    const box=$('sehWorkoutSessionCards');if(!box)return;
-   const warning=legacyUnassignedRows?'<div role="status" style="grid-column:1/-1;background:#fff3cd;color:#624b12;border:1px solid #e1c56b;border-radius:9px;padding:9px 11px;font-size:12px;line-height:1.8">'+(legacyPreviewOnly?'این برنامه قدیمی '+legacyUnassignedCount+' حرکت بدون برچسب جلسه دارد. حرکات در جلسه اول فقط برای مشاهده نشان داده شده‌اند؛ ذخیره و ویرایش تا مشخص‌شدن جلسهٔ واقعی متوقف است تا هیچ حرکت اشتباهی جابه‌جا یا حذف نشود. جدول فقط ۹ ردیف دارد؛ اگر حرکت‌ها بیشتر باشند، همه در پیش‌نمایش جا نمی‌شوند.':'این برنامه '+legacyUnassignedCount+' حرکت بدون برچسب جلسه دارد. برای جلوگیری از انتساب اشتباه، ذخیره جلسه‌ای که حرکات قدیمی آن قابل تشخیص نیست متوقف می‌شود.')+'</div>':'';box.innerHTML=warning+names.map((name,i)=>'<button type="button" class="seh-session-card'+(i===active?' active':'')+'" data-session-index="'+i+'" aria-pressed="'+(i===active?'true':'false')+'">'+name+'<span class="seh-session-count">'+(drafts[i]&&drafts[i].some(r=>r&&(r.exercise||r.checked.length))?'دارای اطلاعات':'')+'</span></button>').join('');
+   const overflowCount=overflowSessions[names[active]]||0;const warning=legacyUnassignedRows?'<div role="status" style="grid-column:1/-1;background:#fff3cd;color:#624b12;border:1px solid #e1c56b;border-radius:9px;padding:9px 11px;font-size:12px;line-height:1.8">'+(legacyPreviewOnly?'این برنامه قدیمی '+legacyUnassignedCount+' حرکت بدون برچسب جلسه دارد. حرکات در جلسه اول فقط برای مشاهده نشان داده شده‌اند؛ ذخیره و ویرایش تا مشخص‌شدن جلسهٔ واقعی متوقف است تا هیچ حرکت اشتباهی جابه‌جا یا حذف نشود. جدول فقط ۹ ردیف دارد؛ اگر حرکت‌ها بیشتر باشند، همه در پیش‌نمایش جا نمی‌شوند.':'این برنامه '+legacyUnassignedCount+' حرکت بدون برچسب جلسه دارد. برای جلوگیری از انتساب اشتباه، ذخیره جلسه‌ای که حرکات قدیمی آن قابل تشخیص نیست متوقف می‌شود.')+'</div>':overflowCount>9?'<div role="alert" style="grid-column:1/-1;background:#fff3cd;color:#624b12;border:1px solid #e1c56b;border-radius:9px;padding:9px 11px;font-size:12px;line-height:1.8">این جلسه '+overflowCount+' ردیف حرکتی دارد، اما جدول فعلاً فقط ۹ ردیف دارد. برای جلوگیری از حذف ناخواسته حرکت‌های پنهان، ویرایش و ذخیره این جلسه موقتاً متوقف است؛ اطلاعات ذخیره‌شده دست‌نخورده می‌ماند.</div>':'';box.innerHTML=warning+names.map((name,i)=>'<button type="button" class="seh-session-card'+(i===active?' active':'')+'" data-session-index="'+i+'" aria-pressed="'+(i===active?'true':'false')+'">'+name+'<span class="seh-session-count">'+(overflowSessions[name]>9?'⚠ '+overflowSessions[name]+' ردیف — ذخیره متوقف':drafts[i]&&drafts[i].some(r=>r&&(r.exercise||r.checked.length))?'دارای اطلاعات':'')+'</span></button>').join('');
    box.querySelectorAll('[data-session-index]').forEach(btn=>btn.addEventListener('click',()=>{
      const next=Number(btn.dataset.sessionIndex);if(!Number.isInteger(next)||next<0||next>5||next===active)return;
      checkClient();capture();active=next;restore();ensureDay();renderTabs();updateButton();
@@ -13840,7 +13840,7 @@ window.sehResetTurnstile=function(){};
    const now=typeof currentClient!=='undefined'&&currentClient&&currentClient.id!=null?String(currentClient.id):'';
    if(clientKey!==now){
      const hadPreviousClient=!!clientKey;
-     clientKey=now;active=0;legacyUnassignedRows=false;legacyUnassignedCount=0;legacyPreviewOnly=false;
+     clientKey=now;active=0;legacyUnassignedRows=false;legacyUnassignedCount=0;legacyPreviewOnly=false;Object.keys(overflowSessions).forEach(k=>delete overflowSessions[k]);
      for(let i=0;i<6;i++)drafts[i]=null;
      if(hadPreviousClient){const t=table();if(t)t.querySelectorAll('tbody tr').forEach(resetRow);}
    }
@@ -13903,12 +13903,12 @@ window.sehResetTurnstile=function(){};
  async function hydrateDrafts(){
    const traineeId=typeof currentClient!=='undefined'&&currentClient&&currentClient.id!=null?String(currentClient.id):'';
    const planId=typeof currentWorkoutPlanId!=='undefined'&&currentWorkoutPlanId!=null?String(currentWorkoutPlanId):'';
-   if(!traineeId||!planId){for(let i=0;i<6;i++)drafts[i]=null;legacyUnassignedRows=false;legacyUnassignedCount=0;legacyPreviewOnly=false;return true;}
+   if(!traineeId||!planId){for(let i=0;i<6;i++)drafts[i]=null;legacyUnassignedRows=false;legacyUnassignedCount=0;legacyPreviewOnly=false;Object.keys(overflowSessions).forEach(k=>delete overflowSessions[k]);return true;}
    hydrating=true;
    try{
      const rows=await sbGet('/trainee_workout_exercises?workout_plan_id=eq.'+encodeURIComponent(planId)+'&select=*&order=sort_order.asc,created_at.asc');
      if(!same(currentClient?.id,traineeId)||!same(currentWorkoutPlanId,planId))return;
-     const unassignedRows=rows.filter(r=>!names.includes(String(r.training_day||'')));const labelledRows=rows.filter(r=>names.includes(String(r.training_day||'')));legacyUnassignedRows=unassignedRows.length>0;legacyUnassignedCount=unassignedRows.length;legacyPreviewOnly=unassignedRows.length>0&&labelledRows.length===0;
+     const unassignedRows=rows.filter(r=>!names.includes(String(r.training_day||'')));const labelledRows=rows.filter(r=>names.includes(String(r.training_day||'')));legacyUnassignedRows=unassignedRows.length>0;legacyUnassignedCount=unassignedRows.length;legacyPreviewOnly=unassignedRows.length>0&&labelledRows.length===0;Object.keys(overflowSessions).forEach(k=>delete overflowSessions[k]);
      const ids=[...new Set(rows.map(r=>String(r.exercise_id)).filter(Boolean))];
      if(ids.length){
        try{
@@ -13919,7 +13919,7 @@ window.sehResetTurnstile=function(){};
      if(!same(currentClient?.id,traineeId)||!same(currentWorkoutPlanId,planId))return;
      for(let day=0;day<6;day++){
        let dayRows=rows.filter(r=>String(r.training_day||'')===names[day]);if(day===0&&legacyPreviewOnly)dayRows=unassignedRows;
-       const groups=rowGroups(dayRows);
+       const groups=rowGroups(dayRows);if(groups.length>9)overflowSessions[names[day]]=groups.length;
        drafts[day]=groups.map(group=>{
          const first=group[0],grouped=['superset','triset','giant'].includes(first.training_system);
          const exerciseIds=group.map(x=>String(x.exercise_id));
@@ -13970,30 +13970,35 @@ window.sehResetTurnstile=function(){};
      catch(e){if(/training_day|column/i.test(e.message||''))throw new Error('ستون تشخیص جلسه در پایگاه داده در دسترس نیست؛ برای جلوگیری از تغییر اشتباه برنامه، چیزی ذخیره نشد.');throw e;}
      if(!same(currentClient?.id,traineeId)||!same(currentWorkoutPlanId,planId))throw new Error('شاگرد یا برنامه هنگام خواندن اطلاعات تغییر کرد.');
      const sessionRows=allRows.filter(r=>String(r.training_day||'')===names[active]);
+     const storedGroupCount=rowGroups(sessionRows).length;if(storedGroupCount>9)throw new Error('این جلسه '+storedGroupCount+' ردیف ذخیره‌شده دارد، اما جدول فقط ۹ ردیف دارد. برای جلوگیری از حذف حرکت‌های پنهان، هیچ تغییری ذخیره نشد.');
      if(legacyUnassignedRows&&sessionRows.length===0&&allRows.some(r=>!names.includes(String(r.training_day||'')))){
        throw new Error('در این برنامه حرکات قدیمی بدون برچسب جلسه وجود دارد؛ برای جلوگیری از ساختن جلسه تکراری، ذخیره متوقف شد و هیچ حرکت قدیمی حذف نشد.');
      }
      const existingGroups=rowGroups(sessionRows);
+     if(existingGroups.length>9)throw new Error('این جلسه بیش از ۹ ردیف دارد؛ برای جلوگیری از حذف اطلاعات پنهان، ذخیره متوقف شد.');
      const stale=[];
      const inserts=[];
-     const maxOrder=allRows.reduce((m,r)=>Math.max(m,Number(r.sort_order)||0),0);
      for(let i=0;i<wanted.length;i++){
-       const r=wanted[i],oldGroup=existingGroups[i]||[];
+       const r=wanted[i],oldGroup=existingGroups[r.index]||[];
        let groupKey=null;
-       if(r.groupMode)groupKey=oldGroup.length&&oldGroup[0].group_key?oldGroup[0].group_key:'W9-'+Date.now().toString(36).toUpperCase()+'-'+active+'-'+i;
+       if(r.groupMode)groupKey=oldGroup.length&&oldGroup[0].group_key?oldGroup[0].group_key:'W9-'+Date.now().toString(36).toUpperCase()+'-'+active+'-'+r.index;
        for(let j=0;j<r.exerciseIds.length;j++){
          const old=oldGroup[j];
-         const payload={workout_plan_id:currentWorkoutPlanId,exercise_id:r.exerciseIds[j],sets:Number(r.setsRaw),reps:r.reps,rest_seconds:Number(r.restRaw),sort_order:(i+1)*10+j,training_system:r.system,group_key:groupKey,training_day:names[active]};
+         const payload={workout_plan_id:currentWorkoutPlanId,exercise_id:r.exerciseIds[j],sets:Number(r.setsRaw),reps:r.reps,rest_seconds:Number(r.restRaw),sort_order:(r.index+1)*10+j,training_system:r.system,group_key:groupKey,training_day:names[active]};
          if(old){
            const patch={exercise_id:payload.exercise_id,sets:payload.sets,reps:payload.reps,rest_seconds:payload.rest_seconds,sort_order:payload.sort_order,training_system:payload.training_system,group_key:payload.group_key,training_day:payload.training_day};
            await sbWrite('/trainee_workout_exercises?id=eq.'+encodeURIComponent(old.id)+'&workout_plan_id=eq.'+encodeURIComponent(planId),'PATCH',patch);
          }else{
-           inserts.push({...payload,sort_order:maxOrder+inserts.length+1,is_completed:false,notes:null});
+           inserts.push({...payload,is_completed:false,notes:null});
          }
        }
-       if(oldGroup.length>r.exerciseIds.length)stale.push(...oldGroup.slice(r.exerciseIds.length));
+       }
+     const wantedByIndex=new Map(wanted.map(r=>[r.index,r]));
+     for(let rowIndex=0;rowIndex<existingGroups.length;rowIndex++){
+       const oldGroup=existingGroups[rowIndex],desired=wantedByIndex.get(rowIndex);
+       if(!desired){stale.push(...oldGroup);continue;}
+       if(oldGroup.length>desired.exerciseIds.length)stale.push(...oldGroup.slice(desired.exerciseIds.length));
      }
-     for(let i=wanted.length;i<existingGroups.length;i++)stale.push(...existingGroups[i]);
      if(inserts.length){
        let inserted;
        try{inserted=await sbWrite('/trainee_workout_exercises','POST',inserts);}
