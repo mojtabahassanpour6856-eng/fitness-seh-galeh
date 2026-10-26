@@ -12223,6 +12223,16 @@ body.workout-output.workout-compact{
    });
    const list=document.getElementById('workoutList');list.parentNode.insertBefore(btn,list);
  }
+ window.getWorkoutPlannerContext=function(){
+   if(!coachMode())throw new Error('این بخش فقط برای مربی مجاز است.');
+   if(typeof currentClient==='undefined'||!currentClient||!currentClient.id)throw new Error('ابتدا یک شاگرد را انتخاب کن.');
+   const selectedId=String(currentClient.id);
+   const targetId=String(window.__sehWorkoutPlannerTargetId||'');
+   if(!targetId||selectedId!==targetId)throw new Error('شاگرد انتخاب‌شده از زمان بازشدن طراح تغییر کرده است؛ طراح را ببند و دوباره باز کن.');
+   const client=window.AUTH_SUPABASE;
+   if(!client||!client.auth||typeof client.rpc!=='function'||typeof client.from!=='function')throw new Error('اتصال امن Supabase پنل مربی در دسترس نیست؛ دوباره وارد پنل شو.');
+   return {supabase:client,traineeId:targetId};
+ };
  async function receive(event){
    if(event.origin!==location.origin||event.source!==window.__sehWorkoutPlannerWindow)return;
    const msg=event.data;if(!msg||msg.type!=='fitness-seh-galeh:workout-plan-draft:v1'||!msg.payload)return;
