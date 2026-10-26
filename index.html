@@ -809,7 +809,7 @@ body.locked{overflow:hidden!important}
 </div>
 <div id="workoutExerciseCount" class="muted" style="margin:6px 0 10px">در حال دریافت حرکات…</div>
 <div class="workout-nine-table-wrap">
-<p class="muted">۹ ردیف برای ثبت سریع حرکات همین جلسه. برای سوپرست، تری‌ست یا جاینت‌ست، سیستم را انتخاب کنید و در همان کادر حرکت، به‌ترتیب ۲ یا ۳ حرکت را تیک بزنید؛ هر گروه فقط یک ردیف می‌گیرد.</p>
+<p class="muted">۹ ردیف اولیه برای ثبت سریع حرکات همین جلسه؛ اگر برنامه ذخیره‌شده حرکات بیشتری داشته باشد، جدول به‌اندازهٔ لازم گسترش می‌یابد. برای سوپرست، تری‌ست یا جاینت‌ست، سیستم را انتخاب کنید و در همان کادر حرکت، حرکت‌های گروه را تیک بزنید؛ هر گروه فقط یک ردیف می‌گیرد.</p>
 <div class="workout-nine-table-scroll">
 <table id="workoutNineTable" class="workout-nine-table">
 <thead><tr><th>حرکت</th><th>سیستم تمرینی</th><th>استراحت (ثانیه)</th><th>تکرار</th><th>ست</th></tr></thead>
@@ -12320,9 +12320,11 @@ window.sehResetTurnstile=function(){};
  };
  function bindNineSystemGrouping(){
    const table=document.getElementById('workoutNineTable');
-   if(!table||table.dataset.w9GroupingBound)return;
+   if(!table)return;
    table.dataset.w9GroupingBound='1';
    table.querySelectorAll('tbody tr').forEach(tr=>{
+     if(tr.dataset.w9GroupingBound==='1')return;
+     tr.dataset.w9GroupingBound='1';
      const systemSelect=tr.querySelector('.w9-system');
      const select=tr.querySelector('.w9-exercise');
      const picker=tr.querySelector('.w9-movement-picker');
@@ -12389,6 +12391,8 @@ window.sehResetTurnstile=function(){};
      function updateInitial(){refresh();}
    });
  }
+ window.__sehBindNineSystemGrouping=bindNineSystemGrouping;
+ window.__sehSyncNineMovementOptions=syncNineMovementOptions;
  function start(){
    syncNineMovementOptions();
    bindNineSystemGrouping();
@@ -13790,7 +13794,7 @@ window.sehResetTurnstile=function(){};
 (function(){
  const names=['جلسه اول','جلسه دوم','جلسه سوم','جلسه چهارم','جلسه پنجم','جلسه ششم'];
  const drafts=Array.from({length:6},()=>null);
- let active=0, clientKey=null, hydrating=false, legacyUnassignedRows=false, legacyUnassignedCount=0, legacyPreviewOnly=false;const overflowSessions={};
+ let active=0, clientKey=null, hydrating=false, legacyUnassignedRows=false, legacyUnassignedCount=0, legacyPreviewOnly=false;
  const exerciseLabels={};
  const $=id=>document.getElementById(id);
  const same=(a,b)=>String(a??'')===String(b??'');
@@ -13830,7 +13834,7 @@ window.sehResetTurnstile=function(){};
  }
  function renderTabs(){
    const box=$('sehWorkoutSessionCards');if(!box)return;
-   const overflowCount=overflowSessions[names[active]]||0;const warning=legacyUnassignedRows?'<div role="status" style="grid-column:1/-1;background:#fff3cd;color:#624b12;border:1px solid #e1c56b;border-radius:9px;padding:9px 11px;font-size:12px;line-height:1.8">'+(legacyPreviewOnly?'این برنامه قدیمی '+legacyUnassignedCount+' حرکت بدون برچسب جلسه دارد. حرکات در جلسه اول فقط برای مشاهده نشان داده شده‌اند؛ ذخیره و ویرایش تا مشخص‌شدن جلسهٔ واقعی متوقف است تا هیچ حرکت اشتباهی جابه‌جا یا حذف نشود. جدول فقط ۹ ردیف دارد؛ اگر حرکت‌ها بیشتر باشند، همه در پیش‌نمایش جا نمی‌شوند.':'این برنامه '+legacyUnassignedCount+' حرکت بدون برچسب جلسه دارد. برای جلوگیری از انتساب اشتباه، ذخیره جلسه‌ای که حرکات قدیمی آن قابل تشخیص نیست متوقف می‌شود.')+'</div>':overflowCount>9?'<div role="alert" style="grid-column:1/-1;background:#fff3cd;color:#624b12;border:1px solid #e1c56b;border-radius:9px;padding:9px 11px;font-size:12px;line-height:1.8">این جلسه '+overflowCount+' ردیف حرکتی دارد، اما جدول فعلاً فقط ۹ ردیف دارد. برای جلوگیری از حذف ناخواسته حرکت‌های پنهان، ویرایش و ذخیره این جلسه موقتاً متوقف است؛ اطلاعات ذخیره‌شده دست‌نخورده می‌ماند.</div>':'';box.innerHTML=warning+names.map((name,i)=>'<button type="button" class="seh-session-card'+(i===active?' active':'')+'" data-session-index="'+i+'" aria-pressed="'+(i===active?'true':'false')+'">'+name+'<span class="seh-session-count">'+(overflowSessions[name]>9?'⚠ '+overflowSessions[name]+' ردیف — ذخیره متوقف':drafts[i]&&drafts[i].some(r=>r&&(r.exercise||r.checked.length))?'دارای اطلاعات':'')+'</span></button>').join('');
+   const warning=legacyUnassignedRows?'<div role="status" style="grid-column:1/-1;background:#fff3cd;color:#624b12;border:1px solid #e1c56b;border-radius:9px;padding:9px 11px;font-size:12px;line-height:1.8">'+(legacyPreviewOnly?'این برنامه قدیمی '+legacyUnassignedCount+' حرکت بدون برچسب جلسه دارد. حرکات در جلسه اول فقط برای مشاهده نشان داده شده‌اند؛ ذخیره و ویرایش تا مشخص‌شدن جلسهٔ واقعی متوقف است تا هیچ حرکت اشتباهی جابه‌جا یا حذف نشود. جدول در صورت نیاز به‌طور خودکار گسترش می‌یابد.':'این برنامه '+legacyUnassignedCount+' حرکت بدون برچسب جلسه دارد. برای جلوگیری از انتساب اشتباه، ذخیره جلسه‌ای که حرکات قدیمی آن قابل تشخیص نیست متوقف می‌شود.')+'</div>':'';box.innerHTML=warning+names.map((name,i)=>'<button type="button" class="seh-session-card'+(i===active?' active':'')+'" data-session-index="'+i+'" aria-pressed="'+(i===active?'true':'false')+'">'+name+'<span class="seh-session-count">'+(drafts[i]&&drafts[i].some(r=>r&&(r.exercise||r.checked.length))?'دارای اطلاعات':'')+'</span></button>').join('');
    box.querySelectorAll('[data-session-index]').forEach(btn=>btn.addEventListener('click',()=>{
      const next=Number(btn.dataset.sessionIndex);if(!Number.isInteger(next)||next<0||next>5||next===active)return;
      checkClient();capture();active=next;restore();ensureDay();renderTabs();updateButton();
@@ -13840,7 +13844,7 @@ window.sehResetTurnstile=function(){};
    const now=typeof currentClient!=='undefined'&&currentClient&&currentClient.id!=null?String(currentClient.id):'';
    if(clientKey!==now){
      const hadPreviousClient=!!clientKey;
-     clientKey=now;active=0;legacyUnassignedRows=false;legacyUnassignedCount=0;legacyPreviewOnly=false;Object.keys(overflowSessions).forEach(k=>delete overflowSessions[k]);
+     clientKey=now;active=0;legacyUnassignedRows=false;legacyUnassignedCount=0;legacyPreviewOnly=false;
      for(let i=0;i<6;i++)drafts[i]=null;
      if(hadPreviousClient){const t=table();if(t)t.querySelectorAll('tbody tr').forEach(resetRow);}
    }
@@ -13867,9 +13871,26 @@ window.sehResetTurnstile=function(){};
      check.type='checkbox';check.className='w9-exercise-check';check.value=value;span.textContent=label;lab.append(check,span);box.appendChild(lab);
    }
  }
+ function ensureTableRows(count){
+   const t=table(),body=t&&t.querySelector('tbody');if(!body)return;
+   const target=Math.max(9,Number(count)||9);
+   while(body.rows.length<target){
+     const rowNumber=body.rows.length+1,clone=body.rows[body.rows.length-1].cloneNode(true);
+     clone.dataset.row=String(rowNumber);clone.removeAttribute('data-w9-grouping-bound');
+     clone.querySelectorAll('.w9-group-movement-toggle,.seh-touch-choice-select').forEach(el=>el.remove());
+     clone.querySelectorAll('.seh-touch-choice-hidden-source').forEach(el=>el.classList.remove('seh-touch-choice-hidden-source'));
+     clone.querySelectorAll('.w9-rest,.w9-reps,.w9-sets').forEach(el=>el.removeAttribute('data-seh-touch-choices'));
+     clone.querySelectorAll('[aria-label]').forEach(el=>el.setAttribute('aria-label',(el.getAttribute('aria-label')||'').replace(/\\d+$/,String(rowNumber))));
+     body.appendChild(clone);resetRow(clone);
+   }
+   while(body.rows.length>target)body.deleteRow(body.rows.length-1);
+   if(window.__sehSyncNineMovementOptions)window.__sehSyncNineMovementOptions();
+   if(window.__sehBindNineSystemGrouping)window.__sehBindNineSystemGrouping();
+ }
  function restore(){
    const t=table();if(!t)return;
-   const data=drafts[active],rows=Array.from(t.querySelectorAll('tbody tr'));
+   const data=drafts[active];ensureTableRows(Math.max(9,data?data.length:9));
+   const rows=Array.from(t.querySelectorAll('tbody tr'));
    rows.forEach((tr,i)=>{
      const r=data&&data[i];
      if(!r){resetRow(tr);return;}
@@ -13903,12 +13924,12 @@ window.sehResetTurnstile=function(){};
  async function hydrateDrafts(){
    const traineeId=typeof currentClient!=='undefined'&&currentClient&&currentClient.id!=null?String(currentClient.id):'';
    const planId=typeof currentWorkoutPlanId!=='undefined'&&currentWorkoutPlanId!=null?String(currentWorkoutPlanId):'';
-   if(!traineeId||!planId){for(let i=0;i<6;i++)drafts[i]=null;legacyUnassignedRows=false;legacyUnassignedCount=0;legacyPreviewOnly=false;Object.keys(overflowSessions).forEach(k=>delete overflowSessions[k]);return true;}
+   if(!traineeId||!planId){for(let i=0;i<6;i++)drafts[i]=null;legacyUnassignedRows=false;legacyUnassignedCount=0;legacyPreviewOnly=false;return true;}
    hydrating=true;
    try{
      const rows=await sbGet('/trainee_workout_exercises?workout_plan_id=eq.'+encodeURIComponent(planId)+'&select=*&order=sort_order.asc,created_at.asc');
      if(!same(currentClient?.id,traineeId)||!same(currentWorkoutPlanId,planId))return;
-     const unassignedRows=rows.filter(r=>!names.includes(String(r.training_day||'')));const labelledRows=rows.filter(r=>names.includes(String(r.training_day||'')));legacyUnassignedRows=unassignedRows.length>0;legacyUnassignedCount=unassignedRows.length;legacyPreviewOnly=unassignedRows.length>0&&labelledRows.length===0;Object.keys(overflowSessions).forEach(k=>delete overflowSessions[k]);
+     const unassignedRows=rows.filter(r=>!names.includes(String(r.training_day||'')));const labelledRows=rows.filter(r=>names.includes(String(r.training_day||'')));legacyUnassignedRows=unassignedRows.length>0;legacyUnassignedCount=unassignedRows.length;legacyPreviewOnly=unassignedRows.length>0&&labelledRows.length===0;
      const ids=[...new Set(rows.map(r=>String(r.exercise_id)).filter(Boolean))];
      if(ids.length){
        try{
@@ -13919,14 +13940,13 @@ window.sehResetTurnstile=function(){};
      if(!same(currentClient?.id,traineeId)||!same(currentWorkoutPlanId,planId))return;
      for(let day=0;day<6;day++){
        let dayRows=rows.filter(r=>String(r.training_day||'')===names[day]);if(day===0&&legacyPreviewOnly)dayRows=unassignedRows;
-       const groups=rowGroups(dayRows);if(groups.length>9)overflowSessions[names[day]]=groups.length;
+       const groups=rowGroups(dayRows);
        drafts[day]=groups.map(group=>{
          const first=group[0],grouped=['superset','triset','giant'].includes(first.training_system);
          const exerciseIds=group.map(x=>String(x.exercise_id));
          return {exercise:grouped?'':exerciseIds[0]||'',checked:grouped?exerciseIds:[],system:first.training_system||'normal',rest:String(first.rest_seconds??60),reps:String(first.reps??10),sets:String(first.sets??3)};
        });
        if(drafts[day].length<9)drafts[day]=drafts[day].concat(Array.from({length:9-drafts[day].length},()=>null));
-       drafts[day]=drafts[day].slice(0,9);
      }
      renderTabs();
      return true;
@@ -13970,12 +13990,10 @@ window.sehResetTurnstile=function(){};
      catch(e){if(/training_day|column/i.test(e.message||''))throw new Error('ستون تشخیص جلسه در پایگاه داده در دسترس نیست؛ برای جلوگیری از تغییر اشتباه برنامه، چیزی ذخیره نشد.');throw e;}
      if(!same(currentClient?.id,traineeId)||!same(currentWorkoutPlanId,planId))throw new Error('شاگرد یا برنامه هنگام خواندن اطلاعات تغییر کرد.');
      const sessionRows=allRows.filter(r=>String(r.training_day||'')===names[active]);
-     const storedGroupCount=rowGroups(sessionRows).length;if(storedGroupCount>9)throw new Error('این جلسه '+storedGroupCount+' ردیف ذخیره‌شده دارد، اما جدول فقط ۹ ردیف دارد. برای جلوگیری از حذف حرکت‌های پنهان، هیچ تغییری ذخیره نشد.');
      if(legacyUnassignedRows&&sessionRows.length===0&&allRows.some(r=>!names.includes(String(r.training_day||'')))){
        throw new Error('در این برنامه حرکات قدیمی بدون برچسب جلسه وجود دارد؛ برای جلوگیری از ساختن جلسه تکراری، ذخیره متوقف شد و هیچ حرکت قدیمی حذف نشد.');
      }
      const existingGroups=rowGroups(sessionRows);
-     if(existingGroups.length>9)throw new Error('این جلسه بیش از ۹ ردیف دارد؛ برای جلوگیری از حذف اطلاعات پنهان، ذخیره متوقف شد.');
      const stale=[];
      const inserts=[];
      for(let i=0;i<wanted.length;i++){
