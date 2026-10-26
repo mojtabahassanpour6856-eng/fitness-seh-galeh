@@ -11195,10 +11195,11 @@ body.workout-output.workout-compact{
  function ensureSection(){
   let sec=$('sehChatSection');if(sec)return sec;
   sec=document.createElement('section');sec.id='sehChatSection';sec.className='section';
-  sec.innerHTML='<button type="button" class="secondary seh-chat-back" id="sehChatBack">↩ بازگشت</button><div class="card"><h2>💬 گفت‌وگو با مربی</h2><p class="muted" id="sehChatHint">پیام‌ها خصوصی هستند و فقط شما و مربی به آن‌ها دسترسی دارید.</p><div class="seh-chat-layout" id="sehChatLayout"><div id="sehChatConversationCard" class="card" style="margin:0;padding:10px"><h3 style="margin-top:0">گفت‌وگوها</h3><div class="seh-chat-conversations" id="sehChatConversations"></div></div><div class="seh-chat-window"><div class="seh-chat-top" id="sehChatTitle">یک گفت‌وگو انتخاب کنید</div><div class="seh-chat-messages" id="sehChatMessages"><div class="seh-chat-muted">برای شروع، یک گفت‌وگو را انتخاب کنید.</div></div><form class="seh-chat-compose" id="sehChatForm"><textarea id="sehChatInput" maxlength="4000" placeholder="پیام خود را بنویسید…" aria-label="متن پیام"></textarea><button type="submit" id="sehChatSend">ارسال</button></form></div></div></div>';
+  sec.innerHTML='<button type="button" class="secondary seh-chat-back" id="sehChatBack">↩ بازگشت</button><div class="card"><h2>💬 گفت‌وگو با مربی</h2><p class="muted" id="sehChatHint">پیام‌ها خصوصی هستند و فقط شما و مربی به آن‌ها دسترسی دارید.</p><div id="sehTraineeNoticeControls" style="display:none;margin:10px 0;padding:10px;border:1px solid #d7bd78;border-radius:10px"><button type="button" id="sehEnableTraineeNotices">فعال‌سازی اعلان پیام مربی</button><small id="sehTraineeNoticeStatus" style="display:block;margin-top:6px">برای دریافت پیام وقتی اپ بسته است، یک‌بار اعلان را فعال کنید.</small></div><div class="seh-chat-layout" id="sehChatLayout"><div id="sehChatConversationCard" class="card" style="margin:0;padding:10px"><h3 style="margin-top:0">گفت‌وگوها</h3><div class="seh-chat-conversations" id="sehChatConversations"></div></div><div class="seh-chat-window"><div class="seh-chat-top" id="sehChatTitle">یک گفت‌وگو انتخاب کنید</div><div class="seh-chat-messages" id="sehChatMessages"><div class="seh-chat-muted">برای شروع، یک گفت‌وگو را انتخاب کنید.</div></div><form class="seh-chat-compose" id="sehChatForm"><textarea id="sehChatInput" maxlength="4000" placeholder="پیام خود را بنویسید…" aria-label="متن پیام"></textarea><button type="submit" id="sehChatSend">ارسال</button></form></div></div></div>';
   const coach=$('coach');if(coach)coach.parentNode.insertBefore(sec,coach.nextSibling);else document.querySelector('.page')?.appendChild(sec);
   $('sehChatBack').addEventListener('click',()=>{stopPolling();if(mode==='coach')window.showSection('coach');else window.showSection('traineeDashboard');});
   $('sehChatForm').addEventListener('submit',sendMessage);
+  $('sehEnableTraineeNotices')?.addEventListener('click',enableTraineeNotices);
   return sec;
  }
  function addEntryCard(){
@@ -11213,7 +11214,7 @@ body.workout-output.workout-compact{
   }else{
    const coach=$('coach');if(coach&&!$('sehChatCoachCard')){
     const card=document.createElement('div');card.id='sehChatCoachCard';card.className='card';
-    card.innerHTML='<h2>💬 پیام‌های شاگردان <span class="seh-chat-unread" id="sehChatCoachUnread" style="display:none">۰</span></h2><p class="muted">گفت‌وگوهای خصوصی شاگردان را از اینجا باز کنید.</p><button type="button" onclick="window.sehOpenCoachChat()">باز کردن پیام‌ها</button> <button type="button" id="sehEnableChatNotices">فعال‌سازی اعلان پیام</button><small id="sehChatNoticeStatus" style="display:block;margin-top:8px;color:#587066">مرحله اول: شناسایی پیام جدید و نام شاگرد؛ اعلان کامل گوشی در مراحل بعد تکمیل می‌شود.</small>';
+    card.innerHTML='<h2>💬 پیام‌های شاگردان <span class="seh-chat-unread" id="sehChatCoachUnread" style="display:none">۰</span></h2><p class="muted">گفت‌وگوهای خصوصی شاگردان را از اینجا باز کنید.</p><button type="button" onclick="window.sehOpenCoachChat()">باز کردن پیام‌ها</button> <button type="button" id="sehEnableChatNotices">فعال‌سازی اعلان پیام</button><small id="sehChatNoticeStatus" style="display:block;margin-top:8px;color:#587066">یک‌بار فعال‌سازی کنید تا اعلان پیام‌های شاگرد روی گوشی مربی نمایش داده شود.</small>';
     const listCard=$('clientList')?.closest('.card');if(listCard)listCard.insertAdjacentElement('afterend',card);else{const first=coach.querySelector('.card');if(first)first.insertAdjacentElement('afterend',card);else coach.prepend(card);}
    }
   }
@@ -11290,6 +11291,45 @@ body.workout-output.workout-compact{
   }catch(e){
    console.error('Coach push setup failed',e);
    setCoachNoticeStatus('فعال‌سازی کامل نشد: '+(e?.message||'خطای نامشخص')+' اگر ذخیره گوشی انجام نشد، تنظیمات کلید اعلان سرور را هم تکمیل می‌کنیم.');
+  }finally{if(button)button.disabled=false;}
+ }
+ async function enableTraineeNotices(){
+  const status=$('sehTraineeNoticeStatus');
+  const setStatus=text=>{if(status)status.textContent=text;};
+  const button=$('sehEnableTraineeNotices');
+  if(!('Notification' in window)){setStatus('این مرورگر اعلان را پشتیبانی نمی‌کند.');return;}
+  if(!('serviceWorker' in navigator)||!('PushManager' in window)){setStatus('برای اعلان پس‌زمینه، اپ را با Chrome به‌روز باز کنید.');return;}
+  if(button)button.disabled=true;
+  try{
+   const profile=(typeof authProfile!=='undefined'&&authProfile)?authProfile:window.authProfile;
+   if(!profile||profile.role!=='trainee')throw new Error('ابتدا با حساب شاگرد وارد شوید.');
+   const user=await currentAuthUser();
+   const permission=await Notification.requestPermission();
+   if(permission!=='granted')throw new Error('اجازه اعلان داده نشد؛ تنظیمات اعلان سایت را بررسی کنید.');
+   setStatus('در حال ثبت این گوشی برای دریافت اعلان…');
+   const registration=await navigator.serviceWorker.register('./sw.js',{scope:'./'});
+   await navigator.serviceWorker.ready;
+   let subscription=await registration.pushManager.getSubscription();
+   const expectedApplicationKey=sehBase64UrlToBytes(SEH_VAPID_PUBLIC_KEY);
+   if(subscription){
+    const currentApplicationKey=subscription.options?.applicationServerKey;
+    const sameKey=currentApplicationKey&&currentApplicationKey.length===expectedApplicationKey.length&&currentApplicationKey.every((v,i)=>v===expectedApplicationKey[i]);
+    if(!sameKey){await subscription.unsubscribe();subscription=null;}
+   }
+   if(!subscription)subscription=await registration.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:expectedApplicationKey});
+   const json=subscription.toJSON();
+   if(!json.endpoint||!json.keys?.p256dh||!json.keys?.auth)throw new Error('اطلاعات اشتراک اعلان کامل نیست؛ دوباره تلاش کنید.');
+   const trainee=await fetchTraineeForUser(user);
+   if(trainee.auth_user_id!==user.id)throw new Error('اتصال حساب به پرونده شاگرد تأیید نشد.');
+   const db=window.AUTH_SUPABASE;
+   const saved=await db.from('trainee_push_subscriptions').upsert({
+    trainee_id:trainee.id,endpoint:json.endpoint,p256dh:json.keys.p256dh,auth:json.keys.auth,updated_at:new Date().toISOString()
+   },{onConflict:'endpoint'});
+   if(saved.error)throw saved.error;
+   setStatus('اعلان این گوشی فعال شد ✅ از این پس پیام مربی می‌تواند حتی با بسته بودن اپ نمایش داده شود.');
+  }catch(e){
+   console.error('Trainee push setup failed',e);
+   setStatus('فعال‌سازی کامل نشد: '+(e?.message||'خطای نامشخص'));
   }finally{if(button)button.disabled=false;}
  }
  async function pollCoachIncomingMessages(initial){
@@ -11399,6 +11439,7 @@ body.workout-output.workout-compact{
    lastMessageId=r.data?.id||lastMessageId;
    // Push delivery must not block the sender's chat UI.
    if(sendMode==='trainee')window.AUTH_SUPABASE.functions.invoke('send-chat-push',{body:{trainee_id:traineeId}}).then(pushResult=>{if(pushResult?.error)console.info('Chat push is not ready yet:',pushResult.error.message||pushResult.error);}).catch(pushErr=>console.info('Chat push is not ready yet:',pushErr));
+   if(sendMode==='coach')window.AUTH_SUPABASE.functions.invoke('send-coach-chat-push',{body:{trainee_id:traineeId}}).then(pushResult=>{if(pushResult?.error)console.info('Trainee chat push is not ready yet:',pushResult.error.message||pushResult.error);}).catch(pushErr=>console.info('Trainee chat push is not ready yet:',pushErr));
    // Refresh read receipts and conversation counts in the background.
    loadMessages(true).catch(err=>console.warn('Chat refresh after send:',err));
    if(sendMode==='coach')loadCoachConversations(user).catch(err=>console.warn('Conversation list refresh after send:',err));
@@ -11409,7 +11450,7 @@ body.workout-output.workout-compact{
  async function openChat(who,preferredTraineeId){
   mode=who;selected=null;lastMessageId=null;ensureSection();const backButton=$('sehChatBack');if(backButton)backButton.style.display=who==='trainee'?'none':'';addEntryCard();
   const sec=$('sehChatSection');const layout=$('sehChatLayout');const convCard=$('sehChatConversationCard');
-  layout?.classList.toggle('coach-mode',who==='coach');if(convCard)convCard.style.display=who==='coach'?'block':'none';
+  layout?.classList.toggle('coach-mode',who==='coach');const traineeNoticeControls=$('sehTraineeNoticeControls');if(traineeNoticeControls)traineeNoticeControls.style.display=who==='trainee'?'block':'none';if(convCard)convCard.style.display=who==='coach'?'block':'none';
   $('sehChatHint').textContent=who==='coach'?'گفت‌وگوها فقط برای مربی و شاگرد مربوطه قابل مشاهده‌اند.':'این گفت‌وگو فقط بین شما و مربی است.';
   $('sehChatConversations').innerHTML='';$('sehChatMessages').innerHTML='<div class="seh-chat-muted">در حال بارگذاری…</div>';$('sehChatTitle').textContent=who==='coach'?'یک شاگرد انتخاب کنید':'گفت‌وگو با مربی';
   window.showSection('sehChatSection');
