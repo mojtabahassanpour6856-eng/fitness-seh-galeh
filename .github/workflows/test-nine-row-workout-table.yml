@@ -249,10 +249,10 @@ jobs:
             await last.locator('.w9-sets').evaluate(el => { el.value='5'; el.dispatchEvent(new Event('input',{bubbles:true})); el.dispatchEvent(new Event('change',{bubbles:true})); if(el.nextElementSibling?.classList.contains('seh-touch-choice-select')) el.nextElementSibling.value='5'; });
             await page.evaluate(async () => { await window.saveWorkoutNineTable(); });
             assert.equal(await table.locator('tbody tr').count(), 10, 'save and automatic reload must preserve the expanded session');
-            assert.equal(window.__mockSavedRows.length, 11, 'editing must preserve all eleven movement records without duplicates');
-            assert.equal(window.__mockSavedRows.find(x=>x.id===11).sets, 5, 'changed sets must be persisted on the existing movement row');
-            assert.equal(window.__mockWrites.filter(x=>x.method==='POST').length, 0, 'editing a fully populated saved session must not insert duplicate records');
-            assert.equal(window.__mockWrites.filter(x=>x.method==='PATCH').length, 11, 'each existing movement record should be updated in place');
+            assert.equal(await page.evaluate(() => window.__mockSavedRows.length), 11, 'editing must preserve all eleven movement records without duplicates');
+            assert.equal(await page.evaluate(() => window.__mockSavedRows.find(x=>x.id===11).sets), 5, 'changed sets must be persisted on the existing movement row');
+            assert.equal(await page.evaluate(() => window.__mockWrites.filter(x=>x.method==='POST').length), 0, 'editing a fully populated saved session must not insert duplicate records');
+            assert.equal(await page.evaluate(() => window.__mockWrites.filter(x=>x.method==='PATCH').length), 11, 'each existing movement record should be updated in place');
             await page.evaluate(async () => { await window.loadWorkoutForClient(); });
             assert.equal(await table.locator('tbody tr').count(), 10, 'a fresh reload must still restore all ten movement groups');
             assert.equal(await table.locator('tbody tr').nth(9).locator('.w9-sets').inputValue(), '5', 'the edited value must survive a fresh reload');
