@@ -809,7 +809,7 @@ body.locked{overflow:hidden!important}
 </div>
 <div id="workoutExerciseCount" class="muted" style="margin:6px 0 10px">در حال دریافت حرکات…</div>
 <div class="workout-nine-table-wrap">
-<p class="muted">۹ ردیف برای ثبت سریع حرکات همین جلسه. برای سوپرست، تری‌ست یا جاینت‌ست، سیستم را انتخاب کنید و در همان کادر حرکت، به‌ترتیب ۲ یا ۳ حرکت را تیک بزنید؛ هر گروه فقط یک ردیف می‌گیرد.</p>
+<p class="muted">۹ ردیف اولیه برای ثبت سریع حرکات همین جلسه؛ اگر برنامه ذخیره‌شده حرکات بیشتری داشته باشد، جدول به‌اندازهٔ لازم گسترش می‌یابد. برای سوپرست، تری‌ست یا جاینت‌ست، سیستم را انتخاب کنید و در همان کادر حرکت، حرکت‌های گروه را تیک بزنید؛ هر گروه فقط یک ردیف می‌گیرد.</p>
 <div class="workout-nine-table-scroll">
 <table id="workoutNineTable" class="workout-nine-table">
 <thead><tr><th>حرکت</th><th>سیستم تمرینی</th><th>استراحت (ثانیه)</th><th>تکرار</th><th>ست</th></tr></thead>
@@ -12320,9 +12320,11 @@ window.sehResetTurnstile=function(){};
  };
  function bindNineSystemGrouping(){
    const table=document.getElementById('workoutNineTable');
-   if(!table||table.dataset.w9GroupingBound)return;
+   if(!table)return;
    table.dataset.w9GroupingBound='1';
    table.querySelectorAll('tbody tr').forEach(tr=>{
+     if(tr.dataset.w9GroupingBound==='1')return;
+     tr.dataset.w9GroupingBound='1';
      const systemSelect=tr.querySelector('.w9-system');
      const select=tr.querySelector('.w9-exercise');
      const picker=tr.querySelector('.w9-movement-picker');
@@ -12389,6 +12391,8 @@ window.sehResetTurnstile=function(){};
      function updateInitial(){refresh();}
    });
  }
+ window.__sehBindNineSystemGrouping=bindNineSystemGrouping;
+ window.__sehSyncNineMovementOptions=syncNineMovementOptions;
  function start(){
    syncNineMovementOptions();
    bindNineSystemGrouping();
@@ -12437,6 +12441,7 @@ window.sehResetTurnstile=function(){};
    if(input.matches('.w9-sets,.w9-reps,.w9-rest')||input.id==='workoutSets'||input.id==='workoutReps'||input.id==='workoutRest')add(input,spec);
   }));
  }
+ window.__sehUpdateTouchChoices=update;
  function start(){update();new MutationObserver(update).observe(document.body,{childList:true,subtree:true});}
  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start,{once:true});else start();
 })();
@@ -13790,8 +13795,10 @@ window.sehResetTurnstile=function(){};
 (function(){
  const names=['جلسه اول','جلسه دوم','جلسه سوم','جلسه چهارم','جلسه پنجم','جلسه ششم'];
  const drafts=Array.from({length:6},()=>null);
- let active=0, clientKey=null;
+ let active=0, clientKey=null, hydrating=false, legacyUnassignedRows=false, legacyUnassignedCount=0, legacyPreviewOnly=false;
+ const exerciseLabels={};
  const $=id=>document.getElementById(id);
+ const same=(a,b)=>String(a??'')===String(b??'');
  function table(){return $('workoutNineTable');}
  function getField(tr,cls){
    const input=tr.querySelector('.'+cls);if(!input)return '';
@@ -13802,7 +13809,7 @@ window.sehResetTurnstile=function(){};
    const input=tr.querySelector('.'+cls);if(!input)return;
    input.value=String(value??'');
    const next=input.nextElementSibling;
-   if(next&&next.classList.contains('seh-touch-choice-select'))next.value=String(value??'');
+   if(next&&next.classList.contains('seh-touch-choice-select')){const v=String(value??'');if(!Array.from(next.options).some(o=>o.value===v)){const option=document.createElement('option');option.value=v;option.textContent=v;next.appendChild(option);}next.value=v;}
    input.dispatchEvent(new Event('input',{bubbles:true}));
    input.dispatchEvent(new Event('change',{bubbles:true}));
  }
@@ -13828,7 +13835,7 @@ window.sehResetTurnstile=function(){};
  }
  function renderTabs(){
    const box=$('sehWorkoutSessionCards');if(!box)return;
-   box.innerHTML=names.map((name,i)=>'<button type="button" class="seh-session-card'+(i===active?' active':'')+'" data-session-index="'+i+'" aria-pressed="'+(i===active?'true':'false')+'">'+name+'<span class="seh-session-count">'+(drafts[i]&&drafts[i].some(r=>r.exercise||r.checked.length)?'در حال تکمیل':'')+'</span></button>').join('');
+   const warning=legacyUnassignedRows?'<div role="status" style="grid-column:1/-1;background:#fff3cd;color:#624b12;border:1px solid #e1c56b;border-radius:9px;padding:9px 11px;font-size:12px;line-height:1.8">'+(legacyPreviewOnly?'این برنامه قدیمی '+legacyUnassignedCount+' حرکت بدون برچسب جلسه دارد. حرکات در جلسه اول فقط برای مشاهده نشان داده شده‌اند؛ ذخیره و ویرایش تا مشخص‌شدن جلسهٔ واقعی متوقف است تا هیچ حرکت اشتباهی جابه‌جا یا حذف نشود. جدول در صورت نیاز به‌طور خودکار گسترش می‌یابد.':'این برنامه '+legacyUnassignedCount+' حرکت بدون برچسب جلسه دارد. برای جلوگیری از انتساب اشتباه، ذخیره جلسه‌ای که حرکات قدیمی آن قابل تشخیص نیست متوقف می‌شود.')+'</div>':'';box.innerHTML=warning+names.map((name,i)=>'<button type="button" class="seh-session-card'+(i===active?' active':'')+'" data-session-index="'+i+'" aria-pressed="'+(i===active?'true':'false')+'">'+name+'<span class="seh-session-count">'+(drafts[i]&&drafts[i].some(r=>r&&(r.exercise||r.checked.length))?'دارای اطلاعات':'')+'</span></button>').join('');
    box.querySelectorAll('[data-session-index]').forEach(btn=>btn.addEventListener('click',()=>{
      const next=Number(btn.dataset.sessionIndex);if(!Number.isInteger(next)||next<0||next>5||next===active)return;
      checkClient();capture();active=next;restore();ensureDay();renderTabs();updateButton();
@@ -13837,13 +13844,10 @@ window.sehResetTurnstile=function(){};
  function checkClient(){
    const now=typeof currentClient!=='undefined'&&currentClient&&currentClient.id!=null?String(currentClient.id):'';
    if(clientKey!==now){
-     // When the first trainee is selected, do not clear movements the coach has
-     // just entered. Clear the table only when leaving an already active trainee.
      const hadPreviousClient=!!clientKey;
-     clientKey=now;active=0;for(let i=0;i<6;i++)drafts[i]=null;
-     if(hadPreviousClient){
-       const t=table();if(t)t.querySelectorAll('tbody tr').forEach(resetRow);
-     }
+     clientKey=now;active=0;legacyUnassignedRows=false;legacyUnassignedCount=0;legacyPreviewOnly=false;
+     for(let i=0;i<6;i++)drafts[i]=null;
+     if(hadPreviousClient){const t=table();if(t)t.querySelectorAll('tbody tr').forEach(resetRow);}
    }
  }
  function resetRow(tr){
@@ -13855,19 +13859,52 @@ window.sehResetTurnstile=function(){};
    if(ex)ex.hidden=false;
    setField(tr,'w9-rest','60');setField(tr,'w9-reps','10');setField(tr,'w9-sets','3');
  }
+ function ensureRowExercise(tr,id){
+   if(id==null||id==='')return;
+   const value=String(id), label=exerciseLabels[value]||value;
+   const sel=tr.querySelector('.w9-exercise');
+   if(sel&&!Array.from(sel.options).some(o=>String(o.value)===value)){
+     const option=document.createElement('option');option.value=value;option.textContent=label;sel.appendChild(option);
+   }
+   const box=tr.querySelector('.w9-movement-checklist');
+   if(box&&!Array.from(box.querySelectorAll('.w9-exercise-check')).some(x=>String(x.value)===value)){
+     const lab=document.createElement('label'),check=document.createElement('input'),span=document.createElement('span');
+     check.type='checkbox';check.className='w9-exercise-check';check.value=value;span.textContent=label;lab.append(check,span);box.appendChild(lab);
+   }
+ }
+ function ensureTableRows(count){
+   const t=table(),body=t&&t.querySelector('tbody');if(!body)return;
+   const target=Math.max(9,Number(count)||9);
+   while(body.rows.length<target){
+     const rowNumber=body.rows.length+1,clone=body.rows[body.rows.length-1].cloneNode(true);
+     clone.dataset.row=String(rowNumber);clone.removeAttribute('data-w9-grouping-bound');
+     clone.querySelectorAll('.w9-group-movement-toggle,.seh-touch-choice-select').forEach(el=>el.remove());
+     clone.querySelectorAll('.seh-touch-choice-hidden-source').forEach(el=>el.classList.remove('seh-touch-choice-hidden-source'));
+     clone.querySelectorAll('.w9-rest,.w9-reps,.w9-sets').forEach(el=>el.removeAttribute('data-seh-touch-choices'));
+     clone.querySelectorAll('[aria-label]').forEach(el=>el.setAttribute('aria-label',(el.getAttribute('aria-label')||'').replace(/\\d+$/,String(rowNumber))));
+     body.appendChild(clone);resetRow(clone);
+   }
+   while(body.rows.length>target)body.deleteRow(body.rows.length-1);
+   if(window.__sehSyncNineMovementOptions)window.__sehSyncNineMovementOptions();
+   if(window.__sehUpdateTouchChoices)window.__sehUpdateTouchChoices();
+   if(window.__sehBindNineSystemGrouping)window.__sehBindNineSystemGrouping();
+ }
+ window.__sehEnsureWorkoutRows=ensureTableRows;
  function restore(){
    const t=table();if(!t)return;
-   const data=drafts[active];
+   const data=drafts[active];ensureTableRows(Math.max(9,data?data.length:9));
    const rows=Array.from(t.querySelectorAll('tbody tr'));
    rows.forEach((tr,i)=>{
      const r=data&&data[i];
      if(!r){resetRow(tr);return;}
+     const ids=['superset','triset','giant'].includes(r.system)?(r.checked||[]):(r.exercise?[r.exercise]:[]);
+     ids.forEach(id=>ensureRowExercise(tr,id));
      const sys=tr.querySelector('.w9-system');if(sys){sys.value=r.system||'normal';sys.dispatchEvent(new Event('change',{bubbles:true}));}
      const ex=tr.querySelector('.w9-exercise');if(ex){ex.value=r.exercise||'';ex.hidden=['superset','triset','giant'].includes(r.system);}
      const box=tr.querySelector('.w9-movement-checklist');
      if(box){
-       const wanted=new Set(r.checked||[]);
-       box.querySelectorAll('.w9-exercise-check').forEach(x=>x.checked=wanted.has(x.value));
+       const wanted=new Set((r.checked||[]).map(String));
+       box.querySelectorAll('.w9-exercise-check').forEach(x=>x.checked=wanted.has(String(x.value)));
        box.hidden=!['superset','triset','giant'].includes(r.system);
      }
      const hint=tr.querySelector('.w9-movement-hint');if(hint)hint.hidden=true;
@@ -13877,25 +13914,159 @@ window.sehResetTurnstile=function(){};
    });
    ensureDay();
  }
- function updateButton(){
-   const b=$('sehAddSessionMovementsBtn');if(b)b.textContent='＋ افزودن حرکات '+names[active]+' به برنامه تمرینی';
+ function updateButton(){const b=$('sehAddSessionMovementsBtn');if(b)b.textContent='＋ ذخیره تغییرات '+names[active]+' در برنامه تمرینی';}
+ function rowGroups(rows){
+   const map=new Map();
+   rows.slice().sort((a,b)=>(Number(a.sort_order)||0)-(Number(b.sort_order)||0)||Number(a.id)-Number(b.id)).forEach(row=>{
+     const key=row.group_key?('group:'+row.group_key):('row:'+row.id);
+     if(!map.has(key))map.set(key,[]);
+     map.get(key).push(row);
+   });
+   return Array.from(map.values()).sort((a,b)=>(Number(a[0].sort_order)||0)-(Number(b[0].sort_order)||0));
+ }
+ async function hydrateDrafts(){
+   const traineeId=typeof currentClient!=='undefined'&&currentClient&&currentClient.id!=null?String(currentClient.id):'';
+   const planId=typeof currentWorkoutPlanId!=='undefined'&&currentWorkoutPlanId!=null?String(currentWorkoutPlanId):'';
+   if(!traineeId||!planId){for(let i=0;i<6;i++)drafts[i]=null;legacyUnassignedRows=false;legacyUnassignedCount=0;legacyPreviewOnly=false;return true;}
+   hydrating=true;
+   try{
+     const rows=await sbGet('/trainee_workout_exercises?workout_plan_id=eq.'+encodeURIComponent(planId)+'&select=*&order=sort_order.asc,created_at.asc');
+     if(!same(currentClient?.id,traineeId)||!same(currentWorkoutPlanId,planId))return;
+     const unassignedRows=rows.filter(r=>!names.includes(String(r.training_day||'')));const labelledRows=rows.filter(r=>names.includes(String(r.training_day||'')));legacyUnassignedRows=unassignedRows.length>0;legacyUnassignedCount=unassignedRows.length;legacyPreviewOnly=unassignedRows.length>0&&labelledRows.length===0;
+     const ids=[...new Set(rows.map(r=>String(r.exercise_id)).filter(Boolean))];
+     if(ids.length){
+       try{
+         const exercises=await sbGet('/exercises?id=in.('+ids.map(encodeURIComponent).join(',')+')&select=id,name');
+         exercises.forEach(x=>exerciseLabels[String(x.id)]=String(x.name||x.id));
+       }catch(e){console.warn('نام بعضی حرکات ذخیره‌شده دریافت نشد',e);}
+     }
+     if(!same(currentClient?.id,traineeId)||!same(currentWorkoutPlanId,planId))return;
+     for(let day=0;day<6;day++){
+       let dayRows=rows.filter(r=>String(r.training_day||'')===names[day]);if(day===0&&legacyPreviewOnly)dayRows=unassignedRows;
+       const groups=rowGroups(dayRows);
+       drafts[day]=groups.map(group=>{
+         const first=group[0],grouped=['superset','triset','giant'].includes(first.training_system);
+         const exerciseIds=group.map(x=>String(x.exercise_id));
+         return {exercise:grouped?'':exerciseIds[0]||'',checked:grouped?exerciseIds:[],system:first.training_system||'normal',rest:String(first.rest_seconds??60),reps:String(first.reps??10),sets:String(first.sets??3)};
+       });
+       if(drafts[day].length<9)drafts[day]=drafts[day].concat(Array.from({length:9-drafts[day].length},()=>null));
+     }
+     renderTabs();
+     return true;
+   }catch(e){
+     console.error('بارگذاری جلسات ذخیره‌شده برای ویرایش ناموفق بود',e);
+     // Do not clear the existing table/drafts when a read fails.
+     const hint=$('sehWorkoutSessionCards');
+     if(hint)hint.title='بارگذاری جلسات از پایگاه داده کامل نشد؛ اطلاعات ذخیره‌شده دست‌نخورده‌اند.';
+     return false;
+   }finally{hydrating=false;}
+ }
+ async function validateAndSaveSession(){
+   checkClient();capture();ensureDay();
+   const traineeId=typeof currentClient!=='undefined'&&currentClient&&currentClient.id!=null?String(currentClient.id):'';
+   if(!traineeId)return alert('اول شاگرد را انتخاب کنید.');
+   if(!currentWorkoutPlanId){await window.saveWorkoutPlan();if(!currentWorkoutPlanId)return;}
+   const planId=String(currentWorkoutPlanId);
+   if(!same(currentClient?.id,traineeId)||!same(currentWorkoutPlanId,planId))return alert('شاگرد یا برنامه تغییر کرده است؛ ذخیره لغو شد.');
+   const t=table();if(!t)return;
+   const selectedByRow=Array.from(t.querySelectorAll('tbody tr')).map(tr=>Array.from(tr.querySelectorAll('.w9-exercise-check:checked')).map(i=>String(i.value)));
+   const wanted=Array.from(t.querySelectorAll('tbody tr')).map((tr,index)=>{
+     const system=tr.querySelector('.w9-system')?.value||'normal',groupMode=['superset','triset','giant'].includes(system);
+     const checked=selectedByRow[index]||[],single=tr.querySelector('.w9-exercise')?.value||'';
+     return {index,system,groupMode,exerciseIds:groupMode?checked:(single?[String(single)]:[]),restRaw:getField(tr,'w9-rest'),reps:String(getField(tr,'w9-reps')||'').trim(),setsRaw:getField(tr,'w9-sets')};
+   }).filter(r=>r.exerciseIds.length);
+   if(!wanted.length)return alert('حداقل یک حرکت را در جدول انتخاب کنید.');
+   const systems=new Set(['normal','superset','triset','giant','drop','rest_pause','timed','multi_stage','custom']);
+   for(const r of wanted){
+     if(!systems.has(r.system))return alert('سیستم تمرینی ردیف '+(r.index+1)+' معتبر نیست.');
+     const needed=r.system==='superset'?2:(r.system==='triset'?3:(r.system==='giant'?4:1));
+     if(r.exerciseIds.length!==needed)return alert((r.system==='superset'?'سوپرست':r.system==='triset'?'تری‌ست':r.system==='giant'?'جاینت‌ست':'این سیستم')+' در ردیف '+(r.index+1)+' باید دقیقاً '+needed+' حرکت داشته باشد.');
+     if(new Set(r.exerciseIds).size!==r.exerciseIds.length)return alert('در ردیف '+(r.index+1)+' یک حرکت را دوبار انتخاب نکنید.');
+     if(!r.reps)return alert('تکرار ردیف '+(r.index+1)+' را وارد کنید.');
+     if(!Number.isFinite(Number(r.setsRaw))||Number(r.setsRaw)<1)return alert('تعداد ست ردیف '+(r.index+1)+' باید حداقل ۱ باشد.');
+     if(!Number.isFinite(Number(r.restRaw))||Number(r.restRaw)<0)return alert('استراحت ردیف '+(r.index+1)+' معتبر نیست.');
+   }
+   try{
+     // Read the exact plan first. Never infer a session from unlabelled legacy rows.
+     let allRows;
+     try{allRows=await sbGet('/trainee_workout_exercises?workout_plan_id=eq.'+encodeURIComponent(planId)+'&select=*&order=sort_order.asc,created_at.asc');}
+     catch(e){if(/training_day|column/i.test(e.message||''))throw new Error('ستون تشخیص جلسه در پایگاه داده در دسترس نیست؛ برای جلوگیری از تغییر اشتباه برنامه، چیزی ذخیره نشد.');throw e;}
+     if(!same(currentClient?.id,traineeId)||!same(currentWorkoutPlanId,planId))throw new Error('شاگرد یا برنامه هنگام خواندن اطلاعات تغییر کرد.');
+     const sessionRows=allRows.filter(r=>String(r.training_day||'')===names[active]);
+     if(legacyUnassignedRows&&sessionRows.length===0&&allRows.some(r=>!names.includes(String(r.training_day||'')))){
+       throw new Error('در این برنامه حرکات قدیمی بدون برچسب جلسه وجود دارد؛ برای جلوگیری از ساختن جلسه تکراری، ذخیره متوقف شد و هیچ حرکت قدیمی حذف نشد.');
+     }
+     const existingGroups=rowGroups(sessionRows);
+     const stale=[];
+     const inserts=[];
+     for(let i=0;i<wanted.length;i++){
+       const r=wanted[i],oldGroup=existingGroups[r.index]||[];
+       let groupKey=null;
+       if(r.groupMode)groupKey=oldGroup.length&&oldGroup[0].group_key?oldGroup[0].group_key:'W9-'+Date.now().toString(36).toUpperCase()+'-'+active+'-'+r.index;
+       for(let j=0;j<r.exerciseIds.length;j++){
+         const old=oldGroup[j];
+         const payload={workout_plan_id:currentWorkoutPlanId,exercise_id:r.exerciseIds[j],sets:Number(r.setsRaw),reps:r.reps,rest_seconds:Number(r.restRaw),sort_order:(r.index+1)*10+j,training_system:r.system,group_key:groupKey,training_day:names[active]};
+         if(old){
+           const patch={exercise_id:payload.exercise_id,sets:payload.sets,reps:payload.reps,rest_seconds:payload.rest_seconds,sort_order:payload.sort_order,training_system:payload.training_system,group_key:payload.group_key,training_day:payload.training_day};
+           await sbWrite('/trainee_workout_exercises?id=eq.'+encodeURIComponent(old.id)+'&workout_plan_id=eq.'+encodeURIComponent(planId),'PATCH',patch);
+         }else{
+           inserts.push({...payload,is_completed:false,notes:null});
+         }
+       }
+       }
+     const wantedByIndex=new Map(wanted.map(r=>[r.index,r]));
+     for(let rowIndex=0;rowIndex<existingGroups.length;rowIndex++){
+       const oldGroup=existingGroups[rowIndex],desired=wantedByIndex.get(rowIndex);
+       if(!desired){stale.push(...oldGroup);continue;}
+       if(oldGroup.length>desired.exerciseIds.length)stale.push(...oldGroup.slice(desired.exerciseIds.length));
+     }
+     if(inserts.length){
+       let inserted;
+       try{inserted=await sbWrite('/trainee_workout_exercises','POST',inserts);}
+       catch(e){
+         if(!/training_day|is_completed/i.test(e.message||''))throw e;
+         throw new Error('پایگاه داده ستون‌های لازم برای تشخیص جلسه را ندارد؛ حرکات قبلی حذف نشدند. جزئیات: '+(e.message||String(e)));
+       }
+       if(!Array.isArray(inserted)||inserted.length!==inserts.length)throw new Error('ثبت حرکات جدید تأیید نشد؛ حذف حرکات قبلی انجام نشد.');
+       if(inserted.some(r=>!same(r.workout_plan_id,planId)||String(r.training_day||'')!==names[active]))throw new Error('پاسخ ثبت حرکات با جلسه انتخابی مطابقت ندارد؛ حذف حرکات قبلی انجام نشد.');
+     }
+     // Delete obsolete rows only after all desired updates/inserts have succeeded.
+     for(const old of stale){
+       await sbWrite('/trainee_workout_exercises?id=eq.'+encodeURIComponent(old.id)+'&workout_plan_id=eq.'+encodeURIComponent(planId),'DELETE');
+     }
+     const verified=await sbGet('/trainee_workout_exercises?workout_plan_id=eq.'+encodeURIComponent(planId)+'&training_day=eq.'+encodeURIComponent(names[active])+'&select=id,exercise_id,training_day,sets,reps,rest_seconds,training_system,group_key,sort_order&order=sort_order.asc');
+     const expectedCount=wanted.reduce((n,r)=>n+r.exerciseIds.length,0);
+     if(verified.length!==expectedCount)throw new Error('پس از ذخیره، تعداد حرکات تأییدشده با جدول برابر نیست؛ اطلاعات قدیمی به‌صورت خودکار پاک نشدند.');
+     if(!same(currentClient?.id,traineeId)||!same(currentWorkoutPlanId,planId))throw new Error('شاگرد یا برنامه پس از ذخیره تغییر کرد؛ لطفاً دوباره بارگذاری کنید.');
+     await window.loadWorkoutForClient();
+     if(!same(currentClient?.id,traineeId)||!same(currentWorkoutPlanId,planId))return;
+     restore();capture();renderTabs();updateButton();
+     alert('تغییرات '+names[active]+' ذخیره و از پایگاه داده بازخوانی شد.');
+   }catch(e){
+     console.error('ذخیره/ویرایش جلسه ناموفق بود',e);
+     try{if(same(currentClient?.id,traineeId)&&same(currentWorkoutPlanId,planId))await window.loadWorkoutForClient();}catch(_){}
+     alert('ذخیره کامل تأیید نشد. اطلاعات حذف‌شده‌ای عمداً پاک‌سازی نشدند.\\n'+(e?.message||String(e)));
+   }
  }
  function install(){
    const t=table();if(!t)return false;
    let box=$('sehWorkoutSessionCards');
    if(!box){box=document.createElement('div');box.id='sehWorkoutSessionCards';box.setAttribute('aria-label','انتخاب جلسه تمرینی');t.closest('.workout-nine-table-wrap')?.insertAdjacentElement('beforebegin',box);}
    checkClient();ensureDay();renderTabs();updateButton();
-   if(!window.__sehSixSessionSaveWrapped&&typeof window.saveWorkoutNineTable==='function'){
-     const original=window.saveWorkoutNineTable;
-     window.saveWorkoutNineTable=async function(){
-       checkClient();capture();ensureDay();
-       const before=Array.from(table()?.querySelectorAll('tbody tr')||[]).some(tr=>tr.querySelector('.w9-exercise')?.value||tr.querySelector('.w9-exercise-check:checked'));
-       await original.apply(this,arguments);
-       const after=Array.from(table()?.querySelectorAll('tbody tr')||[]).some(tr=>tr.querySelector('.w9-exercise')?.value||tr.querySelector('.w9-exercise-check:checked'));
-       if(before&&!after){drafts[active]=null;restore();renderTabs();}
-       else capture();
-       updateButton();
+   if(!window.__sehSixSessionLoadWrapped&&typeof window.loadWorkoutForClient==='function'){
+     const originalLoad=window.loadWorkoutForClient;
+     window.loadWorkoutForClient=async function(){
+       checkClient();
+       const traineeId=typeof currentClient!=='undefined'&&currentClient&&currentClient.id!=null?String(currentClient.id):'';
+       await originalLoad.apply(this,arguments);
+       if(!same(currentClient?.id,traineeId))return;
+       const loaded=await hydrateDrafts();
+       if(loaded){restore();renderTabs();updateButton();}
      };
+     window.__sehSixSessionLoadWrapped=true;
+   }
+   if(!window.__sehSixSessionSaveWrapped&&typeof window.saveWorkoutNineTable==='function'){
+     window.saveWorkoutNineTable=validateAndSaveSession;
      window.__sehSixSessionSaveWrapped=true;
    }
    return true;
@@ -13905,25 +14076,18 @@ window.sehResetTurnstile=function(){};
      const mo=new MutationObserver(()=>{if(install())mo.disconnect();});
      mo.observe(document.body,{childList:true,subtree:true});
    }
-   // Track trainee changes when they happen, not for the first time during Save.
-   // This prevents checkClient() from clearing a freshly selected movement on Save.
    if(!window.__sehWorkoutClientChangeWatcher){
      window.__sehWorkoutClientChangeWatcher=true;
      let lastId=typeof currentClient!=='undefined'&&currentClient&&currentClient.id!=null?String(currentClient.id):'';
      const checkSelection=()=>{
        const now=typeof currentClient!=='undefined'&&currentClient&&currentClient.id!=null?String(currentClient.id):'';
-       if(now!==lastId){
-         lastId=now;
-         checkClient();
-       }
+       if(now!==lastId){lastId=now;checkClient();if(typeof window.loadWorkoutForClient==='function')window.loadWorkoutForClient();}
      };
      document.addEventListener('click',event=>{
        if(event.target&&event.target.closest&&event.target.closest('.coach-name-cell,[data-trainee-id]')){
-         setTimeout(checkSelection,0);
-         setTimeout(checkSelection,80);
+         setTimeout(checkSelection,0);setTimeout(checkSelection,80);
        }
      },true);
-     // Fallback for selection paths that update currentClient without a click target.
      setInterval(checkSelection,350);
    }
  }
