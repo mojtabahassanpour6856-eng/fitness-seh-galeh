@@ -166,7 +166,12 @@ jobs:
           assert.match(html, /if\(day===0&&legacyPreviewOnly\)dayRows=unassignedRows/, 'legacy rows must be surfaced in the editor rather than silently appearing as an empty plan');
           assert.match(html, /ذخیره و ویرایش تا مشخص‌شدن جلسه/, 'legacy preview must visibly warn that editing is blocked to protect ambiguous rows');
           assert.match(html, /legacyUnassignedRows&&sessionRows\.length===0/, 'must refuse to write when the target session cannot be safely identified');
-          console.log('PASS: save handler safeguards and legacy unlabelled-plan preview/stop safeguards.');
+          assert.match(html, /if\(groups\.length>9\)overflowSessions\[names\[day\]\]=groups\.length/, 'must detect saved sessions that exceed the nine-row editor');
+          assert.match(html, /storedGroupCount>9\)throw new Error/, 'must block saves when a session has hidden overflow rows');
+          assert.match(html, /existingGroups\[r\.index\]/, 'must match saved groups to their actual table row index');
+          assert.match(html, /wantedByIndex=new Map\(wanted\.map\(r=>\[r\.index,r\]\)\)/, 'must delete only the saved group corresponding to an intentionally cleared row');
+          assert.match(html, /ویرایش و ذخیره این جلسه موقتاً متوقف است/, 'must visibly warn before an overflow session could be accidentally truncated');
+          console.log('PASS: save safeguards, legacy preview, overflow blocking, and row-index-safe edits.');
           NODE
       - name: Exercise the actual save handler with a mocked database (no live data)
         run: |
