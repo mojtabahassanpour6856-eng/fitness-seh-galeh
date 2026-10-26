@@ -172,6 +172,96 @@ jobs:
           })().catch(err => { console.error(err); process.exit(1); });
           NODE
           node dynamic-row-check.cjs
+      - name: Load, edit, save, and reload an existing workout plan (isolated mock DB)
+        run: |
+          cat > saved-plan-edit-check.cjs <<'NODE'
+          const { chromium } = require('playwright');
+          const path = require('node:path');
+          const assert = require('node:assert/strict');
+          (async () => {
+            const browser = await chromium.launch({ headless: true });
+            const page = await browser.newPage({ viewport: { width: 1440, height: 1100 } });
+            page.on('dialog', d => d.accept());
+            await page.goto('file://' + path.resolve('index.html'), { waitUntil: 'domcontentloaded' });
+            await page.addStyleTag({ content: '#authScreen { display:none !important; }' });
+            await page.locator('#workout').evaluate(el => el.classList.add('active'));
+            await page.locator('#workoutNineTable').waitFor();
+            const seed = [];
+            // Ten visible groups / eleven movements, matching the real legacy edge case.
+            seed.push({id:1,workout_plan_id:444,exercise_id:101,sets:3,reps:'10',rest_seconds:60,sort_order:10,training_system:'superset',group_key:'test-superset',training_day:'جلسه اول',is_completed:false});
+            seed.push({id:2,workout_plan_id:444,exercise_id:102,sets:3,reps:'10',rest_seconds:60,sort_order:10,training_system:'superset',group_key:'test-superset',training_day:'جلسه اول',is_completed:false});
+            for (let i = 0; i < 9; i++) seed.push({id:i+3,workout_plan_id:444,exercise_id:103+i,sets:2+i%3,reps:String(8+i),rest_seconds:45+i,sort_order:(i+2)*10,training_system:'normal',group_key:null,training_day:'جلسه اول',is_completed:false});
+            await page.evaluate((seedRows) => {
+              window.__mockPlans = [{id:444,trainee_id:'test-trainee',title:'Plan for edit test',goal:'strength',notes:'mock only',plan_date:'2026-10-20'}];
+              window.__mockSavedRows = seedRows.map(x => ({...x}));
+              window.__mockExercises = seedRows.map(x => ({id:x.exercise_id,name:'Test movement '+x.exercise_id})).filter((x,i,a)=>a.findIndex(y=>y.id===x.id)===i);
+              window.__mockWrites = [];
+              window.sbGet = async (url) => {
+                if (url.startsWith('/trainee_workout_plans')) return window.__mockPlans;
+                if (url.startsWith('/exercises')) {
+                  const match = url.match(/id=in\.\(([^)]+)\)/);
+                  if (!match) return window.__mockExercises;
+                  const ids = match[1].split(',').map(decodeURIComponent);
+                  return window.__mockExercises.filter(x => ids.includes(String(x.id)));
+                }
+                if (url.startsWith('/trainee_workout_exercises')) {
+                  let rows = window.__mockSavedRows.slice();
+                  const plan = url.match(/workout_plan_id=eq\.([^&]+)/);
+                  if (plan) rows = rows.filter(x => String(x.workout_plan_id) === decodeURIComponent(plan[1]));
+                  const day = url.match(/training_day=eq\.([^&]+)/);
+                  if (day) rows = rows.filter(x => String(x.training_day) === decodeURIComponent(day[1]));
+                  return rows.sort((a,b)=>(Number(a.sort_order)||0)-(Number(b.sort_order)||0)||Number(a.id)-Number(b.id));
+                }
+                return [];
+              };
+              window.sbWrite = async (url, method, payload) => {
+                window.__mockWrites.push({url,method,payload});
+                if (method === 'PATCH') {
+                  const id = decodeURIComponent((url.match(/id=eq\.([^&]+)/)||[])[1]||'');
+                  const index = window.__mockSavedRows.findIndex(x => String(x.id) === id && url.includes('workout_plan_id=eq.444'));
+                  if (index < 0) return [];
+                  window.__mockSavedRows[index] = {...window.__mockSavedRows[index], ...payload};
+                  return [window.__mockSavedRows[index]];
+                }
+                if (method === 'POST') {
+                  const rows = payload.map((x,i)=>({...x,id:Math.max(0,...window.__mockSavedRows.map(r=>Number(r.id)||0))+i+1}));
+                  window.__mockSavedRows.push(...rows);
+                  return rows;
+                }
+                if (method === 'DELETE') {
+                  const id = decodeURIComponent((url.match(/id=eq\.([^&]+)/)||[])[1]||'');
+                  window.__mockSavedRows = window.__mockSavedRows.filter(x => String(x.id) !== id);
+                  return [];
+                }
+                throw new Error('Unexpected mocked write: '+method);
+              };
+              eval('currentClient = {id:"test-trainee", goal:"strength"}; currentWorkoutPlanId = null; workoutExercisesCache = [];');
+            }, seed);
+            await page.evaluate(async () => { await window.loadWorkoutForClient(); });
+            const table = page.locator('#workoutNineTable');
+            assert.equal(await table.locator('tbody tr').count(), 10, 'loading the saved plan should expand to ten movement groups');
+            const first = table.locator('tbody tr').nth(0);
+            assert.equal(await first.locator('.w9-system').inputValue(), 'superset', 'saved superset system should be restored');
+            assert.equal(await first.locator('.w9-movement-checklist input:checked').count(), 2, 'both movements in the saved superset should be restored');
+            const last = table.locator('tbody tr').nth(9);
+            assert.equal(await last.locator('.w9-exercise').inputValue(), '111', 'the tenth saved group should load into row ten');
+            assert.equal(await last.locator('.w9-sets').inputValue(), '4', 'saved prescription should be restored in the last row');
+            await last.locator('.w9-sets').evaluate(el => { el.value='5'; el.dispatchEvent(new Event('input',{bubbles:true})); el.dispatchEvent(new Event('change',{bubbles:true})); if(el.nextElementSibling?.classList.contains('seh-touch-choice-select')) el.nextElementSibling.value='5'; });
+            await page.evaluate(async () => { await window.saveWorkoutNineTable(); });
+            assert.equal(await table.locator('tbody tr').count(), 10, 'save and automatic reload must preserve the expanded session');
+            assert.equal(window.__mockSavedRows.length, 11, 'editing must preserve all eleven movement records without duplicates');
+            assert.equal(window.__mockSavedRows.find(x=>x.id===11).sets, 5, 'changed sets must be persisted on the existing movement row');
+            assert.equal(window.__mockWrites.filter(x=>x.method==='POST').length, 0, 'editing a fully populated saved session must not insert duplicate records');
+            assert.equal(window.__mockWrites.filter(x=>x.method==='PATCH').length, 11, 'each existing movement record should be updated in place');
+            await page.evaluate(async () => { await window.loadWorkoutForClient(); });
+            assert.equal(await table.locator('tbody tr').count(), 10, 'a fresh reload must still restore all ten movement groups');
+            assert.equal(await table.locator('tbody tr').nth(9).locator('.w9-sets').inputValue(), '5', 'the edited value must survive a fresh reload');
+            assert.equal(await table.locator('tbody tr').nth(0).locator('.w9-movement-checklist input:checked').count(), 2, 'grouped movement selection must survive a fresh reload');
+            console.log(JSON.stringify({ loadedGroups:10, loadedMovements:11, supersetRestored:true, editedExistingRow:true, duplicateInserts:0, freshReloadPreservedEdit:true, database:'isolated in-memory mock only' }, null, 2));
+            await browser.close();
+          })().catch(err => { console.error(err); process.exit(1); });
+          NODE
+          node saved-plan-edit-check.cjs
       - name: Verify exact exercise muscle filtering
         run: |
           node - <<'NODE'
