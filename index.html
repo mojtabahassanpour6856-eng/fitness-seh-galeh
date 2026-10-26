@@ -6024,10 +6024,10 @@ body.workout-output .empty-cell{display:none!important}
           )+240;
           /* Extra bottom capture space is intentional: on Android, html2canvas can stop at the body viewport edge and clip the coach-notes/footer block even when it exists in the export DOM. The later A4 crop trims blank pixels, so this safety space does not add a blank border to the downloaded image. */
           /* For the A4 PNG, capture the workout body at the same portrait ratio as the
-             final 1754x2480 page. A very tall natural-flow capture was being shrunk to fit
+             final 2480x3508 page. A very tall natural-flow capture was being shrunk to fit
              the page height, which created broad blank side gutters around the table. */
           const captureHeight=kind!=='meal'
-            ? Math.max(measuredCaptureHeight,Math.ceil(captureWidth*(2480/1754)))
+            ? Math.max(measuredCaptureHeight,Math.ceil(captureWidth*(3508/2480)))
             : measuredCaptureHeight;
           /* Apply the larger plus directly to the source DOM only for PNG capture.
              This is more reliable than clone-only styles on mobile html2canvas builds;
@@ -6041,7 +6041,7 @@ body.workout-output .empty-cell{display:none!important}
             });
           }
           const canvas=await popup.html2canvas(target,{
-            scale:2, backgroundColor:'#ffffff', useCORS:true, logging:false,
+            scale:2.5, backgroundColor:'#ffffff', useCORS:true, logging:false,
             width:captureWidth,
             height:captureHeight,
             windowWidth:captureWidth,
@@ -6175,7 +6175,7 @@ body.workout-output .empty-cell{display:none!important}
           let finalCanvas=canvas;
           if(kind!=='meal'){
             const page=doc.createElement('canvas');
-            page.width=1754; page.height=2480;
+            page.width=2480; page.height=3508;
             const ctx=page.getContext('2d');
             if(!ctx)throw new Error('ساخت صفحه A4 ممکن نشد.');
             ctx.fillStyle='#ffffff';ctx.fillRect(0,0,page.width,page.height);
