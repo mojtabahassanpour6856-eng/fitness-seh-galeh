@@ -13887,6 +13887,7 @@ window.sehResetTurnstile=function(){};
    if(window.__sehSyncNineMovementOptions)window.__sehSyncNineMovementOptions();
    if(window.__sehBindNineSystemGrouping)window.__sehBindNineSystemGrouping();
  }
+ window.__sehEnsureWorkoutRows=ensureTableRows;
  function restore(){
    const t=table();if(!t)return;
    const data=drafts[active];ensureTableRows(Math.max(9,data?data.length:9));
