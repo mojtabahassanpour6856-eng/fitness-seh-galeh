@@ -13830,7 +13830,7 @@ window.sehResetTurnstile=function(){};
  }
  function renderTabs(){
    const box=$('sehWorkoutSessionCards');if(!box)return;
-   box.innerHTML=names.map((name,i)=>'<button type="button" class="seh-session-card'+(i===active?' active':'')+'" data-session-index="'+i+'" aria-pressed="'+(i===active?'true':'false')+'">'+name+'<span class="seh-session-count">'+(drafts[i]&&drafts[i].some(r=>r.exercise||r.checked.length)?'دارای اطلاعات':'')+'</span></button>').join('');
+   box.innerHTML=names.map((name,i)=>'<button type="button" class="seh-session-card'+(i===active?' active':'')+'" data-session-index="'+i+'" aria-pressed="'+(i===active?'true':'false')+'">'+name+'<span class="seh-session-count">'+(drafts[i]&&drafts[i].some(r=>r&&(r.exercise||r.checked.length))?'دارای اطلاعات':'')+'</span></button>').join('');
    box.querySelectorAll('[data-session-index]').forEach(btn=>btn.addEventListener('click',()=>{
      const next=Number(btn.dataset.sessionIndex);if(!Number.isInteger(next)||next<0||next>5||next===active)return;
      checkClient();capture();active=next;restore();ensureDay();renderTabs();updateButton();
@@ -13903,7 +13903,7 @@ window.sehResetTurnstile=function(){};
  async function hydrateDrafts(){
    const traineeId=typeof currentClient!=='undefined'&&currentClient&&currentClient.id!=null?String(currentClient.id):'';
    const planId=typeof currentWorkoutPlanId!=='undefined'&&currentWorkoutPlanId!=null?String(currentWorkoutPlanId):'';
-   if(!traineeId||!planId){for(let i=0;i<6;i++)drafts[i]=null;legacyUnassignedRows=false;return;}
+   if(!traineeId||!planId){for(let i=0;i<6;i++)drafts[i]=null;legacyUnassignedRows=false;return true;}
    hydrating=true;
    try{
      const rows=await sbGet('/trainee_workout_exercises?workout_plan_id=eq.'+encodeURIComponent(planId)+'&select=*&order=sort_order.asc,created_at.asc');
@@ -13929,11 +13929,13 @@ window.sehResetTurnstile=function(){};
        drafts[day]=drafts[day].slice(0,9);
      }
      renderTabs();
+     return true;
    }catch(e){
      console.error('بارگذاری جلسات ذخیره‌شده برای ویرایش ناموفق بود',e);
      // Do not clear the existing table/drafts when a read fails.
      const hint=$('sehWorkoutSessionCards');
      if(hint)hint.title='بارگذاری جلسات از پایگاه داده کامل نشد؛ اطلاعات ذخیره‌شده دست‌نخورده‌اند.';
+     return false;
    }finally{hydrating=false;}
  }
  async function validateAndSaveSession(){
@@ -14017,8 +14019,7 @@ window.sehResetTurnstile=function(){};
    }catch(e){
      console.error('ذخیره/ویرایش جلسه ناموفق بود',e);
      try{if(same(currentClient?.id,traineeId)&&same(currentWorkoutPlanId,planId))await window.loadWorkoutForClient();}catch(_){}
-     alert('ذخیره کامل تأیید نشد. اطلاعات حذف‌شده‌ای عمداً پاک‌سازی نشدند.
-'+(e?.message||String(e)));
+     alert('ذخیره کامل تأیید نشد. اطلاعات حذف‌شده‌ای عمداً پاک‌سازی نشدند.\\n'+(e?.message||String(e)));
    }
  }
  function install(){
@@ -14033,8 +14034,8 @@ window.sehResetTurnstile=function(){};
        const traineeId=typeof currentClient!=='undefined'&&currentClient&&currentClient.id!=null?String(currentClient.id):'';
        await originalLoad.apply(this,arguments);
        if(!same(currentClient?.id,traineeId))return;
-       await hydrateDrafts();
-       restore();renderTabs();updateButton();
+       const loaded=await hydrateDrafts();
+       if(loaded){restore();renderTabs();updateButton();}
      };
      window.__sehSixSessionLoadWrapped=true;
    }
