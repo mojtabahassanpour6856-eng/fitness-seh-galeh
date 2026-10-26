@@ -5564,8 +5564,9 @@ window.useLibraryExercise=async function(id){
           return String(a.created_at||'').localeCompare(String(b.created_at||''));
         });
         const ids = [...new Set(rows.map(x=>x.exercise_id).filter(x=>x!==null&&x!==undefined&&x!==''))];
-        const ex = ids.length ? await sbGet('/exercises?id=in.('+ids.join(',')+')&select=id,name') : [];
+        const ex = ids.length ? await sbGet('/exercises?id=in.('+ids.join(',')+')&select=id,name,instructions,category,muscle_group') : [];
         const names = Object.fromEntries(ex.map(x=>[String(x.id),x.name]));
+        const exerciseDetails = Object.fromEntries(ex.map(x=>[String(x.id),x]));
         const systems = {normal:'معمولی',superset:'سوپرست','super-set':'سوپرست',triset:'تری‌ست','tri-set':'تری‌ست',giant:'جاینت‌ست',giant_set:'جاینت‌ست','giant-set':'جاینت‌ست',drop:'دراپ‌ست',drop_set:'دراپ‌ست','drop-set':'دراپ‌ست',dropset:'دراپ‌ست',rest_pause:'رست‌پاز','rest-pause':'رست‌پاز',restpause:'رست‌پاز',timed:'تایم‌دار',time_based:'تایم‌دار','time-based':'تایم‌دار',multi_stage:'چندمرحله‌ای','multi-stage':'چندمرحله‌ای',pre_exhaust:'پیش‌خستگی','pre-exhaust':'پیش‌خستگی',mechanical_drop:'دراپ‌ست مکانیکی','mechanical-drop':'دراپ‌ست مکانیکی',pyramid:'هرمی',reverse_pyramid:'هرمی معکوس','reverse-pyramid':'هرمی معکوس',circuit:'دایره‌ای',custom:'سفارشی',failure:'تا ناتوانی',to_failure:'تا ناتوانی','to-failure':'تا ناتوانی','forced-reps':'تکرار اجباری',forced_reps:'تکرار اجباری',forcedreps:'تکرار اجباری','negative-reps':'تکرار منفی',negative_reps:'تکرار منفی',negativereps:'تکرار منفی','partial-reps':'نیم‌تکرار',partial_reps:'نیم‌تکرار',partialreps:'نیم‌تکرار','myo-reps':'مایو رپس',myo_reps:'مایو رپس',myoreps:'مایو رپس'};
          const normalizeSystem=value=>String(value||'normal').toLowerCase().trim().replace(/[\s-]+/g,'_');
           const systemLabelFor=value=>{
