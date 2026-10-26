@@ -216,15 +216,36 @@ jobs:
             }
             const first = await page.evaluate(async () => {
               let captured;
-              window.__mockSavedRows = null;
+              window.__mockSavedRows = [];
+              window.__mockWriteCalls = [];
               window.sbGet = async url => {
-                if (url.includes('training_day=eq.') && window.__mockSavedRows) return window.__mockSavedRows;
+                if (url.includes('/trainee_workout_exercises')) {
+                  const rows = window.__mockSavedRows;
+                  if (url.includes('training_day=eq.')) return rows.filter(x => x.training_day === 'جلسه اول');
+                  return rows;
+                }
                 return [];
               };
               window.sbWrite = async (url, method, payload) => {
                 captured = { url, method, payload };
-                window.__mockSavedRows = payload.map((x,i) => ({...x,id:i+1}));
-                return window.__mockSavedRows;
+                window.__mockWriteCalls.push({url,method,payload});
+                if (method === 'POST') {
+                  const inserted = payload.map((x,i) => ({...x,id:window.__mockSavedRows.length+i+1}));
+                  window.__mockSavedRows.push(...inserted);
+                  return inserted;
+                }
+                if (method === 'PATCH') {
+                  const id = decodeURIComponent((url.match(/id=eq\.([^&]+)/)||[])[1]||'');
+                  const index = window.__mockSavedRows.findIndex(x => String(x.id) === String(id));
+                  if (index >= 0) window.__mockSavedRows[index] = {...window.__mockSavedRows[index],...payload};
+                  return index >= 0 ? [window.__mockSavedRows[index]] : [];
+                }
+                if (method === 'DELETE') {
+                  const id = decodeURIComponent((url.match(/id=eq\.([^&]+)/)||[])[1]||'');
+                  window.__mockSavedRows = window.__mockSavedRows.filter(x => String(x.id) !== String(id));
+                  return [];
+                }
+                throw new Error('Unexpected mocked method: '+method);
               };
               await window.saveWorkoutNineTable();
               return captured;
@@ -242,7 +263,22 @@ jobs:
             assert.equal(first.payload[6].group_key, first.payload[9].group_key, 'four same-row giant-set movements must share a group key');
             assert.equal(first.payload[0].group_key, null);
             assert.equal(first.payload[10].group_key, null);
-            // Refill after success and verify the optional-column fallback path too.
+            // Editing the same saved session must PATCH existing IDs, not append a duplicate plan/session.
+            await rows[0].locator('.w9-sets').evaluate(el => { el.value = '5'; if (el.nextElementSibling?.classList.contains('seh-touch-choice-select')) el.nextElementSibling.value = '5'; });
+            const editResult = await page.evaluate(async () => {
+              await window.saveWorkoutNineTable();
+              return {
+                writes: window.__mockWriteCalls.map(x => x.method),
+                rowCount: window.__mockSavedRows.length,
+                firstRow: window.__mockSavedRows.find(x => String(x.id) === '1')
+              };
+            });
+            assert.equal(editResult.rowCount, 15, 'editing a saved session must not duplicate its 15 exercise rows');
+            assert.equal(editResult.writes.filter(x => x === 'POST').length, 1, 'the second save must not insert duplicate movements');
+            assert.equal(editResult.writes.filter(x => x === 'PATCH').length, 15, 'the second save should update existing movement rows');
+            assert.equal(String(editResult.firstRow.sets), '5', 'the changed set count must be persisted to the existing row');
+
+            // If session metadata cannot be read, refuse to write rather than guess which saved session to overwrite.
             for (let i = 0; i < rows.length; i++) {
               await rows[i].locator('.w9-system').selectOption(systems[i]);
               if (['superset','triset','giant'].includes(systems[i])) {
