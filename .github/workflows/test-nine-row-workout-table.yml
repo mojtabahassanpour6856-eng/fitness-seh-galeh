@@ -127,6 +127,51 @@ jobs:
           })().catch(err => { console.error(err); process.exit(1); });
           NODE
           node nine-row-check.cjs
+      - name: Interactively verify dynamic rows and row-11 controls
+        run: |
+          cat > dynamic-row-check.cjs <<'NODE'
+          const { chromium } = require('playwright');
+          const path = require('node:path');
+          const assert = require('node:assert/strict');
+          (async () => {
+            const browser = await chromium.launch({ headless: true });
+            const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
+            await page.goto('file://' + path.resolve('index.html'), { waitUntil: 'domcontentloaded' });
+            await page.addStyleTag({ content: '#authScreen { display:none !important; }' });
+            await page.locator('#workout').evaluate(el => el.classList.add('active'));
+            await page.locator('#workoutNineTable').waitFor();
+            const table = page.locator('#workoutNineTable');
+            assert.equal(await table.locator('tbody tr').count(), 9, 'editor should begin with nine rows');
+            const expanded = await page.evaluate(() => {
+              if (typeof window.__sehEnsureWorkoutRows !== 'function') throw new Error('dynamic row helper was not exposed');
+              window.__sehEnsureWorkoutRows(11);
+              return {
+                rows: document.querySelectorAll('#workoutNineTable tbody tr').length,
+                row11SystemOptions: Array.from(document.querySelector('#workoutNineTable tbody tr:nth-child(11) .w9-system')?.options || []).map(o => o.value),
+                touchChoices: document.querySelectorAll('#workoutNineTable tbody tr:nth-child(11) .seh-touch-choice-select').length
+              };
+            });
+            assert.equal(expanded.rows, 11, 'editor should expand to eleven rows');
+            assert.ok(expanded.row11SystemOptions.includes('superset'), 'row 11 should expose superset option');
+            assert.equal(expanded.touchChoices, 3, 'row 11 should initialize rest, reps, and sets touch selectors');
+            const row11 = table.locator('tbody tr').nth(10);
+            await row11.locator('.w9-system').selectOption('superset');
+            const toggle = row11.locator('.w9-group-movement-toggle');
+            assert.equal(await toggle.count(), 1, 'row 11 should have a movement-group toggle');
+            assert.equal(await toggle.isVisible(), true, 'row 11 movement-group toggle should be visible for superset');
+            await toggle.click();
+            assert.equal(await row11.locator('.w9-movement-checklist').isVisible(), true, 'row 11 movement checklist should open');
+            const repSource = row11.locator('.w9-reps');
+            await repSource.evaluate(el => { el.value = '12+8'; el.dispatchEvent(new Event('input', { bubbles: true })); el.dispatchEvent(new Event('change', { bubbles: true })); });
+            const repState = await repSource.inputValue();
+            assert.equal(repState, '12+8', 'custom rep format should be retained in source field');
+            await page.evaluate(() => window.__sehEnsureWorkoutRows(9));
+            assert.equal(await table.locator('tbody tr').count(), 9, 'editor should shrink to nine rows when switching to a shorter session');
+            console.log(JSON.stringify({ initialRows: 9, expandedRows: expanded.rows, row11SupersetControls: true, touchChoices: expanded.touchChoices, customRep: repState, shrunkRows: 9 }, null, 2));
+            await browser.close();
+          })().catch(err => { console.error(err); process.exit(1); });
+          NODE
+          node dynamic-row-check.cjs
       - name: Verify exact exercise muscle filtering
         run: |
           node - <<'NODE'
