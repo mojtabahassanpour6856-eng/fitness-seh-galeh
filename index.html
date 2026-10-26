@@ -13790,7 +13790,7 @@ window.sehResetTurnstile=function(){};
 (function(){
  const names=['جلسه اول','جلسه دوم','جلسه سوم','جلسه چهارم','جلسه پنجم','جلسه ششم'];
  const drafts=Array.from({length:6},()=>null);
- let active=0, clientKey=null, hydrating=false, legacyUnassignedRows=false;
+ let active=0, clientKey=null, hydrating=false, legacyUnassignedRows=false, legacyUnassignedCount=0, legacyPreviewOnly=false;
  const exerciseLabels={};
  const $=id=>document.getElementById(id);
  const same=(a,b)=>String(a??'')===String(b??'');
@@ -13830,7 +13830,7 @@ window.sehResetTurnstile=function(){};
  }
  function renderTabs(){
    const box=$('sehWorkoutSessionCards');if(!box)return;
-   box.innerHTML=names.map((name,i)=>'<button type="button" class="seh-session-card'+(i===active?' active':'')+'" data-session-index="'+i+'" aria-pressed="'+(i===active?'true':'false')+'">'+name+'<span class="seh-session-count">'+(drafts[i]&&drafts[i].some(r=>r&&(r.exercise||r.checked.length))?'دارای اطلاعات':'')+'</span></button>').join('');
+   const warning=legacyUnassignedRows?'<div role="status" style="grid-column:1/-1;background:#fff3cd;color:#624b12;border:1px solid #e1c56b;border-radius:9px;padding:9px 11px;font-size:12px;line-height:1.8">'+(legacyPreviewOnly?'این برنامه قدیمی '+legacyUnassignedCount+' حرکت بدون برچسب جلسه دارد. حرکات در جلسه اول فقط برای مشاهده نشان داده شده‌اند؛ ذخیره و ویرایش تا مشخص‌شدن جلسهٔ واقعی متوقف است تا هیچ حرکت اشتباهی جابه‌جا یا حذف نشود.':'این برنامه '+legacyUnassignedCount+' حرکت بدون برچسب جلسه دارد. برای جلوگیری از انتساب اشتباه، ذخیره جلسه‌ای که حرکات قدیمی آن قابل تشخیص نیست متوقف می‌شود.')+'</div>':'';box.innerHTML=warning+names.map((name,i)=>'<button type="button" class="seh-session-card'+(i===active?' active':'')+'" data-session-index="'+i+'" aria-pressed="'+(i===active?'true':'false')+'">'+name+'<span class="seh-session-count">'+(drafts[i]&&drafts[i].some(r=>r&&(r.exercise||r.checked.length))?'دارای اطلاعات':'')+'</span></button>').join('');
    box.querySelectorAll('[data-session-index]').forEach(btn=>btn.addEventListener('click',()=>{
      const next=Number(btn.dataset.sessionIndex);if(!Number.isInteger(next)||next<0||next>5||next===active)return;
      checkClient();capture();active=next;restore();ensureDay();renderTabs();updateButton();
@@ -13840,7 +13840,7 @@ window.sehResetTurnstile=function(){};
    const now=typeof currentClient!=='undefined'&&currentClient&&currentClient.id!=null?String(currentClient.id):'';
    if(clientKey!==now){
      const hadPreviousClient=!!clientKey;
-     clientKey=now;active=0;legacyUnassignedRows=false;
+     clientKey=now;active=0;legacyUnassignedRows=false;legacyUnassignedCount=0;legacyPreviewOnly=false;
      for(let i=0;i<6;i++)drafts[i]=null;
      if(hadPreviousClient){const t=table();if(t)t.querySelectorAll('tbody tr').forEach(resetRow);}
    }
@@ -13908,7 +13908,7 @@ window.sehResetTurnstile=function(){};
    try{
      const rows=await sbGet('/trainee_workout_exercises?workout_plan_id=eq.'+encodeURIComponent(planId)+'&select=*&order=sort_order.asc,created_at.asc');
      if(!same(currentClient?.id,traineeId)||!same(currentWorkoutPlanId,planId))return;
-     legacyUnassignedRows=rows.some(r=>!names.includes(String(r.training_day||'')));
+     const unassignedRows=rows.filter(r=>!names.includes(String(r.training_day||'')));const labelledRows=rows.filter(r=>names.includes(String(r.training_day||'')));legacyUnassignedRows=unassignedRows.length>0;legacyUnassignedCount=unassignedRows.length;legacyPreviewOnly=unassignedRows.length>0&&labelledRows.length===0;
      const ids=[...new Set(rows.map(r=>String(r.exercise_id)).filter(Boolean))];
      if(ids.length){
        try{
@@ -13918,7 +13918,7 @@ window.sehResetTurnstile=function(){};
      }
      if(!same(currentClient?.id,traineeId)||!same(currentWorkoutPlanId,planId))return;
      for(let day=0;day<6;day++){
-       const dayRows=rows.filter(r=>String(r.training_day||'')===names[day]);
+       let dayRows=rows.filter(r=>String(r.training_day||'')===names[day]);if(day===0&&legacyPreviewOnly)dayRows=unassignedRows;
        const groups=rowGroups(dayRows);
        drafts[day]=groups.map(group=>{
          const first=group[0],grouped=['superset','triset','giant'].includes(first.training_system);
