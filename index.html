@@ -2079,20 +2079,34 @@ async function seedCorrectiveExerciseBank(){
  ];
  if(btn){btn.disabled=true;btn.textContent='در حال بررسی و افزودن حرکات…';}
  try{
+   const exerciseSelect=document.getElementById('workoutExercise');
+   const previousExerciseId=exerciseSelect?exerciseSelect.value:'';
    const existing=await sbGet('/trainer_exercises?select=name,category&category=eq.'+encodeURIComponent('اصلاحی'));
    const known=new Set((Array.isArray(existing)?existing:[]).filter(x=>x&&x.name).map(x=>String(x.name).trim().toLocaleLowerCase('fa')));
-   let added=0,skipped=0;
+   let added=0,skipped=0,exerciseAdded=0,exerciseSkipped=0;
    for(const item of items){
      const key=item.name.trim().toLocaleLowerCase('fa');
-     if(known.has(key)){skipped++;continue;}
-     await sbWrite('/trainer_exercises','POST',{...item,is_favorite:false});
-     known.add(key);added++;
+     if(known.has(key)){skipped++;}
+     else{
+       await sbWrite('/trainer_exercises','POST',{...item,is_favorite:false});
+       known.add(key);added++;
+     }
+   }
+   /* Make the same coach-only movements selectable in the existing workout planner.
+      This adds exercise catalog entries only; it does not create or edit trainee plans. */
+   for(const item of items){
+     const matches=await sbGet('/exercises?name=eq.'+encodeURIComponent(item.name)+'&select=id,name&limit=1');
+     if(matches&&matches.length){exerciseSkipped++;continue;}
+     await sbWrite('/exercises','POST',{name:item.name,category:item.category,muscle_group:item.target_muscle,equipment:item.equipment,instructions:item.coach_note});
+     exerciseAdded++;
    }
    if(typeof window.loadLibraryExercises==='function')await window.loadLibraryExercises();
-   alert('بانک اصلاحی بررسی شد. حرکات جدید: '+added+'؛ موارد هم‌نامِ از قبل موجود: '+skipped+'. برای دیدن فهرست، فیلتر «اصلاحی» را بزنید.');
+   if(typeof window.loadExercises==='function')await window.loadExercises();
+   if(exerciseSelect&&previousExerciseId){exerciseSelect.value=previousExerciseId;}
+   alert('بانک اصلاحی بررسی شد. حرکات جدید بانک: '+added+'؛ موارد هم‌نام موجود: '+skipped+'. فهرست حرکات برنامه همگام شد؛ موارد جدید برای انتخاب در برنامه: '+exerciseAdded+'؛ از قبل موجود: '+exerciseSkipped+'. هیچ برنامه شاگردی تغییر نکرد.');
  }catch(err){
    console.error('seedCorrectiveExerciseBank failed',err);
-   alert('افزودن حرکات کامل نشد: '+(err&&err.message?err.message:String(err))+'. قبل از اجرای دوباره، فیلتر اصلاحی را بررسی کنید تا از ثبت تکراری جلوگیری شود.');
+   alert('بخشی از افزودن/همگام‌سازی انجام نشد: '+(err&&err.message?err.message:String(err))+'. فهرست بانک و برنامه را بررسی کنید؛ اجرای دوباره موارد هم‌نام را دوباره ثبت نمی‌کند.');
  }finally{if(btn){btn.disabled=false;btn.textContent='🧘 افزودن حرکات پیشنهادی بانک اصلاحی';}}
 }
 async function saveLibraryExercise(){const name=$('libName').value.trim();if(!name){alert('نام حرکت را وارد کنید.');return;}try{await sbWrite('/trainer_exercises','POST',{name,target_muscle:$('libMuscle').value.trim()||null,category:$('libCategory').value,equipment:$('libEquipment').value.trim()||null,level:$('libLevel').value,coach_note:$('libNote').value.trim()||null,is_favorite:false});['libName','libMuscle','libEquipment','libNote'].forEach(id=>$(id).value='');await loadLibraryExercises();alert('حرکت در بانک مربی ذخیره شد.');}catch(e){alert('ذخیره حرکت انجام نشد.\n'+e.message);}}
@@ -5351,8 +5365,9 @@ window.useLibraryExercise=async function(id){
         if(!p) throw new Error('برای این شاگرد برنامه تمرینی ذخیره‌شده‌ای پیدا نشد.');
         const rows = await sbGet('/trainee_workout_exercises?workout_plan_id=eq.'+encodeURIComponent(p.id)+'&select=*&order=sort_order.asc,created_at.asc');
         const ids = [...new Set(rows.map(x=>x.exercise_id).filter(id=>id!==null&&id!==undefined&&id!==''))];
-        const ex = ids.length ? await sbGet('/exercises?id=in.('+ids.join(',')+')&select=id,name') : [];
+        const ex = ids.length ? await sbGet('/exercises?id=in.('+ids.join(',')+')&select=id,name,instructions,category,muscle_group') : [];
         const names = Object.fromEntries(ex.map(x=>[String(x.id),x.name]));
+        const exerciseDetails = Object.fromEntries(ex.map(x=>[String(x.id),x]));
         const systems = {normal:'معمولی',superset:'سوپرست',triset:'تری‌ست',giant:'جاینت‌ست',giant_set:'جاینت‌ست','giant-set':'جاینت‌ست',drop:'دراپ‌ست',drop_set:'دراپ‌ست','drop-set':'دراپ‌ست',rest_pause:'رست‌پاز','rest-pause':'رست‌پاز',timed:'تایم‌دار',multi_stage:'چندمرحله‌ای',pre_exhaust:'پیش‌خستگی',mechanical_drop:'دراپ‌ست مکانیکی',pyramid:'هرمی',reverse_pyramid:'هرمی معکوس',circuit:'دایره‌ای',custom:'سفارشی',failure:'تا ناتوانی','to-failure':'تا ناتوانی',to_failure:'تا ناتوانی','forced-reps':'تکرار اجباری',forced_reps:'تکرار اجباری','negative-reps':'تکرار منفی',negative_reps:'تکرار منفی','partial-reps':'نیم‌تکرار',partial_reps:'نیم‌تکرار','myo-reps':'مایو رپس',myo_reps:'مایو رپس','reverse-pyramid':'هرمی معکوس','rest_pause':'رست‌پاز'};
         body = '<h2>'+escShare(p.title||title)+'</h2><p>هدف: '+escShare(p.goal||'—')+'</p>'+
           (p.notes?'<p>یادداشت برنامه: '+escShare(p.notes)+'</p>':'')+
@@ -5633,7 +5648,17 @@ window.useLibraryExercise=async function(id){
           const normalizeCorrectiveName = value => String(value||'').toLocaleLowerCase('fa').replace(/[\u064B-\u065F\u0670]/g,'').replace(/[\s\-‐‑‒–—_()（）]/g,'').replace(/[：:،,]/g,'');
           const correctiveGuides = Object.fromEntries(Object.entries(correctiveGuideRaw).map(([name,guide])=>[normalizeCorrectiveName(name),{purpose:guide[0],how:guide[1]}]));
           const guideForName = name => correctiveGuides[normalizeCorrectiveName(name)] || null;
-          hasCorrectiveExercise = rows.some(x => !!guideForName(names[String(x.exercise_id)]||''));
+          const guideForMovement = row => {
+            const name=names[String(row.exercise_id)]||'';
+            const namedGuide=guideForName(name);
+            if(namedGuide)return namedGuide;
+            const detail=exerciseDetails[String(row.exercise_id)]||{};
+            if(String(detail.category||'').trim()!=='اصلاحی')return null;
+            const how=String(detail.instructions||'').trim();
+            const purpose=String(detail.muscle_group||'حرکت اصلاحی').trim();
+            return (purpose||how)?{purpose:purpose||'حرکت اصلاحی',how:how||'طبق آموزش مربی و فقط در دامنه بدون درد اجرا شود.'}:null;
+          };
+          hasCorrectiveExercise = rows.some(x => !!guideForMovement(x));
 
           const renderSession = day => {
             const list = grouped.get(day)||[], cards=[], groupMap=new Map();
@@ -5655,7 +5680,7 @@ window.useLibraryExercise=async function(id){
                 const groupPrescriptions=arr.map(prescriptionFor);const firstGroupPrescription=groupPrescriptions[0]||{reps:'—',sets:'—'};const groupDetail='<span class="rx">'+groupPrescriptions.map(v=>esc(v.reps)).join(' + ')+'×'+esc(firstGroupPrescription.sets)+'</span>'+'<span class="rest">S'+esc(first.rest_seconds??0)+'</span>';
                 const groupNotes=arr.map(x=>x.notes?esc(x.notes):'').filter(Boolean);
                 const note=groupNotes.length?'<div class="exercise-extra" style="grid-column:1/-1">'+groupNotes.join(' | ')+'</div>':'';
-                const correctiveRows=arr.map(x=>{const nm=names[String(x.exercise_id)]||'حرکت ثبت‌شده';const guide=guideForName(nm);return guide?'<div class="corrective-guide" style="grid-column:1/-1"><b>'+esc(nm)+'</b> — 🎯 '+esc(guide.purpose)+'<br>▶️ '+esc(guide.how)+'</div>':'';}).join('');
+                const correctiveRows=arr.map(x=>{const nm=names[String(x.exercise_id)]||'حرکت ثبت‌شده';const guide=guideForMovement(x);return guide?'<div class="corrective-guide" style="grid-column:1/-1"><b>'+esc(nm)+'</b> — 🎯 '+esc(guide.purpose)+'<br>▶️ '+esc(guide.how)+'</div>':'';}).join('');
                 movementHtml='<div class="exercise-unit grouped-unit" style="display:grid;grid-template-columns:minmax(0,1fr) max-content;align-items:center;column-gap:8px;width:100%;padding:5px 2px;border-bottom:1px solid #e4d3a9;break-inside:avoid"><div class="exercise-name" style="overflow-wrap:anywhere">'+groupNames+' '+groupBadge+'</div><div class="exercise-details">'+groupDetail+'</div>'+note+correctiveRows+'</div>';
               }else{
                 movementHtml=arr.map(x=>{
@@ -5666,7 +5691,7 @@ window.useLibraryExercise=async function(id){
                   const nameLength=String(names[String(x.exercise_id)]||'حرکت ثبت‌شده').length;
                   const prescription=prescriptionFor(x);const isDropSet=['drop','drop_set','mechanical_drop'].includes(normalizeSystem(x.training_system));const rxText=isDropSet?esc(prescription.reps)+' - '+esc(prescription.reps)+'×'+esc(prescription.sets):esc(prescription.reps)+'×'+esc(prescription.sets);const detail='<span class="rx">'+rxText+'</span>'+'<span class="rest">S'+esc(x.rest_seconds??0)+'</span>';
                   const note=x.notes?'<div class="exercise-extra" style="grid-column:1/-1">'+esc(x.notes)+'</div>':'';
-                  const guide=guideForName(names[String(x.exercise_id)]||'');
+                  const guide=guideForMovement(x);
                   const correctiveNote=guide?'<div class="corrective-guide" style="grid-column:1/-1">🎯 '+esc(guide.purpose)+'<br>▶️ '+esc(guide.how)+'</div>':'';
                   return '<div class="exercise-unit" style="display:grid;grid-template-columns:minmax(0,1fr) max-content;align-items:center;column-gap:8px;width:100%;padding:5px 2px;border-bottom:1px solid #e4d3a9;break-inside:avoid"><div class="exercise-name" style="--name-length:'+nameLength+'">'+(++movementNumber)+'- '+movementName+systemBadge+'</div><div class="exercise-details">'+detail+'</div>'+note+correctiveNote+'</div>';
                 }).join('');
