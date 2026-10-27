@@ -4837,9 +4837,28 @@ window.toggleExerciseFavorite=async function(id,value){try{await sbWrite(`/train
     currentClients.forEach(c=>c.plans=ids.has(String(c.id))?1:0);
     const todayKey=workoutLocalDateKey(),todayMs=Date.parse(todayKey+'T00:00:00Z');
     const dateAgeDays=value=>{const key=String(value||'').slice(0,10);if(!/^\d{4}-\d{2}-\d{2}$/.test(key))return null;const ms=Date.parse(key+'T00:00:00Z');return Number.isFinite(ms)?Math.floor((todayMs-ms)/86400000):null;};
-    const classifyPlan=(plan,dateField,activeAware=false)=>{
-      if(!plan||(activeAware&&plan.is_active===false))return 'missing';
-      const start=String(plan[dateField]||plan.plan_date||plan.start_date||plan.created_at||'').slice(0,10);
+    const classifyWorkoutPlan=plan=>{
+      if(!plan)return 'missing';
+      const start=String(plan.plan_date||plan.created_at||'').slice(0,10);
+      const age=dateAgeDays(start);
+      if(age!==null&&age>=28)return 'missing';
+      if(age!==null&&age>=25)return 'due';
+      return 'active';
+    };
+    const classifyNutritionPlan=plan=>{
+      if(!plan||plan.is_active===false)return 'missing';
+      // Respect the saved nutrition-plan end date when present.
+      const end=String(plan.end_date||'').slice(0,10);
+      if(/^\d{4}-\d{2}-\d{2}$/.test(end)){
+        const endMs=Date.parse(end+'T00:00:00Z');
+        if(Number.isFinite(endMs)){
+          const daysLeft=Math.floor((endMs-todayMs)/86400000);
+          if(daysLeft<0)return 'missing';
+          if(daysLeft<=3)return 'due';
+          return 'active';
+        }
+      }
+      const start=String(plan.start_date||plan.created_at||'').slice(0,10);
       const age=dateAgeDays(start);
       if(age!==null&&age>=28)return 'missing';
       if(age!==null&&age>=25)return 'due';
@@ -4856,8 +4875,8 @@ window.toggleExerciseFavorite=async function(id,value){try{await sbWrite(`/train
     currentClients.forEach(c=>{
       const id=String(c.id),wp=newestWorkoutByTrainee.get(id),np=newestNutritionByTrainee.get(id);
       planStatusMap.set(id,{
-        workout:classifyPlan(wp,'plan_date'),
-        nutrition:classifyPlan(np,'created_at',true)
+        workout:classifyWorkoutPlan(wp),
+        nutrition:classifyNutritionPlan(np)
       });
     });
     window.__sehPlanStatusByTrainee=planStatusMap;
