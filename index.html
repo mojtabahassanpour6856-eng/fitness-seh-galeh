@@ -4792,6 +4792,8 @@ window.toggleExerciseFavorite=async function(id,value){try{await sbWrite(`/train
   }
 
   window.updateStats=async function(){
+    // renderClients calls updateStats; skip that nested call during the status-ready rerender below.
+    if(window.__sehPlanStatusRenderRefreshInProgress)return;
     const currentClients=Array.isArray(clients)?clients:[];
     const total=currentClients.length;
     const active=currentClients.filter(c=>c.active!==false).length;
@@ -4850,8 +4852,9 @@ window.toggleExerciseFavorite=async function(id,value){try{await sbWrite(`/train
       if(!plan)return 'missing';
       const start=String(plan.plan_date||plan.created_at||'').slice(0,10);
       const age=dateAgeDays(start);
-      if(age!==null&&age>=28)return 'missing';
-      if(age!==null&&age>=25)return 'due';
+      if(age===null)return 'unknown';
+      if(age>=28)return 'missing';
+      if(age>=25)return 'due';
       return 'active';
     };
     const classifyNutritionPlan=plan=>{
@@ -4869,8 +4872,9 @@ window.toggleExerciseFavorite=async function(id,value){try{await sbWrite(`/train
       }
       const start=String(plan.start_date||plan.created_at||'').slice(0,10);
       const age=dateAgeDays(start);
-      if(age!==null&&age>=28)return 'missing';
-      if(age!==null&&age>=25)return 'due';
+      if(age===null)return 'unknown';
+      if(age>=28)return 'missing';
+      if(age>=25)return 'due';
       return 'active';
     };
     const newestWorkoutByTrainee=new Map();
@@ -4927,8 +4931,11 @@ window.toggleExerciseFavorite=async function(id,value){try{await sbWrite(`/train
       if(textNode&&client?.name)textNode.textContent=String(client.name);
       btn.setAttribute('aria-label','انتخاب شاگرد '+name+(due?'؛ تمدید برنامه تمرینی':''));
     });
-    // Re-render only the coach list after status data is ready; trainee data and saved plans are read-only here.
-    if(typeof window.renderClients==='function')window.renderClients();
+    // Re-render only the coach list after status data is ready. Its own updateStats call is suppressed to prevent a refresh loop.
+    if(typeof window.renderClients==='function'){
+      window.__sehPlanStatusRenderRefreshInProgress=true;
+      try{window.renderClients();}finally{window.__sehPlanStatusRenderRefreshInProgress=false;}
+    }
     const planDueIds=new Set();
     planStatusMap.forEach((status,id)=>{if(status.workout==='due'||status.nutrition==='due')planDueIds.add(id);});
     const alerts=new Set([
