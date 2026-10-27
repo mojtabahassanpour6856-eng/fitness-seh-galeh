@@ -4836,7 +4836,7 @@ window.toggleExerciseFavorite=async function(id,value){try{await sbWrite(`/train
     const ids=new Set([...workoutRows,...nutritionRows].filter(x=>x&&x.trainee_id!=null).map(x=>String(x.trainee_id)));
     currentClients.forEach(c=>c.plans=ids.has(String(c.id))?1:0);
     const todayKey=workoutLocalDateKey(),todayMs=Date.parse(todayKey+'T00:00:00Z');
-    const dateAgeDays=value=>{const key=String(value||'').slice(0,10);if(!/^\\d{4}-\\d{2}-\\d{2}$/.test(key))return null;const ms=Date.parse(key+'T00:00:00Z');return Number.isFinite(ms)?Math.floor((todayMs-ms)/86400000):null;};
+    const dateAgeDays=value=>{const key=String(value||'').slice(0,10);if(!/^\d{4}-\d{2}-\d{2}$/.test(key))return null;const ms=Date.parse(key+'T00:00:00Z');return Number.isFinite(ms)?Math.floor((todayMs-ms)/86400000):null;};
     const classifyPlan=(plan,dateField,activeAware=false)=>{
       if(!plan||(activeAware&&plan.is_active===false))return 'missing';
       const start=String(plan[dateField]||plan.plan_date||plan.start_date||plan.created_at||'').slice(0,10);
@@ -4877,7 +4877,8 @@ window.toggleExerciseFavorite=async function(id,value){try{await sbWrite(`/train
       const start=explicitPlanDate(p)||String(p?.created_at||'').slice(0,10);
       if(!start)return;
       const startMs=Date.parse(start+'T00:00:00Z');
-      if(Number.isFinite(startMs)&&Math.floor((todayMs-startMs)/86400000)>=25)dueIds.add(id);
+      const age=Number.isFinite(startMs)?Math.floor((todayMs-startMs)/86400000):null;
+      if(age!==null&&age>=25&&age<28)dueIds.add(id);
     });
     // Removed the old per-trainee fallback loop: it could issue up to 26+ sequential
     // network requests on every dashboard refresh. The bulk result above is the fast path.
@@ -4953,8 +4954,8 @@ window.toggleExerciseFavorite=async function(id,value){try{await sbWrite(`/train
       // by the time the trainee list is rendered. Do not duplicate them if a stats refresh is in flight.
       if(!dashboardStatsInFlight){
         window.__sehDashboardSummaryPromise=Promise.allSettled([
-          dashboardGetAllPages('/trainee_workout_plans?select=trainee_id,plan_date,created_at&order=id.asc'),
-          dashboardGetAllPages('/nutrition_plans?select=trainee_id&order=id.asc')
+          dashboardGetAllPages('/trainee_workout_plans?select=*&order=id.asc'),
+          dashboardGetAllPages('/nutrition_plans?select=*&order=id.asc')
         ]);
       }
       const membershipPromise=dashboardGetAllPages('/trainee_memberships?select=id,trainee_id,start_date,end_date,status,created_at&order=created_at.desc,id.desc')
