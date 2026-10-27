@@ -3,6 +3,13 @@ on:
   push:
     paths:
       - 'index.html'
+      - 'tests/coach-plan-status-static.test.js'
+      - '.github/workflows/validate-inline-js.yml'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'index.html'
+      - 'tests/coach-plan-status-static.test.js'
       - '.github/workflows/validate-inline-js.yml'
   workflow_dispatch:
 jobs:
@@ -37,3 +44,5 @@ jobs:
           console.log(`Checked ${count} inline scripts.`);
           if (failed) process.exit(1);
           NODE
+      - name: Test coach plan status classification and refresh guard
+        run: node tests/coach-plan-status-static.test.js
