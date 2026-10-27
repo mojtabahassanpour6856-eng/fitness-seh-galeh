@@ -4675,7 +4675,7 @@ window.toggleExerciseFavorite=async function(id,value){try{await sbWrite(`/train
   const fa=v=>Number(v||0).toLocaleString('fa-IR');
   /* Local calendar date for workout renewal calculations; keep it inside this IIFE so updateStats can always access it. */
   const workoutLocalDateKey=()=>{const d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');};
-  let filter='all', registrationFilter='all';
+  let filter='all', registrationFilter='all', planFilter='all';
   let pendingRegistrationRequests=[], pendingRequestsLoaded=false, pendingRequestsLoading=false;
   function filled(v){return v!==null&&v!==undefined&&String(v).trim()!=='';}
   function explicitlyNoInjury(v){
@@ -4716,6 +4716,10 @@ window.toggleExerciseFavorite=async function(id,value){try{await sbWrite(`/train
       statusFilters.innerHTML='<button type="button" class="active" data-rf="all">همه وضعیت‌ها</button><button type="button" data-rf="pending">🔴 درخواست جدید</button><button type="button" data-rf="incomplete">🟠 پروفایل ناقص</button><button type="button" data-rf="complete">🟢 پروفایل کامل</button>';
       statusFilters.querySelectorAll('button').forEach(b=>b.addEventListener('click',()=>{registrationFilter=b.dataset.rf;statusFilters.querySelectorAll('button').forEach(x=>x.classList.toggle('active',x===b));window.renderClients();}));
       list.appendChild(statusFilters);
+      const planFilters=document.createElement('div');planFilters.id='coachPlanFilters';planFilters.className='coach-filter-row';
+      planFilters.innerHTML='<button type="button" class="active" data-pf="all">همه برنامه‌ها</button><button type="button" data-pf="no-workout">بدون تمرینی</button><button type="button" data-pf="no-nutrition">بدون غذایی</button><button type="button" data-pf="none">بدون هیچ برنامه</button><button type="button" data-pf="due">رو به اتمام</button>';
+      planFilters.querySelectorAll('button').forEach(b=>b.addEventListener('click',()=>{planFilter=b.dataset.pf;planFilters.querySelectorAll('button').forEach(x=>x.classList.toggle('active',x===b));window.renderClients();}));
+      list.appendChild(planFilters);
       const legend=document.createElement('div');legend.className='coach-registration-legend';legend.innerHTML='<span><i class="coach-registration-dot pending"></i> درخواست ارسال شده و هنوز تأیید نشده</span><span><i class="coach-registration-dot incomplete"></i> قد، وزن یا هدف تکمیل شده اما پروفایل کامل نیست</span><span><i class="coach-registration-dot complete"></i> پروفایل کامل، شامل سطح و سابقه تمرین و وضعیت آسیب/محدودیت</span>';
       list.appendChild(legend);
       const grid=document.createElement('div');grid.id='coachMobileCards';grid.className='coach-card-grid';list.appendChild(grid);
@@ -4729,9 +4733,15 @@ window.toggleExerciseFavorite=async function(id,value){try{await sbWrite(`/train
     }
     const q=(el('clientSearch')?.value||'').trim().toLocaleLowerCase('fa');
     const allClients=(Array.isArray(clients)?clients:[]);
+    const planStatuses=window.__sehPlanStatusByTrainee instanceof Map?window.__sehPlanStatusByTrainee:new Map();
     const trainees=allClients
       .filter(c=>(filter==='all'||(c.training_type||'gym')===filter)&&((c.name||'').toLocaleLowerCase('fa').includes(q)||(c.phone||'').includes(q)))
-      .map(c=>({...c,_status:traineeRegistrationStatus(c),_pendingRequest:false}));
+      .map(c=>({...c,_status:traineeRegistrationStatus(c),_pendingRequest:false,_planStatus:planStatuses.get(String(c.id))||{workout:'unknown',nutrition:'unknown'}}))
+      .filter(c=>planFilter==='all'||
+        (planFilter==='no-workout'&&c._planStatus.workout==='missing')||
+        (planFilter==='no-nutrition'&&c._planStatus.nutrition==='missing')||
+        (planFilter==='none'&&c._planStatus.workout==='missing'&&c._planStatus.nutrition==='missing')||
+        (planFilter==='due'&&(c._planStatus.workout==='due'||c._planStatus.nutrition==='due')));
     const pending=pendingRegistrationRequests
       .filter(r=>(filter==='all'||(r.training_type||'gym')===filter)&&((r.full_name||'').toLocaleLowerCase('fa').includes(q)||(r.phone||'').includes(q)))
       .map(r=>({...r,name:r.full_name,weight:r.current_weight,_status:'pending',_pendingRequest:true}));
@@ -4747,7 +4757,12 @@ window.toggleExerciseFavorite=async function(id,value){try{await sbWrite(`/train
         return `<button type="button" class="coach-name-cell coach-pending-name" title="${regLabel}" aria-label="${esc(c.name||'بدون نام')}؛ ${regLabel}" onclick="document.getElementById('registrationRequests')?.scrollIntoView({behavior:'smooth',block:'center'});alert('این فرد هنوز درخواست تأییدنشده دارد؛ از بخش «درخواست‌های ثبت‌نام» بررسی و تأییدش کنید.');">${regDot}${esc(c.name||'بدون نام')}<small>در انتظار تأیید</small></button>`;
       }
       const selected=typeof currentClient!=='undefined'&&currentClient&&String(currentClient.id)===String(c.id);
-      return `<button type="button" data-trainee-id="${String(c.id).replace(/"/g,'&quot;')}" class="coach-name-cell${selected?' selected':''}" onclick="selectClient('${String(c.id).replace(/'/g,'')}');document.querySelectorAll('#coachMobileCards .coach-name-cell').forEach(x=>x.classList.toggle('selected',x===this))" aria-label="انتخاب شاگرد ${esc(c.name||'بدون نام')}؛ ${regLabel}" title="${regLabel}">${regDot}${esc(c.name||'بدون نام')}</button>`;
+      const ps=c._planStatus||{workout:'unknown',nutrition:'unknown'};
+      const planBadge=(kind,status,label)=>'<span class="coach-plan-badge '+kind+' '+status+'" title="'+label+'">'+(kind==='workout'?'🏋️':'🍎')+' '+(status==='active'?'دارد':status==='due'?'رو به اتمام':status==='missing'?'ندارد':'در حال بررسی')+'</span>';
+      const workoutLabel=ps.workout==='due'?'برنامه تمرینی: سه روز یا کمتر تا پایان':ps.workout==='active'?'برنامه تمرینی معتبر دارد':ps.workout==='missing'?'برنامه تمرینی ندارد':'وضعیت تمرینی در حال بررسی';
+      const nutritionLabel=ps.nutrition==='due'?'برنامه غذایی: سه روز یا کمتر تا پایان':ps.nutrition==='active'?'برنامه غذایی معتبر دارد':ps.nutrition==='missing'?'برنامه غذایی ندارد':'وضعیت غذایی در حال بررسی';
+      const badges=planBadge('workout',ps.workout,workoutLabel)+planBadge('nutrition',ps.nutrition,nutritionLabel);
+      return `<button type="button" data-trainee-id="${String(c.id).replace(/"/g,'&quot;')}" class="coach-name-cell${selected?' selected':''}" onclick="selectClient('${String(c.id).replace(/'/g,'')}');document.querySelectorAll('#coachMobileCards .coach-name-cell').forEach(x=>x.classList.toggle('selected',x===this))" aria-label="انتخاب شاگرد ${esc(c.name||'بدون نام')}؛ ${regLabel}؛ ${workoutLabel}؛ ${nutritionLabel}" title="${regLabel}">${regDot}<span class="coach-trainee-name-text">${esc(c.name||'بدون نام')}</span><span class="coach-plan-badges">${badges}</span></button>`;
     }).join(''):(allClients.length===0&&registrationFilter!=='pending'&&registrationFilter!=='incomplete'&&registrationFilter!=='complete'?'<div style="padding:12px;border:1px solid #8b6b2b;border-radius:10px;margin-top:10px"><strong>هنوز شاگردی برای این حساب نمایش داده نمی‌شود.</strong><p>ورود مربی انجام شده، اما درخواست فهرست شاگردان ردیفی برنگردانده است. این حالت معمولاً به پیوند رکورد در جدول trainees با شناسه مربی یا سیاست‌های RLS مربوط است؛ از این پیام به‌تنهایی نمی‌توان علت قطعی را تعیین کرد.</p><p>برای بررسی دقیق، شناسه حساب ورود و مقدار coach_user_id رکوردهای جدول trainees باید در همان پروژه Supabase مقایسه شوند.</p><button type="button" onclick="showTraineeDiagnostic()">نمایش شناسه حساب و وضعیت اتصال</button> <button type="button" onclick="loadClients()">تلاش دوباره</button></div>':'<div class="muted" style="padding:12px">شاگرد یا درخواست ثبت‌نامی با این جستجو یا فیلتر پیدا نشد.</div>');
     if(typeof window.updateStats==='function')window.updateStats();
   };
@@ -4793,15 +4808,15 @@ window.toggleExerciseFavorite=async function(id,value){try{await sbWrite(`/train
     // Reuse the dashboard summaries preloaded in parallel with the trainee list and membership query.
     // If this page was entered through another path, preserve the original parallel-fetch fallback.
     const results=await (window.__sehDashboardSummaryPromise||Promise.allSettled([
-      dashboardGetAllPages('/trainee_workout_plans?select=trainee_id,plan_date,created_at&order=id.asc'),
-      dashboardGetAllPages('/nutrition_plans?select=trainee_id&order=id.asc')
+      dashboardGetAllPages('/trainee_workout_plans?select=*&order=id.asc'),
+      dashboardGetAllPages('/nutrition_plans?select=*&order=id.asc')
     ]));
     if(results[0].status==='fulfilled'&&Array.isArray(results[0].value)){
       workoutRows=results[0].value;
     }else{
       console.warn('دریافت خلاصه برنامه‌های تمرینی ناموفق بود:',results[0].reason);
       try{
-        workoutRows=await dashboardGetAllPages('/trainee_workout_plans?select=trainee_id,created_at&order=id.asc');
+        workoutRows=await dashboardGetAllPages('/trainee_workout_plans?select=*&order=id.asc');
         if(!Array.isArray(workoutRows))workoutRows=[];
       }catch(e){workoutRows=[];}
     }
@@ -4821,6 +4836,31 @@ window.toggleExerciseFavorite=async function(id,value){try{await sbWrite(`/train
     const ids=new Set([...workoutRows,...nutritionRows].filter(x=>x&&x.trainee_id!=null).map(x=>String(x.trainee_id)));
     currentClients.forEach(c=>c.plans=ids.has(String(c.id))?1:0);
     const todayKey=workoutLocalDateKey(),todayMs=Date.parse(todayKey+'T00:00:00Z');
+    const dateAgeDays=value=>{const key=String(value||'').slice(0,10);if(!/^\\d{4}-\\d{2}-\\d{2}$/.test(key))return null;const ms=Date.parse(key+'T00:00:00Z');return Number.isFinite(ms)?Math.floor((todayMs-ms)/86400000):null;};
+    const classifyPlan=(plan,dateField,activeAware=false)=>{
+      if(!plan||(activeAware&&plan.is_active===false))return 'missing';
+      const start=String(plan[dateField]||plan.plan_date||plan.start_date||plan.created_at||'').slice(0,10);
+      const age=dateAgeDays(start);
+      if(age!==null&&age>=28)return 'missing';
+      if(age!==null&&age>=25)return 'due';
+      return 'active';
+    };
+    const newestWorkoutByTrainee=new Map();
+    workoutRows.slice().sort((a,b)=>{
+      const ad=String(a.plan_date||a.created_at||'').slice(0,10),bd=String(b.plan_date||b.created_at||'').slice(0,10);
+      return bd.localeCompare(ad)||String(b.created_at||'').localeCompare(String(a.created_at||''));
+    }).forEach(p=>{const id=String(p.trainee_id??'');if(id&&!newestWorkoutByTrainee.has(id))newestWorkoutByTrainee.set(id,p);});
+    const newestNutritionByTrainee=new Map();
+    nutritionRows.slice().sort((a,b)=>String(b.created_at||'').localeCompare(String(a.created_at||''))).forEach(p=>{const id=String(p.trainee_id??'');if(id&&!newestNutritionByTrainee.has(id))newestNutritionByTrainee.set(id,p);});
+    const planStatusMap=new Map();
+    currentClients.forEach(c=>{
+      const id=String(c.id),wp=newestWorkoutByTrainee.get(id),np=newestNutritionByTrainee.get(id);
+      planStatusMap.set(id,{
+        workout:classifyPlan(wp,'plan_date'),
+        nutrition:classifyPlan(np,'created_at',true)
+      });
+    });
+    window.__sehPlanStatusByTrainee=planStatusMap;
     const newestByTrainee=new Map();
     const explicitPlanDate=p=>String(p?.plan_date||'').slice(0,10);
     workoutRows.slice().sort((a,b)=>{
@@ -4857,9 +4897,14 @@ window.toggleExerciseFavorite=async function(id,value){try{await sbWrite(`/train
       if(textNode&&client?.name)textNode.textContent=String(client.name);
       btn.setAttribute('aria-label','انتخاب شاگرد '+name+(due?'؛ تمدید برنامه تمرینی':''));
     });
+    // Re-render only the coach list after status data is ready; trainee data and saved plans are read-only here.
+    if(typeof window.renderClients==='function')window.renderClients();
+    const planDueIds=new Set();
+    planStatusMap.forEach((status,id)=>{if(status.workout==='due'||status.nutrition==='due')planDueIds.add(id);});
     const alerts=new Set([
       ...currentClients.filter(c=>!c.weight||!c.goal||!c.phone||c.membershipStatus==='منقضی').map(c=>String(c.id)),
-      ...Array.from(dueIds)
+      ...Array.from(dueIds),
+      ...Array.from(planDueIds)
     ]).size;
     if(el('planCount'))el('planCount').textContent=fa(ids.size);
     if(el('alertCount'))el('alertCount').textContent=fa(alerts);
@@ -12085,7 +12130,17 @@ body.workout-output.workout-compact{
 #clientList .coach-registration-dot.pending{background:#e53935;box-shadow:0 0 0 2px #e5393520}
 #clientList .coach-pending-name{border-color:#8e3a39!important}
 #clientList .coach-pending-name small{display:block;width:100%;font-size:9px;color:#ffaaa5;margin-top:3px}
-#clientList .coach-name-cell{gap:2px}
+#clientList .coach-name-cell{gap:2px;flex-wrap:wrap}
+#clientList .coach-trainee-name-text{display:inline;min-width:0;overflow-wrap:anywhere}
+#clientList .coach-plan-badges{display:flex;flex-basis:100%;justify-content:center;align-items:center;gap:3px;flex-wrap:wrap;margin-top:2px}
+#clientList .coach-plan-badge{display:inline-flex;align-items:center;justify-content:center;gap:2px;padding:2px 4px;border-radius:5px;font-size:8px;font-weight:800;line-height:1.45;white-space:nowrap;border:1px solid transparent}
+#clientList .coach-plan-badge.workout.active{background:#e0f4e8;color:#17643a;border-color:#a6d7b8}
+#clientList .coach-plan-badge.nutrition.active{background:#e2efff;color:#174f91;border-color:#b3d0f4}
+#clientList .coach-plan-badge.missing{background:#ffebeb;color:#a51e27;border-color:#efb5b8}
+#clientList .coach-plan-badge.due{background:#fff0cc;color:#8a5100;border-color:#efc66c}
+#clientList .coach-plan-badge.unknown{background:#f1f1f1;color:#555;border-color:#ddd}
+#clientList #coachPlanFilters{margin-top:0}
+@media(max-width:380px){#clientList .coach-plan-badge{font-size:7px;padding:2px 3px}}
 </style>
 <!-- FINAL COACH LOGIN RECOVERY: isolated from optional dashboard scripts -->
 <script id="seh-coach-login-recovery-20261015">
