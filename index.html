@@ -4804,6 +4804,7 @@ window.toggleExerciseFavorite=async function(id,value){try{await sbWrite(`/train
     if(el('planCount'))el('planCount').textContent='…';
     if(el('alertCount'))el('alertCount').textContent='…';
     let workoutRows=[],nutritionRows=[];
+    let workoutStatusDataAvailable=false,nutritionStatusDataAvailable=false;
     // Fetch both summary datasets at the same time instead of waiting for one after the other.
     // Reuse the dashboard summaries preloaded in parallel with the trainee list and membership query.
     // If this page was entered through another path, preserve the original parallel-fetch fallback.
@@ -4813,17 +4814,25 @@ window.toggleExerciseFavorite=async function(id,value){try{await sbWrite(`/train
     ]));
     if(results[0].status==='fulfilled'&&Array.isArray(results[0].value)){
       workoutRows=results[0].value;
+      workoutStatusDataAvailable=true;
     }else{
       console.warn('دریافت خلاصه برنامه‌های تمرینی ناموفق بود:',results[0].reason);
       try{
         workoutRows=await dashboardGetAllPages('/trainee_workout_plans?select=*&order=id.asc');
-        if(!Array.isArray(workoutRows))workoutRows=[];
+        if(Array.isArray(workoutRows))workoutStatusDataAvailable=true;
+        else workoutRows=[];
       }catch(e){workoutRows=[];}
     }
     if(results[1].status==='fulfilled'&&Array.isArray(results[1].value)){
       nutritionRows=results[1].value;
+      nutritionStatusDataAvailable=true;
     }else{
       console.warn('دریافت خلاصه برنامه‌های غذایی ناموفق بود:',results[1].reason);
+      try{
+        nutritionRows=await dashboardGetAllPages('/nutrition_plans?select=*&order=id.asc');
+        if(Array.isArray(nutritionRows))nutritionStatusDataAvailable=true;
+        else nutritionRows=[];
+      }catch(e){nutritionRows=[];}
     }
     // Ignore stale async results if the shared trainee array changed while these requests were in flight.
     // This prevents a delayed stats call started during an older filtered render from overwriting full-list counts.
@@ -4874,9 +4883,10 @@ window.toggleExerciseFavorite=async function(id,value){try{await sbWrite(`/train
     const planStatusMap=new Map();
     currentClients.forEach(c=>{
       const id=String(c.id),wp=newestWorkoutByTrainee.get(id),np=newestNutritionByTrainee.get(id);
+      // A failed read must never be presented as "no plan"; keep the status unknown instead.
       planStatusMap.set(id,{
-        workout:classifyWorkoutPlan(wp),
-        nutrition:classifyNutritionPlan(np)
+        workout:workoutStatusDataAvailable?classifyWorkoutPlan(wp):'unknown',
+        nutrition:nutritionStatusDataAvailable?classifyNutritionPlan(np):'unknown'
       });
     });
     window.__sehPlanStatusByTrainee=planStatusMap;
