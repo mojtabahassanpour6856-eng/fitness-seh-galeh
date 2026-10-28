@@ -6023,25 +6023,25 @@ body.workout-output .empty-cell{display:none!important}
               setImportant(el,'line-height','1.5');
               setImportant(el,'padding','7px 5px');
             });
-            /* The source markup puts the prescription in a max-content second grid
-               column. On narrow session cards that column can consume almost all width,
-               forcing Persian movement names into one-character lines. Stack prescription
-               beneath the name in the PNG only; keep the original planner/input untouched. */
+            /* Preserve the familiar side-by-side movement/prescription layout.
+               Cap the prescription column instead of letting max-content take the whole
+               card width; this prevents Persian movement names from collapsing to one letter
+               per line while keeping the original output model. */
             doc.querySelectorAll('.exercise-unit').forEach(el=>{
-              setImportant(el,'grid-template-columns','minmax(0,1fr)');
+              setImportant(el,'grid-template-columns','minmax(0,1fr) minmax(0,42%)');
               setImportant(el,'width','100%');
               setImportant(el,'min-width','0');
               setImportant(el,'align-items','start');
-              setImportant(el,'column-gap','0');
+              setImportant(el,'column-gap','6px');
             });
             doc.querySelectorAll('.exercise-name').forEach(el=>{
               setImportant(el,'display','block');
-              setImportant(el,'width','100%');
+              setImportant(el,'width','auto');
               setImportant(el,'font-size','18px');
               setImportant(el,'line-height','1.45');
               setImportant(el,'white-space','normal');
               setImportant(el,'overflow-wrap','normal');
-              setImportant(el,'word-break','keep-all');
+              setImportant(el,'word-break','normal');
               setImportant(el,'min-width','0');
               setImportant(el,'max-width','100%');
             });
@@ -6052,14 +6052,15 @@ body.workout-output .empty-cell{display:none!important}
               setImportant(el,'min-width','0');
               setImportant(el,'flex-wrap','wrap');
               setImportant(el,'white-space','normal');
-              setImportant(el,'font-size','17px');
-              setImportant(el,'line-height','1.5');
-              setImportant(el,'gap','4px 8px');
+              setImportant(el,'font-size','15px');
+              setImportant(el,'line-height','1.4');
+              setImportant(el,'gap','3px 5px');
             });
             doc.querySelectorAll('.exercise-details span').forEach(el=>{
               setImportant(el,'white-space','normal');
               setImportant(el,'max-width','100%');
               setImportant(el,'overflow-wrap','normal');
+              setImportant(el,'word-break','normal');
             });
             /* Keep coach-entered plan description in the captured image, not clipped
                or collapsed by the compact print stylesheet. */
