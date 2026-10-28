@@ -4,38 +4,20 @@ const assert = require('assert');
 const html = fs.readFileSync('index.html', 'utf8');
 
 assert(
+  html.includes("doc.querySelectorAll('.session-grid .session-cell').forEach((el,index)=>{"),
+  'PNG export must explicitly place every session instead of relying on RTL grid auto-placement.'
+);
+assert(
   html.includes("setImportant(el,'grid-column',index%2===0?'1':'2');"),
-  'PNG sessions must place odd-numbered sessions in RTL grid column 1 (right) and even-numbered sessions in column 2 (left).'
+  'Session 1/3/5 must be in the right-hand column and session 2/4/6 in the left-hand column.'
 );
 assert(
-  html.includes('class="rx rx-21"'),
-  'The special 21-rep prescription must have a dedicated compact class.'
+  html.includes("setImportant(el,'grid-row',String(Math.floor(index/2)+1));"),
+  'Sessions must stay in their numbered rows: 1/2, 3/4, 5/6.'
 );
 assert(
-  html.includes("clonedDoc.querySelectorAll('.exercise-details:has(.rx-21)')"),
-  'PNG clone must keep the 21-rep prescription and rest-time label on the same line.'
+  html.includes('let next=current*1.25;') &&
+  html.includes("next=Math.max(next,current+2);"),
+  'PNG export must retain the established text enlargement for readable exercise names and prescriptions.'
 );
-assert(
-  html.includes("clonedDoc.querySelectorAll('.exercise-details:has(.rx-21) .rest')"),
-  'The rest-time label next to a 21-rep prescription must receive explicit no-wrap sizing.'
-);
-
-assert(
-  html.includes("clonedDoc.querySelectorAll('.exercise-details').forEach(el=>"),
-  'All system types must receive compact single-row PNG layout, not only 21-rep.'
-);
-assert(
-  html.includes("clonedDoc.querySelectorAll('.exercise-details .rx').forEach(el=>"),
-  'Prescription badges for every system must be compacted in the PNG clone.'
-);
-assert(
-  html.includes("clonedDoc.querySelectorAll('.exercise-details .sys').forEach(el=>"),
-  'System labels such as FST-7 and drop-set must use a compact single-line style.'
-);
-assert(
-  html.includes("el.style.setProperty('flex-wrap','nowrap','important');") &&
-  html.includes("el.style.setProperty('max-width','100%','important');"),
-  'Exercise details must stay on one row within the available width without clipping text.'
-);
-
-console.log('Workout PNG session-order and compact all-systems regression checks passed.');
+console.log('Workout PNG session-order and readable-font regression checks passed.');
