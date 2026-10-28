@@ -1187,7 +1187,7 @@ async function loadClients(){
     // Read with the signed-in user's access token so RLS, not the public key,
     // decides which trainee records this coach is allowed to see.
     if(typeof window.sbGet!=="function")throw new Error("اتصال امن اطلاعات شاگردان هنوز آماده نیست؛ صفحه را تازه‌سازی کنید.");
-    const data=await window.sbGet("/trainees?select=id,full_name,phone,gender,birth_date,current_weight,height,goal,training_level,training_history,limitations,training_type,home_equipment,created_at&order=created_at.desc");
+    const data=await window.sbGet("/trainees?select=id,full_name,phone,gender,birth_date,age,current_weight,height,goal,training_level,training_history,limitations,injuries,training_type,home_equipment,weekly_sessions,training_days,training_time,club_registration_date,created_at&order=created_at.desc");
     if(!Array.isArray(data))throw new Error("پاسخ فهرست شاگردان معتبر نیست.");
 
     clients=data.map(c=>({
@@ -1198,13 +1198,21 @@ async function loadClients(){
       birth_date:c.birth_date,
       age:c.age??calcAge(c.birth_date),
       weight:c.current_weight,
+      current_weight:c.current_weight,
       height:c.height,
       goal:c.goal,
       level:c.training_level,
+      training_level:c.training_level,
       history:c.training_history,
+      training_history:c.training_history,
       limitations:c.limitations,
+      injuries:c.injuries,
       training_type:c.training_type||"gym",
       home_equipment:c.home_equipment||"",
+      weekly_sessions:c.weekly_sessions??null,
+      training_days:c.training_days||"",
+      training_time:c.training_time||"",
+      club_registration_date:c.club_registration_date||null,
       createdAt:c.created_at,
       active:true,
       plans:0
@@ -2692,37 +2700,78 @@ if($("prDate"))$("prDate").value=today();if($("anDate"))$("anDate").value=today(
   }
 
   async function loadDashboard(){
-    buildDashboard();if(!currentClient)return;
-    setText('dashWelcome',`${currentClient.name||'شاگرد'} | ${currentClient.goal||'هدف ثبت نشده'}`);setText('dashGoal',currentClient.goal||'ثبت نشده');
-    try{const w=await sbGet(`/trainee_workout_plans?trainee_id=eq.${encodeURIComponent(currentClient.id)}&select=id&order=created_at.desc&limit=1`);setText('dashWorkout',w.length?'برنامه فعال':'ثبت نشده');}catch(e){}
-    try{
-      const traineeId=currentClient.id;
-      const [plans,dietRows]=await Promise.all([
-        sbGet(`/nutrition_plans?trainee_id=eq.${encodeURIComponent(traineeId)}&select=id,is_active&order=created_at.desc&limit=1`),
-        sbGet(`/fasting_logs?trainee_id=eq.${encodeURIComponent(traineeId)}&select=description&order=created_at.desc&limit=50`).catch(()=>[])
-      ]);
-      const hasNutritionPlan=(plans||[]).some(p=>p.is_active!==false);
-      const hasAssignedDiet=(dietRows||[]).some(row=>{
-        const description=String(row.description||'');
-        return description.startsWith('رژیم‌غذایی::')||
-          (!description.startsWith('STUDENT_DIET_REQUEST:')&&
-           !description.startsWith('DIET_CONFIG:')&&/^نوع\s/.test(description));
-      });
-      setText('dashMeal',hasNutritionPlan||hasAssignedDiet?'برنامه فعال':'ثبت نشده');
-    }catch(e){setText('dashMeal','وضعیت در دسترس نیست');}
-    try{const a=await sbGet(`/body_analyses?trainee_id=eq.${encodeURIComponent(currentClient.id)}&select=weight,body_fat,analysis_date&order=analysis_date.desc&limit=1`);setText('dashAnalysis',a[0]?`${a[0].weight||'—'} kg`:'ثبت نشده');setText('dashProgress',a[0]?.analysis_date||'ثبت نشده');}catch(e){}
-    try{
-      const water=await loadWaterToday();
-      let goal=0;
-      const goalRows=await sbGet(`/trainees?id=eq.${encodeURIComponent(currentClient.id)}&select=water_goal_ml,water_goal_month&limit=1`);
-      const goalRow=goalRows?.[0]||{};
-      const p=new Intl.DateTimeFormat('en-US-u-ca-persian',{year:'numeric',month:'2-digit'}).formatToParts(new Date());
-      const currentJalaliMonth=String(p.find(x=>x.type==='year')?.value)+'-'+String(p.find(x=>x.type==='month')?.value).padStart(2,'0');
-      if(String(goalRow.water_goal_month||'')===currentJalaliMonth)goal=Number(goalRow.water_goal_ml)||0;
-      setText('dashWater',goal>0?`${fmt(water)} / ${fmt(goal)} ml`:`${fmt(water)} ml · هدف تعیین نشده`);
-    }catch(e){try{const water=await loadWaterToday();setText('dashWater',`${fmt(water)} ml`);}catch(_){}}
-    try{const a=await sbGet(`/activity_logs?trainee_id=eq.${encodeURIComponent(currentClient.id)}&activity_date=eq.${today()}&select=calories_burned`);setText('dashActivity',`${fmt(a.reduce((n,x)=>n+(+x.calories_burned||0),0))} kcal`);}catch(e){}
-    try{const m=await sbGet(`/trainee_memberships?trainee_id=eq.${encodeURIComponent(currentClient.id)}&select=end_date,status&order=created_at.desc&limit=1`);setText('dashMembership',window.isoToJalaliDate(m[0]?.end_date)||'ثبت نشده');}catch(e){}
+    buildDashboard();
+    const traineeId=currentClient?.id;
+    if(traineeId==null)return;
+    const sameTrainee=()=>!!currentClient&&String(currentClient.id)===String(traineeId);
+    setText('dashWelcome',`${currentClient.name||'شاگرد'} | ${currentClient.goal||'هدف ثبت نشده'}`);
+    setText('dashGoal',currentClient.goal||'ثبت نشده');
+
+    // Independent dashboard cards load concurrently instead of serial network waits.
+    // Every result is tied to the selected trainee so late responses cannot mix records.
+    const jobs=[
+      (async()=>{
+        try{
+          const rows=await sbGet(`/trainee_workout_plans?trainee_id=eq.${encodeURIComponent(traineeId)}&select=id&order=created_at.desc&limit=1`);
+          if(sameTrainee())setText('dashWorkout',rows.length?'برنامه فعال':'ثبت نشده');
+        }catch(e){}
+      })(),
+      (async()=>{
+        try{
+          const [plans,dietRows]=await Promise.all([
+            sbGet(`/nutrition_plans?trainee_id=eq.${encodeURIComponent(traineeId)}&select=id,is_active&order=created_at.desc&limit=1`),
+            sbGet(`/fasting_logs?trainee_id=eq.${encodeURIComponent(traineeId)}&select=description&order=created_at.desc&limit=50`).catch(()=>[])
+          ]);
+          if(!sameTrainee())return;
+          const hasNutritionPlan=(plans||[]).some(p=>p.is_active!==false);
+          const hasAssignedDiet=(dietRows||[]).some(row=>{
+            const description=String(row.description||'');
+            return description.startsWith('رژیم‌غذایی::')||
+              (!description.startsWith('STUDENT_DIET_REQUEST:')&&
+               !description.startsWith('DIET_CONFIG:')&&/^نوع\\s/.test(description));
+          });
+          setText('dashMeal',hasNutritionPlan||hasAssignedDiet?'برنامه فعال':'ثبت نشده');
+        }catch(e){if(sameTrainee())setText('dashMeal','وضعیت در دسترس نیست');}
+      })(),
+      (async()=>{
+        try{
+          const rows=await sbGet(`/body_analyses?trainee_id=eq.${encodeURIComponent(traineeId)}&select=weight,body_fat,analysis_date&order=analysis_date.desc&limit=1`);
+          if(!sameTrainee())return;
+          setText('dashAnalysis',rows[0]?`${rows[0].weight||'—'} kg`:'ثبت نشده');
+          setText('dashProgress',rows[0]?.analysis_date||'ثبت نشده');
+        }catch(e){}
+      })(),
+      (async()=>{
+        const [waterResult,goalResult]=await Promise.allSettled([
+          loadWaterToday(),
+          sbGet(`/trainees?id=eq.${encodeURIComponent(traineeId)}&select=water_goal_ml,water_goal_month&limit=1`)
+        ]);
+        if(!sameTrainee())return;
+        const water=waterResult.status==='fulfilled'?waterResult.value:null;
+        if(water==null)return;
+        let goal=0;
+        if(goalResult.status==='fulfilled'){
+          const goalRow=goalResult.value?.[0]||{};
+          const parts=new Intl.DateTimeFormat('en-US-u-ca-persian',{year:'numeric',month:'2-digit'}).formatToParts(new Date());
+          const currentJalaliMonth=String(parts.find(x=>x.type==='year')?.value)+'-'+String(parts.find(x=>x.type==='month')?.value).padStart(2,'0');
+          if(String(goalRow.water_goal_month||'')===currentJalaliMonth)goal=Number(goalRow.water_goal_ml)||0;
+        }
+        setText('dashWater',goal>0?`${fmt(water)} / ${fmt(goal)} ml`:`${fmt(water)} ml · هدف تعیین نشده`);
+      })(),
+      (async()=>{
+        try{
+          const rows=await sbGet(`/activity_logs?trainee_id=eq.${encodeURIComponent(traineeId)}&activity_date=eq.${today()}&select=calories_burned`);
+          if(sameTrainee())setText('dashActivity',`${fmt(rows.reduce((n,x)=>n+(+x.calories_burned||0),0))} kcal`);
+        }catch(e){}
+      })(),
+      (async()=>{
+        try{
+          const rows=await sbGet(`/trainee_memberships?trainee_id=eq.${encodeURIComponent(traineeId)}&select=end_date,status&order=created_at.desc&limit=1`);
+          if(sameTrainee())setText('dashMembership',window.isoToJalaliDate(rows[0]?.end_date)||'ثبت نشده');
+        }catch(e){}
+      })()
+    ];
+    await Promise.allSettled(jobs);
   }
 window.loadDashboard = loadDashboard;
   function addNavDashboard(){
@@ -13215,6 +13264,18 @@ window.sehResetTurnstile=function(){};
         const expected = payload[field] == null ? null : String(payload[field]).trim();
         const actual = saved[field] == null ? null : String(saved[field]).trim();
         if(expected !== actual) throw new Error('ذخیره فیلد «'+field+'» تأیید نشد؛ دوباره تلاش کنید.');
+      }
+      for(const field of ['age','current_weight','height','weekly_sessions']){
+        if(!Object.prototype.hasOwnProperty.call(payload,field))continue;
+        const expected=payload[field]==null?null:Number(payload[field]);
+        const actual=saved[field]==null?null:Number(saved[field]);
+        if(expected!==actual)throw new Error('ذخیره مقدار «'+field+'» تأیید نشد؛ دوباره تلاش کنید.');
+      }
+      if(Object.prototype.hasOwnProperty.call(payload,'birth_date')&&String(saved.birth_date||'').slice(0,10)!==String(payload.birth_date||'').slice(0,10)){
+        throw new Error('ذخیره تاریخ تولد تأیید نشد؛ دوباره تلاش کنید.');
+      }
+      if(Object.prototype.hasOwnProperty.call(payload,'training_time')&&String(saved.training_time||'').slice(0,5)!==String(payload.training_time||'').slice(0,5)){
+        throw new Error('ذخیره ساعت تمرین تأیید نشد؛ دوباره تلاش کنید.');
       }
       const updated = {
         ...c, id:saved.id, name:saved.full_name, full_name:saved.full_name, age:saved.age,
