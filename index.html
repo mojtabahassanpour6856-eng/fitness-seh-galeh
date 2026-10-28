@@ -14092,8 +14092,8 @@ window.sehResetTurnstile=function(){};
    reps.setAttribute('aria-label',preset[1]+' ردیف '+(tr.dataset.row||''));
    sets.setAttribute('aria-label',(system==='fst7'?'تعداد ست FST-7': 'تعداد ست')+' ردیف '+(tr.dataset.row||''));
    if(userChanged && system==='fst7' && (!sets.value||sets.value==='3'))sets.value='7';
-   if(userChanged && system==='twenty_one' && (!reps.value||reps.value==='10'))reps.value='7+7+7';
-   if(userChanged && system==='timed' && (!reps.value||reps.value==='10'))reps.value='30 ثانیه';
+   if(userChanged && system==='twenty_one' && (!reps.value||reps.value==='10'||reps.value==='30 ثانیه'))reps.value='7+7+7';
+   if(userChanged && system==='timed' && (!reps.value||reps.value==='10'||reps.value==='7+7+7'))reps.value='30 ثانیه';
  }
 
  function table(){return $('workoutNineTable');}
