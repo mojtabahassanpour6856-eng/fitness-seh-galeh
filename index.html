@@ -5991,8 +5991,13 @@ body.workout-output .empty-cell{display:none!important}
             setImportant(exportGrid,'margin-left','0');
             setImportant(exportGrid,'margin-right','0');
             setImportant(exportGrid,'box-sizing','border-box');
-            /* Persian layout: first session must start in the right-hand column. */
+            /* Persian layout: explicitly pin each session to its numbered RTL slot.
+               Do not rely on grid auto-placement: it can swap session 1/2 and 3/4 in PNG exports. */
             setImportant(exportGrid,'direction','rtl');
+            doc.querySelectorAll('.session-grid .session-cell').forEach((el,index)=>{
+              setImportant(el,'grid-column',index%2===0?'1':'2');
+              setImportant(el,'grid-row',String(Math.floor(index/2)+1));
+            });
             const sessionCount=doc.querySelectorAll('.session-grid .session-cell').length;
             const rows=Math.max(1,Math.ceil(sessionCount/2));
             setImportant(target,'min-height',Math.max(1066,rows*330+350)+'px');
