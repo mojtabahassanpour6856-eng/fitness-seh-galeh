@@ -4,12 +4,14 @@ on:
     paths:
       - 'index.html'
       - 'tests/coach-plan-status-static.test.js'
+      - 'tests/coach-meal-recipes-static.test.js'
       - '.github/workflows/validate-inline-js.yml'
   pull_request:
     branches: [main]
     paths:
       - 'index.html'
       - 'tests/coach-plan-status-static.test.js'
+      - 'tests/coach-meal-recipes-static.test.js'
       - '.github/workflows/validate-inline-js.yml'
   workflow_dispatch:
 jobs:
@@ -46,3 +48,5 @@ jobs:
           NODE
       - name: Test coach plan status classification and refresh guard
         run: node tests/coach-plan-status-static.test.js
+      - name: Test prebuilt meal recipe bank and categories
+        run: node tests/coach-meal-recipes-static.test.js
