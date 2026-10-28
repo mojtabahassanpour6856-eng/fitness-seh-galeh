@@ -20,4 +20,22 @@ assert(
   'The rest-time label next to a 21-rep prescription must receive explicit no-wrap sizing.'
 );
 
-console.log('Workout PNG session-order and 21-rep rest-line regression checks passed.');
+assert(
+  html.includes("clonedDoc.querySelectorAll('.exercise-details').forEach(el=>"),
+  'All system types must receive compact single-row PNG layout, not only 21-rep.'
+);
+assert(
+  html.includes("clonedDoc.querySelectorAll('.exercise-details .rx').forEach(el=>"),
+  'Prescription badges for every system must be compacted in the PNG clone.'
+);
+assert(
+  html.includes("clonedDoc.querySelectorAll('.exercise-details .sys').forEach(el=>"),
+  'System labels such as FST-7 and drop-set must use a compact single-line style.'
+);
+assert(
+  html.includes("el.style.setProperty('flex-wrap','nowrap','important');") &&
+  html.includes("el.style.setProperty('overflow','hidden','important');"),
+  'Exercise details must not wrap or stretch the left column in PNG output.'
+);
+
+console.log('Workout PNG session-order and compact all-systems regression checks passed.');
