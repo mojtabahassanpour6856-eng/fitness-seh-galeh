@@ -14106,8 +14106,9 @@ window.sehResetTurnstile=function(){};
      editor.hidden=true;reps.hidden=false;reps.style.display='';
      editor.replaceChildren();editor.dataset.mode='none';return;
    }
-   const parts=mode==='three'?String(reps.value||'7+7+7').split('+').map(x=>x.trim()):mode==='stages'?String(reps.value||'12/10/8').split('/').map(x=>x.trim()):String(reps.value||'3-1-2').split('-').map(x=>x.trim());
    const defaults=mode==='three'?['7','7','7']:(mode==='stages'?['12','10','8']:['3','1','2']);
+   const partsRaw=mode==='three'?String(reps.value||'').split('+').map(x=>x.trim()):mode==='stages'?String(reps.value||'').split('/').map(x=>x.trim()):String(reps.value||'').split('-').map(x=>x.trim());
+   const parts=partsRaw.length===3&&partsRaw.every(x=>/^\\d+$/.test(x))?partsRaw:defaults.slice();
    const labels=mode==='three'?['بخش اول','بخش دوم','بخش سوم']:(mode==='stages'?['مرحله اول','مرحله دوم','مرحله سوم']:['منفی (ثانیه)','مکث (ثانیه)','مثبت (ثانیه)']);
    if(oldMode!==mode){
      editor.replaceChildren();
