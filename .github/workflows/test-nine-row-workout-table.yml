@@ -41,10 +41,10 @@ jobs:
             const table = page.locator('#workoutNineTable');
             await table.waitFor();
             assert.equal(await table.locator('tbody tr').count(), 9, 'table must contain exactly nine rows');
-            const expected = ['normal','superset','triset','giant','drop','rest_pause','timed','multi_stage','custom'];
+            const expected = ['normal','superset','triset','giant','drop','rest_pause','timed','multi_stage','forced_reps','negative_reps','pyramid','reverse_pyramid','partial_reps','myo_reps','cluster','tempo','mechanical_drop','fst7','twenty_one','custom'];
             for (const row of await table.locator('tbody tr').all()) {
               const systems = await row.locator('select.w9-system option').evaluateAll(opts => opts.map(o => o.value));
-              assert.deepEqual(systems, expected, 'each row must expose all nine training systems');
+              assert.deepEqual(systems, expected, 'each row must expose all supported training systems');
               assert.equal(await row.locator('select.w9-exercise').count(), 1);
               assert.equal(await row.locator('.w9-movement-checklist').count(), 1);
               assert.equal(await row.locator('input.w9-rest').count(), 1);
