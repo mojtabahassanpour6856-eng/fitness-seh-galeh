@@ -376,16 +376,6 @@ body.locked{overflow:hidden!important}
 .seh-touch-choice-select{display:block;box-sizing:border-box;width:100%;min-width:0;max-width:100%;height:34px;margin:3px 0 5px;padding:4px 24px 4px 8px;border:1px solid #b99543;border-radius:8px;background:#fffaf0;color:#463515;font-size:14px;font-weight:700;line-height:1.2}
 .seh-touch-choice-hidden-source{display:none!important}
 </style>
-
-<style id="workout-21-compact-alignment-fix">
-/* Keep the 21-rep editor compact so the reps/sets controls align with the cell divider. */
-#workoutNineTable tbody tr:has(.w9-system option[value="twenty_one"]:checked) td:nth-child(4){padding:2px 1px!important}
-#workoutNineTable tbody tr:has(.w9-system option[value="twenty_one"]:checked) .w9-special-controls{margin:1px 0 0!important;padding:0!important;width:100%;min-width:0}
-#workoutNineTable tbody tr:has(.w9-system option[value="twenty_one"]:checked) .w9-special-title{font-size:8px!important;line-height:1.2!important;margin:0 0 2px!important;letter-spacing:0!important}
-#workoutNineTable tbody tr:has(.w9-system option[value="twenty_one"]:checked) .w9-special-fields{grid-template-columns:repeat(3,minmax(0,1fr))!important;gap:1px!important;width:100%;margin:0!important}
-#workoutNineTable tbody tr:has(.w9-system option[value="twenty_one"]:checked) .w9-special-fields label{font-size:7px!important;line-height:1.15!important;margin:0!important;padding:0!important;min-width:0!important;white-space:nowrap}
-#workoutNineTable tbody tr:has(.w9-system option[value="twenty_one"]:checked) .w9-special-fields input{display:block;width:100%!important;min-width:0!important;padding:3px 1px!important;margin:1px 0 0!important;font-size:9px!important;line-height:1.2!important;height:25px!important;border-radius:4px!important}
-</style>
 </head>
 <body class="locked">
 <div id="authScreen">
@@ -1187,7 +1177,7 @@ async function loadClients(){
     // Read with the signed-in user's access token so RLS, not the public key,
     // decides which trainee records this coach is allowed to see.
     if(typeof window.sbGet!=="function")throw new Error("اتصال امن اطلاعات شاگردان هنوز آماده نیست؛ صفحه را تازه‌سازی کنید.");
-    const data=await window.sbGet("/trainees?select=id,full_name,phone,gender,birth_date,age,current_weight,height,goal,training_level,training_history,limitations,injuries,training_type,home_equipment,weekly_sessions,training_days,training_time,club_registration_date,created_at&order=created_at.desc");
+    const data=await window.sbGet("/trainees?select=id,full_name,phone,gender,birth_date,current_weight,height,goal,training_level,training_history,limitations,training_type,home_equipment,created_at&order=created_at.desc");
     if(!Array.isArray(data))throw new Error("پاسخ فهرست شاگردان معتبر نیست.");
 
     clients=data.map(c=>({
@@ -1198,21 +1188,13 @@ async function loadClients(){
       birth_date:c.birth_date,
       age:c.age??calcAge(c.birth_date),
       weight:c.current_weight,
-      current_weight:c.current_weight,
       height:c.height,
       goal:c.goal,
       level:c.training_level,
-      training_level:c.training_level,
       history:c.training_history,
-      training_history:c.training_history,
       limitations:c.limitations,
-      injuries:c.injuries,
       training_type:c.training_type||"gym",
       home_equipment:c.home_equipment||"",
-      weekly_sessions:c.weekly_sessions??null,
-      training_days:c.training_days||"",
-      training_time:c.training_time||"",
-      club_registration_date:c.club_registration_date||null,
       createdAt:c.created_at,
       active:true,
       plans:0
@@ -2700,78 +2682,37 @@ if($("prDate"))$("prDate").value=today();if($("anDate"))$("anDate").value=today(
   }
 
   async function loadDashboard(){
-    buildDashboard();
-    const traineeId=currentClient?.id;
-    if(traineeId==null)return;
-    const sameTrainee=()=>!!currentClient&&String(currentClient.id)===String(traineeId);
-    setText('dashWelcome',`${currentClient.name||'شاگرد'} | ${currentClient.goal||'هدف ثبت نشده'}`);
-    setText('dashGoal',currentClient.goal||'ثبت نشده');
-
-    // Independent dashboard cards load concurrently instead of serial network waits.
-    // Every result is tied to the selected trainee so late responses cannot mix records.
-    const jobs=[
-      (async()=>{
-        try{
-          const rows=await sbGet(`/trainee_workout_plans?trainee_id=eq.${encodeURIComponent(traineeId)}&select=id&order=created_at.desc&limit=1`);
-          if(sameTrainee())setText('dashWorkout',rows.length?'برنامه فعال':'ثبت نشده');
-        }catch(e){}
-      })(),
-      (async()=>{
-        try{
-          const [plans,dietRows]=await Promise.all([
-            sbGet(`/nutrition_plans?trainee_id=eq.${encodeURIComponent(traineeId)}&select=id,is_active&order=created_at.desc&limit=1`),
-            sbGet(`/fasting_logs?trainee_id=eq.${encodeURIComponent(traineeId)}&select=description&order=created_at.desc&limit=50`).catch(()=>[])
-          ]);
-          if(!sameTrainee())return;
-          const hasNutritionPlan=(plans||[]).some(p=>p.is_active!==false);
-          const hasAssignedDiet=(dietRows||[]).some(row=>{
-            const description=String(row.description||'');
-            return description.startsWith('رژیم‌غذایی::')||
-              (!description.startsWith('STUDENT_DIET_REQUEST:')&&
-               !description.startsWith('DIET_CONFIG:')&&/^نوع\s/.test(description));
-          });
-          setText('dashMeal',hasNutritionPlan||hasAssignedDiet?'برنامه فعال':'ثبت نشده');
-        }catch(e){if(sameTrainee())setText('dashMeal','وضعیت در دسترس نیست');}
-      })(),
-      (async()=>{
-        try{
-          const rows=await sbGet(`/body_analyses?trainee_id=eq.${encodeURIComponent(traineeId)}&select=weight,body_fat,analysis_date&order=analysis_date.desc&limit=1`);
-          if(!sameTrainee())return;
-          setText('dashAnalysis',rows[0]?`${rows[0].weight||'—'} kg`:'ثبت نشده');
-          setText('dashProgress',rows[0]?.analysis_date||'ثبت نشده');
-        }catch(e){}
-      })(),
-      (async()=>{
-        const [waterResult,goalResult]=await Promise.allSettled([
-          loadWaterToday(),
-          sbGet(`/trainees?id=eq.${encodeURIComponent(traineeId)}&select=water_goal_ml,water_goal_month&limit=1`)
-        ]);
-        if(!sameTrainee())return;
-        const water=waterResult.status==='fulfilled'?waterResult.value:null;
-        if(water==null)return;
-        let goal=0;
-        if(goalResult.status==='fulfilled'){
-          const goalRow=goalResult.value?.[0]||{};
-          const parts=new Intl.DateTimeFormat('en-US-u-ca-persian',{year:'numeric',month:'2-digit'}).formatToParts(new Date());
-          const currentJalaliMonth=String(parts.find(x=>x.type==='year')?.value)+'-'+String(parts.find(x=>x.type==='month')?.value).padStart(2,'0');
-          if(String(goalRow.water_goal_month||'')===currentJalaliMonth)goal=Number(goalRow.water_goal_ml)||0;
-        }
-        setText('dashWater',goal>0?`${fmt(water)} / ${fmt(goal)} ml`:`${fmt(water)} ml · هدف تعیین نشده`);
-      })(),
-      (async()=>{
-        try{
-          const rows=await sbGet(`/activity_logs?trainee_id=eq.${encodeURIComponent(traineeId)}&activity_date=eq.${today()}&select=calories_burned`);
-          if(sameTrainee())setText('dashActivity',`${fmt(rows.reduce((n,x)=>n+(+x.calories_burned||0),0))} kcal`);
-        }catch(e){}
-      })(),
-      (async()=>{
-        try{
-          const rows=await sbGet(`/trainee_memberships?trainee_id=eq.${encodeURIComponent(traineeId)}&select=end_date,status&order=created_at.desc&limit=1`);
-          if(sameTrainee())setText('dashMembership',window.isoToJalaliDate(rows[0]?.end_date)||'ثبت نشده');
-        }catch(e){}
-      })()
-    ];
-    await Promise.allSettled(jobs);
+    buildDashboard();if(!currentClient)return;
+    setText('dashWelcome',`${currentClient.name||'شاگرد'} | ${currentClient.goal||'هدف ثبت نشده'}`);setText('dashGoal',currentClient.goal||'ثبت نشده');
+    try{const w=await sbGet(`/trainee_workout_plans?trainee_id=eq.${encodeURIComponent(currentClient.id)}&select=id&order=created_at.desc&limit=1`);setText('dashWorkout',w.length?'برنامه فعال':'ثبت نشده');}catch(e){}
+    try{
+      const traineeId=currentClient.id;
+      const [plans,dietRows]=await Promise.all([
+        sbGet(`/nutrition_plans?trainee_id=eq.${encodeURIComponent(traineeId)}&select=id,is_active&order=created_at.desc&limit=1`),
+        sbGet(`/fasting_logs?trainee_id=eq.${encodeURIComponent(traineeId)}&select=description&order=created_at.desc&limit=50`).catch(()=>[])
+      ]);
+      const hasNutritionPlan=(plans||[]).some(p=>p.is_active!==false);
+      const hasAssignedDiet=(dietRows||[]).some(row=>{
+        const description=String(row.description||'');
+        return description.startsWith('رژیم‌غذایی::')||
+          (!description.startsWith('STUDENT_DIET_REQUEST:')&&
+           !description.startsWith('DIET_CONFIG:')&&/^نوع\s/.test(description));
+      });
+      setText('dashMeal',hasNutritionPlan||hasAssignedDiet?'برنامه فعال':'ثبت نشده');
+    }catch(e){setText('dashMeal','وضعیت در دسترس نیست');}
+    try{const a=await sbGet(`/body_analyses?trainee_id=eq.${encodeURIComponent(currentClient.id)}&select=weight,body_fat,analysis_date&order=analysis_date.desc&limit=1`);setText('dashAnalysis',a[0]?`${a[0].weight||'—'} kg`:'ثبت نشده');setText('dashProgress',a[0]?.analysis_date||'ثبت نشده');}catch(e){}
+    try{
+      const water=await loadWaterToday();
+      let goal=0;
+      const goalRows=await sbGet(`/trainees?id=eq.${encodeURIComponent(currentClient.id)}&select=water_goal_ml,water_goal_month&limit=1`);
+      const goalRow=goalRows?.[0]||{};
+      const p=new Intl.DateTimeFormat('en-US-u-ca-persian',{year:'numeric',month:'2-digit'}).formatToParts(new Date());
+      const currentJalaliMonth=String(p.find(x=>x.type==='year')?.value)+'-'+String(p.find(x=>x.type==='month')?.value).padStart(2,'0');
+      if(String(goalRow.water_goal_month||'')===currentJalaliMonth)goal=Number(goalRow.water_goal_ml)||0;
+      setText('dashWater',goal>0?`${fmt(water)} / ${fmt(goal)} ml`:`${fmt(water)} ml · هدف تعیین نشده`);
+    }catch(e){try{const water=await loadWaterToday();setText('dashWater',`${fmt(water)} ml`);}catch(_){}}
+    try{const a=await sbGet(`/activity_logs?trainee_id=eq.${encodeURIComponent(currentClient.id)}&activity_date=eq.${today()}&select=calories_burned`);setText('dashActivity',`${fmt(a.reduce((n,x)=>n+(+x.calories_burned||0),0))} kcal`);}catch(e){}
+    try{const m=await sbGet(`/trainee_memberships?trainee_id=eq.${encodeURIComponent(currentClient.id)}&select=end_date,status&order=created_at.desc&limit=1`);setText('dashMembership',window.isoToJalaliDate(m[0]?.end_date)||'ثبت نشده');}catch(e){}
   }
 window.loadDashboard = loadDashboard;
   function addNavDashboard(){
@@ -5779,11 +5720,6 @@ window.useLibraryExercise=async function(id){
             const sets=String(x.sets??'—').trim()||'—';
             let reps=String(x.reps??'').trim()||'—';
             const sys=normalizeSystem(x.training_system);
-            // Prevent stale system-21 phases from being joined into a superset prescription.
-            if(groupedSystem(sys)&&/^\d+\s*\+\s*\d+\s*\+\s*\d+$/.test(reps)){
-              const parts=reps.split('+').map(v=>Number(v.trim()));
-              if(parts.length===3&&parts.reduce((sum,v)=>sum+v,0)===21)reps='10';
-            }
             if(['drop','drop_set','mechanical_drop'].includes(sys)&&reps!=='—'){
               reps=reps.replace(/\s*(?:,|;|\+|\/|−|–|—)\s*/g,' - ').replace(/\s*-\s*/g,' - ');
             }else{
@@ -5795,15 +5731,15 @@ window.useLibraryExercise=async function(id){
             const base=prescriptionFor(x),sys=normalizeSystem(x.training_system),raw=String(x.reps??'').trim();
             if(sys==='twenty_one'){
               const parts=raw.split('+').map(v=>v.trim());
-              if(parts.length===3&&parts.every(v=>/^\d+$/.test(v)))return '<span class="rx rx-21" style="font-size:clamp(10px,calc(12px - var(--move-count,6)*.15px),11px);white-space:nowrap;padding:2px 4px;letter-spacing:-.2px">'+parts.map(esc).join(' + ')+' <b>(۲۱)</b> × '+esc(base.sets)+'</span>';
+              if(parts.length===3&&parts.every(v=>/^\d+$/.test(v)))return '<span class="rx">'+parts.map(esc).join(' + ')+' <b>(۲۱ تکرار)</b> × '+esc(base.sets)+' ست</span>';
             }
             if(sys==='tempo'){
               const parts=raw.split('-').map(v=>v.trim());
-              if(parts.length===3&&parts.every(v=>/^\d+$/.test(v)))return '<span class="rx">منفی '+esc(parts[0])+'ث | مکث '+esc(parts[1])+'ث | مثبت '+esc(parts[2])+'ث × '+esc(base.sets)+'</span>';
+              if(parts.length===3&&parts.every(v=>/^\d+$/.test(v)))return '<span class="rx">منفی '+esc(parts[0])+'ث | مکث '+esc(parts[1])+'ث | مثبت '+esc(parts[2])+'ث × '+esc(base.sets)+' ست</span>';
             }
-            if(sys==='timed')return '<span class="rx">'+esc(raw||'—')+' × '+esc(base.sets)+'</span>';
-            if(sys==='fst7')return '<span class="rx" style="font-size:clamp(10px,calc(12px - var(--move-count,6)*.15px),11px);white-space:nowrap;padding:2px 4px;letter-spacing:-.2px">'+esc(base.reps)+' × '+esc(base.sets)+' FST-7</span>';
-            return '<span class="rx">'+esc(base.reps)+' × '+esc(base.sets)+'</span>';
+            if(sys==='timed')return '<span class="rx">'+esc(raw||'—')+' × '+esc(base.sets)+' ست</span>';
+            if(sys==='fst7')return '<span class="rx">'+esc(base.reps)+' × '+esc(base.sets)+' ست FST-7</span>';
+            return '<span class="rx">'+esc(base.reps)+' × '+esc(base.sets)+' ست</span>';
           };
 
           const correctiveGuideRaw = {
@@ -5875,7 +5811,7 @@ window.useLibraryExercise=async function(id){
                   const systemLabel=systemLabelFor(rawSystem);
                   const systemBadge=rawSystem!=='normal'&&systemLabel?'<span class="movement-system-badge" style="display:inline-block;vertical-align:middle;margin:2px 4px;padding:1px 6px;border:1px solid #c69b43;border-radius:5px;background:#fff0bd;color:#68470a;font-size:10px;font-weight:800;line-height:1.6;white-space:nowrap">'+esc(systemLabel)+'</span>':'';
                   const nameLength=String(names[String(x.exercise_id)]||'حرکت ثبت‌شده').length;
-                  const prescription=prescriptionFor(x);const isDropSet=['drop','drop_set','mechanical_drop'].includes(normalizeSystem(x.training_system));const rxText=isDropSet?esc(prescription.reps)+' - '+esc(prescription.reps)+'×'+esc(prescription.sets):esc(prescription.reps)+'×'+esc(prescription.sets);const detail=prescriptionDisplayFor(x)+'<span class="rest" style="white-space:nowrap;flex:0 0 auto">S'+esc(x.rest_seconds??0)+'</span>';
+                  const prescription=prescriptionFor(x);const isDropSet=['drop','drop_set','mechanical_drop'].includes(normalizeSystem(x.training_system));const rxText=isDropSet?esc(prescription.reps)+' - '+esc(prescription.reps)+'×'+esc(prescription.sets):esc(prescription.reps)+'×'+esc(prescription.sets);const detail=prescriptionDisplayFor(x)+'<span class="rest">استراحت '+esc(x.rest_seconds??0)+'ث</span>';
                   const note=x.notes?'<div class="exercise-extra" style="grid-column:1/-1">'+esc(x.notes)+'</div>':'';
                   const guide=guideForMovement(x);
                   const correctiveNote=guide?'<div class="corrective-guide" style="grid-column:1/-1">🎯 '+esc(guide.purpose)+'<br>▶️ '+esc(guide.how)+'</div>':'';
@@ -5894,7 +5830,7 @@ window.useLibraryExercise=async function(id){
           body += lines.length?'<div class="system-notes">'+lines.join('')+'</div>':'';
         }
       }
-      const html = '<!doctype html><html lang="fa" dir="rtl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>'+esc(title)+'</title><style>' + `@import url('https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;500;600;700;800;900&display=swap');*{box-sizing:border-box}html{background:#fff}body{font-family:Tahoma,Arial,sans-serif;padding:8px;line-height:1.45;color:#17130b;background:#fff;margin:0;min-height:282mm;display:flex;flex-direction:column;border:2px solid #d4b15c;border-radius:10px;-webkit-print-color-adjust:exact;print-color-adjust:exact}body:before{content:"";display:block;height:7px;flex:0 0 7px;margin:0 0 8px;border-radius:5px;background:linear-gradient(90deg,#171717 0%,#b88728 25%,#f4d77d 50%,#b88728 75%,#171717 100%)}body:after{content:"FITNESS SEH GALEH  •  TRAIN HARD • STAY STRONG";display:block;text-align:center;margin-top:8px;padding:7px 4px 2px;border-top:1px solid #c69b43;color:#7c5b19;font-size:9px;font-weight:900;letter-spacing:1px}body.workout-output,body.workout-output *{font-family:'Vazirmatn',Tahoma,Arial,sans-serif!important}.plan-header{position:relative;margin:0 0 8px}h1{text-align:center;color:#51380b;background:linear-gradient(135deg,#fffdf6 0%,#fff0c2 48%,#fffaf0 100%);border:3px solid #c99b32;border-radius:12px;padding:25px 92px 17px 92px;margin:0;font-family:Tahoma,Arial,sans-serif;font-weight:900;line-height:1.45;box-shadow:inset 0 0 0 2px #f7df9b,0 3px 8px #8d671e24;position:relative}.gym-name{display:block;font-family:Tahoma,Arial,sans-serif;font-size:36px;font-weight:1000;line-height:1.45;letter-spacing:normal;color:#714800;text-shadow:0 1px 0 #fff;overflow-wrap:normal;word-break:normal}.coach-name{display:block;font-family:Tahoma,Arial,sans-serif;font-size:17px;font-weight:900;color:#51401e;margin-top:4px;letter-spacing:normal}.gym-art{position:absolute;left:8px;bottom:7px;width:76px;height:60px;display:flex;align-items:center;justify-content:center;opacity:.96;pointer-events:none}.gym-art svg{width:100%;height:100%;display:block}.gym-art-right{left:auto;right:8px;transform:scaleX(-1)}.plan-date{position:absolute;top:7px;left:8px;right:auto;font-size:9px;font-weight:800;line-height:1.35;white-space:nowrap;color:#422d08;background:#fff9e8;border:1px solid #b88728;border-radius:5px;padding:2px 4px;box-shadow:0 1px 2px #8d671e22}.workout-plan-description{margin:0 0 8px;padding:7px 10px;border:1.5px solid #c69b43;border-right:4px solid #b88728;border-radius:8px;background:linear-gradient(135deg,#fffdf6,#fff5d7);font-size:12px;line-height:1.8;break-inside:avoid;overflow-wrap:anywhere}.workout-plan-description b{display:block;color:#6e4a0b;font-size:12px;margin-bottom:2px}.plan-meta{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));grid-template-rows:auto;grid-auto-flow:row;gap:8px 12px;align-items:start;width:100%;max-width:100%;box-sizing:border-box;background:#fffaf0;border:2px solid #b88728;border-radius:10px;padding:10px 12px;font-size:15px;line-height:1.6;font-weight:800;margin:10px 0;overflow:visible;direction:rtl}.plan-meta>div{display:block;width:100%;min-width:0;max-width:100%;padding:3px 0;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;overflow-wrap:normal;word-break:keep-all;border:0}.plan-meta b{color:#76500c;font-weight:900;white-space:nowrap}.plan-count{font-size:11px;margin:4px 0;color:#55431d}.actions{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px}.actions button,.actions a{font-family:Tahoma;padding:8px;border:1px solid #555;border-radius:8px;background:#f3f3f3;color:#111;text-decoration:none}.session-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));grid-template-rows:repeat(var(--session-rows,2),minmax(0,1fr));gap:7px;width:100%;height:auto;min-height:250mm;flex:1 0 auto}.session-cell{border:1px solid #c69b43;border-radius:7px;min-width:0;min-height:0;padding:4px;background:#fffdf7;display:flex;flex-direction:column}.session-heading{flex:0 0 auto;text-align:center;font-family:Tahoma,Arial,sans-serif;font-size:15px;font-weight:900;line-height:1.5;color:#382500;background:linear-gradient(135deg,#252525,#444036);color:#f6d77f;border:1.5px solid #b88728;border-radius:5px;padding:8px 3px;margin-bottom:4px;overflow-wrap:anywhere}.session-exercises{min-height:0;flex:1;overflow:hidden;display:flex;flex-direction:column;justify-content:space-evenly}.exercise-card{display:grid;grid-template-columns:minmax(0,1fr) max-content;align-items:center;align-content:center;column-gap:8px;flex:1 1 0;min-height:0;border-bottom:1px solid #e4d3a9;padding:7px 3px;margin:0;break-inside:avoid;text-align:right;font-size:clamp(15px,calc(23px - var(--move-count,6)*1px),21px);line-height:1.55;background:transparent;color:#282014;min-width:0}.exercise-name{display:block;min-width:0;max-width:100%;font-size:clamp(14px,calc(25px - var(--name-length,10)*.3px),25px);font-weight:900;color:#674000;margin:0;white-space:normal;overflow:visible;overflow-wrap:anywhere;word-break:normal;line-height:1.25}.plus{color:#bd7d00;font-size:inherit;padding:0 2px;white-space:nowrap}.exercise-details{display:flex;flex:0 0 auto;flex-wrap:nowrap;align-items:baseline;gap:2px 7px;font-size:clamp(12px,calc(17px - var(--move-count,6)*.45px),15px);font-weight:500;line-height:1.4;color:#665f50;white-space:nowrap}.exercise-details span{white-space:nowrap}.exercise-details .rx{display:inline-block;font-size:clamp(16px,calc(22px - var(--move-count,6)*.5px),20px);font-weight:900;color:#382500;background:#fff1c9;border:1.5px solid #c69b43;border-radius:5px;padding:2px 7px;line-height:1.25;box-shadow:none}.exercise-details .rest{font-size:clamp(11px,calc(15px - var(--move-count,6)*.4px),13px);font-weight:400;color:#777064}.exercise-details .sys{font-weight:500;color:#706959}.exercise-extra{grid-column:1/-1;font-size:12px;margin-top:3px;white-space:normal;overflow-wrap:anywhere}.corrective-guide{grid-column:1/-1;font-size:10px;line-height:1.55;margin:3px 0 2px;padding:4px 6px;border-right:2px solid #c69b43;border-radius:3px;background:#fffaf0;color:#493815;white-space:normal;overflow-wrap:anywhere}.corrective-guide b{color:#674000}.empty-cell{background:#fffdf7}.system-notes{display:flex;flex-direction:row;flex-wrap:wrap;align-items:center;justify-content:flex-start;gap:5px 14px;margin-top:auto;padding:8px 10px;border-top:2px solid #c69b43;background:#fffaf0;border-radius:7px;color:#493815;font-size:12px;font-weight:700;line-height:1.65;break-inside:avoid}.system-notes>div{display:inline-block;flex:0 1 auto;margin:0;white-space:normal;overflow-wrap:anywhere}.system-notes .system-note-star{color:#b88728;font-size:15px;font-weight:900;margin-left:3px}.meal-output{min-height:282mm}.meal-output .plan-header{margin-bottom:0}.plan-title-banner{margin:0;padding:8px 10px;text-align:center;font-size:17px;font-weight:900;line-height:1.5;color:#ffe39a;background:linear-gradient(100deg,#252525 0%,#4b412d 58%,#b88728 100%);border:2px solid #c69b43;border-top:0;border-radius:0 0 9px 9px;overflow-wrap:anywhere}.meal-output .plan-title-banner{color:#51380b;background:linear-gradient(100deg,#fffaf0,#ffe8a3 50%,#fffaf0)}.meal-output .meal-groups{display:flex;flex-direction:column;justify-content:flex-start;gap:6px;min-height:0;flex:0 0 auto}.meal-output .meal-group{flex:0 0 auto;break-inside:avoid}.meal-output .meal-option-row{padding:8px 9px!important;font-size:17px}.meal-output .meal-option-row>div:last-child{font-size:17px!important;line-height:1.8!important}.meal-output .meal-option-row>div:first-child{font-size:16px!important}.meal-output .meal-kcal{margin-top:5px;padding-top:4px;border-top:0;text-align:left;font-size:14px;font-weight:900;color:#654300;white-space:nowrap}.supplement-plan{margin:10px 0 6px;border:1.5px solid #b88728;border-radius:8px;overflow:hidden;break-inside:avoid;background:#fffdf7}.supplement-plan h3{margin:0;padding:7px 9px;background:linear-gradient(100deg,#fff4cf,#ffe6a0 50%,#fff4cf);color:#51380b;font-size:15px;border-bottom:1px solid #c69b43}.supplement-plan table{width:100%;border-collapse:collapse;table-layout:fixed;font-size:12px;line-height:1.6}.supplement-plan th{background:#fff8e6;color:#60440c;font-weight:900}.supplement-plan th,.supplement-plan td{border:1px solid #e4d3a9;padding:5px 4px;text-align:center;vertical-align:middle;overflow-wrap:anywhere}.supplement-plan td:first-child{text-align:right}.supplement-note{font-size:10px;color:#665f50;font-weight:400;margin-top:2px}.meal-output>h2{font-size:19px!important;margin:6px 0 9px!important}.meal-output .plan-date{left:8px;right:auto}.meal-trainee-meta{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px 18px;margin:0 0 6px;padding:8px 12px;border:1.5px solid #c69b43;border-top:0;border-radius:0 0 9px 9px;background:#fffaf0;color:#493815;font-size:15px;font-weight:800;line-height:1.6}.meal-trainee-meta b{color:#76500c;font-weight:900}.meal-output .meal-groups{gap:7px}.meal-output .meal-group{border:1.5px solid #b88728;border-radius:10px;box-shadow:0 1px 3px #8d671e12}.meal-output .meal-group h3{background:linear-gradient(100deg,#272727 0%,#4b412d 58%,#b88728 100%)!important;color:#ffe39a!important;border-bottom:2px solid #d2a43c!important;padding:9px 12px!important;font-size:17px!important}.meal-output .meal-option-row:nth-child(odd){background:#fffaf0}.meal-output .meal-option-row:nth-child(even){background:#fffdf8}.meal-output .meal-kcal{display:inline-block;margin-top:4px!important;padding:3px 8px!important;border:1px solid #d8bd76;border-radius:6px;background:#fff1c9;text-align:left;color:#624300}.meal-bottom-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:8px;align-items:stretch;margin:8px 0;break-inside:avoid}.meal-bottom-grid>.nutrition-summary,.meal-bottom-grid>.supplement-plan{margin:0;min-width:0}.supplement-empty p{padding:10px;margin:0;font-size:11px;color:#66552d}.nutrition-summary{margin:10px 0 8px;border:2px solid #b88728;border-radius:10px;overflow:hidden;background:#fffaf0;break-inside:avoid}.nutrition-summary h3{margin:0;padding:8px 11px;background:linear-gradient(100deg,#fff4cf,#ffe6a0 50%,#fff4cf);color:#51380b;font-size:15px;border-bottom:2px solid #c69b43}.nutrition-metrics{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px;padding:9px}.nutrition-metric{min-width:0;text-align:center;padding:8px 3px;border:1px solid #d8bd76;border-radius:7px;background:#fffdf8;display:flex;flex-direction:column;gap:5px}.nutrition-metric span{font-size:11px;font-weight:800;color:#6c5015}.nutrition-metric b{font-size:13px;line-height:1.5;color:#28251f;overflow-wrap:anywhere}.nutrition-summary p{margin:0;padding:7px 10px;border-top:1px solid #e4d3a9;color:#66552d;font-size:11px;line-height:1.7}.meal-output:after{margin-top:8px}@media(max-width:540px){.meal-bottom-grid{grid-template-columns:minmax(0,1fr)}.nutrition-metrics{grid-template-columns:repeat(2,minmax(0,1fr))}.meal-output .meal-option-row{padding:7px 8px!important}.meal-output .meal-option-row>div:last-child{font-size:15px!important;line-height:1.75!important}}@media print{.meal-output{min-height:282mm}.meal-output .meal-groups{min-height:0;break-inside:auto;justify-content:flex-start}.meal-output .meal-group{break-inside:avoid}}@media screen{body{max-width:900px;margin:0 auto;padding:12px;min-height:282mm}.session-grid{height:auto;min-height:250mm;flex:1 0 auto;grid-auto-rows:minmax(260px,auto)}.session-exercises{overflow:visible}.empty-cell{min-height:250px}}@media print{.actions{display:none}html,body{background:#fff!important;-webkit-print-color-adjust:exact;print-color-adjust:exact}body{padding:0;margin:0;min-height:282mm;display:flex;flex-direction:column}.session-grid{height:auto;min-height:238mm;flex:1 0 auto;grid-template-rows:repeat(var(--session-rows,2),minmax(0,1fr));break-inside:avoid}.session-cell{break-inside:avoid}.session-exercises{overflow:hidden}.meal-output .meal-group h3,.session-heading,.plan-header h1{-webkit-print-color-adjust:exact;print-color-adjust:exact}}@page{size:A4 portrait;margin:7mm}@page{size:A4 portrait;margin:7mm}/* PREMIUM PLAN OUTPUT RESTORE V4: enforce cream/gold design in workout HTML, PNG and print */
+      const html = '<!doctype html><html lang="fa" dir="rtl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>'+esc(title)+'</title><style>' + `@import url('https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;500;600;700;800;900&display=swap');*{box-sizing:border-box}html{background:#fff}body{font-family:Tahoma,Arial,sans-serif;padding:8px;line-height:1.45;color:#17130b;background:#fff;margin:0;min-height:282mm;display:flex;flex-direction:column;border:2px solid #d4b15c;border-radius:10px;-webkit-print-color-adjust:exact;print-color-adjust:exact}body:before{content:"";display:block;height:7px;flex:0 0 7px;margin:0 0 8px;border-radius:5px;background:linear-gradient(90deg,#171717 0%,#b88728 25%,#f4d77d 50%,#b88728 75%,#171717 100%)}body:after{content:"FITNESS SEH GALEH  •  TRAIN HARD • STAY STRONG";display:block;text-align:center;margin-top:8px;padding:7px 4px 2px;border-top:1px solid #c69b43;color:#7c5b19;font-size:9px;font-weight:900;letter-spacing:1px}body.workout-output,body.workout-output *{font-family:'Vazirmatn',Tahoma,Arial,sans-serif!important}.plan-header{position:relative;margin:0 0 8px}h1{text-align:center;color:#51380b;background:linear-gradient(135deg,#fffdf6 0%,#fff0c2 48%,#fffaf0 100%);border:3px solid #c99b32;border-radius:12px;padding:25px 92px 17px 92px;margin:0;font-family:Tahoma,Arial,sans-serif;font-weight:900;line-height:1.45;box-shadow:inset 0 0 0 2px #f7df9b,0 3px 8px #8d671e24;position:relative}.gym-name{display:block;font-family:Tahoma,Arial,sans-serif;font-size:36px;font-weight:1000;line-height:1.45;letter-spacing:normal;color:#714800;text-shadow:0 1px 0 #fff;overflow-wrap:normal;word-break:normal}.coach-name{display:block;font-family:Tahoma,Arial,sans-serif;font-size:17px;font-weight:900;color:#51401e;margin-top:4px;letter-spacing:normal}.gym-art{position:absolute;left:8px;bottom:7px;width:76px;height:60px;display:flex;align-items:center;justify-content:center;opacity:.96;pointer-events:none}.gym-art svg{width:100%;height:100%;display:block}.gym-art-right{left:auto;right:8px;transform:scaleX(-1)}.plan-date{position:absolute;top:7px;left:8px;right:auto;font-size:9px;font-weight:800;line-height:1.35;white-space:nowrap;color:#422d08;background:#fff9e8;border:1px solid #b88728;border-radius:5px;padding:2px 4px;box-shadow:0 1px 2px #8d671e22}.workout-plan-description{margin:0 0 8px;padding:7px 10px;border:1.5px solid #c69b43;border-right:4px solid #b88728;border-radius:8px;background:linear-gradient(135deg,#fffdf6,#fff5d7);font-size:12px;line-height:1.8;break-inside:avoid;overflow-wrap:anywhere}.workout-plan-description b{display:block;color:#6e4a0b;font-size:12px;margin-bottom:2px}.plan-meta{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));grid-template-rows:auto;grid-auto-flow:row;gap:8px 12px;align-items:start;width:100%;max-width:100%;box-sizing:border-box;background:#fffaf0;border:2px solid #b88728;border-radius:10px;padding:10px 12px;font-size:15px;line-height:1.6;font-weight:800;margin:10px 0;overflow:visible;direction:rtl}.plan-meta>div{display:block;width:100%;min-width:0;max-width:100%;padding:3px 0;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;overflow-wrap:normal;word-break:keep-all;border:0}.plan-meta b{color:#76500c;font-weight:900;white-space:nowrap}.plan-count{font-size:11px;margin:4px 0;color:#55431d}.actions{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px}.actions button,.actions a{font-family:Tahoma;padding:8px;border:1px solid #555;border-radius:8px;background:#f3f3f3;color:#111;text-decoration:none}.session-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));grid-template-rows:repeat(var(--session-rows,2),minmax(0,1fr));gap:7px;width:100%;height:auto;min-height:250mm;flex:1 0 auto}.session-cell{border:1px solid #c69b43;border-radius:7px;min-width:0;min-height:0;padding:4px;background:#fffdf7;display:flex;flex-direction:column}.session-heading{flex:0 0 auto;text-align:center;font-family:Tahoma,Arial,sans-serif;font-size:15px;font-weight:900;line-height:1.5;color:#382500;background:linear-gradient(135deg,#252525,#444036);color:#f6d77f;border:1.5px solid #b88728;border-radius:5px;padding:8px 3px;margin-bottom:4px;overflow-wrap:anywhere}.session-exercises{min-height:0;flex:1;overflow:hidden;display:flex;flex-direction:column;justify-content:space-evenly}.exercise-card{display:grid;grid-template-columns:minmax(0,1fr) max-content;align-items:center;align-content:center;column-gap:8px;flex:1 1 0;min-height:0;border-bottom:1px solid #e4d3a9;padding:7px 3px;margin:0;break-inside:avoid;text-align:right;font-size:clamp(15px,calc(23px - var(--move-count,6)*1px),21px);line-height:1.55;background:transparent;color:#282014;min-width:0}.exercise-name{display:block;min-width:0;max-width:100%;font-size:clamp(12px,calc(24px - var(--name-length,10)*.32px),24px);font-weight:900;color:#674000;margin:0;white-space:normal;overflow:visible;overflow-wrap:anywhere;word-break:normal;line-height:1.25}.plus{color:#bd7d00;font-size:inherit;padding:0 2px;white-space:nowrap}.exercise-details{display:flex;flex:0 0 auto;flex-wrap:nowrap;align-items:baseline;gap:2px 7px;font-size:clamp(12px,calc(17px - var(--move-count,6)*.45px),15px);font-weight:500;line-height:1.4;color:#665f50;white-space:nowrap}.exercise-details span{white-space:nowrap}.exercise-details .rx{display:inline-block;font-size:clamp(16px,calc(22px - var(--move-count,6)*.5px),20px);font-weight:900;color:#382500;background:#fff1c9;border:1.5px solid #c69b43;border-radius:5px;padding:2px 7px;line-height:1.25;box-shadow:none}.exercise-details .rest{font-size:clamp(11px,calc(15px - var(--move-count,6)*.4px),13px);font-weight:400;color:#777064}.exercise-details .sys{font-weight:500;color:#706959}.exercise-extra{grid-column:1/-1;font-size:12px;margin-top:3px;white-space:normal;overflow-wrap:anywhere}.corrective-guide{grid-column:1/-1;font-size:10px;line-height:1.55;margin:3px 0 2px;padding:4px 6px;border-right:2px solid #c69b43;border-radius:3px;background:#fffaf0;color:#493815;white-space:normal;overflow-wrap:anywhere}.corrective-guide b{color:#674000}.empty-cell{background:#fffdf7}.system-notes{display:flex;flex-direction:row;flex-wrap:wrap;align-items:center;justify-content:flex-start;gap:5px 14px;margin-top:auto;padding:8px 10px;border-top:2px solid #c69b43;background:#fffaf0;border-radius:7px;color:#493815;font-size:12px;font-weight:700;line-height:1.65;break-inside:avoid}.system-notes>div{display:inline-block;flex:0 1 auto;margin:0;white-space:normal;overflow-wrap:anywhere}.system-notes .system-note-star{color:#b88728;font-size:15px;font-weight:900;margin-left:3px}.meal-output{min-height:282mm}.meal-output .plan-header{margin-bottom:0}.plan-title-banner{margin:0;padding:8px 10px;text-align:center;font-size:17px;font-weight:900;line-height:1.5;color:#ffe39a;background:linear-gradient(100deg,#252525 0%,#4b412d 58%,#b88728 100%);border:2px solid #c69b43;border-top:0;border-radius:0 0 9px 9px;overflow-wrap:anywhere}.meal-output .plan-title-banner{color:#51380b;background:linear-gradient(100deg,#fffaf0,#ffe8a3 50%,#fffaf0)}.meal-output .meal-groups{display:flex;flex-direction:column;justify-content:flex-start;gap:6px;min-height:0;flex:0 0 auto}.meal-output .meal-group{flex:0 0 auto;break-inside:avoid}.meal-output .meal-option-row{padding:8px 9px!important;font-size:17px}.meal-output .meal-option-row>div:last-child{font-size:17px!important;line-height:1.8!important}.meal-output .meal-option-row>div:first-child{font-size:16px!important}.meal-output .meal-kcal{margin-top:5px;padding-top:4px;border-top:0;text-align:left;font-size:14px;font-weight:900;color:#654300;white-space:nowrap}.supplement-plan{margin:10px 0 6px;border:1.5px solid #b88728;border-radius:8px;overflow:hidden;break-inside:avoid;background:#fffdf7}.supplement-plan h3{margin:0;padding:7px 9px;background:linear-gradient(100deg,#fff4cf,#ffe6a0 50%,#fff4cf);color:#51380b;font-size:15px;border-bottom:1px solid #c69b43}.supplement-plan table{width:100%;border-collapse:collapse;table-layout:fixed;font-size:12px;line-height:1.6}.supplement-plan th{background:#fff8e6;color:#60440c;font-weight:900}.supplement-plan th,.supplement-plan td{border:1px solid #e4d3a9;padding:5px 4px;text-align:center;vertical-align:middle;overflow-wrap:anywhere}.supplement-plan td:first-child{text-align:right}.supplement-note{font-size:10px;color:#665f50;font-weight:400;margin-top:2px}.meal-output>h2{font-size:19px!important;margin:6px 0 9px!important}.meal-output .plan-date{left:8px;right:auto}.meal-trainee-meta{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px 18px;margin:0 0 6px;padding:8px 12px;border:1.5px solid #c69b43;border-top:0;border-radius:0 0 9px 9px;background:#fffaf0;color:#493815;font-size:15px;font-weight:800;line-height:1.6}.meal-trainee-meta b{color:#76500c;font-weight:900}.meal-output .meal-groups{gap:7px}.meal-output .meal-group{border:1.5px solid #b88728;border-radius:10px;box-shadow:0 1px 3px #8d671e12}.meal-output .meal-group h3{background:linear-gradient(100deg,#272727 0%,#4b412d 58%,#b88728 100%)!important;color:#ffe39a!important;border-bottom:2px solid #d2a43c!important;padding:9px 12px!important;font-size:17px!important}.meal-output .meal-option-row:nth-child(odd){background:#fffaf0}.meal-output .meal-option-row:nth-child(even){background:#fffdf8}.meal-output .meal-kcal{display:inline-block;margin-top:4px!important;padding:3px 8px!important;border:1px solid #d8bd76;border-radius:6px;background:#fff1c9;text-align:left;color:#624300}.meal-bottom-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:8px;align-items:stretch;margin:8px 0;break-inside:avoid}.meal-bottom-grid>.nutrition-summary,.meal-bottom-grid>.supplement-plan{margin:0;min-width:0}.supplement-empty p{padding:10px;margin:0;font-size:11px;color:#66552d}.nutrition-summary{margin:10px 0 8px;border:2px solid #b88728;border-radius:10px;overflow:hidden;background:#fffaf0;break-inside:avoid}.nutrition-summary h3{margin:0;padding:8px 11px;background:linear-gradient(100deg,#fff4cf,#ffe6a0 50%,#fff4cf);color:#51380b;font-size:15px;border-bottom:2px solid #c69b43}.nutrition-metrics{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px;padding:9px}.nutrition-metric{min-width:0;text-align:center;padding:8px 3px;border:1px solid #d8bd76;border-radius:7px;background:#fffdf8;display:flex;flex-direction:column;gap:5px}.nutrition-metric span{font-size:11px;font-weight:800;color:#6c5015}.nutrition-metric b{font-size:13px;line-height:1.5;color:#28251f;overflow-wrap:anywhere}.nutrition-summary p{margin:0;padding:7px 10px;border-top:1px solid #e4d3a9;color:#66552d;font-size:11px;line-height:1.7}.meal-output:after{margin-top:8px}@media(max-width:540px){.meal-bottom-grid{grid-template-columns:minmax(0,1fr)}.nutrition-metrics{grid-template-columns:repeat(2,minmax(0,1fr))}.meal-output .meal-option-row{padding:7px 8px!important}.meal-output .meal-option-row>div:last-child{font-size:15px!important;line-height:1.75!important}}@media print{.meal-output{min-height:282mm}.meal-output .meal-groups{min-height:0;break-inside:auto;justify-content:flex-start}.meal-output .meal-group{break-inside:avoid}}@media screen{body{max-width:900px;margin:0 auto;padding:12px;min-height:282mm}.session-grid{height:auto;min-height:250mm;flex:1 0 auto;grid-auto-rows:minmax(260px,auto)}.session-exercises{overflow:visible}.empty-cell{min-height:250px}}@media print{.actions{display:none}html,body{background:#fff!important;-webkit-print-color-adjust:exact;print-color-adjust:exact}body{padding:0;margin:0;min-height:282mm;display:flex;flex-direction:column}.session-grid{height:auto;min-height:238mm;flex:1 0 auto;grid-template-rows:repeat(var(--session-rows,2),minmax(0,1fr));break-inside:avoid}.session-cell{break-inside:avoid}.session-exercises{overflow:hidden}.meal-output .meal-group h3,.session-heading,.plan-header h1{-webkit-print-color-adjust:exact;print-color-adjust:exact}}@page{size:A4 portrait;margin:7mm}@page{size:A4 portrait;margin:7mm}/* PREMIUM PLAN OUTPUT RESTORE V4: enforce cream/gold design in workout HTML, PNG and print */
 body.workout-output{min-height:282mm!important;height:auto!important;display:flex!important;flex-direction:column!important;background:#fffdf7!important;color:#241b0c!important;border:2px solid #d4b15c!important}
 body.workout-output:before{background:linear-gradient(90deg,#b88728 0%,#f4d77d 25%,#fff7dd 50%,#f4d77d 75%,#b88728 100%)!important}
 body.workout-output .plan-header h1,body.workout-output h1{background:linear-gradient(135deg,#fffdf6 0%,#fff0c2 48%,#fffaf0 100%)!important;color:#51380b!important;border:3px solid #c99b32!important;box-shadow:inset 0 0 0 2px #f7df9b,0 3px 8px #8d671e24!important}
@@ -5909,11 +5845,6 @@ body.workout-output .session-exercises{overflow:visible!important;justify-conten
 body.workout-output .exercise-card{min-height:64px!important;height:auto!important;flex:0 0 auto!important;padding:9px 5px!important;align-content:center!important;border-bottom:1px solid #e4d3a9!important;font-size:17px!important;line-height:1.6!important;break-inside:avoid!important}
 body.workout-output .exercise-name{font-size:clamp(16px,2.2vw,22px)!important;line-height:1.5!important;font-weight:900!important;color:#241b0c!important;overflow-wrap:anywhere!important}
 body.workout-output .exercise-details{font-size:14px!important;line-height:1.7!important;white-space:normal!important;overflow-wrap:anywhere!important}
-/* Keep prescription and S60 together against the session-card table edge. */
-body.workout-output .exercise-unit{column-gap:2px!important;padding-left:0!important;padding-right:1px!important}
-body.workout-output .exercise-details{justify-self:start!important;gap:2px!important;margin-left:-3px!important;white-space:nowrap!important;flex-wrap:nowrap!important;overflow-wrap:normal!important}
-body.workout-output .exercise-details .rx{padding:1px 4px!important;white-space:nowrap!important}
-body.workout-output .exercise-details .rest{white-space:nowrap!important;font-size:12px!important}
 body.workout-output .system-notes{margin-top:auto!important;display:flex!important;flex-direction:row!important;flex-wrap:wrap!important;align-items:center!important;gap:6px 14px!important;font-size:14px!important;line-height:1.8!important;padding:9px 11px!important;border:1.5px solid #c69b43!important;border-radius:8px!important;background:#fffaf0!important;color:#51380b!important}
 body.workout-output .system-notes>*{display:inline-block!important;flex:0 1 auto!important;margin:0!important}
 body.workout-output .empty-cell{display:none!important}
@@ -6064,13 +5995,6 @@ body.workout-output .empty-cell{display:none!important}
             setImportant(exportGrid,'direction','rtl');
             const sessionCount=doc.querySelectorAll('.session-grid .session-cell').length;
             const rows=Math.max(1,Math.ceil(sessionCount/2));
-            /* Lock session placement explicitly: session 1 right, session 2 left,
-               session 3 right, session 4 left. Do not rely on grid auto-placement
-               direction, which differed between the source and cloned PNG document. */
-            doc.querySelectorAll('.session-grid .session-cell').forEach((el,index)=>{
-              setImportant(el,'grid-column',index%2===0?'1':'2');
-              setImportant(el,'grid-row',String(Math.floor(index/2)+1));
-            });
             setImportant(target,'min-height',Math.max(1066,rows*330+350)+'px');
             setImportant(target,'padding','0 0 10px');
             setImportant(exportGrid,'min-height',Math.max(700,rows*330)+'px');
@@ -6092,60 +6016,19 @@ body.workout-output .empty-cell{display:none!important}
               setImportant(el,'line-height','1.5');
               setImportant(el,'padding','7px 5px');
             });
-            /* Preserve the familiar side-by-side movement/prescription layout.
-               Cap the prescription column instead of letting max-content take the whole
-               card width; this prevents Persian movement names from collapsing to one letter
-               per line while keeping the original output model. */
-            doc.querySelectorAll('.exercise-unit').forEach(el=>{
-              setImportant(el,'grid-template-columns','minmax(0,1fr) minmax(0,42%)');
-              setImportant(el,'width','100%');
-              setImportant(el,'min-width','0');
-              setImportant(el,'align-items','start');
-              setImportant(el,'column-gap','6px');
-            });
             doc.querySelectorAll('.exercise-name').forEach(el=>{
-              setImportant(el,'display','block');
-              setImportant(el,'width','auto');
               setImportant(el,'font-size','18px');
-              setImportant(el,'line-height','1.45');
+              setImportant(el,'line-height','1.35');
               setImportant(el,'white-space','normal');
-              setImportant(el,'overflow-wrap','normal');
+              setImportant(el,'overflow-wrap','break-word');
               setImportant(el,'word-break','normal');
               setImportant(el,'min-width','0');
               setImportant(el,'max-width','100%');
             });
             doc.querySelectorAll('.exercise-details').forEach(el=>{
-              setImportant(el,'display','flex');
-              setImportant(el,'width','100%');
-              setImportant(el,'max-width','100%');
-              setImportant(el,'min-width','0');
-              setImportant(el,'flex-wrap','wrap');
-              setImportant(el,'white-space','normal');
-              setImportant(el,'font-size','15px');
-              setImportant(el,'line-height','1.4');
-              setImportant(el,'gap','3px 5px');
-            });
-            doc.querySelectorAll('.exercise-details span').forEach(el=>{
-              setImportant(el,'white-space','normal');
-              setImportant(el,'max-width','100%');
-              setImportant(el,'overflow-wrap','normal');
-              setImportant(el,'word-break','normal');
-            });
-            /* Keep coach-entered plan description in the captured image, not clipped
-               or collapsed by the compact print stylesheet. */
-            doc.querySelectorAll('.workout-plan-description').forEach(el=>{
-              setImportant(el,'display','block');
-              setImportant(el,'visibility','visible');
-              setImportant(el,'height','auto');
-              setImportant(el,'max-height','none');
-              setImportant(el,'overflow','visible');
-              setImportant(el,'width','100%');
-              setImportant(el,'box-sizing','border-box');
-              setImportant(el,'white-space','normal');
-              setImportant(el,'overflow-wrap','break-word');
-              setImportant(el,'margin','8px 0 12px');
-              setImportant(el,'padding','10px 12px');
-              setImportant(el,'break-inside','avoid');
+              setImportant(el,'font-size','19px');
+              setImportant(el,'line-height','1.5');
+              setImportant(el,'gap','4px 8px');
             });
             /* Make the sets/reps badge and rest-time label clearly readable in the PNG,
                without changing exercise names, page layout, or session arrangement. */
@@ -6377,60 +6260,6 @@ body.workout-output .empty-cell{display:none!important}
                   let next=current*1.25;
                   if(el.matches('.exercise-name,.exercise-details,.exercise-extra,.session-heading,.plan-meta,.plan-count')) next=Math.max(next,current+2);
                   el.style.setProperty('font-size',next+'px','important');
-                });
-                /* Keep the compact 21-rep prescription and its rest-time label on one line.
-                   The general PNG text enlargement above must not expand this badge back out. */
-                clonedDoc.querySelectorAll('.exercise-details:has(.rx-21)').forEach(el=>{
-                  el.style.setProperty('flex-wrap','nowrap','important');
-                  el.style.setProperty('white-space','nowrap','important');
-                  el.style.setProperty('gap','2px','important');
-                  el.style.setProperty('width','100%','important');
-                });
-                clonedDoc.querySelectorAll('.exercise-details .rx-21').forEach(el=>{
-                  el.style.setProperty('font-size','15px','important');
-                  el.style.setProperty('padding','1px 3px','important');
-                  el.style.setProperty('line-height','1.15','important');
-                  el.style.setProperty('letter-spacing','-.4px','important');
-                  el.style.setProperty('white-space','nowrap','important');
-                  el.style.setProperty('flex','0 0 auto','important');
-                });
-                clonedDoc.querySelectorAll('.exercise-details:has(.rx-21) .rest').forEach(el=>{
-                  el.style.setProperty('font-size','13px','important');
-                  el.style.setProperty('white-space','nowrap','important');
-                  el.style.setProperty('flex','0 0 auto','important');
-                });
-                /* Compact every training-system prescription in the PNG, not only 21-rep.
-                   Keep rest, prescription and system label in a single bounded row; shrink
-                   labels before allowing the details column to stretch or wrap. */
-                clonedDoc.querySelectorAll('.exercise-details').forEach(el=>{
-                  el.style.setProperty('display','flex','important');
-                  el.style.setProperty('flex-wrap','nowrap','important');
-                  el.style.setProperty('align-items','center','important');
-                  el.style.setProperty('gap','2px','important');
-                  el.style.setProperty('min-width','0','important');
-                  el.style.setProperty('max-width','100%','important');
-                  el.style.setProperty('white-space','nowrap','important');
-                });
-                clonedDoc.querySelectorAll('.exercise-details .rx').forEach(el=>{
-                  el.style.setProperty('font-size','clamp(10px, 1.05vw, 13px)','important');
-                  el.style.setProperty('padding','1px 3px','important');
-                  el.style.setProperty('line-height','1.15','important');
-                  el.style.setProperty('letter-spacing','-.25px','important');
-                  el.style.setProperty('white-space','nowrap','important');
-                  el.style.setProperty('flex','0 1 auto','important');
-                  el.style.setProperty('min-width','0','important');
-                });
-                clonedDoc.querySelectorAll('.exercise-details .sys').forEach(el=>{
-                  el.style.setProperty('font-size','10px','important');
-                  el.style.setProperty('line-height','1.1','important');
-                  el.style.setProperty('white-space','nowrap','important');
-                  el.style.setProperty('flex','0 1 auto','important');
-                  el.style.setProperty('min-width','0','important');
-                });
-                clonedDoc.querySelectorAll('.exercise-details .rest').forEach(el=>{
-                  el.style.setProperty('font-size','11px','important');
-                  el.style.setProperty('white-space','nowrap','important');
-                  el.style.setProperty('flex','0 0 auto','important');
                 });
               }
               if(kind!=='meal'){
@@ -12741,14 +12570,7 @@ window.sehResetTurnstile=function(){};
      const single=tr.querySelector('.w9-exercise').value;
      return {index,system,groupMode,exerciseIds:groupMode?checked:(single?[single]:[]),
        restRaw:tr.querySelector('.w9-rest').value,
-       reps:(()=>{
-         const value=tr.querySelector('.w9-reps').value.trim();
-         if(groupMode&&/^\d+\s*\+\s*\d+\s*\+\s*\d+$/.test(value)){
-           const parts=value.split('+').map(v=>Number(v.trim()));
-           if(parts.length===3&&parts.reduce((sum,v)=>sum+v,0)===21)return '10';
-         }
-         return value;
-       })(),
+       reps:tr.querySelector('.w9-reps').value.trim(),
        setsRaw:tr.querySelector('.w9-sets').value};
    }).filter(r=>r.exerciseIds.length);
    if(!rows.length)return alert('حداقل یک حرکت را در جدول انتخاب کنید.');
@@ -12777,45 +12599,13 @@ window.sehResetTurnstile=function(){};
          payloads.push({workout_plan_id:currentWorkoutPlanId,exercise_id:exerciseId,sets:Number(r.setsRaw),reps:r.reps,rest_seconds:Number(r.restRaw),notes:null,sort_order:baseOrder+payloads.length,training_system:r.system,group_key:groupKey,training_day:document.getElementById('workoutDay')?.value||null,is_completed:false});
        }
      }
-     // If a coach re-selects a movement that is already saved as system 21 in this same session,
-     // changing it to another system should update that saved row rather than leave the old 21 entry
-     // beside a newly inserted replacement. Other repeated movements keep the normal add behavior.
-     const inserted=[],updatedIds=new Set(),remaining=[];
-     const activeDay=String(document.getElementById('workoutDay')?.value||'');
-     const normalizeSystemValue=v=>String(v||'normal').toLowerCase().trim().replace(/[\\s-]+/g,'_');
-     for(const row of payloads){
-       const existing=row.training_system!=='twenty_one' ? cached.find(x=>
-         x.id!=null &&
-         String(x.workout_plan_id)===String(currentWorkoutPlanId) &&
-         String(x.exercise_id)===String(row.exercise_id) &&
-         String(x.training_day||'')===activeDay &&
-         normalizeSystemValue(x.training_system)==='twenty_one' &&
-         !updatedIds.has(String(x.id))
-       ) : null;
-       if(!existing){remaining.push(row);continue;}
-       if(!currentClient||!currentWorkoutPlanId)throw new Error('شاگرد یا برنامه هنگام اصلاح سیستم تغییر کرده است؛ ذخیره لغو شد.');
-       const patchUrl='/trainee_workout_exercises?id=eq.'+encodeURIComponent(existing.id)+'&workout_plan_id=eq.'+encodeURIComponent(currentWorkoutPlanId);
-       let changed;
-       try{changed=await sbWrite(patchUrl,'PATCH',row);}
-       catch(e){
-         if(!/training_day|is_completed/i.test(e.message||''))throw e;
-         const fallback={...row};delete fallback.training_day;delete fallback.is_completed;
-         changed=await sbWrite(patchUrl,'PATCH',fallback);
-       }
-       if(!Array.isArray(changed)||changed.length!==1)throw new Error('حرکت قبلی برای تغییر سیستم تأیید نشد؛ فهرست برنامه را بررسی کنید.');
-       inserted.push(changed[0]);updatedIds.add(String(existing.id));
+     let inserted;
+     try{inserted=await sbWrite('/trainee_workout_exercises','POST',payloads);}
+     catch(e){
+       if(!/training_day|is_completed/i.test(e.message||''))throw e;
+       inserted=await sbWrite('/trainee_workout_exercises','POST',payloads.map(row=>{const copy={...row};delete copy.training_day;delete copy.is_completed;return copy;}));
      }
-     if(remaining.length){
-       let added;
-       try{added=await sbWrite('/trainee_workout_exercises','POST',remaining);}
-       catch(e){
-         if(!/training_day|is_completed/i.test(e.message||''))throw e;
-         added=await sbWrite('/trainee_workout_exercises','POST',remaining.map(row=>{const copy={...row};delete copy.training_day;delete copy.is_completed;return copy;}));
-       }
-       if(!Array.isArray(added)||added.length!==remaining.length)throw new Error('پاسخ ذخیره‌سازی همه حرکت‌های جدید را تأیید نکرد؛ فهرست را بررسی کنید.');
-       inserted.push(...added);
-     }
-     if(inserted.length!==payloads.length)throw new Error('تعداد حرکت‌های ذخیره‌شده با تعداد انتخاب‌شده برابر نیست؛ فهرست را بررسی کنید.');
+     if(!Array.isArray(inserted)||inserted.length!==payloads.length)throw new Error('پاسخ ذخیره‌سازی همه حرکت‌ها را تأیید نکرد؛ فهرست را بررسی کنید.');
      await window.loadWorkoutForClient();
      table.querySelectorAll('tbody tr').forEach(tr=>{tr.querySelector('.w9-exercise').value='';tr.querySelectorAll('.w9-exercise-check').forEach(i=>i.checked=false);tr.querySelector('.w9-system').value='normal';tr.querySelector('.w9-movement-checklist').hidden=true;tr.querySelector('.w9-movement-hint').hidden=true;tr.querySelector('.w9-exercise').hidden=false;tr.querySelector('.w9-rest').value='60';tr.querySelector('.w9-reps').value='10';tr.querySelector('.w9-sets').value='3';});
      alert(payloads.length+' حرکت با موفقیت در برنامه ثبت شد.');
@@ -13318,18 +13108,6 @@ window.sehResetTurnstile=function(){};
         const expected = payload[field] == null ? null : String(payload[field]).trim();
         const actual = saved[field] == null ? null : String(saved[field]).trim();
         if(expected !== actual) throw new Error('ذخیره فیلد «'+field+'» تأیید نشد؛ دوباره تلاش کنید.');
-      }
-      for(const field of ['age','current_weight','height','weekly_sessions']){
-        if(!Object.prototype.hasOwnProperty.call(payload,field))continue;
-        const expected=payload[field]==null?null:Number(payload[field]);
-        const actual=saved[field]==null?null:Number(saved[field]);
-        if(expected!==actual)throw new Error('ذخیره مقدار «'+field+'» تأیید نشد؛ دوباره تلاش کنید.');
-      }
-      if(Object.prototype.hasOwnProperty.call(payload,'birth_date')&&String(saved.birth_date||'').slice(0,10)!==String(payload.birth_date||'').slice(0,10)){
-        throw new Error('ذخیره تاریخ تولد تأیید نشد؛ دوباره تلاش کنید.');
-      }
-      if(Object.prototype.hasOwnProperty.call(payload,'training_time')&&String(saved.training_time||'').slice(0,5)!==String(payload.training_time||'').slice(0,5)){
-        throw new Error('ذخیره ساعت تمرین تأیید نشد؛ دوباره تلاش کنید.');
       }
       const updated = {
         ...c, id:saved.id, name:saved.full_name, full_name:saved.full_name, age:saved.age,
@@ -14344,7 +14122,6 @@ window.sehResetTurnstile=function(){};
    sets.setAttribute('aria-label',(system==='fst7'?'تعداد ست FST-7':'تعداد ست')+' ردیف '+(tr.dataset.row||''));
    if(userChanged && system==='fst7' && (!sets.value||sets.value==='3'))sets.value='7';
    if(userChanged && system==='twenty_one' && (!reps.value||reps.value==='10'||reps.value==='30 ثانیه'))reps.value='7+7+7';
-   if(userChanged && ['normal','superset','triset','giant'].includes(system) && reps.value.trim()==='7+7+7')reps.value='10';
    if(userChanged && system==='timed' && (!reps.value||reps.value==='10'||!/^\\d+\\s*(ثانیه)?$/.test(reps.value.trim())))reps.value='30 ثانیه';
    let editor=tr.querySelector('.w9-special-controls');
    if(!editor){

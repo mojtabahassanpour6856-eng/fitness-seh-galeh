@@ -340,10 +340,8 @@ jobs:
           assert.ok(end > start, 'could not find end of nine-row save handler');
           const handler = html.slice(start, end);
           assert.match(handler, /workout_plan_id:currentWorkoutPlanId/, 'must use current plan id, not a window property');
-          assert.match(handler, /sbWrite\('\/trainee_workout_exercises','POST',remaining\)/, 'must batch-insert newly selected rows in one request');
-          assert.match(handler, /sbWrite\(patchUrl,'PATCH',row\)/, 'must update a matching saved 21-rep row rather than create a duplicate');
-          assert.match(handler, /added\.length!==remaining\.length/, 'must check all newly inserted rows were returned');
-          assert.match(handler, /inserted\.length!==payloads\.length/, 'must verify the total count across updated and newly inserted rows');
+          assert.match(handler, /sbWrite\('\/trainee_workout_exercises','POST',payloads\)/, 'must use one multi-row insert');
+          assert.match(handler, /inserted\.length!==payloads\.length/, 'must check all rows were returned');
           assert.match(handler, /training_day\|is_completed/i, 'must retain optional-column compatibility fallback');
           assert.match(html, /legacyPreviewOnly=unassignedRows\.length>0&&labelledRows\.length===0/, 'unlabelled legacy rows may only be previewed when the entire plan is unlabelled');
           assert.match(html, /if\(day===0&&legacyPreviewOnly\)dayRows=unassignedRows/, 'legacy rows must be surfaced in the editor rather than silently appearing as an empty plan');
