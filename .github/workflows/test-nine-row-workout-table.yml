@@ -51,6 +51,17 @@ jobs:
               assert.equal(await row.locator('input.w9-reps').count(), 1);
               assert.equal(await row.locator('input.w9-sets').count(), 1);
             }
+            // System-specific defaults and guidance must update when a coach changes a row's system.
+            const dynamicRow = table.locator('tbody tr').nth(8);
+            await dynamicRow.locator('.w9-system').selectOption('fst7');
+            assert.equal(await dynamicRow.locator('.w9-sets').inputValue(), '7', 'FST-7 should default to seven sets');
+            assert.match(await dynamicRow.locator('.w9-reps').getAttribute('placeholder'), /FST-7|تکرار هر ست|تکرار/, 'FST-7 should provide reps guidance');
+            await dynamicRow.locator('.w9-system').selectOption('twenty_one');
+            assert.equal(await dynamicRow.locator('.w9-reps').inputValue(), '7+7+7', '21s should default to 7+7+7');
+            assert.match(await dynamicRow.locator('.w9-reps').getAttribute('placeholder'), /21|بخش‌های/, '21s should explain the three parts');
+            await dynamicRow.locator('.w9-system').selectOption('timed');
+            assert.equal(await dynamicRow.locator('.w9-reps').inputValue(), '30 ثانیه', 'timed work should default to 30 seconds');
+            assert.match(await dynamicRow.locator('.w9-reps').getAttribute('placeholder'), /مدت زمان/, 'timed work should request duration rather than reps');
             // Group systems should reveal checkboxes on the same row, with the required selection count.
             const groupingRows = await table.locator('tbody tr').all();
             await groupingRows[0].locator('.w9-system').selectOption('superset');
