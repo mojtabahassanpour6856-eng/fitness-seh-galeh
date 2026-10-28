@@ -6378,7 +6378,6 @@ body.workout-output .empty-cell{display:none!important}
                   if(el.matches('.exercise-name,.exercise-details,.exercise-extra,.session-heading,.plan-meta,.plan-count')) next=Math.max(next,current+2);
                   el.style.setProperty('font-size',next+'px','important');
                 });
-              });
                 /* Keep the compact 21-rep prescription and its rest-time label on one line.
                    The general PNG text enlargement above must not expand this badge back out. */
                 clonedDoc.querySelectorAll('.exercise-details:has(.rx-21)').forEach(el=>{
