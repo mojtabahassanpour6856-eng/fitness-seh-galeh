@@ -8,8 +8,53 @@ const file = path.join(process.cwd(), 'index.html');
 const marker = '// FITNESS_SEH_GALEH_PREBUILT_MEAL_RECIPES_V1';
 const html = fs.readFileSync(file, 'utf8');
 
+const foodNameRenames = [
+  ['نان','نان سنگک'],
+  ['پنیر','پنیر کم چرب'],
+  ['گوجه‌فرنگی','گوجه‌فرنگی'],
+  ['سالاد فصل','سالاد فصل بدون سس'],
+  ['ماست','ماست کم چرب'],
+  ['شوید','شوید تازه'],
+  ['ماهی','ماهی پخته'],
+  ['سیب‌زمینی آب‌پز','سیب زمینی پخته'],
+  ['سبزیجات','سالاد سبزیجات مخلوط بدون سس'],
+  ['گوشت گوساله کم‌چرب','گوشت گوساله کم چرب'],
+  ['لوبیا سبز','لوبیا سبز پخته'],
+  ['گوشت چرخ‌کرده کم‌چرب','گوشت چرخ کرده کم چرب'],
+  ['کدو سبز','کدو سبز پخته بدون روغن'],
+  ['هویج','هویج خام'],
+  ['فلفل دلمه‌ای','فلفل دلمه‌ای قرمز'],
+  ['قارچ','قارچ خام'],
+  ['ماست یونانی کم‌چرب','ماست یونانی ساده کم‌چرب'],
+  ['ماست یونانی','ماست یونانی ساده کم‌چرب'],
+  ['شیر','شیر کم چرب'],
+  ['کره بادام‌زمینی','کره بادام زمینی'],
+  ['برگه زردآلو','زردآلو خشک'],
+  ['پودر کاکائوی بدون شکر','پودر کاکائو بدون شکر'],
+  ['تخم‌مرغ','تخم مرغ کامل'],
+  ['دارچین','دارچین آسیاب‌شده']
+];
+function normalizeFoodNames(block) {
+  let out = block;
+  for (const [from, to] of foodNameRenames) {
+    out = out.split(JSON.stringify(from)).join(JSON.stringify(to));
+  }
+  // Ice adds no useful nutrition value and is not in the existing food bank.
+  out = out.split(',["یخ",50,"گرم"]').join('');
+  return out;
+}
 if (html.includes(marker)) {
-  console.log('Meal recipe bank already seeded; no changes made.');
+  const markerAt = html.indexOf(marker);
+  const arrayEnd = html.indexOf('];', markerAt);
+  if (arrayEnd < 0) throw new Error('Seed marker exists but recipe array end is missing.');
+  const oldBlock = html.slice(markerAt, arrayEnd);
+  const normalizedBlock = normalizeFoodNames(oldBlock);
+  if (normalizedBlock !== oldBlock) {
+    fs.writeFileSync(file, html.slice(0, markerAt) + normalizedBlock + html.slice(arrayEnd), 'utf8');
+    console.log('Normalized seeded recipe ingredients to existing food-bank names.');
+  } else {
+    console.log('Meal recipe bank already seeded and normalized; no changes made.');
+  }
   process.exit(0);
 }
 
@@ -58,5 +103,8 @@ const serialized = recipes.map(r => '  '+JSON.stringify(r)).join(',\n');
 const needsComma = !/,\s*$/.test(html.slice(0, end));
 const insertion = (needsComma ? ',' : '')+'\n  '+marker+'\n'+serialized+',\n';
 const updated = html.slice(0, end) + insertion + html.slice(end);
-fs.writeFileSync(file, updated, 'utf8');
+const markerAt = updated.indexOf(marker);
+const arrayEnd = updated.indexOf('];', markerAt);
+const normalizedUpdated = updated.slice(0, markerAt) + normalizeFoodNames(updated.slice(markerAt, arrayEnd)) + updated.slice(arrayEnd);
+fs.writeFileSync(file, normalizedUpdated, 'utf8');
 console.log('Added '+recipes.length+' coach-side meal recipes to the existing MEAL_RECIPES bank.');
