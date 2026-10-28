@@ -12657,13 +12657,45 @@ window.sehResetTurnstile=function(){};
          payloads.push({workout_plan_id:currentWorkoutPlanId,exercise_id:exerciseId,sets:Number(r.setsRaw),reps:r.reps,rest_seconds:Number(r.restRaw),notes:null,sort_order:baseOrder+payloads.length,training_system:r.system,group_key:groupKey,training_day:document.getElementById('workoutDay')?.value||null,is_completed:false});
        }
      }
-     let inserted;
-     try{inserted=await sbWrite('/trainee_workout_exercises','POST',payloads);}
-     catch(e){
-       if(!/training_day|is_completed/i.test(e.message||''))throw e;
-       inserted=await sbWrite('/trainee_workout_exercises','POST',payloads.map(row=>{const copy={...row};delete copy.training_day;delete copy.is_completed;return copy;}));
+     // If a coach re-selects a movement that is already saved as system 21 in this same session,
+     // changing it to another system should update that saved row rather than leave the old 21 entry
+     // beside a newly inserted replacement. Other repeated movements keep the normal add behavior.
+     const inserted=[],updatedIds=new Set(),remaining=[];
+     const activeDay=String(document.getElementById('workoutDay')?.value||'');
+     const normalizeSystemValue=v=>String(v||'normal').toLowerCase().trim().replace(/[\\s-]+/g,'_');
+     for(const row of payloads){
+       const existing=row.training_system!=='twenty_one' ? cached.find(x=>
+         x.id!=null &&
+         String(x.workout_plan_id)===String(currentWorkoutPlanId) &&
+         String(x.exercise_id)===String(row.exercise_id) &&
+         String(x.training_day||'')===activeDay &&
+         normalizeSystemValue(x.training_system)==='twenty_one' &&
+         !updatedIds.has(String(x.id))
+       ) : null;
+       if(!existing){remaining.push(row);continue;}
+       if(!currentClient||!currentWorkoutPlanId)throw new Error('شاگرد یا برنامه هنگام اصلاح سیستم تغییر کرده است؛ ذخیره لغو شد.');
+       const patchUrl='/trainee_workout_exercises?id=eq.'+encodeURIComponent(existing.id)+'&workout_plan_id=eq.'+encodeURIComponent(currentWorkoutPlanId);
+       let changed;
+       try{changed=await sbWrite(patchUrl,'PATCH',row);}
+       catch(e){
+         if(!/training_day|is_completed/i.test(e.message||''))throw e;
+         const fallback={...row};delete fallback.training_day;delete fallback.is_completed;
+         changed=await sbWrite(patchUrl,'PATCH',fallback);
+       }
+       if(!Array.isArray(changed)||changed.length!==1)throw new Error('حرکت قبلی برای تغییر سیستم تأیید نشد؛ فهرست برنامه را بررسی کنید.');
+       inserted.push(changed[0]);updatedIds.add(String(existing.id));
      }
-     if(!Array.isArray(inserted)||inserted.length!==payloads.length)throw new Error('پاسخ ذخیره‌سازی همه حرکت‌ها را تأیید نکرد؛ فهرست را بررسی کنید.');
+     if(remaining.length){
+       let added;
+       try{added=await sbWrite('/trainee_workout_exercises','POST',remaining);}
+       catch(e){
+         if(!/training_day|is_completed/i.test(e.message||''))throw e;
+         added=await sbWrite('/trainee_workout_exercises','POST',remaining.map(row=>{const copy={...row};delete copy.training_day;delete copy.is_completed;return copy;}));
+       }
+       if(!Array.isArray(added)||added.length!==remaining.length)throw new Error('پاسخ ذخیره‌سازی همه حرکت‌های جدید را تأیید نکرد؛ فهرست را بررسی کنید.');
+       inserted.push(...added);
+     }
+     if(inserted.length!==payloads.length)throw new Error('تعداد حرکت‌های ذخیره‌شده با تعداد انتخاب‌شده برابر نیست؛ فهرست را بررسی کنید.');
      await window.loadWorkoutForClient();
      table.querySelectorAll('tbody tr').forEach(tr=>{tr.querySelector('.w9-exercise').value='';tr.querySelectorAll('.w9-exercise-check').forEach(i=>i.checked=false);tr.querySelector('.w9-system').value='normal';tr.querySelector('.w9-movement-checklist').hidden=true;tr.querySelector('.w9-movement-hint').hidden=true;tr.querySelector('.w9-exercise').hidden=false;tr.querySelector('.w9-rest').value='60';tr.querySelector('.w9-reps').value='10';tr.querySelector('.w9-sets').value='3';});
      alert(payloads.length+' حرکت با موفقیت در برنامه ثبت شد.');
@@ -14180,6 +14212,7 @@ window.sehResetTurnstile=function(){};
    sets.setAttribute('aria-label',(system==='fst7'?'تعداد ست FST-7':'تعداد ست')+' ردیف '+(tr.dataset.row||''));
    if(userChanged && system==='fst7' && (!sets.value||sets.value==='3'))sets.value='7';
    if(userChanged && system==='twenty_one' && (!reps.value||reps.value==='10'||reps.value==='30 ثانیه'))reps.value='7+7+7';
+   if(userChanged && ['normal','superset','triset','giant'].includes(system) && reps.value.trim()==='7+7+7')reps.value='10';
    if(userChanged && system==='timed' && (!reps.value||reps.value==='10'||!/^\\d+\\s*(ثانیه)?$/.test(reps.value.trim())))reps.value='30 ثانیه';
    let editor=tr.querySelector('.w9-special-controls');
    if(!editor){
