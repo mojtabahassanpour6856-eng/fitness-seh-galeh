@@ -12485,7 +12485,7 @@ window.sehResetTurnstile=function(){};
 .workout-nine-table td{padding:4px;background:#fffdf7;border-top:1px solid #eadfbe;border-bottom:1px solid #eadfbe}
 .workout-nine-table td:first-child{border-right:1px solid #eadfbe;border-radius:0 8px 8px 0}
 .workout-nine-table td:last-child{border-left:1px solid #eadfbe;border-radius:8px 0 0 8px}
-.workout-nine-table select,.workout-nine-table input{width:100%;min-width:0;box-sizing:border-box;padding:8px 4px;margin:0;font-size:12px;border:1px solid #cfc3a5;border-radius:7px;background:#fff;color:#29251c}
+.w9-special-controls{margin-top:5px;min-width:0}.w9-special-title{display:block;font-size:10px;color:#6c5525;margin:2px 0 4px}.w9-special-fields{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:3px}.w9-special-fields label{font-size:9px;line-height:1.35;color:#51401f;min-width:0}.workout-nine-table .w9-special-fields input{padding:6px 2px;font-size:11px;text-align:center;min-width:0}..workout-nine-table select,.workout-nine-table input{width:100%;min-width:0;box-sizing:border-box;padding:8px 4px;margin:0;font-size:12px;border:1px solid #cfc3a5;border-radius:7px;background:#fff;color:#29251c}
 .workout-nine-table th:nth-child(1){width:31%}.w9-movement-picker{min-width:150px;position:relative}.w9-group-movement-toggle{width:100%;box-sizing:border-box;padding:8px 5px;border:1px solid #c7a45a;border-radius:7px;background:#f3e4b8;color:#4b3814;font-size:12px;font-weight:600;text-align:right;cursor:pointer}.w9-group-movement-toggle::after{content:'⌄';float:left;color:#8a6720;margin-right:8px}.w9-group-movement-toggle[aria-expanded="true"]{background:#e8d18c;border-color:#a9832e;box-shadow:0 0 0 2px rgba(199,164,90,.18)}.w9-movement-checklist{position:absolute;z-index:1000;top:calc(100% + 3px);right:0;width:max-content;min-width:100%;max-width:260px;max-height:190px;overflow:auto;text-align:right;border:1px solid #b58b2b;border-radius:8px;padding:6px;background:#f5e6bd;color:#4b3814;box-shadow:0 5px 16px rgba(50,38,12,.18)}.w9-movement-checklist label{display:flex;align-items:center;gap:6px;font-size:12px;padding:5px 4px;white-space:normal;border-bottom:1px solid #dfc783;border-radius:5px;color:#241906!important;font-weight:600}.w9-movement-checklist label:last-child{border-bottom:0}.w9-movement-checklist label:hover{background:#ead18b}.w9-movement-checklist label:has(input:checked){background:#e7d08e;font-weight:600}.w9-movement-checklist input{width:auto;min-width:auto;margin-top:2px;accent-color:#98701b}.w9-movement-hint{display:block;color:#8a6b25;font-size:10px;line-height:1.6}.w9-movement-picker select{width:100%}.w9-movement-checklist[hidden],.w9-movement-hint[hidden]{display:none!important}.workout-nine-table th:nth-child(2){width:23%}.workout-nine-table th:nth-child(3){width:17%}.workout-nine-table th:nth-child(4){width:15%}.workout-nine-table th:nth-child(5){width:14%}
 @media(max-width:480px){.workout-nine-table-wrap{padding:7px}.workout-nine-table{min-width:590px}.workout-nine-table th{font-size:11px}}
 </style>
@@ -14073,27 +14073,67 @@ window.sehResetTurnstile=function(){};
      timed:['مدت زمان به ثانیه (مثلاً 30 یا 45)','مدت زمان'],
      twenty_one:['بخش‌های 21 تایی؛ پیش‌فرض 7+7+7','بخش‌های تکرار'],
      fst7:['تکرار هر ست FST-7 (مثلاً 8-12)','تکرار'],
-     drop:['تکرار مراحل دراپ‌ست (مثلاً 12/10/8)','تکرار مراحل'],
-     mechanical_drop:['تکرار مراحل دراپ‌ست مکانیکال (مثلاً 10/10/10)','تکرار مراحل'],
-     pyramid:['تکرار مراحل هرمی (مثلاً 12/10/8)','تکرار مراحل'],
-     reverse_pyramid:['تکرار مراحل هرمی معکوس (مثلاً 6/8/10)','تکرار مراحل'],
+     drop:['تکرار مراحل دراپ‌ست','تکرار مراحل'],
+     mechanical_drop:['تکرار مراحل دراپ‌ست مکانیکال','تکرار مراحل'],
+     pyramid:['تکرار مراحل هرمی','تکرار مراحل'],
+     reverse_pyramid:['تکرار مراحل هرمی معکوس','تکرار مراحل'],
      rest_pause:['تکرار اصلی + تکرارهای رست‌پاز (مثلاً 10+3+2)','تکرارها'],
-     forced_reps:['تکرار اصلی + اجباری (مثلاً 8+2 اجباری)','تکرارها'],
-     negative_reps:['تکرار منفی (مثلاً 6 منفی)','تکرار'],
-     partial_reps:['تکرار کامل/نیمه (مثلاً 8+6 نیمه)','تکرارها'],
+     forced_reps:['تکرار اصلی + اجباری (مثلاً 8+2)','تکرارها'],
+     negative_reps:['تکرار منفی','تکرار'],
+     partial_reps:['تکرار کامل/نیمه','تکرارها'],
      myo_reps:['مایو رپس (مثلاً 15+5+5+5)','تکرارها'],
      cluster:['کلاستر (مثلاً 4+4+4)','بخش‌های تکرار'],
-     tempo:['تکرار با تمپو (مثلاً 3-1-2)','تمپو'],
-     multi_stage:['مراحل دلخواه (مثلاً 12/10/8)','مراحل'],
+     tempo:['تمپو: منفی، مکث، مثبت','تمپو'],
+     multi_stage:['مراحل دلخواه','مراحل'],
      custom:['جزئیات دلخواه سیستم','جزئیات']
    };
    const preset=presets[system]||presets.normal;
    reps.placeholder=preset[0];
    reps.setAttribute('aria-label',preset[1]+' ردیف '+(tr.dataset.row||''));
-   sets.setAttribute('aria-label',(system==='fst7'?'تعداد ست FST-7': 'تعداد ست')+' ردیف '+(tr.dataset.row||''));
+   sets.setAttribute('aria-label',(system==='fst7'?'تعداد ست FST-7':'تعداد ست')+' ردیف '+(tr.dataset.row||''));
    if(userChanged && system==='fst7' && (!sets.value||sets.value==='3'))sets.value='7';
    if(userChanged && system==='twenty_one' && (!reps.value||reps.value==='10'||reps.value==='30 ثانیه'))reps.value='7+7+7';
    if(userChanged && system==='timed' && (!reps.value||reps.value==='10'||reps.value==='7+7+7'))reps.value='30 ثانیه';
+   let editor=tr.querySelector('.w9-special-controls');
+   if(!editor){
+     editor=document.createElement('div');editor.className='w9-special-controls';editor.hidden=true;
+     editor.setAttribute('aria-label','تنظیمات اختصاصی سیستم تمرینی');
+     reps.insertAdjacentElement('afterend',editor);
+   }
+   const mode=system==='twenty_one'?'three':(['drop','mechanical_drop','pyramid','reverse_pyramid','multi_stage'].includes(system)?'stages':(system==='tempo'?'tempo':'none'));
+   const oldMode=editor.dataset.mode||'';
+   if(mode==='none'){
+     editor.hidden=true;reps.hidden=false;reps.style.display='';
+     editor.replaceChildren();editor.dataset.mode='none';return;
+   }
+   const parts=mode==='three'?String(reps.value||'7+7+7').split('+').map(x=>x.trim()):mode==='stages'?String(reps.value||'12/10/8').split('/').map(x=>x.trim()):String(reps.value||'3-1-2').split('-').map(x=>x.trim());
+   const defaults=mode==='three'?['7','7','7']:(mode==='stages'?['12','10','8']:['3','1','2']);
+   const labels=mode==='three'?['بخش اول','بخش دوم','بخش سوم']:(mode==='stages'?['مرحله اول','مرحله دوم','مرحله سوم']:['منفی (ثانیه)','مکث (ثانیه)','مثبت (ثانیه)']);
+   if(oldMode!==mode){
+     editor.replaceChildren();
+     const title=document.createElement('small');
+     title.className='w9-special-title';
+     title.textContent=mode==='three'?'۲۱ تکرار: هر بخش را جدا وارد کنید':(mode==='stages'?'تکرار هر مرحله را جدا وارد کنید':'زمان اجرای هر تکرار را وارد کنید');
+     editor.appendChild(title);
+     const fields=document.createElement('div');fields.className='w9-special-fields';
+     for(let i=0;i<3;i++){
+       const label=document.createElement('label');label.textContent=labels[i];
+       const input=document.createElement('input');input.type='number';input.min='0';input.step='1';input.className='w9-special-part';input.dataset.part=String(i);input.setAttribute('aria-label',labels[i]+' ردیف '+(tr.dataset.row||''));input.value=parts[i]||defaults[i];
+       label.appendChild(input);fields.appendChild(label);
+     }
+     editor.appendChild(fields);editor.dataset.mode=mode;
+     fields.addEventListener('input',()=>{
+       const vals=Array.from(fields.querySelectorAll('.w9-special-part')).map((el,i)=>el.value.trim()||defaults[i]);
+       reps.value=mode==='three'?vals.join('+'):(mode==='stages'?vals.join('/'):vals.join('-'));
+       reps.dispatchEvent(new Event('input',{bubbles:true}));
+       reps.dispatchEvent(new Event('change',{bubbles:true}));
+     });
+   } else {
+     editor.querySelectorAll('.w9-special-part').forEach((input,i)=>{if(parts[i]!=null&&parts[i]!=='')input.value=parts[i];});
+   }
+   editor.hidden=false;reps.hidden=true;reps.style.display='none';
+   editor.querySelectorAll('.w9-special-part').forEach((input,i)=>{input.value=parts[i]||defaults[i];});
+   reps.value=mode==='three'?Array.from(editor.querySelectorAll('.w9-special-part')).map(x=>x.value||'7').join('+'):(mode==='stages'?Array.from(editor.querySelectorAll('.w9-special-part')).map(x=>x.value||'12').join('/'):Array.from(editor.querySelectorAll('.w9-special-part')).map(x=>x.value||'3').join('-'));
  }
 
  function table(){return $('workoutNineTable');}
