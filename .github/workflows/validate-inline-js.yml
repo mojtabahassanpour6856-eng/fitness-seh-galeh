@@ -13,6 +13,7 @@ on:
       - 'index.html'
       - 'tests/coach-plan-status-static.test.js'
       - 'tests/coach-meal-recipes-static.test.js'
+      - 'tests/workout-export-session-order-restline.test.js'
       - '.github/workflows/validate-inline-js.yml'
   workflow_dispatch:
 jobs:
