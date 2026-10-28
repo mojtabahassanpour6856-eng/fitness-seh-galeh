@@ -1,3 +1,4 @@
+// Deployment refresh: ensure GitHub Pages republishes the latest coach workout PNG styling.
 self.addEventListener('install', function (event) {
   event.waitUntil(self.skipWaiting());
 });
