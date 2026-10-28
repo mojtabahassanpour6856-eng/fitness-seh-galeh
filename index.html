@@ -14356,7 +14356,7 @@ window.sehResetTurnstile=function(){};
        t.querySelectorAll('tbody tr').forEach(tr=>adaptSystemRow(tr,false));
        t.addEventListener('change',event=>{
          const tr=event.target&&event.target.closest?event.target.closest('tbody tr'):null;
-         if(tr&&event.target.classList.contains('w9-system'))adaptSystemRow(tr,event.isTrusted);
+         if(tr&&event.target.classList.contains('w9-system'))adaptSystemRow(tr,true);
        });
        window.__sehTrainingSystemFieldsBound=true;
      }
