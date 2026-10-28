@@ -14343,6 +14343,10 @@ window.sehResetTurnstile=function(){};
      if(r.exerciseIds.length!==needed)return alert((r.system==='superset'?'سوپرست':r.system==='triset'?'تری‌ست':r.system==='giant'?'جاینت‌ست':'این سیستم')+' در ردیف '+(r.index+1)+' باید دقیقاً '+needed+' حرکت داشته باشد.');
      if(new Set(r.exerciseIds).size!==r.exerciseIds.length)return alert('در ردیف '+(r.index+1)+' یک حرکت را دوبار انتخاب نکنید.');
      if(!r.reps)return alert('تکرار ردیف '+(r.index+1)+' را وارد کنید.');
+     if(r.system==='twenty_one'){
+       const parts=r.reps.split('+').map(v=>v.trim());
+       if(parts.length!==3||parts.some(v=>!/^\d+$/.test(v))||parts.reduce((sum,v)=>sum+Number(v),0)!==21)return alert('سیستم ۲۱ تکرار در ردیف '+(r.index+1)+' باید سه بخش عددی داشته باشد که مجموع آن‌ها دقیقاً ۲۱ شود.');
+     }
      if(!Number.isFinite(Number(r.setsRaw))||Number(r.setsRaw)<1)return alert('تعداد ست ردیف '+(r.index+1)+' باید حداقل ۱ باشد.');
      if(!Number.isFinite(Number(r.restRaw))||Number(r.restRaw)<0)return alert('استراحت ردیف '+(r.index+1)+' معتبر نیست.');
    }
