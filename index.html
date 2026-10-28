@@ -5731,7 +5731,7 @@ window.useLibraryExercise=async function(id){
             let reps=String(x.reps??'').trim()||'—';
             const sys=normalizeSystem(x.training_system);
             // Prevent stale system-21 phases from being joined into a superset prescription.
-            if(groupedSystem(sys)&&/^\d+\s*\\+\s*\d+\s*\\+\s*\d+$/.test(reps)){
+            if(groupedSystem(sys)&&/^\d+\s*\+\s*\d+\s*\+\s*\d+$/.test(reps)){
               const parts=reps.split('+').map(v=>Number(v.trim()));
               if(parts.length===3&&parts.reduce((sum,v)=>sum+v,0)===21)reps='10';
             }
@@ -9408,7 +9408,7 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
     write(list);
   }
   function displayId(a){
-    if(a.type==='trainee'&&/^\\+989\d{9}$/.test(a.id))return '0'+a.id.slice(3);
+    if(a.type==='trainee'&&/^\+989\d{9}$/.test(a.id))return '0'+a.id.slice(3);
     return a.id;
   }
   function render(){
@@ -11788,7 +11788,7 @@ body.workout-output.workout-compact{
     const err=document.getElementById('authError');
     const btn=document.getElementById('traineeLoginBox')?.querySelectorAll('.trainee-auth-block button')[1];
     const show=msg=>{if(err){err.textContent=msg;err.style.display='block';}};
-    if(!/^\\+989\d{9}$/.test(phone)||!password){show('شماره موبایل معتبر و رمز عبور را وارد کنید. نمونه شماره: 09121234567');return;}
+    if(!/^\+989\d{9}$/.test(phone)||!password){show('شماره موبایل معتبر و رمز عبور را وارد کنید. نمونه شماره: 09121234567');return;}
     if(!window.AUTH_SUPABASE){show('اتصال ورود بارگذاری نشده است. لطفاً صفحه را تازه‌سازی کنید. '+(window.__fitnessLastScriptError?.message||''));return;}
     if(typeof window.finishLogin!=='function'){show('بخش تکمیل ورود بارگذاری نشده است. خطای ثبت‌شده: '+(window.__fitnessLastScriptError?.message||'نامشخص')+'.');return;}
     if(btn){btn.disabled=true;btn.textContent='⏳ در حال ورود…';}
@@ -12635,7 +12635,7 @@ window.sehResetTurnstile=function(){};
        restRaw:tr.querySelector('.w9-rest').value,
        reps:(()=>{
          const value=tr.querySelector('.w9-reps').value.trim();
-         if(groupMode&&/^\d+\s*\\+\s*\d+\s*\\+\s*\d+$/.test(value)){
+         if(groupMode&&/^\d+\s*\+\s*\d+\s*\+\s*\d+$/.test(value)){
            const parts=value.split('+').map(v=>Number(v.trim()));
            if(parts.length===3&&parts.reduce((sum,v)=>sum+v,0)===21)return '10';
          }
