@@ -42,4 +42,14 @@ assert.equal(recipes.find(r => r.name === 'معجون حجم ۲')?.category, 'po
 assert.equal(recipes.find(r => r.name === 'شیک کاهش وزن ۱')?.category, 'snack');
 assert.equal(recipes.find(r => r.name === 'شیک کاهش وزن ۲')?.category, 'bedtime');
 
-console.log('PASS: 21 prebuilt meal recipes, meal-category placement, and ingredient row validation.');
+const cerelacRecipe = recipes.find(r => r.name === 'معجون حجم ۱');
+assert.ok(cerelacRecipe?.ingredients.some(row => row[0] === 'سرلاک' && Number(row[1]) === 30),
+  'volume shake 1 must include 30 g of Cerelac');
+const cerelacSql = fs.readFileSync('supabase/migrations/202610280001_add_cerelac_wheat.sql', 'utf8');
+assert.match(cerelacSql, /'سرلاک'/);
+assert.match(cerelacSql, /427/);
+assert.match(cerelacSql, /15\.5/);
+assert.match(cerelacSql, /64\.5/);
+assert.match(cerelacSql, /12\.5/);
+
+console.log('PASS: 21 prebuilt meal recipes, Cerelac ingredient and nutrition seed, categories, and row validation.');
