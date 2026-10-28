@@ -209,7 +209,8 @@ jobs:
           (async () => {
             const browser = await chromium.launch({ headless: true });
             const page = await browser.newPage({ viewport: { width: 1440, height: 1100 } });
-            page.on('dialog', d => d.accept());
+            const dialogs = [];
+            page.on('dialog', d => { dialogs.push(d.message()); d.accept(); });
             await page.goto('file://' + path.resolve('index.html'), { waitUntil: 'domcontentloaded' });
             await page.addStyleTag({ content: '#authScreen { display:none !important; }' });
             await page.locator('#workout').evaluate(el => el.classList.add('active'));
@@ -277,6 +278,13 @@ jobs:
             await last.locator('.w9-sets').evaluate(el => { el.value='5'; el.dispatchEvent(new Event('input',{bubbles:true})); el.dispatchEvent(new Event('change',{bubbles:true})); if(el.nextElementSibling?.classList.contains('seh-touch-choice-select')) el.nextElementSibling.value='5'; });
             await last.locator('.w9-system').selectOption('twenty_one');
             assert.equal(await last.locator('.w9-special-part').count(), 3, '21-rep fields should be available on an existing saved row');
+            await last.locator('.w9-special-part').nth(0).fill('7');
+            await last.locator('.w9-special-part').nth(1).fill('8');
+            await last.locator('.w9-special-part').nth(2).fill('7');
+            const writesBeforeInvalid21 = await page.evaluate(() => window.__mockWrites.length);
+            await page.evaluate(async () => { await window.saveWorkoutNineTable(); });
+            assert.match(dialogs.at(-1)||'', /مجموع.*۲۱|۲۱.*مجموع/, 'invalid 21-rep totals should be rejected with a clear message');
+            assert.equal(await page.evaluate(() => window.__mockWrites.length), writesBeforeInvalid21, 'invalid 21-rep prescription must not write to the mock database');
             await last.locator('.w9-special-part').nth(0).fill('7');
             await last.locator('.w9-special-part').nth(1).fill('7');
             await last.locator('.w9-special-part').nth(2).fill('7');
