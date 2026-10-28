@@ -6178,7 +6178,7 @@ body.workout-output .empty-cell{display:none!important}
             });
           }
           const canvas=await popup.html2canvas(target,{
-            scale:2.5, backgroundColor:'#ffffff', useCORS:true, logging:false,
+            scale:2, backgroundColor:'#ffffff', useCORS:true, logging:false,
             width:captureWidth,
             height:captureHeight,
             windowWidth:captureWidth,
@@ -12611,7 +12611,9 @@ window.sehResetTurnstile=function(){};
        inserted=await sbWrite('/trainee_workout_exercises','POST',payloads.map(row=>{const copy={...row};delete copy.training_day;delete copy.is_completed;return copy;}));
      }
      if(!Array.isArray(inserted)||inserted.length!==payloads.length)throw new Error('پاسخ ذخیره‌سازی همه حرکت‌ها را تأیید نکرد؛ فهرست را بررسی کنید.');
-     await window.loadWorkoutForClient();
+     // Confirm the successful batch insert immediately; refresh the full plan in the background.
+     // The insert response already confirms persistence, so waiting for a second full read only delays the coach.
+     window.loadWorkoutForClient().catch(e=>console.warn('Background workout refresh failed after successful save:',e));
      table.querySelectorAll('tbody tr').forEach(tr=>{tr.querySelector('.w9-exercise').value='';tr.querySelectorAll('.w9-exercise-check').forEach(i=>i.checked=false);tr.querySelector('.w9-system').value='normal';tr.querySelector('.w9-movement-checklist').hidden=true;tr.querySelector('.w9-movement-hint').hidden=true;tr.querySelector('.w9-exercise').hidden=false;tr.querySelector('.w9-rest').value='60';tr.querySelector('.w9-reps').value='10';tr.querySelector('.w9-sets').value='3';});
      alert(payloads.length+' حرکت با موفقیت در برنامه ثبت شد.');
    }catch(e){try{await window.loadWorkoutForClient();}catch(_){}alert('ثبت جدول کامل نشد.\\n'+(e?.message||String(e)));}
