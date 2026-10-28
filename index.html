@@ -6399,6 +6399,40 @@ body.workout-output .empty-cell{display:none!important}
                   el.style.setProperty('white-space','nowrap','important');
                   el.style.setProperty('flex','0 0 auto','important');
                 });
+                /* Compact every training-system prescription in the PNG, not only 21-rep.
+                   Keep rest, prescription and system label in a single bounded row; shrink
+                   labels before allowing the details column to stretch or wrap. */
+                clonedDoc.querySelectorAll('.exercise-details').forEach(el=>{
+                  el.style.setProperty('display','flex','important');
+                  el.style.setProperty('flex-wrap','nowrap','important');
+                  el.style.setProperty('align-items','center','important');
+                  el.style.setProperty('gap','2px','important');
+                  el.style.setProperty('min-width','0','important');
+                  el.style.setProperty('max-width','100%','important');
+                  el.style.setProperty('white-space','nowrap','important');
+                  el.style.setProperty('overflow','hidden','important');
+                });
+                clonedDoc.querySelectorAll('.exercise-details .rx').forEach(el=>{
+                  el.style.setProperty('font-size','clamp(10px, 1.05vw, 13px)','important');
+                  el.style.setProperty('padding','1px 3px','important');
+                  el.style.setProperty('line-height','1.15','important');
+                  el.style.setProperty('letter-spacing','-.25px','important');
+                  el.style.setProperty('white-space','nowrap','important');
+                  el.style.setProperty('flex','0 1 auto','important');
+                  el.style.setProperty('min-width','0','important');
+                });
+                clonedDoc.querySelectorAll('.exercise-details .sys').forEach(el=>{
+                  el.style.setProperty('font-size','10px','important');
+                  el.style.setProperty('line-height','1.1','important');
+                  el.style.setProperty('white-space','nowrap','important');
+                  el.style.setProperty('flex','0 1 auto','important');
+                  el.style.setProperty('min-width','0','important');
+                });
+                clonedDoc.querySelectorAll('.exercise-details .rest').forEach(el=>{
+                  el.style.setProperty('font-size','11px','important');
+                  el.style.setProperty('white-space','nowrap','important');
+                  el.style.setProperty('flex','0 0 auto','important');
+                });
               }
               if(kind!=='meal'){
                 /* Repeat the full-width reset on html2canvas's clone: its stylesheet can
