@@ -2434,7 +2434,7 @@ if($("prDate"))$("prDate").value=today();if($("anDate"))$("anDate").value=today(
     const cards=Array.from(grid.querySelectorAll('.v4-card'));
     const profiles=cards.filter(card=>
       card.hasAttribute('data-profile-card') ||
-      /dashOpen\\(\s*['"]client['"]\s*\\)/.test(card.getAttribute('onclick')||'') ||
+      /dashOpen\\(\\s*['"]client['"]\\s*\\)/.test(card.getAttribute('onclick')||'') ||
       /پروفایل من/.test(card.textContent||'')
     );
     if(!profiles.length){
@@ -2524,7 +2524,7 @@ if($("prDate"))$("prDate").value=today();if($("anDate"))$("anDate").value=today(
       const escv=v=>typeof esc==='function'?esc(v):String(v??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
       const formatAnalysisDate=v=>{if(!v)return '—';const d=new Date(String(v).slice(0,10)+'T12:00:00');if(Number.isNaN(d.getTime()))return String(v);try{return new Intl.DateTimeFormat('fa-IR-u-ca-persian',{year:'numeric',month:'2-digit',day:'2-digit'}).format(d);}catch(_){return typeof dateFa==='function'?dateFa(v):String(v);}};
       const metric=(label,val,unit='')=>val!==null&&val!==undefined&&val!==''?'<div class="receipt-item"><small>'+label+'</small><b>'+escv(val)+unit+'</b></div>':'';
-      sheet.innerHTML='<p>تاریخ آنالیز: <b>'+escv(formatAnalysisDate(latest.analysis_date))+'</b></p>'+(hasImage?'<a href="'+data+'" target="_blank" rel="noopener"><img src="'+data+'" alt="برگه آنالیز بدن" style="display:block;width:100%;max-width:700px;max-height:560px;object-fit:contain;margin:10px auto;border-radius:12px"></a>':'<p class="muted">برای این برگه عکس ذخیره‌شده‌ای وجود ندارد. اگر مربی عکس را قبلاً انتخاب کرده اما ذخیره نشده، باید آنالیز را دوباره با عکس ثبت کند.</p>')+'<div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px">'+metric('وزن',latest.weight,' کیلوگرم')+metric('درصد چربی',latest.body_fat,'٪')+metric('توده عضلانی',latest.muscle_mass,' کیلوگرم')+metric('آب بدن',latest.body_water,'٪')+metric('چربی احشایی',latest.visceral_fat)+metric('BMI',notes.match(/BMI:\s*([^|]+)/)?.[1]||'')+metric('متابولیسم پایه',notes.match(/BMR:\s*([^|]+)/)?.[1]||'')+'</div>';
+      sheet.innerHTML='<p>تاریخ آنالیز: <b>'+escv(formatAnalysisDate(latest.analysis_date))+'</b></p>'+(hasImage?'<a href="'+data+'" target="_blank" rel="noopener"><img src="'+data+'" alt="برگه آنالیز بدن" style="display:block;width:100%;max-width:700px;max-height:560px;object-fit:contain;margin:10px auto;border-radius:12px"></a>':'<p class="muted">برای این برگه عکس ذخیره‌شده‌ای وجود ندارد. اگر مربی عکس را قبلاً انتخاب کرده اما ذخیره نشده، باید آنالیز را دوباره با عکس ثبت کند.</p>')+'<div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px">'+metric('وزن',latest.weight,' کیلوگرم')+metric('درصد چربی',latest.body_fat,'٪')+metric('توده عضلانی',latest.muscle_mass,' کیلوگرم')+metric('آب بدن',latest.body_water,'٪')+metric('چربی احشایی',latest.visceral_fat)+metric('BMI',notes.match(/BMI:\\s*([^|]+)/)?.[1]||'')+metric('متابولیسم پایه',notes.match(/BMR:\\s*([^|]+)/)?.[1]||'')+'</div>';
       if(archive){const escA=escv;const archiveByDate=new Map();rows.forEach(r=>{const key=String(r.analysis_date||'بدون تاریخ');const prior=archiveByDate.get(key);if(!prior){archiveByDate.set(key,{...r});return;}['weight','body_fat','muscle_mass','body_water','visceral_fat','waist','abdomen','hip','thigh'].forEach(k=>{if((prior[k]===null||prior[k]===undefined||prior[k]==='')&&r[k]!==null&&r[k]!==undefined&&r[k]!=='')prior[k]=r[k];});const priorNotes=String(prior.notes||''),rowNotes=String(r.notes||'');if(rowNotes.includes(marker)&&!priorNotes.includes(marker))prior.notes=rowNotes;});const archiveRows=Array.from(archiveByDate.values()).sort((a,b)=>String(b.analysis_date||'').localeCompare(String(a.analysis_date||'')));archive.innerHTML='<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px">'+archiveRows.map((r,index)=>{const rn=String(r.notes||'');const markerAt=rn.indexOf(marker);const img=markerAt>=0?rn.slice(markerAt+marker.length).split(' | ')[0]:'';const ok=img.startsWith('data:image/');const dt=escA(formatAnalysisDate(r.analysis_date));const val=(v,u='')=>v!==null&&v!==undefined&&v!==''?'<span style="display:inline-block;margin:3px 6px 3px 0;font-size:12px">'+escA(v)+u+'</span>':'';return '<article style="border:1px solid var(--border,#ddd);border-radius:12px;padding:10px;min-width:0"><b>📅 '+dt+'</b>'+(ok?'<a href="'+img+'" target="_blank" rel="noopener"><img src="'+img+'" alt="عکس آنالیز '+dt+'" style="display:block;width:100%;height:180px;object-fit:contain;background:rgba(127,127,127,.08);border-radius:8px;margin:8px 0"></a><a href="'+img+'" download="body-analysis-'+escA(r.analysis_date||index)+'.jpg" style="display:inline-block;margin:2px 0 8px">⬇️ ذخیره عکس</a>':'<p class="muted">عکس ذخیره‌شده‌ای برای این برگه موجود نیست.</p>')+'<div>'+val(r.weight,' کیلوگرم')+val(r.body_fat,'٪ چربی')+val(r.muscle_mass,' کیلوگرم عضله')+val(r.body_water,'٪ آب بدن')+val(r.visceral_fat,' چربی احشایی')+'</div></article>';}).join('')+'</div>';}
       const series=[
         {key:'weight',label:'وزن',unit:' کیلوگرم'},
@@ -8264,7 +8264,7 @@ const oldWorkoutRenderer=window.renderWorkoutList;
         const marker='ANALYSIS_IMAGE_DATA:';const markerAt=rawNotes.indexOf(marker);const imageValue=markerAt>=0?rawNotes.slice(markerAt+marker.length).split(' | ')[0]:'';const imageMatch=imageValue.startsWith('data:image/')?[imageValue,imageValue]:null;
         const cleanNotes=rawNotes.split(' | ').filter(part=>!part.startsWith(marker)).join(' | ').trim();
         const metric=(label,value,unit='')=>value!==null&&value!==undefined&&value!==''?'<div class="receipt-item"><small>'+label+'</small><b>'+esc(value)+unit+'</b></div>':'';
-        view.innerHTML='<p class="muted">تاریخ برگه: <b>'+esc(dateFa(latestAnalysis.analysis_date))+'</b></p>'+(imageMatch?'<a href="'+imageMatch[1]+'" target="_blank" rel="noopener"><img src="'+imageMatch[1]+'" alt="عکس برگه آنالیز ثبت‌شده توسط مربی" style="display:block;width:100%;max-width:680px;max-height:560px;object-fit:contain;margin:8px auto;border-radius:12px;border:1px solid var(--border,#ddd)"></a>':'<p class="muted">عکس برگه برای این آنالیز ذخیره نشده است.</p>')+'<div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px">'+metric('وزن',latestAnalysis.weight,' کیلوگرم')+metric('درصد چربی',latestAnalysis.body_fat,'٪')+metric('توده عضلانی',latestAnalysis.muscle_mass,' کیلوگرم')+metric('آب بدن',latestAnalysis.body_water,'٪')+metric('چربی احشایی',latestAnalysis.visceral_fat)+metric('دور شکم',latestAnalysis.abdomen,' سانتی‌متر')+metric('دور کمر',latestAnalysis.waist,' سانتی‌متر')+metric('دور سینه',latestAnalysis.chest,' سانتی‌متر')+metric('دور باسن',latestAnalysis.hip,' سانتی‌متر')+metric('دور ران',latestAnalysis.thigh,' سانتی‌متر')+'</div>'+(cleanNotes?'<p class="muted">'+esc(cleanNotes.replace(/ANALYSIS_IMAGE_DATA:[\s\\S]*/,''))+'</p>':'');
+        view.innerHTML='<p class="muted">تاریخ برگه: <b>'+esc(dateFa(latestAnalysis.analysis_date))+'</b></p>'+(imageMatch?'<a href="'+imageMatch[1]+'" target="_blank" rel="noopener"><img src="'+imageMatch[1]+'" alt="عکس برگه آنالیز ثبت‌شده توسط مربی" style="display:block;width:100%;max-width:680px;max-height:560px;object-fit:contain;margin:8px auto;border-radius:12px;border:1px solid var(--border,#ddd)"></a>':'<p class="muted">عکس برگه برای این آنالیز ذخیره نشده است.</p>')+'<div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px">'+metric('وزن',latestAnalysis.weight,' کیلوگرم')+metric('درصد چربی',latestAnalysis.body_fat,'٪')+metric('توده عضلانی',latestAnalysis.muscle_mass,' کیلوگرم')+metric('آب بدن',latestAnalysis.body_water,'٪')+metric('چربی احشایی',latestAnalysis.visceral_fat)+metric('دور شکم',latestAnalysis.abdomen,' سانتی‌متر')+metric('دور کمر',latestAnalysis.waist,' سانتی‌متر')+metric('دور سینه',latestAnalysis.chest,' سانتی‌متر')+metric('دور باسن',latestAnalysis.hip,' سانتی‌متر')+metric('دور ران',latestAnalysis.thigh,' سانتی‌متر')+'</div>'+(cleanNotes?'<p class="muted">'+esc(cleanNotes.replace(/ANALYSIS_IMAGE_DATA:[\\s\\S]*/,''))+'</p>':'');
       }
     }
     const weighted=list.filter(x=>Number.isFinite(Number(x.weight))&&x.weight!==null&&x.weight!=='').sort((a,b)=>String(a.analysis_date||'').localeCompare(String(b.analysis_date||'')));
@@ -9387,10 +9387,10 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
   const STORE='seh_saved_accounts_v1';
   const $=id=>document.getElementById(id);
   const normalizePhone=v=>{
-    let p=String(v||'').trim().replace(/[\s()-]/g,'').replace(/[۰-۹]/g,d=>'۰۱۲۳۴۵۶۷۸۹'.indexOf(d));
-    if(/^09\d{9}$/.test(p))p='+98'+p.slice(1);
-    else if(/^989\d{9}$/.test(p))p='+'+p;
-    else if(/^00989\d{9}$/.test(p))p='+'+p.slice(2);
+    let p=String(v||'').trim().replace(/[\\s()-]/g,'').replace(/[۰-۹]/g,d=>'۰۱۲۳۴۵۶۷۸۹'.indexOf(d));
+    if(/^09\\d{9}$/.test(p))p='+98'+p.slice(1);
+    else if(/^989\\d{9}$/.test(p))p='+'+p;
+    else if(/^00989\\d{9}$/.test(p))p='+'+p.slice(2);
     return p;
   };
   const read=()=>{try{const a=JSON.parse(localStorage.getItem(STORE)||'[]');return Array.isArray(a)?a:[]}catch(e){return []}};
@@ -9408,7 +9408,7 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
     write(list);
   }
   function displayId(a){
-    if(a.type==='trainee'&&/^\+989\d{9}$/.test(a.id))return '0'+a.id.slice(3);
+    if(a.type==='trainee'&&/^\\+989\\d{9}$/.test(a.id))return '0'+a.id.slice(3);
     return a.id;
   }
   function render(){
@@ -11775,7 +11775,7 @@ body.workout-output.workout-compact{
     let p=String(value||'').trim()
       .replace(/[۰-۹]/g,d=>'۰۱۲۳۴۵۶۷۸۹'.indexOf(d))
       .replace(/[٠-٩]/g,d=>'٠١٢٣٤٥٦٧٨٩'.indexOf(d))
-      .replace(/[\s()\\-]/g,'');
+      .replace(/[\\s()\\-]/g,'');
     if(p.startsWith('0098')) p='+98'+p.slice(4);
     else if(p.startsWith('98')) p='+'+p;
     else if(p.startsWith('0')) p='+98'+p.slice(1);
@@ -11788,7 +11788,7 @@ body.workout-output.workout-compact{
     const err=document.getElementById('authError');
     const btn=document.getElementById('traineeLoginBox')?.querySelectorAll('.trainee-auth-block button')[1];
     const show=msg=>{if(err){err.textContent=msg;err.style.display='block';}};
-    if(!/^\+989\d{9}$/.test(phone)||!password){show('شماره موبایل معتبر و رمز عبور را وارد کنید. نمونه شماره: 09121234567');return;}
+    if(!/^\\+989\\d{9}$/.test(phone)||!password){show('شماره موبایل معتبر و رمز عبور را وارد کنید. نمونه شماره: 09121234567');return;}
     if(!window.AUTH_SUPABASE){show('اتصال ورود بارگذاری نشده است. لطفاً صفحه را تازه‌سازی کنید. '+(window.__fitnessLastScriptError?.message||''));return;}
     if(typeof window.finishLogin!=='function'){show('بخش تکمیل ورود بارگذاری نشده است. خطای ثبت‌شده: '+(window.__fitnessLastScriptError?.message||'نامشخص')+'.');return;}
     if(btn){btn.disabled=true;btn.textContent='⏳ در حال ورود…';}
@@ -12674,7 +12674,7 @@ window.sehResetTurnstile=function(){};
      // beside a newly inserted replacement. Other repeated movements keep the normal add behavior.
      const inserted=[],updatedIds=new Set(),remaining=[];
      const activeDay=String(document.getElementById('workoutDay')?.value||'');
-     const normalizeSystemValue=v=>String(v||'normal').toLowerCase().trim().replace(/[\s-]+/g,'_');
+     const normalizeSystemValue=v=>String(v||'normal').toLowerCase().trim().replace(/[\\s-]+/g,'_');
      for(const row of payloads){
        const existing=row.training_system!=='twenty_one' ? cached.find(x=>
          x.id!=null &&
@@ -14225,7 +14225,7 @@ window.sehResetTurnstile=function(){};
    if(userChanged && system==='fst7' && (!sets.value||sets.value==='3'))sets.value='7';
    if(userChanged && system==='twenty_one' && (!reps.value||reps.value==='10'||reps.value==='30 ثانیه'))reps.value='7+7+7';
    if(userChanged && ['normal','superset','triset','giant'].includes(system) && reps.value.trim()==='7+7+7')reps.value='10';
-   if(userChanged && system==='timed' && (!reps.value||reps.value==='10'||!/^\d+\s*(ثانیه)?$/.test(reps.value.trim())))reps.value='30 ثانیه';
+   if(userChanged && system==='timed' && (!reps.value||reps.value==='10'||!/^\\d+\\s*(ثانیه)?$/.test(reps.value.trim())))reps.value='30 ثانیه';
    let editor=tr.querySelector('.w9-special-controls');
    if(!editor){
      editor=document.createElement('div');editor.className='w9-special-controls';editor.hidden=true;
@@ -14355,7 +14355,7 @@ window.sehResetTurnstile=function(){};
      clone.querySelectorAll('.w9-group-movement-toggle,.seh-touch-choice-select').forEach(el=>el.remove());
      clone.querySelectorAll('.seh-touch-choice-hidden-source').forEach(el=>el.classList.remove('seh-touch-choice-hidden-source'));
      clone.querySelectorAll('.w9-rest,.w9-reps,.w9-sets').forEach(el=>el.removeAttribute('data-seh-touch-choices'));
-     clone.querySelectorAll('[aria-label]').forEach(el=>el.setAttribute('aria-label',(el.getAttribute('aria-label')||'').replace(/\d+$/,String(rowNumber))));
+     clone.querySelectorAll('[aria-label]').forEach(el=>el.setAttribute('aria-label',(el.getAttribute('aria-label')||'').replace(/\\d+$/,String(rowNumber))));
      body.appendChild(clone);resetRow(clone);
    }
    while(body.rows.length>target)body.deleteRow(body.rows.length-1);
