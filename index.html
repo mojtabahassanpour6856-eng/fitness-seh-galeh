@@ -14158,6 +14158,10 @@ window.sehResetTurnstile=function(){};
  function table(){return $('workoutNineTable');}
  function getField(tr,cls){
    const input=tr.querySelector('.'+cls);if(!input)return '';
+   // Specialized editors serialize their values into the real reps input.
+   // Ignore the legacy touch-choice proxy while that editor is active; its
+   // fixed numeric options cannot represent values such as 7+7+7 or 3-1-2.
+   if(cls==='w9-reps'&&tr.querySelector('.w9-special-controls:not([hidden])'))return input.value;
    const next=input.nextElementSibling;
    return next&&next.classList.contains('seh-touch-choice-select')?next.value:input.value;
  }
