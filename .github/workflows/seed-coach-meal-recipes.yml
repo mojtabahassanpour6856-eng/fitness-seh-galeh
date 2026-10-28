@@ -5,6 +5,7 @@ on:
       - feat/coach-meal-recipe-bank-20261028
     paths:
       - 'scripts/seed-coach-meal-recipes.js'
+      - 'tests/coach-meal-recipes-static.test.js'
       - '.github/workflows/seed-coach-meal-recipes.yml'
   workflow_dispatch:
 permissions:
@@ -47,6 +48,8 @@ jobs:
           NODE
       - name: Run existing coach dashboard regression test
         run: node tests/coach-plan-status-static.test.js
+      - name: Test the seeded recipe bank and category placement
+        run: node tests/coach-meal-recipes-static.test.js
       - name: Check patch whitespace
         run: git diff --check
       - name: Commit seeded recipes to this experimental branch only
