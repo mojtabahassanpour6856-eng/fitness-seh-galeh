@@ -5731,11 +5731,11 @@ window.useLibraryExercise=async function(id){
             const base=prescriptionFor(x),sys=normalizeSystem(x.training_system),raw=String(x.reps??'').trim();
             if(sys==='twenty_one'){
               const parts=raw.split('+').map(v=>v.trim());
-              if(parts.length===3&&parts.every(v=>/^\\d+$/.test(v)))return '<span class="rx">'+parts.map(esc).join(' + ')+' <b>(۲۱ تکرار)</b> × '+esc(base.sets)+' ست</span>';
+              if(parts.length===3&&parts.every(v=>/^\d+$/.test(v)))return '<span class="rx">'+parts.map(esc).join(' + ')+' <b>(۲۱ تکرار)</b> × '+esc(base.sets)+' ست</span>';
             }
             if(sys==='tempo'){
               const parts=raw.split('-').map(v=>v.trim());
-              if(parts.length===3&&parts.every(v=>/^\\d+$/.test(v)))return '<span class="rx">منفی '+esc(parts[0])+'ث | مکث '+esc(parts[1])+'ث | مثبت '+esc(parts[2])+'ث × '+esc(base.sets)+' ست</span>';
+              if(parts.length===3&&parts.every(v=>/^\d+$/.test(v)))return '<span class="rx">منفی '+esc(parts[0])+'ث | مکث '+esc(parts[1])+'ث | مثبت '+esc(parts[2])+'ث × '+esc(base.sets)+' ست</span>';
             }
             if(sys==='timed')return '<span class="rx">'+esc(raw||'—')+' × '+esc(base.sets)+' ست</span>';
             if(sys==='fst7')return '<span class="rx">'+esc(base.reps)+' × '+esc(base.sets)+' ست FST-7</span>';
@@ -12571,7 +12571,7 @@ window.sehResetTurnstile=function(){};
      if(!r.reps)return alert('تکرار ردیف '+(r.index+1)+' را وارد کنید.');
      if(r.system==='twenty_one'){
        const parts=r.reps.split('+').map(v=>v.trim());
-       if(parts.length!==3||parts.some(v=>!/^\\d+$/.test(v))||parts.reduce((sum,v)=>sum+Number(v),0)!==21)return alert('سیستم ۲۱ تکرار در ردیف '+(r.index+1)+' باید سه بخش عددی داشته باشد که مجموع آن‌ها دقیقاً ۲۱ شود.');
+       if(parts.length!==3||parts.some(v=>!/^\d+$/.test(v))||parts.reduce((sum,v)=>sum+Number(v),0)!==21)return alert('سیستم ۲۱ تکرار در ردیف '+(r.index+1)+' باید سه بخش عددی داشته باشد که مجموع آن‌ها دقیقاً ۲۱ شود.');
      }
      if(!Number.isFinite(Number(r.setsRaw))||Number(r.setsRaw)<1)return alert('تعداد ست ردیف '+(r.index+1)+' باید حداقل ۱ باشد.');
      if(!Number.isFinite(Number(r.restRaw))||Number(r.restRaw)<0)return alert('استراحت ردیف '+(r.index+1)+' معتبر نیست.');
@@ -14126,7 +14126,7 @@ window.sehResetTurnstile=function(){};
    }
    const defaults=mode==='three'?['7','7','7']:(mode==='stages'?['12','10','8']:['3','1','2']);
    const partsRaw=mode==='three'?String(reps.value||'').split('+').map(x=>x.trim()):mode==='stages'?String(reps.value||'').split('/').map(x=>x.trim()):String(reps.value||'').split('-').map(x=>x.trim());
-   const parts=partsRaw.length===3&&partsRaw.every(x=>/^\\d+$/.test(x))?partsRaw:defaults.slice();
+   const parts=partsRaw.length===3&&partsRaw.every(x=>/^\d+$/.test(x))?partsRaw:defaults.slice();
    const labels=mode==='three'?['بخش اول','بخش دوم','بخش سوم']:(mode==='stages'?['مرحله اول','مرحله دوم','مرحله سوم']:['منفی (ثانیه)','مکث (ثانیه)','مثبت (ثانیه)']);
    if(oldMode!==mode){
      editor.replaceChildren();
