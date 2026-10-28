@@ -34,8 +34,8 @@ assert(
 );
 assert(
   html.includes("el.style.setProperty('flex-wrap','nowrap','important');") &&
-  html.includes("el.style.setProperty('overflow','hidden','important');"),
-  'Exercise details must not wrap or stretch the left column in PNG output.'
+  html.includes("el.style.setProperty('max-width','100%','important');"),
+  'Exercise details must stay on one row within the available width without clipping text.'
 );
 
 console.log('Workout PNG session-order and compact all-systems regression checks passed.');
