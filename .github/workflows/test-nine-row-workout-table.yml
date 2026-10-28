@@ -275,17 +275,27 @@ jobs:
             assert.equal(await last.locator('.w9-exercise').inputValue(), '111', 'the tenth saved group should load into row ten');
             assert.equal(await last.locator('.w9-sets').inputValue(), '4', 'saved prescription should be restored in the last row');
             await last.locator('.w9-sets').evaluate(el => { el.value='5'; el.dispatchEvent(new Event('input',{bubbles:true})); el.dispatchEvent(new Event('change',{bubbles:true})); if(el.nextElementSibling?.classList.contains('seh-touch-choice-select')) el.nextElementSibling.value='5'; });
+            await last.locator('.w9-system').selectOption('twenty_one');
+            assert.equal(await last.locator('.w9-special-part').count(), 3, '21-rep fields should be available on an existing saved row');
+            await last.locator('.w9-special-part').nth(0).fill('7');
+            await last.locator('.w9-special-part').nth(1).fill('7');
+            await last.locator('.w9-special-part').nth(2).fill('7');
+            assert.equal(await last.locator('.w9-reps').inputValue(), '7+7+7', '21-rep prescription should serialize before saving');
             await page.evaluate(async () => { await window.saveWorkoutNineTable(); });
             assert.equal(await table.locator('tbody tr').count(), 10, 'save and automatic reload must preserve the expanded session');
             assert.equal(await page.evaluate(() => window.__mockSavedRows.length), 11, 'editing must preserve all eleven movement records without duplicates');
             assert.equal(await page.evaluate(() => window.__mockSavedRows.find(x=>x.id===11).sets), 5, 'changed sets must be persisted on the existing movement row');
+            assert.equal(await page.evaluate(() => window.__mockSavedRows.find(x=>x.id===11).training_system), 'twenty_one', 'specialized training system must persist on the existing movement row');
+            assert.equal(await page.evaluate(() => window.__mockSavedRows.find(x=>x.id===11).reps), '7+7+7', '21-rep stage values must persist in the existing reps field');
             assert.equal(await page.evaluate(() => window.__mockWrites.filter(x=>x.method==='POST').length), 0, 'editing a fully populated saved session must not insert duplicate records');
             assert.equal(await page.evaluate(() => window.__mockWrites.filter(x=>x.method==='PATCH').length), 11, 'each existing movement record should be updated in place');
             await page.evaluate(async () => { await window.loadWorkoutForClient(); });
             assert.equal(await table.locator('tbody tr').count(), 10, 'a fresh reload must still restore all ten movement groups');
             assert.equal(await table.locator('tbody tr').nth(9).locator('.w9-sets').inputValue(), '5', 'the edited value must survive a fresh reload');
+            assert.equal(await table.locator('tbody tr').nth(9).locator('.w9-system').inputValue(), 'twenty_one', '21-rep system must survive a fresh reload');
+            assert.deepEqual(await table.locator('tbody tr').nth(9).locator('.w9-special-part').evaluateAll(es => es.map(e => e.value)), ['7','7','7'], '21-rep fields must be reconstructed after reload');
             assert.equal(await table.locator('tbody tr').nth(0).locator('.w9-movement-checklist input:checked').count(), 2, 'grouped movement selection must survive a fresh reload');
-            console.log(JSON.stringify({ loadedGroups:10, loadedMovements:11, supersetRestored:true, editedExistingRow:true, duplicateInserts:0, freshReloadPreservedEdit:true, database:'isolated in-memory mock only' }, null, 2));
+            console.log(JSON.stringify({ loadedGroups:10, loadedMovements:11, supersetRestored:true, editedExistingRow:true, duplicateInserts:0, freshReloadPreservedEdit:true, twentyOneRepSavedAndRestored:true, database:'isolated in-memory mock only' }, null, 2));
             await browser.close();
           })().catch(err => { console.error(err); process.exit(1); });
           NODE
