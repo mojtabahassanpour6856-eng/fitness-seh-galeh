@@ -16,8 +16,19 @@ assert(
   'Sessions must stay in their numbered rows: 1/2, 3/4, 5/6.'
 );
 assert(
-  html.includes('let next=current*1.25;') &&
-  html.includes("next=Math.max(next,current+2);"),
-  'PNG export must retain the established text enlargement for readable exercise names and prescriptions.'
+  html.includes("setImportant(el,'font-size','22px');") &&
+  html.includes("setImportant(el,'font-size','27px');") &&
+  html.includes('let next=current*1.25;'),
+  'PNG export must use larger exercise, prescription, and rest text.'
 );
-console.log('Workout PNG session-order and readable-font regression checks passed.');
+assert(
+  html.includes("'<span class=\"rest\">'+esc(x.rest_seconds??0)+' S</span>'") &&
+  html.includes("'<span class=\"rest\">'+esc(first.rest_seconds??0)+' S</span>'"),
+  'PNG rest display must show only the seconds value followed by S, without the word rest.'
+);
+assert(
+  html.includes("return '<span class=\"rx\">'+esc(base.reps)+' × '+esc(base.sets)+'</span>';") &&
+  !html.includes("'+esc(base.sets)+' ست</span>"),
+  'Workout prescription output must omit the Persian word ست.'
+);
+console.log('Workout PNG session-order, font-size, set-label, and rest-format regression checks passed.');
