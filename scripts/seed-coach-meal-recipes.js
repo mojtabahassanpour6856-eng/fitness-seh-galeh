@@ -55,7 +55,8 @@ const recipes = [
 ];
 
 const serialized = recipes.map(r => '  '+JSON.stringify(r)).join(',\n');
-const insertion = '\n  '+marker+'\n'+serialized+',\n';
+const needsComma = !/,\s*$/.test(html.slice(0, end));
+const insertion = (needsComma ? ',' : '')+'\n  '+marker+'\n'+serialized+',\n';
 const updated = html.slice(0, end) + insertion + html.slice(end);
 fs.writeFileSync(file, updated, 'utf8');
 console.log('Added '+recipes.length+' coach-side meal recipes to the existing MEAL_RECIPES bank.');
