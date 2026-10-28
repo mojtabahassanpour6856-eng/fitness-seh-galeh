@@ -5731,7 +5731,7 @@ window.useLibraryExercise=async function(id){
             const base=prescriptionFor(x),sys=normalizeSystem(x.training_system),raw=String(x.reps??'').trim();
             if(sys==='twenty_one'){
               const parts=raw.split('+').map(v=>v.trim());
-              if(parts.length===3&&parts.every(v=>/^\d+$/.test(v)))return '<span class="rx" style="font-size:clamp(10px,calc(12px - var(--move-count,6)*.15px),11px);white-space:nowrap;padding:2px 4px;letter-spacing:-.2px">'+parts.map(esc).join(' + ')+' <b>(۲۱)</b> × '+esc(base.sets)+'</span>';
+              if(parts.length===3&&parts.every(v=>/^\d+$/.test(v)))return '<span class="rx rx-twenty-one" style="font-size:clamp(9px,calc(10px - var(--move-count,6)*.1px),10px);white-space:nowrap;padding:1px 2px;letter-spacing:-.35px">'+parts.map(esc).join('+')+'<b>(۲۱)</b>×'+esc(base.sets)+'</span>';
             }
             if(sys==='tempo'){
               const parts=raw.split('-').map(v=>v.trim());
@@ -6137,6 +6137,12 @@ body.workout-output .empty-cell{display:none!important}
                 setImportant(el,'font-size','20px');
                 setImportant(el,'padding','2px 6px');
               });
+              doc.querySelectorAll('.exercise-details .rx-twenty-one').forEach(el=>{
+                setImportant(el,'font-size','11px');
+                setImportant(el,'padding','1px 2px');
+                setImportant(el,'letter-spacing','-.35px');
+                setImportant(el,'line-height','1.1');
+              });
               doc.querySelectorAll('.exercise-details .rest,.exercise-details .sys').forEach(el=>{
                 setImportant(el,'font-size','16px');
               });
@@ -6302,7 +6308,7 @@ body.workout-output .empty-cell{display:none!important}
                   '.session-cell .system-notes,.session-cell .system-notes *'
                 );
                 textTargets.forEach(el=>{
-                  if(el.closest('.plan-header')) return;
+                  if(el.closest('.plan-header') || el.matches('.rx-twenty-one')) return;
                   const current=parseFloat(clonedDoc.defaultView.getComputedStyle(el).fontSize);
                   if(!Number.isFinite(current) || current<=0) return;
                   let next=current*1.25;
