@@ -5712,7 +5712,7 @@ window.useLibraryExercise=async function(id){
         if(!sessions.length) {
           body += '<p>برای این برنامه هنوز حرکتی ثبت نشده است.</p>';
         } else {
-          const help = {superset:'دو حرکت را پشت سر هم انجام بده؛ بینشان استراحت نکن.',triset:'سه حرکت را پشت سر هم انجام بده؛ بینشان استراحت نکن.',giant:'سه حرکت یا بیشتر را پشت سر هم انجام بده.',giant_set:'سه حرکت یا بیشتر را پشت سر هم انجام بده.','giant-set':'سه حرکت یا بیشتر را پشت سر هم انجام بده.',drop:'یک حرکت؛ پس از خستگی وزنه را کم کن و تکرارها را ادامه بده.',drop_set:'یک حرکت؛ پس از خستگی وزنه را کم کن و تکرارها را ادامه بده.','drop-set':'یک حرکت؛ پس از خستگی وزنه را کم کن و تکرارها را ادامه بده.',rest_pause:'پس از مکث کوتاه، چند تکرار دیگر انجام بده.','rest-pause':'پس از مکث کوتاه، چند تکرار دیگر انجام بده.',timed:'حرکت را برای مدت زمان تعیین‌شده اجرا کن.',multi_stage:'حرکت را طبق مراحل ثبت‌شده اجرا کن.',pre_exhaust:'ابتدا حرکت تک‌مفصلی، سپس حرکت اصلی.',mechanical_drop:'با تغییر شکل حرکت، پس از خستگی ادامه بده.',pyramid:'وزنه و تکرارها به‌تدریج تغییر می‌کنند.',reverse_pyramid:'ابتدا سنگین‌تر؛ سپس وزنه کمتر می‌شود.',circuit:'حرکات را به‌ترتیب و با استراحت کم انجام بده.',custom:'طبق توضیح اختصاصی ثبت‌شده اجرا کن.',failure:'ست را تا ناتوانی عضلانی کنترل‌شده ادامه بده.', 'forced-reps':'با کمک کنترل‌شده، تکرارهای پایانی را انجام بده.',forced_reps:'با کمک کنترل‌شده، تکرارهای پایانی را انجام بده.','negative-reps':'بخش منفی حرکت را آهسته و کنترل‌شده اجرا کن.',negative_reps:'بخش منفی حرکت را آهسته و کنترل‌شده اجرا کن.','partial-reps':'تکرارهای ناقص را در دامنه کنترل‌شده انجام بده.',partial_reps:'تکرارهای ناقص را در دامنه کنترل‌شده انجام بده.','myo-reps':'تکرارهای کوتاه با مکث‌های کوتاه انجام بده.',myo_reps:'تکرارهای کوتاه با مکث‌های کوتاه انجام بده.','to-failure':'ست را تا ناتوانی عضلانی کنترل‌شده ادامه بده.',to_failure:'ست را تا ناتوانی عضلانی کنترل‌شده ادامه بده.'};
+          const help = {superset:'دو حرکت را پشت سر هم انجام بده؛ بینشان استراحت نکن.',triset:'سه حرکت را پشت سر هم انجام بده؛ بینشان استراحت نکن.',giant:'سه حرکت یا بیشتر را پشت سر هم انجام بده.',giant_set:'سه حرکت یا بیشتر را پشت سر هم انجام بده.','giant-set':'سه حرکت یا بیشتر را پشت سر هم انجام بده.',drop:'پس از رسیدن به خستگی، وزنه را کم کن و مراحل تکرار ثبت‌شده را ادامه بده.',drop_set:'پس از رسیدن به خستگی، وزنه را کم کن و مراحل تکرار ثبت‌شده را ادامه بده.','drop-set':'پس از رسیدن به خستگی، وزنه را کم کن و مراحل تکرار ثبت‌شده را ادامه بده.',rest_pause:'ست اصلی را اجرا کن، مکث کوتاه داشته باش و سپس تکرارهای تکمیلی را انجام بده.','rest-pause':'ست اصلی را اجرا کن، مکث کوتاه داشته باش و سپس تکرارهای تکمیلی را انجام بده.',timed:'حرکت را به مدت زمان ثبت‌شده اجرا کن.',multi_stage:'مراحل را به ترتیب مقادیر ثبت‌شده اجرا کن.',pre_exhaust:'ابتدا حرکت تک‌مفصلی، سپس حرکت اصلی.',mechanical_drop:'با تغییر نوع حرکت به شکل مکانیکی آسان‌تر، پس از خستگی ادامه بده.',pyramid:'مقادیر مراحل هرمی را به ترتیب اجرا کن.',reverse_pyramid:'ابتدا مرحله سنگین‌تر را اجرا کن و سپس مطابق مراحل ثبت‌شده پیش برو.',circuit:'حرکات را به‌ترتیب و با استراحت کم انجام بده.',custom:'طبق توضیح اختصاصی ثبت‌شده اجرا کن.',failure:'ست را تا ناتوانی عضلانی کنترل‌شده ادامه بده.', 'forced-reps':'با کمک کنترل‌شده، تکرارهای پایانی را انجام بده.',forced_reps:'با کمک کنترل‌شده، تکرارهای پایانی را انجام بده.','negative-reps':'بخش منفی حرکت را آهسته و کنترل‌شده اجرا کن.',negative_reps:'بخش منفی حرکت را آهسته و کنترل‌شده اجرا کن.','partial-reps':'تکرارهای ناقص را در دامنه کنترل‌شده انجام بده.',partial_reps:'تکرارهای ناقص را در دامنه کنترل‌شده انجام بده.','myo-reps':'تکرارهای کوتاه با مکث‌های کوتاه انجام بده.',myo_reps:'تکرارهای کوتاه با مکث‌های کوتاه انجام بده.',cluster:'تکرارها را در خوشه‌های کوچک و با مکث کوتاه بین خوشه‌ها اجرا کن.',tempo:'زمان بخش منفی، مکث و بخش مثبت را به ترتیب مقادیر ثبت‌شده رعایت کن.',fst7:'۷ ست با استراحت کوتاه و کنترل حرکت اجرا کن.',twenty_one:'۲۱ تکرار را در سه بخش ۷ تایی و طبق مقادیر ثبت‌شده اجرا کن.','to-failure':'ست را تا ناتوانی عضلانی کنترل‌شده ادامه بده.',to_failure:'ست را تا ناتوانی عضلانی کنترل‌شده ادامه بده.'};
           // Always display the saved fields in the intended order: sets × reps.
           // Do not guess or swap numeric values: 3 sets of 10 reps must remain 3×10.
           // Drop-set stages use dashes; other compound repetition formats are spaced consistently.
@@ -5726,6 +5726,20 @@ window.useLibraryExercise=async function(id){
               reps=reps.replace(/\s*([+\/-])\s*/g,' $1 ');
             }
             return {sets,reps};
+          };
+          const prescriptionDisplayFor = x => {
+            const base=prescriptionFor(x),sys=normalizeSystem(x.training_system),raw=String(x.reps??'').trim();
+            if(sys==='twenty_one'){
+              const parts=raw.split('+').map(v=>v.trim());
+              if(parts.length===3&&parts.every(v=>/^\\d+$/.test(v)))return '<span class="rx">'+parts.map(esc).join(' + ')+' <b>(۲۱ تکرار)</b> × '+esc(base.sets)+' ست</span>';
+            }
+            if(sys==='tempo'){
+              const parts=raw.split('-').map(v=>v.trim());
+              if(parts.length===3&&parts.every(v=>/^\\d+$/.test(v)))return '<span class="rx">منفی '+esc(parts[0])+'ث | مکث '+esc(parts[1])+'ث | مثبت '+esc(parts[2])+'ث × '+esc(base.sets)+' ست</span>';
+            }
+            if(sys==='timed')return '<span class="rx">'+esc(raw||'—')+' × '+esc(base.sets)+' ست</span>';
+            if(sys==='fst7')return '<span class="rx">'+esc(base.reps)+' × '+esc(base.sets)+' ست FST-7</span>';
+            return '<span class="rx">'+esc(base.reps)+' × '+esc(base.sets)+' ست</span>';
           };
 
           const correctiveGuideRaw = {
@@ -5797,7 +5811,7 @@ window.useLibraryExercise=async function(id){
                   const systemLabel=systemLabelFor(rawSystem);
                   const systemBadge=rawSystem!=='normal'&&systemLabel?'<span class="movement-system-badge" style="display:inline-block;vertical-align:middle;margin:2px 4px;padding:1px 6px;border:1px solid #c69b43;border-radius:5px;background:#fff0bd;color:#68470a;font-size:10px;font-weight:800;line-height:1.6;white-space:nowrap">'+esc(systemLabel)+'</span>':'';
                   const nameLength=String(names[String(x.exercise_id)]||'حرکت ثبت‌شده').length;
-                  const prescription=prescriptionFor(x);const isDropSet=['drop','drop_set','mechanical_drop'].includes(normalizeSystem(x.training_system));const rxText=isDropSet?esc(prescription.reps)+' - '+esc(prescription.reps)+'×'+esc(prescription.sets):esc(prescription.reps)+'×'+esc(prescription.sets);const detail='<span class="rx">'+rxText+'</span>'+'<span class="rest">S'+esc(x.rest_seconds??0)+'</span>';
+                  const prescription=prescriptionFor(x);const isDropSet=['drop','drop_set','mechanical_drop'].includes(normalizeSystem(x.training_system));const rxText=isDropSet?esc(prescription.reps)+' - '+esc(prescription.reps)+'×'+esc(prescription.sets):esc(prescription.reps)+'×'+esc(prescription.sets);const detail=prescriptionDisplayFor(x)+'<span class="rest">استراحت '+esc(x.rest_seconds??0)+'ث</span>';
                   const note=x.notes?'<div class="exercise-extra" style="grid-column:1/-1">'+esc(x.notes)+'</div>':'';
                   const guide=guideForMovement(x);
                   const correctiveNote=guide?'<div class="corrective-guide" style="grid-column:1/-1">🎯 '+esc(guide.purpose)+'<br>▶️ '+esc(guide.how)+'</div>':'';
