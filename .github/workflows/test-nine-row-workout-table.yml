@@ -41,16 +41,44 @@ jobs:
             const table = page.locator('#workoutNineTable');
             await table.waitFor();
             assert.equal(await table.locator('tbody tr').count(), 9, 'table must contain exactly nine rows');
-            const expected = ['normal','superset','triset','giant','drop','rest_pause','timed','multi_stage','custom'];
+            const expected = ['normal','superset','triset','giant','drop','rest_pause','timed','multi_stage','forced_reps','negative_reps','pyramid','reverse_pyramid','partial_reps','myo_reps','cluster','tempo','mechanical_drop','fst7','twenty_one','custom'];
             for (const row of await table.locator('tbody tr').all()) {
               const systems = await row.locator('select.w9-system option').evaluateAll(opts => opts.map(o => o.value));
-              assert.deepEqual(systems, expected, 'each row must expose all nine training systems');
+              assert.deepEqual(systems, expected, 'each row must expose all supported training systems');
               assert.equal(await row.locator('select.w9-exercise').count(), 1);
               assert.equal(await row.locator('.w9-movement-checklist').count(), 1);
               assert.equal(await row.locator('input.w9-rest').count(), 1);
               assert.equal(await row.locator('input.w9-reps').count(), 1);
               assert.equal(await row.locator('input.w9-sets').count(), 1);
             }
+            // System-specific defaults and guidance must update when a coach changes a row's system.
+            const dynamicRow = table.locator('tbody tr').nth(8);
+            await dynamicRow.locator('.w9-system').selectOption('fst7');
+            assert.equal(await dynamicRow.locator('.w9-sets').inputValue(), '7', 'FST-7 should default to seven sets');
+            assert.match(await dynamicRow.locator('.w9-reps').getAttribute('placeholder'), /FST-7|تکرار هر ست|تکرار/, 'FST-7 should provide reps guidance');
+            await dynamicRow.locator('.w9-system').selectOption('twenty_one');
+            assert.equal(await dynamicRow.locator('.w9-reps').inputValue(), '7+7+7', '21s should default to 7+7+7');
+            assert.match(await dynamicRow.locator('.w9-reps').getAttribute('placeholder'), /21|بخش‌های/, '21s should explain the three parts');
+            const twentyOneParts = dynamicRow.locator('.w9-special-part');
+            assert.equal(await twentyOneParts.count(), 3, '21s must expose three separate editable fields');
+            assert.equal(await twentyOneParts.nth(0).inputValue(), '7');
+            assert.equal(await twentyOneParts.nth(1).inputValue(), '7');
+            assert.equal(await twentyOneParts.nth(2).inputValue(), '7');
+            await twentyOneParts.nth(1).fill('8');
+            assert.equal(await dynamicRow.locator('.w9-reps').inputValue(), '7+8+7', '21s fields must serialize into the existing reps field');
+            await dynamicRow.locator('.w9-system').selectOption('pyramid');
+            assert.equal(await dynamicRow.locator('.w9-special-part').count(), 3, 'pyramid should expose editable stage values');
+            assert.deepEqual(await dynamicRow.locator('.w9-special-part').evaluateAll(es => es.map(e => e.value)), ['12','10','8'], 'pyramid stages should have safe defaults');
+            await dynamicRow.locator('.w9-special-part').nth(1).fill('9');
+            assert.equal(await dynamicRow.locator('.w9-reps').inputValue(), '12/9/8', 'stage controls must serialize into existing reps storage');
+            await dynamicRow.locator('.w9-system').selectOption('tempo');
+            assert.equal(await dynamicRow.locator('.w9-special-part').count(), 3, 'tempo should expose three editable timing fields');
+            assert.deepEqual(await dynamicRow.locator('.w9-special-part').evaluateAll(es => es.map(e => e.value)), ['3','1','2'], 'tempo should default to negative/pause/positive timing');
+            await dynamicRow.locator('.w9-special-part').nth(0).fill('4');
+            assert.equal(await dynamicRow.locator('.w9-reps').inputValue(), '4-1-2', 'tempo fields must serialize into existing reps storage');
+            await dynamicRow.locator('.w9-system').selectOption('timed');
+            assert.equal(await dynamicRow.locator('.w9-reps').inputValue(), '30 ثانیه', 'timed work should default to 30 seconds');
+            assert.match(await dynamicRow.locator('.w9-reps').getAttribute('placeholder'), /مدت زمان/, 'timed work should request duration rather than reps');
             // Group systems should reveal checkboxes on the same row, with the required selection count.
             const groupingRows = await table.locator('tbody tr').all();
             await groupingRows[0].locator('.w9-system').selectOption('superset');
@@ -181,7 +209,8 @@ jobs:
           (async () => {
             const browser = await chromium.launch({ headless: true });
             const page = await browser.newPage({ viewport: { width: 1440, height: 1100 } });
-            page.on('dialog', d => d.accept());
+            const dialogs = [];
+            page.on('dialog', d => { dialogs.push(d.message()); d.accept(); });
             await page.goto('file://' + path.resolve('index.html'), { waitUntil: 'domcontentloaded' });
             await page.addStyleTag({ content: '#authScreen { display:none !important; }' });
             await page.locator('#workout').evaluate(el => el.classList.add('active'));
@@ -247,17 +276,34 @@ jobs:
             assert.equal(await last.locator('.w9-exercise').inputValue(), '111', 'the tenth saved group should load into row ten');
             assert.equal(await last.locator('.w9-sets').inputValue(), '4', 'saved prescription should be restored in the last row');
             await last.locator('.w9-sets').evaluate(el => { el.value='5'; el.dispatchEvent(new Event('input',{bubbles:true})); el.dispatchEvent(new Event('change',{bubbles:true})); if(el.nextElementSibling?.classList.contains('seh-touch-choice-select')) el.nextElementSibling.value='5'; });
+            await last.locator('.w9-system').selectOption('twenty_one');
+            assert.equal(await last.locator('.w9-special-part').count(), 3, '21-rep fields should be available on an existing saved row');
+            await last.locator('.w9-special-part').nth(0).fill('7');
+            await last.locator('.w9-special-part').nth(1).fill('8');
+            await last.locator('.w9-special-part').nth(2).fill('7');
+            const writesBeforeInvalid21 = await page.evaluate(() => window.__mockWrites.length);
+            await page.evaluate(async () => { await window.saveWorkoutNineTable(); });
+            assert.match(dialogs.at(-1)||'', /مجموع.*۲۱|۲۱.*مجموع/, 'invalid 21-rep totals should be rejected with a clear message');
+            assert.equal(await page.evaluate(() => window.__mockWrites.length), writesBeforeInvalid21, 'invalid 21-rep prescription must not write to the mock database');
+            await last.locator('.w9-special-part').nth(0).fill('7');
+            await last.locator('.w9-special-part').nth(1).fill('7');
+            await last.locator('.w9-special-part').nth(2).fill('7');
+            assert.equal(await last.locator('.w9-reps').inputValue(), '7+7+7', '21-rep prescription should serialize before saving');
             await page.evaluate(async () => { await window.saveWorkoutNineTable(); });
             assert.equal(await table.locator('tbody tr').count(), 10, 'save and automatic reload must preserve the expanded session');
             assert.equal(await page.evaluate(() => window.__mockSavedRows.length), 11, 'editing must preserve all eleven movement records without duplicates');
             assert.equal(await page.evaluate(() => window.__mockSavedRows.find(x=>x.id===11).sets), 5, 'changed sets must be persisted on the existing movement row');
+            assert.equal(await page.evaluate(() => window.__mockSavedRows.find(x=>x.id===11).training_system), 'twenty_one', 'specialized training system must persist on the existing movement row');
+            assert.equal(await page.evaluate(() => window.__mockSavedRows.find(x=>x.id===11).reps), '7+7+7', '21-rep stage values must persist in the existing reps field');
             assert.equal(await page.evaluate(() => window.__mockWrites.filter(x=>x.method==='POST').length), 0, 'editing a fully populated saved session must not insert duplicate records');
             assert.equal(await page.evaluate(() => window.__mockWrites.filter(x=>x.method==='PATCH').length), 11, 'each existing movement record should be updated in place');
             await page.evaluate(async () => { await window.loadWorkoutForClient(); });
             assert.equal(await table.locator('tbody tr').count(), 10, 'a fresh reload must still restore all ten movement groups');
             assert.equal(await table.locator('tbody tr').nth(9).locator('.w9-sets').inputValue(), '5', 'the edited value must survive a fresh reload');
+            assert.equal(await table.locator('tbody tr').nth(9).locator('.w9-system').inputValue(), 'twenty_one', '21-rep system must survive a fresh reload');
+            assert.deepEqual(await table.locator('tbody tr').nth(9).locator('.w9-special-part').evaluateAll(es => es.map(e => e.value)), ['7','7','7'], '21-rep fields must be reconstructed after reload');
             assert.equal(await table.locator('tbody tr').nth(0).locator('.w9-movement-checklist input:checked').count(), 2, 'grouped movement selection must survive a fresh reload');
-            console.log(JSON.stringify({ loadedGroups:10, loadedMovements:11, supersetRestored:true, editedExistingRow:true, duplicateInserts:0, freshReloadPreservedEdit:true, database:'isolated in-memory mock only' }, null, 2));
+            console.log(JSON.stringify({ loadedGroups:10, loadedMovements:11, supersetRestored:true, editedExistingRow:true, duplicateInserts:0, freshReloadPreservedEdit:true, twentyOneRepSavedAndRestored:true, database:'isolated in-memory mock only' }, null, 2));
             await browser.close();
           })().catch(err => { console.error(err); process.exit(1); });
           NODE
