@@ -5795,7 +5795,7 @@ window.useLibraryExercise=async function(id){
             const base=prescriptionFor(x),sys=normalizeSystem(x.training_system),raw=String(x.reps??'').trim();
             if(sys==='twenty_one'){
               const parts=raw.split('+').map(v=>v.trim());
-              if(parts.length===3&&parts.every(v=>/^\d+$/.test(v)))return '<span class="rx" style="font-size:clamp(10px,calc(12px - var(--move-count,6)*.15px),11px);white-space:nowrap;padding:2px 4px;letter-spacing:-.2px">'+parts.map(esc).join(' + ')+' <b>(۲۱)</b> × '+esc(base.sets)+'</span>';
+              if(parts.length===3&&parts.every(v=>/^\d+$/.test(v)))return '<span class="rx rx-21" style="font-size:clamp(10px,calc(12px - var(--move-count,6)*.15px),11px);white-space:nowrap;padding:2px 4px;letter-spacing:-.2px">'+parts.map(esc).join(' + ')+' <b>(۲۱)</b> × '+esc(base.sets)+'</span>';
             }
             if(sys==='tempo'){
               const parts=raw.split('-').map(v=>v.trim());
@@ -6068,7 +6068,7 @@ body.workout-output .empty-cell{display:none!important}
                session 3 right, session 4 left. Do not rely on grid auto-placement
                direction, which differed between the source and cloned PNG document. */
             doc.querySelectorAll('.session-grid .session-cell').forEach((el,index)=>{
-              setImportant(el,'grid-column',index%2===0?'2':'1');
+              setImportant(el,'grid-column',index%2===0?'1':'2');
               setImportant(el,'grid-row',String(Math.floor(index/2)+1));
             });
             setImportant(target,'min-height',Math.max(1066,rows*330+350)+'px');
@@ -6377,6 +6377,28 @@ body.workout-output .empty-cell{display:none!important}
                   let next=current*1.25;
                   if(el.matches('.exercise-name,.exercise-details,.exercise-extra,.session-heading,.plan-meta,.plan-count')) next=Math.max(next,current+2);
                   el.style.setProperty('font-size',next+'px','important');
+                });
+              });
+                /* Keep the compact 21-rep prescription and its rest-time label on one line.
+                   The general PNG text enlargement above must not expand this badge back out. */
+                clonedDoc.querySelectorAll('.exercise-details:has(.rx-21)').forEach(el=>{
+                  el.style.setProperty('flex-wrap','nowrap','important');
+                  el.style.setProperty('white-space','nowrap','important');
+                  el.style.setProperty('gap','2px','important');
+                  el.style.setProperty('width','100%','important');
+                });
+                clonedDoc.querySelectorAll('.exercise-details .rx-21').forEach(el=>{
+                  el.style.setProperty('font-size','15px','important');
+                  el.style.setProperty('padding','1px 3px','important');
+                  el.style.setProperty('line-height','1.15','important');
+                  el.style.setProperty('letter-spacing','-.4px','important');
+                  el.style.setProperty('white-space','nowrap','important');
+                  el.style.setProperty('flex','0 0 auto','important');
+                });
+                clonedDoc.querySelectorAll('.exercise-details:has(.rx-21) .rest').forEach(el=>{
+                  el.style.setProperty('font-size','13px','important');
+                  el.style.setProperty('white-space','nowrap','important');
+                  el.style.setProperty('flex','0 0 auto','important');
                 });
               }
               if(kind!=='meal'){
