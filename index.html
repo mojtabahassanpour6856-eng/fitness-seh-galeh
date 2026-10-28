@@ -5735,11 +5735,11 @@ window.useLibraryExercise=async function(id){
             }
             if(sys==='tempo'){
               const parts=raw.split('-').map(v=>v.trim());
-              if(parts.length===3&&parts.every(v=>/^\d+$/.test(v)))return '<span class="rx">منفی '+esc(parts[0])+'ث | مکث '+esc(parts[1])+'ث | مثبت '+esc(parts[2])+'ث × '+esc(base.sets)+' ست</span>';
+              if(parts.length===3&&parts.every(v=>/^\d+$/.test(v)))return '<span class="rx">منفی '+esc(parts[0])+'ث | مکث '+esc(parts[1])+'ث | مثبت '+esc(parts[2])+'ث × '+esc(base.sets)+'</span>';
             }
-            if(sys==='timed')return '<span class="rx">'+esc(raw||'—')+' × '+esc(base.sets)+' ست</span>';
+            if(sys==='timed')return '<span class="rx">'+esc(raw||'—')+' × '+esc(base.sets)+'</span>';
             if(sys==='fst7')return '<span class="rx" style="font-size:clamp(10px,calc(12px - var(--move-count,6)*.15px),11px);white-space:nowrap;padding:2px 4px;letter-spacing:-.2px">'+esc(base.reps)+' × '+esc(base.sets)+' FST-7</span>';
-            return '<span class="rx">'+esc(base.reps)+' × '+esc(base.sets)+' ست</span>';
+            return '<span class="rx">'+esc(base.reps)+' × '+esc(base.sets)+'</span>';
           };
 
           const correctiveGuideRaw = {
