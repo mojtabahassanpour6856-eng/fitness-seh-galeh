@@ -16,6 +16,11 @@ assert(
   'Sessions must stay in their numbered rows: 1/2, 3/4, 5/6.'
 );
 assert(
+  html.includes('const ordinal={اولین:1,اول:1,دوم:2,سوم:3,چهارم:4') &&
+  html.includes("const m=text.match(/(?:جلسه|روز)\\s*(?:ی\\s*)?(اولین|اول|دوم|سوم|چهارم|پنجم|ششم|هفتم|هشتم|نهم|دهم|[۰-۹0-9]+)/);"),
+  'Export ordering must understand Persian ordinal session names such as جلسه اول and جلسه دوم, not fall back to sort_order.'
+);
+assert(
   html.includes("setImportant(el,'font-size','22px');") &&
   html.includes("setImportant(el,'font-size','27px');") &&
   html.includes('let next=current*1.25;'),
