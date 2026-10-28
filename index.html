@@ -5730,6 +5730,11 @@ window.useLibraryExercise=async function(id){
             const sets=String(x.sets??'—').trim()||'—';
             let reps=String(x.reps??'').trim()||'—';
             const sys=normalizeSystem(x.training_system);
+            // Prevent stale system-21 phases from being joined into a superset prescription.
+            if(groupedSystem(sys)&&/^\d+\s*\+\s*\d+\s*\+\s*\d+$/.test(reps)){
+              const parts=reps.split('+').map(v=>Number(v.trim()));
+              if(parts.length===3&&parts.reduce((sum,v)=>sum+v,0)===21)reps='10';
+            }
             if(['drop','drop_set','mechanical_drop'].includes(sys)&&reps!=='—'){
               reps=reps.replace(/\s*(?:,|;|\+|\/|−|–|—)\s*/g,' - ').replace(/\s*-\s*/g,' - ');
             }else{
@@ -12628,7 +12633,14 @@ window.sehResetTurnstile=function(){};
      const single=tr.querySelector('.w9-exercise').value;
      return {index,system,groupMode,exerciseIds:groupMode?checked:(single?[single]:[]),
        restRaw:tr.querySelector('.w9-rest').value,
-       reps:tr.querySelector('.w9-reps').value.trim(),
+       reps:(()=>{
+         const value=tr.querySelector('.w9-reps').value.trim();
+         if(groupMode&&/^\d+\s*\+\s*\d+\s*\+\s*\d+$/.test(value)){
+           const parts=value.split('+').map(v=>Number(v.trim()));
+           if(parts.length===3&&parts.reduce((sum,v)=>sum+v,0)===21)return '10';
+         }
+         return value;
+       })(),
        setsRaw:tr.querySelector('.w9-sets').value};
    }).filter(r=>r.exerciseIds.length);
    if(!rows.length)return alert('حداقل یک حرکت را در جدول انتخاب کنید.');
