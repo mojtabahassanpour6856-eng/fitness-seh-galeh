@@ -5995,6 +5995,13 @@ body.workout-output .empty-cell{display:none!important}
             setImportant(exportGrid,'direction','rtl');
             const sessionCount=doc.querySelectorAll('.session-grid .session-cell').length;
             const rows=Math.max(1,Math.ceil(sessionCount/2));
+            /* Lock session placement explicitly: session 1 right, session 2 left,
+               session 3 right, session 4 left. Do not rely on grid auto-placement
+               direction, which differed between the source and cloned PNG document. */
+            doc.querySelectorAll('.session-grid .session-cell').forEach((el,index)=>{
+              setImportant(el,'grid-column',index%2===0?'2':'1');
+              setImportant(el,'grid-row',String(Math.floor(index/2)+1));
+            });
             setImportant(target,'min-height',Math.max(1066,rows*330+350)+'px');
             setImportant(target,'padding','0 0 10px');
             setImportant(exportGrid,'min-height',Math.max(700,rows*330)+'px');
@@ -6016,19 +6023,59 @@ body.workout-output .empty-cell{display:none!important}
               setImportant(el,'line-height','1.5');
               setImportant(el,'padding','7px 5px');
             });
+            /* The source markup puts the prescription in a max-content second grid
+               column. On narrow session cards that column can consume almost all width,
+               forcing Persian movement names into one-character lines. Stack prescription
+               beneath the name in the PNG only; keep the original planner/input untouched. */
+            doc.querySelectorAll('.exercise-unit').forEach(el=>{
+              setImportant(el,'grid-template-columns','minmax(0,1fr)');
+              setImportant(el,'width','100%');
+              setImportant(el,'min-width','0');
+              setImportant(el,'align-items','start');
+              setImportant(el,'column-gap','0');
+            });
             doc.querySelectorAll('.exercise-name').forEach(el=>{
+              setImportant(el,'display','block');
+              setImportant(el,'width','100%');
               setImportant(el,'font-size','18px');
-              setImportant(el,'line-height','1.35');
+              setImportant(el,'line-height','1.45');
               setImportant(el,'white-space','normal');
-              setImportant(el,'overflow-wrap','break-word');
-              setImportant(el,'word-break','normal');
+              setImportant(el,'overflow-wrap','normal');
+              setImportant(el,'word-break','keep-all');
               setImportant(el,'min-width','0');
               setImportant(el,'max-width','100%');
             });
             doc.querySelectorAll('.exercise-details').forEach(el=>{
-              setImportant(el,'font-size','19px');
+              setImportant(el,'display','flex');
+              setImportant(el,'width','100%');
+              setImportant(el,'max-width','100%');
+              setImportant(el,'min-width','0');
+              setImportant(el,'flex-wrap','wrap');
+              setImportant(el,'white-space','normal');
+              setImportant(el,'font-size','17px');
               setImportant(el,'line-height','1.5');
               setImportant(el,'gap','4px 8px');
+            });
+            doc.querySelectorAll('.exercise-details span').forEach(el=>{
+              setImportant(el,'white-space','normal');
+              setImportant(el,'max-width','100%');
+              setImportant(el,'overflow-wrap','normal');
+            });
+            /* Keep coach-entered plan description in the captured image, not clipped
+               or collapsed by the compact print stylesheet. */
+            doc.querySelectorAll('.workout-plan-description').forEach(el=>{
+              setImportant(el,'display','block');
+              setImportant(el,'visibility','visible');
+              setImportant(el,'height','auto');
+              setImportant(el,'max-height','none');
+              setImportant(el,'overflow','visible');
+              setImportant(el,'width','100%');
+              setImportant(el,'box-sizing','border-box');
+              setImportant(el,'white-space','normal');
+              setImportant(el,'overflow-wrap','break-word');
+              setImportant(el,'margin','8px 0 12px');
+              setImportant(el,'padding','10px 12px');
+              setImportant(el,'break-inside','avoid');
             });
             /* Make the sets/reps badge and rest-time label clearly readable in the PNG,
                without changing exercise names, page layout, or session arrangement. */
