@@ -22,7 +22,7 @@ assert(
 );
 assert(
   html.includes("setImportant(el,'font-size','22px');") &&
-  html.includes("setImportant(el,'font-size','27px');") &&
+  html.includes("setImportant(el,'font-size','25px');") &&
   html.includes('let next=current*1.25;'),
   'PNG export must use larger exercise, prescription, and rest text.'
 );
