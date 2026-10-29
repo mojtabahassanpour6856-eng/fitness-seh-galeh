@@ -6321,30 +6321,40 @@ body.workout-output .empty-cell{display:none!important}
                1) trim blank white margins from the captured bitmap,
                2) preserve the real aspect ratio of all text and cards,
                3) place the trimmed content on the A4 canvas without stretching. */
-            const pixels=canvas.getContext('2d',{willReadFrequently:true});
             let cropX=0,cropY=0,cropW=sourceW,cropH=sourceH;
-            if(pixels){
-              try{
-                const data=pixels.getImageData(0,0,sourceW,sourceH).data;
-                let left=sourceW,top=sourceH,right=-1,bottom=-1;
-                /* The export background is white; detect visible ink, borders and cream/gold panels. */
-                for(let y=0;y<sourceH;y++){
-                  for(let x=0;x<sourceW;x++){
-                    const k=(y*sourceW+x)*4;
-                    if(data[k+3]>8 && (data[k]<248 || data[k+1]<248 || data[k+2]<248)){
-                      if(x<left)left=x;if(x>right)right=x;
-                      if(y<top)top=y;if(y>bottom)bottom=y;
-                    }
+            try{
+              /* Scan a small thumbnail instead of reading every pixel of the full-resolution
+                 capture. On Android, full-canvas getImageData plus the A4 canvas can exhaust
+                 memory or stall the download. Map the detected bounds back to source pixels. */
+              const scanScale=Math.min(1,800/Math.max(sourceW,sourceH));
+              const scanW=Math.max(1,Math.ceil(sourceW*scanScale));
+              const scanH=Math.max(1,Math.ceil(sourceH*scanScale));
+              const scanCanvas=doc.createElement('canvas');
+              scanCanvas.width=scanW;scanCanvas.height=scanH;
+              const scanCtx=scanCanvas.getContext('2d',{willReadFrequently:true});
+              if(!scanCtx)throw new Error('PNG crop scan context unavailable');
+              scanCtx.drawImage(canvas,0,0,scanW,scanH);
+              const data=scanCtx.getImageData(0,0,scanW,scanH).data;
+              let left=scanW,top=scanH,right=-1,bottom=-1;
+              /* The export background is white; detect visible ink, borders and cream/gold panels. */
+              for(let y=0;y<scanH;y++){
+                for(let x=0;x<scanW;x++){
+                  const k=(y*scanW+x)*4;
+                  if(data[k+3]>8 && (data[k]<248 || data[k+1]<248 || data[k+2]<248)){
+                    if(x<left)left=x;if(x>right)right=x;
+                    if(y<top)top=y;if(y>bottom)bottom=y;
                   }
                 }
-                if(right>=left&&bottom>=top){
-                  const pad=14;
-                  cropX=Math.max(0,left-pad);cropY=Math.max(0,top-pad);
-                  const cropRight=Math.min(sourceW-1,right+pad),cropBottom=Math.min(sourceH-1,bottom+pad);
-                  cropW=Math.max(1,cropRight-cropX+1);cropH=Math.max(1,cropBottom-cropY+1);
-                }
-              }catch(cropError){console.warn('PNG whitespace trim skipped:',cropError);}
-            }
+              }
+              if(right>=left&&bottom>=top){
+                const pad=14;
+                cropX=Math.max(0,Math.floor(left/scanScale)-pad);
+                cropY=Math.max(0,Math.floor(top/scanScale)-pad);
+                const cropRight=Math.min(sourceW-1,Math.ceil((right+1)/scanScale)+pad);
+                const cropBottom=Math.min(sourceH-1,Math.ceil((bottom+1)/scanScale)+pad);
+                cropW=Math.max(1,cropRight-cropX+1);cropH=Math.max(1,cropBottom-cropY+1);
+              }
+            }catch(cropError){console.warn('PNG whitespace trim skipped:',cropError);}
             /* Fill the A4 width even when a long 5- or 6-session plan must be fitted
                by height. The old contain logic scaled both dimensions equally in that case,
                leaving wide blank gutters. Keep the height-based fit to preserve every exercise
@@ -14095,7 +14105,7 @@ window.sehResetTurnstile=function(){};
 (function(){
  const names=['جلسه اول','جلسه دوم','جلسه سوم','جلسه چهارم','جلسه پنجم','جلسه ششم'];
  const drafts=Array.from({length:6},()=>null);
- let active=0, clientKey=null, hydrating=false, legacyUnassignedRows=false, legacyUnassignedCount=0, legacyPreviewOnly=false;
+ let active=0, clientKey=null, hydrating=false, saveInFlight=false, legacyUnassignedRows=false, legacyUnassignedCount=0, legacyPreviewOnly=false;
  const exerciseLabels={};
  const $=id=>document.getElementById(id);
  const same=(a,b)=>String(a??'')===String(b??'');
@@ -14215,6 +14225,7 @@ window.sehResetTurnstile=function(){};
    const box=$('sehWorkoutSessionCards');if(!box)return;
    const warning=legacyUnassignedRows?'<div role="status" style="grid-column:1/-1;background:#fff3cd;color:#624b12;border:1px solid #e1c56b;border-radius:9px;padding:9px 11px;font-size:12px;line-height:1.8">'+(legacyPreviewOnly?'این برنامه قدیمی '+legacyUnassignedCount+' حرکت بدون برچسب جلسه دارد. حرکات در جلسه اول فقط برای مشاهده نشان داده شده‌اند؛ ذخیره و ویرایش تا مشخص‌شدن جلسهٔ واقعی متوقف است تا هیچ حرکت اشتباهی جابه‌جا یا حذف نشود. جدول در صورت نیاز به‌طور خودکار گسترش می‌یابد.':'این برنامه '+legacyUnassignedCount+' حرکت بدون برچسب جلسه دارد. برای جلوگیری از انتساب اشتباه، ذخیره جلسه‌ای که حرکات قدیمی آن قابل تشخیص نیست متوقف می‌شود.')+'</div>':'';box.innerHTML=warning+names.map((name,i)=>'<button type="button" class="seh-session-card'+(i===active?' active':'')+'" data-session-index="'+i+'" aria-pressed="'+(i===active?'true':'false')+'">'+name+'<span class="seh-session-count">'+(drafts[i]&&drafts[i].some(r=>r&&(r.exercise||r.checked.length))?'دارای اطلاعات':'')+'</span></button>').join('');
    box.querySelectorAll('[data-session-index]').forEach(btn=>btn.addEventListener('click',()=>{
+     if(saveInFlight)return;
      const next=Number(btn.dataset.sessionIndex);if(!Number.isInteger(next)||next<0||next>5||next===active)return;
      checkClient();capture();active=next;restore();ensureDay();renderTabs();updateButton();
    }));
@@ -14340,11 +14351,15 @@ window.sehResetTurnstile=function(){};
    }finally{hydrating=false;}
  }
  async function validateAndSaveSession(){
-   checkClient();capture();ensureDay();
+   checkClient();
+   const sessionIndex=active;
+   const sessionName=names[sessionIndex];
+   capture();ensureDay();
    const traineeId=typeof currentClient!=='undefined'&&currentClient&&currentClient.id!=null?String(currentClient.id):'';
    if(!traineeId)return alert('اول شاگرد را انتخاب کنید.');
    if(!currentWorkoutPlanId){await window.saveWorkoutPlan();if(!currentWorkoutPlanId)return;}
    const planId=String(currentWorkoutPlanId);
+   const planIdValue=currentWorkoutPlanId;
    if(!same(currentClient?.id,traineeId)||!same(currentWorkoutPlanId,planId))return alert('شاگرد یا برنامه تغییر کرده است؛ ذخیره لغو شد.');
    const t=table();if(!t)return;
    const selectedByRow=Array.from(t.querySelectorAll('tbody tr')).map(tr=>Array.from(tr.querySelectorAll('.w9-exercise-check:checked')).map(i=>String(i.value)));
@@ -14374,7 +14389,7 @@ window.sehResetTurnstile=function(){};
      try{allRows=await sbGet('/trainee_workout_exercises?workout_plan_id=eq.'+encodeURIComponent(planId)+'&select=*&order=sort_order.asc,created_at.asc');}
      catch(e){if(/training_day|column/i.test(e.message||''))throw new Error('ستون تشخیص جلسه در پایگاه داده در دسترس نیست؛ برای جلوگیری از تغییر اشتباه برنامه، چیزی ذخیره نشد.');throw e;}
      if(!same(currentClient?.id,traineeId)||!same(currentWorkoutPlanId,planId))throw new Error('شاگرد یا برنامه هنگام خواندن اطلاعات تغییر کرد.');
-     const sessionRows=allRows.filter(r=>String(r.training_day||'')===names[active]);
+     const sessionRows=allRows.filter(r=>String(r.training_day||'')===sessionName);
      if(legacyUnassignedRows&&sessionRows.length===0&&allRows.some(r=>!names.includes(String(r.training_day||'')))){
        throw new Error('در این برنامه حرکات قدیمی بدون برچسب جلسه وجود دارد؛ برای جلوگیری از ساختن جلسه تکراری، ذخیره متوقف شد و هیچ حرکت قدیمی حذف نشد.');
      }
@@ -14387,7 +14402,8 @@ window.sehResetTurnstile=function(){};
        if(r.groupMode)groupKey=oldGroup.length&&oldGroup[0].group_key?oldGroup[0].group_key:'W9-'+Date.now().toString(36).toUpperCase()+'-'+active+'-'+r.index;
        for(let j=0;j<r.exerciseIds.length;j++){
          const old=oldGroup[j];
-         const payload={workout_plan_id:currentWorkoutPlanId,exercise_id:r.exerciseIds[j],sets:Number(r.setsRaw),reps:r.reps,rest_seconds:Number(r.restRaw),sort_order:(r.index+1)*10+j,training_system:r.system,group_key:groupKey,training_day:names[active]};
+         if(!same(currentClient?.id,traineeId)||!same(currentWorkoutPlanId,planId)||active!==sessionIndex)throw new Error('شاگرد، برنامه یا جلسه هنگام ذخیره تغییر کرد؛ ادامه ذخیره متوقف شد.');
+         const payload={workout_plan_id:planIdValue,exercise_id:r.exerciseIds[j],sets:Number(r.setsRaw),reps:r.reps,rest_seconds:Number(r.restRaw),sort_order:(r.index+1)*10+j,training_system:r.system,group_key:groupKey,training_day:sessionName};
          if(old){
            const patch={exercise_id:payload.exercise_id,sets:payload.sets,reps:payload.reps,rest_seconds:payload.rest_seconds,sort_order:payload.sort_order,training_system:payload.training_system,group_key:payload.group_key,training_day:payload.training_day};
            await sbWrite('/trainee_workout_exercises?id=eq.'+encodeURIComponent(old.id)+'&workout_plan_id=eq.'+encodeURIComponent(planId),'PATCH',patch);
@@ -14403,6 +14419,7 @@ window.sehResetTurnstile=function(){};
        if(oldGroup.length>desired.exerciseIds.length)stale.push(...oldGroup.slice(desired.exerciseIds.length));
      }
      if(inserts.length){
+       if(!same(currentClient?.id,traineeId)||!same(currentWorkoutPlanId,planId)||active!==sessionIndex)throw new Error('شاگرد، برنامه یا جلسه هنگام ذخیره تغییر کرد؛ ادامه ذخیره متوقف شد.');
        let inserted;
        try{inserted=await sbWrite('/trainee_workout_exercises','POST',inserts);}
        catch(e){
@@ -14410,20 +14427,38 @@ window.sehResetTurnstile=function(){};
          throw new Error('پایگاه داده ستون‌های لازم برای تشخیص جلسه را ندارد؛ حرکات قبلی حذف نشدند. جزئیات: '+(e.message||String(e)));
        }
        if(!Array.isArray(inserted)||inserted.length!==inserts.length)throw new Error('ثبت حرکات جدید تأیید نشد؛ حذف حرکات قبلی انجام نشد.');
-       if(inserted.some(r=>!same(r.workout_plan_id,planId)||String(r.training_day||'')!==names[active]))throw new Error('پاسخ ثبت حرکات با جلسه انتخابی مطابقت ندارد؛ حذف حرکات قبلی انجام نشد.');
+       if(inserted.some(r=>!same(r.workout_plan_id,planId)||String(r.training_day||'')!==sessionName))throw new Error('پاسخ ثبت حرکات با جلسه انتخابی مطابقت ندارد؛ حذف حرکات قبلی انجام نشد.');
      }
-     // Delete obsolete rows only after all desired updates/inserts have succeeded.
+     /* Verify every intended movement before deleting obsolete rows. If an insert/update
+        was only partly accepted, leave the previous rows intact for recovery. */
+     const verifiedBeforeCleanup=await sbGet('/trainee_workout_exercises?workout_plan_id=eq.'+encodeURIComponent(planId)+'&training_day=eq.'+encodeURIComponent(sessionName)+'&select=id,exercise_id,training_day,sets,reps,rest_seconds,training_system,group_key,sort_order&order=sort_order.asc');
+     const expectedRows=wanted.flatMap(r=>r.exerciseIds.map((exerciseId,j)=>({
+       exercise_id:String(exerciseId),training_day:sessionName,sort_order:(r.index+1)*10+j,
+       sets:Number(r.setsRaw),reps:r.reps,rest_seconds:Number(r.restRaw),training_system:r.system
+     })));
+     const missingExpected=expectedRows.some(expected=>!verifiedBeforeCleanup.some(row=>
+       String(row.exercise_id)===expected.exercise_id &&
+       String(row.training_day||'')===expected.training_day &&
+       Number(row.sort_order)===expected.sort_order &&
+       Number(row.sets)===expected.sets &&
+       String(row.reps??'')===expected.reps &&
+       Number(row.rest_seconds)===expected.rest_seconds &&
+       String(row.training_system||'normal')===expected.training_system
+     ));
+     if(missingExpected)throw new Error('ذخیره همه حرکات جدید هنوز تأیید نشده است؛ حرکات قبلی حذف نشدند تا امکان بازیابی حفظ شود.');
+     // Only remove obsolete rows after the desired rows have been read back and matched.
      for(const old of stale){
+       if(!same(currentClient?.id,traineeId)||!same(currentWorkoutPlanId,planId)||active!==sessionIndex)throw new Error('شاگرد، برنامه یا جلسه هنگام ذخیره تغییر کرد؛ حذف حرکات قدیمی متوقف شد.');
        await sbWrite('/trainee_workout_exercises?id=eq.'+encodeURIComponent(old.id)+'&workout_plan_id=eq.'+encodeURIComponent(planId),'DELETE');
      }
-     const verified=await sbGet('/trainee_workout_exercises?workout_plan_id=eq.'+encodeURIComponent(planId)+'&training_day=eq.'+encodeURIComponent(names[active])+'&select=id,exercise_id,training_day,sets,reps,rest_seconds,training_system,group_key,sort_order&order=sort_order.asc');
+     const verified=await sbGet('/trainee_workout_exercises?workout_plan_id=eq.'+encodeURIComponent(planId)+'&training_day=eq.'+encodeURIComponent(sessionName)+'&select=id,exercise_id,training_day,sets,reps,rest_seconds,training_system,group_key,sort_order&order=sort_order.asc');
      const expectedCount=wanted.reduce((n,r)=>n+r.exerciseIds.length,0);
-     if(verified.length!==expectedCount)throw new Error('پس از ذخیره، تعداد حرکات تأییدشده با جدول برابر نیست؛ اطلاعات قدیمی به‌صورت خودکار پاک نشدند.');
+     if(verified.length!==expectedCount)throw new Error('تعداد نهایی حرکات پس از پاک‌سازی با جدول برابر نیست؛ لطفاً فهرست را بررسی کنید.');
      if(!same(currentClient?.id,traineeId)||!same(currentWorkoutPlanId,planId))throw new Error('شاگرد یا برنامه پس از ذخیره تغییر کرد؛ لطفاً دوباره بارگذاری کنید.');
      await window.loadWorkoutForClient();
      if(!same(currentClient?.id,traineeId)||!same(currentWorkoutPlanId,planId))return;
      restore();capture();renderTabs();updateButton();
-     alert('تغییرات '+names[active]+' ذخیره و از پایگاه داده بازخوانی شد.');
+     alert('تغییرات '+sessionName+' ذخیره و از پایگاه داده بازخوانی شد.');
    }catch(e){
      console.error('ذخیره/ویرایش جلسه ناموفق بود',e);
      try{if(same(currentClient?.id,traineeId)&&same(currentWorkoutPlanId,planId))await window.loadWorkoutForClient();}catch(_){}
@@ -14459,7 +14494,19 @@ window.sehResetTurnstile=function(){};
      window.__sehSixSessionLoadWrapped=true;
    }
    if(!window.__sehSixSessionSaveWrapped&&typeof window.saveWorkoutNineTable==='function'){
-     window.saveWorkoutNineTable=validateAndSaveSession;
+     window.saveWorkoutNineTable=async function(){
+       if(saveInFlight){alert('ذخیره قبلی هنوز در حال انجام است؛ لطفاً تا پایان آن صبر کنید.');return;}
+       saveInFlight=true;
+       const button=$('sehAddSessionMovementsBtn');
+       if(button){button.disabled=true;button.textContent='در حال ذخیره جلسه…';}
+       renderTabs();
+       try{return await validateAndSaveSession();}
+       finally{
+         saveInFlight=false;
+         if(button)button.disabled=false;
+         renderTabs();updateButton();
+       }
+     };
      window.__sehSixSessionSaveWrapped=true;
    }
    return true;

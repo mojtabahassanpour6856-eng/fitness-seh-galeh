@@ -22,7 +22,7 @@ assert(
 );
 assert(
   html.includes("setImportant(el,'font-size','22px');") &&
-  html.includes("setImportant(el,'font-size','27px');") &&
+  html.includes("setImportant(el,'font-size','25px');") &&
   html.includes('let next=current*1.25;'),
   'PNG export must use larger exercise, prescription, and rest text.'
 );
@@ -35,5 +35,14 @@ assert(
   html.includes("return '<span class=\"rx\">'+esc(base.reps)+' × '+esc(base.sets)+'</span>';") &&
   !html.includes("'+esc(base.sets)+' ست</span>"),
   'Workout prescription output must omit the Persian word ست.'
+);
+assert(
+  html.includes('const scanScale=Math.min(1,800/Math.max(sourceW,sourceH));') &&
+  html.includes('scanCtx.getImageData(0,0,scanW,scanH)'),
+  'PNG whitespace detection must scan a downscaled thumbnail to limit mobile memory and CPU use.'
+);
+assert(
+  html.includes("link.download=imageFile.name;") && html.includes("link.click();link.remove();"),
+  'PNG download must create and click a named download link.'
 );
 console.log('Workout PNG session-order, font-size, set-label, and rest-format regression checks passed.');
