@@ -20,6 +20,8 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
+      - name: Check workout session save race regression
+        run: node tests/workout-session-save-race-static.test.js
       - name: Install Playwright Chromium
         run: |
           npm init -y
