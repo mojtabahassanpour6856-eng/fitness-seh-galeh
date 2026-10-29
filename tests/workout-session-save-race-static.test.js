@@ -19,7 +19,7 @@ assert.match(planner, /saveInFlight=true;[\s\S]*?button\.disabled=true/, 'the sa
 assert.match(planner, /finally\{[\s\S]*?saveInFlight=false;[\s\S]*?button\.disabled=false/, 'the lock and button must be restored after success or failure');
 assert.match(save, /const sessionIndex=active;\s*const sessionName=names\[sessionIndex\]/, 'save must snapshot the chosen session before awaiting');
 assert.doesNotMatch(save, /names\[active\]/, 'save must not read a mutable active-session index after awaiting');
-assert.match(save, /workout_plan_id:planId/, 'new rows must target the snapshotted plan id');
+assert.match(save, /workout_plan_id:planIdValue/, 'new rows must target the snapshotted plan id');
 assert.match(save, /active!==sessionIndex/, 'save must abort if the active session changes');
 assert.match(save, /verified\.length!==expectedCount/, 'save must verify the stored movement count');
 assert.ok(save.indexOf('const verifiedBeforeCleanup=await sbGet') >= 0, 'desired rows must be read back before cleanup');
