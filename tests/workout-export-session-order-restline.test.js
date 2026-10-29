@@ -45,4 +45,15 @@ assert(
   html.includes("link.download=imageFile.name;") && html.includes("link.click();link.remove();"),
   'PNG download must create and click a named download link.'
 );
+assert(
+  html.includes('const footerHeight=170;') &&
+  html.includes("ctx.fillText('باشگاه فیتنس سه‌قلعه | مربی من'") &&
+  html.includes("ctx.fillText('FITNESS SEH GALEH'") &&
+  html.includes('ctx.moveTo(90,footerTop+18)'),
+  'Every workout PNG must draw the horizontal divider, Persian gym branding, and small English brand text on the final A4 canvas.'
+);
+assert(
+  html.includes("if(coachFooter.lastElementChild)coachFooter.lastElementChild.style.setProperty('display','none','important');"),
+  'The old HTML branding must be hidden during capture to prevent duplicate footer branding; coach notes remain in the content.'
+);
 console.log('Workout PNG session-order, font-size, set-label, and rest-format regression checks passed.');
