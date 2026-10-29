@@ -6321,30 +6321,40 @@ body.workout-output .empty-cell{display:none!important}
                1) trim blank white margins from the captured bitmap,
                2) preserve the real aspect ratio of all text and cards,
                3) place the trimmed content on the A4 canvas without stretching. */
-            const pixels=canvas.getContext('2d',{willReadFrequently:true});
             let cropX=0,cropY=0,cropW=sourceW,cropH=sourceH;
-            if(pixels){
-              try{
-                const data=pixels.getImageData(0,0,sourceW,sourceH).data;
-                let left=sourceW,top=sourceH,right=-1,bottom=-1;
-                /* The export background is white; detect visible ink, borders and cream/gold panels. */
-                for(let y=0;y<sourceH;y++){
-                  for(let x=0;x<sourceW;x++){
-                    const k=(y*sourceW+x)*4;
-                    if(data[k+3]>8 && (data[k]<248 || data[k+1]<248 || data[k+2]<248)){
-                      if(x<left)left=x;if(x>right)right=x;
-                      if(y<top)top=y;if(y>bottom)bottom=y;
-                    }
+            try{
+              /* Scan a small thumbnail instead of reading every pixel of the full-resolution
+                 capture. On Android, full-canvas getImageData plus the A4 canvas can exhaust
+                 memory or stall the download. Map the detected bounds back to source pixels. */
+              const scanScale=Math.min(1,800/Math.max(sourceW,sourceH));
+              const scanW=Math.max(1,Math.ceil(sourceW*scanScale));
+              const scanH=Math.max(1,Math.ceil(sourceH*scanScale));
+              const scanCanvas=doc.createElement('canvas');
+              scanCanvas.width=scanW;scanCanvas.height=scanH;
+              const scanCtx=scanCanvas.getContext('2d',{willReadFrequently:true});
+              if(!scanCtx)throw new Error('PNG crop scan context unavailable');
+              scanCtx.drawImage(canvas,0,0,scanW,scanH);
+              const data=scanCtx.getImageData(0,0,scanW,scanH).data;
+              let left=scanW,top=scanH,right=-1,bottom=-1;
+              /* The export background is white; detect visible ink, borders and cream/gold panels. */
+              for(let y=0;y<scanH;y++){
+                for(let x=0;x<scanW;x++){
+                  const k=(y*scanW+x)*4;
+                  if(data[k+3]>8 && (data[k]<248 || data[k+1]<248 || data[k+2]<248)){
+                    if(x<left)left=x;if(x>right)right=x;
+                    if(y<top)top=y;if(y>bottom)bottom=y;
                   }
                 }
-                if(right>=left&&bottom>=top){
-                  const pad=14;
-                  cropX=Math.max(0,left-pad);cropY=Math.max(0,top-pad);
-                  const cropRight=Math.min(sourceW-1,right+pad),cropBottom=Math.min(sourceH-1,bottom+pad);
-                  cropW=Math.max(1,cropRight-cropX+1);cropH=Math.max(1,cropBottom-cropY+1);
-                }
-              }catch(cropError){console.warn('PNG whitespace trim skipped:',cropError);}
-            }
+              }
+              if(right>=left&&bottom>=top){
+                const pad=14;
+                cropX=Math.max(0,Math.floor(left/scanScale)-pad);
+                cropY=Math.max(0,Math.floor(top/scanScale)-pad);
+                const cropRight=Math.min(sourceW-1,Math.ceil((right+1)/scanScale)+pad);
+                const cropBottom=Math.min(sourceH-1,Math.ceil((bottom+1)/scanScale)+pad);
+                cropW=Math.max(1,cropRight-cropX+1);cropH=Math.max(1,cropBottom-cropY+1);
+              }
+            }catch(cropError){console.warn('PNG whitespace trim skipped:',cropError);}
             /* Fill the A4 width even when a long 5- or 6-session plan must be fitted
                by height. The old contain logic scaled both dimensions equally in that case,
                leaving wide blank gutters. Keep the height-based fit to preserve every exercise
