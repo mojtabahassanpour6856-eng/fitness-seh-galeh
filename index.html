@@ -14359,6 +14359,7 @@ window.sehResetTurnstile=function(){};
    if(!traineeId)return alert('اول شاگرد را انتخاب کنید.');
    if(!currentWorkoutPlanId){await window.saveWorkoutPlan();if(!currentWorkoutPlanId)return;}
    const planId=String(currentWorkoutPlanId);
+   const planIdValue=currentWorkoutPlanId;
    if(!same(currentClient?.id,traineeId)||!same(currentWorkoutPlanId,planId))return alert('شاگرد یا برنامه تغییر کرده است؛ ذخیره لغو شد.');
    const t=table();if(!t)return;
    const selectedByRow=Array.from(t.querySelectorAll('tbody tr')).map(tr=>Array.from(tr.querySelectorAll('.w9-exercise-check:checked')).map(i=>String(i.value)));
@@ -14402,7 +14403,7 @@ window.sehResetTurnstile=function(){};
        for(let j=0;j<r.exerciseIds.length;j++){
          const old=oldGroup[j];
          if(!same(currentClient?.id,traineeId)||!same(currentWorkoutPlanId,planId)||active!==sessionIndex)throw new Error('شاگرد، برنامه یا جلسه هنگام ذخیره تغییر کرد؛ ادامه ذخیره متوقف شد.');
-         const payload={workout_plan_id:planId,exercise_id:r.exerciseIds[j],sets:Number(r.setsRaw),reps:r.reps,rest_seconds:Number(r.restRaw),sort_order:(r.index+1)*10+j,training_system:r.system,group_key:groupKey,training_day:sessionName};
+         const payload={workout_plan_id:planIdValue,exercise_id:r.exerciseIds[j],sets:Number(r.setsRaw),reps:r.reps,rest_seconds:Number(r.restRaw),sort_order:(r.index+1)*10+j,training_system:r.system,group_key:groupKey,training_day:sessionName};
          if(old){
            const patch={exercise_id:payload.exercise_id,sets:payload.sets,reps:payload.reps,rest_seconds:payload.rest_seconds,sort_order:payload.sort_order,training_system:payload.training_system,group_key:payload.group_key,training_day:payload.training_day};
            await sbWrite('/trainee_workout_exercises?id=eq.'+encodeURIComponent(old.id)+'&workout_plan_id=eq.'+encodeURIComponent(planId),'PATCH',patch);
