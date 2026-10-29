@@ -24,6 +24,6 @@ assert.match(save, /active!==sessionIndex/, 'save must abort if the active sessi
 assert.match(save, /verified\.length!==expectedCount/, 'save must verify the stored movement count');
 assert.ok(save.indexOf('const verifiedBeforeCleanup=await sbGet') >= 0, 'desired rows must be read back before cleanup');
 assert.ok(save.indexOf('if(missingExpected)throw new Error') < save.indexOf('for(const old of stale)'), 'stale rows must not be deleted unless every desired row is verified');
-assert.match(save, /const expectedRows=wanted\\.flatMap/, 'verification must cover every selected exercise, including grouped movements');
+assert.match(save, /const expectedRows=wanted\.flatMap/, 'verification must cover every selected exercise, including grouped movements');
 
 console.log('PASS: workout session save is serialized, session-scoped, and count-verified.');
