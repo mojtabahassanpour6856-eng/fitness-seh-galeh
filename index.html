@@ -6225,6 +6225,12 @@ body.workout-output .empty-cell{display:none!important}
                 coachFooter.style.setProperty('overflow','visible','important');
                 coachFooter.style.setProperty('flex','0 0 auto','important');
                 coachFooter.style.setProperty('break-inside','avoid','important');
+                /* Keep coach notes in captured content; render branding in a dedicated A4 footer. */
+                if(coachFooter.lastElementChild)coachFooter.lastElementChild.style.setProperty('display','none','important');
+                coachFooter.style.setProperty('border','0','important');
+                coachFooter.style.setProperty('background','transparent','important');
+                coachFooter.style.setProperty('padding','0','important');
+                coachFooter.style.setProperty('margin','0','important');
               }
                 body.style.setProperty('margin','0px','important');
                 body.style.setProperty('border','2px solid #d4b15c','important');
@@ -6359,14 +6365,26 @@ body.workout-output .empty-cell{display:none!important}
                by height. The old contain logic scaled both dimensions equally in that case,
                leaving wide blank gutters. Keep the height-based fit to preserve every exercise
                and footer, but use the full page width; shorter plans are width-fitted normally. */
+            const footerHeight=170;
+            const contentHeight=page.height-footerHeight;
             const widthScale=page.width/cropW;
             const heightAtWidth=cropH*widthScale;
-            const fitByHeight=heightAtWidth>page.height;
-            const scale=fitByHeight ? page.height/cropH : widthScale;
+            const fitByHeight=heightAtWidth>contentHeight;
+            const scale=fitByHeight ? contentHeight/cropH : widthScale;
             const drawW=page.width;
             const drawH=Math.max(1,Math.round(cropH*scale));
             ctx.imageSmoothingEnabled=true;ctx.imageSmoothingQuality='high';
-            ctx.drawImage(canvas,cropX,cropY,cropW,cropH,0,Math.round((page.height-drawH)/2),drawW,drawH);
+            ctx.drawImage(canvas,cropX,cropY,cropW,cropH,0,Math.max(0,Math.round((contentHeight-drawH)/2)),drawW,drawH);
+            /* Branding is drawn on the final PNG itself, never dependent on html2canvas body bounds. */
+            const footerTop=page.height-footerHeight;
+            ctx.fillStyle='#ffffff';ctx.fillRect(0,footerTop,page.width,footerHeight);
+            ctx.strokeStyle='#c69b43';ctx.lineWidth=5;
+            ctx.beginPath();ctx.moveTo(90,footerTop+18);ctx.lineTo(page.width-90,footerTop+18);ctx.stroke();
+            ctx.textAlign='center';ctx.textBaseline='middle';
+            ctx.fillStyle='#51380b';ctx.font='bold 42px Tahoma, Arial, sans-serif';ctx.direction='rtl';
+            ctx.fillText('باشگاه فیتنس سه‌قلعه | مربی من',page.width/2,footerTop+77);
+            ctx.direction='ltr';ctx.fillStyle='#7a6a4a';ctx.font='24px Arial, sans-serif';
+            ctx.fillText('FITNESS SEH GALEH',page.width/2,footerTop+128);
             finalCanvas=page;
           }
           const png=await new Promise((resolve,reject)=>{
