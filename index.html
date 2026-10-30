@@ -6034,7 +6034,7 @@ body.workout-output .empty-cell{display:none!important}
                Giant sets and ordinary movements keep their existing layout. */
             doc.querySelectorAll('.grouped-unit .exercise-name').forEach(el=>{
               const badge=el.querySelector('.group-system-badge');
-              const label=(badge?.textContent||'').replace(/[()\\s‌]/g,'');
+              const label=(badge?.textContent||'').replace(/[()\s‌]/g,'');
               if(!/سوپرست|تری‌ست|تریست/.test(label)) return;
               setImportant(el,'white-space','nowrap');
               setImportant(el,'overflow-wrap','normal');
