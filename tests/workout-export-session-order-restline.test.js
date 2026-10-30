@@ -21,10 +21,10 @@ assert(
   'Export ordering must understand Persian ordinal session names such as جلسه اول and جلسه دوم, not fall back to sort_order.'
 );
 assert(
-  html.includes("setImportant(el,'font-size','22px');") &&
-  html.includes("setImportant(el,'font-size','25px');") &&
+  html.includes("setImportant(el,'font-size','20px');") &&
+  html.includes("setImportant(el,'font-size','23px');") &&
   html.includes('let next=current*1.25;'),
-  'PNG export must use larger exercise, prescription, and rest text.'
+  'PNG export must preserve readable exercise text while using the compact prescription and rest sizes.'
 );
 assert(
   html.includes("'<span class=\"rest\">'+esc(x.rest_seconds??0)+' S</span>'") &&
