@@ -6030,6 +6030,19 @@ body.workout-output .empty-cell{display:none!important}
               setImportant(el,'min-width','0');
               setImportant(el,'max-width','100%');
             });
+            /* PNG-only: keep superset/triset group names on one line.
+               Giant sets and ordinary movements keep their existing layout. */
+            doc.querySelectorAll('.grouped-unit .exercise-name').forEach(el=>{
+              const badge=el.querySelector('.group-system-badge');
+              const label=(badge?.textContent||'').replace(/[()\s‌]/g,'');
+              if(!/سوپرست|تری‌ست|تریست/.test(label)) return;
+              setImportant(el,'white-space','nowrap');
+              setImportant(el,'overflow-wrap','normal');
+              setImportant(el,'word-break','keep-all');
+              setImportant(el,'font-size','16px');
+              setImportant(el,'line-height','1.2');
+              if(badge) setImportant(badge,'font-size','11px');
+            });
             doc.querySelectorAll('.exercise-details').forEach(el=>{
               setImportant(el,'font-size','22px');
               setImportant(el,'line-height','1.5');
