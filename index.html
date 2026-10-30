@@ -6036,9 +6036,12 @@ body.workout-output .empty-cell{display:none!important}
               const badge=el.querySelector('.group-system-badge');
               const label=(badge?.textContent||'').replace(/[()\s‌]/g,'');
               if(!/سوپرست|تری‌ست|تریست/.test(label)) return;
-              setImportant(el,'white-space','nowrap');
-              setImportant(el,'overflow-wrap','normal');
-              setImportant(el,'word-break','keep-all');
+              /* Wrap long group names inside their own column, above the prescription badge. */
+              setImportant(el,'white-space','normal');
+              setImportant(el,'overflow-wrap','anywhere');
+              setImportant(el,'word-break','normal');
+              setImportant(el,'min-width','0');
+              setImportant(el,'max-width','100%');
               setImportant(el,'font-size','16px');
               setImportant(el,'line-height','1.2');
               if(badge) setImportant(badge,'font-size','11px');
@@ -6055,6 +6058,11 @@ body.workout-output .empty-cell{display:none!important}
               setImportant(el,'font-weight','900');
               setImportant(el,'line-height','1.35');
               setImportant(el,'padding','3px 8px');
+            });
+            /* One-step reduction for grouped superset/triset prescription badges only. */
+            doc.querySelectorAll('.grouped-unit .exercise-details .rx').forEach(el=>{
+              setImportant(el,'font-size','24px');
+              setImportant(el,'padding','2px 7px');
             });
             doc.querySelectorAll('.exercise-details .rest').forEach(el=>{
               setImportant(el,'font-size','22px');
