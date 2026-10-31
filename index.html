@@ -12837,7 +12837,10 @@ window.sehResetTurnstile=function(){};
  }
  function pushRoute(id){
   if(role()!=='trainee'||id==='membership'||id==='sehChatSection')return;
-  var next=sectionFor(id),current=activeId();if(current===next||!valid(next))return;
+  var next=sectionFor(id),current=activeId();
+  // Some trainee sections (analysis and goals) are created lazily by dashOpen
+  // after this capture-phase click handler runs. Record their route before creation.
+  if(current===next)return;
   try{var state=Object.assign({},history.state||{});if(!state.sehTraineeNav){state.sehTraineeNav={section:current};history.replaceState(state,'');}state.sehTraineeNav={section:next};history.pushState(state,'');}
   catch(e){console.warn('ثبت مسیر بازگشت شاگرد انجام نشد:',e);}
  }
