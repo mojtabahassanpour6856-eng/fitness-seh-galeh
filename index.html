@@ -2787,7 +2787,23 @@ window.loadDashboard = loadDashboard;
     qsAll('.nav button').forEach(b=>b.style.display='none');$id('navDash').style.display='block';
     ['client','meal','workout','progress'].forEach(sec=>{const b=qsAll('.nav button').find(x=>String(x.getAttribute('onclick')||'').includes("'"+sec+"'"));if(b)b.style.display='block';});
     document.body.classList.remove('locked');$id('authScreen').style.display='none';$id('authUserBar').style.display='block';$id('authUserText').textContent=`${c.full_name||user.phone} | شاگرد`;
-    addScheduleUI();await selectClient(c.id);await loadDashboard();showSection('traineeDashboard',$id('navDash'));
+    addScheduleUI();
+    // On trainee login, prepare the dashboard data without routing through
+    // selectClient(), because that function intentionally opens the coach profile.
+    // The trainee can still open and edit their profile manually from its dashboard card.
+    const setProfileValue=(id,value)=>{const el=$id(id);if(el)el.value=value==null?'':String(value);};
+    setProfileValue('pn',c.full_name||'');
+    setProfileValue('page',c.age??calcAge(c.birth_date)??'');
+    setProfileValue('pweight',c.current_weight??'');
+    setProfileValue('pheight',c.height??'');
+    setProfileValue('pgoal',c.goal||'کاهش وزن');
+    setProfileValue('plevel',c.training_level||'مبتدی');
+    await Promise.allSettled([
+      loadNutritionForClient(),loadWorkoutForClient(),loadSupplements(),
+      loadInjuries(),loadActivityToday(),loadDashboard(),
+      loadProgressHistory(),loadFastingSummary()
+    ]);
+    showSection('traineeDashboard',$id('navDash'));
   }
 
   function buildAuthTabs(){
