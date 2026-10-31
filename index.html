@@ -14710,6 +14710,8 @@ window.sehResetTurnstile=function(){};
   return t&&/شاگرد/.test(t.textContent||'')?'trainee':'';
  }
  function current(){
+  var profile=document.getElementById('client');
+  if(profile&&profile.classList.contains('active'))return 'client';
   var el=document.querySelector('.section.active');
   return el&&el.id||'traineeDashboard';
  }
@@ -14783,20 +14785,40 @@ window.sehResetTurnstile=function(){};
   var from=current(),to=normalize(key);
   if(from!==to)writeRoute(to,false);
  },true);
+ var restoring=false;
  window.addEventListener('popstate',function(e){
   if(role()!=='trainee')return;
-  var route=e.state&&e.state.sehTraineeBackV2&&e.state.sehTraineeBackV2.route;
-  // If Back reaches the entry before the app's first route, keep the trainee
-  // on the dashboard instead of allowing the WebView to leave the app.
-  if(!route){
-   e.stopImmediatePropagation();
-   writeRoute('traineeDashboard',true);
-   show('traineeDashboard');
-   return;
-  }
+  var entry=e.state&&e.state.sehTraineeBackV2;
+  var route=entry&&entry.route||'traineeDashboard';
   e.stopImmediatePropagation();
-  show(route);
+  restoring=true;
+  try{show(route);}finally{restoring=false;}
+  // A same-URL guard entry keeps the Android/WebView Back key from leaving
+  // the app when the trainee reaches its dashboard root.
+  if(!entry||entry.kind==='base'){
+   setTimeout(function(){
+    try{
+     var state=Object.assign({},history.state||{});
+     state.sehTraineeBackV2={route:'traineeDashboard',kind:'guard'};
+     history.pushState(state,'');
+    }catch(err){console.warn('بازسازی مسیر محافظ انجام نشد',err);}
+   },0);
+  }
  },true);
+ var oldProfileOpen=window.openTraineeProfile;
+ if(typeof oldProfileOpen==='function'){
+  window.openTraineeProfile=function(){
+   if(role()==='trainee'&&!restoring&&current()!=='client')writeRoute('client',false);
+   return oldProfileOpen.apply(this,arguments);
+  };
+ }
+ var oldChatOpen=window.sehOpenTraineeChat;
+ if(typeof oldChatOpen==='function'){
+  window.sehOpenTraineeChat=function(){
+   if(role()==='trainee'&&!restoring&&current()!=='sehChatSection')writeRoute('sehChatSection',false);
+   return oldChatOpen.apply(this,arguments);
+  };
+ }
  var oldReturn=window.sehReturnToDashboard;
  window.sehReturnToDashboard=function(){
   if(role()!=='trainee'){
@@ -14806,9 +14828,18 @@ window.sehResetTurnstile=function(){};
   writeRoute('traineeDashboard',true);
   show('traineeDashboard');
  };
+ var initialized=false;
  function init(){
-  if(role()!=='trainee')return;
-  if(!(history.state&&history.state.sehTraineeBackV2))writeRoute(current(),true);
+  if(initialized||role()!=='trainee')return;
+  initialized=true;
+  try{
+   var state=Object.assign({},history.state||{});
+   state.sehTraineeBackV2={route:current(),kind:'base'};
+   history.replaceState(state,'');
+   state=Object.assign({},history.state||{});
+   state.sehTraineeBackV2={route:current(),kind:'guard'};
+   history.pushState(state,'');
+  }catch(e){console.warn('راه‌اندازی مسیر محافظ انجام نشد',e);}
  }
  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init,{once:true});else init();
 })();
