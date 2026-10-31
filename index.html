@@ -66,7 +66,7 @@ body.seh-trainee-mode #authUserBar{display:none!important}
 .seh-profile-photo-add{position:absolute;bottom:0;left:0;width:27px;height:27px;margin:0;padding:0;border:2px solid #fff8e7;border-radius:50%;background:#b78b27;color:#fff;font-size:19px;line-height:1}
 .seh-profile-info{min-width:0;flex:1}
 .seh-profile-name{font-size:16px;font-weight:800;overflow-wrap:anywhere}
-.seh-profile-birth{display:inline-block;margin-top:8px;padding:5px 9px;border-radius:9px;background:#e8d6a9;color:#463817;font-size:11px}
+.seh-profile-age{display:inline-block;margin-top:7px;margin-inline-start:5px;padding:5px 9px;border-radius:9px;background:#dcebd5;color:#294323;font-size:11px;font-weight:700}.seh-profile-birth{display:inline-block;margin-top:8px;padding:5px 9px;border-radius:9px;background:#e8d6a9;color:#463817;font-size:11px}
 .seh-profile-exit{display:flex;align-items:center;justify-content:center;gap:7px;width:100%;margin:8px 0 0;padding:9px 12px;border:1px solid #b98f32;border-radius:11px;background:#fff8e7;color:#59451b;font-size:13px}
 .seh-profile-exit span{font-size:19px}
 @media(max-width:420px){.seh-profile-summary{padding:11px;gap:11px}.seh-profile-avatar{width:68px;height:68px;flex-basis:68px}.seh-profile-name{font-size:14px}}
@@ -2458,7 +2458,7 @@ if($("prDate"))$("prDate").value=today();if($("anDate"))$("anDate").value=today(
     const fallback=(gender==='زن'||gender==='female'||gender==='f')?'👩':'👨';
     wrap.innerHTML='<div class="seh-profile-summary" role="button" tabindex="0" aria-label="باز کردن پروفایل من" onclick="dashOpen(\'client\')" onkeydown="if(event.key===\'Enter\'||event.key===\' \'){event.preventDefault();dashOpen(\'client\')}">'+
       '<div class="seh-profile-avatar"><span class="seh-profile-fallback">'+fallback+'</span><img class="seh-profile-image" alt="عکس پروفایل"><button type="button" class="seh-profile-photo-add" aria-label="افزودن عکس پروفایل" onclick="event.stopPropagation();document.getElementById(\'sehTraineePhotoInput\').click()">+</button></div>'+
-      '<div class="seh-profile-info"><div class="seh-profile-name"></div><div class="seh-profile-birth"></div></div></div>'+
+      '<div class="seh-profile-info"><div class="seh-profile-name"></div><div class="seh-profile-age"></div><div class="seh-profile-birth"></div></div></div>'+
       '<input id="sehTraineePhotoInput" type="file" accept="image/*" hidden onchange="window.sehSaveTraineePhoto(this)">'+
       '<button type="button" class="seh-profile-exit" onclick="logoutApp()"><span>↪</span> خروج از حساب کاربری</button>'+
       '';
@@ -2466,6 +2466,9 @@ if($("prDate"))$("prDate").value=today();if($("anDate"))$("anDate").value=today(
     const birthNode=wrap.querySelector('.seh-profile-birth');
     const birthText=window.isoToJalaliDate?window.isoToJalaliDate(c.birth_date):'';
     if(birthNode)birthNode.textContent=birthText?'🎂 '+birthText:'🎂 تاریخ تولد ثبت نشده';
+    const ageNode=wrap.querySelector('.seh-profile-age');
+    const calculatedAge=c.birth_date&&typeof calcAge==='function'?calcAge(c.birth_date):null;
+    if(ageNode){ageNode.textContent=Number.isInteger(calculatedAge)&&calculatedAge>=0?'سن: '+calculatedAge+' سال':'';ageNode.style.display=Number.isInteger(calculatedAge)&&calculatedAge>=0?'inline-block':'none';}
     const img=wrap.querySelector('.seh-profile-image');
     const fallbackNode=wrap.querySelector('.seh-profile-fallback');
     if(c.profile_image){
@@ -2491,6 +2494,7 @@ if($("prDate"))$("prDate").value=today();if($("anDate"))$("anDate").value=today(
       }
       currentClient.birth_date=iso;
       if(Array.isArray(clients)){const row=clients.find(x=>String(x.id)===String(currentClient.id));if(row)row.birth_date=iso;}
+      const profileRoot=document.getElementById('traineeDashboard');if(profileRoot)renderTraineeProfileHeader(profileRoot);
       const status=document.getElementById('sehTraineeBirthStatus');
       if(status)status.textContent='✓ تاریخ تولد ذخیره شد';
     }catch(e){console.error('Trainee birth date save failed',e);alert('ذخیره تاریخ تولد انجام نشد. '+(e.message||''));}
