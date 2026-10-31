@@ -2467,8 +2467,18 @@ if($("prDate"))$("prDate").value=today();if($("anDate"))$("anDate").value=today(
     const birthText=window.isoToJalaliDate?window.isoToJalaliDate(c.birth_date):'';
     if(birthNode)birthNode.textContent=birthText?'🎂 '+birthText:'🎂 تاریخ تولد ثبت نشده';
     const ageNode=wrap.querySelector('.seh-profile-age');
-    const calculatedAge=c.birth_date&&typeof calcAge==='function'?calcAge(c.birth_date):null;
-    if(ageNode){ageNode.textContent=Number.isInteger(calculatedAge)&&calculatedAge>=0?'سن: '+calculatedAge+' سال':'';ageNode.style.display=Number.isInteger(calculatedAge)&&calculatedAge>=0?'inline-block':'none';}
+    const birthValue=String(c.birth_date||authProfile.birth_date||'').trim().slice(0,10);
+    let calculatedAge=null;
+    if(/^\\d{4}-\\d{2}-\\d{2}$/.test(birthValue)){
+      const parts=birthValue.split('-').map(Number);
+      const birthDate=new Date(parts[0],parts[1]-1,parts[2]);
+      if(birthDate.getFullYear()===parts[0]&&birthDate.getMonth()===parts[1]-1&&birthDate.getDate()===parts[2]){
+        const now=new Date();calculatedAge=now.getFullYear()-parts[0];
+        if(now.getMonth()<parts[1]-1||(now.getMonth()===parts[1]-1&&now.getDate()<parts[2]))calculatedAge--;
+      }
+    }
+    if(!Number.isInteger(calculatedAge)&&c.age!==null&&c.age!==undefined&&String(c.age).trim()!=='')calculatedAge=Number(c.age);
+    if(ageNode){const validAge=Number.isInteger(calculatedAge)&&calculatedAge>=0&&calculatedAge<120;ageNode.textContent=validAge?'سن: '+calculatedAge+' سال':'';ageNode.style.display=validAge?'inline-block':'none';}
     const img=wrap.querySelector('.seh-profile-image');
     const fallbackNode=wrap.querySelector('.seh-profile-fallback');
     if(c.profile_image){
