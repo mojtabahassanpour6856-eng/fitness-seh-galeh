@@ -14792,25 +14792,32 @@ window.sehResetTurnstile=function(){};
   if(role()!=='trainee')return;
   var entry=e.state&&e.state.sehTraineeBackV2;
   var dashboard=current()==='traineeDashboard';
-  // On the dashboard, skip any older in-app route entries left in this
-  // browser session (including legacy food-management entries).
-  if(dashboard&&entry&&entry.route&&normalize(entry.route)!=='traineeDashboard'){
-   e.stopImmediatePropagation();
-   setTimeout(function(){try{history.back();}catch(err){}},0);
-   return;
-  }
-  if(!entry){
-   // A legacy/unmarked history entry must not reopen an old card while the
-   // trainee is already on the dashboard. Let the browser leave normally.
-   if(dashboard)return;
+  // A single Back from any trainee card must return directly to the dashboard.
+  // Replace the popped entry so a second Back can leave the app normally.
+  if(!dashboard){
    e.stopImmediatePropagation();
    restoring=true;
-   try{show('traineeDashboard');}finally{restoring=false;}
+   try{
+    show('traineeDashboard');
+    var state=Object.assign({},e.state||{});
+    state.sehTraineeBackV2={route:'traineeDashboard',kind:'base'};
+    history.replaceState(state,'');
+   }finally{restoring=false;}
    return;
   }
+  // Do not let an old in-app route reopen a card while already on dashboard.
+  // Consume that stale state by replacing it, rather than requiring another Back.
+  if(entry&&entry.route&&normalize(entry.route)!=='traineeDashboard'){
+   e.stopImmediatePropagation();
+   var state=Object.assign({},e.state||{});
+   state.sehTraineeBackV2={route:'traineeDashboard',kind:'base'};
+   history.replaceState(state,'');
+   return;
+  }
+  if(!entry)return;
   e.stopImmediatePropagation();
   restoring=true;
-  try{show(entry.route||'traineeDashboard');}
+  try{show('traineeDashboard');}
   finally{restoring=false;}
  },true);
  // Authentication completes asynchronously after DOMContentLoaded. Initialize
