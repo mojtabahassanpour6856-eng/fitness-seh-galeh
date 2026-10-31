@@ -54,6 +54,15 @@ table{width:100%;border-collapse:collapse;margin-top:13px;font-size:12px}th,td{p
 @media(max-width:600px){.grid,.grid2{grid-template-columns:1fr}.stats,.badges{grid-template-columns:1fr 1fr}.nav{grid-template-columns:1fr 1fr}.row{display:grid;grid-template-columns:1fr}}
 
 /* Trainee dashboard profile header */
+.seh-profile-brand{margin:0 0 10px;padding:11px 12px;text-align:center;border-radius:15px;background:linear-gradient(135deg,#fff8e7,#ead29a);border:1px solid #c7a34b;color:#654b16;box-shadow:0 3px 12px rgba(123,91,28,.10)}
+.seh-profile-brand strong{display:block;font-size:19px;font-weight:900;letter-spacing:-.3px}
+.seh-profile-brand small{display:block;margin-top:3px;font-size:10px;color:#82682f}
+.seh-profile-birth-edit{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-top:7px}
+.seh-profile-birth-edit label{width:100%;font-size:10px;color:#715a2a}
+.seh-profile-birth-edit input{min-width:0;flex:1;width:120px;padding:7px 8px;border:1px solid #cdb777;border-radius:8px;background:#fffdf7;color:#342b18;font-size:12px;direction:ltr;text-align:center}
+.seh-profile-birth-save{width:auto;margin:0;padding:7px 10px;border:1px solid #aa812c;border-radius:8px;background:#b78b27;color:#fff;font-size:11px}
+.seh-profile-signup{display:flex!important;width:100%;justify-content:center;margin:7px 0 0;padding:7px 10px;border:1px solid #c7a34b;border-radius:10px;background:#fff;color:#70521a;font-size:11px}
+
 body.seh-trainee-mode #authUserBar{display:none!important}
 .seh-profile-wrap{margin:0 0 12px}
 .seh-profile-summary{display:flex;align-items:center;gap:14px;padding:14px;border:1px solid #c7a34b;border-radius:17px;background:linear-gradient(135deg,#fff8e7,#f4e7c5);color:#2c2618;cursor:pointer;direction:rtl}
@@ -2444,13 +2453,18 @@ if($("prDate"))$("prDate").value=today();if($("anDate"))$("anDate").value=today(
     const birth=window.isoToJalaliDate?window.isoToJalaliDate(c.birth_date):'';
     const gender=String(c.gender||'').toLowerCase();
     const fallback=(gender==='زن'||gender==='female'||gender==='f')?'👩':'👨';
-    wrap.innerHTML='<div class="seh-profile-summary" role="button" tabindex="0" aria-label="باز کردن پروفایل من" onclick="dashOpen(\'client\')" onkeydown="if(event.key===\'Enter\'||event.key===\' \'){event.preventDefault();dashOpen(\'client\')}">'+
-      '<div class="seh-profile-avatar"><span class="seh-profile-fallback">'+fallback+'</span><img class="seh-profile-image" alt="عکس پروفایل"><button type="button" class="seh-profile-photo-add" aria-label="افزودن عکس پروفایل" onclick="event.stopPropagation();document.getElementById(\'sehTraineePhotoInput\').click()">+</button></div>'+
+    wrap.innerHTML='<div class="seh-profile-brand"><strong>فیتنس سه‌قلعه</strong><small>باشگاه تخصصی بدنسازی و تناسب اندام</small></div>'+
+      '<div class="seh-profile-summary" role="button" tabindex="0" aria-label="باز کردن پروفایل من" onclick="dashOpen(\\'client\\')" onkeydown="if(event.key===\\'Enter\\'||event.key===\\' \\'){event.preventDefault();dashOpen(\\'client\\')}">'+
+      '<div class="seh-profile-avatar"><span class="seh-profile-fallback">'+fallback+'</span><img class="seh-profile-image" alt="عکس پروفایل"><button type="button" class="seh-profile-photo-add" aria-label="افزودن عکس پروفایل" onclick="event.stopPropagation();document.getElementById(\\'sehTraineePhotoInput\\').click()">+</button></div>'+
       '<div class="seh-profile-info"><div class="seh-profile-name"></div><div class="seh-profile-birth"></div></div></div>'+
       '<input id="sehTraineePhotoInput" type="file" accept="image/*" hidden onchange="window.sehSaveTraineePhoto(this)">'+
-      '<button type="button" class="seh-profile-exit" onclick="logoutApp()"><span>↪</span> خروج از حساب کاربری</button>';
+      '<div class="seh-profile-birth-edit"><label for="sehTraineeBirthInput">تاریخ تولد شمسی</label><input id="sehTraineeBirthInput" type="text" inputmode="numeric" placeholder="مثلاً ۱۳۷۵/۰۷/۱۸" autocomplete="off"><button type="button" class="seh-profile-birth-save" onclick="window.sehSaveTraineeBirth()">ثبت تاریخ</button></div>'+
+      '<button type="button" class="seh-profile-exit" onclick="logoutApp()"><span>↪</span> خروج از حساب کاربری</button>'+
+      '<button type="button" id="sehAddTraineeRequestOpen" class="seh-profile-signup" style="display:none" aria-label="ثبت‌نام فرد جدید" onclick="window.openAddTraineeRequest()">👤＋ ثبت‌نام فرد جدید</button>';
     wrap.querySelector('.seh-profile-name').textContent=name;
     wrap.querySelector('.seh-profile-birth').textContent=birth?'🎂 '+birth:'🎂 تاریخ تولد ثبت نشده';
+    const birthInput=wrap.querySelector('#sehTraineeBirthInput');
+    if(birthInput)birthInput.value=c.birth_date||'';
     const img=wrap.querySelector('.seh-profile-image');
     const fallbackNode=wrap.querySelector('.seh-profile-fallback');
     if(c.profile_image){
@@ -2459,6 +2473,26 @@ if($("prDate"))$("prDate").value=today();if($("anDate"))$("anDate").value=today(
       img.src=c.profile_image;
     }else{img.style.display='none';fallbackNode.style.display='block';}
   }
+
+  window.sehSaveTraineeBirth=async function(){
+    const input=document.getElementById('sehTraineeBirthInput');
+    if(!input||!currentClient||!currentClient.id){alert('پرونده شاگرد پیدا نشد؛ دوباره وارد شوید.');return;}
+    const raw=window.getJalaliVisibleValue?window.getJalaliVisibleValue(input):String(input.value||'');
+    const iso=window.jalaliToISODate?window.jalaliToISODate(raw):'';
+    if(raw&&!iso){alert('تاریخ تولد معتبر نیست؛ از تقویم یا قالب ۱۳۷۵/۰۷/۱۸ استفاده کنید.');return;}
+    if(!raw){alert('لطفاً تاریخ تولد شمسی را انتخاب یا وارد کنید.');return;}
+    try{
+      const rows=await window.sbWrite('/trainees?id=eq.'+encodeURIComponent(currentClient.id),'PATCH',{birth_date:iso});
+      if(!Array.isArray(rows)||!rows.some(row=>String(row.id)===String(currentClient.id)&&String(row.birth_date||'').slice(0,10)===iso)){
+        throw new Error('ذخیره تاریخ تولد در پایگاه داده تأیید نشد.');
+      }
+      currentClient.birth_date=iso;
+      if(Array.isArray(clients)){const row=clients.find(x=>String(x.id)===String(currentClient.id));if(row)row.birth_date=iso;}
+      const root=document.getElementById('traineeDashboard');
+      if(root)renderTraineeProfileHeader(root);
+      alert('تاریخ تولد شمسی ذخیره شد.');
+    }catch(e){console.error('Trainee birth date save failed',e);alert('ذخیره تاریخ تولد انجام نشد. '+(e.message||''));}
+  };
 
   window.sehSaveTraineePhoto=async function(input){
     const file=input&&input.files&&input.files[0];
