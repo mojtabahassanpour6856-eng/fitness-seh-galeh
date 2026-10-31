@@ -14698,7 +14698,7 @@ window.sehResetTurnstile=function(){};
  'use strict';
  if(window.__sehTraineeBackNavSafeV2)return;
  window.__sehTraineeBackNavSafeV2=true;
- var initialized=false,restoring=false;
+ var initialized=false,restoring=false,returnedFromCard=false;
  function role(){
   try{if(window.authProfile&&window.authProfile.role)return String(window.authProfile.role).toLowerCase();}catch(e){}
   try{if(typeof authProfile!=='undefined'&&authProfile&&authProfile.role)return String(authProfile.role).toLowerCase();}catch(e){}
@@ -14794,12 +14794,19 @@ window.sehResetTurnstile=function(){};
   // A single Back from any trainee card must return directly to the dashboard.
   // Replace the popped entry so a second Back can leave the app normally.
   if(dashboard){
-   // Let the browser's Back action leave the dashboard immediately.
+   // If this dashboard was reached by backing out of a card, one extra
+   // stale in-app history entry may remain. Skip it automatically on the
+   // trainee's next Back press, so the same single press exits the app.
+   if(returnedFromCard){
+    returnedFromCard=false;
+    e.stopImmediatePropagation();
+    setTimeout(function(){try{history.back();}catch(err){}},0);
+   }
    return;
   }
-  // From any card, one Back returns to dashboard and normalizes the
-  // destination history entry so the next Back exits.
+  // From any card, one Back returns to dashboard.
   e.stopImmediatePropagation();
+  returnedFromCard=true;
   restoring=true;
   try{
    show('traineeDashboard');
