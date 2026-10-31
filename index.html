@@ -419,7 +419,7 @@ body.locked{overflow:hidden!important}
 <div class="page">
 
 <div id="authUserBar" class="card" style="display:none;padding:10px;margin-bottom:10px">
-  <div class="row"><div id="authUserText" class="auth-user"></div><button class="logout-btn" onclick="logoutApp()">🚪 خروج</button></div>
+  <div class="row"><div id="authUserText" class="auth-user"></div></div>
 </div>
 <div class="hero">
   <div class="brand">
@@ -9438,10 +9438,11 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
     if(bar){
       const row=bar.querySelector('.row');
       if(row&&!$('sehSwitchAccountBtn')){
-        const b=document.createElement('button');b.id='sehSwitchAccountBtn';b.type='button';b.className='logout-btn';b.textContent='🔄 تغییر حساب';
+        const b=document.createElement('button');b.id='sehSwitchAccountBtn';b.type='button';b.className='secondary';b.textContent='🔄 تغییر حساب';
         b.addEventListener('click',async()=>{
           const auth=window.AUTH_SUPABASE;
           if(!auth?.auth){alert('سامانه ورود آماده نیست؛ صفحه را تازه‌سازی کنید.');return;}
+          if(!confirm('با تغییر حساب، از حساب فعلی خارج می‌شوید. ادامه می‌دهید؟'))return;
           b.disabled=true;
           try{const {error}=await auth.auth.signOut();if(error)throw error;location.reload();}
           catch(e){b.disabled=false;alert('تغییر حساب انجام نشد: '+(e?.message||String(e)));}
