@@ -12798,6 +12798,68 @@ window.sehResetTurnstile=function(){};
  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start,{once:true});else start();
 })();
 </script>
+
+<script id="SEH_TRAINEE_BACK_NAV_V1_20261031">
+/* Browser Back between trainee sections only; no logout, reload, or data writes. */
+(function(){
+ 'use strict';
+ if(window.__sehTraineeBackNavV1)return;
+ window.__sehTraineeBackNavV1=true;
+ var handlingPop=false;
+ function role(){
+  try{if(typeof authProfile!=='undefined'&&authProfile&&authProfile.role)return String(authProfile.role).toLowerCase();}catch(e){}
+  return String(window.authProfile&&window.authProfile.role||'').toLowerCase();
+ }
+ function sectionFor(key){return ({analysis:'traineeAnalysis',activity:'activitySection',goals:'traineeGoalsSection'})[key]||key;}
+ function valid(id){var el=document.getElementById(id);return !!(el&&el.classList&&el.classList.contains('section'));}
+ function activeId(){var el=document.querySelector('.section.active');return el&&el.id||'traineeDashboard';}
+ function setRoute(id){
+  id=sectionFor(id);if(!valid(id))return false;
+  document.querySelectorAll('.section').forEach(function(sec){
+   var chosen=sec.id===id;sec.classList.toggle('active',chosen);
+   if(chosen){sec.hidden=false;sec.removeAttribute('hidden');sec.removeAttribute('aria-hidden');sec.style.setProperty('display','block','important');sec.style.setProperty('visibility','visible','important');}
+   else{sec.style.setProperty('display','none','important');sec.style.setProperty('visibility','hidden','important');sec.setAttribute('aria-hidden','true');}
+  });
+  document.querySelectorAll('.nav button').forEach(function(btn){btn.classList.remove('active');});
+  if(id==='traineeDashboard'){var dash=document.getElementById('navDash');if(dash)dash.classList.add('active');}
+  else{
+   var key=id==='traineeAnalysis'?'analysis':id==='activitySection'?'activity':id;
+   var nav=Array.from(document.querySelectorAll('.nav button')).find(function(btn){return String(btn.getAttribute('onclick')||'').indexOf("'"+key+"'")>=0;});
+   if(nav)nav.classList.add('active');
+  }
+  return true;
+ }
+ function pushRoute(id){
+  if(role()!=='trainee'||id==='membership'||id==='sehChatSection')return;
+  var next=sectionFor(id),current=activeId();if(current===next||!valid(next))return;
+  try{var state=Object.assign({},history.state||{});state.sehTraineeNav={section:next};history.pushState(state,'');}
+  catch(e){console.warn('ثبت مسیر بازگشت شاگرد انجام نشد:',e);}
+ }
+ function clickedRoute(e){
+  if(role()!=='trainee')return;
+  var target=e.target&&e.target.closest?e.target.closest('.nav button, [data-profile-card], [onclick*="dashOpen("], [onclick*="showSection("]'):null;
+  if(!target)return;
+  var key='';
+  if(target.id==='navDash')key='traineeDashboard';
+  else if(target.hasAttribute('data-profile-card')||target.closest('#traineeDashboard [data-profile-card]'))key='client';
+  else{var code=String(target.getAttribute('onclick')||'');var m=code.match(/(?:showSection|dashOpen)\(['"]([^'"]+)['"]/);if(m)key=m[1];}
+  if(key)pushRoute(key);
+ }
+ window.addEventListener('click',clickedRoute,true);
+ window.addEventListener('popstate',function(e){
+  if(role()!=='trainee')return;
+  var route=e.state&&e.state.sehTraineeNav&&e.state.sehTraineeNav.section;if(!route)return;
+  handlingPop=true;try{setRoute(route);}finally{setTimeout(function(){handlingPop=false;},0);}
+ },true);
+ var priorReturn=window.sehReturnToDashboard;
+ if(typeof priorReturn==='function')window.sehReturnToDashboard=function(){if(handlingPop)return;return priorReturn.apply(this,arguments);};
+ function initialize(){
+  if(role()!=='trainee')return;
+  try{var state=Object.assign({},history.state||{});if(!state.sehTraineeNav)state.sehTraineeNav={section:activeId()};history.replaceState(state,'');}catch(e){}
+ }
+ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',initialize,{once:true});else initialize();
+})();
+</script>
 </body></html>
 
 <!-- SEH COACH LOGIN VISIBLE DIAGNOSTIC -->
