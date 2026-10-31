@@ -14748,6 +14748,11 @@ window.sehResetTurnstile=function(){};
  function writeRoute(id,replace){
   try{
    var state=Object.assign({},history.state||{});
+   if(!replace&&!state.sehTraineeBackV2){
+    state.sehTraineeBackV2={route:current()};
+    history.replaceState(state,'');
+    state=Object.assign({},history.state||{});
+   }
    state.sehTraineeBackV2={route:normalize(id)};
    history[replace?'replaceState':'pushState'](state,'');
   }catch(e){console.warn('ثبت مسیر بازگشت انجام نشد',e);}
