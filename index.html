@@ -14721,9 +14721,8 @@ window.sehResetTurnstile=function(){};
    var state=Object.assign({},history.state||{});
    state.sehTraineeBackV2={route:current(),kind:'base'};
    history.replaceState(state,'');
-   state=Object.assign({},history.state||{});
-   state.sehTraineeBackV2={route:current(),kind:'guard'};
-   history.pushState(state,'');
+   // Do not add a hidden dashboard guard entry: it makes exiting require
+   // an extra Back press. The route entries themselves provide card navigation.
   }catch(e){initialized=false;console.warn('راه‌اندازی مسیر بازگشت شاگرد انجام نشد',e);}
   return initialized;
  }
@@ -14794,31 +14793,20 @@ window.sehResetTurnstile=function(){};
   var dashboard=current()==='traineeDashboard';
   // A single Back from any trainee card must return directly to the dashboard.
   // Replace the popped entry so a second Back can leave the app normally.
-  if(!dashboard){
-   e.stopImmediatePropagation();
-   restoring=true;
-   try{
-    show('traineeDashboard');
-    var state=Object.assign({},e.state||{});
-    state.sehTraineeBackV2={route:'traineeDashboard',kind:'base'};
-    history.replaceState(state,'');
-   }finally{restoring=false;}
+  if(dashboard){
+   // Let the browser's Back action leave the dashboard immediately.
    return;
   }
-  // Do not let an old in-app route reopen a card while already on dashboard.
-  // Consume that stale state by replacing it, rather than requiring another Back.
-  if(entry&&entry.route&&normalize(entry.route)!=='traineeDashboard'){
-   e.stopImmediatePropagation();
+  // From any card, one Back returns to dashboard and normalizes the
+  // destination history entry so the next Back exits.
+  e.stopImmediatePropagation();
+  restoring=true;
+  try{
+   show('traineeDashboard');
    var state=Object.assign({},e.state||{});
    state.sehTraineeBackV2={route:'traineeDashboard',kind:'base'};
    history.replaceState(state,'');
-   return;
-  }
-  if(!entry)return;
-  e.stopImmediatePropagation();
-  restoring=true;
-  try{show('traineeDashboard');}
-  finally{restoring=false;}
+  }finally{restoring=false;}
  },true);
  // Authentication completes asynchronously after DOMContentLoaded. Initialize
  // only once the trainee profile is actually available; never reset an active stack.
