@@ -14695,3 +14695,128 @@ window.sehResetTurnstile=function(){};
  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start,{once:true});else start();
 })();
 </script>
+
+
+<script id="SEH_TRAINEE_BACK_NAV_SAFE_V2_20261031">
+/* Trainee-only history navigation. Preserve the existing section/profile handlers. */
+(function(){
+ 'use strict';
+ if(window.__sehTraineeBackNavSafeV2)return;
+ window.__sehTraineeBackNavSafeV2=true;
+ var initialized=false,restoring=false;
+ function role(){
+  try{if(window.authProfile&&window.authProfile.role)return String(window.authProfile.role).toLowerCase();}catch(e){}
+  try{if(typeof authProfile!=='undefined'&&authProfile&&authProfile.role)return String(authProfile.role).toLowerCase();}catch(e){}
+  var t=document.getElementById('authUserText');
+  return t&&/شاگرد/.test(t.textContent||'')?'trainee':'';
+ }
+ function normalize(id){
+  return ({analysis:'traineeAnalysis',activity:'activitySection',goals:'traineeGoalsSection'})[id]||id||'traineeDashboard';
+ }
+ function current(){
+  var profile=document.getElementById('client');
+  if(profile&&profile.classList.contains('active'))return 'client';
+  var el=document.querySelector('.section.active');
+  return el&&el.id||'traineeDashboard';
+ }
+ function init(){
+  if(initialized||role()!=='trainee')return false;
+  initialized=true;
+  try{
+   var state=Object.assign({},history.state||{});
+   state.sehTraineeBackV2={route:current(),kind:'base'};
+   history.replaceState(state,'');
+   state=Object.assign({},history.state||{});
+   state.sehTraineeBackV2={route:current(),kind:'guard'};
+   history.pushState(state,'');
+  }catch(e){initialized=false;console.warn('راه‌اندازی مسیر بازگشت شاگرد انجام نشد',e);}
+  return initialized;
+ }
+ function writeRoute(id,replace){
+  if(role()!=='trainee'||restoring)return;
+  init();
+  var to=normalize(id),state=Object.assign({},history.state||{}),entry=state.sehTraineeBackV2;
+  if(entry&&normalize(entry.route)===to)return;
+  state.sehTraineeBackV2={route:to,kind:'route'};
+  try{history[replace?'replaceState':'pushState'](state,'');}
+  catch(e){console.warn('ثبت مسیر بازگشت انجام نشد',e);}
+ }
+ function show(id){
+  id=normalize(id);
+  if(id==='client'&&typeof window.openTraineeProfile==='function'){
+   window.openTraineeProfile();return true;
+  }
+  var target=document.getElementById(id);
+  if(!target||!target.classList.contains('section'))return false;
+  document.querySelectorAll('.section').forEach(function(sec){
+   var active=sec===target;
+   sec.classList.toggle('active',active);
+   if(active){sec.hidden=false;sec.removeAttribute('hidden');sec.removeAttribute('aria-hidden');sec.classList.remove('hide');sec.style.setProperty('display','block','important');sec.style.setProperty('visibility','visible','important');}
+   else{sec.style.setProperty('display','none','important');sec.style.setProperty('visibility','hidden','important');sec.setAttribute('aria-hidden','true');}
+  });
+  document.querySelectorAll('.nav button').forEach(function(b){b.classList.remove('active');});
+  var nav=id==='traineeDashboard'?document.getElementById('navDash'):null;
+  if(nav)nav.classList.add('active');
+  if(id!=='traineeDashboard'){
+   var key=id==='traineeAnalysis'?'analysis':id==='activitySection'?'activity':id;
+   var match=Array.from(document.querySelectorAll('.nav button')).find(function(b){return String(b.getAttribute('onclick')||'').indexOf("'"+key+"'")>=0;});
+   if(match)match.classList.add('active');
+  }
+  return true;
+ }
+ var originalProfile=window.openTraineeProfile;
+ if(typeof originalProfile==='function'){
+  window.openTraineeProfile=function(){
+   if(role()==='trainee'&&!restoring&&current()!=='client')writeRoute('client',false);
+   return originalProfile.apply(this,arguments);
+  };
+ }
+ var originalChat=window.sehOpenTraineeChat;
+ if(typeof originalChat==='function'){
+  window.sehOpenTraineeChat=function(){
+   if(role()==='trainee'&&!restoring&&current()!=='sehChatSection')writeRoute('sehChatSection',false);
+   return originalChat.apply(this,arguments);
+  };
+ }
+ ['showSection','dashOpen'].forEach(function(name){
+  var original=window[name];
+  if(typeof original!=='function')return;
+  window[name]=function(id){
+   if(role()==='trainee'&&!restoring&&id)writeRoute(id,false);
+   return original.apply(this,arguments);
+  };
+ });
+ var originalReturn=window.sehReturnToDashboard;
+ window.sehReturnToDashboard=function(){
+  if(role()!=='trainee')return typeof originalReturn==='function'?originalReturn.apply(this,arguments):undefined;
+  writeRoute('traineeDashboard',true);
+  if(typeof originalReturn==='function')return originalReturn.apply(this,arguments);
+  return show('traineeDashboard');
+ };
+ window.addEventListener('popstate',function(e){
+  if(role()!=='trainee')return;
+  var entry=e.state&&e.state.sehTraineeBackV2;
+  if(!entry)return;
+  e.stopImmediatePropagation();
+  restoring=true;
+  try{show(entry.route||'traineeDashboard');}
+  finally{restoring=false;}
+  if(entry.kind==='base'){
+   setTimeout(function(){
+    try{
+     var state=Object.assign({},history.state||{});
+     state.sehTraineeBackV2={route:entry.route||'traineeDashboard',kind:'guard'};
+     history.pushState(state,'');
+    }catch(err){console.warn('بازسازی مسیر محافظ انجام نشد',err);}
+   },0);
+  }
+ },true);
+ // Authentication completes asynchronously after DOMContentLoaded. Initialize
+ // only once the trainee profile is actually available; never reset an active stack.
+ var attempts=0,timer=setInterval(function(){
+  attempts++;
+  if(init()||attempts>=600)clearInterval(timer);
+ },250);
+ document.addEventListener('visibilitychange',function(){if(document.visibilityState==='visible')init();});
+})();
+</script>
