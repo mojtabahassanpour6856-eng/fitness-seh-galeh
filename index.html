@@ -14786,7 +14786,14 @@ window.sehResetTurnstile=function(){};
  window.addEventListener('popstate',function(e){
   if(role()!=='trainee')return;
   var route=e.state&&e.state.sehTraineeBackV2&&e.state.sehTraineeBackV2.route;
-  if(!route)return;
+  // If Back reaches the entry before the app's first route, keep the trainee
+  // on the dashboard instead of allowing the WebView to leave the app.
+  if(!route){
+   e.stopImmediatePropagation();
+   writeRoute('traineeDashboard',true);
+   show('traineeDashboard');
+   return;
+  }
   e.stopImmediatePropagation();
   show(route);
  },true);
