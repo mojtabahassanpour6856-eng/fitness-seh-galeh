@@ -66,7 +66,7 @@ body.seh-trainee-mode #authUserBar{display:none!important}
 .seh-profile-photo-add{position:absolute;bottom:0;left:0;width:27px;height:27px;margin:0;padding:0;border:2px solid #fff8e7;border-radius:50%;background:#b78b27;color:#fff;font-size:19px;line-height:1}
 .seh-profile-info{min-width:0;flex:1}
 .seh-profile-name{font-size:16px;font-weight:800;overflow-wrap:anywhere}
-.seh-profile-age{display:inline-block;margin-top:7px;margin-inline-start:5px;padding:5px 9px;border-radius:9px;background:#dcebd5;color:#294323;font-size:11px;font-weight:700}.seh-profile-birth{display:inline-block;margin-top:8px;padding:5px 9px;border-radius:9px;background:#e8d6a9;color:#463817;font-size:11px}
+.seh-profile-birth{display:inline-block;margin-top:8px;padding:5px 9px;border-radius:9px;background:#e8d6a9;color:#463817;font-size:11px}
 .seh-profile-exit{display:flex;align-items:center;justify-content:center;gap:7px;width:100%;margin:8px 0 0;padding:9px 12px;border:1px solid #b98f32;border-radius:11px;background:#fff8e7;color:#59451b;font-size:13px}
 .seh-profile-exit span{font-size:19px}
 @media(max-width:420px){.seh-profile-summary{padding:11px;gap:11px}.seh-profile-avatar{width:68px;height:68px;flex-basis:68px}.seh-profile-name{font-size:14px}}
@@ -94,8 +94,7 @@ button:active,.client:active,.meal-card:active,.badge:active{transform:scale(.98
   body:has(#workout.active) #workout #workoutList .meal-card { margin-bottom: 12px; }
 }
 
-/* Trainee profile photo crop/delete controls */
-.seh-profile-photo-remove{position:absolute;top:0;left:0;width:25px;height:25px;margin:0;padding:0;border:2px solid #fff8e7;border-radius:50%;background:#b83232;color:#fff;font-size:15px;line-height:1;z-index:2}
+/* Trainee profile photo crop controls */
 #sehPhotoCropModal{position:fixed;inset:0;z-index:10050;background:rgba(0,0,0,.86);display:none;align-items:center;justify-content:center;padding:14px;direction:rtl}
 #sehPhotoCropModal.show{display:flex}#sehPhotoCropModal .seh-crop-panel{width:min(420px,100%);background:#101923;border:1px solid #c7a34b;border-radius:16px;padding:14px;color:#fff}
 #sehPhotoCropModal canvas{display:block;width:min(280px,75vw);height:min(280px,75vw);margin:10px auto;background:#222;border-radius:50%;touch-action:none}#sehPhotoCropModal .seh-crop-actions{display:flex;gap:8px}#sehPhotoCropModal .seh-crop-actions button{flex:1}
@@ -629,6 +628,7 @@ body.locked{overflow:hidden!important}
 <div><label>تجهیزات منزل</label><input id="pequipment"></div>
 </div>
 <button onclick="saveProfile()">ذخیره پروفایل</button>
+<button type="button" id="sehDeleteTraineePhotoEdit" class="secondary" style="display:none;margin-top:8px" onclick="window.sehDeleteTraineePhoto()">🗑️ حذف عکس پروفایل</button>
 <button class="secondary" onclick="openClientMealPlan()">🍽️ برنامه غذایی این شاگرد</button>
 </div>
 
@@ -2458,7 +2458,7 @@ if($("prDate"))$("prDate").value=today();if($("anDate"))$("anDate").value=today(
     const fallback=(gender==='زن'||gender==='female'||gender==='f')?'👩':'👨';
     wrap.innerHTML='<div class="seh-profile-summary" role="button" tabindex="0" aria-label="باز کردن پروفایل من" onclick="dashOpen(\'client\')" onkeydown="if(event.key===\'Enter\'||event.key===\' \'){event.preventDefault();dashOpen(\'client\')}">'+
       '<div class="seh-profile-avatar"><span class="seh-profile-fallback">'+fallback+'</span><img class="seh-profile-image" alt="عکس پروفایل"><button type="button" class="seh-profile-photo-add" aria-label="افزودن عکس پروفایل" onclick="event.stopPropagation();document.getElementById(\'sehTraineePhotoInput\').click()">+</button></div>'+
-      '<div class="seh-profile-info"><div class="seh-profile-name"></div><div class="seh-profile-age"></div><div class="seh-profile-birth"></div></div></div>'+
+      '<div class="seh-profile-info"><div class="seh-profile-name"></div><div class="seh-profile-birth"></div></div></div>'+
       '<input id="sehTraineePhotoInput" type="file" accept="image/*" hidden onchange="window.sehSaveTraineePhoto(this)">'+
       '<button type="button" class="seh-profile-exit" onclick="logoutApp()"><span>↪</span> خروج از حساب کاربری</button>'+
       '';
@@ -2466,23 +2466,11 @@ if($("prDate"))$("prDate").value=today();if($("anDate"))$("anDate").value=today(
     const birthNode=wrap.querySelector('.seh-profile-birth');
     const birthText=window.isoToJalaliDate?window.isoToJalaliDate(c.birth_date):'';
     if(birthNode)birthNode.textContent=birthText?'🎂 '+birthText:'🎂 تاریخ تولد ثبت نشده';
-    const ageNode=wrap.querySelector('.seh-profile-age');
-    const birthValue=String(c.birth_date||authProfile.birth_date||'').trim().slice(0,10);
-    let calculatedAge=null;
-    if(/^\d{4}-\d{2}-\d{2}$/.test(birthValue)){
-      const parts=birthValue.split('-').map(Number);
-      const birthDate=new Date(parts[0],parts[1]-1,parts[2]);
-      if(birthDate.getFullYear()===parts[0]&&birthDate.getMonth()===parts[1]-1&&birthDate.getDate()===parts[2]){
-        const now=new Date();calculatedAge=now.getFullYear()-parts[0];
-        if(now.getMonth()<parts[1]-1||(now.getMonth()===parts[1]-1&&now.getDate()<parts[2]))calculatedAge--;
-      }
-    }
-    if(!Number.isInteger(calculatedAge)&&c.age!==null&&c.age!==undefined&&String(c.age).trim()!=='')calculatedAge=Number(c.age);
-    if(ageNode){const validAge=Number.isInteger(calculatedAge)&&calculatedAge>=0&&calculatedAge<120;ageNode.textContent=validAge?'سن: '+calculatedAge+' سال':'';ageNode.style.display=validAge?'inline-block':'none';}
     const img=wrap.querySelector('.seh-profile-image');
     const fallbackNode=wrap.querySelector('.seh-profile-fallback');
+    const editDeleteButton=document.getElementById('sehDeleteTraineePhotoEdit');
+    if(editDeleteButton)editDeleteButton.style.display=(authProfile&&authProfile.role==='trainee'&&c.profile_image)?'inline-flex':'none';
     if(c.profile_image){
-      const remove=document.createElement('button');remove.type='button';remove.className='seh-profile-photo-remove';remove.title='حذف عکس پروفایل';remove.setAttribute('aria-label','حذف عکس پروفایل');remove.textContent='×';remove.onclick=(event)=>{event.stopPropagation();window.sehDeleteTraineePhoto();};wrap.querySelector('.seh-profile-avatar').appendChild(remove);
       img.onload=()=>{img.style.display='block';fallbackNode.style.display='none';};
       img.onerror=()=>{img.style.display='none';fallbackNode.style.display='block';};
       img.src=c.profile_image;
