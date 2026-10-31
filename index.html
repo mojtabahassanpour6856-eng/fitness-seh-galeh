@@ -2451,13 +2451,14 @@ if($("prDate"))$("prDate").value=today();if($("anDate"))$("anDate").value=today(
     const fallback=(gender==='زن'||gender==='female'||gender==='f')?'👩':'👨';
     wrap.innerHTML='<div class="seh-profile-summary" role="button" tabindex="0" aria-label="باز کردن پروفایل من" onclick="dashOpen(\'client\')" onkeydown="if(event.key===\'Enter\'||event.key===\' \'){event.preventDefault();dashOpen(\'client\')}">'+
       '<div class="seh-profile-avatar"><span class="seh-profile-fallback">'+fallback+'</span><img class="seh-profile-image" alt="عکس پروفایل"><button type="button" class="seh-profile-photo-add" aria-label="افزودن عکس پروفایل" onclick="event.stopPropagation();document.getElementById(\'sehTraineePhotoInput\').click()">+</button></div>'+
-      '<div class="seh-profile-info"><div class="seh-profile-name"></div><input id="sehTraineeBirthInput" class="seh-profile-birth-input" type="text" inputmode="numeric" placeholder="تاریخ تولد شمسی" autocomplete="off" onclick="event.stopPropagation()" onkeydown="event.stopPropagation()" onchange="window.sehSaveTraineeBirth()"><small id="sehTraineeBirthStatus" class="seh-profile-birth-status">برای ثبت، تاریخ را انتخاب کنید.</small></div></div>'+
+      '<div class="seh-profile-info"><div class="seh-profile-name"></div><div class="seh-profile-birth"></div></div></div>'+
       '<input id="sehTraineePhotoInput" type="file" accept="image/*" hidden onchange="window.sehSaveTraineePhoto(this)">'+
       '<button type="button" class="seh-profile-exit" onclick="logoutApp()"><span>↪</span> خروج از حساب کاربری</button>'+
       '';
     wrap.querySelector('.seh-profile-name').textContent=name;
-    const birthInput=wrap.querySelector('#sehTraineeBirthInput');
-    if(birthInput)birthInput.value=c.birth_date||'';
+    const birthNode=wrap.querySelector('.seh-profile-birth');
+    const birthText=window.isoToJalaliDate?window.isoToJalaliDate(c.birth_date):'';
+    if(birthNode)birthNode.textContent=birthText?'🎂 '+birthText:'🎂 تاریخ تولد ثبت نشده';
     const img=wrap.querySelector('.seh-profile-image');
     const fallbackNode=wrap.querySelector('.seh-profile-fallback');
     if(c.profile_image){
@@ -2517,9 +2518,14 @@ if($("prDate"))$("prDate").value=today();if($("anDate"))$("anDate").value=today(
   function normalizeTraineeProfileCards(root){
     const grid=root&&root.querySelector('.v4-dashboard');
     if(!grid)return;
-    grid.querySelectorAll('.v4-card').forEach(card=>{
-      if(card.hasAttribute('data-profile-card') || /پروفایل من/.test(card.textContent||''))card.remove();
-    });
+    const cards=Array.from(grid.querySelectorAll('.v4-card'));
+    const profiles=cards.filter(card=>card.hasAttribute('data-profile-card') || /dashOpen\\(\\s*['"]client['"]\\s*\\)/.test(card.getAttribute('onclick')||'') || /پروفایل من/.test(card.textContent||''));
+    if(!profiles.length){
+      grid.insertAdjacentHTML('beforeend',`<div class="v4-card" data-profile-card="1" onclick="dashOpen('client')"><b>👤</b>پروفایل من<span class="v4-small">مشاهده و ثبت اطلاعات شخصی</span></div>`);
+      return;
+    }
+    profiles[0].setAttribute('data-profile-card','1');
+    profiles.slice(1).forEach(card=>card.remove());
   }
   function buildDashboard(){
     const existing=$id('traineeDashboard');
