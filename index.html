@@ -9033,6 +9033,9 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
  // پشتیبان برای کارت پروفایل داشبورد
  document.addEventListener('click',function(e){
   var card=e.target&&e.target.closest&&e.target.closest('[data-profile-card]');
+  // The trainee navigation guard below owns cards inside #traineeDashboard.
+  // Let it record the requested section and invoke openTraineeProfile exactly once.
+  if(card&&card.closest&&card.closest('#traineeDashboard'))return;
   if(card){e.preventDefault();e.stopPropagation();window.openTraineeProfile();}
  },true);
  window.closeTraineeMembershipCard=closeMembership;
