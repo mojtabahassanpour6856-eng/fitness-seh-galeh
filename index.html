@@ -14751,7 +14751,7 @@ window.sehResetTurnstile=function(){};
   document.querySelectorAll('.section').forEach(function(sec){
    var active=sec===target;
    sec.classList.toggle('active',active);
-   if(active){sec.hidden=false;sec.removeAttribute('hidden');sec.removeAttribute('aria-hidden');sec.classList.remove('hide');sec.style.removeProperty('display');sec.style.removeProperty('visibility');}
+   if(active){sec.hidden=false;sec.removeAttribute('hidden');sec.removeAttribute('aria-hidden');sec.classList.remove('hide');sec.style.setProperty('display','block','important');sec.style.setProperty('visibility','visible','important');}
    else{sec.style.setProperty('display','none','important');sec.style.setProperty('visibility','hidden','important');sec.setAttribute('aria-hidden','true');}
   });
   document.querySelectorAll('.nav button').forEach(function(b){b.classList.remove('active');});
