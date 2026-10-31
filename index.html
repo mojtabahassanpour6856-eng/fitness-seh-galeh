@@ -1809,8 +1809,37 @@ async function sbApiHeaders(extra={}){
  return headers;
 }
 async function sbGet(path){
- const r=await fetch(SUPABASE_URL+"/rest/v1"+path,{headers:await sbApiHeaders()});
- if(!r.ok)throw new Error(await r.text());return r.json();
+ let authRetried=false,schemaRetried=false,networkRetried=false;
+ while(true){
+  let r;
+  try{
+   r=await fetch(SUPABASE_URL+"/rest/v1"+path,{headers:await sbApiHeaders()});
+  }catch(networkError){
+   if(!networkRetried){networkRetried=true;await new Promise(resolve=>setTimeout(resolve,650));continue;}
+   throw networkError;
+  }
+  if(r.ok)return r.json();
+  const raw=await r.text();
+  let detail={};try{detail=JSON.parse(raw)||{};}catch(e){}
+  // A mobile app resumed after being backgrounded can hold an expired access
+  // token. Refresh once and repeat the exact same read with the new session.
+  if(r.status===401&&!authRetried&&window.AUTH_SUPABASE?.auth?.refreshSession){
+   authRetried=true;
+   try{
+    const refreshed=await window.AUTH_SUPABASE.auth.refreshSession();
+    if(!refreshed.error&&refreshed.data?.session)continue;
+    throw refreshed.error||new Error("نشست تازه‌سازی نشد.");
+   }catch(refreshError){
+    throw new Error("نشست ورود منقضی شده است؛ یک‌بار خارج و دوباره وارد شوید. "+(refreshError?.message||String(refreshError)));
+   }
+  }
+  // PostgREST can briefly serve a stale schema cache after a database wake or
+  // schema reload. Retry this read once; never hide a persistent missing table.
+  if(!schemaRetried&&(detail.code==="PGRST205"||/schema cache/i.test(raw))){
+   schemaRetried=true;await new Promise(resolve=>setTimeout(resolve,900));continue;
+  }
+  throw new Error(raw||("HTTP "+r.status));
+ }
 }
 async function sbWrite(path,method,body){
  const r=await fetch(SUPABASE_URL+"/rest/v1"+path,{method,headers:await sbApiHeaders({"Prefer":"return=representation"}),body:JSON.stringify(body)});
@@ -11433,7 +11462,10 @@ body.workout-output.workout-compact{
      lastPlanId=String(plan.id);
    }catch(e){
      console.warn('Weekly workout report:',e);
-     box.innerHTML='<h3>📊 گزارش هفتگی برنامه تمرینی</h3><p class="muted">بخش گزارش نمایش داده شده، اما آمار از پایگاه داده دریافت نشد. اتصال یا دسترسی حساب را بررسی کنید.</p>';
+     var detail=String(e&&e.message||e||'خطای نامشخص').slice(0,360);
+     box.innerHTML='<h3>📊 گزارش هفتگی برنامه تمرینی</h3><p class="muted">دریافت آمار ناموفق بود؛ اطلاعات قبلی حذف نشده است. جزئیات خطا: '+esc(detail)+'</p><button type="button" id="sehWeeklyRetry">تلاش دوباره برای دریافت گزارش</button>';
+     var retry=box.querySelector('#sehWeeklyRetry');
+     if(retry)retry.addEventListener('click',function(){schedule(true);});
    }
  }
  function schedule(force){if(timer)clearTimeout(timer);timer=setTimeout(function(){timer=null;refresh(!!force);},250);}
