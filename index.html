@@ -14695,3 +14695,109 @@ window.sehResetTurnstile=function(){};
  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start,{once:true});else start();
 })();
 </script>
+
+
+<script id="SEH_TRAINEE_BACK_NAV_SAFE_V2_20261031">
+/* Keep Android/WebView Back inside trainee pages. No sign-out, reload, or data writes. */
+(function(){
+ 'use strict';
+ if(window.__sehTraineeBackNavSafeV2)return;
+ window.__sehTraineeBackNavSafeV2=true;
+ function role(){
+  try{if(window.authProfile&&window.authProfile.role)return String(window.authProfile.role).toLowerCase();}catch(e){}
+  try{if(typeof authProfile!=='undefined'&&authProfile&&authProfile.role)return String(authProfile.role).toLowerCase();}catch(e){}
+  var t=document.getElementById('authUserText');
+  return t&&/شاگرد/.test(t.textContent||'')?'trainee':'';
+ }
+ function current(){
+  var el=document.querySelector('.section.active');
+  return el&&el.id||'traineeDashboard';
+ }
+ function normalize(id){
+  return ({analysis:'traineeAnalysis',activity:'activitySection',goals:'traineeGoalsSection'})[id]||id||'traineeDashboard';
+ }
+ function show(id){
+  id=normalize(id);
+  if(id==='client'&&typeof window.openTraineeProfile==='function'){
+   window.openTraineeProfile();return true;
+  }
+  var target=document.getElementById(id);
+  if(!target||!target.classList.contains('section'))id='traineeDashboard';
+  target=document.getElementById(id);
+  if(!target)return false;
+  document.querySelectorAll('.section').forEach(function(sec){
+   var active=sec===target;
+   sec.classList.toggle('active',active);
+   if(active){
+    sec.hidden=false;sec.removeAttribute('hidden');sec.removeAttribute('aria-hidden');sec.classList.remove('hide');
+    sec.style.setProperty('display','block','important');sec.style.setProperty('visibility','visible','important');
+   }else{
+    sec.style.setProperty('display','none','important');sec.style.setProperty('visibility','hidden','important');sec.setAttribute('aria-hidden','true');
+   }
+  });
+  document.querySelectorAll('.nav button').forEach(function(b){b.classList.remove('active');});
+  var nav=document.getElementById('navDash');
+  if(id==='traineeDashboard'&&nav)nav.classList.add('active');
+  if(id!=='traineeDashboard'){
+   var key=id==='traineeAnalysis'?'analysis':id==='activitySection'?'activity':id;
+   var match=Array.from(document.querySelectorAll('.nav button')).find(function(b){return String(b.getAttribute('onclick')||'').indexOf("'"+key+"'")>=0;});
+   if(match)match.classList.add('active');
+  }
+  return true;
+ }
+ function writeRoute(id,replace){
+  try{
+   var state=Object.assign({},history.state||{});
+   state.sehTraineeBackV2={route:normalize(id)};
+   history[replace?'replaceState':'pushState'](state,'');
+  }catch(e){console.warn('ثبت مسیر بازگشت انجام نشد',e);}
+ }
+ function routeFromClick(target){
+  if(!target)return '';
+  if(target.closest('#traineeDashboard [data-profile-card]'))return 'client';
+  if(target.closest('#sehChatEntryCard'))return 'sehChatSection';
+  var nav=target.closest('.nav button');
+  if(nav){
+   if(nav.id==='navDash')return 'traineeDashboard';
+   var code=String(nav.getAttribute('onclick')||'');
+   var m=code.match(/(?:showSection|dashOpen)\(['"]([^'"]+)['"]/);
+   if(m)return m[1];
+  }
+  var action=target.closest('[onclick*="dashOpen("], [onclick*="showSection("]');
+  if(action){
+   var c=String(action.getAttribute('onclick')||'');
+   var found=c.match(/(?:showSection|dashOpen)\(['"]([^'"]+)['"]/);
+   if(found)return found[1];
+  }
+  return '';
+ }
+ document.addEventListener('click',function(e){
+  if(role()!=='trainee')return;
+  var key=routeFromClick(e.target);
+  if(!key)return;
+  var from=current(),to=normalize(key);
+  if(from!==to)writeRoute(to,false);
+ },true);
+ window.addEventListener('popstate',function(e){
+  if(role()!=='trainee')return;
+  var route=e.state&&e.state.sehTraineeBackV2&&e.state.sehTraineeBackV2.route;
+  if(!route)return;
+  e.stopImmediatePropagation();
+  show(route);
+ },true);
+ var oldReturn=window.sehReturnToDashboard;
+ window.sehReturnToDashboard=function(){
+  if(role()!=='trainee'){
+   if(typeof oldReturn==='function')return oldReturn.apply(this,arguments);
+   return;
+  }
+  writeRoute('traineeDashboard',true);
+  show('traineeDashboard');
+ };
+ function init(){
+  if(role()!=='trainee')return;
+  if(!(history.state&&history.state.sehTraineeBackV2))writeRoute(current(),true);
+ }
+ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init,{once:true});else init();
+})();
+</script>
