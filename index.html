@@ -2449,6 +2449,7 @@ if($("prDate"))$("prDate").value=today();if($("anDate"))$("anDate").value=today(
       root.insertBefore(wrap,root.firstChild);
     }
     const c=currentClient||{};
+    const signupButton=document.getElementById('sehAddTraineeRequestOpen');
     const name=c.full_name||c.name||authProfile.full_name||'شاگرد';
     const birth=window.isoToJalaliDate?window.isoToJalaliDate(c.birth_date):'';
     const gender=String(c.gender||'').toLowerCase();
@@ -2465,7 +2466,6 @@ if($("prDate"))$("prDate").value=today();if($("anDate"))$("anDate").value=today(
     wrap.querySelector('.seh-profile-birth').textContent=birth?'🎂 '+birth:'🎂 تاریخ تولد ثبت نشده';
     const birthInput=wrap.querySelector('#sehTraineeBirthInput');
     if(birthInput)birthInput.value=c.birth_date||'';
-    const signupButton=document.getElementById('sehAddTraineeRequestOpen');
     if(signupButton){signupButton.classList.add('seh-profile-signup');wrap.appendChild(signupButton);}
     const img=wrap.querySelector('.seh-profile-image');
     const fallbackNode=wrap.querySelector('.seh-profile-fallback');
