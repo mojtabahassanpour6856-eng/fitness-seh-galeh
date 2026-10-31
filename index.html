@@ -2798,12 +2798,17 @@ window.loadDashboard = loadDashboard;
     setProfileValue('pheight',c.height??'');
     setProfileValue('pgoal',c.goal||'کاهش وزن');
     setProfileValue('plevel',c.training_level||'مبتدی');
-    await Promise.allSettled([
+    // Paint the dashboard first; optional panels refresh without blocking login.
+    showSection('traineeDashboard',$id('navDash'));
+    Promise.allSettled([
       loadNutritionForClient(),loadWorkoutForClient(),loadSupplements(),
       loadInjuries(),loadActivityToday(),loadDashboard(),
       loadProgressHistory(),loadFastingSummary()
-    ]);
-    showSection('traineeDashboard',$id('navDash'));
+    ]).then(results=>{
+      results.forEach((item,index)=>{
+        if(item.status==='rejected')console.warn('Trainee dashboard background load failed:',index,item.reason);
+      });
+    });
   }
 
   function buildAuthTabs(){
