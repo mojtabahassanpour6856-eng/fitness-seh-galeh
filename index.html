@@ -5208,6 +5208,9 @@ window.toggleExerciseFavorite=async function(id,value){try{await sbWrite(`/train
 .jalali-days button{padding:7px 0;min-width:0;min-height:31px;font-size:12px}
 .jalali-days button.jp-selected{background:#ffbd16;color:#111;border-color:#ffbd16}
 .jalali-days button.jp-today{border-color:#08a88b}
+.jalali-days.jp-years{grid-template-columns:repeat(4,minmax(0,1fr));max-height:230px;overflow-y:auto}
+.jalali-days.jp-years button{min-height:38px}
+.jalali-pop .jp-month{border:0;background:transparent;color:#fff;padding:6px 2px;cursor:pointer}
 .jalali-pop-foot{display:flex;gap:6px;margin-top:9px}
 .jalali-pop-foot button{flex:1}
 .jalali-pop-foot .jp-confirm{background:#ffbd16;color:#111;border-color:#ffbd16}
@@ -5229,7 +5232,7 @@ window.toggleExerciseFavorite=async function(id,value){try{await sbWrite(`/train
  const nativeValue=Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value');
  // Read the actual visible Jalali text without the compatibility .value getter, which exposes ISO to legacy code.
  window.getJalaliVisibleValue=function(idOrInput){const input=typeof idOrInput==='string'?document.getElementById(idOrInput):idOrInput;return input?String(nativeValue.get.call(input)??'').trim():'';};
- let pop=null,active=null,view=null,chosen=null;
+ let pop=null,active=null,view=null,chosen=null,pickerMode='days';
  function shown(input){return nativeValue.get.call(input);}
  function rawSet(input,v){nativeValue.set.call(input,v);}
  function setupInput(input){
@@ -5254,8 +5257,8 @@ window.toggleExerciseFavorite=async function(id,value){try{await sbWrite(`/train
    input.addEventListener('change',()=>{const raw=shown(input),iso=jToIso(raw);if(raw&&!iso){input.setCustomValidity('تاریخ شمسی معتبر وارد کنید؛ نمونه: ۱۴۰۵/۰۸/۱۸');}else{input.setCustomValidity('');if(iso)rawSet(input,isoToJ(iso));}});
    input.addEventListener('input',()=>input.setCustomValidity(''));
  }
- function ensurePop(){if(pop)return;pop=document.createElement('div');pop.className='jalali-pop';pop.hidden=true;pop.innerHTML='<div class="jalali-pop-head"><button type="button" data-act="prev" aria-label="ماه قبل">‹</button><div class="jp-month"></div><button type="button" data-act="next" aria-label="ماه بعد">›</button></div><div class="jalali-days"></div><div class="jalali-pop-foot"><button type="button" data-act="today">امروز</button><button type="button" data-act="cancel">بستن</button><button type="button" class="jp-confirm" data-act="confirm">تأیید</button></div>';
-   pop.addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;const a=b.dataset.act;if(a==='prev'||a==='next'){view[1]+=a==='prev'?-1:1;if(view[1]<1){view[1]=12;view[0]--;}if(view[1]>12){view[1]=1;view[0]++;}render();}else if(a==='today'){view=todayJ().slice(0,2);chosen=todayJ();render();}else if(a==='cancel'){close();}else if(a==='confirm'){if(active&&chosen){const iso=jToIso(chosen.join('/'));if(iso){active.value=iso;active.setCustomValidity('');active.dispatchEvent(new Event('input',{bubbles:true}));active.dispatchEvent(new Event('change',{bubbles:true}));}}close();}else if(b.dataset.day){chosen=[view[0],view[1],+b.dataset.day];render();}});
+ function ensurePop(){if(pop)return;pop=document.createElement('div');pop.className='jalali-pop';pop.hidden=true;pop.innerHTML='<div class="jalali-pop-head"><button type="button" data-act="prev" aria-label="ماه قبل">‹</button><button type="button" class="jp-month" data-act="years" aria-label="انتخاب سال"></button><button type="button" data-act="next" aria-label="ماه بعد">›</button></div><div class="jalali-days"></div><div class="jalali-pop-foot"><button type="button" data-act="today">امروز</button><button type="button" data-act="cancel">بستن</button><button type="button" class="jp-confirm" data-act="confirm">تأیید</button></div>';
+   pop.addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;const a=b.dataset.act;if(a==='years'){pickerMode=pickerMode==='years'?'days':'years';render();}else if(a==='prev'||a==='next'){if(pickerMode==='years'){view[0]+=a==='prev'?-12:12;}else{view[1]+=a==='prev'?-1:1;if(view[1]<1){view[1]=12;view[0]--;}if(view[1]>12){view[1]=1;view[0]++;}}render();}else if(a==='today'){view=todayJ().slice(0,2);chosen=todayJ();pickerMode='days';render();}else if(a==='cancel'){close();}else if(a==='confirm'){if(active&&chosen){const iso=jToIso(chosen.join('/'));if(iso){active.value=iso;active.setCustomValidity('');active.dispatchEvent(new Event('input',{bubbles:true}));active.dispatchEvent(new Event('change',{bubbles:true}));}}close();}else if(b.dataset.year){view[0]=Number(b.dataset.year);pickerMode='days';render();}else if(b.dataset.day){chosen=[view[0],view[1],+b.dataset.day];render();}});
    document.body.appendChild(pop);
    document.addEventListener('pointerdown',e=>{if(pop&&!pop.hidden&&!pop.contains(e.target)&&e.target!==active&&!e.target.closest('.jalali-open-btn'))close();});
    window.addEventListener('resize',position);window.addEventListener('scroll',position,true);
@@ -5263,10 +5266,12 @@ window.toggleExerciseFavorite=async function(id,value){try{await sbWrite(`/train
  function open(input){setupInput(input);ensurePop();active=input;const raw=shown(input),iso=jToIso(raw);chosen=null;
    // Convert ISO date to Jalali with explicit components.
    if(iso){const p=iso.split('-').map(Number);chosen=g2j(p[0],p[1],p[2]);}
-   if(!chosen){const t=todayJ();chosen=t.slice();}view=chosen.slice(0,2);pop.hidden=false;render();position();}
+   if(!chosen){const t=todayJ();chosen=t.slice();}view=chosen.slice(0,2);pickerMode='days';pop.hidden=false;render();position();}
  function close(){if(pop)pop.hidden=true;active=null;}
  function position(){if(!pop||pop.hidden||!active)return;const r=active.getBoundingClientRect();const w=Math.min(310,window.innerWidth-24);let left=Math.max(12,Math.min(window.innerWidth-w-12,r.left));let top=r.bottom+5;if(top+300>window.innerHeight)top=Math.max(12,r.top-300);pop.style.left=left+'px';pop.style.top=top+'px';}
- function render(){if(!pop||!view)return;pop.querySelector('.jp-month').textContent=months[view[1]-1]+' '+String(view[0]).replace(/\d/g,d=>faDigits[+d]);const days=pop.querySelector('.jalali-days');days.innerHTML=weekdays.map(w=>'<span>'+w+'</span>').join('');
+ function render(){if(!pop||!view)return;const title=pop.querySelector('.jp-month');title.textContent=pickerMode==='years'?'انتخاب سال · '+String(view[0]).replace(/\d/g,d=>faDigits[+d]):months[view[1]-1]+' '+String(view[0]).replace(/\d/g,d=>faDigits[+d]);const days=pop.querySelector('.jalali-days');days.innerHTML='';days.classList.toggle('jp-years',pickerMode==='years');
+   if(pickerMode==='years'){const current=todayJ()[0];for(let y=current;y>=1200;y--){const b=document.createElement('button');b.type='button';b.textContent=String(y).replace(/\d/g,x=>faDigits[+x]);b.dataset.year=String(y);if(y===view[0])b.classList.add('jp-selected');days.appendChild(b);}return;}
+   days.innerHTML=weekdays.map(w=>'<span>'+w+'</span>').join('');
    const [gy,gm,gd]=j2g(view[0],view[1],1);const offset=(new Date(Date.UTC(gy,gm-1,gd)).getUTCDay()+1)%7;for(let i=0;i<offset;i++)days.insertAdjacentHTML('beforeend','<span></span>');
    let max=view[1]<=6?31:30;if(view[1]===12&&!validJ(view[0],12,30))max=29;
    for(let d=1;d<=max;d++){const sel=chosen&&chosen[0]===view[0]&&chosen[1]===view[1]&&chosen[2]===d;const now=todayJ();const istoday=now[0]===view[0]&&now[1]===view[1]&&now[2]===d;const b=document.createElement('button');b.type='button';b.textContent=String(d).replace(/\d/g,x=>faDigits[+x]);b.dataset.day=String(d);if(sel)b.classList.add('jp-selected');if(istoday)b.classList.add('jp-today');days.appendChild(b);}
