@@ -13303,6 +13303,8 @@ window.sehResetTurnstile=function(){};
       window.currentClient = updated;
       normalizeProfile();
       if(typeof window.loadDashboard === 'function') await window.loadDashboard();
+      const traineeHeader = document.getElementById('traineeDashboard');
+      if(traineeHeader && typeof renderTraineeProfileHeader === 'function') renderTraineeProfileHeader(traineeHeader);
       alert('پروفایل شما با موفقیت ذخیره و از پایگاه داده بررسی شد.');
     }catch(e){
       console.error('trainee profile save failed', e);
