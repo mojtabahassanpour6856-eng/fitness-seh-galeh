@@ -93,6 +93,12 @@ button:active,.client:active,.meal-card:active,.badge:active{transform:scale(.98
   body:has(#workout.active) #workout textarea { font-size: 15px; }
   body:has(#workout.active) #workout #workoutList .meal-card { margin-bottom: 12px; }
 }
+
+/* Trainee profile photo crop/delete controls */
+.seh-profile-photo-remove{position:absolute;top:0;left:0;width:25px;height:25px;margin:0;padding:0;border:2px solid #fff8e7;border-radius:50%;background:#b83232;color:#fff;font-size:15px;line-height:1;z-index:2}
+#sehPhotoCropModal{position:fixed;inset:0;z-index:10050;background:rgba(0,0,0,.86);display:none;align-items:center;justify-content:center;padding:14px;direction:rtl}
+#sehPhotoCropModal.show{display:flex}#sehPhotoCropModal .seh-crop-panel{width:min(420px,100%);background:#101923;border:1px solid #c7a34b;border-radius:16px;padding:14px;color:#fff}
+#sehPhotoCropModal canvas{display:block;width:min(280px,75vw);height:min(280px,75vw);margin:10px auto;background:#222;border-radius:50%;touch-action:none}#sehPhotoCropModal .seh-crop-actions{display:flex;gap:8px}#sehPhotoCropModal .seh-crop-actions button{flex:1}
 </style>
 <style>
 #authScreen{position:fixed;inset:0;background:#050a11;z-index:999;display:flex;align-items:center;justify-content:center;padding:16px}
@@ -2463,6 +2469,7 @@ if($("prDate"))$("prDate").value=today();if($("anDate"))$("anDate").value=today(
     const img=wrap.querySelector('.seh-profile-image');
     const fallbackNode=wrap.querySelector('.seh-profile-fallback');
     if(c.profile_image){
+      const remove=document.createElement('button');remove.type='button';remove.className='seh-profile-photo-remove';remove.title='حذف عکس پروفایل';remove.setAttribute('aria-label','حذف عکس پروفایل');remove.textContent='×';remove.onclick=(event)=>{event.stopPropagation();window.sehDeleteTraineePhoto();};wrap.querySelector('.seh-profile-avatar').appendChild(remove);
       img.onload=()=>{img.style.display='block';fallbackNode.style.display='none';};
       img.onerror=()=>{img.style.display='none';fallbackNode.style.display='block';};
       img.src=c.profile_image;
@@ -2489,33 +2496,14 @@ if($("prDate"))$("prDate").value=today();if($("anDate"))$("anDate").value=today(
     }catch(e){console.error('Trainee birth date save failed',e);alert('ذخیره تاریخ تولد انجام نشد. '+(e.message||''));}
   };
 
-  window.sehSaveTraineePhoto=async function(input){
-    const file=input&&input.files&&input.files[0];
-    if(!file)return;
-    if(!file.type||!file.type.startsWith('image/')){alert('لطفاً یک فایل تصویری انتخاب کنید.');input.value='';return;}
-    if(file.size>8*1024*1024){alert('حجم عکس باید کمتر از ۸ مگابایت باشد.');input.value='';return;}
-    if(!currentClient||!currentClient.id){alert('پرونده شاگرد پیدا نشد؛ دوباره وارد شوید.');input.value='';return;}
-    try{
-      const bitmap=await createImageBitmap(file);
-      const side=320;
-      const canvas=document.createElement('canvas');canvas.width=side;canvas.height=side;
-      const ctx=canvas.getContext('2d');
-      const crop=Math.min(bitmap.width,bitmap.height),sx=(bitmap.width-crop)/2,sy=(bitmap.height-crop)/2;
-      ctx.drawImage(bitmap,sx,sy,crop,crop,0,0,side,side);
-      bitmap.close&&bitmap.close();
-      const imageData=canvas.toDataURL('image/jpeg',0.76);
-      const rows=await window.sbWrite('/trainees?id=eq.'+encodeURIComponent(currentClient.id),'PATCH',{profile_image:imageData});
-      if(!Array.isArray(rows)||!rows.some(row=>String(row.id)===String(currentClient.id)&&row.profile_image===imageData)){
-        throw new Error('ذخیره عکس در پایگاه داده تأیید نشد.');
-      }
-      currentClient.profile_image=imageData;
-      if(Array.isArray(clients)){const row=clients.find(x=>String(x.id)===String(currentClient.id));if(row)row.profile_image=imageData;}
-      const root=document.getElementById('traineeDashboard');
-      if(root)renderTraineeProfileHeader(root);
-      alert('عکس پروفایل ذخیره شد.');
-    }catch(e){console.error('Trainee profile photo save failed',e);alert('ذخیره عکس انجام نشد. '+(e.message||''));}
-    finally{if(input)input.value='';}
-  };
+  let sehCropBitmap=null,sehCropScale=1,sehCropX=0,sehCropY=0,sehCropPointer=null;
+  function sehCropDraw(){const canvas=document.getElementById('sehPhotoCropCanvas');if(!canvas||!sehCropBitmap)return;const ctx=canvas.getContext('2d'),w=320,h=320;ctx.clearRect(0,0,w,h);const base=Math.max(w/sehCropBitmap.width,h/sehCropBitmap.height),scale=base*sehCropScale,dw=sehCropBitmap.width*scale,dh=sehCropBitmap.height*scale;ctx.save();ctx.beginPath();ctx.arc(160,160,160,0,Math.PI*2);ctx.clip();ctx.drawImage(sehCropBitmap,(w-dw)/2+sehCropX,(h-dh)/2+sehCropY,dw,dh);ctx.restore();}
+  function sehClosePhotoCrop(){const modal=document.getElementById('sehPhotoCropModal');if(modal)modal.classList.remove('show');if(sehCropBitmap&&sehCropBitmap.close)sehCropBitmap.close();sehCropBitmap=null;sehCropPointer=null;}
+  function sehEnsurePhotoCropModal(){let modal=document.getElementById('sehPhotoCropModal');if(modal)return modal;modal=document.createElement('div');modal.id='sehPhotoCropModal';modal.innerHTML='<div class="seh-crop-panel"><h3>برش عکس پروفایل</h3><p class="muted">عکس را با انگشت جابه‌جا کنید و اندازه را تنظیم کنید.</p><canvas id="sehPhotoCropCanvas" width="320" height="320"></canvas><label for="sehPhotoCropZoom">بزرگ‌نمایی</label><input id="sehPhotoCropZoom" type="range" min="1" max="3" step=".01" value="1"><div class="seh-crop-actions"><button type="button" class="secondary" id="sehPhotoCropCancel">انصراف</button><button type="button" id="sehPhotoCropSave">ذخیره برش</button></div></div>';document.body.appendChild(modal);modal.querySelector('#sehPhotoCropCancel').onclick=sehClosePhotoCrop;modal.querySelector('#sehPhotoCropZoom').oninput=e=>{sehCropScale=Number(e.target.value)||1;sehCropDraw();};const canvas=modal.querySelector('canvas');canvas.addEventListener('pointerdown',e=>{sehCropPointer={x:e.clientX,y:e.clientY,ox:sehCropX,oy:sehCropY};canvas.setPointerCapture(e.pointerId);});canvas.addEventListener('pointermove',e=>{if(!sehCropPointer)return;const factor=320/canvas.getBoundingClientRect().width;sehCropX=sehCropPointer.ox+(e.clientX-sehCropPointer.x)*factor;sehCropY=sehCropPointer.oy+(e.clientY-sehCropPointer.y)*factor;sehCropDraw();});['pointerup','pointercancel','lostpointercapture'].forEach(ev=>canvas.addEventListener(ev,()=>{sehCropPointer=null;}));modal.querySelector('#sehPhotoCropSave').onclick=window.sehCommitTraineePhotoCrop;return modal;}
+  window.sehSaveTraineePhoto=async function(input){const file=input&&input.files&&input.files[0];if(!file)return;if(!file.type||!file.type.startsWith('image/')){alert('لطفاً یک فایل تصویری انتخاب کنید.');input.value='';return;}if(file.size>8*1024*1024){alert('حجم عکس باید کمتر از ۸ مگابایت باشد.');input.value='';return;}if(!currentClient||!currentClient.id){alert('پرونده شاگرد پیدا نشد؛ دوباره وارد شوید.');input.value='';return;}try{if(!('createImageBitmap' in window))throw new Error('مرورگر این گوشی امکان برش عکس را پشتیبانی نمی‌کند.');sehCropBitmap=await createImageBitmap(file);sehCropScale=1;sehCropX=0;sehCropY=0;const modal=sehEnsurePhotoCropModal();modal.classList.add('show');modal.querySelector('#sehPhotoCropZoom').value='1';sehCropDraw();}catch(e){console.error('Trainee photo crop open failed',e);alert('باز کردن برش عکس انجام نشد. '+(e.message||''));}finally{if(input)input.value='';}};
+  window.sehCommitTraineePhotoCrop=async function(){if(!sehCropBitmap||!currentClient||!currentClient.id)return;const button=document.getElementById('sehPhotoCropSave');if(button){button.disabled=true;button.textContent='در حال ذخیره…';}try{const canvas=document.createElement('canvas');canvas.width=320;canvas.height=320;const ctx=canvas.getContext('2d'),base=Math.max(320/sehCropBitmap.width,320/sehCropBitmap.height),scale=base*sehCropScale,dw=sehCropBitmap.width*scale,dh=sehCropBitmap.height*scale;ctx.save();ctx.beginPath();ctx.arc(160,160,160,0,Math.PI*2);ctx.clip();ctx.drawImage(sehCropBitmap,(320-dw)/2+sehCropX,(320-dh)/2+sehCropY,dw,dh);ctx.restore();const imageData=canvas.toDataURL('image/jpeg',.8),traineeId=String(currentClient.id);const rows=await window.sbWrite('/trainees?id=eq.'+encodeURIComponent(traineeId),'PATCH',{profile_image:imageData});if(!Array.isArray(rows)||!rows.some(row=>String(row.id)===traineeId&&row.profile_image===imageData))throw new Error('ذخیره عکس در پایگاه داده تأیید نشد.');currentClient.profile_image=imageData;if(Array.isArray(clients)){const row=clients.find(x=>String(x.id)===traineeId);if(row)row.profile_image=imageData;}sehClosePhotoCrop();const root=document.getElementById('traineeDashboard');if(root)renderTraineeProfileHeader(root);alert('عکس پروفایل ذخیره شد.');}catch(e){console.error('Trainee profile photo save failed',e);alert('ذخیره عکس انجام نشد. '+(e.message||''));}finally{if(button){button.disabled=false;button.textContent='ذخیره برش';}}};
+  window.sehDeleteTraineePhoto=async function(){if(!currentClient||!currentClient.id||!currentClient.profile_image)return;if(!confirm('عکس پروفایل حذف شود؟'))return;const traineeId=String(currentClient.id);try{const rows=await window.sbWrite('/trainees?id=eq.'+encodeURIComponent(traineeId),'PATCH',{profile_image:null});if(!Array.isArray(rows)||!rows.some(row=>String(row.id)===traineeId&&row.profile_image==null))throw new Error('حذف عکس در پایگاه داده تأیید نشد.');currentClient.profile_image=null;if(Array.isArray(clients)){const row=clients.find(x=>String(x.id)===traineeId);if(row)row.profile_image=null;}const root=document.getElementById('traineeDashboard');if(root)renderTraineeProfileHeader(root);alert('عکس پروفایل حذف شد.');}catch(e){console.error('Trainee profile photo delete failed',e);alert('حذف عکس انجام نشد. '+(e.message||''));}};
+
 
   function normalizeTraineeProfileCards(root){
     const grid=root&&root.querySelector('.v4-dashboard');
