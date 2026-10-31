@@ -2460,11 +2460,13 @@ if($("prDate"))$("prDate").value=today();if($("anDate"))$("anDate").value=today(
       '<input id="sehTraineePhotoInput" type="file" accept="image/*" hidden onchange="window.sehSaveTraineePhoto(this)">'+
       '<div class="seh-profile-birth-edit"><label for="sehTraineeBirthInput">تاریخ تولد شمسی</label><input id="sehTraineeBirthInput" type="text" inputmode="numeric" placeholder="مثلاً ۱۳۷۵/۰۷/۱۸" autocomplete="off"><button type="button" class="seh-profile-birth-save" onclick="window.sehSaveTraineeBirth()">ثبت تاریخ</button></div>'+
       '<button type="button" class="seh-profile-exit" onclick="logoutApp()"><span>↪</span> خروج از حساب کاربری</button>'+
-      '<button type="button" id="sehAddTraineeRequestOpen" class="seh-profile-signup" style="display:none" aria-label="ثبت‌نام فرد جدید" onclick="window.openAddTraineeRequest()">👤＋ ثبت‌نام فرد جدید</button>';
+      '';
     wrap.querySelector('.seh-profile-name').textContent=name;
     wrap.querySelector('.seh-profile-birth').textContent=birth?'🎂 '+birth:'🎂 تاریخ تولد ثبت نشده';
     const birthInput=wrap.querySelector('#sehTraineeBirthInput');
     if(birthInput)birthInput.value=c.birth_date||'';
+    const signupButton=document.getElementById('sehAddTraineeRequestOpen');
+    if(signupButton){signupButton.classList.add('seh-profile-signup');wrap.appendChild(signupButton);}
     const img=wrap.querySelector('.seh-profile-image');
     const fallbackNode=wrap.querySelector('.seh-profile-fallback');
     if(c.profile_image){
