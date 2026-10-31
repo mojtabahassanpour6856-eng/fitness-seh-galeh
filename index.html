@@ -12832,7 +12832,7 @@ window.sehResetTurnstile=function(){};
  function pushRoute(id){
   if(role()!=='trainee'||id==='membership'||id==='sehChatSection')return;
   var next=sectionFor(id),current=activeId();if(current===next||!valid(next))return;
-  try{var state=Object.assign({},history.state||{});state.sehTraineeNav={section:next};history.pushState(state,'');}
+  try{var state=Object.assign({},history.state||{});if(!state.sehTraineeNav){state.sehTraineeNav={section:current};history.replaceState(state,'');}state.sehTraineeNav={section:next};history.pushState(state,'');}
   catch(e){console.warn('ثبت مسیر بازگشت شاگرد انجام نشد:',e);}
  }
  function clickedRoute(e){
