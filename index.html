@@ -2468,6 +2468,7 @@ if($("prDate"))$("prDate").value=today();if($("anDate"))$("anDate").value=today(
       img.src=c.profile_image;
     }else{img.style.display='none';fallbackNode.style.display='block';}
   }
+  window.renderTraineeProfileHeader = renderTraineeProfileHeader;
 
   window.sehSaveTraineeBirth=async function(){
     const input=document.getElementById('sehTraineeBirthInput');
@@ -13304,7 +13305,7 @@ window.sehResetTurnstile=function(){};
       normalizeProfile();
       if(typeof window.loadDashboard === 'function') await window.loadDashboard();
       const traineeHeader = document.getElementById('traineeDashboard');
-      if(traineeHeader && typeof renderTraineeProfileHeader === 'function') renderTraineeProfileHeader(traineeHeader);
+      if(traineeHeader && typeof window.renderTraineeProfileHeader === 'function') window.renderTraineeProfileHeader(traineeHeader);
       alert('پروفایل شما با موفقیت ذخیره و از پایگاه داده بررسی شد.');
     }catch(e){
       console.error('trainee profile save failed', e);
