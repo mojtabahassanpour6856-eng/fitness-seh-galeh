@@ -2480,9 +2480,9 @@ if($("prDate"))$("prDate").value=today();if($("anDate"))$("anDate").value=today(
     const input=document.getElementById('sehTraineeBirthInput');
     if(!input||!currentClient||!currentClient.id){alert('پرونده شاگرد پیدا نشد؛ دوباره وارد شوید.');return;}
     const raw=window.getJalaliVisibleValue?window.getJalaliVisibleValue(input):String(input.value||'');
-    const iso=window.jalaliToISODate?window.jalaliToISODate(raw):'';
-    if(raw&&!iso){alert('تاریخ تولد معتبر نیست؛ از تقویم یا قالب ۱۳۷۵/۰۷/۱۸ استفاده کنید.');return;}
-    if(!raw){alert('لطفاً تاریخ تولد شمسی را انتخاب یا وارد کنید.');return;}
+    // The shared Jalali picker exposes the converted ISO date through the input.value getter.
+    const iso=String(input.value||'').slice(0,10);
+    if(!raw||!/^\\d{4}-\\d{2}-\\d{2}$/.test(iso)){alert('تاریخ تولد معتبر نیست؛ از تقویم یا قالب ۱۳۷۵/۰۷/۱۸ استفاده کنید.');return;}
     try{
       const rows=await window.sbWrite('/trainees?id=eq.'+encodeURIComponent(currentClient.id),'PATCH',{birth_date:iso});
       if(!Array.isArray(rows)||!rows.some(row=>String(row.id)===String(currentClient.id)&&String(row.birth_date||'').slice(0,10)===iso)){
