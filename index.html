@@ -2469,7 +2469,7 @@ if($("prDate"))$("prDate").value=today();if($("anDate"))$("anDate").value=today(
     const ageNode=wrap.querySelector('.seh-profile-age');
     const birthValue=String(c.birth_date||authProfile.birth_date||'').trim().slice(0,10);
     let calculatedAge=null;
-    if(/^\\d{4}-\\d{2}-\\d{2}$/.test(birthValue)){
+    if(/^\d{4}-\d{2}-\d{2}$/.test(birthValue)){
       const parts=birthValue.split('-').map(Number);
       const birthDate=new Date(parts[0],parts[1]-1,parts[2]);
       if(birthDate.getFullYear()===parts[0]&&birthDate.getMonth()===parts[1]-1&&birthDate.getDate()===parts[2]){
