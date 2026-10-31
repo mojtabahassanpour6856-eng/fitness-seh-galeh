@@ -2444,11 +2444,12 @@ if($("prDate"))$("prDate").value=today();if($("anDate"))$("anDate").value=today(
       root.insertBefore(wrap,root.firstChild);
     }
     const c=currentClient||{};
+    const signupButton=document.getElementById('sehAddTraineeRequestOpen');
+    if(signupButton)signupButton.remove();
     const name=c.full_name||c.name||authProfile.full_name||'شاگرد';
-    const birth=window.isoToJalaliDate?window.isoToJalaliDate(c.birth_date):'';
     const gender=String(c.gender||'').toLowerCase();
     const fallback=(gender==='زن'||gender==='female'||gender==='f')?'👩':'👨';
-    wrap.innerHTML=      '<div class="seh-profile-summary" role="button" tabindex="0" aria-label="باز کردن پروفایل من" onclick="dashOpen(\'client\')" onkeydown="if(event.key===\'Enter\'||event.key===\' \'){event.preventDefault();dashOpen(\'client\')}">'+
+    wrap.innerHTML='<div class="seh-profile-summary" role="button" tabindex="0" aria-label="باز کردن پروفایل من" onclick="dashOpen(\'client\')" onkeydown="if(event.key===\'Enter\'||event.key===\' \'){event.preventDefault();dashOpen(\'client\')}">'+
       '<div class="seh-profile-avatar"><span class="seh-profile-fallback">'+fallback+'</span><img class="seh-profile-image" alt="عکس پروفایل"><button type="button" class="seh-profile-photo-add" aria-label="افزودن عکس پروفایل" onclick="event.stopPropagation();document.getElementById(\'sehTraineePhotoInput\').click()">+</button></div>'+
       '<div class="seh-profile-info"><div class="seh-profile-name"></div><input id="sehTraineeBirthInput" class="seh-profile-birth-input" type="text" inputmode="numeric" placeholder="تاریخ تولد شمسی" autocomplete="off" onclick="event.stopPropagation()" onkeydown="event.stopPropagation()" onchange="window.sehSaveTraineeBirth()"><small id="sehTraineeBirthStatus" class="seh-profile-birth-status">برای ثبت، تاریخ را انتخاب کنید.</small></div></div>'+
       '<input id="sehTraineePhotoInput" type="file" accept="image/*" hidden onchange="window.sehSaveTraineePhoto(this)">'+
