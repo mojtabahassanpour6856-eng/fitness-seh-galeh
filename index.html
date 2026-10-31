@@ -13622,20 +13622,22 @@ window.sehResetTurnstile=function(){};
   var m=code.match(/(?:showSection|dashOpen)\(['"]([^'"]+)['"]/);
   if(m){remember(m[1]);schedule(m[1]);}
  },true);
- // Keep only the requested section visible even if a legacy handler writes
- // display:block!important directly to #client after navigation.
- if(typeof MutationObserver!=='undefined'&&document.body){
+ // Observe only section visibility attributes. Watching every node and every child
+ // in the full app caused a large mutation stream on mobile when profile cards
+ // were normalized or moved; section-level observation is sufficient here.
+ if(typeof MutationObserver!=='undefined'){
   var observer=new MutationObserver(function(){
    if(role()!=='trainee'||applying||!requested||requested==='membership')return;
    var id=targetFor(requested);
-   var chosen=document.getElementById(id);
-   if(!chosen)return;
+   if(!validSection(id)||id==='client')return;
    var profile=document.getElementById('client');
-   if(profile&&id!=='client'&&(profile.classList.contains('active')||getComputedStyle(profile).display!=='none'||profile.style.getPropertyValue('display')==='block')){
+   if(profile&&(profile.classList.contains('active')||profile.style.getPropertyValue('display')==='block')){
     apply(id);
    }
   });
-  observer.observe(document.body,{subtree:true,childList:true,attributes:true,attributeFilter:['class','style','hidden','aria-hidden']});
+  document.querySelectorAll('.section').forEach(function(section){
+   observer.observe(section,{attributes:true,attributeFilter:['class','style','hidden','aria-hidden']});
+  });
  }
 })();
 </script>
