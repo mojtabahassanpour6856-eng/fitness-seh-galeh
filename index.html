@@ -14791,13 +14791,27 @@ window.sehResetTurnstile=function(){};
  window.addEventListener('popstate',function(e){
   if(role()!=='trainee')return;
   var entry=e.state&&e.state.sehTraineeBackV2;
-  if(!entry)return;
+  var dashboard=current()==='traineeDashboard';
+  // On the dashboard, skip any older in-app route entries left in this
+  // browser session (including legacy food-management entries).
+  if(dashboard&&entry&&entry.route&&normalize(entry.route)!=='traineeDashboard'){
+   e.stopImmediatePropagation();
+   setTimeout(function(){try{history.back();}catch(err){}},0);
+   return;
+  }
+  if(!entry){
+   // A legacy/unmarked history entry must not reopen an old card while the
+   // trainee is already on the dashboard. Let the browser leave normally.
+   if(dashboard)return;
+   e.stopImmediatePropagation();
+   restoring=true;
+   try{show('traineeDashboard');}finally{restoring=false;}
+   return;
+  }
   e.stopImmediatePropagation();
   restoring=true;
   try{show(entry.route||'traineeDashboard');}
   finally{restoring=false;}
-  // Once the dashboard's base entry is reached, do not add another guard
-  // entry. Let the next Back leave the app/page instead of exposing stale routes.
  },true);
  // Authentication completes asynchronously after DOMContentLoaded. Initialize
  // only once the trainee profile is actually available; never reset an active stack.
