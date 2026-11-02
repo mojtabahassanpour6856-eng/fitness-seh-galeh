@@ -8134,6 +8134,7 @@ const oldWorkoutRenderer=window.renderWorkoutList;
  function renderDietMealPlanner(){
   const host=$diet("dietMealPlanner");if(!host)return;
   if(!dietMealRows.length)dietMealRows=[{name:"صبحانه",time:"08:00",items:[{foodIndex:"",amount:100}]}];
+  if(Array.isArray(foods)&&foods.length)dietMealRows.forEach(meal=>(meal.items||[]).forEach(item=>{const savedName=String(item.foodName||"").trim();if(savedName){const match=foods.findIndex(food=>String(food&&food[0]||"").trim()===savedName);item.foodIndex=match>=0?String(match):"";}}));
   if(!Array.isArray(foods)||!foods.length){host.innerHTML='<p class="warning-text">بانک غذا هنوز بارگذاری نشده است؛ کمی بعد این بخش را دوباره باز کن.</p>';return;}
   const opts='<option value="">انتخاب غذا…</option>'+foods.map((f,i)=>'<option value="'+i+'">'+esc(f[0])+'</option>').join("");
   dietMealRows.forEach(meal=>{if(!meal._uiId)meal._uiId="meal-"+Date.now().toString(36)+"-"+Math.random().toString(36).slice(2,10);});
@@ -8201,7 +8202,7 @@ const oldWorkoutRenderer=window.renderWorkoutList;
    const select=$diet("dietTypeSelect");
    if(select){const option=Array.from(select.options).find(o=>o.value===data.type||o.text===data.type);if(option)select.value=option.value;else{select.value="custom";$diet("dietCustomWrap")?.classList.remove("hide");if($diet("dietCustomName"))$diet("dietCustomName").value=data.type;}
     if($diet("dietSettings"))$diet("dietSettings").value=data.settings||"";if($diet("dietNotes"))$diet("dietNotes").value=data.notes||"";
-    dietMealRows=Array.isArray(data.meals)?data.meals.map(meal=>({...meal,items:(Array.isArray(meal.items)?meal.items:[]).map(item=>{const savedName=String(item.foodName||"").trim();if(!savedName)return item;const match=Array.isArray(foods)?foods.findIndex(food=>String(food&&food[0]||"").trim()===savedName):-1;return {...item,foodIndex:match>=0?String(match):""};})})):[];syncDietTypeUI();if(select.value!=="fasting")renderDietMealPlanner();
+    dietMealRows=Array.isArray(data.meals)?data.meals.map(meal=>({...meal,items:(Array.isArray(meal.items)?meal.items:[]).map(item=>{const savedName=String(item.foodName||"").trim();if(!savedName)return item;const match=Array.isArray(foods)?foods.findIndex(food=>String(food&&food[0]||"").trim()===savedName):-1;return {...item,foodIndex:Array.isArray(foods)&&foods.length?(match>=0?String(match):""):(item.foodIndex??"")};})})):[];syncDietTypeUI();if(select.value!=="fasting")renderDietMealPlanner();
    }
   }catch(error){console.error("loadDietSummary",error);box.textContent="نمایش رژیم ثبت‌شده ممکن نیست؛ اتصال پایگاه داده را بررسی کن.";}
  };
