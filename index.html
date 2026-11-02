@@ -14171,7 +14171,7 @@ window.sehResetTurnstile=function(){};
     });
     $('sehRecoveryResetBtn').addEventListener('click',async()=>{
       const btn=$('sehRecoveryResetBtn'),phone=phoneNorm($('sehRecoveryPhone').value);
-      const code=$('sehRecoveryCode').value.trim();
+      const code=$('sehRecoveryCode').value.trim().replace(/[۰-۹]/g,d=>String('۰۱۲۳۴۵۶۷۸۹'.indexOf(d))).replace(/[٠-٩]/g,d=>String('٠١٢٣٤٥٦٧٨٩'.indexOf(d)));
       const new_password=$('sehRecoveryNewPassword').value||'',repeat=$('sehRecoveryNewPassword2').value||'';
       if(!/^\+989\d{9}$/.test(phone)){message('sehRecoveryResetStatus','شماره موبایل ثبت‌شده را درست وارد کنید.',false);return;}
       if(!/^\d{4}$/.test(code)){message('sehRecoveryResetStatus','کد بازیابی باید ۴ رقم باشد.',false);return;}
