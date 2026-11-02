@@ -14228,7 +14228,8 @@ window.sehResetTurnstile=function(){};
       '<label for="sehRecoveryNewPassword2">تکرار رمز جدید</label><input id="sehRecoveryNewPassword2" type="password" autocomplete="new-password" minlength="8" placeholder="تکرار رمز جدید">'+
       '<button type="button" id="sehRecoveryResetBtn">🔒 ذخیره رمز جدید</button>'+
       '<div id="sehRecoveryResetStatus" role="status" style="display:none;white-space:pre-wrap;line-height:1.8;margin-top:8px"></div>';
-    box.appendChild(panel);
+    /* Keep recovery panel outside the login block because passwordless login renderer replaces that block's innerHTML. */
+    (box.parentElement||box).appendChild(panel);
     const loginPhone=$('traineePhoneLogin');
     $('sehRecoveryPhone').value=loginPhone?.value||'';
     loginPhone?.addEventListener('change',()=>{if(!$('sehRecoveryPhone').value)$('sehRecoveryPhone').value=loginPhone.value;});
