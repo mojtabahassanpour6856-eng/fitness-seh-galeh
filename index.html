@@ -14142,14 +14142,13 @@ window.sehResetTurnstile=function(){};
     panel.className='trainee-auth-block';
     panel.innerHTML=
       '<h3>🔑 بازیابی رمز با تأیید مربی</h3>'+
-      '<p class="muted">بدون پیامک: درخواست را بفرستید. پس از تأیید مربی، شناسهٔ درخواست و کد یک‌بارمصرف را از خود مربی دریافت کنید.</p>'+
+      '<p class="muted">بدون پیامک: درخواست را بفرستید. پس از تأیید مربی، فقط کد چهاررقمی را از مربی بگیرید.</p>'+
       '<label for="sehRecoveryPhone">شماره موبایل ثبت‌شده</label><input id="sehRecoveryPhone" type="tel" inputmode="tel" autocomplete="tel" placeholder="09121234567">'+
       '<button type="button" id="sehRecoveryRequestBtn">📨 درخواست بازیابی رمز</button>'+
       '<div id="sehRecoveryRequestStatus" role="status" style="display:none;white-space:pre-wrap;line-height:1.8;margin-top:8px"></div>'+
       '<hr style="border-color:#344b60;margin:14px 0">'+
       '<h3>🔐 تعیین رمز جدید</h3>'+
-      '<label for="sehRecoveryRequestId">شناسهٔ درخواست (از مربی بگیرید)</label><input id="sehRecoveryRequestId" autocomplete="off" placeholder="شناسهٔ درخواست">'+
-      '<label for="sehRecoveryCode">کد ۸ رقمی بازیابی</label><input id="sehRecoveryCode" inputmode="numeric" autocomplete="one-time-code" maxlength="8" placeholder="کد دریافت‌شده از مربی">'+
+      '<label for="sehRecoveryCode">کد ۴ رقمی بازیابی</label><input id="sehRecoveryCode" inputmode="numeric" autocomplete="one-time-code" maxlength="4" placeholder="کد دریافت‌شده از مربی">'+
       '<label for="sehRecoveryNewPassword">رمز جدید (حداقل ۸ کاراکتر)</label><input id="sehRecoveryNewPassword" type="password" autocomplete="new-password" minlength="8" placeholder="رمز جدید">'+
       '<label for="sehRecoveryNewPassword2">تکرار رمز جدید</label><input id="sehRecoveryNewPassword2" type="password" autocomplete="new-password" minlength="8" placeholder="تکرار رمز جدید">'+
       '<button type="button" id="sehRecoveryResetBtn">🔒 ذخیره رمز جدید</button>'+
@@ -14172,21 +14171,20 @@ window.sehResetTurnstile=function(){};
     });
     $('sehRecoveryResetBtn').addEventListener('click',async()=>{
       const btn=$('sehRecoveryResetBtn'),phone=phoneNorm($('sehRecoveryPhone').value);
-      const request_id=$('sehRecoveryRequestId').value.trim(),code=$('sehRecoveryCode').value.trim();
+      const code=$('sehRecoveryCode').value.trim();
       const new_password=$('sehRecoveryNewPassword').value||'',repeat=$('sehRecoveryNewPassword2').value||'';
       if(!/^\+989\d{9}$/.test(phone)){message('sehRecoveryResetStatus','شماره موبایل ثبت‌شده را درست وارد کنید.',false);return;}
-      if(!/^[0-9a-f-]{36}$/i.test(request_id)){message('sehRecoveryResetStatus','شناسهٔ درخواست را دقیقاً از مربی دریافت و وارد کنید.',false);return;}
-      if(!/^\d{8}$/.test(code)){message('sehRecoveryResetStatus','کد بازیابی باید ۸ رقم باشد.',false);return;}
+      if(!/^\d{4}$/.test(code)){message('sehRecoveryResetStatus','کد بازیابی باید ۴ رقم باشد.',false);return;}
       if(new_password.length<8||new_password.length>128){message('sehRecoveryResetStatus','رمز جدید باید بین ۸ تا ۱۲۸ کاراکتر باشد.',false);return;}
       if(new_password!==repeat){message('sehRecoveryResetStatus','رمز جدید و تکرار آن یکسان نیستند.',false);return;}
       btn.disabled=true;btn.textContent='⏳ در حال ذخیره…';
       try{
-        const {data,error}=await client().functions.invoke('trainee-password-recovery',{body:{action:'reset',request_id,code,new_password}});
+        const {data,error}=await client().functions.invoke('trainee-password-recovery',{body:{action:'reset',phone,code,new_password}});
         if(error)throw error;if(data?.error)throw new Error(data.error);
         message('sehRecoveryResetStatus',data?.message||'رمز جدید ذخیره شد؛ اکنون وارد شوید.',true);
         $('traineePhoneLogin').value=$('sehRecoveryPhone').value;
         $('traineeLoginPassword').value=new_password;
-        $('sehRecoveryRequestId').value='';$('sehRecoveryCode').value='';
+        $('sehRecoveryCode').value='';
         $('sehRecoveryNewPassword').value='';$('sehRecoveryNewPassword2').value='';
       }catch(e){console.error('[seh recovery reset]',e);message('sehRecoveryResetStatus','تغییر رمز انجام نشد: '+(e?.message||String(e)),false);}
       finally{btn.disabled=false;btn.textContent='🔒 ذخیره رمز جدید';}
@@ -14237,16 +14235,16 @@ window.sehResetTurnstile=function(){};
         codeBox.innerHTML='<h3 style="margin:0 0 8px">🔐 کد بازیابی — فقط همین بار نمایش داده می‌شود</h3>'+
           '<p><b>شاگرد:</b> '+esc(btn.dataset.sehRecoveryName||'شاگرد')+'</p>'+
           '<p><b>شماره:</b> '+esc(btn.dataset.sehRecoveryPhone||'')+'</p>'+
-          '<p><b>شناسهٔ درخواست:</b><br><code style="word-break:break-all">'+esc(request_id)+'</code></p>'+
+          ' 
           '<p style="font-size:24px;font-weight:bold;letter-spacing:4px;margin:12px 0">'+esc(data.recovery_code||'')+'</p>'+
-          '<p>اعتبار: ۱۵ دقیقه. شناسهٔ درخواست و کد را فقط به خود شاگرد بدهید؛ پیامک خودکار ارسال نمی‌شود.</p>'+
-          '<button type="button" id="sehRecoveryCopyDetails">📋 کپی شناسه و کد</button>';
+          '<p>اعتبار: ۱۵ دقیقه. کد را فقط به خود شاگرد بدهید؛ پیامک خودکار ارسال نمی‌شود.</p>'+
+          '<button type="button" id="sehRecoveryCopyDetails">📋 کپی کد بازیابی</button>';
         $('sehRecoveryCopyDetails').addEventListener('click',async()=>{
-          const textValue='شناسه درخواست: '+request_id+'\nکد بازیابی: '+String(data.recovery_code||'');
-          try{await navigator.clipboard.writeText(textValue);message('sehCoachRecoveryMessage','شناسه و کد کپی شد؛ آن را فقط به خود شاگرد بدهید.',true);}
-          catch(e){message('sehCoachRecoveryMessage','کپی خودکار ممکن نیست؛ شناسه و کد را از کادر بالا دستی منتقل کنید.',false);}
+          const textValue='کد بازیابی: '+String(data.recovery_code||'');
+          try{await navigator.clipboard.writeText(textValue);message('sehCoachRecoveryMessage','کد بازیابی کپی شد؛ آن را فقط به خود شاگرد بدهید.',true);}
+          catch(e){message('sehCoachRecoveryMessage','کپی خودکار ممکن نیست؛ کد را از کادر بالا دستی منتقل کنید.',false);}
         });
-        message('sehCoachRecoveryMessage','درخواست تأیید شد. کد ۱۵ دقیقه اعتبار دارد و در سرور به‌صورت متن خام نگهداری نمی‌شود.',true);
+        message('sehCoachRecoveryMessage','درخواست تأیید شد. کد چهاررقمی ۱۵ دقیقه اعتبار دارد و در سرور به‌صورت متن خام نگهداری نمی‌شود.',true);
       }else{
         $('sehRecoveryIssuedCode').style.display='none';
         message('sehCoachRecoveryMessage','درخواست بازیابی رد شد.',true);
