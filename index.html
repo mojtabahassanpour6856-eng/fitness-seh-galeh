@@ -8168,7 +8168,7 @@ const oldWorkoutRenderer=window.renderWorkoutList;
  window.setDietMealTime=function(i,v){if(dietMealRows[i])dietMealRows[i].time=v;};
  window.addDietFood=function(i){if(!dietMealRows[i])return;if(dietMealRows[i].items.length>=12){alert("برای هر وعده حداکثر ۱۲ قلم غذا مجاز است.");return;}dietMealRows[i].items.push({foodIndex:"",amount:100});renderDietMealPlanner();};
  window.removeDietFood=function(i,j){if(!dietMealRows[i])return;dietMealRows[i].items.splice(j,1);if(!dietMealRows[i].items.length)dietMealRows[i].items.push({foodIndex:"",amount:100});renderDietMealPlanner();};
- window.setDietFood=function(i,j,v){if(dietMealRows[i]?.items[j]){dietMealRows[i].items[j].foodIndex=v===""?"":String(Number(v));renderDietMealPlanner();}};
+ window.setDietFood=function(i,j,v){if(dietMealRows[i]?.items[j]){const item=dietMealRows[i].items[j];const index=v===""?-1:Number(v);item.foodIndex=index>=0&&Number.isInteger(index)?String(index):"";item.foodName=item.foodIndex!==""&&Array.isArray(foods)&&foods[index]?String(foods[index][0]):"";renderDietMealPlanner();}};
  window.setDietAmount=function(i,j,v){if(!dietMealRows[i]?.items[j])return;const n=Number(v);dietMealRows[i].items[j].amount=Number.isFinite(n)?Math.min(10000,Math.max(1,Math.round(n))):1;};
  $diet("dietTypeSelect")?.addEventListener("change",syncDietTypeUI);
  window.saveDietConfiguration=async function(){
