@@ -8157,7 +8157,7 @@ const oldWorkoutRenderer=window.renderWorkoutList;
  window.addDietMeal=function(){if(dietMealRows.length>=8){alert("حداکثر ۸ وعده غذایی می‌توانی اضافه کنی.");return;}dietMealRows.push({name:"وعده "+(dietMealRows.length+1),time:"12:00",items:[{foodIndex:"",amount:100}]});renderDietMealPlanner();};
  window.removeDietMeal=function(i){dietMealRows.splice(i,1);renderDietMealPlanner();};
  window.copyDietMeal=function(i){if(!dietMealRows[i])return;if(dietMealRows.length>=8){alert("حداکثر ۸ وعده غذایی می‌توانی داشته باشی.");return;}const copy=JSON.parse(JSON.stringify(dietMealRows[i]));copy.name=(copy.name||"وعده")+" (کپی)";dietMealRows.splice(i+1,0,copy);renderDietMealPlanner();};
- window.setDietMealName=function(i,v){if(dietMealRows[i])dietMealRows[i].name=String(v||"").slice(0,50);};
+ window.setDietMealName=function(i,v){if(dietMealRows[i]){dietMealRows[i].name=String(v||"").slice(0,50);renderDietMealPlanner();}};
  window.setDietMealTime=function(i,v){if(dietMealRows[i])dietMealRows[i].time=v;};
  window.addDietFood=function(i){if(!dietMealRows[i])return;if(dietMealRows[i].items.length>=12){alert("برای هر وعده حداکثر ۱۲ قلم غذا مجاز است.");return;}dietMealRows[i].items.push({foodIndex:"",amount:100});renderDietMealPlanner();};
  window.removeDietFood=function(i,j){if(!dietMealRows[i])return;dietMealRows[i].items.splice(j,1);if(!dietMealRows[i].items.length)dietMealRows[i].items.push({foodIndex:"",amount:100});renderDietMealPlanner();};
