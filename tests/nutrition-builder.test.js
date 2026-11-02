@@ -3,7 +3,7 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const vm = require('node:vm');
 
-function createHarness({ getRows, write } = {}) {
+function createHarness({ getRows, write, locks } = {}) {
   const elements = {
     dietTypeSelect: { value: 'متعادل', options: [], addEventListener() {} },
     dietCustomName: { value: '' },
@@ -36,7 +36,7 @@ function createHarness({ getRows, write } = {}) {
       return [];
     },
     alert: message => { calls.push(['ALERT', message]); },
-    navigator: { locks: { request: async (name, options, callback) => { lockCalls.push({ name, options }); return callback(); } } },
+    navigator: { locks: locks || { request: async (name, options, callback) => { lockCalls.push({ name, options }); return callback(); } } },
     window: {}
   };
   context.window = context;
@@ -56,6 +56,40 @@ test('diet saves request an exclusive browser-wide lock per trainee', async () =
   assert.equal(h.lockCalls.length, 1);
   assert.equal(h.lockCalls[0].name, 'sehgaleh-diet-save-trainee-test-1');
   assert.equal(h.lockCalls[0].options.mode, 'exclusive');
+});
+
+test('separate tabs serialize saves for the same trainee through the shared browser lock', async () => {
+  const tails = new Map();
+  const sharedLocks = {
+    request: (name, options, callback) => {
+      const previous = tails.get(name) || Promise.resolve();
+      const current = previous.then(callback);
+      tails.set(name, current.catch(() => {}));
+      return current;
+    }
+  };
+  let stored = [];
+  const write = async (path, method, payload) => {
+    if (method === 'POST') stored = [{ id: 51, ...payload }];
+    if (method === 'PATCH') stored = stored.map(row => row.id === 51 ? { ...row, ...payload } : row);
+    return stored;
+  };
+  const firstTab = createHarness({ getRows: () => stored, write, locks: sharedLocks });
+  const secondTab = createHarness({ getRows: () => stored, write, locks: sharedLocks });
+  await Promise.all([
+    firstTab.context.saveDietConfiguration(),
+    secondTab.context.saveDietConfiguration()
+  ]);
+  assert.equal(firstTab.calls.filter(x => x[0] === 'POST').length + secondTab.calls.filter(x => x[0] === 'POST').length, 1);
+  assert.equal(firstTab.calls.filter(x => x[0] === 'PATCH').length + secondTab.calls.filter(x => x[0] === 'PATCH').length, 1);
+  assert.equal(stored.length, 1);
+});
+
+test('diet save still works when the browser does not support Web Locks', async () => {
+  const h = createHarness({ locks: null });
+  delete h.context.navigator.locks;
+  await h.context.saveDietConfiguration();
+  assert.equal(h.calls.filter(x => x[0] === 'POST').length, 1);
 });
 
 test('first diet save inserts one tagged diet row', async () => {
