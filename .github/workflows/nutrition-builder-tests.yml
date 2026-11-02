@@ -1,0 +1,20 @@
+name: Nutrition builder tests
+on:
+  pull_request:
+    paths:
+      - 'index.html'
+      - 'tests/nutrition-builder.test.js'
+      - '.github/workflows/nutrition-builder-tests.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  nutrition-builder:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Run nutrition builder tests
+        run: node --test tests/nutrition-builder.test.js
