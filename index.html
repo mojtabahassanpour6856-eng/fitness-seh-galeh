@@ -8179,7 +8179,7 @@ const oldWorkoutRenderer=window.renderWorkoutList;
   if(invalidFood){alert("یکی از غذاهای انتخاب‌شده دیگر در بانک غذا موجود نیست. لطفاً آن وعده را بررسی و غذا را دوباره انتخاب کن.");return;}
   const invalidAmount=dietMealRows.some(meal=>(meal.items||[]).some(item=>!Number.isFinite(Number(item.amount))||Number(item.amount)<1||Number(item.amount)>10000));
   if(invalidAmount){alert("مقدار یکی از غذاها معتبر نیست؛ مقدار را بین ۱ تا ۱۰۰۰۰ گرم وارد کن.");return;}
-  const safeMeals=dietMealRows.map(meal=>({name:String(meal.name||"").slice(0,50),time:/^([01]\d|2[0-3]):[0-5]\d$/.test(meal.time||"")?meal.time:"12:00",items:(Array.isArray(meal.items)?meal.items:[]).slice(0,12).map(item=>({foodIndex:item.foodIndex===""?"":String(Number(item.foodIndex)),amount:Math.min(10000,Math.max(1,Math.round(Number(item.amount)||1)))}))})).slice(0,8);
+  const safeMeals=dietMealRows.map(meal=>({name:String(meal.name||"").slice(0,50),time:/^([01]\d|2[0-3]):[0-5]\d$/.test(meal.time||"")?meal.time:"12:00",items:(Array.isArray(meal.items)?meal.items:[]).slice(0,12).map(item=>({foodIndex:item.foodIndex===""?"":String(Number(item.foodIndex)),foodName:item.foodIndex!==""&&Array.isArray(foods)&&foods[Number(item.foodIndex)]?String(foods[Number(item.foodIndex)][0]):"",amount:Math.min(10000,Math.max(1,Math.round(Number(item.amount)||1)))}))})).slice(0,8);
   const data={type,settings:String($diet("dietSettings")?.value||"").trim(),notes:String($diet("dietNotes")?.value||"").trim(),meals:safeMeals,mealPlanText:dietMealPlanText(),updatedAt:new Date().toISOString()};
   const status=$diet("dietStatus");if(status)status.textContent="در حال ذخیره رژیم و برنامه غذایی برای این شاگرد…";
   try{await sbWrite("/fasting_logs","POST",{trainee_id:trainee,fasting_date:today(),description:PREFIX+JSON.stringify(data)});if(status)status.textContent="✅ رژیم و برنامه غذایی برای این شاگرد ذخیره شد.";if(String(selectedTrainee())===String(trainee))await window.loadDietSummary();}
@@ -8201,7 +8201,7 @@ const oldWorkoutRenderer=window.renderWorkoutList;
    const select=$diet("dietTypeSelect");
    if(select){const option=Array.from(select.options).find(o=>o.value===data.type||o.text===data.type);if(option)select.value=option.value;else{select.value="custom";$diet("dietCustomWrap")?.classList.remove("hide");if($diet("dietCustomName"))$diet("dietCustomName").value=data.type;}
     if($diet("dietSettings"))$diet("dietSettings").value=data.settings||"";if($diet("dietNotes"))$diet("dietNotes").value=data.notes||"";
-    dietMealRows=Array.isArray(data.meals)?data.meals:[];syncDietTypeUI();if(select.value!=="fasting")renderDietMealPlanner();
+    dietMealRows=Array.isArray(data.meals)?data.meals.map(meal=>({...meal,items:(Array.isArray(meal.items)?meal.items:[]).map(item=>{const savedName=String(item.foodName||"").trim();if(!savedName)return item;const match=Array.isArray(foods)?foods.findIndex(food=>String(food&&food[0]||"").trim()===savedName):-1;return {...item,foodIndex:match>=0?String(match):""};})})):[];syncDietTypeUI();if(select.value!=="fasting")renderDietMealPlanner();
    }
   }catch(error){console.error("loadDietSummary",error);box.textContent="نمایش رژیم ثبت‌شده ممکن نیست؛ اتصال پایگاه داده را بررسی کن.";}
  };
