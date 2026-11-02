@@ -8146,7 +8146,8 @@ const oldWorkoutRenderer=window.renderWorkoutList;
   const key=$diet("dietTemplateSelect")?.value||"blank";
   const names=key==="classic"?["صبحانه","میان‌وعده صبح","ناهار","میان‌وعده عصر","قبل تمرین","بعد تمرین","شام"]:key==="compact"?["صبحانه","میان‌وعده","ناهار","عصرانه","شام"]:[];
   if(dietMealRows.some(m=>m.items.some(x=>x.foodIndex!==""))&&!confirm("قالب جدید جایگزین وعده‌های فعلی می‌شود. ادامه بدهیم؟"))return;
-  dietMealRows=names.map((name,i)=>({name,time:["08:00","10:30","13:00","16:00","19:00","20:30","22:00"][i]||"12:00",items:[{foodIndex:"",amount:100}]}));
+  const times=key==="compact"?["08:00","11:00","14:00","17:00","20:00"]:["08:00","10:30","13:00","16:00","19:00","20:30","22:00"];
+  dietMealRows=names.map((name,i)=>({name,time:times[i]||"12:00",items:[{foodIndex:"",amount:100}]}));
   if(!dietMealRows.length)dietMealRows=[{name:"صبحانه",time:"08:00",items:[{foodIndex:"",amount:100}]}];
   renderDietMealPlanner();
  };
@@ -8154,7 +8155,7 @@ const oldWorkoutRenderer=window.renderWorkoutList;
   try{localStorage.setItem("sehgaleh_diet_meal_template_v1",JSON.stringify(dietMealRows));alert("قالب وعده‌های فعلی روی همین دستگاه ذخیره شد.");}
   catch(e){alert("ذخیره قالب روی این دستگاه انجام نشد.");}
  };
- window.loadDietMealTemplate=function(){try{const raw=localStorage.getItem("sehgaleh_diet_meal_template_v1");if(!raw){alert("قالب ذخیره‌شده‌ای روی این دستگاه نیست.");return;}const parsed=JSON.parse(raw);if(!Array.isArray(parsed)||!parsed.length)throw Error("invalid template");if(dietMealRows.some(m=>m.items.some(x=>x.foodIndex!==""))&&!confirm("قالب ذخیره‌شده جایگزین وعده‌های فعلی می‌شود. ادامه بدهیم؟"))return;dietMealRows=parsed;renderDietMealPlanner();}catch(e){alert("خواندن قالب ذخیره‌شده ممکن نشد.");}};
+ window.loadDietMealTemplate=function(){try{const raw=localStorage.getItem("sehgaleh_diet_meal_template_v1");if(!raw){alert("قالب ذخیره‌شده‌ای روی این دستگاه نیست.");return;}const parsed=JSON.parse(raw);if(!Array.isArray(parsed)||!parsed.length||parsed.length>8||!parsed.every(m=>m&&typeof m.name==="string"&&typeof m.time==="string"&&Array.isArray(m.items)&&m.items.length>0&&m.items.length<=12&&m.items.every(x=>x&&Number.isFinite(Number(x.amount))&&Number(x.amount)>0&&(x.foodIndex===""||Number.isInteger(Number(x.foodIndex))))))throw Error("invalid template");if(dietMealRows.some(m=>m.items.some(x=>x.foodIndex!==""))&&!confirm("قالب ذخیره‌شده جایگزین وعده‌های فعلی می‌شود. ادامه بدهیم؟"))return;dietMealRows=parsed;renderDietMealPlanner();}catch(e){alert("خواندن قالب ذخیره‌شده ممکن نشد.");}};
  function dietMealPlanText(){return dietMealRows.map((meal,i)=>{const parts=(meal.items||[]).filter(x=>x.foodIndex!==""&&foods[Number(x.foodIndex)]).map(x=>foods[Number(x.foodIndex)][0]+" ("+(Number(x.amount)||0)+" گرم)");return parts.length?(meal.name||("وعده "+(i+1)))+" — ساعت "+(meal.time||"تعیین‌نشده")+": "+parts.join("، "):"";}).filter(Boolean).join("\n");}
  window.addDietMeal=function(){if(dietMealRows.length>=8){alert("حداکثر ۸ وعده غذایی می‌توانی اضافه کنی.");return;}dietMealRows.push({name:"وعده "+(dietMealRows.length+1),time:"12:00",items:[{foodIndex:"",amount:100}]});renderDietMealPlanner();};
  window.removeDietMeal=function(i){dietMealRows.splice(i,1);renderDietMealPlanner();};
