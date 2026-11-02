@@ -8122,6 +8122,7 @@ const oldWorkoutRenderer=window.renderWorkoutList;
  const selectedTrainee=()=>currentClient&&currentClient.id;
  let dietMealRows=[];
  function parseDiet(row){const raw=String(row&&row.description||"");if(!raw.startsWith(PREFIX))return null;try{return JSON.parse(raw.slice(PREFIX.length));}catch(e){return null;}}
+ function dietRowsPath(trainee,limit){return "/fasting_logs?trainee_id=eq."+encodeURIComponent(trainee)+"&description=like."+encodeURIComponent(PREFIX)+"*&order=created_at.desc"+(limit?"&limit="+limit:"");}
  function selectedDietName(){const select=$diet("dietTypeSelect");if(!select)return "";return select.value==="custom"?String($diet("dietCustomName")?.value||"").trim():String(select.value||"").trim();}
  function syncDietTypeUI(){
   const fasting=$diet("dietTypeSelect")?.value==="fasting";
@@ -8190,7 +8191,7 @@ const oldWorkoutRenderer=window.renderWorkoutList;
   try{
    // Update the existing diet-config row for this trainee when present.
    // This prevents subsequent saves from inserting another diet row.
-   const existingRows=await sbGet("/fasting_logs?trainee_id=eq."+encodeURIComponent(trainee)+"&order=created_at.desc&limit=50");
+   const existingRows=await sbGet(dietRowsPath(trainee));
    if(String(selectedTrainee())!==String(trainee))throw new Error("شاگرد هنگام ذخیره تغییر کرده است؛ ذخیره لغو شد.");
    const existing=(existingRows||[]).find(row=>parseDiet(row));
    const payload={trainee_id:trainee,fasting_date:today(),description:PREFIX+JSON.stringify(data)};
@@ -8211,7 +8212,7 @@ const oldWorkoutRenderer=window.renderWorkoutList;
   if(!trainee){box.textContent="ابتدا شاگرد را انتخاب کن.";return;}if(!isCoach()){box.textContent="نوع رژیم غذایی را مربی تعیین می‌کند.";return;}
   box.textContent="در حال بارگذاری رژیم ثبت‌شده…";
   try{
-   const rows=await sbGet("/fasting_logs?trainee_id=eq."+encodeURIComponent(trainee)+"&order=created_at.desc&limit=30");if(!selectedTrainee()||String(selectedTrainee())!==String(trainee))return;
+   const rows=await sbGet(dietRowsPath(trainee,30));if(!selectedTrainee()||String(selectedTrainee())!==String(trainee))return;
    const row=(rows||[]).find(x=>parseDiet(x)),data=row&&parseDiet(row);
    if(!data){
     const fastingRows=(rows||[]).filter(x=>!String(x.description||"").startsWith(PREFIX)),fastingRow=fastingRows.find(x=>String(x.description||"").includes("نوع "));
