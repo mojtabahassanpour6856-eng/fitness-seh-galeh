@@ -14210,9 +14210,16 @@ window.sehResetTurnstile=function(){};
   }
   function client(){return window.AUTH_SUPABASE;}
   function addStudentRecovery(){
-    const box=$('traineeLoginBox');
-    if(!box||$('sehRecoveryStudentPanel'))return;
-    const panel=document.createElement('div');
+    /* There are legacy duplicate traineeLoginBox IDs in the page. Always attach
+       recovery to the currently visible login box, not the first hidden legacy copy. */
+    const boxes=Array.from(document.querySelectorAll('[id="traineeLoginBox"]'));
+    if(!boxes.length)return;
+    const visible=boxes.filter(b=>!b.classList.contains('hide')&&b.getClientRects().length>0);
+    const box=visible[visible.length-1]||boxes[boxes.length-1];
+    let panel=$('sehRecoveryStudentPanel');
+    if(!panel){panel=document.createElement('div');panel.id='sehRecoveryStudentPanel';}
+    if(panel.parentElement!==box)box.appendChild(panel);
+    if(panel.dataset.sehRecoveryBound==='1')return;
     panel.id='sehRecoveryStudentPanel';
     panel.className='trainee-auth-block';
     panel.innerHTML=
@@ -14228,9 +14235,9 @@ window.sehResetTurnstile=function(){};
       '<label for="sehRecoveryNewPassword2">تکرار رمز جدید</label><input id="sehRecoveryNewPassword2" type="password" autocomplete="new-password" minlength="8" placeholder="تکرار رمز جدید">'+
       '<button type="button" id="sehRecoveryResetBtn">🔒 ذخیره رمز جدید</button>'+
       '<div id="sehRecoveryResetStatus" role="status" style="display:none;white-space:pre-wrap;line-height:1.8;margin-top:8px"></div>';
-    /* Keep recovery panel outside the login block because passwordless login renderer replaces that block's innerHTML. */
-    box.appendChild(panel);
-    const loginPhone=$('traineePhoneLogin');
+    /* Keep recovery outside the replaceable login form, but inside the active auth box. */
+    panel.dataset.sehRecoveryBound='1';
+    const loginPhone=box.querySelector('#traineePhoneLogin');
     $('sehRecoveryPhone').value=loginPhone?.value||'';
     loginPhone?.addEventListener('change',()=>{if(!$('sehRecoveryPhone').value)$('sehRecoveryPhone').value=loginPhone.value;});
     $('sehRecoveryRequestBtn').addEventListener('click',async()=>{
