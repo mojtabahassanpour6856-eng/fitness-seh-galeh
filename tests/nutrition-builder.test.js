@@ -57,7 +57,8 @@ test('diet saves request an exclusive browser-wide lock per trainee', async () =
   assert.equal(h.lockCalls[0].name, 'sehgaleh-diet-save-trainee-test-1');
   assert.equal(h.lockCalls[0].options.mode, 'exclusive');
 });
-\ntest('first diet save inserts one tagged diet row', async () => {
+
+test('first diet save inserts one tagged diet row', async () => {
   const h = createHarness();
   await h.context.saveDietConfiguration();
   const writes = h.calls.filter(x => x[0] === 'POST');
