@@ -3221,7 +3221,7 @@ window.loadDashboard = loadDashboard;
   const blocks=Array.from(box.querySelectorAll('.trainee-auth-block'));
   let block=blocks.find(b=>(b.querySelector('h3')?.textContent||'').includes('ورود شاگرد'));
   if(!block)return;
-  if(block.dataset.sehApprovalLogin==='1')return;
+  if(block.dataset.sehApprovalLogin==='1' && $('sehApprovalPhone'))return;
   block.dataset.sehApprovalLogin='1';
   block.innerHTML='<h3>👤 ورود شاگرد</h3><p class="muted" style="line-height:1.9">شماره موبایل و نام خود را وارد کنید. پس از تأیید مربی، همین گوشی بدون رمز وارد حساب شما می‌شود.</p><label>نام و نام خانوادگی</label><input id="sehApprovalName" type="text" autocomplete="name" placeholder="نام کامل شما"><label>شماره موبایل ثبت‌شده در باشگاه</label><input id="sehApprovalPhone" type="tel" inputmode="tel" autocomplete="tel" placeholder="09121234567"><button type="button" id="sehApprovalRequestBtn" onclick="window.sehRequestApprovalLogin()">📨 درخواست ورود از مربی</button><p id="sehApprovalLoginStatus" class="muted" style="font-size:12px;line-height:1.9;white-space:pre-wrap"></p>';
   if(read())status('درخواست قبلی شما در حال پیگیری است؛ منتظر تأیید مربی بمانید.');
