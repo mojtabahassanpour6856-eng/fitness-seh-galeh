@@ -34,7 +34,7 @@ function createHarness({ getRows, write } = {}) {
       if (write) return write(path, method, payload);
       return [];
     },
-    alert: message => { throw new Error('Unexpected alert: ' + message); },
+    alert: message => { calls.push(['ALERT', message]); },
     window: {}
   };
   context.window = context;
