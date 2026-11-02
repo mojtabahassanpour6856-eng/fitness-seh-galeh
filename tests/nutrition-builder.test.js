@@ -73,6 +73,19 @@ test('subsequent save updates the existing diet row instead of inserting another
   assert.equal(h.calls.filter(x => x[0] === 'POST').length, 1);
   assert.equal(h.calls.filter(x => x[0] === 'PATCH').length, 1);
   assert.equal(stored.length, 1);
+  assert.match(h.calls.find(x => x[0] === 'GET')[1], /description=like\./);
+});
+
+
+test('diet lookup is filtered by its tag so unrelated fasting history cannot hide it', async () => {
+  const h = createHarness({
+    getRows: () => [{ id: 88, description: 'رژیم‌غذایی::{"type":"متعادل"}' }]
+  });
+  await h.context.saveDietConfiguration();
+  const lookup = h.calls.find(x => x[0] === 'GET')[1];
+  assert.match(lookup, /description=like\./);
+  assert.equal(h.calls.filter(x => x[0] === 'PATCH').length, 1);
+  assert.equal(h.calls.filter(x => x[0] === 'POST').length, 0);
 });
 
 test('concurrent save clicks are ignored while the first save is in progress', async () => {
