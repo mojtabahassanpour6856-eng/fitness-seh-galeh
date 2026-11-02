@@ -652,8 +652,9 @@ body.locked{overflow:hidden!important}
 <div style="border-top:1px solid #c7a34b;margin-top:14px;padding-top:10px">
 <h3>🍽️ برنامه غذایی متناسب با این رژیم</h3>
 <p class="muted">وعده‌ها را اضافه کن، ساعت هر وعده را تعیین کن و غذاها را از بانک غذای اپ همراه مقدارشان انتخاب کن. این برنامه با نوع رژیم انتخاب‌شده ذخیره می‌شود.</p>
+<div class="grid2" style="align-items:end;margin:8px 0"><div><label for="dietTemplateSelect">قالب وعده‌ها</label><select id="dietTemplateSelect"><option value="blank">قالب خالی</option><option value="classic">۷ وعده روزانه</option><option value="compact">۳ وعده اصلی + ۲ میان‌وعده</option></select></div><div class="close-row"><button type="button" class="secondary" onclick="applyDietMealTemplate()">اعمال قالب</button></div></div>
 <div id="dietMealPlanner"></div>
-<div class="close-row"><button type="button" class="secondary" onclick="addDietMeal()">➕ افزودن وعده غذایی</button></div>
+<div class="close-row"><button type="button" class="secondary" onclick="addDietMeal()">➕ افزودن وعده</button><button type="button" class="secondary" onclick="saveDietMealTemplate()">💾 ذخیره قالب فعلی</button></div>
 <p id="dietMealPlannerStatus" class="muted"></p>
 </div>
 <button type="button" onclick="saveDietConfiguration()">💾 ذخیره رژیم و برنامه غذایی</button>
@@ -8135,10 +8136,23 @@ const oldWorkoutRenderer=window.renderWorkoutList;
   if(!dietMealRows.length)dietMealRows=[{name:"صبحانه",time:"08:00",items:[{foodIndex:"",amount:100}]}];
   if(!Array.isArray(foods)||!foods.length){host.innerHTML='<p class="warning-text">بانک غذا هنوز بارگذاری نشده است؛ کمی بعد این بخش را دوباره باز کن.</p>';return;}
   const opts='<option value="">انتخاب غذا…</option>'+foods.map((f,i)=>'<option value="'+i+'">'+esc(f[0])+'</option>').join("");
-  host.innerHTML=dietMealRows.map((meal,i)=>'<div class="card" style="padding:12px;margin:10px 0;border:1px solid #d8c9a5"><div class="grid2"><div><label>وعده '+(i+1)+' — عنوان</label><input maxlength="50" value="'+esc(meal.name||("وعده "+(i+1)))+'" onchange="setDietMealName('+i+',this.value)"></div><div><label>ساعت وعده</label><input type="time" value="'+esc(meal.time||"12:00")+'" onchange="setDietMealTime('+i+',this.value)"></div></div>'+meal.items.map((item,j)=>'<div class="grid2" style="margin-top:8px"><div><label>غذا</label><select onchange="setDietFood('+i+','+j+',this.value)">'+opts+'</select></div><div><label>مقدار (گرم)</label><input type="number" min="1" step="1" value="'+esc(item.amount||100)+'" onchange="setDietAmount('+i+','+j+',this.value)"></div></div><div class="close-row"><button type="button" class="secondary" onclick="removeDietFood('+i+','+j+')">حذف این غذا</button></div>').join("")+'<div class="close-row"><button type="button" class="secondary" onclick="addDietFood('+i+')">➕ افزودن غذا به این وعده</button> <button type="button" class="secondary" onclick="removeDietMeal('+i+')">حذف وعده</button></div></div>').join("");
-  let k=0;dietMealRows.forEach(meal=>meal.items.forEach(item=>{const select=host.querySelectorAll("select")[k++];if(select)select.value=item.foodIndex===""?"":String(item.foodIndex);}));
-  const status=$diet("dietMealPlannerStatus");if(status)status.textContent="غذاها از بانک غذا انتخاب می‌شوند؛ مقدارها بر حسب گرم است. برای هر وعده می‌توانی چند غذا ثبت کنی.";
+  host.innerHTML=dietMealRows.map((meal,i)=>'<details class="card" '+(i===0?'open':'')+' style="padding:8px 10px;margin:7px 0;border:1px solid #d8c9a5"><summary style="cursor:pointer;font-weight:bold;padding:4px">وعده '+(i+1)+' · '+esc(meal.name||("وعده "+(i+1)))+' <small class="muted">('+meal.items.length+' قلم)</small></summary><div style="padding-top:8px"><div class="grid2"><div><label>عنوان وعده</label><input maxlength="50" value="'+esc(meal.name||("وعده "+(i+1)))+'" onchange="setDietMealName('+i+',this.value)"></div><div><label>ساعت</label><input type="time" value="'+esc(meal.time||"12:00")+'" onchange="setDietMealTime('+i+',this.value)"></div></div>'+meal.items.map((item,j)=>'<div class="grid2" style="margin-top:7px;align-items:end"><div><label>غذا</label><select onchange="setDietFood('+i+','+j+',this.value)">'+opts+'</select></div><div><label>مقدار (گرم)</label><div style="display:flex;gap:5px"><input style="min-width:0" type="number" min="1" step="1" value="'+esc(item.amount||100)+'" onchange="setDietAmount('+i+','+j+',this.value)"><select aria-label="مقدار آماده" onchange="setDietAmount('+i+','+j+',this.value);this.value=\'\'" style="max-width:76px"><option value="">گرم</option><option value="50">۵۰</option><option value="75">۷۵</option><option value="100">۱۰۰</option><option value="150">۱۵۰</option><option value="200">۲۰۰</option></select></div></div></div><div class="close-row"><button type="button" class="secondary" onclick="removeDietFood('+i+','+j+')">حذف غذا</button></div>').join("")+'<div class="close-row"><button type="button" class="secondary" onclick="addDietFood('+i+')">＋ افزودن غذا</button><button type="button" class="secondary" onclick="removeDietMeal('+i+')">حذف وعده</button></div></div></details>').join("");
+  let k=0;dietMealRows.forEach(meal=>meal.items.forEach(item=>{const select=host.querySelectorAll("select[aria-label=\"\"]")[k++];}));
+  const foodSelects=host.querySelectorAll('select:not([aria-label])');let idx=0;dietMealRows.forEach(meal=>meal.items.forEach(item=>{if(foodSelects[idx])foodSelects[idx++].value=item.foodIndex===""?"":String(item.foodIndex);}));
+  const status=$diet("dietMealPlannerStatus");if(status)status.textContent="وعده‌ها باز و بسته می‌شوند؛ غذا را انتخاب کن و مقدار را وارد یا از گزینه‌های آماده انتخاب کن.";
  }
+ window.applyDietMealTemplate=function(){
+  const key=$diet("dietTemplateSelect")?.value||"blank";
+  const names=key==="classic"?["صبحانه","میان‌وعده صبح","ناهار","میان‌وعده عصر","قبل تمرین","بعد تمرین","شام"]:key==="compact"?["صبحانه","میان‌وعده","ناهار","عصرانه","شام"]:[];
+  if(dietMealRows.some(m=>m.items.some(x=>x.foodIndex!==""))&&!confirm("قالب جدید جایگزین وعده‌های فعلی می‌شود. ادامه بدهیم؟"))return;
+  dietMealRows=names.map((name,i)=>({name,time:["08:00","10:30","13:00","16:00","19:00","20:30","22:00"][i]||"12:00",items:[{foodIndex:"",amount:100}]}));
+  if(!dietMealRows.length)dietMealRows=[{name:"صبحانه",time:"08:00",items:[{foodIndex:"",amount:100}]}];
+  renderDietMealPlanner();
+ };
+ window.saveDietMealTemplate=function(){
+  try{localStorage.setItem("sehgaleh_diet_meal_template_v1",JSON.stringify(dietMealRows));alert("قالب وعده‌های فعلی روی همین دستگاه ذخیره شد.");}
+  catch(e){alert("ذخیره قالب روی این دستگاه انجام نشد.");}
+ };
  function dietMealPlanText(){return dietMealRows.map((meal,i)=>{const parts=(meal.items||[]).filter(x=>x.foodIndex!==""&&foods[Number(x.foodIndex)]).map(x=>foods[Number(x.foodIndex)][0]+" ("+(Number(x.amount)||0)+" گرم)");return parts.length?(meal.name||("وعده "+(i+1)))+" — ساعت "+(meal.time||"تعیین‌نشده")+": "+parts.join("، "):"";}).filter(Boolean).join("\n");}
  window.addDietMeal=function(){if(dietMealRows.length>=8){alert("حداکثر ۸ وعده غذایی می‌توانی اضافه کنی.");return;}dietMealRows.push({name:"وعده "+(dietMealRows.length+1),time:"12:00",items:[{foodIndex:"",amount:100}]});renderDietMealPlanner();};
  window.removeDietMeal=function(i){dietMealRows.splice(i,1);renderDietMealPlanner();};
