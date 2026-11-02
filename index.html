@@ -8187,8 +8187,23 @@ const oldWorkoutRenderer=window.renderWorkoutList;
   const saveButton=document.querySelector('button[onclick="saveDietConfiguration()"]');
   if(saveButton){saveButton.disabled=true;saveButton.dataset.originalText=saveButton.textContent;saveButton.textContent="⏳ در حال ذخیره…";}
   const status=$diet("dietStatus");if(status)status.textContent="در حال ذخیره رژیم و برنامه غذایی برای این شاگرد…";
-  try{await sbWrite("/fasting_logs","POST",{trainee_id:trainee,fasting_date:today(),description:PREFIX+JSON.stringify(data)});if(status)status.textContent="✅ رژیم و برنامه غذایی برای این شاگرد ذخیره شد.";if(String(selectedTrainee())===String(trainee))await window.loadDietSummary();}
-  catch(error){console.error("saveDietConfiguration",error);if(status)status.textContent="❌ ذخیره رژیم انجام نشد: "+(error?.message||String(error));alert("ذخیره رژیم انجام نشد.\n"+(error?.message||String(error)));}
+  try{
+   // Update the existing diet-config row for this trainee when present.
+   // This prevents subsequent saves from inserting another diet row.
+   const existingRows=await sbGet("/fasting_logs?trainee_id=eq."+encodeURIComponent(trainee)+"&order=created_at.desc&limit=50");
+   if(String(selectedTrainee())!==String(trainee))throw new Error("شاگرد هنگام ذخیره تغییر کرده است؛ ذخیره لغو شد.");
+   const existing=(existingRows||[]).find(row=>parseDiet(row));
+   const payload={trainee_id:trainee,fasting_date:today(),description:PREFIX+JSON.stringify(data)};
+   if(existing){
+    if(!existing.id)throw new Error("شناسه رکورد رژیم قبلی دریافت نشد؛ برای جلوگیری از ثبت تکراری، ذخیره انجام نشد.");
+    await sbWrite("/fasting_logs?id=eq."+encodeURIComponent(existing.id)+"&trainee_id=eq."+encodeURIComponent(trainee),"PATCH",payload);
+   }else{
+    await sbWrite("/fasting_logs","POST",payload);
+   }
+   if(status)status.textContent="✅ رژیم و برنامه غذایی برای این شاگرد ذخیره شد.";
+   if(String(selectedTrainee())===String(trainee))await window.loadDietSummary();
+  }
+  catch(error){console.error("saveDietConfiguration",error);if(status)status.textContent="❌ ذخیره رژیم انجام نشد: "+(error?.message||String(error));alert("ذخیره رژیم انجام نشد.\\n"+(error?.message||String(error)));}
   finally{window._dietSaveInProgress=false;if(saveButton){saveButton.disabled=false;saveButton.textContent=saveButton.dataset.originalText||"💾 ذخیره رژیم و برنامه غذایی";delete saveButton.dataset.originalText;}}
  };
  window.loadDietSummary=async function(){
