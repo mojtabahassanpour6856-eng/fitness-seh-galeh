@@ -8207,6 +8207,16 @@ const oldWorkoutRenderer=window.renderWorkoutList;
   catch(error){console.error("saveDietConfiguration",error);if(status)status.textContent="❌ ذخیره رژیم انجام نشد: "+(error?.message||String(error));alert("ذخیره رژیم انجام نشد.\\n"+(error?.message||String(error)));}
   finally{window._dietSaveInProgress=false;if(saveButton){saveButton.disabled=false;saveButton.textContent=saveButton.dataset.originalText||"💾 ذخیره رژیم و برنامه غذایی";delete saveButton.dataset.originalText;}}
  };
+ // Serialize saves across tabs/windows in the same browser profile.
+ // This reduces same-device races; cross-device atomicity still requires a database constraint/RPC.
+ const saveDietConfigurationInPage=window.saveDietConfiguration;
+ window.saveDietConfiguration=async function(){
+  const trainee=selectedTrainee();
+  if(!trainee||typeof navigator==="undefined"||!navigator.locks||typeof navigator.locks.request!=="function"){
+   return saveDietConfigurationInPage.apply(this,arguments);
+  }
+  return navigator.locks.request("sehgaleh-diet-save-"+String(trainee),{mode:"exclusive"},()=>saveDietConfigurationInPage.apply(this,arguments));
+ };
  window.loadDietSummary=async function(){
   const box=$diet("dietSavedSummary");if(!box)return;const trainee=selectedTrainee();
   if(!trainee){box.textContent="ابتدا شاگرد را انتخاب کن.";return;}if(!isCoach()){box.textContent="نوع رژیم غذایی را مربی تعیین می‌کند.";return;}
