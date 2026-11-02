@@ -8182,9 +8182,14 @@ const oldWorkoutRenderer=window.renderWorkoutList;
   if(invalidAmount){alert("مقدار یکی از غذاها معتبر نیست؛ مقدار را بین ۱ تا ۱۰۰۰۰ گرم وارد کن.");return;}
   const safeMeals=dietMealRows.map(meal=>({name:String(meal.name||"").slice(0,50),time:/^([01]\d|2[0-3]):[0-5]\d$/.test(meal.time||"")?meal.time:"12:00",items:(Array.isArray(meal.items)?meal.items:[]).slice(0,12).map(item=>({foodIndex:item.foodIndex===""?"":String(Number(item.foodIndex)),foodName:item.foodIndex!==""&&Array.isArray(foods)&&foods[Number(item.foodIndex)]?String(foods[Number(item.foodIndex)][0]):"",amount:Math.min(10000,Math.max(1,Math.round(Number(item.amount)||1)))}))})).slice(0,8);
   const data={type,settings:String($diet("dietSettings")?.value||"").trim(),notes:String($diet("dietNotes")?.value||"").trim(),meals:safeMeals,mealPlanText:dietMealPlanText(),updatedAt:new Date().toISOString()};
+  if(window._dietSaveInProgress)return;
+  window._dietSaveInProgress=true;
+  const saveButton=document.querySelector('button[onclick="saveDietConfiguration()"]');
+  if(saveButton){saveButton.disabled=true;saveButton.dataset.originalText=saveButton.textContent;saveButton.textContent="⏳ در حال ذخیره…";}
   const status=$diet("dietStatus");if(status)status.textContent="در حال ذخیره رژیم و برنامه غذایی برای این شاگرد…";
   try{await sbWrite("/fasting_logs","POST",{trainee_id:trainee,fasting_date:today(),description:PREFIX+JSON.stringify(data)});if(status)status.textContent="✅ رژیم و برنامه غذایی برای این شاگرد ذخیره شد.";if(String(selectedTrainee())===String(trainee))await window.loadDietSummary();}
   catch(error){console.error("saveDietConfiguration",error);if(status)status.textContent="❌ ذخیره رژیم انجام نشد: "+(error?.message||String(error));alert("ذخیره رژیم انجام نشد.\n"+(error?.message||String(error)));}
+  finally{window._dietSaveInProgress=false;if(saveButton){saveButton.disabled=false;saveButton.textContent=saveButton.dataset.originalText||"💾 ذخیره رژیم و برنامه غذایی";delete saveButton.dataset.originalText;}}
  };
  window.loadDietSummary=async function(){
   const box=$diet("dietSavedSummary");if(!box)return;const trainee=selectedTrainee();
