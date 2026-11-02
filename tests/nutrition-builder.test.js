@@ -18,6 +18,7 @@ function createHarness({ getRows, write } = {}) {
     querySelector: selector => selector.includes('saveDietConfiguration') ? button : null
   };
   const calls = [];
+  const lockCalls = [];
   const context = {
     console,
     document,
@@ -35,6 +36,7 @@ function createHarness({ getRows, write } = {}) {
       return [];
     },
     alert: message => { calls.push(['ALERT', message]); },
+    navigator: { locks: { request: async (name, options, callback) => { lockCalls.push({ name, options }); return callback(); } } },
     window: {}
   };
   context.window = context;
@@ -44,10 +46,18 @@ function createHarness({ getRows, write } = {}) {
   assert.ok(match, 'diet builder script must exist in index.html');
   vm.runInContext(match[1], context, { timeout: 3000 });
   context.loadDietSummary = async () => {}; // Keep this unit test focused on the save path.
-  return { context, elements, button, calls };
+  return { context, elements, button, calls, lockCalls };
 }
 
-test('first diet save inserts one tagged diet row', async () => {
+
+test('diet saves request an exclusive browser-wide lock per trainee', async () => {
+  const h = createHarness();
+  await h.context.saveDietConfiguration();
+  assert.equal(h.lockCalls.length, 1);
+  assert.equal(h.lockCalls[0].name, 'sehgaleh-diet-save-trainee-test-1');
+  assert.equal(h.lockCalls[0].options.mode, 'exclusive');
+});
+\ntest('first diet save inserts one tagged diet row', async () => {
   const h = createHarness();
   await h.context.saveDietConfiguration();
   const writes = h.calls.filter(x => x[0] === 'POST');
