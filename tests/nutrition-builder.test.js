@@ -43,6 +43,7 @@ function createHarness({ getRows, write } = {}) {
   const match = html.match(/<script id="FITNESS_TRAINEE_DIET_TYPES_V1">([\s\S]*?)<\/script>/);
   assert.ok(match, 'diet builder script must exist in index.html');
   vm.runInContext(match[1], context, { timeout: 3000 });
+  context.loadDietSummary = async () => {}; // Keep this unit test focused on the save path.
   return { context, elements, button, calls };
 }
 
