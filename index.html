@@ -3272,7 +3272,7 @@ window.loadDashboard = loadDashboard;
  setInterval(()=>{if(read())poll();},6500);
  if(read())setTimeout(poll,1200);
 })();
-</script>
+<\/script>
 
 </body></html>`;
     const w=window.open('','_blank');if(w){w.document.write(html);w.document.close();}
@@ -14318,7 +14318,6 @@ window.sehResetTurnstile=function(){};
         codeBox.innerHTML='<h3 style="margin:0 0 8px">🔐 کد بازیابی — فقط همین بار نمایش داده می‌شود</h3>'+
           '<p><b>شاگرد:</b> '+esc(btn.dataset.sehRecoveryName||'شاگرد')+'</p>'+
           '<p><b>شماره:</b> '+esc(btn.dataset.sehRecoveryPhone||'')+'</p>'+
-          ' 
           '<p style="font-size:24px;font-weight:bold;letter-spacing:4px;margin:12px 0">'+esc(data.recovery_code||'')+'</p>'+
           '<p>اعتبار: ۱۵ دقیقه. کد را فقط به خود شاگرد بدهید؛ پیامک خودکار ارسال نمی‌شود.</p>'+
           '<button type="button" id="sehRecoveryCopyDetails">📋 کپی کد بازیابی</button>';
