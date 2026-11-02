@@ -8175,10 +8175,14 @@ const oldWorkoutRenderer=window.renderWorkoutList;
   if($diet("dietTypeSelect")?.value==="fasting"){syncDietTypeUI();if(typeof window.saveFasting==="function")return window.saveFasting();alert("بخش ذخیره فستینگ بارگذاری نشده است؛ صفحه را تازه‌سازی کن.");return;}
   const trainee=selectedTrainee();if(!trainee){alert("ابتدا یک شاگرد را انتخاب کن.");return;}
   const type=selectedDietName();if(!type){alert("نوع رژیم را انتخاب کن و در صورت انتخاب «سایر»، نام آن را بنویس.");return;}
+  const invalidFood=dietMealRows.some(meal=>(meal.items||[]).some(item=>item.foodIndex!==""&&(!Number.isInteger(Number(item.foodIndex))||!Array.isArray(foods)||!foods[Number(item.foodIndex)])));
+  if(invalidFood){alert("یکی از غذاهای انتخاب‌شده دیگر در بانک غذا موجود نیست. لطفاً آن وعده را بررسی و غذا را دوباره انتخاب کن.");return;}
+  const invalidAmount=dietMealRows.some(meal=>(meal.items||[]).some(item=>!Number.isFinite(Number(item.amount))||Number(item.amount)<1||Number(item.amount)>10000));
+  if(invalidAmount){alert("مقدار یکی از غذاها معتبر نیست؛ مقدار را بین ۱ تا ۱۰۰۰۰ گرم وارد کن.");return;}
   const safeMeals=dietMealRows.map(meal=>({name:String(meal.name||"").slice(0,50),time:/^([01]\d|2[0-3]):[0-5]\d$/.test(meal.time||"")?meal.time:"12:00",items:(Array.isArray(meal.items)?meal.items:[]).slice(0,12).map(item=>({foodIndex:item.foodIndex===""?"":String(Number(item.foodIndex)),amount:Math.min(10000,Math.max(1,Math.round(Number(item.amount)||1)))}))})).slice(0,8);
   const data={type,settings:String($diet("dietSettings")?.value||"").trim(),notes:String($diet("dietNotes")?.value||"").trim(),meals:safeMeals,mealPlanText:dietMealPlanText(),updatedAt:new Date().toISOString()};
   const status=$diet("dietStatus");if(status)status.textContent="در حال ذخیره رژیم و برنامه غذایی برای این شاگرد…";
-  try{await sbWrite("/fasting_logs","POST",{trainee_id:trainee,fasting_date:today(),description:PREFIX+JSON.stringify(data)});if(status)status.textContent="✅ رژیم و برنامه غذایی برای این شاگرد ذخیره شد.";await window.loadDietSummary();}
+  try{await sbWrite("/fasting_logs","POST",{trainee_id:trainee,fasting_date:today(),description:PREFIX+JSON.stringify(data)});if(status)status.textContent="✅ رژیم و برنامه غذایی برای این شاگرد ذخیره شد.";if(String(selectedTrainee())===String(trainee))await window.loadDietSummary();}
   catch(error){console.error("saveDietConfiguration",error);if(status)status.textContent="❌ ذخیره رژیم انجام نشد: "+(error?.message||String(error));alert("ذخیره رژیم انجام نشد.\n"+(error?.message||String(error)));}
  };
  window.loadDietSummary=async function(){
