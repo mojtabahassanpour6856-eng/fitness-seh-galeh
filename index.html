@@ -8130,6 +8130,17 @@ const oldWorkoutRenderer=window.renderWorkoutList;
   if(fasting){if(typeof window.configureFastingModel==="function")window.configureFastingModel();if(typeof window.loadFastingSummary==="function")window.loadFastingSummary();}
   else if($diet("dietMealPlanner")){if(!dietMealRows.length)dietMealRows=[{name:"صبحانه",time:"08:00",items:[{foodIndex:"",amount:100}]},{name:"ناهار",time:"13:00",items:[{foodIndex:"",amount:100}]},{name:"شام",time:"19:00",items:[{foodIndex:"",amount:100}]}];renderDietMealPlanner();}
  }
+ function dietFoodNutrition(item){
+  const food=Array.isArray(foods)&&item.foodIndex!==""?foods[Number(item.foodIndex)]:null;
+  const amount=Math.max(0,Number(item.amount)||0);
+  if(!food||!Number.isFinite(amount))return {cal:0,protein:0,carbs:0,fat:0,valid:false};
+  const values=[1,2,3,4].map(i=>Number(food[i]));
+  if(values.some(v=>!Number.isFinite(v)||v<0))return {cal:0,protein:0,carbs:0,fat:0,valid:false};
+  return {cal:values[0]*amount/100,protein:values[1]*amount/100,carbs:values[2]*amount/100,fat:values[3]*amount/100,valid:true};
+ }
+ function dietMealNutrition(meal){
+  return (meal.items||[]).reduce((sum,item)=>{const n=dietFoodNutrition(item);if(n.valid){sum.cal+=n.cal;sum.protein+=n.protein;sum.carbs+=n.carbs;sum.fat+=n.fat;}return sum;},{cal:0,protein:0,carbs:0,fat:0});
+ }
  function renderDietMealPlanner(){
   const host=$diet("dietMealPlanner");if(!host)return;
   if(!dietMealRows.length)dietMealRows=[{name:"صبحانه",time:"08:00",items:[{foodIndex:"",amount:100}]}];
@@ -8140,9 +8151,19 @@ const oldWorkoutRenderer=window.renderWorkoutList;
   const existingDetails=host.querySelectorAll('details[data-meal-id]');
   const openIds=existingDetails.length?new Set(Array.from(existingDetails).filter(d=>d.open).map(d=>d.dataset.mealId)):new Set([dietMealRows[0]._uiId]);
   if(window._dietMealForceOpenId){openIds.add(window._dietMealForceOpenId);window._dietMealForceOpenId="";}
-  host.innerHTML=dietMealRows.map((meal,i)=>'<details class="card" data-meal-id="'+esc(meal._uiId)+'" '+(openIds.has(meal._uiId)?'open':'')+' style="padding:8px 10px;margin:7px 0;border:1px solid #d8c9a5"><summary style="cursor:pointer;font-weight:bold;padding:4px">وعده '+(i+1)+' · '+esc(meal.name||("وعده "+(i+1)))+' <small class="muted">('+meal.items.length+' قلم)</small></summary><div style="padding-top:8px"><div class="grid2"><div><label>عنوان وعده</label><input maxlength="50" value="'+esc(meal.name||("وعده "+(i+1)))+'" onchange="setDietMealName('+i+',this.value)"></div><div><label>ساعت</label><input type="time" value="'+esc(meal.time||"12:00")+'" onchange="setDietMealTime('+i+',this.value)"></div></div>'+meal.items.map((item,j)=>'<div class="grid2" style="margin-top:7px;align-items:end"><div><label>غذا</label><select onchange="setDietFood('+i+','+j+',this.value)">'+opts+'</select></div><div><label>مقدار (گرم)</label><div style="display:flex;gap:5px"><input style="min-width:0" type="number" min="1" step="1" value="'+esc(item.amount||100)+'" onchange="setDietAmount('+i+','+j+',this.value)"><select aria-label="مقدار آماده" onchange="setDietAmount('+i+','+j+',this.value);this.parentElement.querySelector(\'input\').value=this.value;this.value=\'\'" style="max-width:76px"><option value="">گرم</option><option value="50">۵۰</option><option value="75">۷۵</option><option value="100">۱۰۰</option><option value="150">۱۵۰</option><option value="200">۲۰۰</option></select></div></div></div><div class="close-row"><button type="button" class="secondary" onclick="removeDietFood('+i+','+j+')">حذف غذا</button></div>').join("")+'<div class="close-row"><button type="button" class="secondary" onclick="addDietFood('+i+')">＋ افزودن غذا</button><button type="button" class="secondary" onclick="copyDietMeal('+i+')">کپی وعده</button><button type="button" class="secondary" onclick="removeDietMeal('+i+')">حذف وعده</button></div></div></details>').join("");
-  const foodSelects=host.querySelectorAll('select:not([aria-label])');let idx=0;dietMealRows.forEach(meal=>meal.items.forEach(item=>{if(foodSelects[idx])foodSelects[idx++].value=item.foodIndex===""?"":String(item.foodIndex);}));
-  const status=$diet("dietMealPlannerStatus");if(status)status.textContent="وعده‌ها باز و بسته می‌شوند؛ غذا را انتخاب کن و مقدار را وارد یا از گزینه‌های آماده انتخاب کن.";
+  host.innerHTML=dietMealRows.map((meal,i)=>{
+   const total=dietMealNutrition(meal);
+   const rows=meal.items.map((item,j)=>{
+    const n=dietFoodNutrition(item),fmt=v=>n.valid?String(Math.round(v*10)/10):"—";
+    return '<tr><td style="min-width:145px"><select style="width:100%;min-width:135px" onchange="setDietFood('+i+','+j+',this.value)">'+opts+'</select></td><td style="min-width:90px"><input aria-label="مقدار غذا به گرم" style="width:78px;min-width:65px" type="number" min="1" max="10000" step="1" value="'+esc(item.amount||100)+'" onchange="setDietAmount('+i+','+j+',this.value)"></td><td>'+fmt(n.cal)+'</td><td>'+fmt(n.protein)+'</td><td>'+fmt(n.carbs)+'</td><td>'+fmt(n.fat)+'</td><td><button type="button" class="secondary" onclick="removeDietFood('+i+','+j+')">حذف</button></td></tr>';
+   }).join("");
+   return '<details class="card" data-meal-id="'+esc(meal._uiId)+'" '+(openIds.has(meal._uiId)?'open':'')+' style="padding:8px 10px;margin:7px 0;border:1px solid #d8c9a5"><summary style="cursor:pointer;font-weight:bold;padding:4px">وعده '+(i+1)+' · '+esc(meal.name||("وعده "+(i+1)))+' <small class="muted">('+meal.items.length+' قلم)</small></summary><div style="padding-top:8px"><div class="grid2"><div><label>عنوان وعده</label><input maxlength="50" value="'+esc(meal.name||("وعده "+(i+1)))+'" onchange="setDietMealName('+i+',this.value)"></div><div><label>ساعت</label><input type="time" value="'+esc(meal.time||"12:00")+'" onchange="setDietMealTime('+i+',this.value)"></div></div><div style="overflow-x:auto;margin-top:10px"><table style="width:100%;min-width:660px;border-collapse:collapse;text-align:center;font-size:13px"><thead><tr><th>نام غذا</th><th>مقدار (گرم)</th><th>کالری</th><th>پروتئین</th><th>کربوهیدرات</th><th>چربی</th><th>عملیات</th></tr></thead><tbody>'+rows+'</tbody><tfoot><tr style="font-weight:bold;background:#f5eedc"><td>مجموع وعده</td><td>—</td><td>'+Math.round(total.cal)+'</td><td>'+Math.round(total.protein*10)/10+'</td><td>'+Math.round(total.carbs*10)/10+'</td><td>'+Math.round(total.fat*10)/10+'</td><td></td></tr></tfoot></table></div><div class="close-row"><button type="button" class="secondary" onclick="addDietFood('+i+')">＋ افزودن غذا</button><button type="button" class="secondary" onclick="copyDietMeal('+i+')">کپی وعده</button><button type="button" class="secondary" onclick="removeDietMeal('+i+')">حذف وعده</button></div></div></details>';
+  }).join("");
+  const foodSelects=host.querySelectorAll('table select');let idx=0;
+  dietMealRows.forEach(meal=>meal.items.forEach(item=>{if(foodSelects[idx])foodSelects[idx++].value=item.foodIndex===""?"":String(item.foodIndex);}));
+  const grand=dietMealRows.reduce((sum,meal)=>{const n=dietMealNutrition(meal);sum.cal+=n.cal;sum.protein+=n.protein;sum.carbs+=n.carbs;sum.fat+=n.fat;return sum;},{cal:0,protein:0,carbs:0,fat:0});
+  host.insertAdjacentHTML("beforeend",'<div class="card" style="margin-top:10px;padding:12px;background:#fff8e8;border:1px solid #d8c9a5"><b>جمع کل برنامه غذایی</b><div style="display:flex;flex-wrap:wrap;gap:12px;margin-top:8px">کالری: '+Math.round(grand.cal)+' kcal · پروتئین: '+(Math.round(grand.protein*10)/10)+' g · کربوهیدرات: '+(Math.round(grand.carbs*10)/10)+' g · چربی: '+(Math.round(grand.fat*10)/10)+' g</div></div>');
+  const status=$diet("dietMealPlannerStatus");if(status)status.textContent="ارزش غذایی هر قلم و مجموع وعده‌ها از بانک غذا و بر اساس مقدار گرم به‌صورت خودکار محاسبه می‌شود.";
  }
  window.applyDietMealTemplate=function(){
   const key=$diet("dietTemplateSelect")?.value||"blank";
