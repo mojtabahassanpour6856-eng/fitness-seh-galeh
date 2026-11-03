@@ -151,3 +151,24 @@ $function$;
 revoke all on function public.save_coach_nutrition_builder_plan(jsonb) from public;
 revoke all on function public.save_coach_nutrition_builder_plan(jsonb) from anon;
 grant execute on function public.save_coach_nutrition_builder_plan(jsonb) to authenticated;
+
+-- The current sbWrite bridge posts the payload object directly. This named-argument
+-- overload adapts that shape to the validated single-payload implementation above.
+create or replace function public.save_coach_nutrition_builder_plan(
+  trainee_id uuid,
+  plan jsonb,
+  meals jsonb
+)
+returns jsonb
+language sql
+security invoker
+set search_path = pg_catalog, public
+as $function$
+  select public.save_coach_nutrition_builder_plan(
+    jsonb_build_object('trainee_id', $1, 'plan', $2, 'meals', $3)
+  );
+$function$;
+
+revoke all on function public.save_coach_nutrition_builder_plan(uuid, jsonb, jsonb) from public;
+revoke all on function public.save_coach_nutrition_builder_plan(uuid, jsonb, jsonb) from anon;
+grant execute on function public.save_coach_nutrition_builder_plan(uuid, jsonb, jsonb) to authenticated;
