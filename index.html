@@ -14954,5 +14954,42 @@ window.sehResetTurnstile=function(){};
  document.addEventListener('visibilitychange',function(){if(document.visibilityState==='visible')init();});
 })();
 </script>
+
+<script>
+/* Coach-only bridge for the embedded nutrition builder. */
+window.sehNutritionBuilderBridge={
+ async getContext(){
+  if(!currentClient||currentClient.id==null)throw new Error('ابتدا یک شاگرد را انتخاب کن.');
+  if(!authProfile||authProfile.role!=='coach')throw new Error('دسترسی مربی تأیید نشد.');
+  const traineeId=String(currentClient.id);
+  const plans=await sbGet('/nutrition_plans?trainee_id=eq.'+encodeURIComponent(traineeId)+'&select=*&order=created_at.desc&limit=1');
+  if(!currentClient||String(currentClient.id)!==traineeId)throw new Error('شاگرد هنگام بارگذاری تغییر کرد.');
+  const plan=plans[0]||null;let meals=[];
+  if(plan){
+   meals=await sbGet('/nutrition_meals?plan_id=eq.'+encodeURIComponent(plan.id)+'&select=*&order=meal_order.asc');
+   if(!currentClient||String(currentClient.id)!==traineeId)throw new Error('شاگرد هنگام بارگذاری تغییر کرد.');
+   const ids=meals.map(x=>x.id);let mf=[];
+   if(ids.length)mf=await sbGet('/nutrition_meal_foods?meal_id=in.('+ids.map(encodeURIComponent).join(',')+')&select=*&order=created_at.asc');
+   if(!currentClient||String(currentClient.id)!==traineeId)throw new Error('شاگرد هنگام بارگذاری تغییر کرد.');
+   const foodIds=[...new Set(mf.map(x=>x.food_id).filter(Boolean))];let foodRows=[];
+   if(foodIds.length)foodRows=await sbGet('/foods?id=in.('+foodIds.map(encodeURIComponent).join(',')+')&select=*');
+   if(!currentClient||String(currentClient.id)!==traineeId)throw new Error('شاگرد هنگام بارگذاری تغییر کرد.');
+   const byId={};foodRows.forEach(x=>byId[String(x.id)]=x);
+   meals.forEach(m=>m.foods=mf.filter(x=>String(x.meal_id)===String(m.id)).map(x=>({...x,food:byId[String(x.food_id)]||null})));
+  }
+  return {trainee:{id:traineeId,name:currentClient.name||currentClient.full_name||'شاگرد'},plan,meals};
+ },
+ async save(payload){
+  if(!currentClient||currentClient.id==null||!authProfile||authProfile.role!=='coach')throw new Error('دسترسی مربی یا انتخاب شاگرد معتبر نیست.');
+  const traineeId=String(currentClient.id);
+  if(String(payload?.trainee_id)!==traineeId)throw new Error('شناسه شاگرد با انتخاب فعلی مطابقت ندارد.');
+  if(!Array.isArray(payload.meals)||payload.meals.length<8||payload.meals.length>32)throw new Error('تعداد گزینه‌های برنامه معتبر نیست.');
+  const result=await sbWrite('/rpc/save_coach_nutrition_builder_plan','POST',payload);
+  if(!currentClient||String(currentClient.id)!==traineeId)throw new Error('برنامه ثبت شد، اما انتخاب شاگرد تغییر کرده؛ دوباره شاگرد قبلی را باز کن.');
+  if(typeof loadNutritionForClient==='function')await loadNutritionForClient();
+  return Array.isArray(result)?result[0]:result;
+ }
+};
+</script>
 </body>
 </html>
