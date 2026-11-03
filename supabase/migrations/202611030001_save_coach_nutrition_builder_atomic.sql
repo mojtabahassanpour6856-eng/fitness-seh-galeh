@@ -115,6 +115,12 @@ begin
         raise exception 'Food does not exist: %',v_food_id using errcode = '23503';
       end if;
       v_grams := nullif(v_food->>'grams_per_unit','')::numeric;
+      if v_grams is not null and (v_grams <= 0 or v_grams > 100000) then
+        raise exception 'Invalid grams_per_unit' using errcode = '22023';
+      end if;
+      if length(coalesce(v_food->>'unit','گرم')) > 40 then
+        raise exception 'Invalid food unit' using errcode = '22023';
+      end if;
       v_note := null;
       if nullif(v_food->>'recipe_name','') is not null then
         v_note := '[دستور ترکیبی: ' || left(v_food->>'recipe_name',120) || ']';
@@ -132,6 +138,12 @@ begin
   if v_count <> jsonb_array_length(v_meals) then
     raise exception 'Meal option count mismatch' using errcode = '22023';
   end if;
+  -- Every one of the eight meal slots must retain its primary option.
+  for v_index in 0..7 loop
+    if not ((v_index::text || ':1') = any(v_seen)) then
+      raise exception 'Missing primary option for meal slot %',v_index using errcode = '22023';
+    end if;
+  end loop;
   return jsonb_build_object('plan_id',v_plan_id,'trainee_id',v_trainee_id,'meal_options',v_count,'food_rows',v_food_count);
 end;
 $function$;
