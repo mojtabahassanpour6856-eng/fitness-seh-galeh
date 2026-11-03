@@ -8131,10 +8131,13 @@ const oldWorkoutRenderer=window.renderWorkoutList;
   else if($diet("dietMealPlanner")){if(!dietMealRows.length)dietMealRows=[{name:"صبحانه",time:"08:00",items:[{foodIndex:"",amount:100}]},{name:"ناهار",time:"13:00",items:[{foodIndex:"",amount:100}]},{name:"شام",time:"19:00",items:[{foodIndex:"",amount:100}]}];renderDietMealPlanner();}
  }
  function dietFoodNutrition(item){
-  const food=Array.isArray(foods)&&item.foodIndex!==""?foods[Number(item.foodIndex)]:null;
-  const amount=Math.max(0,Number(item.amount)||0);
-  if(!food||!Number.isFinite(amount))return {cal:0,protein:0,carbs:0,fat:0,valid:false};
-  const values=[1,2,3,4].map(i=>Number(food[i]));
+  const index=Number(item&&item.foodIndex);
+  const food=Array.isArray(foods)&&item&&item.foodIndex!==""&&Number.isInteger(index)&&index>=0?foods[index]:null;
+  const amount=Number(item&&item.amount);
+  if(!food||!Number.isFinite(amount)||amount<=0)return {cal:0,protein:0,carbs:0,fat:0,valid:false};
+  const raw=food.slice(1,5);
+  if(raw.length!==4||raw.some(v=>v===null||v===undefined||String(v).trim()===""))return {cal:0,protein:0,carbs:0,fat:0,valid:false};
+  const values=raw.map(Number);
   if(values.some(v=>!Number.isFinite(v)||v<0))return {cal:0,protein:0,carbs:0,fat:0,valid:false};
   return {cal:values[0]*amount/100,protein:values[1]*amount/100,carbs:values[2]*amount/100,fat:values[3]*amount/100,valid:true};
  }
