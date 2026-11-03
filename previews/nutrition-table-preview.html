@@ -1,79 +1,43 @@
 <!doctype html>
 <html lang="fa" dir="rtl">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<meta name="theme-color" content="#f7f0df">
-<title>قالب خالی برنامه غذایی | فیتنس سه‌قلعه</title>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#f7f0df"><title>قالب برنامه غذایی | فیتنس سه‌قلعه</title>
 <style>
-:root{font-family:Tahoma,Arial,sans-serif;color:#302b20;background:#f7f3e9}
-*{box-sizing:border-box}
-body{margin:0;padding:10px;max-width:680px;margin-inline:auto}
-header,.meal{background:#fffdf8;border:1px solid #e5d8b9;border-radius:13px;box-shadow:0 2px 8px #5b47200b}
-header{padding:12px 14px;text-align:center;border-top:4px solid #c7a34b;margin-bottom:10px}
-h1{font-size:17px;margin:0 0 5px}.sub{font-size:11px;color:#82765f;line-height:1.8}
-.section-title{font-size:13px;font-weight:bold;margin:12px 3px 8px}
-.meal{margin:8px 0;padding:10px}
-.meal-head{display:flex;align-items:center;justify-content:space-between;gap:8px}
-.meal-name{font-size:13px;font-weight:bold;min-width:95px}
-.options{display:flex;align-items:center;gap:5px;flex-wrap:wrap}
-.opt,.add{border:1px solid #e2d3af;background:#faf5e9;color:#71551b;border-radius:8px;min-width:32px;height:31px;padding:0 8px;font:inherit;font-size:11px}
-.opt.active{background:#c7a34b;color:white;border-color:#c7a34b}
-.add{background:#fff;border-style:dashed;font-size:16px;line-height:1}
-.expand{border:0;background:transparent;color:#8a6b2d;font-size:18px;padding:3px 5px}
-.option-panel{display:none;margin-top:10px;padding-top:9px;border-top:1px solid #eee4d0}
-.option-panel.show{display:block}
-.panel-title{font-size:12px;font-weight:bold;margin:0 0 8px}
-.table-wrap{overflow-x:auto;border:1px solid #eee4cf;border-radius:8px}
-table{width:100%;border-collapse:collapse;table-layout:fixed;text-align:center;font-size:11px}
-th{background:#f7f0df;color:#665126;font-weight:bold;padding:8px 4px}
-td{padding:7px 4px;border-top:1px solid #f0e9dc}
-th:first-child{width:55%}th:nth-child(2){width:22%}th:nth-child(3){width:23%}
-.blank{height:30px;background:#fffefa}
-.add-row{margin-top:8px;border:1px dashed #d7c69e;border-radius:8px;background:#fffdf8;color:#765b23;width:100%;padding:8px;font:inherit;font-size:11px}
-.note{font-size:10px;color:#8a806d;margin:8px 2px 0}
-@media(max-width:380px){body{padding:7px}.meal{padding:8px}.meal-name{min-width:80px;font-size:12px}.opt,.add{min-width:29px;height:29px;padding:0 6px}}
-</style>
-</head>
+:root{font-family:Tahoma,Arial,sans-serif;color:#302b20;background:#f7f3e9}*{box-sizing:border-box}body{margin:0;padding:10px;max-width:700px;margin-inline:auto}
+header,.meal,.summary{background:#fffdf8;border:1px solid #e5d8b9;border-radius:13px;box-shadow:0 2px 8px #5b47200b}
+header{padding:12px;text-align:center;border-top:4px solid #c7a34b;margin-bottom:10px}h1{font-size:17px;margin:0 0 5px}.sub,.hint{font-size:10px;color:#82765f;line-height:1.8}
+.top-actions{display:flex;gap:7px;margin:10px 0}.save-all{flex:1;background:#b8943d;color:white;border:0;border-radius:9px;padding:11px;font:inherit;font-size:12px;font-weight:bold}.summary{padding:9px 11px;margin-bottom:10px;font-size:11px;color:#69552c}
+.section-title{font-size:13px;font-weight:bold;margin:12px 3px 8px}.meal{margin:8px 0;padding:10px}.meal-head{display:flex;align-items:center;justify-content:space-between;gap:8px}.meal-name{font-size:13px;font-weight:bold;min-width:91px}.options{display:flex;align-items:center;gap:5px;flex-wrap:wrap}
+.opt,.add{border:1px solid #e2d3af;background:#faf5e9;color:#71551b;border-radius:8px;min-width:30px;height:30px;padding:0 7px;font:inherit;font-size:11px}.opt.active{background:#c7a34b;color:white;border-color:#c7a34b}.add{background:#fff;border-style:dashed;font-size:16px}.expand{border:0;background:transparent;color:#8a6b2d;font-size:18px;padding:3px}
+.option-panel{display:none;margin-top:10px;padding-top:9px;border-top:1px solid #eee4d0}.option-panel.show{display:block}.panel-title{font-size:12px;font-weight:bold;margin:0 0 8px}
+.table-wrap{overflow-x:auto;border:1px solid #eee4cf;border-radius:8px}table{width:100%;border-collapse:collapse;table-layout:fixed;text-align:center;font-size:10px}th{background:#f7f0df;color:#665126;padding:8px 3px}td{padding:6px 3px;border-top:1px solid #f0e9dc}th:first-child{width:48%}th:nth-child(2){width:20%}th:nth-child(3){width:20%}th:nth-child(4){width:12%}
+.empty{height:31px;background:#fffefa}.trash{border:0;background:transparent;color:#a45d45;font-size:15px;padding:3px}
+.row-actions{display:flex;gap:6px;margin-top:8px}.small-btn{flex:1;border:1px dashed #d7c69e;border-radius:8px;background:#fffdf8;color:#765b23;padding:8px 4px;font:inherit;font-size:10px}.save-one{border-style:solid;background:#f8f0dd}
+.hint{margin:8px 2px 0}.footer-note{text-align:center;font-size:10px;color:#8a806d;margin:12px 2px}
+.toast{position:fixed;bottom:15px;left:50%;transform:translateX(-50%);background:#302b20;color:white;padding:10px 15px;border-radius:9px;font-size:11px;display:none;max-width:90%;text-align:center}
+@media(max-width:390px){body{padding:7px}.meal{padding:8px}.meal-name{min-width:76px;font-size:12px}.opt,.add{min-width:27px;height:28px;padding:0 5px}.small-btn{font-size:9px}}
+</style></head>
 <body>
-<header>
-<h1>باشگاه فیتنس سه‌قلعه</h1>
-<div class="sub">قالب خالی برنامه غذایی · پیش‌نمایش چیدمان مربی</div>
-</header>
-<div class="section-title">وعده‌های برنامه غذایی</div>
-<div id="meals"></div>
-<div class="note">این نسخه فقط اسکلت ظاهری است؛ هیچ غذا، مقدار، واحد یا اطلاعات تغذیه‌ای از پیش وارد نشده است.</div>
+<header><h1>باشگاه فیتنس سه‌قلعه</h1><div class="sub">برنامه‌ساز غذایی · پیش‌نمایش چارچوب مربی</div></header>
+<div class="top-actions"><button class="save-all" onclick="notify('در نسخه نهایی، تمام وعده‌ها و گزینه‌های تکمیل‌شده با هم ذخیره می‌شوند.')">💾 ثبت تمام برنامه غذایی</button></div>
+<div class="summary">محاسبات تغذیه‌ای کل برنامه در این قسمت نمایش داده می‌شود: کالری · پروتئین · کربوهیدرات · چربی</div>
+<div class="section-title">وعده‌های برنامه غذایی</div><div id="meals"></div>
+<div class="footer-note">این پیش‌نمایش مستقل است؛ هنوز به بانک غذا یا اطلاعات شاگردان متصل نیست.</div><div class="toast" id="toast"></div>
 <script>
-const mealNames=["صبحانه","میان‌وعده اول","ناهار","میان‌وعده دوم","شام","قبل از خواب"];
-const state=mealNames.map(name=>({name,active:[1],selected:1,open:false,rows:3}));
-function draw(){
- document.getElementById("meals").innerHTML=state.map((m,i)=>`
- <section class="meal">
-  <div class="meal-head">
-   <div class="meal-name">${m.name}</div>
-   <div class="options">
-    ${[1,2,3,4].filter(n=>m.active.includes(n)).map(n=>`<button class="opt ${m.selected===n?'active':''}" onclick="choose(${i},${n})">${n}</button>`).join("")}
-    ${m.active.length<4?'<button class="add" aria-label="افزودن گزینه" onclick="addOption('+i+')">＋</button>':''}
-   </div>
-   <button class="expand" aria-label="باز و بسته کردن" onclick="toggle(${i})">${m.open?'⌃':'⌄'}</button>
-  </div>
-  <div class="option-panel ${m.open?'show':''}">
-   <div class="panel-title">${m.name} ${m.selected}</div>
-   <div class="table-wrap">
-    <table>
-     <thead><tr><th>نام غذا</th><th>مقدار</th><th>واحد</th></tr></thead>
-     <tbody>${Array.from({length:m.rows},()=>'<tr><td class="blank"></td><td class="blank"></td><td class="blank"></td></tr>').join("")}</tbody>
-    </table>
-   </div>
-   <button class="add-row" onclick="addRow(${i})">＋ افزودن ردیف خالی</button>
-  </div>
- </section>`).join("");
-}
-function choose(i,n){state[i].selected=n;state[i].open=true;draw()}
-function addOption(i){const m=state[i];const next=[1,2,3,4].find(n=>!m.active.includes(n));if(next){m.active.push(next);m.selected=next;m.open=true;draw()}}
-function toggle(i){state[i].open=!state[i].open;draw()}
-function addRow(i){state[i].rows=Math.min(12,state[i].rows+1);draw()}
-draw();
-</script>
-</body>
-</html>
+const names=['صبحانه','میان‌وعده اول','ناهار','میان‌وعده دوم','شام','قبل از خواب','قبل تمرین','بعد تمرین'];
+const state=names.map(name=>({name,active:[1],selected:1,open:false,rows:3}));
+function draw(){document.getElementById('meals').innerHTML=state.map((m,i)=>`
+<section class="meal"><div class="meal-head"><div class="meal-name">${m.name}</div><div class="options">
+${m.active.map(n=>`<button class="opt ${m.selected===n?'active':''}" onclick="choose(${i},${n})">${n}</button>`).join('')}
+${m.active.length<4?'<button class="add" aria-label="افزودن گزینه" onclick="addOption('+i+')">＋</button>':''}
+</div><button class="expand" aria-label="باز و بسته کردن" onclick="toggle(${i})">${m.open?'⌃':'⌄'}</button></div>
+<div class="option-panel ${m.open?'show':''}"><div class="panel-title">${m.name} ${m.selected}</div>
+<div class="table-wrap"><table><thead><tr><th>نام غذا / دستور</th><th>مقدار</th><th>واحد</th><th>حذف</th></tr></thead>
+<tbody>${Array.from({length:m.rows},(_,r)=>`<tr><td class="empty"></td><td class="empty"></td><td class="empty"></td><td><button class="trash" title="حذف ردیف" onclick="removeRow(${i},${r})">🗑</button></td></tr>`).join('')}</tbody></table></div>
+<div class="row-actions"><button class="small-btn" onclick="notify('اینجا فهرست بانک غذایی فعلی برای انتخاب غذا یا دستور ترکیبی باز می‌شود؛ اتصال در مرحله بعد انجام می‌شود.')">＋ افزودن از بانک غذا</button><button class="small-btn" onclick="addRow(${i})">＋ ردیف خالی</button><button class="small-btn save-one" onclick="notify('در نسخه نهایی فقط '+ '${m.name} ${m.selected}' +' ذخیره می‌شود.')">💾 ذخیره این گزینه</button></div>
+<div class="hint">با انتخاب دستور ترکیبی، اجزای آن در همین بخش باز می‌شوند و امکان تغییر مقدار، حذف یا افزودن جزء از بانک غذا وجود خواهد داشت.</div></div></section>`).join('')}
+function choose(i,n){state[i].selected=n;state[i].open=true;draw()}function addOption(i){let m=state[i],n=[1,2,3,4].find(x=>!m.active.includes(x));if(n){m.active.push(n);m.selected=n;m.open=true;draw()}}
+function toggle(i){state[i].open=!state[i].open;draw()}function addRow(i){state[i].rows=Math.min(15,state[i].rows+1);draw()}function removeRow(i,r){if(state[i].rows>1){state[i].rows--;draw()}else notify('حداقل یک ردیف خالی باقی می‌ماند.')}
+function notify(t){let e=document.getElementById('toast');e.textContent=t;e.style.display='block';clearTimeout(window.nt);window.nt=setTimeout(()=>e.style.display='none',3000)}draw();
+</script></body></html>
