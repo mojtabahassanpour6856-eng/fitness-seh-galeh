@@ -251,6 +251,26 @@ async function loadBuilderContext(){
  }
 }
 window.addEventListener('message',event=>{if(event.origin===location.origin&&event.data?.type==='sehNutritionBuilderRefresh')loadBuilderContext()});
+window.addEventListener('message',event=>{
+ if(event.origin!==location.origin||event.data?.type!=='sehNutritionApplyTargets')return;
+ const data=event.data||{};
+ const activeId=window.parent.currentClient&&window.parent.currentClient.id!=null?String(window.parent.currentClient.id):'';
+ if(!builderTrainee||!activeId||String(builderTrainee.id)!==activeId||String(data.traineeId||'')!==activeId){
+  notify('شاگرد انتخاب‌شده در محاسبه‌گر و برنامه‌ساز یکسان نیست؛ ابتدا همان شاگرد را انتخاب کن.');
+  return;
+ }
+ const values={targetCaloriesInput:data.calories,targetProteinInput:data.protein,targetCarbsInput:data.carbs,targetFatInput:data.fat};
+ Object.entries(values).forEach(([id,value])=>{
+  const input=document.getElementById(id);
+  if(!input)return;
+  input.value=Number(value)>0?String(Math.round(Number(value))):'';
+  input.dispatchEvent(new Event('input',{bubbles:true}));
+ });
+ targetManualDirty=true;
+ const targetBox=document.querySelector('.target-grid');
+ if(targetBox){targetBox.scrollIntoView({behavior:'smooth',block:'center'});targetBox.style.outline='2px solid #c7a34b';setTimeout(()=>targetBox.style.outline='',1800);}
+ notify('کالری و درشت‌مغذی‌ها در کادرهای هدف برنامه غذایی قرار گرفتند؛ هنوز ذخیره نشده‌اند.');
+});
 async function saveAllToTrainee(){
  if(builderBusy)return;
  const selectedId=window.parent.currentClient&&window.parent.currentClient.id!=null?String(window.parent.currentClient.id):'';
