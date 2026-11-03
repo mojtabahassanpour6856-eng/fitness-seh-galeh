@@ -4,60 +4,76 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#f7f0df">
-<title>پیش‌نمایش جدول برنامه غذایی | فیتنس سه‌قلعه</title>
+<title>قالب خالی برنامه غذایی | فیتنس سه‌قلعه</title>
 <style>
 :root{font-family:Tahoma,Arial,sans-serif;color:#302b20;background:#f7f3e9}
-*{box-sizing:border-box}body{margin:0;padding:14px;max-width:850px;margin-inline:auto}
-header,.card,.summary{background:#fffdf8;border:1px solid #e5d8b9;border-radius:14px;padding:14px;margin-bottom:12px;box-shadow:0 2px 8px #5b47200d}
-header{text-align:center;border-top:4px solid #c7a34b}h1{font-size:19px;margin:2px 0 7px}h2{font-size:16px;margin:0 0 10px}.muted{color:#766f60;font-size:12px;line-height:1.8}
-.pill{display:inline-block;background:#f6edda;color:#71551b;border-radius:30px;padding:5px 10px;font-size:11px}
-summary{cursor:pointer;font-weight:bold;list-style:none}summary::-webkit-details-marker{display:none}summary:after{content:"＋";float:left;color:#9a762a}details[open] summary:after{content:"−"}
-.meal{padding:12px;margin:10px 0;border:1px solid #e5d8b9;border-radius:12px;background:#fff}
-.grid{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin:12px 0}
-label{display:block;font-size:12px;margin-bottom:5px;color:#655a45}input,select{width:100%;min-height:42px;border:1px solid #d8c9a5;border-radius:8px;background:#fffefa;padding:8px;font:inherit;font-size:13px;color:#302b20}
-.table-wrap{overflow-x:auto;border:1px solid #eee4cf;border-radius:9px;-webkit-overflow-scrolling:touch}
-table{width:100%;min-width:690px;border-collapse:collapse;text-align:center;font-size:12px}
-th,td{padding:10px 7px;border-bottom:1px solid #eee7d8;white-space:nowrap}th{background:#f7f0df;color:#665126}td select{min-width:150px}td input{width:82px;min-width:72px}
-tfoot td{font-weight:bold;background:#fbf5e8}
-button{border:0;border-radius:9px;padding:10px 12px;font:inherit;font-size:12px;cursor:pointer;background:#c7a34b;color:#fff;margin:8px 4px 0 0}
-button.alt{background:#eee5d2;color:#51452e}.remove{background:#f3e5e1;color:#8a3d2e}
-.meal-total{font-size:12px;color:#6a5528;margin:10px 2px 0}
-.summary{background:#fff7e5;border-color:#d9bf7b}.totals{display:flex;flex-wrap:wrap;gap:9px;margin-top:10px}.total{background:#fff;border:1px solid #eadcb8;border-radius:9px;padding:9px 12px;font-size:12px}
-.notice{font-size:11px;color:#8a6a2c;line-height:1.8;margin-top:12px}
-@media(max-width:480px){body{padding:9px}.grid{gap:7px}header,.card,.summary{padding:11px}h1{font-size:17px}}
+*{box-sizing:border-box}
+body{margin:0;padding:10px;max-width:680px;margin-inline:auto}
+header,.meal{background:#fffdf8;border:1px solid #e5d8b9;border-radius:13px;box-shadow:0 2px 8px #5b47200b}
+header{padding:12px 14px;text-align:center;border-top:4px solid #c7a34b;margin-bottom:10px}
+h1{font-size:17px;margin:0 0 5px}.sub{font-size:11px;color:#82765f;line-height:1.8}
+.section-title{font-size:13px;font-weight:bold;margin:12px 3px 8px}
+.meal{margin:8px 0;padding:10px}
+.meal-head{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.meal-name{font-size:13px;font-weight:bold;min-width:95px}
+.options{display:flex;align-items:center;gap:5px;flex-wrap:wrap}
+.opt,.add{border:1px solid #e2d3af;background:#faf5e9;color:#71551b;border-radius:8px;min-width:32px;height:31px;padding:0 8px;font:inherit;font-size:11px}
+.opt.active{background:#c7a34b;color:white;border-color:#c7a34b}
+.add{background:#fff;border-style:dashed;font-size:16px;line-height:1}
+.expand{border:0;background:transparent;color:#8a6b2d;font-size:18px;padding:3px 5px}
+.option-panel{display:none;margin-top:10px;padding-top:9px;border-top:1px solid #eee4d0}
+.option-panel.show{display:block}
+.panel-title{font-size:12px;font-weight:bold;margin:0 0 8px}
+.table-wrap{overflow-x:auto;border:1px solid #eee4cf;border-radius:8px}
+table{width:100%;border-collapse:collapse;table-layout:fixed;text-align:center;font-size:11px}
+th{background:#f7f0df;color:#665126;font-weight:bold;padding:8px 4px}
+td{padding:7px 4px;border-top:1px solid #f0e9dc}
+th:first-child{width:55%}th:nth-child(2){width:22%}th:nth-child(3){width:23%}
+.blank{height:30px;background:#fffefa}
+.add-row{margin-top:8px;border:1px dashed #d7c69e;border-radius:8px;background:#fffdf8;color:#765b23;width:100%;padding:8px;font:inherit;font-size:11px}
+.note{font-size:10px;color:#8a806d;margin:8px 2px 0}
+@media(max-width:380px){body{padding:7px}.meal{padding:8px}.meal-name{min-width:80px;font-size:12px}.opt,.add{min-width:29px;height:29px;padding:0 6px}}
 </style>
 </head>
 <body>
-<header><h1>باشگاه فیتنس سه‌قلعه</h1><div class="muted">پیش‌نمایش جدول برنامه غذایی مربی</div><span class="pill">نسخه نمایشی با اطلاعات نمونه</span></header>
-<section class="card"><h2>برنامه غذایی روزانه</h2><div class="muted">برای دیدن جدول هر وعده، روی عنوان آن بزن. برای مشاهده همه ستون‌ها در گوشی، جدول را به چپ و راست بکش.</div></section>
+<header>
+<h1>باشگاه فیتنس سه‌قلعه</h1>
+<div class="sub">قالب خالی برنامه غذایی · پیش‌نمایش چیدمان مربی</div>
+</header>
+<div class="section-title">وعده‌های برنامه غذایی</div>
 <div id="meals"></div>
-<section class="summary"><strong>جمع کل برنامه غذایی</strong><div class="totals" id="grand"></div></section>
-<p class="notice">این صفحه فقط پیش‌نمایش ظاهری و محاسباتی است؛ اطلاعات غذاها نمونه‌اند و هیچ اطلاعاتی در حساب شاگرد یا پایگاه داده ذخیره نمی‌شود.</p>
+<div class="note">این نسخه فقط اسکلت ظاهری است؛ هیچ غذا، مقدار، واحد یا اطلاعات تغذیه‌ای از پیش وارد نشده است.</div>
 <script>
-const bank=[
-{name:"سینه مرغ پخته",cal:165,p:31,c:0,f:3.6},
-{name:"برنج پخته",cal:130,p:2.7,c:28.2,f:.3},
-{name:"تخم‌مرغ کامل",cal:155,p:13,c:1.1,f:11},
-{name:"ماست یونانی",cal:97,p:9,c:3.6,f:5},
-{name:"موز",cal:89,p:1.1,c:22.8,f:.3},
-{name:"جو دوسر",cal:389,p:16.9,c:66.3,f:6.9}
-];
-let meals=[
-{name:"صبحانه",time:"08:00",items:[{food:2,g:100},{food:5,g:50}]},
-{name:"میان‌وعده صبح",time:"10:30",items:[{food:4,g:120}]},
-{name:"ناهار",time:"13:00",items:[{food:0,g:150},{food:1,g:200}]},
-{name:"میان‌وعده عصر",time:"16:00",items:[{food:3,g:150}]},
-{name:"شام",time:"20:00",items:[{food:0,g:120},{food:1,g:150}]}
-];
-const fmt=n=>Math.round(n*10)/10;
-function calc(item){const f=bank[item.food],k=Number(item.g)/100;return {cal:f.cal*k,p:f.p*k,c:f.c*k,f:f.f*k};}
-function sum(items){return items.reduce((a,x)=>{const n=calc(x);a.cal+=n.cal;a.p+=n.p;a.c+=n.c;a.f+=n.f;return a},{cal:0,p:0,c:0,f:0});}
-function totalsHTML(n){return '<span class="total">کالری: '+Math.round(n.cal)+' kcal</span><span class="total">پروتئین: '+fmt(n.p)+' g</span><span class="total">کربوهیدرات: '+fmt(n.c)+' g</span><span class="total">چربی: '+fmt(n.f)+' g</span>';}
-function render(){
- const host=document.getElementById('meals');
- host.innerHTML=meals.map((m,i)=>{const n=sum(m.items);return '<details class="meal" '+(i===0?'open':'')+'><summary>'+m.name+' <small class="muted"> · '+m.items.length+' قلم</small></summary><div class="grid"><div><label>عنوان وعده</label><input value="'+m.name+'" onchange="meals['+i+'].name=this.value;render()"></div><div><label>ساعت وعده</label><input type="time" value="'+m.time+'" onchange="meals['+i+'].time=this.value"></div></div><div class="table-wrap"><table><thead><tr><th>نام غذا</th><th>مقدار (گرم)</th><th>کالری</th><th>پروتئین</th><th>کربوهیدرات</th><th>چربی</th><th>عملیات</th></tr></thead><tbody>'+m.items.map((x,j)=>{const v=calc(x);return '<tr><td><select onchange="meals['+i+'].items['+j+'].food=Number(this.value);render()">'+bank.map((f,k)=>'<option value="'+k+'" '+(k===x.food?'selected':'')+'>'+f.name+'</option>').join('')+'</select></td><td><input type="number" min="1" max="10000" value="'+x.g+'" onchange="meals['+i+'].items['+j+'].g=Math.max(1,Number(this.value)||1);render()"></td><td>'+fmt(v.cal)+'</td><td>'+fmt(v.p)+'</td><td>'+fmt(v.c)+'</td><td>'+fmt(v.f)+'</td><td><button class="remove" onclick="meals['+i+'].items.splice('+j+',1);if(!meals['+i+'].items.length)meals['+i+'].items.push({food:0,g:100});render()">حذف</button></td></tr>'}).join('')+'</tbody><tfoot><tr><td>مجموع وعده</td><td>—</td><td>'+Math.round(n.cal)+'</td><td>'+fmt(n.p)+'</td><td>'+fmt(n.c)+'</td><td>'+fmt(n.f)+'</td><td>—</td></tr></tfoot></table></div><div class="meal-total">مقادیر تغذیه‌ای با تغییر غذا یا وزن، دوباره محاسبه می‌شوند.</div><button onclick="meals['+i+'].items.push({food:0,g:100});render()">＋ افزودن غذا</button><button class="alt" onclick="meals.splice('+i+',0,JSON.parse(JSON.stringify(meals['+i+'])));render()">کپی وعده</button><button class="remove" onclick="if(meals.length>1){meals.splice('+i+',1);render()}">حذف وعده</button></details>'}).join('');
- const all=sum(meals.flatMap(m=>m.items));document.getElementById('grand').innerHTML=totalsHTML(all);
+const mealNames=["صبحانه","میان‌وعده اول","ناهار","میان‌وعده دوم","شام","قبل از خواب"];
+const state=mealNames.map(name=>({name,active:[1],selected:1,open:false,rows:3}));
+function draw(){
+ document.getElementById("meals").innerHTML=state.map((m,i)=>`
+ <section class="meal">
+  <div class="meal-head">
+   <div class="meal-name">${m.name}</div>
+   <div class="options">
+    ${[1,2,3,4].filter(n=>m.active.includes(n)).map(n=>`<button class="opt ${m.selected===n?'active':''}" onclick="choose(${i},${n})">${n}</button>`).join("")}
+    ${m.active.length<4?'<button class="add" aria-label="افزودن گزینه" onclick="addOption('+i+')">＋</button>':''}
+   </div>
+   <button class="expand" aria-label="باز و بسته کردن" onclick="toggle(${i})">${m.open?'⌃':'⌄'}</button>
+  </div>
+  <div class="option-panel ${m.open?'show':''}">
+   <div class="panel-title">${m.name} ${m.selected}</div>
+   <div class="table-wrap">
+    <table>
+     <thead><tr><th>نام غذا</th><th>مقدار</th><th>واحد</th></tr></thead>
+     <tbody>${Array.from({length:m.rows},()=>'<tr><td class="blank"></td><td class="blank"></td><td class="blank"></td></tr>').join("")}</tbody>
+    </table>
+   </div>
+   <button class="add-row" onclick="addRow(${i})">＋ افزودن ردیف خالی</button>
+  </div>
+ </section>`).join("");
 }
-render();
+function choose(i,n){state[i].selected=n;state[i].open=true;draw()}
+function addOption(i){const m=state[i];const next=[1,2,3,4].find(n=>!m.active.includes(n));if(next){m.active.push(next);m.selected=next;m.open=true;draw()}}
+function toggle(i){state[i].open=!state[i].open;draw()}
+function addRow(i){state[i].rows=Math.min(12,state[i].rows+1);draw()}
+draw();
 </script>
-</body></html>
+</body>
+</html>
