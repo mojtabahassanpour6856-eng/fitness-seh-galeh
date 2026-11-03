@@ -1816,6 +1816,7 @@ async function loadNutritionForClient(){
   // شاگرد و گزارش فقط وعده‌هایی را ببینند که دست‌کم یک غذای معتبر با مقدار مثبت دارند؛ فهرست مربی برای ویرایش خالی‌ها کامل می‌ماند.
   const visibleStudentMeals=meals.filter(m=>(m.foods||[]).some(x=>x.food_id&&x.food&&x.amount!==null&&x.amount!==undefined&&String(x.amount).trim()!==''&&Number(x.amount)>0));
   renderStudentMeals(visibleStudentMeals,p);renderMealReport(visibleStudentMeals,p);
+  try{const frame=document.getElementById("sehNutritionBuilderFrame");if(frame?.contentWindow)frame.contentWindow.postMessage({type:"sehNutritionBuilderRefresh"},location.origin);}catch(refreshError){}
  }catch(e){console.error("Nutrition load failed at: "+nutritionLoadStage,e);if(sameTrainee())alert("دریافت برنامه غذایی از Supabase انجام نشد.\nمرحله خطا: "+nutritionLoadStage+"\n"+(e?.message||String(e)));}
 }
 async function sbApiHeaders(extra={}){
