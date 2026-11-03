@@ -220,7 +220,7 @@ async function loadBuilderContext(){
   document.getElementById('planEnd').value=ctx.plan?.end_date||'';
   const savedTargets={daily_calories:ctx.plan?.daily_calories,protein_target:ctx.plan?.protein_target,carbs_target:ctx.plan?.carbs_target,fat_target:ctx.plan?.fat_target};
   const hasSavedTargets=Object.values(savedTargets).some(v=>v!==null&&v!==undefined&&v!=='');
-  if(changedTrainee||!targetManualDirty){const next={};['daily_calories','protein_target','carbs_target','fat_target'].forEach(k=>{const v=savedTargets[k];next[k]=(v!==null&&v!==undefined&&v!=='')?v:(!hasSavedTargets&&calculated?calculated[k]:'')});syncTargetFields(next)}
+  if(changedTrainee||!targetManualDirty){const next={};['daily_calories','protein_target','carbs_target','fat_target'].forEach(k=>{const v=savedTargets[k];next[k]=(v!==null&&v!==undefined&&v!=='')?v:(calculated?calculated[k]:'')});syncTargetFields(next)}
   document.getElementById('targetSource').textContent=hasSavedTargets?'اهداف ذخیره‌شده برنامه قبلی حفظ شده‌اند.':(calculated?'بر اساس وزن، قد، سن، جنسیت، هدف و سابقه تمرین شاگرد محاسبه شده‌اند؛ قابل ویرایش توسط مربی.':'برای محاسبه خودکار، وزن، قد، سن و جنسیت شاگرد باید در پروفایل ثبت شده باشد؛ اهداف را دستی وارد کن.');
   state.forEach((m,i)=>{m.active=[1];m.selected=1;m.options={1:{rows:[],target:0}}});
   if(ctx.plan){
