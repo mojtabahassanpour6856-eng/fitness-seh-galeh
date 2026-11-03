@@ -212,6 +212,8 @@ async function loadBuilderContext(){
 async function saveAllToTrainee(){
  if(builderBusy)return;
  if(!builderTrainee){await loadBuilderContext();if(!builderTrainee)return}
+
+loadBuilderContext();
  const meals=[];
  for(let i=0;i<state.length;i++){
   const m=state[i];
