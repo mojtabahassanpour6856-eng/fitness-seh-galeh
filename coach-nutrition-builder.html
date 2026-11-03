@@ -251,12 +251,22 @@ async function loadBuilderContext(){
  }
 }
 window.addEventListener('message',event=>{if(event.origin===location.origin&&event.data?.type==='sehNutritionBuilderRefresh')loadBuilderContext()});
-window.addEventListener('message',event=>{
+window.addEventListener('message',async event=>{
  if(event.origin!==location.origin||event.data?.type!=='sehNutritionApplyTargets')return;
  const data=event.data||{};
  const activeId=window.parent.currentClient&&window.parent.currentClient.id!=null?String(window.parent.currentClient.id):'';
- if(!builderTrainee||!activeId||String(builderTrainee.id)!==activeId||String(data.traineeId||'')!==activeId){
-  notify('شاگرد انتخاب‌شده در محاسبه‌گر و برنامه‌ساز یکسان نیست؛ ابتدا همان شاگرد را انتخاب کن.');
+ const transferId=String(data.traineeId||'');
+ if(!activeId||!transferId||transferId!==activeId){
+  notify('شاگرد محاسبه‌گر با شاگرد فعال پنل یکی نیست؛ همان شاگرد را در پنل انتخاب کن و دوباره انتقال بده.');
+  return;
+ }
+ // The builder iframe may still hold the previous trainee context after the coach changes selection.
+ // Refresh only when the cached context is stale, then verify the transfer owner before filling fields.
+ if(!builderTrainee||String(builderTrainee.id)!==transferId){
+  try{await loadBuilderContext()}catch(e){console.warn('Could not refresh nutrition builder before target transfer',e)}
+ }
+ if(!builderTrainee||String(builderTrainee.id)!==transferId){
+  notify('اطلاعات برنامه‌ساز هنوز برای این شاگرد به‌روز نشده؛ یک‌بار برنامه‌ساز غذایی را باز کن و دوباره انتقال بده.');
   return;
  }
  const values={targetCaloriesInput:data.calories,targetProteinInput:data.protein,targetCarbsInput:data.carbs,targetFatInput:data.fat};
