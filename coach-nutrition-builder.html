@@ -204,7 +204,7 @@ function calculateNutritionTargets(p){
  const calories=Math.round((bmr*activity*(lose?0.85:gain?1.1:1))/50)*50,protein=Math.round(w*(lose?2:gain?1.8:1.6)),fat=Math.round(Math.max(w*.6,calories*.25/9)),carbs=Math.max(0,Math.round((calories-protein*4-fat*9)/4));
  return {daily_calories:calories,protein_target:protein,carbs_target:carbs,fat_target:fat};
 }
-async function fetchSelectedTraineeProfile(ctx){const id=String(ctx.trainee.id);if(typeof window.parent.sbGet!=='function')return null;const rows=await window.parent.sbGet('/trainees?id=eq.'+encodeURIComponent(id)+'&select=id,gender,birth_date,age,height,current_weight,goal,training_level,weekly_sessions');if(!window.parent.currentClient||String(window.parent.currentClient.id)!==id)throw new Error('شاگرد هنگام دریافت مشخصات تغییر کرد.');return Array.isArray(rows)?rows[0]||null:null}
+async function fetchSelectedTraineeProfile(ctx){const id=String(ctx.trainee.id);if(typeof window.parent.sbGet!=='function')return null;const rows=await window.parent.sbGet('/trainees?id=eq.'+encodeURIComponent(id)+'&select=id,full_name,gender,birth_date,age,height,current_weight,goal,training_level,weekly_sessions');if(!window.parent.currentClient||String(window.parent.currentClient.id)!==id)throw new Error('شاگرد هنگام دریافت مشخصات تغییر کرد.');return Array.isArray(rows)?rows[0]||null:null}
 async function loadBuilderContext(){
  const loadSeq=++builderLoadSequence;
  try{
@@ -221,6 +221,7 @@ async function loadBuilderContext(){
   if(loadSeq!==builderLoadSequence||!window.parent.currentClient||String(window.parent.currentClient.id)!==selectedId)return;
   const changedTrainee=targetOwnerId!==selectedId;
   if(changedTrainee){targetOwnerId=selectedId;targetManualDirty=false}
+  if(profile&&String(profile.id)===selectedId&&profile.full_name)ctx.trainee.name=profile.full_name;
   const calculated=calculateNutritionTargets(profile);
   builderTrainee=ctx.trainee;builderExistingNotes=ctx.plan?.notes||'';
   bindTargetInputs();
