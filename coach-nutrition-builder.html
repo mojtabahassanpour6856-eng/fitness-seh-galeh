@@ -69,4 +69,19 @@ function saveOption(i){try{localStorage.setItem('sehgaleh_preview_option_'+i+'_'
 function saveAll(){try{localStorage.setItem('sehgaleh_preview_all',JSON.stringify(state));notify('پیش‌نمایش برنامه در همین مرورگر ذخیره شد؛ هنوز به شاگرد یا دیتابیس وصل نیست.')}catch(e){notify('ذخیره آزمایشی ممکن نشد.')}}
 function notify(t){const e=document.getElementById('toast');e.textContent=t;e.style.display='block';clearTimeout(window.nt);window.nt=setTimeout(()=>e.style.display='none',3000)}
 draw();
-</script></body></html>
+</script><script>
+(function(){
+ function reportHeight(){
+  var h=Math.max(document.documentElement.scrollHeight,document.body?document.body.scrollHeight:0);
+  if(parent!==window)parent.postMessage({type:'sehNutritionBuilderHeight',height:h},location.origin);
+ }
+ window.addEventListener('load',reportHeight);
+ window.addEventListener('resize',reportHeight);
+ if(window.ResizeObserver){
+  new ResizeObserver(reportHeight).observe(document.documentElement);
+ }
+ setTimeout(reportHeight,100);
+ setTimeout(reportHeight,500);
+})();
+</script>
+</body></html>
