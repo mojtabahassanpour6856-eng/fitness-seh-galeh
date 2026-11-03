@@ -721,7 +721,7 @@ body.locked{overflow:hidden!important}
   if(!frame||event.origin!==window.location.origin||event.source!==frame.contentWindow)return;
   var data=event.data||{};
   if(data.type==='sehNutritionBuilderHeight'&&Number.isFinite(Number(data.height))){
-   frame.style.height=Math.max(700,Math.min(12000,Number(data.height)+20))+'px';
+   frame.style.height=Math.max(320,Math.min(12000,Math.ceil(Number(data.height))))+'px';
   }
  });
 })();
