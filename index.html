@@ -709,11 +709,23 @@ body.locked{overflow:hidden!important}
 </div>
 
 <div id="mealCoachView">
-<div class="card" id="sehIsolatedNutritionBuilderEntry" style="border:1px solid #c7a34b;background:#fffaf0">
-<h2>🆕 برنامه‌ساز غذایی جدید (آزمایشی)</h2>
-<p class="muted">قالب جدید را جداگانه امتحان کن؛ روش قدیمی پایین همین صفحه بدون هیچ تغییری باقی مانده است. اطلاعات این نسخه فعلاً فقط در حافظه همین مرورگر ذخیره می‌شود.</p>
-<a href="./coach-nutrition-builder.html" target="_blank" rel="noopener" style="display:inline-block;background:#c7a34b;color:#fff;border-radius:8px;padding:10px 14px;text-decoration:none;text-align:center;font-weight:bold">🍽️ ورود به برنامه‌ساز جدید</a>
+<div id="sehEmbeddedNutritionBuilder" style="width:100%;margin:0 0 14px">
+<iframe id="sehNutritionBuilderFrame" title="برنامه‌ساز غذایی جدید" src="./coach-nutrition-builder.html" loading="eager" style="display:block;width:100%;height:900px;border:1px solid #e5d8b9;border-radius:12px;background:#f7f3e9"></iframe>
 </div>
+<script>
+(function(){
+ if(window.__sehNutritionFrameResizeBound)return;
+ window.__sehNutritionFrameResizeBound=true;
+ window.addEventListener('message',function(event){
+  var frame=document.getElementById('sehNutritionBuilderFrame');
+  if(!frame||event.origin!==window.location.origin||event.source!==frame.contentWindow)return;
+  var data=event.data||{};
+  if(data.type==='sehNutritionBuilderHeight'&&Number.isFinite(Number(data.height))){
+   frame.style.height=Math.max(700,Math.min(12000,Number(data.height)+20))+'px';
+  }
+ });
+})();
+</script>
 <div class="card">
 <h2>اطلاعات برنامه</h2>
 <div class="grid2">
