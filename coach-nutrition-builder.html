@@ -184,6 +184,7 @@ function builderMealName(index,optionNo){return dbMealNames[index]+(optionNo===1
 function decodeMealName(name){const n=String(name||'').normalize('NFC').replace(/[\s\u200c\u200f]/g,'');for(let i=0;i<dbMealNames.length;i++){const base=dbMealNames[i].replace(/[\s\u200c\u200f]/g,'');if(!n.startsWith(base))continue;const tail=n.slice(base.length).replace(/[۰-۹]/g,d=>'۰۱۲۳۴۵۶۷۸۹'.indexOf(d));const opt=tail?Number(tail):1;if(Number.isInteger(opt)&&opt>=1&&opt<=4)return {index:i,opt}}return null}
 function fromDbUnitNote(note){const m=String(note||'').match(/\[seh-gpu:([0-9]+(?:\.[0-9]+)?)\]/);return m?Number(m[1]):null}
 function fromDbRecipeNote(note){const m=String(note||'').match(/\[دستور ترکیبی:\s*([^\]]+)\]/);return m?m[1]:null}
+function fromDbTarget(note){const m=String(note||'').match(/SEH_BUILDER_TARGET:([0-9]+(?:\.[0-9]+)?)/);return m?Number(m[1])||0:0}
 async function loadBuilderContext(){
  try{
   const ctx=await parentBridge().getContext();
@@ -201,7 +202,7 @@ async function loadBuilderContext(){
    for(const meal of ctx.meals||[]){
     const parsed=decodeMealName(meal.meal_name);if(!parsed)continue;
     const m=state[parsed.index];if(!m.active.includes(parsed.opt))m.active.push(parsed.opt);
-    m.options[parsed.opt]={rows:(meal.foods||[]).map(x=>({foodId:Number(x.food_id),amount:Number(x.amount),unit:x.unit||'گرم',gramsPerUnit:fromDbUnitNote(x.notes),recipeName:fromDbRecipeNote(x.notes)})),target:0};
+    m.options[parsed.opt]={rows:(meal.foods||[]).map(x=>({foodId:Number(x.food_id),amount:Number(x.amount),unit:x.unit||'گرم',gramsPerUnit:fromDbUnitNote(x.notes),recipeName:fromDbRecipeNote(x.notes)})),target:fromDbTarget(meal.notes)};
    }
    state.forEach(m=>{m.active.sort((a,b)=>a-b);m.selected=m.active[0]});
   }
