@@ -75,7 +75,7 @@ begin
      nullif(v_plan->>'protein_target','')::numeric,
      nullif(v_plan->>'carbs_target','')::numeric,
      nullif(v_plan->>'fat_target','')::numeric,
-     'ساخته‌شده با برنامه‌ساز جدید مربی',true)
+     nullif(v_plan->>'notes',''),true)
   returning id into v_plan_id;
 
   for v_meal in select value from jsonb_array_elements(v_meals)
