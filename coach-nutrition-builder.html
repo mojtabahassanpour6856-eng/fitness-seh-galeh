@@ -19,7 +19,7 @@ td input,td select{width:100%;min-width:0;border:1px solid #e5dcc8;border-radius
 .modal-back{display:none;position:fixed;inset:0;background:#201b13a8;z-index:10;padding:12px;overflow:auto}.modal-back.show{display:block}.picker{max-width:620px;margin:20px auto;padding:13px}.picker h3{font-size:14px;margin:0 0 10px}.field{margin:9px 0}.field label{display:block;font-size:11px;margin-bottom:5px}.field select,.field input{width:100%;padding:9px;border:1px solid #e2d3af;border-radius:7px;background:white;font:inherit;font-size:12px}.modal-actions{display:flex;gap:7px;margin-top:12px}.modal-actions button{flex:1;border:0;border-radius:8px;padding:10px;font:inherit;font-size:11px;background:#b8943d;color:white}.modal-actions .cancel{background:#eee7d8;color:#574b35}
 .ingredient{display:grid;grid-template-columns:minmax(0,1fr) 75px 100px 34px;gap:5px;align-items:center;margin:7px 0}.ingredient select,.ingredient input{min-width:0;width:100%;padding:7px 3px;border:1px solid #e2d3af;border-radius:6px;font:inherit;font-size:10px;background:white}.metrics{font-size:10px;background:#faf5e9;border-radius:8px;padding:8px;line-height:2;margin-top:8px}
 .toast{position:fixed;bottom:15px;left:50%;transform:translateX(-50%);background:#302b20;color:white;padding:10px 15px;border-radius:9px;font-size:11px;display:none;max-width:90%;text-align:center}
-.meta-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.meta-grid label{display:block;font-size:10px;color:#69552c}.meta-grid input{display:block;width:100%;margin-top:4px;padding:8px 6px;border:1px solid #e2d3af;border-radius:7px;background:#fff;color:#302b20;font:inherit;font-size:11px;min-width:0}.connection-ok{border-color:#b8d9b6;background:#f1f8ed;color:#315b2c}.connection-warn{border-color:#e7c98a;background:#fff8e8;color:#795b20}@media(max-width:390px){body{padding:7px}.meal{padding:8px}.meal-name{min-width:76px;font-size:12px}.opt,.add{min-width:27px;height:28px;padding:0 5px}.small-btn{font-size:9px}.ingredient{grid-template-columns:minmax(0,1fr) 58px 82px 30px}}
+.meta-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.meta-grid label{display:block;font-size:10px;color:#69552c}.meta-grid input{display:block;width:100%;margin-top:4px;padding:8px 6px;border:1px solid #e2d3af;border-radius:7px;background:#fff;color:#302b20;font:inherit;font-size:11px;min-width:0}.target-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;background:#fffdf8;border:1px solid #e5d8b9;border-radius:12px;padding:10px;margin:0 0 10px}.target-grid label{display:block;font-size:10px;color:#69552c}.target-grid input{display:block;width:100%;margin-top:4px;padding:8px 6px;border:1px solid #e2d3af;border-radius:7px;background:#fff;color:#302b20;font:inherit;font-size:12px;min-width:0}.target-caption{grid-column:1/-1;font-size:10px;color:#82765f;line-height:1.7}.target-grid strong{font-size:12px;color:#69552c}@media(max-width:390px){.target-grid{gap:6px;padding:8px}}.connection-ok{border-color:#b8d9b6;background:#f1f8ed;color:#315b2c}.connection-warn{border-color:#e7c98a;background:#fff8e8;color:#795b20}@media(max-width:390px){body{padding:7px}.meal{padding:8px}.meal-name{min-width:76px;font-size:12px}.opt,.add{min-width:27px;height:28px;padding:0 5px}.small-btn{font-size:9px}.ingredient{grid-template-columns:minmax(0,1fr) 58px 82px 30px}}
 </style></head>
 <body>
 <header><h1>باشگاه فیتنس سه‌قلعه</h1><div class="sub">برنامه‌ساز غذایی · پیش‌نمایش تعاملی مربی</div></header>
@@ -31,6 +31,7 @@ td input,td select{width:100%;min-width:0;border:1px solid #e5dcc8;border-radius
 <input id="planCalories" type="number"><input id="planProtein" type="number">
 <input id="planCarbs" type="number"><input id="planFat" type="number">
 </div>
+<div class="target-grid" id="autoTargets"><div class="target-caption"><strong>🎯 اهداف روزانه برنامه</strong><br><span id="targetSource">با انتخاب شاگرد، در صورت وجود اطلاعات کافی به‌صورت خودکار محاسبه می‌شوند؛ امکان ویرایش دستی وجود دارد.</span></div><label>کالری روزانه<input id="targetCaloriesInput" type="number" min="0" step="1" inputmode="numeric"></label><label>پروتئین هدف (گرم)<input id="targetProteinInput" type="number" min="0" step="1" inputmode="numeric"></label><label>کربوهیدرات هدف (گرم)<input id="targetCarbsInput" type="number" min="0" step="1" inputmode="numeric"></label><label>چربی هدف (گرم)<input id="targetFatInput" type="number" min="0" step="1" inputmode="numeric"></label></div>
 <div class="top-actions"><button class="save-all" id="saveAllBtn" onclick="saveAll()">💾 ثبت تمام برنامه غذایی در پرونده شاگرد</button><button class="save-all" style="background:#75633e" onclick="toggleStudentPreview()">👤 پیش‌نمایش شاگرد</button></div><div id="studentPreview" class="summary" style="display:none"></div>
 <div class="summary" id="daySummary">جمع گزینه‌های انتخاب‌شده نمایش داده می‌شود؛ گزینه‌های جایگزین با هم جمع نمی‌شوند.</div>
 <div class="section-title">وعده‌های برنامه غذایی</div><div id="meals"></div>
@@ -186,18 +187,41 @@ function decodeMealName(name){const n=String(name||'').normalize('NFC').replace(
 function fromDbUnitNote(note){const m=String(note||'').match(/\[seh-gpu:([0-9]+(?:\.[0-9]+)?)\]/);return m?Number(m[1]):null}
 function fromDbRecipeNote(note){const m=String(note||'').match(/\[دستور ترکیبی:\s*([^\]]+)\]/);return m?m[1]:null}
 function fromDbTarget(note){const m=String(note||'').match(/SEH_BUILDER_TARGET:([0-9]+(?:\.[0-9]+)?)/);return m?Number(m[1])||0:0}
+
+const targetInputMap={daily_calories:'targetCaloriesInput',protein_target:'targetProteinInput',carbs_target:'targetCarbsInput',fat_target:'targetFatInput'};
+let targetManualDirty=false,targetOwnerId=null;
+function syncTargetFields(values){const keys=['daily_calories','protein_target','carbs_target','fat_target'];keys.forEach(k=>{const h=document.getElementById(k==='daily_calories'?'planCalories':k==='protein_target'?'planProtein':k==='carbs_target'?'planCarbs':'planFat'),v=document.getElementById(targetInputMap[k]);if(v){v.value=values&&values[k]!=null?values[k]:'';h.value=v.value}})}
+function bindTargetInputs(){Object.entries(targetInputMap).forEach(([key,id])=>{const input=document.getElementById(id);if(input&&!input.dataset.bound){input.dataset.bound='1';input.addEventListener('input',()=>{targetManualDirty=true;document.getElementById(key==='daily_calories'?'planCalories':key==='protein_target'?'planProtein':key==='carbs_target'?'planCarbs':'planFat').value=input.value})}})}
+function positiveNumber(...values){for(const v of values){const n=Number(v);if(Number.isFinite(n)&&n>0)return n}return null}
+function calculateNutritionTargets(p){
+ if(!p)return null;const w=positiveNumber(p.current_weight,p.weight),h=positiveNumber(p.height);let age=positiveNumber(p.age);
+ if(!age&&p.birth_date){const d=new Date(p.birth_date+'T00:00:00');if(!Number.isNaN(d.getTime()))age=Math.floor((Date.now()-d.getTime())/31557600000)}
+ const g=String(p.gender||'').trim().toLowerCase(),male=/^(male|man|m|مرد|آقا|پسر)$/.test(g),female=/^(female|woman|f|زن|خانم|دختر)$/.test(g);
+ if(!w||!h||!age||age<15||age>85||(!male&&!female))return null;
+ const sessions=positiveNumber(p.weekly_sessions,p.training_days),level=String(p.training_level||'').toLowerCase();let activity=1.2;
+ if(sessions>=6||/پیشرفته|advanced/.test(level))activity=1.725;else if(sessions>=3||/متوسط|intermediate/.test(level))activity=1.55;else if(sessions>=1||/مبتدی|beginner/.test(level))activity=1.375;
+ const bmr=10*w+6.25*h-5*age+(male?5:-161),goal=String(p.goal||'').toLowerCase(),lose=/کاهش|لاغر|چربی.?سوز|weight.?loss|fat.?loss|cut/.test(goal),gain=/افزایش|حجم|عضله.?سازی|muscle.?gain|bulk/.test(goal);
+ const calories=Math.round((bmr*activity*(lose?0.85:gain?1.1:1))/50)*50,protein=Math.round(w*(lose?2:gain?1.8:1.6)),fat=Math.round(Math.max(w*.6,calories*.25/9)),carbs=Math.max(0,Math.round((calories-protein*4-fat*9)/4));
+ return {daily_calories:calories,protein_target:protein,carbs_target:carbs,fat_target:fat};
+}
+async function fetchSelectedTraineeProfile(ctx){const id=String(ctx.trainee.id);if(typeof window.parent.sbGet!=='function')return null;const rows=await window.parent.sbGet('/trainees?id=eq.'+encodeURIComponent(id)+'&select=id,gender,birth_date,age,height,current_weight,goal,training_level,weekly_sessions');if(!window.parent.currentClient||String(window.parent.currentClient.id)!==id)throw new Error('شاگرد هنگام دریافت مشخصات تغییر کرد.');return Array.isArray(rows)?rows[0]||null:null}
 async function loadBuilderContext(){
  try{
   const ctx=await parentBridge().getContext();
   if(!ctx||!ctx.trainee)throw new Error('ابتدا یک شاگرد را در پنل مربی انتخاب کن.');
+  const changedTrainee=targetOwnerId!==String(ctx.trainee.id);
+  if(changedTrainee){targetOwnerId=String(ctx.trainee.id);targetManualDirty=false}
   builderTrainee=ctx.trainee;builderExistingNotes=ctx.plan?.notes||'';
+  bindTargetInputs();let profile=null;try{profile=await fetchSelectedTraineeProfile(ctx)}catch(profileError){console.warn('Nutrition target profile unavailable',profileError)}
+  const calculated=calculateNutritionTargets(profile);
+'';
   document.getElementById('planTitle').value=ctx.plan?.title||'برنامه غذایی';
   document.getElementById('planStart').value=ctx.plan?.start_date||new Date().toISOString().slice(0,10);
   document.getElementById('planEnd').value=ctx.plan?.end_date||'';
-  document.getElementById('planCalories').value=ctx.plan?.daily_calories??'';
-  document.getElementById('planProtein').value=ctx.plan?.protein_target??'';
-  document.getElementById('planCarbs').value=ctx.plan?.carbs_target??'';
-  document.getElementById('planFat').value=ctx.plan?.fat_target??'';
+  const savedTargets={daily_calories:ctx.plan?.daily_calories,protein_target:ctx.plan?.protein_target,carbs_target:ctx.plan?.carbs_target,fat_target:ctx.plan?.fat_target};
+  const hasSavedTargets=Object.values(savedTargets).some(v=>v!==null&&v!==undefined&&v!=='');
+  if(changedTrainee||!targetManualDirty){const next={};['daily_calories','protein_target','carbs_target','fat_target'].forEach(k=>{const v=savedTargets[k];next[k]=(v!==null&&v!==undefined&&v!=='')?v:(!hasSavedTargets&&calculated?calculated[k]:'')});syncTargetFields(next)}
+  document.getElementById('targetSource').textContent=hasSavedTargets?'اهداف ذخیره‌شده برنامه قبلی حفظ شده‌اند.':(calculated?'بر اساس وزن، قد، سن، جنسیت، هدف و سابقه تمرین شاگرد محاسبه شده‌اند؛ قابل ویرایش توسط مربی.':'برای محاسبه خودکار، وزن، قد، سن و جنسیت شاگرد باید در پروفایل ثبت شده باشد؛ اهداف را دستی وارد کن.');
   state.forEach((m,i)=>{m.active=[1];m.selected=1;m.options={1:{rows:[],target:0}}});
   if(ctx.plan){
    for(const meal of ctx.meals||[]){
@@ -226,7 +250,7 @@ async function saveAllToTrainee(){
   }
  }
  if(meals.length>32){notify('تعداد گزینه‌های برنامه بیشتر از حد مجاز است.');return}
- const plan={title:document.getElementById('planTitle').value.trim()||'برنامه غذایی',start_date:document.getElementById('planStart').value||null,end_date:document.getElementById('planEnd').value||null,daily_calories:Number(document.getElementById('planCalories').value)||null,protein_target:Number(document.getElementById('planProtein').value)||null,carbs_target:Number(document.getElementById('planCarbs').value)||null,fat_target:Number(document.getElementById('planFat').value)||null,notes:builderExistingNotes};
+ const plan={title:document.getElementById('planTitle').value.trim()||'برنامه غذایی',start_date:document.getElementById('planStart').value||null,end_date:document.getElementById('planEnd').value||null,daily_calories:Number(document.getElementById('targetCaloriesInput').value)||null,protein_target:Number(document.getElementById('targetProteinInput').value)||null,carbs_target:Number(document.getElementById('targetCarbsInput').value)||null,fat_target:Number(document.getElementById('targetFatInput').value)||null,notes:builderExistingNotes}
  builderBusy=true;const btn=document.getElementById('saveAllBtn');btn.disabled=true;btn.textContent='در حال ثبت امن برنامه…';
  try{
   const result=await parentBridge().save({trainee_id:String(builderTrainee.id),plan,meals});
