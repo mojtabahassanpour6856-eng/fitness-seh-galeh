@@ -24,12 +24,13 @@ td input,td select{width:100%;min-width:0;border:1px solid #e5dcc8;border-radius
 <body>
 <header><h1>باشگاه فیتنس سه‌قلعه</h1><div class="sub">برنامه‌ساز غذایی · پیش‌نمایش تعاملی مربی</div></header>
 <div class="summary" id="connectionStatus">در انتظار انتخاب شاگرد از پنل مربی…</div>
-<div class="summary"><div class="meta-grid">
-<label>عنوان برنامه<input id="planTitle" value="برنامه غذایی"></label>
-<label>شروع برنامه<input id="planStart" type="date"></label><label>پایان برنامه<input id="planEnd" type="date"></label>
-<label>کالری هدف<input id="planCalories" type="number" min="0"></label><label>پروتئین هدف (گرم)<input id="planProtein" type="number" min="0"></label>
-<label>کربوهیدرات هدف (گرم)<input id="planCarbs" type="number" min="0"></label><label>چربی هدف (گرم)<input id="planFat" type="number" min="0"></label>
-</div></div>
+<!-- اطلاعات اصلی برنامه در فرم قدیمی پایین صفحه مدیریت می‌شود؛ مقادیر مخفی برای حفظ سازگاری ذخیره‌سازی نگه داشته شده‌اند. -->
+<div hidden aria-hidden="true">
+<input id="planTitle" value="برنامه غذایی">
+<input id="planStart" type="date"><input id="planEnd" type="date">
+<input id="planCalories" type="number"><input id="planProtein" type="number">
+<input id="planCarbs" type="number"><input id="planFat" type="number">
+</div>
 <div class="top-actions"><button class="save-all" id="saveAllBtn" onclick="saveAll()">💾 ثبت تمام برنامه غذایی در پرونده شاگرد</button><button class="save-all" style="background:#75633e" onclick="toggleStudentPreview()">👤 پیش‌نمایش شاگرد</button></div><div id="studentPreview" class="summary" style="display:none"></div>
 <div class="summary" id="daySummary">جمع گزینه‌های انتخاب‌شده نمایش داده می‌شود؛ گزینه‌های جایگزین با هم جمع نمی‌شوند.</div>
 <div class="section-title">وعده‌های برنامه غذایی</div><div id="meals"></div>
