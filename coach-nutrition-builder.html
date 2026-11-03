@@ -71,17 +71,39 @@ function notify(t){const e=document.getElementById('toast');e.textContent=t;e.st
 draw();
 </script><script>
 (function(){
+ var scheduled=false;
  function reportHeight(){
-  var h=Math.max(document.documentElement.scrollHeight,document.body?document.body.scrollHeight:0);
+  scheduled=false;
+  var body=document.body;
+  if(!body)return;
+  var bottom=0;
+  Array.prototype.forEach.call(body.children,function(el){
+   var style=window.getComputedStyle(el);
+   if(style.position==='fixed'||style.position==='absolute'||el.tagName==='SCRIPT')return;
+   var rect=el.getBoundingClientRect();
+   bottom=Math.max(bottom,rect.bottom+window.scrollY);
+  });
+  var h=Math.ceil(bottom+30);
   if(parent!==window)parent.postMessage({type:'sehNutritionBuilderHeight',height:h},location.origin);
  }
- window.addEventListener('load',reportHeight);
- window.addEventListener('resize',reportHeight);
- if(window.ResizeObserver){
-  new ResizeObserver(reportHeight).observe(document.documentElement);
+ function scheduleReport(){
+  if(scheduled)return;
+  scheduled=true;
+  requestAnimationFrame(reportHeight);
  }
- setTimeout(reportHeight,100);
- setTimeout(reportHeight,500);
+ window.addEventListener('load',scheduleReport);
+ window.addEventListener('resize',scheduleReport);
+ if(window.ResizeObserver){
+  var observer=new ResizeObserver(scheduleReport);
+  ['header','.top-actions','#studentPreview','#daySummary','.section-title','#meals','.footer-note'].forEach(function(selector){
+   var el=document.querySelector(selector);if(el)observer.observe(el);
+  });
+ }
+ if(window.MutationObserver){
+  new MutationObserver(scheduleReport).observe(document.body,{childList:true,subtree:true,attributes:true,characterData:true});
+ }
+ setTimeout(scheduleReport,100);
+ setTimeout(scheduleReport,500);
 })();
 </script>
 </body></html>
