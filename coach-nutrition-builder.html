@@ -189,7 +189,7 @@ function fromDbRecipeNote(note){const m=String(note||'').match(/\[دستور ت�
 function fromDbTarget(note){const m=String(note||'').match(/SEH_BUILDER_TARGET:([0-9]+(?:\.[0-9]+)?)/);return m?Number(m[1])||0:0}
 
 const targetInputMap={daily_calories:'targetCaloriesInput',protein_target:'targetProteinInput',carbs_target:'targetCarbsInput',fat_target:'targetFatInput'};
-let targetManualDirty=false,targetOwnerId=null;
+let targetManualDirty=false,targetOwnerId=null,builderLoadSequence=0;
 function syncTargetFields(values){const keys=['daily_calories','protein_target','carbs_target','fat_target'];keys.forEach(k=>{const h=document.getElementById(k==='daily_calories'?'planCalories':k==='protein_target'?'planProtein':k==='carbs_target'?'planCarbs':'planFat'),v=document.getElementById(targetInputMap[k]);if(v){v.value=values&&values[k]!=null?values[k]:'';h.value=v.value}})}
 function bindTargetInputs(){Object.entries(targetInputMap).forEach(([key,id])=>{const input=document.getElementById(id);if(input&&!input.dataset.bound){input.dataset.bound='1';input.addEventListener('input',()=>{targetManualDirty=true;document.getElementById(key==='daily_calories'?'planCalories':key==='protein_target'?'planProtein':key==='carbs_target'?'planCarbs':'planFat').value=input.value})}})}
 function positiveNumber(...values){for(const v of values){const n=Number(v);if(Number.isFinite(n)&&n>0)return n}return null}
@@ -206,15 +206,24 @@ function calculateNutritionTargets(p){
 }
 async function fetchSelectedTraineeProfile(ctx){const id=String(ctx.trainee.id);if(typeof window.parent.sbGet!=='function')return null;const rows=await window.parent.sbGet('/trainees?id=eq.'+encodeURIComponent(id)+'&select=id,gender,birth_date,age,height,current_weight,goal,training_level,weekly_sessions');if(!window.parent.currentClient||String(window.parent.currentClient.id)!==id)throw new Error('شاگرد هنگام دریافت مشخصات تغییر کرد.');return Array.isArray(rows)?rows[0]||null:null}
 async function loadBuilderContext(){
+ const loadSeq=++builderLoadSequence;
  try{
   const ctx=await parentBridge().getContext();
+  if(loadSeq!==builderLoadSequence)return;
   if(!ctx||!ctx.trainee)throw new Error('ابتدا یک شاگرد را در پنل مربی انتخاب کن.');
-  const changedTrainee=targetOwnerId!==String(ctx.trainee.id);
-  if(changedTrainee){targetOwnerId=String(ctx.trainee.id);targetManualDirty=false}
-  builderTrainee=ctx.trainee;builderExistingNotes=ctx.plan?.notes||'';
-  bindTargetInputs();let profile=null;try{profile=await fetchSelectedTraineeProfile(ctx)}catch(profileError){console.warn('Nutrition target profile unavailable',profileError)}
+  const selectedId=String(ctx.trainee.id);
+  if(!window.parent.currentClient||String(window.parent.currentClient.id)!==selectedId)return;
+  let profile=null;
+  try{profile=await fetchSelectedTraineeProfile(ctx)}catch(profileError){
+   if(loadSeq!==builderLoadSequence||!window.parent.currentClient||String(window.parent.currentClient.id)!==selectedId)return;
+   console.warn('Nutrition target profile unavailable',profileError);
+  }
+  if(loadSeq!==builderLoadSequence||!window.parent.currentClient||String(window.parent.currentClient.id)!==selectedId)return;
+  const changedTrainee=targetOwnerId!==selectedId;
+  if(changedTrainee){targetOwnerId=selectedId;targetManualDirty=false}
   const calculated=calculateNutritionTargets(profile);
-'';
+  builderTrainee=ctx.trainee;builderExistingNotes=ctx.plan?.notes||'';
+  bindTargetInputs();
   document.getElementById('planTitle').value=ctx.plan?.title||'برنامه غذایی';
   document.getElementById('planStart').value=ctx.plan?.start_date||new Date().toISOString().slice(0,10);
   document.getElementById('planEnd').value=ctx.plan?.end_date||'';
@@ -222,7 +231,7 @@ async function loadBuilderContext(){
   const hasSavedTargets=Object.values(savedTargets).some(v=>v!==null&&v!==undefined&&v!=='');
   if(changedTrainee||!targetManualDirty){const next={};['daily_calories','protein_target','carbs_target','fat_target'].forEach(k=>{const v=savedTargets[k];next[k]=(v!==null&&v!==undefined&&v!=='')?v:(calculated?calculated[k]:'')});syncTargetFields(next)}
   document.getElementById('targetSource').textContent=hasSavedTargets?'اهداف ذخیره‌شده برنامه قبلی حفظ شده‌اند.':(calculated?'بر اساس وزن، قد، سن، جنسیت، هدف و سابقه تمرین شاگرد محاسبه شده‌اند؛ قابل ویرایش توسط مربی.':'برای محاسبه خودکار، وزن، قد، سن و جنسیت شاگرد باید در پروفایل ثبت شده باشد؛ اهداف را دستی وارد کن.');
-  state.forEach((m,i)=>{m.active=[1];m.selected=1;m.options={1:{rows:[],target:0}}});
+  state.forEach(m=>{m.active=[1];m.selected=1;m.options={1:{rows:[],target:0}}});
   if(ctx.plan){
    for(const meal of ctx.meals||[]){
     const parsed=decodeMealName(meal.meal_name);if(!parsed)continue;
@@ -231,14 +240,20 @@ async function loadBuilderContext(){
    }
    state.forEach(m=>{m.active.sort((a,b)=>a-b);m.selected=m.active[0]});
   }
+  if(loadSeq!==builderLoadSequence||!window.parent.currentClient||String(window.parent.currentClient.id)!==selectedId)return;
   setConnectionStatus('متصل به پرونده شاگرد: '+(ctx.trainee.name||'شاگرد')+(ctx.plan?' · برنامه قبلی بارگذاری شد':' · هنوز برنامه‌ای ثبت نشده است'),true);
   draw();
- }catch(e){setConnectionStatus(e.message,false);if(/پل ارتباطی پنل مربی هنوز آماده نیست/.test(e.message))setTimeout(loadBuilderContext,500)}
+ }catch(e){
+  if(loadSeq!==builderLoadSequence)return;
+  setConnectionStatus(e.message,false);
+  if(/پل ارتباطی پنل مربی هنوز آماده نیست/.test(e.message))setTimeout(()=>{if(loadSeq===builderLoadSequence)loadBuilderContext()},500);
+ }
 }
 window.addEventListener('message',event=>{if(event.origin===location.origin&&event.data?.type==='sehNutritionBuilderRefresh')loadBuilderContext()});
 async function saveAllToTrainee(){
  if(builderBusy)return;
- if(!builderTrainee){await loadBuilderContext();if(!builderTrainee)return}
+ const selectedId=window.parent.currentClient&&window.parent.currentClient.id!=null?String(window.parent.currentClient.id):'';
+ if(!builderTrainee||selectedId!==String(builderTrainee.id)){await loadBuilderContext();notify('شاگرد انتخاب‌شده به‌روزرسانی شد؛ قبل از ثبت، اطلاعات را بررسی کن.');return}
 
  const meals=[];
  for(let i=0;i<state.length;i++){
