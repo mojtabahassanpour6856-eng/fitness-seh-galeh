@@ -4,40 +4,84 @@
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#f7f0df"><title>قالب برنامه غذایی | فیتنس سه‌قلعه</title>
 <style>
-:root{font-family:Tahoma,Arial,sans-serif;color:#302b20;background:#f7f3e9}*{box-sizing:border-box}body{margin:0;padding:10px;max-width:700px;margin-inline:auto}
-header,.meal,.summary{background:#fffdf8;border:1px solid #e5d8b9;border-radius:13px;box-shadow:0 2px 8px #5b47200b}
+:root{font-family:Tahoma,Arial,sans-serif;color:#302b20;background:#f7f3e9}*{box-sizing:border-box}body{margin:0;padding:10px;max-width:760px;margin-inline:auto}
+header,.meal,.summary,.picker{background:#fffdf8;border:1px solid #e5d8b9;border-radius:13px;box-shadow:0 2px 8px #5b47200b}
 header{padding:12px;text-align:center;border-top:4px solid #c7a34b;margin-bottom:10px}h1{font-size:17px;margin:0 0 5px}.sub,.hint{font-size:10px;color:#82765f;line-height:1.8}
 .top-actions{display:flex;gap:7px;margin:10px 0}.save-all{flex:1;background:#b8943d;color:white;border:0;border-radius:9px;padding:11px;font:inherit;font-size:12px;font-weight:bold}.summary{padding:9px 11px;margin-bottom:10px;font-size:11px;color:#69552c}
 .section-title{font-size:13px;font-weight:bold;margin:12px 3px 8px}.meal{margin:8px 0;padding:10px}.meal-head{display:flex;align-items:center;justify-content:space-between;gap:8px}.meal-name{font-size:13px;font-weight:bold;min-width:91px}.options{display:flex;align-items:center;gap:5px;flex-wrap:wrap}
-.opt,.add{border:1px solid #e2d3af;background:#faf5e9;color:#71551b;border-radius:8px;min-width:30px;height:30px;padding:0 7px;font:inherit;font-size:11px}.opt.active{background:#c7a34b;color:white;border-color:#c7a34b}.add{background:#fff;border-style:dashed;font-size:16px}.expand{border:0;background:transparent;color:#8a6b2d;font-size:18px;padding:3px}
+.opt,.add,.expand,.trash{border:1px solid #e2d3af;background:#faf5e9;color:#71551b;border-radius:8px;min-width:30px;height:30px;padding:0 7px;font:inherit;font-size:11px}.opt.active{background:#c7a34b;color:white;border-color:#c7a34b}.add{background:#fff;border-style:dashed;font-size:16px}.expand{border:0;background:transparent;color:#8a6b2d;font-size:18px}
 .option-panel{display:none;margin-top:10px;padding-top:9px;border-top:1px solid #eee4d0}.option-panel.show{display:block}.panel-title{font-size:12px;font-weight:bold;margin:0 0 8px}
-.table-wrap{overflow-x:auto;border:1px solid #eee4cf;border-radius:8px}table{width:100%;border-collapse:collapse;table-layout:fixed;text-align:center;font-size:10px}th{background:#f7f0df;color:#665126;padding:8px 3px}td{padding:6px 3px;border-top:1px solid #f0e9dc}th:first-child{width:48%}th:nth-child(2){width:20%}th:nth-child(3){width:20%}th:nth-child(4){width:12%}
-.empty{height:31px;background:#fffefa}.trash{border:0;background:transparent;color:#a45d45;font-size:15px;padding:3px}
+.table-wrap{overflow-x:auto;border:1px solid #eee4cf;border-radius:8px}table{width:100%;border-collapse:collapse;table-layout:fixed;text-align:center;font-size:10px}th{background:#f7f0df;color:#665126;padding:8px 3px}td{padding:6px 3px;border-top:1px solid #f0e9dc}th:first-child{width:42%}th:nth-child(2){width:19%}th:nth-child(3){width:18%}th:nth-child(4){width:10%}th:nth-child(5){width:11%}
+td input,td select{width:100%;min-width:0;border:1px solid #e5dcc8;border-radius:6px;padding:6px 3px;font:inherit;font-size:10px;background:white;color:#302b20}.trash{border:0;background:transparent;color:#a45d45;font-size:15px;padding:3px}
 .row-actions{display:flex;gap:6px;margin-top:8px}.small-btn{flex:1;border:1px dashed #d7c69e;border-radius:8px;background:#fffdf8;color:#765b23;padding:8px 4px;font:inherit;font-size:10px}.save-one{border-style:solid;background:#f8f0dd}
+.nutrition-line{margin-top:8px;padding:8px;border-radius:8px;background:#f9f3e5;border:1px solid #eadfc8;font-size:10px;line-height:2;color:#65512b}.target{display:flex;align-items:center;gap:7px;margin-top:7px;font-size:10px}.target input{width:90px;padding:6px;border:1px solid #e2d3af;border-radius:6px;font:inherit}
 .hint{margin:8px 2px 0}.footer-note{text-align:center;font-size:10px;color:#8a806d;margin:12px 2px}
+.modal-back{display:none;position:fixed;inset:0;background:#201b13a8;z-index:10;padding:12px;overflow:auto}.modal-back.show{display:block}.picker{max-width:620px;margin:20px auto;padding:13px}.picker h3{font-size:14px;margin:0 0 10px}.field{margin:9px 0}.field label{display:block;font-size:11px;margin-bottom:5px}.field select,.field input{width:100%;padding:9px;border:1px solid #e2d3af;border-radius:7px;background:white;font:inherit;font-size:12px}.modal-actions{display:flex;gap:7px;margin-top:12px}.modal-actions button{flex:1;border:0;border-radius:8px;padding:10px;font:inherit;font-size:11px;background:#b8943d;color:white}.modal-actions .cancel{background:#eee7d8;color:#574b35}
+.ingredient{display:grid;grid-template-columns:minmax(0,1fr) 75px 100px 34px;gap:5px;align-items:center;margin:7px 0}.ingredient select,.ingredient input{min-width:0;width:100%;padding:7px 3px;border:1px solid #e2d3af;border-radius:6px;font:inherit;font-size:10px;background:white}.metrics{font-size:10px;background:#faf5e9;border-radius:8px;padding:8px;line-height:2;margin-top:8px}
 .toast{position:fixed;bottom:15px;left:50%;transform:translateX(-50%);background:#302b20;color:white;padding:10px 15px;border-radius:9px;font-size:11px;display:none;max-width:90%;text-align:center}
-@media(max-width:390px){body{padding:7px}.meal{padding:8px}.meal-name{min-width:76px;font-size:12px}.opt,.add{min-width:27px;height:28px;padding:0 5px}.small-btn{font-size:9px}}
+@media(max-width:390px){body{padding:7px}.meal{padding:8px}.meal-name{min-width:76px;font-size:12px}.opt,.add{min-width:27px;height:28px;padding:0 5px}.small-btn{font-size:9px}.ingredient{grid-template-columns:minmax(0,1fr) 58px 82px 30px}}
 </style></head>
 <body>
-<header><h1>باشگاه فیتنس سه‌قلعه</h1><div class="sub">برنامه‌ساز غذایی · پیش‌نمایش چارچوب مربی</div></header>
-<div class="top-actions"><button class="save-all" onclick="notify('در نسخه نهایی، تمام وعده‌ها و گزینه‌های تکمیل‌شده با هم ذخیره می‌شوند.')">💾 ثبت تمام برنامه غذایی</button></div>
-<div class="summary">محاسبات تغذیه‌ای کل برنامه در این قسمت نمایش داده می‌شود: کالری · پروتئین · کربوهیدرات · چربی</div>
+<header><h1>باشگاه فیتنس سه‌قلعه</h1><div class="sub">برنامه‌ساز غذایی · پیش‌نمایش تعاملی مربی</div></header>
+<div class="top-actions"><button class="save-all" onclick="saveAll()">💾 ثبت تمام برنامه غذایی</button></div>
+<div class="summary" id="daySummary">جمع گزینه‌های انتخاب‌شده نمایش داده می‌شود؛ گزینه‌های جایگزین با هم جمع نمی‌شوند.</div>
 <div class="section-title">وعده‌های برنامه غذایی</div><div id="meals"></div>
-<div class="footer-note">این پیش‌نمایش مستقل است؛ هنوز به بانک غذا یا اطلاعات شاگردان متصل نیست.</div><div class="toast" id="toast"></div>
+<div class="footer-note">این نسخه برای بررسی رفتار و ظاهر است؛ داده‌های نمونه دارد و هنوز به بانک واقعی و اطلاعات شاگردان متصل نیست.</div>
+<div class="modal-back" id="modal"><div class="picker">
+<h3>افزودن از بانک غذا</h3>
+<div class="field"><label>نوع انتخاب</label><select id="pickMode" onchange="renderPicker()"><option value="single">غذای تکی</option><option value="recipe">غذای ترکیبی / دستور آماده</option></select></div>
+<div class="field"><label>دسته‌بندی</label><select id="pickCategory" onchange="renderPicker()"><option value="all">همه دسته‌ها</option><option value="breakfast">صبحانه</option><option value="lunch">ناهار</option><option value="dinner">شام</option><option value="snack">میان‌وعده</option><option value="bedtime">قبل خواب</option><option value="preworkout">قبل تمرین</option><option value="postworkout">بعد تمرین</option></select></div>
+<div id="pickSelection"></div><div id="editor"></div>
+<div class="modal-actions"><button onclick="confirmPick()">افزودن به گزینه</button><button class="cancel" onclick="closePicker()">انصراف</button></div>
+</div></div>
+<div class="toast" id="toast"></div>
 <script>
+const foods=[
+{id:1,name:'جو دوسر',cal:389,p:16.9,c:66.3,f:6.9,category:'صبحانه'},
+{id:2,name:'موز',cal:89,p:1.1,c:22.8,f:.3,category:'میوه'},
+{id:3,name:'عسل',cal:304,p:.3,c:82.4,f:0,category:'صبحانه'},
+{id:4,name:'کره بادام زمینی',cal:588,p:25,c:20,f:50,category:'صبحانه'},
+{id:5,name:'شیر کم چرب',cal:42,p:3.4,c:5,f:1,category:'لبنیات'},
+{id:6,name:'تخم مرغ کامل',cal:143,p:12.6,c:.7,f:9.5,category:'پروتئین'},
+{id:7,name:'نان تست سبوس‌دار',cal:247,p:13,c:41,f:4.2,category:'نان'},
+{id:8,name:'سینه مرغ پخته',cal:165,p:31,c:0,f:3.6,category:'پروتئین'},
+{id:9,name:'برنج پخته',cal:130,p:2.7,c:28,f:.3,category:'غلات'},
+{id:10,name:'ماست یونانی ساده کم‌چرب',cal:73,p:10,c:3.9,f:2},
+{id:11,name:'تخم چیا',cal:486,p:16.5,c:42.1,f:30.7},
+{id:12,name:'توت‌فرنگی',cal:32,p:.7,c:7.7,f:.3}
+];
+const recipes=[
+{name:'اوتمیل موز، عسل و کره بادام‌زمینی',category:'breakfast',ingredients:[{foodId:1,amount:50,unit:'گرم'},{foodId:2,amount:1,unit:'عدد'},{foodId:3,amount:1,unit:'قاشق غذاخوری'},{foodId:4,amount:1,unit:'قاشق غذاخوری'},{foodId:5,amount:250,unit:'میلی‌لیتر'}]},
+{name:'صبحانه تخم‌مرغ و نان تست',category:'breakfast',ingredients:[{foodId:6,amount:2,unit:'عدد'},{foodId:7,amount:60,unit:'گرم'}]},
+{name:'بشقاب مرغ و برنج',category:'lunch',ingredients:[{foodId:8,amount:150,unit:'گرم'},{foodId:9,amount:150,unit:'گرم'}]},
+{name:'کاسه ماست یونانی و میوه',category:'snack',ingredients:[{foodId:10,amount:170,unit:'گرم'},{foodId:2,amount:1,unit:'عدد'},{foodId:11,amount:5,unit:'گرم'},{foodId:12,amount:50,unit:'گرم'}]}
+];
+const categoryNames={breakfast:'صبحانه',lunch:'ناهار',dinner:'شام',snack:'میان‌وعده',bedtime:'قبل خواب',preworkout:'قبل تمرین',postworkout:'بعد تمرین'};
 const names=['صبحانه','میان‌وعده اول','ناهار','میان‌وعده دوم','شام','قبل از خواب','قبل تمرین','بعد تمرین'];
-const state=names.map(name=>({name,active:[1],selected:1,open:false,rows:3}));
-function draw(){document.getElementById('meals').innerHTML=state.map((m,i)=>`
-<section class="meal"><div class="meal-head"><div class="meal-name">${m.name}</div><div class="options">
-${m.active.map(n=>`<button class="opt ${m.selected===n?'active':''}" onclick="choose(${i},${n})">${n}</button>`).join('')}
-${m.active.length<4?'<button class="add" aria-label="افزودن گزینه" onclick="addOption('+i+')">＋</button>':''}
-</div><button class="expand" aria-label="باز و بسته کردن" onclick="toggle(${i})">${m.open?'⌃':'⌄'}</button></div>
-<div class="option-panel ${m.open?'show':''}"><div class="panel-title">${m.name} ${m.selected}</div>
-<div class="table-wrap"><table><thead><tr><th>نام غذا / دستور</th><th>مقدار</th><th>واحد</th><th>حذف</th></tr></thead>
-<tbody>${Array.from({length:m.rows},(_,r)=>`<tr><td class="empty"></td><td class="empty"></td><td class="empty"></td><td><button class="trash" title="حذف ردیف" onclick="removeRow(${i},${r})">🗑</button></td></tr>`).join('')}</tbody></table></div>
-<div class="row-actions"><button class="small-btn" onclick="notify('اینجا فهرست بانک غذایی فعلی برای انتخاب غذا یا دستور ترکیبی باز می‌شود؛ اتصال در مرحله بعد انجام می‌شود.')">＋ افزودن از بانک غذا</button><button class="small-btn" onclick="addRow(${i})">＋ ردیف خالی</button><button class="small-btn save-one" onclick="notify('در نسخه نهایی فقط '+ '${m.name} ${m.selected}' +' ذخیره می‌شود.')">💾 ذخیره این گزینه</button></div>
-<div class="hint">با انتخاب دستور ترکیبی، اجزای آن در همین بخش باز می‌شوند و امکان تغییر مقدار، حذف یا افزودن جزء از بانک غذا وجود خواهد داشت.</div></div></section>`).join('')}
-function choose(i,n){state[i].selected=n;state[i].open=true;draw()}function addOption(i){let m=state[i],n=[1,2,3,4].find(x=>!m.active.includes(x));if(n){m.active.push(n);m.selected=n;m.open=true;draw()}}
-function toggle(i){state[i].open=!state[i].open;draw()}function addRow(i){state[i].rows=Math.min(15,state[i].rows+1);draw()}function removeRow(i,r){if(state[i].rows>1){state[i].rows--;draw()}else notify('حداقل یک ردیف خالی باقی می‌ماند.')}
-function notify(t){let e=document.getElementById('toast');e.textContent=t;e.style.display='block';clearTimeout(window.nt);window.nt=setTimeout(()=>e.style.display='none',3000)}draw();
+const state=names.map(name=>({name,active:[1],selected:1,open:false,options:{1:{rows:[],target:0}}}));
+let pickerContext=null,draft=[];
+function unitFactor(food,unit){if(unit==='گرم'||unit==='میلی‌لیتر')return 1;if(unit==='عدد')return /موز/.test(food.name)?100:50;if(unit==='قاشق غذاخوری')return /عسل/.test(food.name)?21:16;if(unit==='لیوان')return 240;return null}
+function metric(item){const f=foods.find(x=>x.id===item.foodId),factor=f&&unitFactor(f,item.unit),q=Number(item.amount);if(!f||!factor||!Number.isFinite(q)||q<=0)return null;const ratio=q*factor/100;return {cal:f.cal*ratio,p:f.p*ratio,c:f.c*ratio,f:f.f*ratio}}
+function total(rows){return rows.reduce((a,row)=>{const n=metric(row);if(n){a.cal+=n.cal;a.p+=n.p;a.c+=n.c;a.f+=n.f}return a},{cal:0,p:0,c:0,f:0})}
+function fmt(n){return Math.round(n*10)/10}
+function option(m){return m.options[m.selected]||(m.options[m.selected]={rows:[],target:0})}
+function draw(){document.getElementById('meals').innerHTML=state.map((m,i)=>{const o=option(m),t=total(o.rows);return '<section class="meal"><div class="meal-head"><div class="meal-name">'+m.name+'</div><div class="options">'+m.active.map(n=>'<button class="opt '+(m.selected===n?'active':'')+'" onclick="choose('+i+','+n+')">'+n+'</button>').join('')+(m.active.length<4?'<button class="add" onclick="addOption('+i+')">＋</button>':'')+'</div><button class="expand" onclick="toggle('+i+')">'+(m.open?'⌃':'⌄')+'</button></div><div class="option-panel '+(m.open?'show':'')+'"><div class="panel-title">'+m.name+' · گزینه '+m.selected+'</div><div class="table-wrap"><table><thead><tr><th>نام غذا / دستور</th><th>مقدار</th><th>واحد</th><th>ویرایش</th><th>حذف</th></tr></thead><tbody>'+o.rows.map((r,j)=>{const f=foods.find(x=>x.id===r.foodId);return '<tr><td>'+ (f?f.name:'—')+'</td><td><input type="number" min=".1" step=".1" value="'+r.amount+'" onchange="changeAmount('+i+','+j+',this.value)"></td><td>'+r.unit+'</td><td><button class="trash" onclick="editRow('+i+','+j+')">✎</button></td><td><button class="trash" onclick="removeRow('+i+','+j+')">🗑</button></td></tr>'}).join('')+'</tbody></table></div><div class="row-actions"><button class="small-btn" onclick="openPicker('+i+')">＋ افزودن از بانک غذا</button><button class="small-btn save-one" onclick="saveOption('+i+')">💾 ذخیره این گزینه</button></div><div class="target"><label>هدف کالری این گزینه:</label><input type="number" min="0" value="'+(o.target||'')+'" placeholder="مثلاً ۴۵۰" onchange="changeTarget('+i+',this.value)"></div><div class="nutrition-line">کالری: '+fmt(t.cal)+' kcal · پروتئین: '+fmt(t.p)+' g · کربوهیدرات: '+fmt(t.c)+' g · چربی: '+fmt(t.f)+' g'+(o.target?' · اختلاف با هدف: '+fmt(t.cal-o.target)+' kcal':'')+'</div><div class="hint">تغییر مقدار یا حذف و افزودن هر جزء، محاسبات را فوراً به‌روز می‌کند. دستور اصلی بانک تغییر نمی‌کند.</div></div></section>'}).join('');updateDaySummary()}
+function updateDaySummary(){const t=state.reduce((a,m)=>{const n=total(option(m).rows);a.cal+=n.cal;a.p+=n.p;a.c+=n.c;a.f+=n.f;return a},{cal:0,p:0,c:0,f:0});document.getElementById('daySummary').textContent='جمع گزینه‌های انتخاب‌شده: '+fmt(t.cal)+' kcal · پروتئین '+fmt(t.p)+' g · کربوهیدرات '+fmt(t.c)+' g · چربی '+fmt(t.f)+' g؛ گزینه‌های جایگزین با هم جمع نمی‌شوند.'}
+function choose(i,n){state[i].selected=n;state[i].open=true;draw()}function addOption(i){const m=state[i],n=[1,2,3,4].find(x=>!m.active.includes(x));if(n){m.active.push(n);m.selected=n;m.options[n]={rows:[],target:0};m.open=true;draw()}}
+function toggle(i){state[i].open=!state[i].open;draw()}function changeAmount(i,j,v){option(state[i]).rows[j].amount=Number(v);draw()}function changeTarget(i,v){option(state[i]).target=Number(v)||0;draw()}function removeRow(i,j){option(state[i]).rows.splice(j,1);draw()}
+function openPicker(i){pickerContext={meal:i,edit:-1};draft=[];document.getElementById('pickMode').value='single';document.getElementById('pickCategory').value='all';document.getElementById('modal').classList.add('show');renderPicker()}
+function editRow(i,j){pickerContext={meal:i,edit:j};const row=option(state[i]).rows[j];draft=[{...row}];document.getElementById('pickMode').value='single';document.getElementById('pickCategory').value='all';document.getElementById('modal').classList.add('show');renderPicker();document.getElementById('pickSelection').innerHTML='<div class="field"><label>غذای انتخاب‌شده</label><select id="foodPick">'+foodOptions(row.foodId)+'</select></div><div class="field"><label>مقدار</label><input id="singleAmount" type="number" min=".1" step=".1" value="'+row.amount+'"></div><div class="field"><label>واحد</label><select id="singleUnit">'+unitOptions(row.unit)+'</select></div>'}
+function foodOptions(selected){return foods.map(f=>'<option value="'+f.id+'" '+(f.id===selected?'selected':'')+'>'+f.name+'</option>').join('')}
+function unitOptions(selected){return ['گرم','عدد','قاشق غذاخوری','لیوان','میلی‌لیتر'].map(u=>'<option '+(u===selected?'selected':'')+'>'+u+'</option>').join('')}
+function renderPicker(){const mode=document.getElementById('pickMode').value,cat=document.getElementById('pickCategory').value;const host=document.getElementById('pickSelection'),editor=document.getElementById('editor');editor.innerHTML='';if(mode==='single'){const list=foods.filter(f=>cat==='all'||!categoryNames[cat]||f.category===categoryNames[cat]);host.innerHTML='<div class="field"><label>انتخاب غذا</label><select id="foodPick">'+list.map(f=>'<option value="'+f.id+'">'+f.name+'</option>').join('')+'</select></div><div class="field"><label>مقدار</label><input id="singleAmount" type="number" min=".1" step=".1" value="100"></div><div class="field"><label>واحد</label><select id="singleUnit">'+unitOptions('گرم')+'</select></div>'}else{const list=recipes.filter(r=>cat==='all'||r.category===cat);host.innerHTML='<div class="field"><label>انتخاب دستور ترکیبی</label><select id="recipePick">'+list.map((r,i)=>'<option value="'+recipes.indexOf(r)+'">'+r.name+'</option>').join('')+'</select></div>';host.insertAdjacentHTML('beforeend','<div class="hint">با انتخاب دستور، اجزای آن در پایین نمایش داده می‌شوند. تغییرات فقط در نسخه برنامه فعلی اعمال می‌شود.</div>');document.getElementById('recipePick').onchange=loadRecipeDraft;loadRecipeDraft()}}
+function loadRecipeDraft(){const idx=Number(document.getElementById('recipePick')?.value),r=recipes[idx];if(!r)return;draft=r.ingredients.map(x=>({...x}));renderEditor()}
+function renderEditor(){const host=document.getElementById('editor');if(!draft.length){host.innerHTML='<p class="hint">این دستور هنوز ماده‌ای ندارد.</p>';return}host.innerHTML='<b style="font-size:11px">اجزای دستور · قابل ویرایش</b>'+draft.map((x,i)=>'<div class="ingredient"><select onchange="draft['+i+'].foodId=Number(this.value);renderEditor()">'+foodOptions(x.foodId)+'</select><input type="number" min=".1" step=".1" value="'+x.amount+'" onchange="draft['+i+'].amount=Number(this.value);renderEditor()"><select onchange="draft['+i+'].unit=this.value">'+unitOptions(x.unit)+'</select><button class="trash" onclick="draft.splice('+i+',1);renderEditor()">×</button></div>').join('')+'<div class="field"><label>افزودن ماده از بانک غذا</label><div class="ingredient"><select id="newFood">'+foodOptions(foods[0].id)+'</select><input id="newAmount" type="number" value="100" min=".1" step=".1"><select id="newUnit">'+unitOptions('گرم')+'</select><button class="add" onclick="addIngredient()">＋</button></div></div><div class="metrics">'+metricsText(total(draft))+'</div>'}
+function metricsText(t){return 'مجموع فعلی: '+fmt(t.cal)+' kcal · پروتئین '+fmt(t.p)+' g · کربوهیدرات '+fmt(t.c)+' g · چربی '+fmt(t.f)+' g'}
+function addIngredient(){const id=Number(document.getElementById('newFood').value),amount=Number(document.getElementById('newAmount').value),unit=document.getElementById('newUnit').value;if(!Number.isFinite(amount)||amount<=0){notify('مقدار ماده جدید معتبر نیست.');return}draft.push({foodId:id,amount,unit});renderEditor()}
+function confirmPick(){if(!pickerContext)return;const mode=document.getElementById('pickMode').value;let rows=[];if(mode==='single'){const id=Number(document.getElementById('foodPick').value),amount=Number(document.getElementById('singleAmount').value),unit=document.getElementById('singleUnit').value;if(!Number.isFinite(amount)||amount<=0){notify('مقدار معتبر وارد کن.');return}rows=[{foodId:id,amount,unit}]}else{if(!draft.length||draft.some(x=>!Number.isFinite(Number(x.amount))||Number(x.amount)<=0||!metric(x))){notify('مواد و مقدارهای دستور را بررسی کن.');return}rows=draft.map(x=>({...x}))}const o=option(state[pickerContext.meal]);if(pickerContext.edit>=0)o.rows.splice(pickerContext.edit,1,...rows);else o.rows.push(...rows);closePicker();draw()}
+function closePicker(){document.getElementById('modal').classList.remove('show');pickerContext=null;draft=[]}
+function saveOption(i){try{localStorage.setItem('sehgaleh_preview_option_'+i+'_'+state[i].selected,JSON.stringify(option(state[i])));notify('گزینه در حافظه همین مرورگر ذخیره شد؛ این ذخیره آزمایشی است.')}catch(e){notify('ذخیره آزمایشی ممکن نشد.')}}
+function saveAll(){try{localStorage.setItem('sehgaleh_preview_all',JSON.stringify(state));notify('پیش‌نمایش برنامه در همین مرورگر ذخیره شد؛ هنوز به شاگرد یا دیتابیس وصل نیست.')}catch(e){notify('ذخیره آزمایشی ممکن نشد.')}}
+function notify(t){const e=document.getElementById('toast');e.textContent=t;e.style.display='block';clearTimeout(window.nt);window.nt=setTimeout(()=>e.style.display='none',3000)}
+draw();
 </script></body></html>
