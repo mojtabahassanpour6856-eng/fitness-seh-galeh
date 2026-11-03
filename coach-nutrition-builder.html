@@ -181,9 +181,9 @@ function setConnectionStatus(msg,ok=false){const el=document.getElementById('con
 function parentBridge(){if(window.parent===window||window.location.origin!==window.parent.location.origin)throw new Error('این صفحه باید از داخل پنل مربی باز شود.');const b=window.parent.sehNutritionBuilderBridge;if(!b)throw new Error('پل ارتباطی پنل مربی هنوز آماده نیست؛ صفحه را یک‌بار تازه‌سازی کن.');return b}
 function toPersianDigits(n){return String(n).replace(/[0-9]/g,d=>'۰۱۲۳۴۵۶۷۸۹'[Number(d)])}
 function builderMealName(index,optionNo){return dbMealNames[index]+(optionNo===1?'':toPersianDigits(optionNo))}
-function decodeMealName(name){const n=String(name||'').normalize('NFC').replace(/[\\s\\u200c\\u200f]/g,'');for(let i=0;i<dbMealNames.length;i++){const base=dbMealNames[i].replace(/[\\s\\u200c\\u200f]/g,'');if(!n.startsWith(base))continue;const tail=n.slice(base.length).replace(/[۰-۹]/g,d=>'۰۱۲۳۴۵۶۷۸۹'.indexOf(d));const opt=tail?Number(tail):1;if(Number.isInteger(opt)&&opt>=1&&opt<=4)return {index:i,opt}}return null}
-function fromDbUnitNote(note){const m=String(note||'').match(/\\[seh-gpu:([0-9]+(?:\\.[0-9]+)?)\\]/);return m?Number(m[1]):null}
-function fromDbRecipeNote(note){const m=String(note||'').match(/\\[دستور ترکیبی:\\s*([^\\]]+)\\]/);return m?m[1]:null}
+function decodeMealName(name){const n=String(name||'').normalize('NFC').replace(/[\s\u200c\u200f]/g,'');for(let i=0;i<dbMealNames.length;i++){const base=dbMealNames[i].replace(/[\s\u200c\u200f]/g,'');if(!n.startsWith(base))continue;const tail=n.slice(base.length).replace(/[۰-۹]/g,d=>'۰۱۲۳۴۵۶۷۸۹'.indexOf(d));const opt=tail?Number(tail):1;if(Number.isInteger(opt)&&opt>=1&&opt<=4)return {index:i,opt}}return null}
+function fromDbUnitNote(note){const m=String(note||'').match(/\[seh-gpu:([0-9]+(?:\.[0-9]+)?)\]/);return m?Number(m[1]):null}
+function fromDbRecipeNote(note){const m=String(note||'').match(/\[دستور ترکیبی:\s*([^\]]+)\]/);return m?m[1]:null}
 async function loadBuilderContext(){
  try{
   const ctx=await parentBridge().getContext();
@@ -207,8 +207,9 @@ async function loadBuilderContext(){
   }
   setConnectionStatus('متصل به پرونده شاگرد: '+(ctx.trainee.name||'شاگرد')+(ctx.plan?' · برنامه قبلی بارگذاری شد':' · هنوز برنامه‌ای ثبت نشده است'),true);
   draw();
- }catch(e){setConnectionStatus(e.message,false)}
+ }catch(e){setConnectionStatus(e.message,false);if(/پل ارتباطی پنل مربی هنوز آماده نیست/.test(e.message))setTimeout(loadBuilderContext,500)}
 }
+window.addEventListener('message',event=>{if(event.origin===location.origin&&event.data?.type==='sehNutritionBuilderRefresh')loadBuilderContext()});
 async function saveAllToTrainee(){
  if(builderBusy)return;
  if(!builderTrainee){await loadBuilderContext();if(!builderTrainee)return}
