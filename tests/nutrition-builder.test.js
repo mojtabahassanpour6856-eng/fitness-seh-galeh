@@ -158,3 +158,48 @@ test('switching selected trainee during save cancels the write', async () => {
   assert.equal(h.calls.some(x => x[0] === 'POST' || x[0] === 'PATCH'), false);
   assert.match(h.elements.dietStatus.textContent, /شاگرد هنگام ذخیره تغییر کرده است/);
 });
+
+test('nutrition table calculations scale every bank value per 100g by selected amount', () => {
+  const h = createHarness();
+  h.context.foods = [
+    ['سینه مرغ پخته', 165, 31, 0, 3.6],
+    ['برنج پخته', 130, 2.7, 28.2, 0.3]
+  ];
+  const chicken = h.context.dietFoodNutrition({ foodIndex: '0', amount: 150 });
+  assert.deepEqual(
+    { cal: chicken.cal, protein: chicken.protein, carbs: chicken.carbs, fat: chicken.fat, valid: chicken.valid },
+    { cal: 247.5, protein: 46.5, carbs: 0, fat: 5.4, valid: true }
+  );
+  const rice = h.context.dietFoodNutrition({ foodIndex: '1', amount: 200 });
+  assert.deepEqual(
+    { cal: rice.cal, protein: rice.protein, carbs: rice.carbs, fat: rice.fat, valid: rice.valid },
+    { cal: 260, protein: 5.4, carbs: 56.4, fat: 0.6, valid: true }
+  );
+});
+
+test('nutrition calculations reject missing or malformed bank values instead of showing false zeroes', () => {
+  const h = createHarness();
+  h.context.foods = [
+    ['غذای ناقص', 120, 4, null, 2],
+    ['غذای نامعتبر', 120, 4, 'نامشخص', 2]
+  ];
+  assert.equal(h.context.dietFoodNutrition({ foodIndex: '0', amount: 100 }).valid, false);
+  assert.equal(h.context.dietFoodNutrition({ foodIndex: '1', amount: 100 }).valid, false);
+  assert.equal(h.context.dietFoodNutrition({ foodIndex: '', amount: 100 }).valid, false);
+});
+
+test('meal totals add the nutrition of all selected food rows', () => {
+  const h = createHarness();
+  h.context.foods = [
+    ['سینه مرغ پخته', 165, 31, 0, 3.6],
+    ['برنج پخته', 130, 2.7, 28.2, 0.3]
+  ];
+  const total = h.context.dietMealNutrition({
+    items: [{ foodIndex: '0', amount: 150 }, { foodIndex: '1', amount: 200 }]
+  });
+  assert.deepEqual(
+    { cal: total.cal, protein: total.protein, carbs: total.carbs, fat: total.fat },
+    { cal: 507.5, protein: 51.9, carbs: 56.4, fat: 6 }
+  );
+});
+
