@@ -710,6 +710,20 @@ body.locked{overflow:hidden!important}
 </div>
 
 <div id="mealCoachView">
+
+<div class="card" id="sehDietPrototype" style="border:2px solid #c7a34b">
+ <h2>🧪 قالب آزمایشی برنامه غذایی</h2>
+ <p class="muted">قالب اولیه پنج‌وعده‌ای برای بررسی مربی. غذاها از بانک غذا انتخاب می‌شوند و مقدار هرکدام قابل تغییر است. این بخش فعلاً فقط روی همین دستگاه ذخیره می‌شود و به برنامه شاگرد یا پایگاه داده ارسال نمی‌شود.</p>
+ <div id="sehDietPrototypeMeals"></div>
+ <div class="close-row" style="margin-top:10px">
+  <button type="button" class="secondary" onclick="sehDietPrototypeAddMeal()">➕ افزودن وعده</button>
+  <button type="button" onclick="sehDietPrototypeSave()">💾 ذخیره قالب آزمایشی</button>
+  <button type="button" class="secondary" onclick="sehDietPrototypeLoad()">بارگذاری قالب</button>
+  <button type="button" class="secondary" onclick="sehDietPrototypeReset()">بازنشانی اولیه</button>
+ </div>
+ <p id="sehDietPrototypeStatus" class="muted" aria-live="polite"></p>
+</div>
+
 <div class="card">
 <h2>اطلاعات برنامه</h2>
 <div class="grid2">
@@ -3199,6 +3213,45 @@ window.loadDashboard = loadDashboard;
 
 
 
+
+
+<script>
+(function(){
+ const KEY="sehgaleh_diet_prototype_v1";
+ const initial=()=>[
+  {name:"صبحانه",time:"08:00",items:[{foodIndex:"",amount:100}]},
+  {name:"میان‌وعده صبح",time:"10:30",items:[{foodIndex:"",amount:100}]},
+  {name:"ناهار",time:"13:30",items:[{foodIndex:"",amount:100}]},
+  {name:"میان‌وعده عصر",time:"17:00",items:[{foodIndex:"",amount:100}]},
+  {name:"شام",time:"20:30",items:[{foodIndex:"",amount:100}]}
+ ];
+ let rows=initial();
+ const host=()=>document.getElementById("sehDietPrototypeMeals");
+ const status=t=>{const e=document.getElementById("sehDietPrototypeStatus");if(e)e.textContent=t||"";};
+ const safe=s=>typeof esc==="function"?esc(String(s??"")):String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+ function options(selected){
+  const list=Array.isArray(foods)?foods:[];
+  return '<option value="">انتخاب غذا از بانک…</option>'+list.map((f,i)=>'<option value="'+i+'" '+(String(selected)===String(i)?'selected':'')+'>'+safe(f?.[0]||"غذای بدون نام")+'</option>').join("");
+ }
+ function render(){
+  const h=host();if(!h)return;
+  h.innerHTML=rows.map((m,i)=>'<details class="card" open style="padding:9px;margin:8px 0;border:1px solid #d8c9a5"><summary style="font-weight:bold;cursor:pointer">وعده '+(i+1)+' · '+safe(m.name)+'</summary><div class="grid2" style="margin-top:10px"><div><label>نام وعده</label><input maxlength="50" value="'+safe(m.name)+'" oninput="sehDietPrototypeSetMeal('+i+',\'name\',this.value)"></div><div><label>ساعت وعده</label><input type="time" value="'+safe(m.time)+'" onchange="sehDietPrototypeSetMeal('+i+',\'time\',this.value)"></div></div>'+m.items.map((it,j)=>'<div class="grid2" style="align-items:end;margin-top:8px"><div><label>غذا</label><select onchange="sehDietPrototypeSetFood('+i+','+j+',this.value)">'+options(it.foodIndex)+'</select></div><div><label>مقدار (گرم)</label><div style="display:flex;gap:6px"><input type="number" min="1" max="10000" step="1" value="'+safe(it.amount)+'" onchange="sehDietPrototypeSetAmount('+i+','+j+',this.value)"><button type="button" class="secondary" onclick="sehDietPrototypeRemoveFood('+i+','+j+')" aria-label="حذف غذا">حذف</button></div></div></div>').join("")+'<button type="button" class="secondary" style="margin-top:8px" onclick="sehDietPrototypeAddFood('+i+')">➕ افزودن غذا به این وعده</button>'+(rows.length>1?'<button type="button" class="secondary" style="margin:8px 6px 0" onclick="sehDietPrototypeRemoveMeal('+i+')">حذف وعده</button>':'')+'</details>').join("");
+  if(!Array.isArray(foods)||!foods.length)status("بانک غذا هنوز بارگذاری نشده؛ بعد از بارگذاری غذاها، فهرست انتخاب فعال می‌شود.");
+ }
+ window.sehDietPrototypeSetMeal=(i,k,v)=>{if(rows[i])rows[i][k]=v;};
+ window.sehDietPrototypeSetFood=(i,j,v)=>{if(rows[i]?.items[j])rows[i].items[j].foodIndex=v;};
+ window.sehDietPrototypeSetAmount=(i,j,v)=>{if(rows[i]?.items[j])rows[i].items[j].amount=Math.max(1,Math.min(10000,Number(v)||1));};
+ window.sehDietPrototypeAddFood=i=>{if(rows[i]){rows[i].items.push({foodIndex:"",amount:100});render();}};
+ window.sehDietPrototypeRemoveFood=(i,j)=>{if(rows[i]&&rows[i].items.length>1){rows[i].items.splice(j,1);render();}};
+ window.sehDietPrototypeAddMeal=()=>{if(rows.length>=8){status("حداکثر ۸ وعده قابل افزودن است.");return;}rows.push({name:"وعده جدید",time:"12:00",items:[{foodIndex:"",amount:100}]});render();};
+ window.sehDietPrototypeRemoveMeal=i=>{if(rows.length>1){rows.splice(i,1);render();}};
+ window.sehDietPrototypeSave=()=>{try{const data=rows.map(m=>({...m,items:m.items.map(it=>({...it,foodName:it.foodIndex!==""&&Array.isArray(foods)?String(foods[Number(it.foodIndex)]?.[0]||""):""}))}));localStorage.setItem(KEY,JSON.stringify(data));status("قالب آزمایشی فقط روی همین دستگاه ذخیره شد؛ هیچ اطلاعاتی به شاگرد یا پایگاه داده ارسال نشد.");}catch(e){status("ذخیره محلی انجام نشد.");}};
+ window.sehDietPrototypeLoad=()=>{try{const data=JSON.parse(localStorage.getItem(KEY)||"null");if(!Array.isArray(data)||!data.length)throw new Error("empty");rows=data.map(m=>({...m,items:(m.items||[]).map(it=>{let idx=it.foodIndex??"";if(it.foodName&&Array.isArray(foods)){const found=foods.findIndex(f=>String(f?.[0]||"")===it.foodName);idx=found>=0?String(found):"";}return {foodIndex:idx,amount:Math.max(1,Number(it.amount)||100)};})}));render();status("قالب ذخیره‌شده بارگذاری شد.");}catch(e){status("قالب ذخیره‌شده‌ای پیدا نشد یا قابل خواندن نیست.");}};
+ window.sehDietPrototypeReset=()=>{rows=initial();render();status("قالب اولیه پنج‌وعده‌ای بازنشانی شد.");};
+ document.addEventListener("DOMContentLoaded",render);
+ if(document.readyState!=="loading")render();
+})();
+</script>
 
 </body></html>`;
     const w=window.open('','_blank');if(w){w.document.write(html);w.document.close();}
