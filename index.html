@@ -12452,6 +12452,15 @@ body.workout-output.workout-compact{
     ['sehCalName','sehCalHeight','sehCalWeight','sehCalTarget'].forEach(function(id){el(id).value='';});
     el('sehCalSex').value='male';el('sehCalAge').value='30';el('sehCalGoal').value='lose';el('sehCalWeeks').value='12';el('sehCalActivity').value='1.55';el('sehCalSessions').value='3';el('sehCalDuration').value='60';el('sehCalcResult').innerHTML='';showGoalFields();
   };
+  window.sehApplyCalorieTargetsToNutrition=function(calories,protein,carbs,fat){
+    var traineeId=(typeof currentClient!=='undefined'&&currentClient&&currentClient.id!=null)?String(currentClient.id):'';
+    if(!traineeId){alert('ابتدا یک شاگرد را از پنل مربی انتخاب کن.');return;}
+    if(typeof window.showSection==='function')window.showSection('meal',null);
+    var frame=document.getElementById('sehNutritionBuilderFrame');
+    if(!frame||!frame.contentWindow){alert('برنامه‌ساز غذایی هنوز آماده نیست؛ دوباره تلاش کن.');return;}
+    var payload={type:'sehNutritionApplyTargets',traineeId:traineeId,calories:calories,protein:protein,carbs:carbs,fat:fat};
+    setTimeout(function(){try{frame.contentWindow.postMessage(payload,window.location.origin);}catch(e){console.warn('Nutrition target transfer failed',e);}},180);
+  };
   window.sehCalcCalories=function(){
     var sex=el('sehCalSex').value,age=num('sehCalAge'),height=num('sehCalHeight'),weight=num('sehCalWeight'),goal=el('sehCalGoal').value;
     var targetRaw=String(el('sehCalTarget').value||'').trim(),target=goal==='maintain'?weight:(targetRaw===''?null:Number(targetRaw)),weeks=goal==='maintain'?0:num('sehCalWeeks'),activity=num('sehCalActivity'),sessions=num('sehCalSessions'),duration=num('sehCalDuration');
@@ -12483,6 +12492,7 @@ body.workout-output.workout-compact{
     html+='</div><p class="muted" style="margin-top:10px">هدف: '+({lose:'کاهش وزن',maintain:'حفظ وزن',gain:'افزایش وزن'}[goal])+' | تمرین: '+sessions+' جلسه در هفته، هر جلسه '+duration+' دقیقه.</p>';
     if(warnings.length)html+='<div style="margin-top:10px;padding:12px;border-radius:10px;background:#fff1e8;color:#7b2d12"><strong>موارد قابل بررسی</strong><ul style="margin:6px 0 0;padding-right:20px">'+warnings.map(function(w){return '<li>'+w+'</li>';}).join('')+'</ul></div>';
     html+='<p style="font-size:12px;color:#777;margin-top:10px">برآورد با فرمول Mifflin–St Jeor و تخمین تقریبی ۷۷۰۰ کیلوکالری به ازای هر کیلوگرم تغییر وزن انجام شده است. نیاز واقعی با توجه به شرایط فرد، داروها، بیماری‌ها و روند وزن متفاوت است؛ نتیجه را با پیگیری وزن و ارزیابی مربی/متخصص تنظیم کن.</p>';
+    html+='<button type="button" style="margin-top:12px;background:#c7a34b;color:#241b0c;font-weight:bold" onclick="window.sehApplyCalorieTargetsToNutrition('+calories+','+protein+','+carbs+','+fat+')">📥 انتقال این اعداد به کادرهای برنامه غذایی</button><p style="font-size:11px;color:#66512b;margin:7px 2px 0">با زدن این دکمه، چهار عدد در کادرهای هدف برنامه‌ساز غذایی قرار می‌گیرند؛ ذخیره برنامه همچنان با دکمه ثبت برنامه انجام می‌شود.</p>';
     el('sehCalcResult').innerHTML=html;
   };
 })();
