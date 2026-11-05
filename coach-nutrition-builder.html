@@ -20,6 +20,18 @@ td input,td select{width:100%;min-width:0;border:1px solid #e5dcc8;border-radius
 .ingredient{display:grid;grid-template-columns:minmax(0,1fr) 75px 100px 34px;gap:5px;align-items:center;margin:7px 0}.ingredient select,.ingredient input{min-width:0;width:100%;padding:7px 3px;border:1px solid #e2d3af;border-radius:6px;font:inherit;font-size:10px;background:white}.metrics{font-size:10px;background:#faf5e9;border-radius:8px;padding:8px;line-height:2;margin-top:8px}
 .toast{position:fixed;bottom:15px;left:50%;transform:translateX(-50%);background:#302b20;color:white;padding:10px 15px;border-radius:9px;font-size:11px;display:none;max-width:90%;text-align:center}
 .meta-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.meta-grid label{display:block;font-size:10px;color:#69552c}.meta-grid input{display:block;width:100%;margin-top:4px;padding:8px 6px;border:1px solid #e2d3af;border-radius:7px;background:#fff;color:#302b20;font:inherit;font-size:11px;min-width:0}.target-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;background:#fffdf8;border:1px solid #e5d8b9;border-radius:12px;padding:10px;margin:0 0 10px}.target-grid label{display:block;font-size:10px;color:#69552c}.target-grid input{display:block;width:100%;margin-top:4px;padding:8px 6px;border:1px solid #e2d3af;border-radius:7px;background:#fff;color:#302b20;font:inherit;font-size:12px;min-width:0}.preset-box{background:#fffdf8;border:1px solid #e5d8b9;border-radius:13px;padding:11px;margin:0 0 10px}.preset-head{font-size:13px;font-weight:bold;margin-bottom:7px}.preset-actions{display:flex;gap:7px;flex-wrap:wrap}.preset-btn{flex:1;min-width:145px;border:1px solid #c7a34b;border-radius:9px;background:#fbf5e7;color:#70551c;padding:10px 8px;font:inherit;font-size:11px;font-weight:bold}.preset-note{font-size:10px;color:#82765f;line-height:1.8;margin-top:7px}.target-caption{grid-column:1/-1;font-size:10px;color:#82765f;line-height:1.7}.target-grid strong{font-size:12px;color:#69552c}@media(max-width:390px){.target-grid{gap:6px;padding:8px}}.connection-ok{border-color:#b8d9b6;background:#f1f8ed;color:#315b2c}.connection-warn{border-color:#e7c98a;background:#fff8e8;color:#795b20}@media(max-width:390px){body{padding:7px}.meal{padding:8px}.meal-name{min-width:76px;font-size:12px}.opt,.add{min-width:27px;height:28px;padding:0 5px}.small-btn{font-size:9px}.ingredient{grid-template-columns:minmax(0,1fr) 58px 82px 30px}}
+
+.template-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.template-card{min-width:0;border:1px solid #e4d5b2;border-radius:10px;background:#fff;padding:9px;display:flex;flex-direction:column;gap:7px}
+.template-card-head{display:flex;align-items:center;justify-content:space-between;gap:5px}
+.template-card-title{font-size:11px;font-weight:bold;color:#5d4920}
+.template-card-status{font-size:9px;border-radius:20px;padding:3px 6px;background:#f3eee2;color:#81765f;white-space:nowrap}
+.template-card-status.saved{background:#edf6e9;color:#3e6b37}
+.template-card-actions{display:flex;gap:5px;flex-wrap:wrap}
+.template-card button{flex:1;min-width:90px;border:1px solid #c7a34b;border-radius:7px;background:#fbf5e7;color:#70551c;padding:7px 5px;font:inherit;font-size:9px;font-weight:bold}
+.template-card button.primary{background:#b8943d;color:#fff;border-color:#b8943d}
+.template-card button:disabled{opacity:.45}
+@media(max-width:390px){.template-grid{gap:6px}.template-card{padding:7px}.template-card button{font-size:8px;min-width:75px}}
 </style></head>
 <body>
 <header><h1>باشگاه فیتنس سه‌قلعه</h1><div class="sub">برنامه‌ساز غذایی · پیش‌نمایش تعاملی مربی</div></header>
@@ -32,7 +44,11 @@ td input,td select{width:100%;min-width:0;border:1px solid #e5dcc8;border-radius
 <input id="planCarbs" type="number"><input id="planFat" type="number">
 </div>
 <div class="target-grid" id="autoTargets"><div class="target-caption"><strong>🎯 اهداف روزانه برنامه</strong><br><span id="targetSource">با انتخاب شاگرد، در صورت وجود اطلاعات کافی به‌صورت خودکار محاسبه می‌شوند؛ امکان ویرایش دستی وجود دارد.</span></div><label>کالری روزانه<input id="targetCaloriesInput" type="number" min="0" step="1" inputmode="numeric"></label><label>پروتئین هدف (گرم)<input id="targetProteinInput" type="number" min="0" step="1" inputmode="numeric"></label><label>کربوهیدرات هدف (گرم)<input id="targetCarbsInput" type="number" min="0" step="1" inputmode="numeric"></label><label>چربی هدف (گرم)<input id="targetFatInput" type="number" min="0" step="1" inputmode="numeric"></label></div>
-<section class="preset-box" id="nutritionPresetV1"><div class="preset-head">⚡ قالب آماده برنامه غذایی</div><div class="preset-actions"><button class="preset-btn" type="button" onclick="applyWeightLossPreset()">کاهش وزن شدید · قالب اولیه</button></div><div class="preset-note">با انتخاب قالب، ۸ وعده و ۲۲ گزینه غذایی در همین صفحه بارگذاری می‌شود. مقادیر قابل ویرایش‌اند و تا زدن دکمه ثبت، چیزی در پرونده شاگرد ذخیره نمی‌شود. این قالب نقطه شروع است و باید با شرایط هر شاگرد تنظیم شود.</div></section>
+<section class="preset-box" id="nutritionPresetV1">
+<div class="preset-head">⚡ پنج الگوی آماده برنامه غذایی</div>
+<div class="template-grid" id="nutritionTemplateCards"></div>
+<div class="preset-note">ابتدا برنامه را در همین قالب غذایی طراحی کن و با دکمه «ذخیره در این الگو» داخل کارت مربوطه نگه دار. بعد از ذخیره، دکمه «کپی در برنامه» همان وعده‌ها و مقدارها را به همین فرم منتقل می‌کند. الگوها از برنامه شاگرد جدا هستند و تغییر شاگرد، الگوی اصلی را عوض نمی‌کند.</div>
+</section>
 <div class="top-actions"><button class="save-all" id="saveAllBtn" onclick="saveAll()">💾 ثبت تمام برنامه غذایی در پرونده شاگرد</button><button class="save-all" style="background:#75633e" onclick="toggleStudentPreview()">👤 پیش‌نمایش شاگرد</button></div><div id="studentPreview" class="summary" style="display:none"></div>
 <div class="summary" id="daySummary">جمع گزینه‌های انتخاب‌شده نمایش داده می‌شود؛ گزینه‌های جایگزین با هم جمع نمی‌شوند.</div>
 <div class="section-title">وعده‌های برنامه غذایی</div><div id="meals"></div>
@@ -75,6 +91,54 @@ function applyWeightLossPreset(){
  draw();
  notify('قالب کاهش وزن بارگذاری شد؛ مقدارها را متناسب با شاگرد تنظیم و سپس ثبت کن.');
 }
+
+
+/* الگوهای غذایی مربی: مستقل از پرونده شاگرد و ذخیره‌شده روی همین مرورگر/دستگاه */
+const NUTRITION_TEMPLATE_STORAGE_KEY='seh-galeh-nutrition-templates-v1';
+const nutritionTemplateDefinitions=[
+ {id:'weight-loss-severe',name:'کاهش وزن شدید'},
+ {id:'weight-loss-normal',name:'کاهش وزن معمولی'},
+ {id:'fitness-maintenance',name:'تناسب اندام'},
+ {id:'weight-gain-normal',name:'افزایش وزن معمولی'},
+ {id:'weight-gain-severe',name:'افزایش وزن شدید'}
+];
+let activeNutritionTemplateId=null;
+function readNutritionTemplates(){
+ try{return JSON.parse(localStorage.getItem(NUTRITION_TEMPLATE_STORAGE_KEY)||'{}')||{}}
+ catch(e){return {}}
+}
+function cloneNutritionPlan(source){return JSON.parse(JSON.stringify(source))}
+function nutritionPlanHasFood(plan){return Array.isArray(plan)&&plan.some(m=>m&&m.options&&Object.values(m.options).some(o=>o&&Array.isArray(o.rows)&&o.rows.length))}
+function renderNutritionTemplateCards(){
+ const host=document.getElementById('nutritionTemplateCards');if(!host)return;
+ const saved=readNutritionTemplates();
+ host.innerHTML=nutritionTemplateDefinitions.map(t=>{
+  const exists=!!saved[t.id],editing=activeNutritionTemplateId===t.id;
+  let actions='<button class="primary" type="button" onclick="saveNutritionTemplate(\''+t.id+'\')">'+(exists||editing?'ذخیره تغییرات':'ذخیره در این الگو')+'</button>';
+  if(exists)actions+='<button type="button" onclick="copyNutritionTemplate(\''+t.id+'\')">کپی در برنامه</button><button type="button" onclick="editNutritionTemplate(\''+t.id+'\')">ویرایش الگو</button>';
+  if(t.id==='weight-loss-severe'&&!exists)actions+='<button type="button" onclick="applyWeightLossPreset()">بارگذاری نمونه اولیه</button>';
+  return '<article class="template-card"><div class="template-card-head"><span class="template-card-title">'+t.name+'</span><span class="template-card-status '+(exists?'saved':'')+'">'+(exists?'ذخیره شده':'هنوز خالی')+'</span></div><div class="template-card-actions">'+actions+'</div></article>';
+ }).join('');
+}
+function saveNutritionTemplate(id){
+ const def=nutritionTemplateDefinitions.find(x=>x.id===id);if(!def)return;
+ if(!nutritionPlanHasFood(state)){notify('ابتدا مواد غذایی برنامه را وارد کن؛ الگوی خالی ذخیره نمی‌شود.');return}
+ const all=readNutritionTemplates();
+ all[id]={name:def.name,savedAt:new Date().toISOString(),plan:cloneNutritionPlan(state)};
+ try{localStorage.setItem(NUTRITION_TEMPLATE_STORAGE_KEY,JSON.stringify(all));activeNutritionTemplateId=id;renderNutritionTemplateCards();notify('الگوی «'+def.name+'» ذخیره شد.')}
+ catch(e){notify('ذخیره الگو در این دستگاه انجام نشد؛ فضای مرورگر را بررسی کن.')}
+}
+function loadNutritionTemplateIntoBuilder(id,mode){
+ const all=readNutritionTemplates(),entry=all[id];
+ if(!entry||!Array.isArray(entry.plan)){notify('این الگو هنوز ذخیره نشده است.');return}
+ if(state.some(m=>m.active.some(n=>(m.options[n]?.rows||[]).length))&&!confirm('محتوای فعلی برنامه‌ساز جایگزین می‌شود؛ هنوز چیزی در پرونده شاگرد ثبت نمی‌شود. ادامه می‌دهی؟'))return;
+ state.splice(0,state.length,...cloneNutritionPlan(entry.plan));
+ activeNutritionTemplateId=mode==='edit'?id:null;
+ draw();renderNutritionTemplateCards();
+ notify(mode==='edit'?'الگو برای ویرایش بارگذاری شد.':'الگو در قالب برنامه غذایی کپی شد؛ برای شاگرد تنظیم و در صورت نیاز ثبت کن.');
+}
+function copyNutritionTemplate(id){loadNutritionTemplateIntoBuilder(id,'copy')}
+function editNutritionTemplate(id){loadNutritionTemplateIntoBuilder(id,'edit')}
 
 let pickerContext=null,draft=[];
 function unitFactor(item){
@@ -166,6 +230,7 @@ function saveOption(i){notify('گزینه '+state[i].selected+' آماده ثب�
 function saveAll(){return saveAllToTrainee()}
 function notify(t){const e=document.getElementById('toast');e.textContent=t;e.style.display='block';clearTimeout(window.nt);window.nt=setTimeout(()=>e.style.display='none',3000)}
 draw();
+renderNutritionTemplateCards();
 </script><script>
 (function(){
  var scheduled=false;
