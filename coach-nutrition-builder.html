@@ -84,9 +84,11 @@ const nutritionTemplateDefinitions=[
 ];
 let nutritionTemplateCache={};
 let nutritionTemplatesBusy=false;
+let nutritionTemplateLoadAttempts=0;
+let nutritionTemplateLoadTimer=null;
 function nutritionTemplateClient(){
  const client=window.parent&&window.parent.AUTH_SUPABASE;
- if(!client||typeof client.from!=='function')throw new Error('اتصال امن دیتابیس در پنل مربی آماده نیست؛ یک‌بار اپ را تازه‌سازی کن.');
+ if(!client||typeof client.from!=='function')throw new Error('اتصال امن دیتابیس در پنل مربی هنوز در حال آماده‌شدن است.');
  return client;
 }
 function nutritionTemplateHasFood(plan){
@@ -104,16 +106,44 @@ function renderNutritionTemplateCards(){
  }).join('');
 }
 async function loadNutritionTemplates(){
- const host=document.getElementById('nutritionTemplateCards');if(host)host.innerHTML='<div class="nutrition-template-loading">در حال دریافت الگوهای ذخیره‌شده…</div>';
+ const host=document.getElementById('nutritionTemplateCards');
+ if(host)host.innerHTML='<div class="nutrition-template-loading">در حال آماده‌شدن اتصال امن مربی…</div>';
  try{
-  const {data,error}=await nutritionTemplateClient().from('coach_nutrition_templates')
+  const client=nutritionTemplateClient();
+  // The iframe is loaded eagerly, before the parent app finishes creating
+  // AUTH_SUPABASE and restoring the coach session. Wait for that existing
+  // session instead of treating the startup race as a permanent failure.
+  if(client.auth&&typeof client.auth.getSession==='function'){
+   const sessionResult=await client.auth.getSession();
+   if(sessionResult.error)throw sessionResult.error;
+   if(!sessionResult.data||!sessionResult.data.session||!sessionResult.data.session.user){
+    if(nutritionTemplateLoadAttempts<40){
+     nutritionTemplateLoadAttempts++;
+     if(host)host.innerHTML='<div class="nutrition-template-loading">در انتظار آماده‌شدن نشست مربی…</div>';
+     clearTimeout(nutritionTemplateLoadTimer);
+     nutritionTemplateLoadTimer=setTimeout(loadNutritionTemplates,500);
+     return;
+    }
+    throw new Error('نشست مربی هنوز آماده نشده است؛ بدون خروج از حساب، صفحه را دوباره باز کن.');
+   }
+  }
+  const {data,error}=await client.from('coach_nutrition_templates')
    .select('id,template_key,name,template_data,updated_at').order('template_key',{ascending:true});
   if(error)throw error;
+  nutritionTemplateLoadAttempts=0;
+  clearTimeout(nutritionTemplateLoadTimer);
   nutritionTemplateCache={};
   (data||[]).forEach(row=>{nutritionTemplateCache[row.template_key]=row});
   renderNutritionTemplateCards();
  }catch(e){
-  if(host)host.innerHTML='<div class="nutrition-template-loading">دریافت الگوها انجام نشد: '+String(e.message||e).replace(/[<>]/g,'')+'</div>';
+  const message=String(e&&e.message||e);
+  if(/اتصال امن دیتابیس در پنل مربی هنوز در حال آماده‌شدن است/.test(message)&&nutritionTemplateLoadAttempts<40){
+   nutritionTemplateLoadAttempts++;
+   clearTimeout(nutritionTemplateLoadTimer);
+   nutritionTemplateLoadTimer=setTimeout(loadNutritionTemplates,500);
+   return;
+  }
+  if(host)host.innerHTML='<div class="nutrition-template-loading">دریافت الگوها انجام نشد: '+message.replace(/[<>]/g,'')+'</div>';
   console.error('Nutrition templates load failed',e);
  }
 }
