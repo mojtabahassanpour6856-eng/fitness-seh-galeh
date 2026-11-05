@@ -31,6 +31,8 @@ td input,td select{width:100%;min-width:0;border:1px solid #e5dcc8;border-radius
 .nutrition-template-card-status.saved{color:#3f7137}
 .nutrition-template-card button{width:100%;border:1px solid #c7a34b;border-radius:7px;background:#fbf5e7;color:#70551c;padding:8px 5px;font:inherit;font-size:10px;font-weight:bold}
 .nutrition-template-card button.primary{background:#b8943d;color:#fff}
+.nutrition-template-card button.secondary{background:#fff;color:#70551c;border-style:dashed}
+.nutrition-template-card.is-editing{border:2px solid #b8943d;background:#fffaf0}
 .nutrition-template-card button:disabled{opacity:.55}
 .nutrition-template-help{font-size:9px;line-height:1.8;color:#82765f;margin-top:8px}
 .nutrition-template-loading{grid-column:1/-1;text-align:center;font-size:10px;color:#82765f;padding:10px}
@@ -84,6 +86,7 @@ const nutritionTemplateDefinitions=[
 ];
 let nutritionTemplateCache={};
 let nutritionTemplatesBusy=false;
+let nutritionTemplateEditingId=null;
 let nutritionTemplateLoadAttempts=0;
 let nutritionTemplateLoadTimer=null;
 function nutritionTemplateClient(){
@@ -94,15 +97,39 @@ function nutritionTemplateClient(){
 function nutritionTemplateHasFood(plan){
  return Array.isArray(plan)&&plan.some(m=>m&&m.options&&Object.values(m.options).some(o=>o&&Array.isArray(o.rows)&&o.rows.length));
 }
+function startNutritionTemplate(id){
+ const def=nutritionTemplateDefinitions.find(x=>x.id===id);if(!def)return;
+ const row=nutritionTemplateCache[id],data=row&&row.template_data;
+ if(nutritionTemplateHasFood(state)&&!confirm('محتوای فعلی برنامه‌ساز جایگزین می‌شود. اگر لازم است ابتدا آن را در کارت خودش ذخیره کن. ادامه می‌دهی؟'))return;
+ nutritionTemplateEditingId=id;
+ if(data&&Array.isArray(data.state)){
+  state.splice(0,state.length,...JSON.parse(JSON.stringify(data.state)));
+  const p=data.plan||{};
+  syncTargetFields({daily_calories:p.daily_calories,protein_target:p.protein_target,carbs_target:p.carbs_target,fat_target:p.fat_target});
+ }else{
+  state.forEach(m=>{m.active=[1];m.selected=1;m.open=false;m.options={1:{rows:[],target:0}}});
+  syncTargetFields({daily_calories:'',protein_target:'',carbs_target:'',fat_target:''});
+ }
+ document.getElementById('planTitle').value=def.name;
+ targetManualDirty=true;
+ renderNutritionTemplateCards();
+ draw();
+ setConnectionStatus('در حال ساخت الگوی «'+def.name+'»؛ وعده‌ها را پایین صفحه با دکمه افزودن از بانک غذا تکمیل کن. هنوز چیزی برای شاگرد ثبت نشده است.',true);
+ const meals=document.getElementById('meals');
+ if(meals)setTimeout(()=>meals.scrollIntoView({behavior:'smooth',block:'start'}),80);
+ notify('الگوی «'+def.name+'» باز شد؛ غذاها را به وعده‌ها اضافه کن و در پایان دکمه ذخیره همین کارت را بزن.');
+}
 function renderNutritionTemplateCards(){
  const host=document.getElementById('nutritionTemplateCards');if(!host)return;
  host.innerHTML=nutritionTemplateDefinitions.map(t=>{
   const row=nutritionTemplateCache[t.id];
   const saved=!!(row&&row.template_data&&Array.isArray(row.template_data.state));
-  const action=saved
-   ?'<button class="primary" type="button" onclick="copyNutritionTemplate(\''+t.id+'\')">کپی در برنامه</button>'
-   :'<button type="button" onclick="saveNutritionTemplate(\''+t.id+'\')" '+(nutritionTemplatesBusy?'disabled':'')+'>ذخیره در این کارت</button>';
-  return '<article class="nutrition-template-card"><div class="nutrition-template-card-name">'+t.name+'</div><div class="nutrition-template-card-status '+(saved?'saved':'')+'">'+(saved?'✓ الگو ذخیره شده':'هنوز ذخیره نشده')+'</div>'+action+'</article>';
+  const editing=nutritionTemplateEditingId===t.id;
+  const actions=saved
+   ?'<button class="primary" type="button" onclick="copyNutritionTemplate(\''+t.id+'\')">کپی در برنامه</button><button class="secondary" type="button" onclick="startNutritionTemplate(\''+t.id+'\')">ویرایش این الگو</button>'
+   :'<button class="primary" type="button" onclick="startNutritionTemplate(\''+t.id+'\')">ورود و تکمیل این الگو</button>';
+  const status=editing?'✏️ در حال تکمیل این الگو':(saved?'✓ الگو ذخیره شده':'برای شروع وارد کارت شو');
+  return '<article class="nutrition-template-card '+(editing?'is-editing':'')+'"><div class="nutrition-template-card-name">'+t.name+'</div><div class="nutrition-template-card-status '+(saved?'saved':'')+'">'+status+'</div>'+actions+'</article>';
  }).join('');
 }
 async function loadNutritionTemplates(){
@@ -149,8 +176,8 @@ async function loadNutritionTemplates(){
 }
 async function saveNutritionTemplate(id){
  const def=nutritionTemplateDefinitions.find(x=>x.id===id);if(!def||nutritionTemplatesBusy)return;
- if(nutritionTemplateCache[id]){notify('این الگو قبلاً ذخیره شده است؛ از دکمه کپی استفاده کن.');return}
- if(!nutritionTemplateHasFood(state)){notify('ابتدا وعده‌ها و مواد غذایی این برنامه را کامل کن.');return}
+ if(nutritionTemplateEditingId!==id){notify('ابتدا از روی همین کارت گزینه ورود و تکمیل را بزن.');return}
+ if(!nutritionTemplateHasFood(state)){notify('ابتدا وعده‌ها و مواد غذایی این الگو را کامل کن.');return}
  const templateData={
   version:1,
   state:JSON.parse(JSON.stringify(state)),
@@ -169,6 +196,7 @@ async function saveNutritionTemplate(id){
    .select('id,template_key,name,template_data,updated_at').single();
   if(error)throw error;
   nutritionTemplateCache[id]=data;
+  nutritionTemplateEditingId=null;
   renderNutritionTemplateCards();
   notify('الگوی «'+def.name+'» در دیتابیس ذخیره شد.');
  }catch(e){
@@ -180,6 +208,7 @@ async function saveNutritionTemplate(id){
  }
 }
 function copyNutritionTemplate(id){
+ nutritionTemplateEditingId=null;
  const row=nutritionTemplateCache[id],data=row&&row.template_data;
  if(!data||!Array.isArray(data.state)){notify('اطلاعات این الگو کامل نیست؛ دوباره الگوها را دریافت کن.');return}
  if(nutritionTemplateHasFood(state)&&!confirm('محتوای فعلی برنامه‌ساز جایگزین الگو می‌شود. هنوز چیزی در پرونده شاگرد ثبت نمی‌شود. ادامه می‌دهی؟'))return;
