@@ -19,7 +19,7 @@ td input,td select{width:100%;min-width:0;border:1px solid #e5dcc8;border-radius
 .modal-back{display:none;position:fixed;inset:0;background:#201b13a8;z-index:10;padding:12px;overflow:auto}.modal-back.show{display:block}.picker{max-width:620px;margin:20px auto;padding:13px}.picker h3{font-size:14px;margin:0 0 10px}.field{margin:9px 0}.field label{display:block;font-size:11px;margin-bottom:5px}.field select,.field input{width:100%;padding:9px;border:1px solid #e2d3af;border-radius:7px;background:white;font:inherit;font-size:12px}.modal-actions{display:flex;gap:7px;margin-top:12px}.modal-actions button{flex:1;border:0;border-radius:8px;padding:10px;font:inherit;font-size:11px;background:#b8943d;color:white}.modal-actions .cancel{background:#eee7d8;color:#574b35}
 .ingredient{display:grid;grid-template-columns:minmax(0,1fr) 75px 100px 34px;gap:5px;align-items:center;margin:7px 0}.ingredient select,.ingredient input{min-width:0;width:100%;padding:7px 3px;border:1px solid #e2d3af;border-radius:6px;font:inherit;font-size:10px;background:white}.metrics{font-size:10px;background:#faf5e9;border-radius:8px;padding:8px;line-height:2;margin-top:8px}
 .toast{position:fixed;bottom:15px;left:50%;transform:translateX(-50%);background:#302b20;color:white;padding:10px 15px;border-radius:9px;font-size:11px;display:none;max-width:90%;text-align:center}
-.meta-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.meta-grid label{display:block;font-size:10px;color:#69552c}.meta-grid input{display:block;width:100%;margin-top:4px;padding:8px 6px;border:1px solid #e2d3af;border-radius:7px;background:#fff;color:#302b20;font:inherit;font-size:11px;min-width:0}.target-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;background:#fffdf8;border:1px solid #e5d8b9;border-radius:12px;padding:10px;margin:0 0 10px}.target-grid label{display:block;font-size:10px;color:#69552c}.target-grid input{display:block;width:100%;margin-top:4px;padding:8px 6px;border:1px solid #e2d3af;border-radius:7px;background:#fff;color:#302b20;font:inherit;font-size:12px;min-width:0}.target-caption{grid-column:1/-1;font-size:10px;color:#82765f;line-height:1.7}.target-grid strong{font-size:12px;color:#69552c}@media(max-width:390px){.target-grid{gap:6px;padding:8px}}.connection-ok{border-color:#b8d9b6;background:#f1f8ed;color:#315b2c}.connection-warn{border-color:#e7c98a;background:#fff8e8;color:#795b20}@media(max-width:390px){body{padding:7px}.meal{padding:8px}.meal-name{min-width:76px;font-size:12px}.opt,.add{min-width:27px;height:28px;padding:0 5px}.small-btn{font-size:9px}.ingredient{grid-template-columns:minmax(0,1fr) 58px 82px 30px}}
+.meta-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.meta-grid label{display:block;font-size:10px;color:#69552c}.meta-grid input{display:block;width:100%;margin-top:4px;padding:8px 6px;border:1px solid #e2d3af;border-radius:7px;background:#fff;color:#302b20;font:inherit;font-size:11px;min-width:0}.target-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;background:#fffdf8;border:1px solid #e5d8b9;border-radius:12px;padding:10px;margin:0 0 10px}.target-grid label{display:block;font-size:10px;color:#69552c}.target-grid input{display:block;width:100%;margin-top:4px;padding:8px 6px;border:1px solid #e2d3af;border-radius:7px;background:#fff;color:#302b20;font:inherit;font-size:12px;min-width:0}.preset-box{background:#fffdf8;border:1px solid #e5d8b9;border-radius:13px;padding:11px;margin:0 0 10px}.preset-head{font-size:13px;font-weight:bold;margin-bottom:7px}.preset-actions{display:flex;gap:7px;flex-wrap:wrap}.preset-btn{flex:1;min-width:145px;border:1px solid #c7a34b;border-radius:9px;background:#fbf5e7;color:#70551c;padding:10px 8px;font:inherit;font-size:11px;font-weight:bold}.preset-note{font-size:10px;color:#82765f;line-height:1.8;margin-top:7px}.target-caption{grid-column:1/-1;font-size:10px;color:#82765f;line-height:1.7}.target-grid strong{font-size:12px;color:#69552c}@media(max-width:390px){.target-grid{gap:6px;padding:8px}}.connection-ok{border-color:#b8d9b6;background:#f1f8ed;color:#315b2c}.connection-warn{border-color:#e7c98a;background:#fff8e8;color:#795b20}@media(max-width:390px){body{padding:7px}.meal{padding:8px}.meal-name{min-width:76px;font-size:12px}.opt,.add{min-width:27px;height:28px;padding:0 5px}.small-btn{font-size:9px}.ingredient{grid-template-columns:minmax(0,1fr) 58px 82px 30px}}
 </style></head>
 <body>
 <header><h1>باشگاه فیتنس سه‌قلعه</h1><div class="sub">برنامه‌ساز غذایی · پیش‌نمایش تعاملی مربی</div></header>
@@ -32,6 +32,7 @@ td input,td select{width:100%;min-width:0;border:1px solid #e5dcc8;border-radius
 <input id="planCarbs" type="number"><input id="planFat" type="number">
 </div>
 <div class="target-grid" id="autoTargets"><div class="target-caption"><strong>🎯 اهداف روزانه برنامه</strong><br><span id="targetSource">با انتخاب شاگرد، در صورت وجود اطلاعات کافی به‌صورت خودکار محاسبه می‌شوند؛ امکان ویرایش دستی وجود دارد.</span></div><label>کالری روزانه<input id="targetCaloriesInput" type="number" min="0" step="1" inputmode="numeric"></label><label>پروتئین هدف (گرم)<input id="targetProteinInput" type="number" min="0" step="1" inputmode="numeric"></label><label>کربوهیدرات هدف (گرم)<input id="targetCarbsInput" type="number" min="0" step="1" inputmode="numeric"></label><label>چربی هدف (گرم)<input id="targetFatInput" type="number" min="0" step="1" inputmode="numeric"></label></div>
+<section class="preset-box" id="nutritionPresetV1"><div class="preset-head">⚡ قالب آماده برنامه غذایی</div><div class="preset-actions"><button class="preset-btn" type="button" onclick="applyWeightLossPreset()">کاهش وزن شدید · قالب اولیه</button></div><div class="preset-note">با انتخاب قالب، ۸ وعده و ۲۲ گزینه غذایی در همین صفحه بارگذاری می‌شود. مقادیر قابل ویرایش‌اند و تا زدن دکمه ثبت، چیزی در پرونده شاگرد ذخیره نمی‌شود. این قالب نقطه شروع است و باید با شرایط هر شاگرد تنظیم شود.</div></section>
 <div class="top-actions"><button class="save-all" id="saveAllBtn" onclick="saveAll()">💾 ثبت تمام برنامه غذایی در پرونده شاگرد</button><button class="save-all" style="background:#75633e" onclick="toggleStudentPreview()">👤 پیش‌نمایش شاگرد</button></div><div id="studentPreview" class="summary" style="display:none"></div>
 <div class="summary" id="daySummary">جمع گزینه‌های انتخاب‌شده نمایش داده می‌شود؛ گزینه‌های جایگزین با هم جمع نمی‌شوند.</div>
 <div class="section-title">وعده‌های برنامه غذایی</div><div id="meals"></div>
@@ -50,6 +51,31 @@ const recipes=[{"name":"دستور ۱ (نان + پنیر + گردو + خیار)"
 const categoryNames={breakfast:'صبحانه',lunch:'ناهار',dinner:'شام',snack:'میان‌وعده',bedtime:'قبل خواب',preworkout:'قبل تمرین',postworkout:'بعد تمرین'};
 const names=['صبحانه','میان‌وعده صبح','ناهار','میان‌وعده عصر','شام','قبل خواب','قبل تمرین','بعد تمرین'];
 const state=names.map(name=>({name,active:[1],selected:1,open:false,options:{1:{rows:[],target:0}}}));
+
+/* nutritionPresetV1: قالب پایه کاهش وزن؛ فقط در حافظه همین برنامه‌ساز اعمال می‌شود. */
+const weightLossPresetV1=[
+ [[ [6,35],[16,200],[22,80] ],[ [14,100],[2,35],[74,100] ],[ [49,170],[6,20],[23,100] ],[ [54,50],[18,35] ]],
+ [[ [23,150],[27,10] ],[ [17,150],[22,60] ]],
+ [[ [8,120],[1,100],[73,100],[74,100] ],[ [12,130],[5,150],[75,80] ],[ [59,120],[52,100],[76,100] ],[ [19,150],[14,50],[73,100] ]],
+ [[ [49,150],[26,100] ],[ [18,30],[24,150] ]],
+ [[ [12,120],[5,120],[75,100] ],[ [8,110],[19,100],[74,100] ],[ [10,100],[73,100],[76,100] ],[ [14,100],[17,100],[75,100] ]],
+ [[ [49,150],[33,8] ],[ [16,200],[46,15] ]],
+ [[ [22,80],[16,150] ],[ [54,30],[29,8] ]],
+ [[ [46,20],[16,200] ],[ [14,100],[23,100] ]]
+];
+function applyWeightLossPreset(){
+ const hasData=state.some(m=>m.active.some(n=>(m.options[n]?.rows||[]).length));
+ if(hasData&&!confirm('قالب جدید جایگزین محتوای فعلی همین برنامه‌ساز می‌شود. هنوز چیزی در پرونده شاگرد ذخیره نشده است. ادامه می‌دهی؟'))return;
+ state.forEach((m,i)=>{
+  const group=weightLossPresetV1[i];
+  m.active=group.map((_,j)=>j+1);
+  m.selected=1;m.open=true;m.options={};
+  group.forEach((rows,j)=>{m.options[j+1]={rows:rows.map(([foodId,amount])=>({foodId,amount,unit:'گرم',gramsPerUnit:null,recipeName:null})),target:0}});
+ });
+ draw();
+ notify('قالب کاهش وزن بارگذاری شد؛ مقدارها را متناسب با شاگرد تنظیم و سپس ثبت کن.');
+}
+
 let pickerContext=null,draft=[];
 function unitFactor(item){
  if(item.unit==='گرم')return 1;
