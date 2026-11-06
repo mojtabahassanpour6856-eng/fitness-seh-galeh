@@ -98,6 +98,29 @@ function nutritionTemplateClient(){
 function nutritionTemplateHasFood(plan){
  return Array.isArray(plan)&&plan.some(m=>m&&m.options&&Object.values(m.options).some(o=>o&&Array.isArray(o.rows)&&o.rows.length));
 }
+function nutritionTemplateValidationError(plan){
+ if(!Array.isArray(plan)||plan.length!==names.length)return 'ساختار الگو باید شامل '+names.length+' وعده باشد.';
+ let rowCount=0;
+ for(let i=0;i<plan.length;i++){
+  const meal=plan[i];
+  if(!meal||!Array.isArray(meal.active)||!meal.active.length||!meal.options||typeof meal.options!=='object')return 'ساختار وعده «'+names[i]+'» کامل نیست.';
+  const active=meal.active.map(Number);
+  if(active.some(n=>!Number.isInteger(n)||n<1||n>4)||new Set(active).size!==active.length)return 'شماره گزینه‌های وعده «'+names[i]+'» معتبر نیست.';
+  if(!active.includes(Number(meal.selected)))return 'گزینه انتخاب‌شده وعده «'+names[i]+'» معتبر نیست.';
+  for(const n of active){
+   const opt=meal.options[n];
+   if(!opt||!Array.isArray(opt.rows))return 'ساختار گزینه '+n+' از وعده «'+names[i]+'» کامل نیست.';
+   for(const row of opt.rows){
+    const foodId=Number(row&&row.foodId),amount=Number(row&&row.amount);
+    if(!foods.some(f=>Number(f.id)===foodId))return 'یکی از غذاهای وعده «'+names[i]+'» در بانک غذا پیدا نشد.';
+    if(!Number.isFinite(amount)||amount<=0)return 'مقدار یکی از غذاهای وعده «'+names[i]+'» معتبر نیست.';
+    if(!String(row.unit||'').trim())return 'واحد یکی از غذاهای وعده «'+names[i]+'» مشخص نیست.';
+    rowCount++;
+   }
+  }
+ }
+ return rowCount?'':'ابتدا حداقل یک ماده غذایی به الگو اضافه کن.';
+}
 
 /* Local-only autosave for coach template drafts. This never writes trainee records. */
 const nutritionDraftStorageKey='fitness-seh-galeh:coach-nutrition-template-draft:v1';
@@ -119,6 +142,11 @@ function scheduleNutritionDraftSave(){
  if(!nutritionTemplateEditingId)return;
  clearTimeout(nutritionDraftTimer);
  nutritionDraftTimer=setTimeout(persistNutritionDraft,180);
+}
+function clearNutritionDraft(){
+ clearTimeout(nutritionDraftTimer);
+ nutritionDraftTimer=null;
+ try{localStorage.removeItem(nutritionDraftStorageKey)}catch(e){}
 }
 function restoreNutritionDraft(){
  try{
@@ -142,6 +170,7 @@ function startNutritionTemplate(id){
  const def=nutritionTemplateDefinitions.find(x=>x.id===id);if(!def)return;
  const row=nutritionTemplateCache[id],data=row&&row.template_data;
  if(nutritionTemplateHasFood(state)&&!confirm('محتوای فعلی برنامه‌ساز جایگزین می‌شود. اگر لازم است ابتدا آن را در کارت خودش ذخیره کن. ادامه می‌دهی؟'))return;
+ clearNutritionDraft();
  nutritionTemplateEditingId=id;
  if(data&&Array.isArray(data.state)){
   state.splice(0,state.length,...JSON.parse(JSON.stringify(data.state)));
@@ -221,7 +250,8 @@ async function loadNutritionTemplates(){
 async function saveNutritionTemplate(id){
  const def=nutritionTemplateDefinitions.find(x=>x.id===id);if(!def||nutritionTemplatesBusy)return;
  if(nutritionTemplateEditingId!==id){notify('ابتدا از روی همین کارت گزینه ورود و تکمیل را بزن.');return}
- if(!nutritionTemplateHasFood(state)){notify('ابتدا وعده‌ها و مواد غذایی این الگو را کامل کن.');return}
+ const validationError=nutritionTemplateValidationError(state);
+ if(validationError){notify(validationError);return}
  const templateData={
   version:1,
   state:JSON.parse(JSON.stringify(state)),
@@ -240,8 +270,8 @@ async function saveNutritionTemplate(id){
    .select('id,template_key,name,template_data,updated_at').single();
   if(error)throw error;
   nutritionTemplateCache[id]=data;
+  clearNutritionDraft();
   nutritionTemplateEditingId=null;
-  try{localStorage.removeItem(nutritionDraftStorageKey)}catch(e){}
   renderNutritionTemplateCards();
   notify('الگوی «'+def.name+'» در دیتابیس ذخیره شد.');
  }catch(e){
@@ -253,10 +283,13 @@ async function saveNutritionTemplate(id){
  }
 }
 function copyNutritionTemplate(id){
- nutritionTemplateEditingId=null;
  const row=nutritionTemplateCache[id],data=row&&row.template_data;
- if(!data||!Array.isArray(data.state)){notify('اطلاعات این الگو کامل نیست؛ دوباره الگوها را دریافت کن.');return}
+ if(!data){notify('اطلاعات این الگو موجود نیست؛ دوباره الگوها را دریافت کن.');return}
+ const validationError=nutritionTemplateValidationError(data.state);
+ if(validationError){notify('کپی الگو انجام نشد: '+validationError);return}
  if(nutritionTemplateHasFood(state)&&!confirm('محتوای فعلی برنامه‌ساز جایگزین الگو می‌شود. هنوز چیزی در پرونده شاگرد ثبت نمی‌شود. ادامه می‌دهی؟'))return;
+ clearNutritionDraft();
+ nutritionTemplateEditingId=null;
  state.splice(0,state.length,...JSON.parse(JSON.stringify(data.state)));
  const p=data.plan||{};
  document.getElementById('planTitle').value=p.title||row.name||'برنامه غذایی';
