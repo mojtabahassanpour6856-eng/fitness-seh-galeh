@@ -97,6 +97,46 @@ function nutritionTemplateClient(){
 function nutritionTemplateHasFood(plan){
  return Array.isArray(plan)&&plan.some(m=>m&&m.options&&Object.values(m.options).some(o=>o&&Array.isArray(o.rows)&&o.rows.length));
 }
+
+/* Local-only autosave for coach template drafts. This never writes trainee records. */
+const nutritionDraftStorageKey='fitness-seh-galeh:coach-nutrition-template-draft:v1';
+let nutritionDraftTimer=null;
+function persistNutritionDraft(){
+ if(!nutritionTemplateEditingId)return;
+ try{
+  const payload={version:1,templateId:nutritionTemplateEditingId,savedAt:Date.now(),
+   state:JSON.parse(JSON.stringify(state)),
+   plan:{title:document.getElementById('planTitle')?.value||'',
+    daily_calories:document.getElementById('targetCaloriesInput')?.value||'',
+    protein_target:document.getElementById('targetProteinInput')?.value||'',
+    carbs_target:document.getElementById('targetCarbsInput')?.value||'',
+    fat_target:document.getElementById('targetFatInput')?.value||''}};
+  localStorage.setItem(nutritionDraftStorageKey,JSON.stringify(payload));
+ }catch(e){console.warn('Nutrition draft autosave failed',e)}
+}
+function scheduleNutritionDraftSave(){
+ if(!nutritionTemplateEditingId)return;
+ clearTimeout(nutritionDraftTimer);
+ nutritionDraftTimer=setTimeout(persistNutritionDraft,180);
+}
+function restoreNutritionDraft(){
+ try{
+  const raw=localStorage.getItem(nutritionDraftStorageKey);if(!raw)return;
+  const d=JSON.parse(raw);
+  if(!d||d.version!==1||!nutritionTemplateDefinitions.some(x=>x.id===d.templateId)||!Array.isArray(d.state)||!nutritionTemplateHasFood(d.state))return;
+  state.splice(0,state.length,...JSON.parse(JSON.stringify(d.state)));
+  nutritionTemplateEditingId=d.templateId;
+  const p=d.plan||{};
+  const title=document.getElementById('planTitle');if(title)title.value=p.title||'';
+  syncTargetFields({daily_calories:p.daily_calories,protein_target:p.protein_target,carbs_target:p.carbs_target,fat_target:p.fat_target});
+  renderNutritionTemplateCards();
+  notify('پیش‌نویس ذخیره‌شده الگوی غذایی بازیابی شد.');
+ }catch(e){console.warn('Nutrition draft restore failed',e)}
+}
+window.addEventListener('pagehide',persistNutritionDraft);
+document.addEventListener('input',function(e){
+ if(e.target&&['planTitle','targetCaloriesInput','targetProteinInput','targetCarbsInput','targetFatInput'].includes(e.target.id))scheduleNutritionDraftSave();
+});
 function startNutritionTemplate(id){
  const def=nutritionTemplateDefinitions.find(x=>x.id===id);if(!def)return;
  const row=nutritionTemplateCache[id],data=row&&row.template_data;
@@ -199,6 +239,7 @@ async function saveNutritionTemplate(id){
   if(error)throw error;
   nutritionTemplateCache[id]=data;
   nutritionTemplateEditingId=null;
+  try{localStorage.removeItem(nutritionDraftStorageKey)}catch(e){}
   renderNutritionTemplateCards();
   notify('الگوی «'+def.name+'» در دیتابیس ذخیره شد.');
  }catch(e){
@@ -297,7 +338,7 @@ function metric(item){const f=foods.find(x=>x.id===item.foodId),factor=f&&unitFa
 function total(rows){return rows.reduce((a,row)=>{const n=metric(row);if(n){a.cal+=n.cal;a.p+=n.p;a.c+=n.c;a.f+=n.f}return a},{cal:0,p:0,c:0,f:0})}
 function fmt(n){return Math.round(n*10)/10}
 function option(m){return m.options[m.selected]||(m.options[m.selected]={rows:[],target:0})}
-function draw(){document.getElementById('meals').innerHTML=state.map((m,i)=>{const o=option(m),t=total(o.rows);return '<section class="meal"><div class="meal-head"><div class="meal-name">'+m.name+'</div><div class="options">'+m.active.map(n=>'<button class="opt '+(m.selected===n?'active':'')+'" onclick="choose('+i+','+n+')">'+n+'</button>').join('')+(m.active.length<4?'<button class="add" onclick="addOption('+i+')">＋</button>':'')+'</div><button class="expand" onclick="toggle('+i+')">'+(m.open?'⌃':'⌄')+'</button></div><div class="option-panel '+(m.open?'show':'')+'"><div class="panel-title">'+m.name+' · گزینه '+m.selected+'</div><div class="table-wrap"><table><thead><tr><th>نام غذا / دستور</th><th>مقدار</th><th>واحد</th><th>ویرایش</th><th>حذف</th></tr></thead><tbody>'+o.rows.map((r,j)=>{const f=foods.find(x=>x.id===r.foodId);return '<tr><td>'+ (f?f.name:'—')+'</td><td><input type="number" min=".1" step=".1" value="'+r.amount+'" onchange="changeAmount('+i+','+j+',this.value)"></td><td>'+r.unit+(r.unit!=='گرم'&&r.gramsPerUnit?' · '+fmt(r.gramsPerUnit)+' گرم/واحد':'')+'</td><td><button class="trash" onclick="editRow('+i+','+j+')">✎</button></td><td><button class="trash" onclick="removeRow('+i+','+j+')">🗑</button></td></tr>'}).join('')+'</tbody></table></div><div class="row-actions"><button class="small-btn" onclick="openPicker('+i+')">＋ افزودن از بانک غذا</button><button class="small-btn save-one" onclick="saveOption('+i+')">✓ تأیید این گزینه</button></div><div class="target"><label>هدف کالری این گزینه:</label><input type="number" min="0" value="'+(o.target||'')+'" placeholder="مثلاً ۴۵۰" onchange="changeTarget('+i+',this.value)"></div><div class="nutrition-line">کالری: '+fmt(t.cal)+' kcal · پروتئین: '+fmt(t.p)+' g · کربوهیدرات: '+fmt(t.c)+' g · چربی: '+fmt(t.f)+' g'+(o.target?' · اختلاف با هدف: '+fmt(t.cal-o.target)+' kcal':'')+'</div>'+(hasUnconverted(o.rows)?'<div class="hint" style="color:#9a5b00">برای محاسبه دقیق، واحد این ردیف‌ها را به گرم تبدیل و ثبت کن؛ تبدیل عدد، قاشق، لیوان و میلی‌لیتر بدون وزن یا چگالی معتبر انجام نمی‌شود و فعلاً در جمع کالری لحاظ نشده است.</div>':'')+'<div class="hint">تغییر مقدار یا حذف و افزودن هر جزء، محاسبات را فوراً به‌روز می‌کند. دستور اصلی بانک تغییر نمی‌کند.</div></div></section>'}).join('');updateDaySummary()}
+function draw(){scheduleNutritionDraftSave();document.getElementById('meals').innerHTML=state.map((m,i)=>{const o=option(m),t=total(o.rows);return '<section class="meal"><div class="meal-head"><div class="meal-name">'+m.name+'</div><div class="options">'+m.active.map(n=>'<button class="opt '+(m.selected===n?'active':'')+'" onclick="choose('+i+','+n+')">'+n+'</button>').join('')+(m.active.length<4?'<button class="add" onclick="addOption('+i+')">＋</button>':'')+'</div><button class="expand" onclick="toggle('+i+')">'+(m.open?'⌃':'⌄')+'</button></div><div class="option-panel '+(m.open?'show':'')+'"><div class="panel-title">'+m.name+' · گزینه '+m.selected+'</div><div class="table-wrap"><table><thead><tr><th>نام غذا / دستور</th><th>مقدار</th><th>واحد</th><th>ویرایش</th><th>حذف</th></tr></thead><tbody>'+o.rows.map((r,j)=>{const f=foods.find(x=>x.id===r.foodId);return '<tr><td>'+ (f?f.name:'—')+'</td><td><input type="number" min=".1" step=".1" value="'+r.amount+'" onchange="changeAmount('+i+','+j+',this.value)"></td><td>'+r.unit+(r.unit!=='گرم'&&r.gramsPerUnit?' · '+fmt(r.gramsPerUnit)+' گرم/واحد':'')+'</td><td><button class="trash" onclick="editRow('+i+','+j+')">✎</button></td><td><button class="trash" onclick="removeRow('+i+','+j+')">🗑</button></td></tr>'}).join('')+'</tbody></table></div><div class="row-actions"><button class="small-btn" onclick="openPicker('+i+')">＋ افزودن از بانک غذا</button><button class="small-btn save-one" onclick="saveOption('+i+')">✓ تأیید این گزینه</button></div><div class="target"><label>هدف کالری این گزینه:</label><input type="number" min="0" value="'+(o.target||'')+'" placeholder="مثلاً ۴۵۰" onchange="changeTarget('+i+',this.value)"></div><div class="nutrition-line">کالری: '+fmt(t.cal)+' kcal · پروتئین: '+fmt(t.p)+' g · کربوهیدرات: '+fmt(t.c)+' g · چربی: '+fmt(t.f)+' g'+(o.target?' · اختلاف با هدف: '+fmt(t.cal-o.target)+' kcal':'')+'</div>'+(hasUnconverted(o.rows)?'<div class="hint" style="color:#9a5b00">برای محاسبه دقیق، واحد این ردیف‌ها را به گرم تبدیل و ثبت کن؛ تبدیل عدد، قاشق، لیوان و میلی‌لیتر بدون وزن یا چگالی معتبر انجام نمی‌شود و فعلاً در جمع کالری لحاظ نشده است.</div>':'')+'<div class="hint">تغییر مقدار یا حذف و افزودن هر جزء، محاسبات را فوراً به‌روز می‌کند. دستور اصلی بانک تغییر نمی‌کند.</div></div></section>'}).join('');updateDaySummary()}
 function updateDaySummary(){const t=state.reduce((a,m)=>{const n=total(option(m).rows);a.cal+=n.cal;a.p+=n.p;a.c+=n.c;a.f+=n.f;return a},{cal:0,p:0,c:0,f:0});const pending=state.some(m=>hasUnconverted(option(m).rows));document.getElementById('daySummary').textContent='جمع گزینه‌های انتخاب‌شده: '+fmt(t.cal)+' kcal · پروتئین '+fmt(t.p)+' g · کربوهیدرات '+fmt(t.c)+' g · چربی '+fmt(t.f)+' g؛ گزینه‌های جایگزین با هم جمع نمی‌شوند.'+(pending?' ⚠️ بعضی ردیف‌ها به‌دلیل واحد غیرگرمی در محاسبه لحاظ نشده‌اند.':'')}
 function choose(i,n){state[i].selected=n;state[i].open=true;draw()}function addOption(i){const m=state[i],n=[1,2,3,4].find(x=>!m.active.includes(x));if(n){m.active.push(n);m.selected=n;m.options[n]={rows:[],target:0};m.open=true;draw()}}
 function toggle(i){state[i].open=!state[i].open;draw()}function changeAmount(i,j,v){option(state[i]).rows[j].amount=Number(v);draw()}function changeTarget(i,v){option(state[i]).target=Number(v)||0;draw()}function removeRow(i,j){option(state[i]).rows.splice(j,1);draw()}
@@ -317,6 +358,7 @@ function renderStudentPreview(){const box=document.getElementById('studentPrevie
 function saveOption(i){notify('گزینه '+state[i].selected+' آماده ثبت است؛ برای ذخیره قطعی، دکمه ثبت تمام برنامه را بزن.')} 
 function saveAll(){return saveAllToTrainee()}
 function notify(t){const e=document.getElementById('toast');e.textContent=t;e.style.display='block';clearTimeout(window.nt);window.nt=setTimeout(()=>e.style.display='none',3000)}
+restoreNutritionDraft();
 draw();
 loadNutritionTemplates();
 </script><script>
