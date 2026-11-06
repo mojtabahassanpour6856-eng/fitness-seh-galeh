@@ -54,7 +54,7 @@ td input,td select{width:100%;min-width:0;border:1px solid #e5dcc8;border-radius
  <div class="nutrition-template-grid" id="nutritionTemplateCards">
   <div class="nutrition-template-loading">در حال دریافت الگوهای ذخیره‌شده…</div>
  </div>
- <div class="nutrition-template-help">برای ساخت هر الگو، برنامه کامل را در همین قالب آماده کن و «ذخیره در این کارت» را بزن. پس از ذخیره، کارت فقط دکمه «کپی در برنامه» را نشان می‌دهد. کپی‌کردن هیچ تغییری در پرونده شاگرد ایجاد نمی‌کند؛ ثبت برای شاگرد همچنان با دکمه ثبت برنامه انجام می‌شود.</div>
+ <div class="nutrition-template-help">برای ساخت یا اصلاح هر الگو، وارد همان کارت شو، وعده‌ها و غذاها را در همین قالب تنظیم کن و سپس «ذخیره این الگو» را بزن. «کپی در برنامه» یک نسخه جدا در برنامه‌ساز می‌سازد و الگوی مادر را تغییر نمی‌دهد؛ فقط پس از کپی، امکان ثبت جداگانه برای شاگرد وجود دارد.</div>
 </section>
 <div class="target-grid" id="autoTargets"><div class="target-caption"><strong>🎯 اهداف روزانه برنامه</strong><br><span id="targetSource">با انتخاب شاگرد، در صورت وجود اطلاعات کافی به‌صورت خودکار محاسبه می‌شوند؛ امکان ویرایش دستی وجود دارد.</span></div><label>کالری روزانه<input id="targetCaloriesInput" type="number" min="0" step="1" inputmode="numeric"></label><label>پروتئین هدف (گرم)<input id="targetProteinInput" type="number" min="0" step="1" inputmode="numeric"></label><label>کربوهیدرات هدف (گرم)<input id="targetCarbsInput" type="number" min="0" step="1" inputmode="numeric"></label><label>چربی هدف (گرم)<input id="targetFatInput" type="number" min="0" step="1" inputmode="numeric"></label></div>
 <div class="top-actions"><button class="save-all" id="saveAllBtn" onclick="saveAll()">💾 ثبت تمام برنامه غذایی در پرونده شاگرد</button><button class="save-all" style="background:#75633e" onclick="toggleStudentPreview()">👤 پیش‌نمایش شاگرد</button></div><div id="studentPreview" class="summary" style="display:none"></div>
@@ -87,6 +87,8 @@ const nutritionTemplateDefinitions=[
 let nutritionTemplateCache={};
 let nutritionTemplatesBusy=false;
 let nutritionTemplateEditingId=null;
+// Prevent a coach-template draft from being written to a trainee until the coach explicitly copies it.
+let nutritionTemplateWorkflow='normal';
 let nutritionTemplateLoadAttempts=0;
 let nutritionTemplateLoadTimer=null;
 function nutritionTemplateClient(){
@@ -102,6 +104,7 @@ function startNutritionTemplate(id){
  const row=nutritionTemplateCache[id],data=row&&row.template_data;
  if(nutritionTemplateHasFood(state)&&!confirm('محتوای فعلی برنامه‌ساز جایگزین می‌شود. اگر لازم است ابتدا آن را در کارت خودش ذخیره کن. ادامه می‌دهی؟'))return;
  nutritionTemplateEditingId=id;
+ nutritionTemplateWorkflow='editing';
  if(data&&Array.isArray(data.state)){
   state.splice(0,state.length,...JSON.parse(JSON.stringify(data.state)));
   const p=data.plan||{};
@@ -119,15 +122,25 @@ function startNutritionTemplate(id){
  if(meals)setTimeout(()=>meals.scrollIntoView({behavior:'smooth',block:'start'}),80);
  notify('الگوی «'+def.name+'» باز شد؛ غذاها را به وعده‌ها اضافه کن و در پایان دکمه ذخیره همین کارت را بزن.');
 }
+function cancelNutritionTemplateEdit(id){
+ if(nutritionTemplateEditingId!==id||nutritionTemplatesBusy)return;
+ nutritionTemplateEditingId=null;
+ // Keep the current editor content, but never let an un-copied template draft be saved to a trainee.
+ nutritionTemplateWorkflow='master';
+ renderNutritionTemplateCards();
+ notify('ویرایش الگو بدون ذخیره پایان یافت؛ محتوای فعلی فقط در همین قالب باقی مانده است.');
+}
 function renderNutritionTemplateCards(){
  const host=document.getElementById('nutritionTemplateCards');if(!host)return;
  host.innerHTML=nutritionTemplateDefinitions.map(t=>{
   const row=nutritionTemplateCache[t.id];
   const saved=!!(row&&row.template_data&&Array.isArray(row.template_data.state));
   const editing=nutritionTemplateEditingId===t.id;
-  const actions=saved
-   ?'<button class="primary" type="button" onclick="copyNutritionTemplate(\''+t.id+'\')">کپی در برنامه</button><button class="secondary" type="button" onclick="startNutritionTemplate(\''+t.id+'\')">ویرایش این الگو</button>'
-   :'<button class="primary" type="button" onclick="startNutritionTemplate(\''+t.id+'\')">ورود و تکمیل این الگو</button>';
+  const actions=editing
+   ?'<button class="primary" type="button" onclick="saveNutritionTemplate(\''+t.id+'\')" '+(nutritionTemplatesBusy?'disabled':'')+'>ذخیره این الگو</button><button class="secondary" type="button" onclick="cancelNutritionTemplateEdit(\''+t.id+'\')" '+(nutritionTemplatesBusy?'disabled':'')+'>پایان ویرایش بدون ذخیره</button>'
+   :(saved
+    ?'<button class="primary" type="button" onclick="copyNutritionTemplate(\''+t.id+'\')">کپی در برنامه</button><button class="secondary" type="button" onclick="startNutritionTemplate(\''+t.id+'\')">ویرایش این الگو</button>'
+    :'<button class="primary" type="button" onclick="startNutritionTemplate(\''+t.id+'\')">ورود و تکمیل این الگو</button>');
   const status=editing?'✏️ در حال تکمیل این الگو':(saved?'✓ الگو ذخیره شده':'برای شروع وارد کارت شو');
   return '<article class="nutrition-template-card '+(editing?'is-editing':'')+'"><div class="nutrition-template-card-name">'+t.name+'</div><div class="nutrition-template-card-status '+(saved?'saved':'')+'">'+status+'</div>'+actions+'</article>';
  }).join('');
@@ -197,6 +210,7 @@ async function saveNutritionTemplate(id){
   if(error)throw error;
   nutritionTemplateCache[id]=data;
   nutritionTemplateEditingId=null;
+  nutritionTemplateWorkflow='master';
   renderNutritionTemplateCards();
   notify('الگوی «'+def.name+'» در دیتابیس ذخیره شد.');
  }catch(e){
@@ -208,10 +222,11 @@ async function saveNutritionTemplate(id){
  }
 }
 function copyNutritionTemplate(id){
- nutritionTemplateEditingId=null;
  const row=nutritionTemplateCache[id],data=row&&row.template_data;
  if(!data||!Array.isArray(data.state)){notify('اطلاعات این الگو کامل نیست؛ دوباره الگوها را دریافت کن.');return}
  if(nutritionTemplateHasFood(state)&&!confirm('محتوای فعلی برنامه‌ساز جایگزین الگو می‌شود. هنوز چیزی در پرونده شاگرد ثبت نمی‌شود. ادامه می‌دهی؟'))return;
+ nutritionTemplateEditingId=null;
+ nutritionTemplateWorkflow='copied';
  state.splice(0,state.length,...JSON.parse(JSON.stringify(data.state)));
  const p=data.plan||{};
  document.getElementById('planTitle').value=p.title||row.name||'برنامه غذایی';
@@ -460,6 +475,10 @@ window.addEventListener('message',async event=>{
 });
 async function saveAllToTrainee(){
  if(builderBusy)return;
+ if(typeof nutritionTemplateWorkflow!=='undefined'&&(nutritionTemplateWorkflow==='editing'||nutritionTemplateWorkflow==='master')){
+  notify('این محتوا هنوز الگوی مربی است و به پرونده شاگرد متصل نشده؛ برای ساخت برنامه شاگرد، از کارت گزینه «کپی در برنامه» را بزن.');
+  return;
+ }
  const selectedId=window.parent.currentClient&&window.parent.currentClient.id!=null?String(window.parent.currentClient.id):'';
  if(!builderTrainee||selectedId!==String(builderTrainee.id)){await loadBuilderContext();notify('شاگرد انتخاب‌شده به‌روزرسانی شد؛ قبل از ثبت، اطلاعات را بررسی کن.');return}
 
@@ -479,6 +498,7 @@ async function saveAllToTrainee(){
   const result=await parentBridge().save({trainee_id:String(builderTrainee.id),plan,meals});
   setConnectionStatus('برنامه غذایی برای '+(builderTrainee.name||'شاگرد')+' با موفقیت ثبت شد؛ نسخه قبلی حفظ شده است.',true);
   notify('برنامه در پرونده شاگرد ثبت شد.');
+  if(typeof nutritionTemplateWorkflow!=='undefined'&&nutritionTemplateWorkflow==='copied')nutritionTemplateWorkflow='normal';
  }catch(e){setConnectionStatus('ذخیره انجام نشد: '+e.message,false);notify('ذخیره انجام نشد؛ اطلاعات واردشده پاک نشده است.')}
  finally{builderBusy=false;btn.disabled=false;btn.textContent='💾 ثبت تمام برنامه غذایی در پرونده شاگرد'}
 }
