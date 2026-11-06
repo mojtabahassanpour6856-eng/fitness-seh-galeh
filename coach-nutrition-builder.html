@@ -204,7 +204,7 @@ async function loadNutritionTemplates(){
   clearTimeout(nutritionTemplateLoadTimer);
   nutritionTemplateCache={};
   (data||[]).forEach(row=>{nutritionTemplateCache[row.template_key]=row});
-  if(!nutritionTemplateCache['weight-loss-severe'])nutritionTemplateCache['weight-loss-severe']={template_key:'weight-loss-severe',name:'کاهش وزن شدید',template_data:builtInSevereWeightLossTemplate,_builtin:true};
+  if(!nutritionTemplateCache['weight-loss-severe']||!Array.isArray(nutritionTemplateCache['weight-loss-severe'].template_data?.state))nutritionTemplateCache['weight-loss-severe']={template_key:'weight-loss-severe',name:'کاهش وزن شدید',template_data:builtInSevereWeightLossTemplate,_builtin:true};
   renderNutritionTemplateCards();
  }catch(e){
   const message=String(e&&e.message||e);
