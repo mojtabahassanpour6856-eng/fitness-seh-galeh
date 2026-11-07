@@ -3162,7 +3162,7 @@ window.loadDashboard = loadDashboard;
     if(!chosen.length)return alert(groupMode?'حرکت‌های گروه را انتخاب کنید.':'حرکت را انتخاب کنید.');
     if(system==='superset'&&chosen.length!==2)return alert('برای سوپرست دقیقاً دو حرکت انتخاب کنید.');
     if(system==='triset'&&chosen.length!==3)return alert('برای تری‌ست دقیقاً سه حرکت انتخاب کنید.');
-    if(system==='giant'&&chosen.length!==3)return alert('برای جاینت‌ست دقیقاً سه حرکت انتخاب کنید.');
+    if(system==='giant'&&chosen.length!==4)return alert('برای جاینت‌ست دقیقاً چهار حرکت انتخاب کنید.');
     const baseOrder=workoutExercisesCache.length?Math.max(...workoutExercisesCache.map(x=>Number(x.sort_order)||0))+1:1;
     let groupKey=$id('workoutGroup')?.value.trim()||null;
     if(groupMode&&!groupKey)groupKey=(system==='superset'?'SS':system==='triset'?'TS':'GS')+'-'+Date.now().toString(36).toUpperCase();
@@ -5651,11 +5651,12 @@ window.useLibraryExercise=async function(id){
       }
       const names = Object.fromEntries(exerciseRows.map(row=>[String(row.id),row.name]));
       const systemNames = {
-        normal:'معمولی',superset:'سوپرست',drop_set:'دراپ‌ست','drop-set':'دراپ‌ست',
-        rest_pause:'استراحت-مکث','rest-pause':'استراحت-مکث',
-        giant_set:'جاینت‌ست','giant-set':'جاینت‌ست',
-        pyramid:'هرمی',reverse_pyramid:'هرمی معکوس',
-        circuit:'دایره‌ای',triset:'تری‌ست'
+        normal:'معمولی',superset:'سوپرست',triset:'تری‌ست',giant:'جاینت‌ست',giant_set:'جاینت‌ست','giant-set':'جاینت‌ست',
+        drop:'دراپ‌ست',drop_set:'دراپ‌ست','drop-set':'دراپ‌ست',rest_pause:'رست‌پاز','rest-pause':'رست‌پاز',
+        timed:'تایم‌دار',multi_stage:'چندمرحله‌ای',forced_reps:'تکرار اجباری',negative_reps:'تکرار منفی',
+        pyramid:'هرمی',reverse_pyramid:'هرمی معکوس',partial_reps:'تکرارهای نیمه',myo_reps:'مایو رپس',
+        cluster:'کلاستر ست',tempo:'تمپو',mechanical_drop:'دراپ‌ست مکانیکال',fst7:'FST-7',twenty_one:'۲۱ تکرار (۷+۷+۷)',custom:'سفارشی',
+        circuit:'دایره‌ای'
       };
       const exerciseTable = rows.length
         ? '<table><thead><tr><th>ردیف</th><th>جلسه</th><th>حرکت</th><th>ست</th><th>تکرار / زمان</th><th>استراحت (ثانیه)</th><th>سیستم تمرینی</th><th>گروه</th><th>توضیحات</th></tr></thead><tbody>'+
