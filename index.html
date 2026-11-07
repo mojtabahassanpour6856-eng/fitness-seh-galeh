@@ -12889,6 +12889,19 @@ window.sehResetTurnstile=function(){};
        const parts=r.reps.split('+').map(v=>v.trim());
        if(parts.length!==3||parts.some(v=>!/^\d+$/.test(v))||parts.reduce((sum,v)=>sum+Number(v),0)!==21)return alert('سیستم ۲۱ تکرار در ردیف '+(r.index+1)+' باید سه بخش عددی داشته باشد که مجموع آن‌ها دقیقاً ۲۱ شود.');
      }
+     if(r.system==='fst7'&&Number(r.setsRaw)!==7)return alert('سیستم FST-7 باید دقیقاً ۷ ست داشته باشد.');
+     if(r.system==='timed'){
+       const duration=String(r.reps).replace(/\s*ثانیه\s*$/,'').trim();
+       if(!/^\d+(?:\.\d+)?$/.test(duration)||Number(duration)<=0)return alert('زمان سیستم تایم‌دار باید یک عدد مثبت بر حسب ثانیه باشد.');
+     }
+     if(r.system==='tempo'){
+       const parts=r.reps.split('-').map(v=>v.trim());
+       if(parts.length!==3||parts.some(v=>!/^\d+$/.test(v)))return alert('تمپو باید سه عدد جداگانه برای بخش منفی، مکث و مثبت داشته باشد؛ مانند ۳-۱-۲.');
+     }
+     if(['drop','mechanical_drop','pyramid','reverse_pyramid','multi_stage'].includes(r.system)){
+       const parts=r.reps.split('/').map(v=>v.trim());
+       if(parts.length<3||parts.some(v=>!/^\d+$/.test(v)||Number(v)<=0))return alert('این سیستم باید دست‌کم سه مرحله با تعداد تکرار عددی و مثبت داشته باشد؛ مراحل را با / جدا کنید.');
+     }
      if(!Number.isFinite(Number(r.setsRaw))||Number(r.setsRaw)<1)return alert('تعداد ست ردیف '+(r.index+1)+' باید حداقل ۱ باشد.');
      if(!Number.isFinite(Number(r.restRaw))||Number(r.restRaw)<0)return alert('استراحت ردیف '+(r.index+1)+' معتبر نیست.');
    }
@@ -14436,6 +14449,10 @@ window.sehResetTurnstile=function(){};
    sets.setAttribute('aria-label',(system==='fst7'?'تعداد ست FST-7':'تعداد ست')+' ردیف '+(tr.dataset.row||''));
    if(userChanged && system==='fst7' && (!sets.value||sets.value==='3'))sets.value='7';
    if(userChanged && system==='twenty_one' && (!reps.value||reps.value==='10'||reps.value==='30 ثانیه'))reps.value='7+7+7';
+   if(userChanged && system!=='twenty_one' && reps.value.trim()==='7+7+7'){
+     const defaults={timed:'30 ثانیه',drop:'12/10/8',mechanical_drop:'12/10/8',pyramid:'12/10/8',reverse_pyramid:'8/10/12',multi_stage:'12/10/8',rest_pause:'10+3+2',forced_reps:'8+2',myo_reps:'15+5+5+5',cluster:'4+4+4',tempo:'3-1-2'};
+     reps.value=defaults[system]||'10';
+   }
    if(userChanged && system==='timed' && (!reps.value||reps.value==='10'||!/^\\d+\\s*(ثانیه)?$/.test(reps.value.trim())))reps.value='30 ثانیه';
    let editor=tr.querySelector('.w9-special-controls');
    if(!editor){
@@ -14451,8 +14468,8 @@ window.sehResetTurnstile=function(){};
    }
    const defaults=mode==='three'?['7','7','7']:(mode==='stages'?['12','10','8']:['3','1','2']);
    const partsRaw=mode==='three'?String(reps.value||'').split('+').map(x=>x.trim()):mode==='stages'?String(reps.value||'').split('/').map(x=>x.trim()):String(reps.value||'').split('-').map(x=>x.trim());
-   const parts=partsRaw.length===3&&partsRaw.every(x=>/^\d+$/.test(x))?partsRaw:defaults.slice();
-   const labels=mode==='three'?['بخش اول','بخش دوم','بخش سوم']:(mode==='stages'?['مرحله اول','مرحله دوم','مرحله سوم']:['منفی (ثانیه)','مکث (ثانیه)','مثبت (ثانیه)']);
+   const parts=partsRaw.length>=3&&partsRaw.every(x=>/^\d+$/.test(x))?partsRaw:defaults.slice();
+   const labels=mode==='three'?['بخش اول','بخش دوم','بخش سوم']:(mode==='stages'?parts.map((_,i)=>'مرحله '+(i+1)):['منفی (ثانیه)','مکث (ثانیه)','مثبت (ثانیه)']);
    if(oldMode!==mode){
      editor.replaceChildren();
      const title=document.createElement('small');
@@ -14460,7 +14477,7 @@ window.sehResetTurnstile=function(){};
      title.textContent=mode==='three'?'۲۱ تکرار: هر بخش را جدا وارد کنید':(mode==='stages'?'تکرار هر مرحله را جدا وارد کنید':'زمان اجرای هر تکرار را وارد کنید');
      editor.appendChild(title);
      const fields=document.createElement('div');fields.className='w9-special-fields';
-     for(let i=0;i<3;i++){
+     for(let i=0;i<parts.length;i++){
        const label=document.createElement('label');label.textContent=labels[i];
        const input=document.createElement('input');input.type='number';input.min='0';input.step='1';input.className='w9-special-part';input.dataset.part=String(i);input.setAttribute('aria-label',labels[i]+' ردیف '+(tr.dataset.row||''));input.value=parts[i]||defaults[i];
        label.appendChild(input);fields.appendChild(label);
@@ -14595,7 +14612,7 @@ window.sehResetTurnstile=function(){};
      }
      const hint=tr.querySelector('.w9-movement-hint');if(hint)hint.hidden=true;
      if(box)box.hidden=true;
-     setField(tr,'w9-rest',r.rest||'60');setField(tr,'w9-reps',r.reps||'10');setField(tr,'w9-sets',r.sets||'3');
+     setField(tr,'w9-rest',r.rest||'60');setField(tr,'w9-reps',r.reps||'10');setField(tr,'w9-sets',r.sets||'3');adaptSystemRow(tr,false);
      if(window.__sehRefreshNinePicker)window.__sehRefreshNinePicker(tr);
    });
    ensureDay();
@@ -14676,6 +14693,19 @@ window.sehResetTurnstile=function(){};
      if(r.system==='twenty_one'){
        const parts=r.reps.split('+').map(v=>v.trim());
        if(parts.length!==3||parts.some(v=>!/^\d+$/.test(v))||parts.reduce((sum,v)=>sum+Number(v),0)!==21)return alert('سیستم ۲۱ تکرار در ردیف '+(r.index+1)+' باید سه بخش عددی داشته باشد که مجموع آن‌ها دقیقاً ۲۱ شود.');
+     }
+     if(r.system==='fst7'&&Number(r.setsRaw)!==7)return alert('سیستم FST-7 باید دقیقاً ۷ ست داشته باشد.');
+     if(r.system==='timed'){
+       const duration=String(r.reps).replace(/\s*ثانیه\s*$/,'').trim();
+       if(!/^\d+(?:\.\d+)?$/.test(duration)||Number(duration)<=0)return alert('زمان سیستم تایم‌دار باید یک عدد مثبت بر حسب ثانیه باشد.');
+     }
+     if(r.system==='tempo'){
+       const parts=r.reps.split('-').map(v=>v.trim());
+       if(parts.length!==3||parts.some(v=>!/^\d+$/.test(v)))return alert('تمپو باید سه عدد جداگانه برای بخش منفی، مکث و مثبت داشته باشد؛ مانند ۳-۱-۲.');
+     }
+     if(['drop','mechanical_drop','pyramid','reverse_pyramid','multi_stage'].includes(r.system)){
+       const parts=r.reps.split('/').map(v=>v.trim());
+       if(parts.length<3||parts.some(v=>!/^\d+$/.test(v)||Number(v)<=0))return alert('این سیستم باید دست‌کم سه مرحله با تعداد تکرار عددی و مثبت داشته باشد؛ مراحل را با / جدا کنید.');
      }
      if(!Number.isFinite(Number(r.setsRaw))||Number(r.setsRaw)<1)return alert('تعداد ست ردیف '+(r.index+1)+' باید حداقل ۱ باشد.');
      if(!Number.isFinite(Number(r.restRaw))||Number(r.restRaw)<0)return alert('استراحت ردیف '+(r.index+1)+' معتبر نیست.');
