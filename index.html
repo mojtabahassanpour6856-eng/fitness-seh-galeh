@@ -14420,6 +14420,11 @@ window.sehResetTurnstile=function(){};
  const exerciseLabels={};
  const $=id=>document.getElementById(id);
  const same=(a,b)=>String(a??'')===String(b??'');
+ function canonicalSystem(value){
+   const key=String(value||'normal').trim().toLowerCase().replace(/[\\s-]+/g,'_');
+   const aliases={drop_set:'drop',giant_set:'giant',time_based:'timed',fst_7:'fst7'};
+   return aliases[key]||key||'normal';
+ }
  function adaptSystemRow(tr, userChanged){
    const system=tr.querySelector('.w9-system')?.value||'normal';
    const reps=tr.querySelector('.w9-reps');
@@ -14649,9 +14654,9 @@ window.sehResetTurnstile=function(){};
        let dayRows=rows.filter(r=>String(r.training_day||'')===names[day]);if(day===0&&legacyPreviewOnly)dayRows=unassignedRows;
        const groups=rowGroups(dayRows);
        drafts[day]=groups.map(group=>{
-         const first=group[0],grouped=['superset','triset','giant'].includes(first.training_system);
+         const first=group[0],system=canonicalSystem(first.training_system),grouped=['superset','triset','giant'].includes(system);
          const exerciseIds=group.map(x=>String(x.exercise_id));
-         return {exercise:grouped?'':exerciseIds[0]||'',checked:grouped?exerciseIds:[],system:first.training_system||'normal',rest:String(first.rest_seconds??60),reps:String(first.reps??10),sets:String(first.sets??3)};
+         return {exercise:grouped?'':exerciseIds[0]||'',checked:grouped?exerciseIds:[],system,rest:String(first.rest_seconds??60),reps:String(first.reps??10),sets:String(first.sets??3)};
        });
        if(drafts[day].length<9)drafts[day]=drafts[day].concat(Array.from({length:9-drafts[day].length},()=>null));
      }
