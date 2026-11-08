@@ -1294,16 +1294,22 @@ function updateStats(){
 
 
 function renderCoachSelectedTraineeHeader(){
-  const section=$("client");
-  if(!section||!currentClient)return;
+  const hero=document.querySelector(".hero");
+  if(!hero)return;
   let header=document.getElementById("coachSelectedTraineeHeader");
   if(!header){
     header=document.createElement("div");
     header.id="coachSelectedTraineeHeader";
     header.className="coach-selected-trainee-header";
-    section.insertBefore(header,section.firstChild);
+    const brand=hero.querySelector(".brand");
+    hero.insertBefore(header,brand||hero.firstChild);
   }
+  const isCoach=(()=>{try{return (typeof authProfile!=="undefined"&&authProfile?.role==="coach")||window.authProfile?.role==="coach";}catch(e){return window.authProfile?.role==="coach";}})();
+  const clientSection=document.getElementById("client");
+  const isOpen=!!(clientSection&&clientSection.classList.contains("active")&&currentClient);
+  header.hidden=!(isCoach&&isOpen);
   header.replaceChildren();
+  if(!isCoach||!isOpen)return;
   const avatar=document.createElement("div");
   avatar.className="coach-selected-trainee-avatar";
   const fallback=document.createElement("span");
@@ -1313,7 +1319,8 @@ function renderCoachSelectedTraineeHeader(){
     const img=document.createElement("img");
     img.alt="عکس پروفایل شاگرد";
     img.src=currentClient.profile_image;
-    img.onerror=function(){this.remove();};
+    img.onerror=function(){this.remove();fallback.style.display="";};
+    fallback.style.display="none";
     avatar.insertBefore(img,fallback);
   }
   const name=document.createElement("strong");
@@ -5289,7 +5296,7 @@ window.toggleExerciseFavorite=async function(id,value){try{await sbWrite(`/train
         weight:c.current_weight??c.weight??null,height:c.height??null,goal:c.goal||'',level:c.training_level||'',
         history:c.training_history||'',limitations:c.limitations||'',training_type:c.training_type||'gym',
         home_equipment:c.home_equipment||'',weekly_sessions:c.weekly_sessions??c.sessions_per_week??c.training_sessions??'',training_days:c.training_days||'',training_time:c.training_time||'',
-        createdAt:c.created_at||null,archivedAt:c.archived_at||null,active:!c.archived_at,membershipStatus:'وضعیت نامشخص',plans:0
+        createdAt:c.created_at||null,archivedAt:c.archived_at||null,profile_image:c.profile_image||null,active:!c.archived_at,membershipStatus:'وضعیت نامشخص',plans:0
       }));
       // Show the trainee list immediately; membership and summary statistics are supplementary.
       // Do not keep the main coach table waiting for these slower requests.
@@ -15043,6 +15050,43 @@ window.sehNutritionBuilderBridge={
   return Array.isArray(result)?result[0]:result;
  }
 };
+</script>
+<style id="coach-selected-trainee-topbar-fix">
+#coachSelectedTraineeHeader[hidden]{display:none!important}
+.hero #coachSelectedTraineeHeader{display:flex;align-items:center;gap:8px;flex:0 1 auto;min-width:0;margin-inline:8px;padding:5px 9px;border:1px solid #c7a34b;border-radius:12px;background:#fff8e7;color:#2c2618;direction:rtl}
+.coach-selected-trainee-avatar{position:relative;display:inline-flex;align-items:center;justify-content:center;flex:0 0 34px;width:34px;height:34px;border-radius:50%;overflow:hidden;background:#ead9ae;border:1.5px solid #c7a34b}
+.coach-selected-trainee-avatar img{width:100%;height:100%;object-fit:cover;display:block}
+#coachSelectedTraineeHeader strong{font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:180px}
+@media(max-width:600px){.hero #coachSelectedTraineeHeader{margin:6px 0;order:2}.hero .brand{order:3}#coachSelectedTraineeHeader strong{max-width:130px}}
+</style>
+<script id="coach-selected-trainee-topbar-sync">
+(function(){
+  function sync(){
+    const h=document.getElementById("coachSelectedTraineeHeader");
+    if(!h)return;
+    let coach=false;
+    try{coach=(typeof authProfile!=="undefined"&&authProfile?.role==="coach")||window.authProfile?.role==="coach";}catch(e){}
+    const section=document.getElementById("client");
+    const selected=(()=>{try{return typeof currentClient!=="undefined"?currentClient:null;}catch(e){return window.currentClient||null;}})();
+    h.hidden=!(coach&&section?.classList.contains("active")&&selected);
+    if(h.hidden){h.replaceChildren();return;}
+    if(typeof renderCoachSelectedTraineeHeader==="function")renderCoachSelectedTraineeHeader();
+  }
+  const oldShow=window.showSection;
+  if(typeof oldShow==="function"&&!window.__coachTraineeTopbarShowHook){
+    window.showSection=function(){const r=oldShow.apply(this,arguments);setTimeout(sync,0);return r;};
+    window.__coachTraineeTopbarShowHook=true;
+  }
+  const oldSelect=window.selectClient;
+  if(typeof oldSelect==="function"&&!window.__coachTraineeTopbarSelectHook){
+    window.selectClient=function(){const r=oldSelect.apply(this,arguments);setTimeout(sync,0);return r;};
+    window.__coachTraineeTopbarSelectHook=true;
+  }
+  document.addEventListener("DOMContentLoaded",sync);
+  const client=document.getElementById("client");
+  if(client&&typeof MutationObserver==="function")new MutationObserver(sync).observe(client,{attributes:true,attributeFilter:["class"]});
+  setTimeout(sync,500);
+})();
 </script>
 </body>
 </html>
