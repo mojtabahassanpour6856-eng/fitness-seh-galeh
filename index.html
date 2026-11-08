@@ -1305,14 +1305,18 @@ function updateStats(){
 
 
 function renderCoachSelectedTraineeHeader(){
-  const section=$("client");
-  if(!section||!currentClient)return;
+  const page=document.querySelector(".page");
+  const hero=document.querySelector(".hero");
+  if(!page||!hero||!currentClient)return;
   let header=document.getElementById("coachSelectedTraineeHeader");
   if(!header){
     header=document.createElement("div");
     header.id="coachSelectedTraineeHeader";
     header.className="coach-selected-trainee-header";
-    section.insertBefore(header,section.firstChild);
+  }
+  // Keep the selected trainee identity between the logout bar and gym title.
+  if(header.parentElement!==page||header.nextElementSibling!==hero){
+    page.insertBefore(header,hero);
   }
   header.replaceChildren();
   const avatar=document.createElement("div");
