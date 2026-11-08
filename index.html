@@ -13550,6 +13550,8 @@ window.sehResetTurnstile=function(){};
     // Commit selection and navigate synchronously, before any network-dependent hooks.
     try { currentClient = selected; } catch (error) {}
     window.currentClient = selected;
+    // The final selection guard bypasses the legacy selectClient body; render the identity header here.
+    try { if (typeof renderCoachSelectedTraineeHeader === 'function') renderCoachSelectedTraineeHeader(); } catch (error) { console.warn('نمایش هویت شاگرد ناموفق بود:', error); }
     const setValue = (key, value) => {
       const node = document.getElementById(key);
       if (node) node.value = value == null ? '' : String(value);
@@ -13616,6 +13618,8 @@ window.sehResetTurnstile=function(){};
     if(!selected)return false;
     try{currentClient=selected;}catch(e){}
     window.currentClient=selected;
+    // Keep the selected trainee photo and name visible even when this recovery path opens the profile.
+    try{if(typeof renderCoachSelectedTraineeHeader==='function')renderCoachSelectedTraineeHeader();}catch(e){console.warn('نمایش هویت شاگرد ناموفق بود:',e);}
     const values={
       pn:selected.name||selected.full_name||'',
       page:selected.age??'',
