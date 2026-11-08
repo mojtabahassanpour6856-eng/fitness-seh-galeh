@@ -5305,7 +5305,7 @@ window.toggleExerciseFavorite=async function(id,value){try{await sbWrite(`/train
         weight:c.current_weight??c.weight??null,height:c.height??null,goal:c.goal||'',level:c.training_level||'',
         history:c.training_history||'',limitations:c.limitations||'',training_type:c.training_type||'gym',
         home_equipment:c.home_equipment||'',weekly_sessions:c.weekly_sessions??c.sessions_per_week??c.training_sessions??'',training_days:c.training_days||'',training_time:c.training_time||'',
-        createdAt:c.created_at||null,archivedAt:c.archived_at||null,active:!c.archived_at,membershipStatus:'وضعیت نامشخص',plans:0
+        createdAt:c.created_at||null,archivedAt:c.archived_at||null,profile_image:c.profile_image||null,active:!c.archived_at,membershipStatus:'وضعیت نامشخص',plans:0
       }));
       // Show the trainee list immediately; membership and summary statistics are supplementary.
       // Do not keep the main coach table waiting for these slower requests.
