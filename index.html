@@ -1329,6 +1329,37 @@ function renderCoachSelectedTraineeHeader(){
     img.alt="عکس پروفایل شاگرد";
     img.src=currentClient.profile_image;
     img.onerror=function(){this.remove();};
+    avatar.style.cursor="zoom-in";
+    avatar.title="برای بزرگ‌نمایی عکس بزنید";
+    avatar.setAttribute("role","button");
+    avatar.setAttribute("tabindex","0");
+    avatar.setAttribute("aria-label","نمایش بزرگ عکس پروفایل");
+    const openPhoto=function(){
+      const old=document.getElementById("coachTraineePhotoViewer");
+      if(old)old.remove();
+      const viewer=document.createElement("div");
+      viewer.id="coachTraineePhotoViewer";
+      viewer.style.cssText="position:fixed;inset:0;z-index:99999;background:rgba(0,0,0,.88);display:flex;align-items:center;justify-content:center;padding:20px;cursor:zoom-out";
+      const large=document.createElement("img");
+      large.src=currentClient.profile_image;
+      large.alt="عکس بزرگ پروفایل شاگرد";
+      large.style.cssText="display:block;max-width:92vw;max-height:88vh;object-fit:contain;border-radius:12px;box-shadow:0 8px 35px rgba(0,0,0,.5);cursor:default";
+      const close=document.createElement("button");
+      close.type="button";
+      close.textContent="✕";
+      close.setAttribute("aria-label","بستن عکس");
+      close.style.cssText="position:absolute;top:16px;right:16px;width:42px;height:42px;border:0;border-radius:50%;background:#fff;color:#222;font-size:24px;cursor:pointer";
+      const dismiss=function(){viewer.remove();document.removeEventListener("keydown",onKey);};
+      const onKey=function(e){if(e.key==="Escape")dismiss();};
+      close.addEventListener("click",dismiss);
+      viewer.addEventListener("click",function(e){if(e.target===viewer)dismiss();});
+      large.addEventListener("click",function(e){e.stopPropagation();});
+      document.addEventListener("keydown",onKey);
+      viewer.append(large,close);
+      document.body.appendChild(viewer);
+    };
+    avatar.addEventListener("click",openPhoto);
+    avatar.addEventListener("keydown",function(e){if(e.key==="Enter"||e.key===" "){e.preventDefault();openPhoto();}});
     avatar.insertBefore(img,fallback);
   }
   const name=document.createElement("strong");
