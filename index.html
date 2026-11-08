@@ -1218,7 +1218,7 @@ async function loadClients(){
     // Read with the signed-in user's access token so RLS, not the public key,
     // decides which trainee records this coach is allowed to see.
     if(typeof window.sbGet!=="function")throw new Error("اتصال امن اطلاعات شاگردان هنوز آماده نیست؛ صفحه را تازه‌سازی کنید.");
-    const data=await window.sbGet("/trainees?select=id,full_name,phone,gender,birth_date,current_weight,height,goal,training_level,training_history,limitations,training_type,home_equipment,created_at&order=created_at.desc");
+    const data=await window.sbGet("/trainees?select=id,full_name,phone,gender,birth_date,current_weight,height,goal,training_level,training_history,limitations,training_type,home_equipment,profile_image,created_at&order=created_at.desc");
     if(!Array.isArray(data))throw new Error("پاسخ فهرست شاگردان معتبر نیست.");
 
     clients=data.map(c=>({
@@ -1236,6 +1236,7 @@ async function loadClients(){
       limitations:c.limitations,
       training_type:c.training_type||"gym",
       home_equipment:c.home_equipment||"",
+      profile_image:c.profile_image||null,
       createdAt:c.created_at,
       active:true,
       plans:0
@@ -1292,8 +1293,36 @@ function updateStats(){
 }
 
 
+function renderCoachSelectedTraineeHeader(){
+  const section=$("client");
+  if(!section||!currentClient)return;
+  let header=document.getElementById("coachSelectedTraineeHeader");
+  if(!header){
+    header=document.createElement("div");
+    header.id="coachSelectedTraineeHeader";
+    header.className="coach-selected-trainee-header";
+    section.insertBefore(header,section.firstChild);
+  }
+  header.replaceChildren();
+  const avatar=document.createElement("div");
+  avatar.className="coach-selected-trainee-avatar";
+  const fallback=document.createElement("span");
+  fallback.textContent=["زن","female","f"].includes(String(currentClient.gender||"").toLowerCase())?"👩":"👤";
+  avatar.appendChild(fallback);
+  if(currentClient.profile_image){
+    const img=document.createElement("img");
+    img.alt="عکس پروفایل شاگرد";
+    img.src=currentClient.profile_image;
+    img.onerror=function(){this.remove();};
+    avatar.insertBefore(img,fallback);
+  }
+  const name=document.createElement("strong");
+  name.textContent=currentClient.name||currentClient.full_name||"شاگرد بدون نام";
+  header.append(avatar,name);
+}
 function selectClient(id){
   currentClient=clients.find(x=>String(x.id)===String(id));if(!currentClient)return;
+  renderCoachSelectedTraineeHeader();
   if(typeof window.sehUseCalorieTrainee==="function")window.sehUseCalorieTrainee(currentClient.id);
   $("pn").value=currentClient.name||"";$("page").value=currentClient.age||"";$("pweight").value=currentClient.weight||"";
   $("pheight").value=currentClient.height||"";$("pgoal").value=currentClient.goal||"کاهش وزن";
@@ -5018,7 +5047,7 @@ window.toggleExerciseFavorite=async function(id,value){try{await sbWrite(`/train
       const workoutLabel=ps.workout==='due'?'برنامه تمرینی: سه روز یا کمتر تا پایان':ps.workout==='active'?'برنامه تمرینی معتبر دارد':ps.workout==='missing'?'برنامه تمرینی ندارد':'وضعیت تمرینی در حال بررسی';
       const nutritionLabel=ps.nutrition==='due'?'برنامه غذایی: سه روز یا کمتر تا پایان':ps.nutrition==='active'?'برنامه غذایی معتبر دارد':ps.nutrition==='missing'?'برنامه غذایی ندارد':'وضعیت غذایی در حال بررسی';
       const badges=planBadge('workout',ps.workout,workoutLabel)+planBadge('nutrition',ps.nutrition,nutritionLabel);
-      return `<button type="button" data-trainee-id="${String(c.id).replace(/"/g,'&quot;')}" class="coach-name-cell${selected?' selected':''}" onclick="selectClient('${String(c.id).replace(/'/g,'')}');document.querySelectorAll('#coachMobileCards .coach-name-cell').forEach(x=>x.classList.toggle('selected',x===this))" aria-label="انتخاب شاگرد ${esc(c.name||'بدون نام')}؛ ${regLabel}؛ ${workoutLabel}؛ ${nutritionLabel}" title="${regLabel}">${regDot}<span class="coach-trainee-name-text">${esc(c.name||'بدون نام')}</span><span class="coach-plan-badges">${badges}</span></button>`;
+      return `<button type="button" data-trainee-id="${String(c.id).replace(/"/g,'&quot;')}" class="coach-name-cell${selected?' selected':''}" onclick="selectClient('${String(c.id).replace(/'/g,'')}');document.querySelectorAll('#coachMobileCards .coach-name-cell').forEach(x=>x.classList.toggle('selected',x===this))" aria-label="انتخاب شاگرد ${esc(c.name||'بدون نام')}؛ ${regLabel}؛ ${workoutLabel}؛ ${nutritionLabel}" title="${regLabel}">${regDot}<span class="coach-list-avatar" aria-hidden="true">${c.profile_image?`<img src="${esc(c.profile_image)}" alt="" onerror="this.style.display='none';this.nextElementSibling.style.display='inline-flex'">`:''}<span class="coach-list-avatar-fallback" style="${c.profile_image?'display:none;':''}">${['زن','female','f'].includes(String(c.gender||'').toLowerCase())?'👩':'👤'}</span></span><span class="coach-trainee-name-text">${esc(c.name||'بدون نام')}</span><span class="coach-plan-badges">${badges}</span></button>`;
     }).join(''):(allClients.length===0&&registrationFilter!=='pending'&&registrationFilter!=='incomplete'&&registrationFilter!=='complete'?'<div style="padding:12px;border:1px solid #8b6b2b;border-radius:10px;margin-top:10px"><strong>هنوز شاگردی برای این حساب نمایش داده نمی‌شود.</strong><p>ورود مربی انجام شده، اما درخواست فهرست شاگردان ردیفی برنگردانده است. این حالت معمولاً به پیوند رکورد در جدول trainees با شناسه مربی یا سیاست‌های RLS مربوط است؛ از این پیام به‌تنهایی نمی‌توان علت قطعی را تعیین کرد.</p><p>برای بررسی دقیق، شناسه حساب ورود و مقدار coach_user_id رکوردهای جدول trainees باید در همان پروژه Supabase مقایسه شوند.</p><button type="button" onclick="showTraineeDiagnostic()">نمایش شناسه حساب و وضعیت اتصال</button> <button type="button" onclick="loadClients()">تلاش دوباره</button></div>':'<div class="muted" style="padding:12px">شاگرد یا درخواست ثبت‌نامی با این جستجو یا فیلتر پیدا نشد.</div>');
     if(typeof window.updateStats==='function')window.updateStats();
   };
@@ -12502,6 +12531,19 @@ body.workout-output.workout-compact{
 <style id="workout-renewal-alert-style">#clientList .coach-name-cell.workout-renewal-due{position:relative;border-color:#c62828!important;background:#fff0f0!important;color:#9f1717!important;box-shadow:inset 0 0 0 1px #c62828!important}#clientList .coach-name-cell.workout-renewal-due::before{content:"";display:inline-block;width:9px;height:9px;min-width:9px;border-radius:50%;background:#d71920;margin-left:5px;vertical-align:middle;box-shadow:0 0 0 2px #d7192026}#clientList .workout-renewal-dot{display:none!important}#workoutStartDateFa{display:block;margin-top:4px;font-size:12px}</style>
 <script id="workout-start-date-jalali-label">(function(){function workoutLocalDateKey(){var d=new Date();return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");}function updateWorkoutStartDateFa(){var el=document.getElementById("workoutStartDate"),out=document.getElementById("workoutStartDateFa");if(!el||!out)return;var v=el.value;if(!v){out.textContent="تاریخ شروع را انتخاب کنید.";return;}try{out.textContent="تاریخ شروع انتخاب‌شده: "+new Intl.DateTimeFormat("fa-IR-u-ca-persian",{year:"numeric",month:"long",day:"numeric",timeZone:"UTC"}).format(new Date(v+"T00:00:00Z"));}catch(e){out.textContent="تاریخ شروع: "+v;}}window.updateWorkoutStartDateFa=updateWorkoutStartDateFa;document.addEventListener("change",function(e){if(e.target&&e.target.id==="workoutStartDate")updateWorkoutStartDateFa();});document.addEventListener("DOMContentLoaded",updateWorkoutStartDateFa);})();</script>
 <script id="workout-renewal-name-badges">(function(){var original=window.renderClients;if(typeof original!=="function")return;window.renderClients=function(){var r=original.apply(this,arguments);setTimeout(function(){var due=window.__sehWorkoutRenewalDueIds instanceof Set?window.__sehWorkoutRenewalDueIds:new Set();document.querySelectorAll("#clientList .coach-name-cell[data-trainee-id]").forEach(function(btn){var id=String(btn.getAttribute("data-trainee-id")||""),isDue=due.has(id),client=(Array.isArray(window.clients)?window.clients:[]).find(function(c){return String(c.id)===id;}),name=(client&&client.name)||btn.textContent.replace("🔴","").trim()||"بدون نام";btn.classList.toggle("workout-renewal-due",isDue);var dot=btn.querySelector(".workout-renewal-dot");if(isDue){if(!dot){dot=document.createElement("span");dot.className="workout-renewal-dot";dot.setAttribute("aria-hidden","true");dot.style.cssText="display:inline-block!important;width:9px;height:9px;min-width:9px;border-radius:50%;background:#d71920;margin-left:6px;vertical-align:middle;box-shadow:0 0 0 2px #d7192026;";btn.prepend(dot);}}else if(dot){dot.remove();}var textNode=Array.from(btn.childNodes).find(function(n){return n.nodeType===3&&n.textContent.trim();});if(textNode)textNode.textContent=String(name);var registrationLabel=btn.getAttribute("title")||"";btn.setAttribute("aria-label","انتخاب شاگرد "+name+(registrationLabel?"؛ "+registrationLabel:"")+(isDue?"؛ تمدید برنامه تمرینی":""));});},0);return r;};})();</script>
+<style id="coach-profile-photo-display">
+/* Coach-only profile photo display; does not modify trainee profile data. */
+#clientList .coach-list-avatar{display:inline-flex;position:relative;flex:0 0 30px;width:30px;height:30px;border-radius:50%;overflow:hidden;align-items:center;justify-content:center;background:#ead9ae;border:1.5px solid #c7a34b;margin-inline:0 5px}
+#clientList .coach-list-avatar img{width:100%;height:100%;object-fit:cover;display:block}
+#clientList .coach-list-avatar-fallback{width:100%;height:100%;align-items:center;justify-content:center;font-size:17px}
+#clientList .coach-name-cell{gap:4px}
+#clientList .coach-trainee-name-text{min-width:0}
+.coach-selected-trainee-header{display:flex;align-items:center;justify-content:flex-start;gap:13px;margin:0 0 14px;padding:12px 15px;border:1px solid #c7a34b;border-radius:16px;background:linear-gradient(135deg,#fff8e7,#f4e7c5);color:#342b18;direction:rtl;min-height:84px}
+.coach-selected-trainee-avatar{display:flex;position:relative;flex:0 0 62px;width:62px;height:62px;border-radius:50%;overflow:hidden;align-items:center;justify-content:center;background:#ead9ae;border:3px solid #c7a34b;font-size:29px}
+.coach-selected-trainee-avatar img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.coach-selected-trainee-header strong{font-size:16px;font-weight:800;overflow-wrap:anywhere}
+@media(max-width:420px){.coach-selected-trainee-header{padding:10px 12px;min-height:76px}.coach-selected-trainee-avatar{width:56px;height:56px;flex-basis:56px}}
+</style>
 <style id="coach-trainee-name-grid">
 /* Scoped only to the trainee list; all other cards and components remain unchanged. */
 #clientList #coachMobileCards.coach-card-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:7px;margin-top:8px}
