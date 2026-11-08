@@ -48,7 +48,12 @@ table{width:100%;border-collapse:collapse;margin-top:13px;font-size:12px}th,td{p
 #registrationRequests .v4-table{min-width:0}
 @media(max-width:600px){.registration-requests-heading{display:block}.registration-refresh{width:100%;margin-top:8px}.registration-requests-card{padding:12px}}
 .client{padding:12px;border:1px solid #2b4053;border-radius:12px;margin:8px 0;background:#101b28}
-.client strong{display:block;margin-bottom:5px}.pill{display:inline-block;padding:4px 8px;border-radius:20px;background:#203447;color:#dce7ef;font-size:11px}
+.client-identity{display:flex;align-items:center;gap:10px;min-width:0;margin-bottom:8px}
+.client-identity strong{display:block;min-width:0;overflow-wrap:anywhere}
+.client-avatar{width:42px;height:42px;flex:0 0 42px;border-radius:50%;overflow:hidden;display:flex;align-items:center;justify-content:center;background:#ead9ae;border:1.5px solid #c7a34b;color:#5d4920;font-size:22px}
+.client-avatar img{width:100%;height:100%;display:block;object-fit:cover}
+.client-avatar-fallback[hidden]{display:none}
+.pill{display:inline-block;padding:4px 8px;border-radius:20px;background:#203447;color:#dce7ef;font-size:11px}
 #custom{display:none}.hide{display:none!important}
 .footer{text-align:center;color:#8998a6;padding:18px;font-size:11px}
 @media(max-width:600px){.grid,.grid2{grid-template-columns:1fr}.stats,.badges{grid-template-columns:1fr 1fr}.nav{grid-template-columns:1fr 1fr}.row{display:grid;grid-template-columns:1fr}}
@@ -1276,7 +1281,13 @@ function renderClients(){
   const q=($("clientSearch")?.value||"").trim().toLowerCase();
   const arr=clients.filter(c=>(c.name||"").toLowerCase().includes(q));
   $("clientList").innerHTML=arr.length?arr.map(c=>`<div class="client">
-    <strong>${esc(c.name||"بدون نام")}</strong>
+    <div class="client-identity">
+      <div class="client-avatar" aria-hidden="true">
+        ${c.profile_image?`<img src="${esc(c.profile_image)}" alt="" loading="lazy" onerror="this.remove();this.parentElement.querySelector('.client-avatar-fallback').hidden=false">`:""}
+        <span class="client-avatar-fallback" ${c.profile_image?'hidden':""}>${["زن","female","f"].includes(String(c.gender||"").toLowerCase())?"👩":"👨"}</span>
+      </div>
+      <strong>${esc(c.name||"بدون نام")}</strong>
+    </div>
     <span class="pill">${esc(c.goal||"بدون هدف")}</span>
     <span class="pill">${c.weight?c.weight+" کیلو":"وزن ثبت نشده"}</span>
     <span class="pill">${c.phone?esc(c.phone):"شماره ثبت نشده"}</span>
