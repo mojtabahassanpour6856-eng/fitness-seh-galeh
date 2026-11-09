@@ -9,7 +9,6 @@ on:
       - "top-genesis-pdf-test.html"
       - "top-genesis-archive.js"
       - "index.html"
-      - "top-genesis-pdf-app-embed.js"
       - "tests/top-genesis-browser-smoke.mjs"
       - "top-genesis-pdf-app-embed.js"
       - ".github/workflows/top-genesis-browser-smoke.yml"
