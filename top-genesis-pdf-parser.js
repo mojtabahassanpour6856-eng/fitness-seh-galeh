@@ -157,7 +157,7 @@
       const value = numberAfter(text, pattern);
       if (value == null) return;
       rawMeasures[key] = {
-        ...metric(value, "cm", "3D Scan and Measurements", "needs_coach_review"),
+        ...metric(value, "raw_reported_unit", "3D Scan and Measurements", "needs_coach_review"),
         raw_value: value,
         measurement_kind: "multi_point_or_region_reported_value",
         interpretation: "تفسیر دقیق عدد تا تأیید ساختار اسکن و تعریف خروجی دستگاه مشخص نیست؛ آن را محیط یک مقطع فرض نکنید."
@@ -204,7 +204,7 @@
         if (leftPresent !== rightPresent) {
           const missingKey = leftPresent ? rightKey : leftKey;
           missingMeasures[missingKey] = {
-            value: null, unit: "cm", source: "Body Measurements / paired region not present in this PDF",
+            value: null, unit: "raw_reported_unit", source: "Body Measurements / paired region not present in this PDF",
             status: "not_reported",
             interpretation: "سمت مقابل در این فایل ثبت نشده است؛ صفر یا مقدار حدسی نیست و از سمت دیگر کپی نمی‌شود."
           };
@@ -215,7 +215,7 @@
     if (hasBodyMeasurementsSection && Object.keys(rawMeasures).length) {
       ["forearm_left_cm", "forearm_right_cm"].forEach(key => {
         if (!rawMeasures[key]) missingMeasures[key] = {
-          value: null, unit: "cm", source: "Body Measurements / expected region not present in this PDF",
+          value: null, unit: "raw_reported_unit", source: "Body Measurements / expected region not present in this PDF",
           status: "not_reported",
           interpretation: "در این فایل ثبت نشده است؛ صفر یا مقدار حدسی نیست و از اسکن دیگری منتقل نشده است."
         };
