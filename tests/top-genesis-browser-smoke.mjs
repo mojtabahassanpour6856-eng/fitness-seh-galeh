@@ -260,7 +260,7 @@ try {
   assert.match(multiTrend,/کاهش 4.00 kg/,"Multi-visit chart should calculate first-to-last weight change.");
   assert.match(multiTrend,/کاهش 5.00 واحد درصد/,"Multi-visit chart should calculate percentage-point change.");
   assert.doesNotMatch(multiTrend,/BMI/,"A metric invalid in any visit must be excluded from the complete trend.");
-  assert.match(await page.locator("#pdfFilesMore").getAttribute("multiple") || "",/./);
+  assert.equal(await page.locator("#pdfFilesMore").evaluate(el=>el.hasAttribute("multiple")),true,"Additional report picker must allow multiple PDFs.");
   const suspiciousAnalysis = await page.evaluate(() => window.TopGenesisSimpleAnalysis({
     weight_kg:{value:57,status:"within_initial_range_needs_coach_review"},
     fat_mass_kg:{value:14,status:"needs_coach_review"},
