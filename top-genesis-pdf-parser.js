@@ -210,7 +210,7 @@
       if (Object.keys(missingMeasures).length) {
         out.missing_measurements = missingMeasures;
         out.measurement_coverage = { status: "partial", missing: Object.keys(missingMeasures) };
-        flags.push("اندازه ساعد در این گزارش ثبت نشده است؛ سایر شاخص‌ها مستقل قابل استفاده‌اند.");
+        flags.push("برخی اندازه‌های مورد انتظار در این گزارش ثبت نشده‌اند؛ مقادیر غایب صفر یا حدس نیستند و سایر شاخص‌ها مستقل قابل بررسی‌اند.");
       }
     }
     if (Object.keys(rawMeasures).length) {
