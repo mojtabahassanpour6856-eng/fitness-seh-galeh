@@ -7,14 +7,19 @@ on:
     paths:
       - "top-genesis-pdf-parser.js"
       - "top-genesis-pdf-test.html"
-      - "top-genesis-archive.js"\n      - "index.html"
+      - "top-genesis-archive.js"
+      - "index.html"
       - "top-genesis-pdf-app-embed.js"
-      - "tests/top-genesis-browser-smoke.mjs"\n      - "top-genesis-pdf-app-embed.js"
+      - "tests/top-genesis-browser-smoke.mjs"
+      - "top-genesis-pdf-app-embed.js"
       - ".github/workflows/top-genesis-browser-smoke.yml"
   pull_request:
     paths:
       - "top-genesis-pdf-parser.js"
       - "top-genesis-pdf-test.html"
+      - "top-genesis-archive.js"
+      - "top-genesis-pdf-app-embed.js"
+      - "index.html"
       - "tests/top-genesis-browser-smoke.mjs"
       - ".github/workflows/top-genesis-browser-smoke.yml"
 
