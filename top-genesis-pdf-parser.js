@@ -150,10 +150,55 @@
         interpretation: "تفسیر دقیق عدد تا تأیید ساختار اسکن و تعریف خروجی دستگاه مشخص نیست؛ آن را محیط یک مقطع فرض نکنید."
       };
     });
-    // Forearm is optional across report layouts. Only mark it missing when
-    // a Body Measurements section and other region measurements are present.
+    // Compare left/right values only as a report-quality check. The device's
+    // "Region" values are not yet confirmed to be circumference in cm, so the
+    // threshold is expressed in raw reported units and must not be interpreted
+    // as a clinical or body-measurement diagnosis.
+    const bilateralPairs = [
+      ["calf_left_cm", "calf_right_cm", "ساق"],
+      ["forearm_left_cm", "forearm_right_cm", "ساعد"],
+      ["thigh_left_cm", "thigh_right_cm", "ران"],
+      ["upper_arm_left_cm", "upper_arm_right_cm", "بازو"]
+    ];
+    const bilateralComparisons = [];
+    bilateralPairs.forEach(([leftKey, rightKey, label]) => {
+      const left = rawMeasures[leftKey]?.raw_value;
+      const right = rawMeasures[rightKey]?.raw_value;
+      if (left == null || right == null) return;
+      const difference = Math.abs(left - right);
+      const average = (Math.abs(left) + Math.abs(right)) / 2;
+      const comparison = {
+        region: label, left_value: left, right_value: right,
+        absolute_difference: Number(difference.toFixed(3)),
+        relative_difference_percent: average ? Number((difference / average * 100).toFixed(2)) : null,
+        status: difference > 2 ? "coach_review_asymmetry" : "within_initial_review_threshold",
+        interpretation: "مقایسه صرفاً برای کنترل کیفیت گزارش است؛ واحد و معنای دقیق مقادیر ناحیه‌ای هنوز باید با دستگاه تأیید شود."
+      };
+      bilateralComparisons.push(comparison);
+      if (difference > 2) {
+        flags.push("اختلاف گزارش‌شده بین " + label + " چپ و راست بیش از ۲ واحد است؛ احتمال خطای ثبت/حرکت/نور یا تفاوت واقعی وجود دارد و باید با اسکن و مشاهده مربی بررسی شود.");
+      }
+    });
+    if (bilateralComparisons.length) out.bilateral_measurement_review = bilateralComparisons;
+
+    // A missing side is never converted to zero or inferred from its opposite side.
     const hasBodyMeasurementsSection = /Body\s*Measurements\s*\(?(?:cm)?\)?/i.test(text);
     const missingMeasures = {};
+    if (hasBodyMeasurementsSection && Object.keys(rawMeasures).length) {
+      bilateralPairs.forEach(([leftKey, rightKey, label]) => {
+        const leftPresent = Object.prototype.hasOwnProperty.call(rawMeasures, leftKey);
+        const rightPresent = Object.prototype.hasOwnProperty.call(rawMeasures, rightKey);
+        if (leftPresent !== rightPresent) {
+          const missingKey = leftPresent ? rightKey : leftKey;
+          missingMeasures[missingKey] = {
+            value: null, unit: "cm", source: "Body Measurements / paired region not present in this PDF",
+            status: "not_reported",
+            interpretation: "سمت مقابل در این فایل ثبت نشده است؛ صفر یا مقدار حدسی نیست و از سمت دیگر کپی نمی‌شود."
+          };
+          flags.push("اندازه " + label + " در یک سمت گزارش نشده است؛ مقدار آن نباید حدس زده شود.");
+        }
+      });
+    }
     if (hasBodyMeasurementsSection && Object.keys(rawMeasures).length) {
       ["forearm_left_cm", "forearm_right_cm"].forEach(key => {
         if (!rawMeasures[key]) missingMeasures[key] = {
