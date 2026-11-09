@@ -30,7 +30,9 @@ pre{white-space:pre-wrap;overflow-wrap:anywhere;background:#f7f7f7;padding:12px;
 <label for="pdfFile">انتخاب گزارش PDF (حداکثر ۱۰ مگابایت):</label><br>
 <input id="pdfFile" type="file" accept="application/pdf,.pdf">
 <br><label for="pdfFile2">گزارش دوم (جدیدتر؛ اختیاری برای مقایسه):</label><br>
-<input id="pdfFile2" type="file" accept="application/pdf,.pdf">\n<br><label for="pdfFilesMore">گزارش‌های بعدی (برای سه نوبت یا بیشتر؛ به ترتیب قدیمی به جدید):</label><br>\n<input id="pdfFilesMore" type="file" accept="application/pdf,.pdf" multiple>
+<input id="pdfFile2" type="file" accept="application/pdf,.pdf">
+<br><label for="pdfFilesMore">گزارش‌های بعدی (برای سه نوبت یا بیشتر؛ به ترتیب قدیمی به جدید):</label><br>
+<input id="pdfFilesMore" type="file" accept="application/pdf,.pdf" multiple>
 <br><button id="run" type="button">شروع استخراج و تحلیل</button>
 <div id="status" role="status" aria-live="polite"></div>
 <div id="result"></div>
@@ -83,7 +85,8 @@ function buildReportComparison(older,newer){
  if(!rows.length)return "<section class='analysis-box'><h2>مقایسه دو گزارش</h2><p class='analysis-warn'>شاخص مشترک و قابل‌مقایسه‌ای در هر دو گزارش پیدا نشد. مقادیر ناقص، متعارض یا با واحد متفاوت مقایسه نمی‌شوند.</p></section>";
  return "<section class='analysis-box'><h2>مقایسه روند دو گزارش</h2><p class='small'>گزارش اول به‌عنوان قدیمی‌تر و گزارش دوم به‌عنوان جدیدتر در نظر گرفته شده است. این مقایسه صرفاً عددی است و به‌تنهایی علت تغییر را مشخص نمی‌کند.</p><table><thead><tr><th>شاخص</th><th>قدیمی‌تر</th><th>جدیدتر</th><th>تغییر</th><th>نتیجه</th></tr></thead><tbody>"+rows.join("")+"</tbody></table><p class='note'>اندازه‌های Region فقط به‌صورت اختلاف عدد خام نمایش داده می‌شوند؛ تا زمان تأیید معنای واحد دستگاه، افزایش یا کاهش آن‌ها را تغییر قطعی محیط بدن تلقی نکنید.</p></section>";
 }
-window.TopGenesisReportComparison=buildReportComparison;\n
+window.TopGenesisReportComparison=buildReportComparison;
+
 function buildMultiReportTrend(reports){
  const keys=["weight_kg","body_fat_percent","bmi","fat_mass_kg","lean_mass_kg","resting_metabolic_rate_kcal"];
  const usable=x=>x&&Number.isFinite(Number(x.value))&&!["invalid_range","conflict_review","not_reported"].includes(x.status);
@@ -114,7 +117,11 @@ button.addEventListener("click",async()=>{
  try{
   const data=await window.TopGenesisPdfParser.extract(file);
   const newerFile=fileInput2.files&&fileInput2.files[0];
-  const newerData=newerFile?await window.TopGenesisPdfParser.extract(newerFile):null;\n  const moreFiles=Array.from(fileInputMore.files||[]);\n  const moreData=[];\n  for(const extraFile of moreFiles){if(extraFile.size>10*1024*1024)throw new Error("حجم هر فایل باید حداکثر ۱۰ مگابایت باشد.");moreData.push(await window.TopGenesisPdfParser.extract(extraFile));}\n  const allReports=[data,...(newerData?[newerData]:[]),...moreData];
+  const newerData=newerFile?await window.TopGenesisPdfParser.extract(newerFile):null;
+  const moreFiles=Array.from(fileInputMore.files||[]);
+  const moreData=[];
+  for(const extraFile of moreFiles){if(extraFile.size>10*1024*1024)throw new Error("حجم هر فایل باید حداکثر ۱۰ مگابایت باشد.");moreData.push(await window.TopGenesisPdfParser.extract(extraFile));}
+  const allReports=[data,...(newerData?[newerData]:[]),...moreData];
   const rows=[];
   Object.entries(data.metrics||{}).forEach(([key,item])=>{
    if(key==="raw_body_measurements"||!item)return;
