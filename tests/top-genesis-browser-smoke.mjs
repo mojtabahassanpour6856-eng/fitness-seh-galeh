@@ -99,23 +99,31 @@ try {
   assert.match(pageInfo, /57/);
   assert.match(pageInfo, /24.5/);
   const direct = await page.evaluate(() => window.TopGenesisPdfParser.extractMetrics(
-    "Body Measurements (cm) Calf Left Region 157.69 Calf Right Region 162.757 Hip Region 680.13"
+    "Body Measurements (cm) Calf Left Region 157.686 Calf Right Region 162.757 Hip Region 680.131"
   ));
-  assert.equal(direct.metrics.raw_body_measurements.calf_left_cm.raw_value, 157.69,
+  assert.equal(direct.metrics.raw_body_measurements.calf_left_cm.raw_value, 157.686,
     "Calf raw value must retain its decimal precision.");
   assert.equal(direct.metrics.raw_body_measurements.calf_right_cm.raw_value, 162.757,
     "Opposite-side calf raw value must retain its decimal precision.");
   assert.equal(direct.metrics.bilateral_measurement_review[0].status, "coach_review_asymmetry",
     "A left/right difference above the initial 2-unit review threshold must be flagged.");
-  assert.equal(direct.metrics.bilateral_measurement_review[0].absolute_difference, 5.067,
+  assert.equal(direct.metrics.bilateral_measurement_review[0].absolute_difference, 5.071,
     "The bilateral difference must be calculated without losing decimal precision.");
-  assert.equal(direct.metrics.raw_body_measurements.hip_region_cm.raw_value, 680.13,
+  assert.equal(direct.metrics.raw_body_measurements.hip_region_cm.raw_value, 680.131,
     "Hip raw value must retain its decimal precision.");
   assert.equal(direct.metrics.missing_measurements.forearm_left_cm.status, "not_reported",
     "Absent forearm must be represented as not_reported, not zero.");
+  assert.equal(direct.metrics.missing_measurements.forearm_right_cm.status, "not_reported",
+    "Both absent forearms must remain not_reported.");
   assert.equal(direct.metrics.measurement_coverage.status, "partial");
+  const smallDifference = await page.evaluate(() => window.TopGenesisPdfParser.extractMetrics(
+    "Body Measurements (cm) Calf Left Region 157.686 Calf Right Region 159.000"
+  ));
+  assert.equal(smallDifference.metrics.bilateral_measurement_review[0].status, "within_initial_review_threshold",
+    "A bilateral difference at or below 2 reported units must not trigger the asymmetry flag.");
   assert.match(pageInfo, /ساعد چپ.*ثبت نشده/s, "Missing forearm was not reported as missing.");
   assert.match(pageInfo, /69\.87/, "Tesseract did not recognize the synthetic waist value from the raster page.");
+  assert.match(pageInfo, /123\.456/, "Targeted OCR did not recover the region value from the semi-text page.");
   assert.deepEqual(pageErrors, [], `Browser page errors: ${pageErrors.join("; ")}`);
   console.log("PASS: Chromium loaded PDF.js, parsed selectable PDF text, ran OCR on image-only and semi-text measurement pages, and rendered extracted metrics.");
 } finally {
