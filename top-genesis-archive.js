@@ -148,10 +148,9 @@
 
   const observer = new MutationObserver(() => {
     mount();
-    if (mounted) refresh();
   });
   observer.observe(document.documentElement, { childList: true, subtree: true });
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", mount);
   else mount();
-  window.setInterval(() => { mount(); if (mounted) refresh(); }, 5000);
+  window.setInterval(() => { mount(); if (mounted) refresh(); }, 15000);
 })();
