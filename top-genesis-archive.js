@@ -65,10 +65,13 @@
       list.innerHTML = data.map((r) => `
         <div style="display:flex;gap:8px;align-items:center;justify-content:space-between;flex-wrap:wrap;border:1px solid #eee2bf;border-radius:9px;padding:9px;margin:7px 0;background:#fff">
           <div><b>${esc(r.analysis_date)}</b><div style="font-size:12px">${esc(r.original_file_name)} · ${(Number(r.file_size_bytes)/1024/1024).toFixed(2)} MB</div><small>وضعیت: ${esc(r.parse_status)}</small></div>
-          <button type="button" data-tg-open="${esc(r.id)}" style="width:auto">مشاهده PDF</button>
+          <div style="display:flex;gap:6px;flex-wrap:wrap"><button type="button" data-tg-open="${esc(r.id)}" style="width:auto">مشاهده PDF</button><button type="button" data-tg-delete="${esc(r.id)}" style="width:auto;background:#a83232;color:#fff;border:0">حذف</button></div>
         </div>`).join("");
       list.querySelectorAll("[data-tg-open]").forEach((button) => {
         button.addEventListener("click", () => openReport(button.getAttribute("data-tg-open")));
+      });
+      list.querySelectorAll("[data-tg-delete]").forEach((button) => {
+        button.addEventListener("click", () => deleteReport(button, button.getAttribute("data-tg-delete")));
       });
     } catch (e) {
       list.textContent = "دریافت آرشیو انجام نشد: " + (e?.message || String(e));
@@ -127,6 +130,37 @@
     } finally {
       button.disabled = false;
       button.textContent = "ذخیره گزارش در آرشیو خصوصی";
+    }
+  }
+
+
+  async function deleteReport(button, id) {
+    const ctx = currentCoachAndTrainee();
+    if (!ctx) return alert("نشست مربی یا شاگرد انتخاب‌شده معتبر نیست.");
+    if (!window.confirm("این گزارش PDF و رکورد آن برای همین شاگرد به‌طور کامل حذف شود؟ این کار قابل بازگشت نیست.")) return;
+    button.disabled = true;
+    button.textContent = "در حال حذف…";
+    try {
+      const { data: row, error: rowError } = await ctx.sb.from(TABLE)
+        .select("id,storage_path").eq("id", id).eq("trainee_id", ctx.trainee.id).single();
+      if (rowError) throw rowError;
+      if (!row?.storage_path) throw new Error("مسیر فایل پیدا نشد؛ هیچ چیزی حذف نشد.");
+      const { error: storageError } = await ctx.sb.storage.from(BUCKET).remove([row.storage_path]);
+      if (storageError) throw storageError;
+      const { error: deleteError } = await ctx.sb.from(TABLE)
+        .delete().eq("id", id).eq("trainee_id", ctx.trainee.id);
+      if (deleteError) {
+        alert("خود فایل از فضای ذخیره‌سازی حذف شد، اما حذف رکورد پایگاه داده انجام نشد. لطفاً دوباره تلاش کنید یا دسترسی‌ها بررسی شود. جزئیات: " + deleteError.message);
+        await refresh();
+        return;
+      }
+      await refresh();
+      const status = $("tgReportStatus");
+      if (status) status.textContent = "گزارش انتخاب‌شده و فایل PDF آن با موفقیت حذف شدند.";
+    } catch (e) {
+      alert("حذف گزارش انجام نشد: " + (e?.message || String(e)));
+      button.disabled = false;
+      button.textContent = "حذف";
     }
   }
 
