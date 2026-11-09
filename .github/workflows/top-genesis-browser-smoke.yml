@@ -1,0 +1,36 @@
+name: Top Genesis browser smoke test
+
+on:
+  push:
+    branches:
+      - experiment/top-genesis-pdf-parser-20261109
+    paths:
+      - "top-genesis-pdf-parser.js"
+      - "top-genesis-pdf-test.html"
+      - "tests/top-genesis-browser-smoke.mjs"
+      - ".github/workflows/top-genesis-browser-smoke.yml"
+  pull_request:
+    paths:
+      - "top-genesis-pdf-parser.js"
+      - "top-genesis-pdf-test.html"
+      - "tests/top-genesis-browser-smoke.mjs"
+      - ".github/workflows/top-genesis-browser-smoke.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  chromium-smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Install browser test dependencies
+        run: npm install --no-save playwright pdf-lib
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+      - name: Test PDF.js and OCR in Chromium
+        run: node tests/top-genesis-browser-smoke.mjs
