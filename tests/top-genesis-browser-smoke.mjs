@@ -261,6 +261,16 @@ try {
   assert.match(multiTrend,/کاهش 5.00 واحد درصد/,"Multi-visit chart should calculate percentage-point change.");
   assert.doesNotMatch(multiTrend,/BMI/,"A metric invalid in any visit must be excluded from the complete trend.");
   assert.equal(await page.locator("#pdfFilesMore").evaluate(el=>el.hasAttribute("multiple")),true,"Additional report picker must allow multiple PDFs.");
+  const printableReportScaffold = await page.evaluate(() => ({
+    hasPrintStyles: Array.from(document.querySelectorAll("style")).some(x => x.textContent.includes("@media print")),
+    hasPrintButtonCode: document.documentElement.innerHTML.includes("printReport"),
+    hasCoachSignoff: document.documentElement.innerHTML.includes("یادداشت و تأیید مربی"),
+    hasPersianReportTitle: document.documentElement.innerHTML.includes("گزارش تحلیل ترکیب بدن")
+  }));
+  assert.equal(printableReportScaffold.hasPrintStyles,true,"Printable report must include print-specific styling.");
+  assert.equal(printableReportScaffold.hasPrintButtonCode,true,"Printable report must expose a print action after extraction.");
+  assert.equal(printableReportScaffold.hasCoachSignoff,true,"Printable report must include coach sign-off fields.");
+  assert.equal(printableReportScaffold.hasPersianReportTitle,true,"Printable report must have a Persian title.");
   const suspiciousAnalysis = await page.evaluate(() => window.TopGenesisSimpleAnalysis({
     weight_kg:{value:57,status:"within_initial_range_needs_coach_review"},
     fat_mass_kg:{value:14,status:"needs_coach_review"},
