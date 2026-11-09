@@ -144,12 +144,35 @@ try {
     "Materially different body-fat values must require review.");
   assert.deepEqual(conflictingFat.metrics.body_fat_percent.alternatives, [25, 29.5]);
   const energy = await page.evaluate(() => window.TopGenesisPdfParser.extractMetrics(
-    "RMR 1352 calories/day Total 2100 Calories/day"
+    "RMR 1352 calories/day Caloric Expenditure 2100 Calories/day"
   ));
   assert.equal(energy.metrics.resting_metabolic_rate_kcal.value, 1352,
     "RMR must be extracted only from its explicit label.");
   assert.equal(energy.metrics.daily_energy_expenditure_kcal.value, 2100,
     "Daily expenditure must not be confused with the explicit RMR value.");
+  const ambiguousEnergy = await page.evaluate(() => window.TopGenesisPdfParser.extractMetrics(
+    "RMR 1352 calories/day Activity target 1900 Calories/day Maintenance 2200 Calories/day"
+  ));
+  assert.equal(ambiguousEnergy.metrics.resting_metabolic_rate_kcal.value, 1352);
+  assert.equal(ambiguousEnergy.metrics.daily_energy_expenditure_kcal, undefined,
+    "A generic last Calories/day value must not be guessed as TDEE.");
+  const repeatedCore = await page.evaluate(() => window.TopGenesisPdfParser.extractMetrics(
+    "Height & Weight 161 cm & 57 kg Height & Weight 161.0 cm & 57.0 kg Body Fat 25% Body Fat 25.2% BMI 22.0 BMI 22.1 Waist-to-Hip Ratio 0.734 Waist-to-Hip Ratio 0.73"
+  ));
+  assert.equal(repeatedCore.metrics.height_cm.value, 161);
+  assert.equal(repeatedCore.metrics.weight_kg.value, 57);
+  assert.equal(repeatedCore.metrics.height_cm.status, "consistent_rounding");
+  assert.equal(repeatedCore.metrics.body_fat_percent.value, 25);
+  assert.equal(repeatedCore.metrics.body_fat_percent.status, "consistent_rounding");
+  assert.equal(repeatedCore.metrics.bmi.value, 22);
+  assert.equal(repeatedCore.metrics.bmi.status, "consistent_rounding");
+  assert.equal(repeatedCore.metrics.waist_hip_ratio.value, 0.734);
+  assert.equal(repeatedCore.metrics.waist_hip_ratio.status, "consistent_rounding");
+  const conflictingBmi = await page.evaluate(() => window.TopGenesisPdfParser.extractMetrics(
+    "BMI 22.0 BMI 29.4"
+  ));
+  assert.equal(conflictingBmi.metrics.bmi.status, "conflict_review");
+  assert.deepEqual(conflictingBmi.metrics.bmi.alternatives, [22, 29.4]);
   assert.match(pageInfo, /ساعد چپ.*ثبت نشده/s, "Missing forearm was not reported as missing.");
   assert.match(pageInfo, /69\.87/, "Tesseract did not recognize the synthetic waist value from the raster page.");
   assert.match(pageInfo, /123\.456/, "Targeted OCR did not recover the region value from the semi-text page.");
