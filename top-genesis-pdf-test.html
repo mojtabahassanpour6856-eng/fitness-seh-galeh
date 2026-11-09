@@ -45,7 +45,7 @@ resting_metabolic_rate_kcal:"سوخت‌وساز پایه",daily_energy_expendit
 fat_mass_kg:"توده چربی",lean_mass_kg:"توده بدون چربی",waist_circumference_cm:"دور کمر",
 comparison_percentile:"درصد مقایسه‌ای",body_fat_rank_marker:"رتبه نمایش‌داده‌شده در نمودار",forearm_left_cm:"ساعد چپ",forearm_right_cm:"ساعد راست"
 };
-const statusText={not_reported:"در این گزارش ثبت نشده",needs_coach_review:"نیازمند تأیید مربی",conflict_review:"تعارض؛ بررسی شود",invalid_range:"خارج از محدوده معتبر",consistent_rounding:"اختلاف ناشی از گرد کردن"};
+const statusText={not_reported:"در این گزارش ثبت نشده",needs_coach_review:"نیازمند تأیید مربی",within_initial_range_needs_coach_review:"در محدوده کنترل اولیه؛ تأیید مربی همچنان لازم است",conflict_review:"تعارض؛ بررسی شود",invalid_range:"خارج از محدوده کنترل اولیه",consistent_rounding:"اختلاف ناشی از گرد کردن"};
 const units={"cm":"سانتی‌متر","kg":"کیلوگرم","%":"درصد","kg/m²":"kg/m²","ratio":"نسبت","kcal/day":"کیلوکالری در روز"};
 const fileInput=document.getElementById("pdfFile"),button=document.getElementById("run"),status=document.getElementById("status"),result=document.getElementById("result");
 button.addEventListener("click",async()=>{
