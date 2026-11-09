@@ -157,7 +157,7 @@ try {
   assert.equal(ambiguousEnergy.metrics.daily_energy_expenditure_kcal, undefined,
     "A generic last Calories/day value must not be guessed as TDEE.");
   const repeatedCore = await page.evaluate(() => window.TopGenesisPdfParser.extractMetrics(
-    "Height & Weight 161 cm & 57 kg Height & Weight 161.0 cm & 57.0 kg Body Fat 25% Body Fat 25.2% BMI 22.0 BMI 22.1 Waist-to-Hip Ratio 0.734 Waist-to-Hip Ratio 0.73"
+    "Height & Weight 161 cm & 57 kg Height & Weight 161.2 cm & 57.1 kg Body Fat 25% Body Fat 25.2% BMI 22.0 BMI 22.1 Waist-to-Hip Ratio 0.734 Waist-to-Hip Ratio 0.73"
   ));
   assert.equal(repeatedCore.metrics.height_cm.value, 161);
   assert.equal(repeatedCore.metrics.weight_kg.value, 57);
@@ -168,6 +168,13 @@ try {
   assert.equal(repeatedCore.metrics.bmi.status, "consistent_rounding");
   assert.equal(repeatedCore.metrics.waist_hip_ratio.value, 0.734);
   assert.equal(repeatedCore.metrics.waist_hip_ratio.status, "consistent_rounding");
+  const separatelyLabeled = await page.evaluate(() => window.TopGenesisPdfParser.extractMetrics(
+    "Height: 172 cm Weight: 68.5 kg"
+  ));
+  assert.equal(separatelyLabeled.metrics.height_cm.value, 172,
+    "Height must also be found when reported separately.");
+  assert.equal(separatelyLabeled.metrics.weight_kg.value, 68.5,
+    "Weight must also be found when reported separately.");
   const conflictingBmi = await page.evaluate(() => window.TopGenesisPdfParser.extractMetrics(
     "BMI 22.0 BMI 29.4"
   ));
