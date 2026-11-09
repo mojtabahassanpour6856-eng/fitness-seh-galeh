@@ -116,6 +116,13 @@ try {
   assert.equal(direct.metrics.missing_measurements.forearm_right_cm.status, "not_reported",
     "Both absent forearms must remain not_reported.");
   assert.equal(direct.metrics.measurement_coverage.status, "partial");
+  const oneSided = await page.evaluate(() => window.TopGenesisPdfParser.extractMetrics(
+    "Body Measurements (cm) Calf Left Region 157.686 Hip Region 680.131"
+  ));
+  assert.equal(oneSided.metrics.missing_measurements.calf_right_cm.status, "not_reported",
+    "A missing paired side must be explicitly marked not_reported.");
+  assert.equal(oneSided.metrics.raw_body_measurements.calf_left_cm.raw_value, 157.686,
+    "The present side must remain unchanged when its paired side is absent.");
   const smallDifference = await page.evaluate(() => window.TopGenesisPdfParser.extractMetrics(
     "Body Measurements (cm) Calf Left Region 157.686 Calf Right Region 159.000"
   ));
