@@ -126,7 +126,7 @@
     const bodyRank = numberAfter(text, /Your\s*Rank\s*([0-9]+(?:\.[0-9]+)?)\s*%\s*places\s*you/i);
     if (bodyRank != null) out.body_fat_rank_marker = metric(bodyRank, "%", "Body Composition / Your Rank");
 
-    const ratioMatches = [...text.matchAll(/Waist\s*[- ]?to\s*[- ]?Hip\s*Ratio\s*([0-9]+(?:\.[0-9]+)?)/gi)];
+    const ratioMatches = [...text.matchAll(/Waist\s*[- ]?to\s*[- ]?Hip\s*Ratio\s*[:=-]?\s*([0-9]+(?:\.[0-9]+)?)/gi)];
     const detailedWaistRatio = ratioMatches.length ? Number(ratioMatches[ratioMatches.length - 1][1]) : null;
     if (detailedWaistRatio != null) {
       out.waist_hip_ratio_detailed = metric(detailedWaistRatio, "ratio", "Waist Analysis");
@@ -139,18 +139,18 @@
     }
 
     const bodyMeasures = [
-      ["calf_left_cm", /Calf\s*Left\s*Region\s*([0-9]+(?:\.[0-9]+)?)/i],
-      ["forearm_left_cm", /Forearm\s*Left\s*Region\s*([0-9]+(?:\.[0-9]+)?)/i],
-      ["forearm_right_cm", /Forearm\s*Right\s*Region\s*([0-9]+(?:\.[0-9]+)?)/i],
-      ["calf_right_cm", /Calf\s*Right\s*Region\s*([0-9]+(?:\.[0-9]+)?)/i],
-      ["chest_region_cm", /Chest\s*Region\s*([0-9]+(?:\.[0-9]+)?)/i],
-      ["hip_region_cm", /Hip\s*Region\s*([0-9]+(?:\.[0-9]+)?)/i],
-      ["lower_waist_region_cm", /Lower\s*Waist\s*Region\s*([0-9]+(?:\.[0-9]+)?)/i],
-      ["thigh_left_cm", /Thigh\s*Left\s*Region\s*([0-9]+(?:\.[0-9]+)?)/i],
-      ["thigh_right_cm", /Thigh\s*Right\s*Region\s*([0-9]+(?:\.[0-9]+)?)/i],
-      ["upper_arm_left_cm", /Upper\s*Arm\s*Left\s*Region\s*([0-9]+(?:\.[0-9]+)?)/i],
-      ["upper_arm_right_cm", /Upper\s*Arm\s*Right\s*Region\s*([0-9]+(?:\.[0-9]+)?)/i],
-      ["upper_waist_region_cm", /Upper\s*Waist\s*Region\s*([0-9]+(?:\.[0-9]+)?)/i]
+      ["calf_left_cm", /Calf\s*Left\s*Region\s*[:=-]?\s*([0-9]+(?:\.[0-9]+)?)/i],
+      ["forearm_left_cm", /Forearm\s*Left\s*Region\s*[:=-]?\s*([0-9]+(?:\.[0-9]+)?)/i],
+      ["forearm_right_cm", /Forearm\s*Right\s*Region\s*[:=-]?\s*([0-9]+(?:\.[0-9]+)?)/i],
+      ["calf_right_cm", /Calf\s*Right\s*Region\s*[:=-]?\s*([0-9]+(?:\.[0-9]+)?)/i],
+      ["chest_region_cm", /Chest\s*Region\s*[:=-]?\s*([0-9]+(?:\.[0-9]+)?)/i],
+      ["hip_region_cm", /Hip\s*Region\s*[:=-]?\s*([0-9]+(?:\.[0-9]+)?)/i],
+      ["lower_waist_region_cm", /Lower\s*Waist\s*Region\s*[:=-]?\s*([0-9]+(?:\.[0-9]+)?)/i],
+      ["thigh_left_cm", /Thigh\s*Left\s*Region\s*[:=-]?\s*([0-9]+(?:\.[0-9]+)?)/i],
+      ["thigh_right_cm", /Thigh\s*Right\s*Region\s*[:=-]?\s*([0-9]+(?:\.[0-9]+)?)/i],
+      ["upper_arm_left_cm", /Upper\s*Arm\s*Left\s*Region\s*[:=-]?\s*([0-9]+(?:\.[0-9]+)?)/i],
+      ["upper_arm_right_cm", /Upper\s*Arm\s*Right\s*Region\s*[:=-]?\s*([0-9]+(?:\.[0-9]+)?)/i],
+      ["upper_waist_region_cm", /Upper\s*Waist\s*Region\s*[:=-]?\s*([0-9]+(?:\.[0-9]+)?)/i]
     ];
     const rawMeasures = {};
     bodyMeasures.forEach(([key, pattern]) => {
