@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>آزمایش تحلیل PDF تاپ جنسیس</title>
+<style>
+:root{font-family:Tahoma,Arial,sans-serif;color:#29251e;background:#f6f2e9}
+body{max-width:900px;margin:0 auto;padding:18px;line-height:1.8}
+main{background:#fff;border:1px solid #e6dcc8;border-radius:16px;padding:20px;box-shadow:0 4px 18px #0000000a}
+h1{font-size:1.35rem;color:#876b35;margin-top:0}
+.note{background:#fff7df;border-right:4px solid #c49a45;padding:10px 14px;border-radius:8px}
+button{background:#8d713b;color:white;border:0;border-radius:9px;padding:11px 18px;font-size:1rem}
+button:disabled{opacity:.55}
+input{max-width:100%;margin:12px 0}
+#status{margin:12px 0;font-weight:bold}
+table{width:100%;border-collapse:collapse;margin-top:12px}
+td,th{padding:9px;border-bottom:1px solid #eee;text-align:right}
+th{background:#f7f2e8}
+.bad{color:#a33}.ok{color:#287447}.review{color:#8a641f}
+section{margin-top:22px}
+pre{white-space:pre-wrap;overflow-wrap:anywhere;background:#f7f7f7;padding:12px;border-radius:8px}
+.small{font-size:.88rem;color:#625d54}
+</style>
+</head>
+<body>
+<main>
+<h1>آزمایش مستقل تحلیل گزارش تاپ جنسیس</h1>
+<p class="note">این صفحه فقط برای آزمایش مربی است. فایل در این صفحه بارگذاری یا ذخیره نمی‌شود و اطلاعات نام و ایمیل عمداً در خروجی نمایش داده نمی‌شوند. پردازش PDF در مرورگر انجام می‌شود؛ برای بارگذاری کتابخانه‌های PDF و OCR اتصال اینترنت لازم است.</p>
+<label for="pdfFile">انتخاب گزارش PDF (حداکثر ۱۰ مگابایت):</label><br>
+<input id="pdfFile" type="file" accept="application/pdf,.pdf">
+<br><button id="run" type="button">شروع استخراج و تحلیل</button>
+<div id="status" role="status" aria-live="polite"></div>
+<div id="result"></div>
+<p class="small">تمام مقادیر استخراج‌شده نیازمند تأیید مربی هستند و این آزمایش هیچ داده‌ای را به پرونده شاگرد متصل نمی‌کند.</p>
+</main>
+<script src="./top-genesis-pdf-parser.js"></script>
+<script>
+(function(){
+"use strict";
+const labels={
+height_cm:"قد",weight_kg:"وزن",body_fat_percent:"درصد چربی بدن",bmi:"BMI",
+waist_hip_ratio:"نسبت کمر به باسن",waist_hip_ratio_detailed:"نسبت کمر به باسن (جزئیات)",
+resting_metabolic_rate_kcal:"سوخت‌وساز پایه",daily_energy_expenditure_kcal:"مصرف انرژی روزانه",
+fat_mass_kg:"توده چربی",lean_mass_kg:"توده بدون چربی",waist_circumference_cm:"دور کمر",
+comparison_percentile:"درصد مقایسه‌ای",body_fat_rank_marker:"رتبه نمایش‌داده‌شده در نمودار"
+};
+const statusText={needs_coach_review:"نیازمند تأیید مربی",conflict_review:"تعارض؛ بررسی شود",invalid_range:"خارج از محدوده معتبر",consistent_rounding:"اختلاف ناشی از گرد کردن"};
+const units={"cm":"سانتی‌متر","kg":"کیلوگرم","%":"درصد","kg/m²":"kg/m²","ratio":"نسبت","kcal/day":"کیلوکالری در روز"};
+const fileInput=document.getElementById("pdfFile"),button=document.getElementById("run"),status=document.getElementById("status"),result=document.getElementById("result");
+button.addEventListener("click",async()=>{
+ const file=fileInput.files&&fileInput.files[0];
+ if(!file){status.textContent="ابتدا یک فایل PDF انتخاب کنید.";return;}
+ button.disabled=true;result.innerHTML="";status.textContent="در حال خواندن صفحات PDF؛ در صورت نیاز OCR نیز اجرا می‌شود. لطفاً صفحه را نبندید.";
+ try{
+  const data=await window.TopGenesisPdfParser.extract(file);
+  const rows=[];
+  Object.entries(data.metrics||{}).forEach(([key,item])=>{
+   if(key==="raw_body_measurements"||!item)return;
+   rows.push("<tr><td>"+(labels[key]||key)+"</td><td>"+item.value+" "+(units[item.unit]||item.unit||"")+"</td><td class='"+(item.status==="invalid_range"||item.status==="conflict_review"?"bad":"review")+"'>"+(statusText[item.status]||item.status)+"</td></tr>");
+  });
+  let html="<section><h2>نتیجه استخراج</h2><p>تعداد صفحات: "+data.page_count+" | صفحات OCR: "+((data.ocr_pages||[]).join("، ")||"ندارد")+"</p><table><thead><tr><th>شاخص</th><th>مقدار</th><th>وضعیت</th></tr></thead><tbody>"+rows.join("")+"</tbody></table></section>";
+  const measures=data.metrics&&data.metrics.raw_body_measurements;
+  if(measures){html+="<section><h2>اندازه‌های خام اندام</h2><p class='bad'>این مقادیر به دلیل احتمال خطای واحد/اسکن نباید وارد نمودار یا پرونده شوند.</p><table><tr><th>کد شاخص</th><th>مقدار</th><th>وضعیت</th></tr>"+Object.entries(measures).map(([k,v])=>"<tr><td>"+k+"</td><td>"+v.value+" cm</td><td class='bad'>"+(statusText[v.status]||v.status)+"</td></tr>").join("")+"</table></section>";}
+  if(data.flags&&data.flags.length)html+="<section><h2>هشدارها</h2><ul>"+data.flags.map(x=>"<li>"+x+"</li>").join("")+"</ul></section>";
+  html+="<p class='note'>این نتیجه آزمایشی است؛ تأیید مربی الزامی است. اطلاعات هویتی از خروجی صفحه حذف شده‌اند.</p>";
+  result.innerHTML=html;status.textContent="استخراج تمام شد. هیچ اطلاعاتی ذخیره یا ارسال نشد.";
+ }catch(e){status.textContent="خطا: "+(e&&e.message?e.message:"استخراج ناموفق بود.");}
+ finally{button.disabled=false;}
+});
+})();
+</script>
+</body>
+</html>
