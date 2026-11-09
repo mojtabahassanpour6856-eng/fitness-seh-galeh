@@ -1,0 +1,161 @@
+<!doctype html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>آزمایش تحلیل PDF تاپ جنسیس</title>
+<style>
+:root{font-family:Tahoma,Arial,sans-serif;color:#29251e;background:#f6f2e9}
+body{max-width:900px;margin:0 auto;padding:18px;line-height:1.8}
+body.embedded{max-width:none;margin:0;padding:0;background:transparent}
+body.embedded main{border:0;border-radius:0;box-shadow:none;padding:12px}
+body.embedded h1{font-size:1.15rem}
+main{background:#fff;border:1px solid #e6dcc8;border-radius:16px;padding:20px;box-shadow:0 4px 18px #0000000a}
+h1{font-size:1.35rem;color:#876b35;margin-top:0}
+.note{background:#fff7df;border-right:4px solid #c49a45;padding:10px 14px;border-radius:8px}
+button{background:#8d713b;color:white;border:0;border-radius:9px;padding:11px 18px;font-size:1rem}
+button:disabled{opacity:.55}
+input{max-width:100%;margin:12px 0}
+#status{margin:12px 0;font-weight:bold}
+table{width:100%;border-collapse:collapse;margin-top:12px}
+td,th{padding:9px;border-bottom:1px solid #eee;text-align:right}
+th{background:#f7f2e8}
+.bad{color:#a33}.ok{color:#287447}.review{color:#8a641f}
+section{margin-top:22px}.analysis-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin:14px 0}.analysis-card{background:#fbf8f1;border:1px solid #e9dfcc;border-radius:12px;padding:12px}.analysis-card strong{display:block;font-size:1.3rem;color:#765b2e}.analysis-card span{font-size:.88rem;color:#625d54}.chart-row{display:grid;grid-template-columns:85px 1fr 55px;gap:8px;align-items:center;margin:10px 0}.bar-track{height:14px;background:#eee8dc;border-radius:20px;overflow:hidden}.bar-fill{height:100%;background:#b9944d;border-radius:20px}.analysis-good{color:#287447}.analysis-warn{color:#8a641f}.analysis-box{background:#fcfaf5;border:1px solid #e9dfcc;padding:14px;border-radius:12px;margin-top:14px}.trend-card{background:#fff;border:1px solid #eee3d1;border-radius:10px;padding:12px;margin:12px 0}.trend-point{display:grid;grid-template-columns:75px 1fr 65px;gap:8px;align-items:center;margin:8px 0}
+@media print{body{background:#fff;max-width:none;padding:0;color:#111}body.print-report main{border:0;box-shadow:none;padding:0}body.print-report main>:not(#result){display:none!important}body.print-report #result{display:block!important}body.print-report #result .no-print{display:none!important}.print-only{display:block!important}.analysis-box,.trend-card,table{break-inside:avoid}h1,h2,h3{break-after:avoid}table{font-size:10pt}th{background:#eee!important;-webkit-print-color-adjust:exact;print-color-adjust:exact}}.print-only{display:none}.print-header{text-align:center;border-bottom:2px solid #b9944d;padding-bottom:12px;margin-bottom:18px}.print-signoff{margin-top:28px;padding-top:14px;border-top:1px solid #aaa;break-inside:avoid}.print-signoff .sign-lines{display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-top:28px}.print-signoff .line{border-bottom:1px solid #777;height:28px}
+pre{white-space:pre-wrap;overflow-wrap:anywhere;background:#f7f7f7;padding:12px;border-radius:8px}
+.small{font-size:.88rem;color:#625d54}
+</style>
+</head>
+<body>
+<main>
+<h1>آزمایش مستقل تحلیل گزارش تاپ جنسیس</h1>
+<p class="note">این صفحه فقط برای آزمایش مربی است. فایل در این صفحه بارگذاری یا ذخیره نمی‌شود و اطلاعات نام و ایمیل عمداً در خروجی نمایش داده نمی‌شوند. پردازش PDF در مرورگر انجام می‌شود؛ برای بارگذاری کتابخانه‌های PDF و OCR اتصال اینترنت لازم است.</p>
+<label for="pdfFile">انتخاب گزارش PDF (حداکثر ۱۰ مگابایت):</label><br>
+<input id="pdfFile" type="file" accept="application/pdf,.pdf">
+<br><label for="pdfFile2">گزارش دوم (جدیدتر؛ اختیاری برای مقایسه):</label><br>
+<input id="pdfFile2" type="file" accept="application/pdf,.pdf">
+<br><label for="pdfFilesMore">گزارش‌های بعدی (برای سه نوبت یا بیشتر؛ به ترتیب قدیمی به جدید):</label><br>
+<input id="pdfFilesMore" type="file" accept="application/pdf,.pdf" multiple>
+<br><button id="run" type="button">شروع استخراج و تحلیل</button>
+<div id="status" role="status" aria-live="polite"></div>
+<div id="result"></div>
+<p class="small">تمام مقادیر استخراج‌شده نیازمند تأیید مربی هستند و این آزمایش هیچ داده‌ای را به پرونده شاگرد متصل نمی‌کند.</p>
+</main>
+<script src="./top-genesis-pdf-parser.js"></script>
+<script>
+(function(){
+"use strict";
+const embeddedMode=new URLSearchParams(window.location.search).get("embedded")==="1";
+if(embeddedMode)document.body.classList.add("embedded");
+function notifyParentHeight(){if(embeddedMode&&window.parent!==window)window.parent.postMessage({type:"top-genesis-pdf-height",height:document.documentElement.scrollHeight},"*");}
+window.addEventListener("load",notifyParentHeight);
+if(typeof ResizeObserver!=="undefined")new ResizeObserver(()=>requestAnimationFrame(notifyParentHeight)).observe(document.documentElement);
+const labels={
+height_cm:"قد",weight_kg:"وزن",body_fat_percent:"درصد چربی بدن",bmi:"BMI",
+waist_hip_ratio:"نسبت کمر به باسن",waist_hip_ratio_detailed:"نسبت کمر به باسن (جزئیات)",
+resting_metabolic_rate_kcal:"سوخت‌وساز پایه",daily_energy_expenditure_kcal:"مصرف انرژی روزانه",
+fat_mass_kg:"توده چربی",lean_mass_kg:"توده بدون چربی",waist_circumference_cm:"دور کمر",
+comparison_percentile:"درصد مقایسه‌ای",body_fat_rank_marker:"رتبه نمایش‌داده‌شده در نمودار",calf_left_cm:"ساق چپ",calf_right_cm:"ساق راست",forearm_left_cm:"ساعد چپ",forearm_right_cm:"ساعد راست",thigh_left_cm:"ران چپ",thigh_right_cm:"ران راست",upper_arm_left_cm:"بازوی چپ",upper_arm_right_cm:"بازوی راست",chest_region_cm:"ناحیه سینه",hip_region_cm:"ناحیه باسن",lower_waist_region_cm:"ناحیه کمر پایین",upper_waist_region_cm:"ناحیه کمر بالا"
+};
+const statusText={not_reported:"در این گزارش ثبت نشده",needs_coach_review:"نیازمند تأیید مربی",within_initial_range_needs_coach_review:"در محدوده کنترل اولیه؛ تأیید مربی همچنان لازم است",conflict_review:"تعارض؛ بررسی شود",invalid_range:"خارج از محدوده کنترل اولیه",consistent_rounding:"اختلاف جزئی؛ احتمالاً ناشی از گرد کردن"};
+const units={"raw_reported_unit":"واحد خام گزارش" ,"cm":"سانتی‌متر","kg":"کیلوگرم","%":"درصد","kg/m²":"kg/m²","ratio":"نسبت","kcal/day":"کیلوکالری در روز"};
+function escapeHTML(v){return String(v==null?'':v).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+function buildSimpleAnalysis(m){
+ const safe=k=>m[k]&&Number.isFinite(Number(m[k].value))&&!['invalid_range','conflict_review','not_reported'].includes(m[k].status)?Number(m[k].value):null;
+ const w=safe('weight_kg'),h=safe('height_cm'),f=safe('fat_mass_kg'),l=safe('lean_mass_kg'),p=safe('body_fat_percent'),b=safe('bmi'),r=safe('resting_metabolic_rate_kcal');
+ const cards=[];if(w!==null)cards.push(['وزن ثبت‌شده',w+' کیلوگرم','مقدار گزارش']);if(p!==null)cards.push(['درصد چربی',p+'٪','بدون طبقه‌بندی پزشکی']);if(b!==null)cards.push(['BMI گزارش',b,'تفسیر به سن و شرایط فرد وابسته است']);if(r!==null)cards.push(['سوخت‌وساز پایه',r+' kcal/day','معادل کالری مصرفی روزانه نیست']);
+ let o='<section class="analysis-box"><h2>خلاصه ساده و تصویری</h2><p class="small">این بخش فقط داده‌های گزارش و کنترل سازگاری را توضیح می‌دهد؛ تشخیص یا نسخه تمرین و تغذیه نیست.</p>';
+ if(cards.length)o+='<div class="analysis-grid">'+cards.map(c=>'<div class="analysis-card"><span>'+escapeHTML(c[0])+'</span><strong>'+escapeHTML(c[1])+'</strong><span>'+escapeHTML(c[2])+'</span></div>').join('')+'</div>';
+ if(w!==null&&h!==null&&b!==null){const x=w/Math.pow(h/100,2),d=Math.abs(x-b);o+='<p class="'+(d<=1?'analysis-good':'analysis-warn')+'">کنترل BMI: از قد و وزن '+x.toFixed(1)+' محاسبه می‌شود؛ گزارش '+b+'. '+(d<=1?'دو مقدار نزدیک‌اند.':'اختلاف نیازمند بازبینی است.')+'</p>';}
+ if(w!==null&&f!==null&&l!==null){const sum=f+l,d=Math.abs(sum-w);if(d<=1.5){const fw=Math.max(0,Math.min(100,f/sum*100)),lw=100-fw;o+='<h3>ترکیب وزن ثبت‌شده</h3><div class="chart-row"><span>توده چربی</span><div class="bar-track"><div class="bar-fill" style="width:'+fw.toFixed(1)+'%"></div></div><b>'+f.toFixed(1)+' kg</b></div><div class="chart-row"><span>بدون چربی</span><div class="bar-track"><div class="bar-fill" style="width:'+lw.toFixed(1)+'%"></div></div><b>'+l.toFixed(1)+' kg</b></div><p class="analysis-good">جمع دو بخش '+sum.toFixed(1)+' کیلوگرم است و با وزن کل سازگاری اولیه دارد.</p>';}else{o+='<p class="analysis-warn">جمع توده چربی و بدون چربی با وزن کل سازگار نیست؛ نمودار نمایش داده نشد.</p>';}}
+ if(w!==null&&f!==null&&p!==null&&w>0){const x=f/w*100,d=Math.abs(x-p);o+='<p class="'+(d<=1.5?'analysis-good':'analysis-warn')+'">درصد چربی محاسبه‌شده '+x.toFixed(1)+'٪؛ مقدار گزارش '+p+'٪. '+(d<=1.5?'سازگاری اولیه دیده می‌شود.':'اختلاف نیازمند بررسی است.')+'</p>';}
+ if(!cards.length)o+='<p>شاخص کافی برای ساخت خلاصه پیدا نشد.</p>';
+ o+='<p class="note">مقادیر مشکوک یا متعارض وارد محاسبات نمی‌شوند. مقدار کالری روزانه از روی RMR حدس زده نمی‌شود.</p></section>';return o;
+}
+window.TopGenesisSimpleAnalysis=buildSimpleAnalysis;
+
+function buildReportComparison(older,newer){
+ const keys=["weight_kg","body_fat_percent","bmi","fat_mass_kg","lean_mass_kg","waist_circumference_cm","waist_hip_ratio","resting_metabolic_rate_kcal","daily_energy_expenditure_kcal","calf_left_cm","calf_right_cm","thigh_left_cm","thigh_right_cm","upper_arm_left_cm","upper_arm_right_cm","forearm_left_cm","forearm_right_cm","chest_region_cm","hip_region_cm","lower_waist_region_cm","upper_waist_region_cm"];
+ const usable=x=>x&&Number.isFinite(Number(x.value))&&!["invalid_range","conflict_review","not_reported"].includes(x.status);
+ const rows=[];
+ keys.forEach(k=>{
+  const a=older&&older[k],b=newer&&newer[k];
+  if(!usable(a)||!usable(b)||a.unit!==b.unit)return;
+  const av=Number(a.value),bv=Number(b.value),diff=bv-av;
+  const raw=a.unit==="raw_reported_unit";
+  const unit=raw?"واحد خام":(units[b.unit]||b.unit||"");
+  const label=labels[k]||k;
+  let delta=diff>0?"افزایش":diff<0?"کاهش":"بدون تغییر";
+  if(k==="body_fat_percent")delta=diff>0?"افزایش درصدی":diff<0?"کاهش درصدی":"بدون تغییر";
+  const deltaText=(diff>0?"+":"")+diff.toFixed(2)+" "+(k==="body_fat_percent"?"واحد درصد":unit);
+  rows.push("<tr><td>"+escapeHTML(label)+"</td><td>"+escapeHTML(av)+"</td><td>"+escapeHTML(bv)+"</td><td>"+escapeHTML(deltaText)+"</td><td>"+delta+(raw?"؛ مقایسه خام، بدون تفسیر محیطی":"")+"</td></tr>");
+ });
+ if(!rows.length)return "<section class='analysis-box'><h2>مقایسه دو گزارش</h2><p class='analysis-warn'>شاخص مشترک و قابل‌مقایسه‌ای در هر دو گزارش پیدا نشد. مقادیر ناقص، متعارض یا با واحد متفاوت مقایسه نمی‌شوند.</p></section>";
+ return "<section class='analysis-box'><h2>مقایسه روند دو گزارش</h2><p class='small'>گزارش اول به‌عنوان قدیمی‌تر و گزارش دوم به‌عنوان جدیدتر در نظر گرفته شده است. این مقایسه صرفاً عددی است و به‌تنهایی علت تغییر را مشخص نمی‌کند.</p><table><thead><tr><th>شاخص</th><th>قدیمی‌تر</th><th>جدیدتر</th><th>تغییر</th><th>نتیجه</th></tr></thead><tbody>"+rows.join("")+"</tbody></table><p class='note'>اندازه‌های Region فقط به‌صورت اختلاف عدد خام نمایش داده می‌شوند؛ تا زمان تأیید معنای واحد دستگاه، افزایش یا کاهش آن‌ها را تغییر قطعی محیط بدن تلقی نکنید.</p></section>";
+}
+window.TopGenesisReportComparison=buildReportComparison;
+
+function buildMultiReportTrend(reports){
+ const keys=["weight_kg","body_fat_percent","bmi","fat_mass_kg","lean_mass_kg","resting_metabolic_rate_kcal"];
+ const usable=x=>x&&Number.isFinite(Number(x.value))&&!["invalid_range","conflict_review","not_reported"].includes(x.status);
+ const names={weight_kg:"وزن",body_fat_percent:"درصد چربی",bmi:"BMI",fat_mass_kg:"توده چربی",lean_mass_kg:"توده بدون چربی",resting_metabolic_rate_kcal:"سوخت‌وساز پایه"};
+ const output=[];
+ keys.forEach(k=>{
+  const points=reports.map((r,i)=>({label:"گزارش "+(i+1),item:r.metrics&&r.metrics[k]}));
+  if(points.length<3||points.some(p=>!usable(p.item)))return;
+  const unit=points[0].item.unit;
+  if(points.some(p=>p.item.unit!==unit))return;
+  const vals=points.map(p=>Number(p.item.value)),min=Math.min(...vals),max=Math.max(...vals),range=max-min;
+  const bars=vals.map((v,i)=>{const width=range===0?100:Math.max(4,((v-min)/range)*100);return "<div class='trend-point'><span>"+escapeHTML(points[i].label)+"</span><div class='bar-track'><div class='bar-fill' style='width:"+width.toFixed(1)+"%'></div></div><b>"+escapeHTML(v)+"</b></div>";}).join("");
+  const change=vals[vals.length-1]-vals[0],direction=change>0?"افزایش":change<0?"کاهش":"بدون تغییر";
+  const shownUnit=k==="body_fat_percent"?"واحد درصد":(units[unit]||unit||"");
+  output.push("<article class='trend-card'><h3>"+names[k]+"</h3>"+bars+"<p class='small'>تغییر از گزارش اول تا آخر: <strong>"+direction+" "+Math.abs(change).toFixed(2)+" "+shownUnit+"</strong></p></article>");
+ });
+ if(!output.length)return "<section class='analysis-box'><h2>روند چندمرحله‌ای</h2><p class='analysis-warn'>برای هیچ شاخصی در تمام گزارش‌ها داده معتبر و هم‌واحد پیدا نشد. نقاط ناقص یا متعارض حذف می‌شوند.</p></section>";
+ return "<section class='analysis-box'><h2>نمودار روند چندمرحله‌ای</h2><p class='small'>ترتیب فایل‌ها همان ترتیب انتخاب/ورود است؛ گزارش‌ها را از قدیمی به جدید انتخاب کنید. نمودارها تغییر نسبی بین نقاط را نشان می‌دهند و محور هر نمودار مستقل است.</p>"+output.join("")+"<p class='note'>این نمودار فقط روند عددی را نمایش می‌دهد و علت تغییر یا نتیجه پزشکی/تمرینی را تعیین نمی‌کند. شاخص‌های خام Region در این نمودار وارد نشده‌اند.</p></section>";
+}
+window.TopGenesisMultiReportTrend=buildMultiReportTrend;
+
+
+const fileInput=document.getElementById("pdfFile"),fileInput2=document.getElementById("pdfFile2"),fileInputMore=document.getElementById("pdfFilesMore"),button=document.getElementById("run"),status=document.getElementById("status"),result=document.getElementById("result");
+button.addEventListener("click",async()=>{
+ const file=fileInput.files&&fileInput.files[0];
+ if(!file){status.textContent="ابتدا یک فایل PDF انتخاب کنید.";return;}
+ button.disabled=true;result.innerHTML="";status.textContent="در حال خواندن صفحات PDF؛ در صورت نیاز OCR نیز اجرا می‌شود. لطفاً صفحه را نبندید.";
+ try{
+  const data=await window.TopGenesisPdfParser.extract(file);
+  const newerFile=fileInput2.files&&fileInput2.files[0];
+  const newerData=newerFile?await window.TopGenesisPdfParser.extract(newerFile):null;
+  const moreFiles=Array.from(fileInputMore.files||[]);
+  const moreData=[];
+  for(const extraFile of moreFiles){if(extraFile.size>10*1024*1024)throw new Error("حجم هر فایل باید حداکثر ۱۰ مگابایت باشد.");moreData.push(await window.TopGenesisPdfParser.extract(extraFile));}
+  const allReports=[data,...(newerData?[newerData]:[]),...moreData];
+  const rows=[];
+  Object.entries(data.metrics||{}).forEach(([key,item])=>{
+   if(key==="raw_body_measurements"||!item)return;
+   const alternatives=item.alternatives&&item.alternatives.length>1?"<br><span class='small'>مقادیر مشاهده‌شده: "+item.alternatives.map(escapeHTML).join("، ")+"</span>":"";
+   rows.push("<tr><td>"+escapeHTML(labels[key]||key)+"</td><td>"+escapeHTML(item.value)+" "+escapeHTML(units[item.unit]||item.unit||"")+alternatives+"</td><td class='"+(item.status==="invalid_range"||item.status==="conflict_review"?"bad":"review")+"'>"+escapeHTML(statusText[item.status]||item.status)+"</td></tr>");
+  });
+  let html=buildSimpleAnalysis(data.metrics)+(newerData?buildReportComparison(data.metrics,newerData.metrics):"")+(allReports.length>=3?buildMultiReportTrend(allReports):"")+"<section><h2>نتیجه استخراج گزارش اول</h2><p>تعداد صفحات: "+data.page_count+" | صفحات OCR: "+((data.ocr_pages||[]).join("، ")||"ندارد")+"</p><table><thead><tr><th>شاخص</th><th>مقدار</th><th>وضعیت</th></tr></thead><tbody>"+rows.join("")+"</tbody></table></section>";
+  const measures=data.metrics&&data.metrics.raw_body_measurements;
+  if(measures){html+="<section><h2>اندازه‌های خام گزارش‌شده دستگاه</h2><p class='note'>این مقادیر عیناً از گزارش دستگاه استخراج شده‌اند. ممکن است هر عدد حاصل چند نقطه یا چند مقطع از ناحیه باشد؛ تا زمان تأیید تعریف خروجی دستگاه، آن را محیط یک دور اندام در نظر نگیرید و با حدود استاندارد محیط تک‌نقطه‌ای مقایسه نکنید.</p><table><tr><th>ناحیه</th><th>مقدار خام گزارش‌شده</th><th>وضعیت</th></tr>"+Object.entries(measures).map(([k,v])=>"<tr><td>"+escapeHTML(labels[k]||k)+"</td><td>"+escapeHTML(v.raw_value)+" "+escapeHTML(units[v.unit]||v.unit||"")+"</td><td class='review'>نیازمند تأیید مربی؛ تفسیر ساختار اندازه‌گیری نامشخص</td></tr>").join("")+"</table></section>";}
+  const bilateral=data.metrics&&data.metrics.bilateral_measurement_review;
+  if(bilateral&&bilateral.length){html+="<section><h2>مقایسه دو سمت بدن</h2><p class='note'>این مقایسه فقط کنترل کیفیت گزارش است؛ به‌دلیل نامشخص بودن تعریف مقادیر Region، اختلاف‌ها را تشخیص پزشکی یا اختلاف قطعی محیط اندام تلقی نکنید.</p><table><tr><th>ناحیه</th><th>چپ</th><th>راست</th><th>اختلاف خام</th><th>وضعیت</th></tr>"+bilateral.map(x=>"<tr><td>"+escapeHTML(x.region)+"</td><td>"+escapeHTML(x.left_value)+"</td><td>"+escapeHTML(x.right_value)+"</td><td>"+escapeHTML(x.absolute_difference)+"</td><td class='"+(x.status==="coach_review_asymmetry"?"bad":"review")+"'>"+(x.status==="coach_review_asymmetry"?"نیازمند بررسی مربی":"اختلاف کمتر از آستانه هشدار اولیه")+"</td></tr>").join("")+"</table></section>";}
+  const missing=data.metrics&&data.metrics.missing_measurements;
+  if(missing){html+="<section><h2>اندازه‌های ثبت‌نشده</h2><p class='note'>این موارد صفر نیستند و از گزارش دیگری هم جایگزین نشده‌اند.</p><table><tr><th>ناحیه</th><th>وضعیت</th></tr>"+Object.entries(missing).map(([k,v])=>"<tr><td>"+escapeHTML(labels[k]||k)+"</td><td class='review'>در این گزارش ثبت نشده</td></tr>").join("")+"</table></section>";}
+  if(data.flags&&data.flags.length)html+="<section><h2>هشدارها</h2><ul>"+data.flags.map(x=>"<li>"+escapeHTML(x)+"</li>").join("")+"</ul></section>";
+  html+="<p class='note'>این نتیجه آزمایشی است؛ تأیید مربی الزامی است. اطلاعات هویتی از خروجی صفحه حذف شده‌اند.</p>";
+  html="<div class='print-only print-header'><h1>گزارش تحلیل ترکیب بدن</h1><p>باشگاه فیتنس سه‌قلعه | گزارش استخراج‌شده از دستگاه تاپ جنسیس</p><p>ترتیب گزارش‌ها مطابق ترتیب انتخاب فایل‌هاست.</p></div><div class='no-print'><button id='printReport' type='button'>چاپ / ذخیره به‌صورت PDF</button><p class='small'>در پنجره چاپ، گزینه «ذخیره به‌صورت PDF» را انتخاب کنید.</p></div>"+html+"<section class='print-signoff'><h3>یادداشت و تأیید مربی</h3><p>نکات تکمیلی: ........................................................................................................</p><div class='sign-lines'><div>نام و امضای مربی<div class='line'></div></div><div>تاریخ بررسی<div class='line'></div></div></div><p class='small'>این گزارش ابزار کمکی است؛ مقادیر استخراج‌شده باید با گزارش اصلی دستگاه و شرایط اندازه‌گیری تطبیق داده شوند.</p></section>";
+  result.innerHTML=html;
+  notifyParentHeight();
+  document.getElementById("printReport").addEventListener("click",()=>{document.body.classList.add("print-report");window.print();});
+  window.onafterprint=()=>document.body.classList.remove("print-report");
+  status.textContent=allReports.length>1?"استخراج و مقایسه "+allReports.length+" گزارش تمام شد. هیچ اطلاعاتی ذخیره یا ارسال نشد.":"استخراج تمام شد. هیچ اطلاعاتی ذخیره یا ارسال نشد.";
+ }catch(e){status.textContent="خطا: "+(e&&e.message?e.message:"استخراج ناموفق بود.");}
+ finally{button.disabled=false;notifyParentHeight();}
+});
+})();
+</script>
+</body>
+</html>
