@@ -260,9 +260,9 @@
         // key region labels are missing from the selectable text layer.
         const normalizedPageText = normalize(pageText);
         const hasMeasurementContext = /Body\s*Measurements|3D\s*Scan|\bRegion\b/i.test(normalizedPageText);
-        const hasRecognizableRegionLabel = /(?:Calf|Forearm|Thigh|Upper\s*Arm|Chest|Hip|Lower\s*Waist|Upper\s*Waist)\s*(?:Left|Right)?\s*Region/i.test(normalizedPageText);
+        const hasRecognizableRegionMeasurement = /(?:Calf|Forearm|Thigh|Upper\s*Arm|Chest|Hip|Lower\s*Waist|Upper\s*Waist)\s*(?:Left|Right)?\s*Region\s*[:=-]?\s*[0-9]/i.test(normalizedPageText);
         const needsTargetedOcr = normalizedPageText.length < 100 ||
-          (hasMeasurementContext && !hasRecognizableRegionLabel);
+          (hasMeasurementContext && !hasRecognizableRegionMeasurement);
         if (needsTargetedOcr) {
           if (!ocrWorker) {
             const Tesseract = await loadTesseract();
