@@ -137,15 +137,20 @@ window.TopGenesisMultiReportTrend=buildMultiReportTrend;
 const fileInput=document.getElementById("pdfFile"),fileInput2=document.getElementById("pdfFile2"),fileInputMore=document.getElementById("pdfFilesMore"),button=document.getElementById("run"),status=document.getElementById("status"),result=document.getElementById("result");
 button.addEventListener("click",async()=>{
  const file=fileInput.files&&fileInput.files[0];
- if(!file){status.textContent="ابتدا یک فایل PDF انتخاب کنید.";return;}
+ const newerFile=fileInput2.files&&fileInput2.files[0];
+ const moreFiles=Array.from(fileInputMore.files||[]);
+ if(!file){status.textContent="ابتدا فایل PDF اصلی را انتخاب کنید.";return;}
+ const selectedFiles=[file,...(newerFile?[newerFile]:[]),...moreFiles];
+ const invalidFile=selectedFiles.find(f=>!(/\.pdf$/i.test(f.name)||f.type==="application/pdf"));
+ if(invalidFile){status.textContent="فایل «"+invalidFile.name+"» از نوع PDF نیست.";return;}
+ const oversizedFile=selectedFiles.find(f=>f.size>10*1024*1024);
+ if(oversizedFile){status.textContent="حجم فایل «"+oversizedFile.name+"» بیشتر از ۱۰ مگابایت است. لطفاً فایل کوچک‌تری انتخاب کنید.";return;}
  button.disabled=true;result.innerHTML="";status.textContent="در حال خواندن صفحات PDF؛ در صورت نیاز OCR نیز اجرا می‌شود. لطفاً صفحه را نبندید.";
  try{
   const data=await window.TopGenesisPdfParser.extract(file);
-  const newerFile=fileInput2.files&&fileInput2.files[0];
   const newerData=newerFile?await window.TopGenesisPdfParser.extract(newerFile):null;
-  const moreFiles=Array.from(fileInputMore.files||[]);
   const moreData=[];
-  for(const extraFile of moreFiles){if(extraFile.size>10*1024*1024)throw new Error("حجم هر فایل باید حداکثر ۱۰ مگابایت باشد.");moreData.push(await window.TopGenesisPdfParser.extract(extraFile));}
+  for(const extraFile of moreFiles){moreData.push(await window.TopGenesisPdfParser.extract(extraFile));}
   const allReports=[data,...(newerData?[newerData]:[]),...moreData];
   const rows=[];
   Object.entries(data.metrics||{}).forEach(([key,item])=>{
