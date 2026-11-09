@@ -154,8 +154,15 @@
     ];
     const rawMeasures = {};
     bodyMeasures.forEach(([key, pattern]) => {
-      const value = numberAfter(text, pattern);
-      if (value == null) return;
+      // Prefer the final labeled value in the PDF. Some device pages list all
+      // region labels first and their values afterward, while the later
+      // Measurement Snapshots page pairs each label with its own value.
+      const globalPattern = new RegExp(pattern.source, pattern.flags + "g");
+      const matches = [...text.matchAll(globalPattern)];
+      const value = matches.length
+        ? Number(String(matches[matches.length - 1][1]).replace(",", "."))
+        : null;
+      if (value == null || !Number.isFinite(value)) return;
       rawMeasures[key] = {
         ...metric(value, "raw_reported_unit", "3D Scan and Measurements", "needs_coach_review"),
         raw_value: value,
