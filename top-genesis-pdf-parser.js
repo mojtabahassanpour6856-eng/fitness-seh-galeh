@@ -76,7 +76,8 @@
     const rmr = numberAfter(text, /\bRMR\s*([0-9]+(?:\.[0-9]+)?)\s*calories?\s*\/\s*day/i);
     if (rmr != null) out.resting_metabolic_rate_kcal = metric(rmr, "kcal/day", "Activity & Caloric Expenditure / RMR");
 
-    const tdee = numberAfter(text, /(?:Caloric\s*Expenditure|total\s*calories\s*you\s*burn\s*each\s*day)[^0-9]{0,100}([0-9]+(?:\.[0-9]+)?)\s*Calories?\s*\/\s*day/i);
+    const calorieValues = [...text.matchAll(/([0-9]+(?:\.[0-9]+)?)\s*Calories?\s*\/\s*day/gi)].map(m => Number(m[1]));
+    const tdee = calorieValues.length >= 2 ? calorieValues[1] : null;
     if (tdee != null) out.daily_energy_expenditure_kcal = metric(tdee, "kcal/day", "Activity & Caloric Expenditure / Caloric Expenditure");
 
     const fatMass = numberAfter(text, /([0-9]+(?:\.[0-9]+)?)\s*kg\s*of\s*fat\s*mass/i);
