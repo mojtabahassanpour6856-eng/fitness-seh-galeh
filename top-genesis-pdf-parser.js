@@ -126,18 +126,18 @@
     }
 
     const bodyMeasures = [
-      ["calf_left_cm", /Calf\s*Left\s*Region\s*([0-9]+(?:\\.[0-9]+)?)/i],
+      ["calf_left_cm", /Calf\s*Left\s*Region\s*([0-9]+(?:\.[0-9]+)?)/i],
       ["forearm_left_cm", /Forearm\s*Left\s*Region\s*([0-9]+(?:\.[0-9]+)?)/i],
       ["forearm_right_cm", /Forearm\s*Right\s*Region\s*([0-9]+(?:\.[0-9]+)?)/i],
-      ["calf_right_cm", /Calf\s*Right\s*Region\s*([0-9]+(?:\\.[0-9]+)?)/i],
-      ["chest_region_cm", /Chest\s*Region\s*([0-9]+(?:\\.[0-9]+)?)/i],
-      ["hip_region_cm", /Hip\s*Region\s*([0-9]+(?:\\.[0-9]+)?)/i],
-      ["lower_waist_region_cm", /Lower\s*Waist\s*Region\s*([0-9]+(?:\\.[0-9]+)?)/i],
-      ["thigh_left_cm", /Thigh\s*Left\s*Region\s*([0-9]+(?:\\.[0-9]+)?)/i],
-      ["thigh_right_cm", /Thigh\s*Right\s*Region\s*([0-9]+(?:\\.[0-9]+)?)/i],
-      ["upper_arm_left_cm", /Upper\s*Arm\s*Left\s*Region\s*([0-9]+(?:\\.[0-9]+)?)/i],
-      ["upper_arm_right_cm", /Upper\s*Arm\s*Right\s*Region\s*([0-9]+(?:\\.[0-9]+)?)/i],
-      ["upper_waist_region_cm", /Upper\s*Waist\s*Region\s*([0-9]+(?:\\.[0-9]+)?)/i]
+      ["calf_right_cm", /Calf\s*Right\s*Region\s*([0-9]+(?:\.[0-9]+)?)/i],
+      ["chest_region_cm", /Chest\s*Region\s*([0-9]+(?:\.[0-9]+)?)/i],
+      ["hip_region_cm", /Hip\s*Region\s*([0-9]+(?:\.[0-9]+)?)/i],
+      ["lower_waist_region_cm", /Lower\s*Waist\s*Region\s*([0-9]+(?:\.[0-9]+)?)/i],
+      ["thigh_left_cm", /Thigh\s*Left\s*Region\s*([0-9]+(?:\.[0-9]+)?)/i],
+      ["thigh_right_cm", /Thigh\s*Right\s*Region\s*([0-9]+(?:\.[0-9]+)?)/i],
+      ["upper_arm_left_cm", /Upper\s*Arm\s*Left\s*Region\s*([0-9]+(?:\.[0-9]+)?)/i],
+      ["upper_arm_right_cm", /Upper\s*Arm\s*Right\s*Region\s*([0-9]+(?:\.[0-9]+)?)/i],
+      ["upper_waist_region_cm", /Upper\s*Waist\s*Region\s*([0-9]+(?:\.[0-9]+)?)/i]
     ];
     const rawMeasures = {};
     bodyMeasures.forEach(([key, pattern]) => {
