@@ -75,6 +75,9 @@ try {
   assert.match(pageInfo, /161/);
   assert.match(pageInfo, /57/);
   assert.match(pageInfo, /24.5/);
+  assert.match(pageInfo, /157\.69/, "Existing calf region value was not extracted.");
+  assert.match(pageInfo, /680\.13/, "Existing hip region value was not extracted.");
+  assert.match(pageInfo, /ساعد چپ.*ثبت نشده/s, "Missing forearm was not reported as missing.");
   assert.match(pageInfo, /69\.87/, "Tesseract did not recognize the synthetic waist value from the raster page.");
   assert.deepEqual(pageErrors, [], `Browser page errors: ${pageErrors.join("; ")}`);
   console.log("PASS: Chromium loaded PDF.js, parsed selectable PDF text, initialized Tesseract OCR on the image-only page, and rendered extracted metrics.");
