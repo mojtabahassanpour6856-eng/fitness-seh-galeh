@@ -221,6 +221,30 @@ try {
   assert.match(pageInfo, /ساعد چپ.*ثبت نشده/s, "Missing forearm was not reported as missing.");
   assert.match(pageInfo, /69\.87/, "Tesseract did not recognize the synthetic waist value from the raster page.");
   assert.match(pageInfo, /123\.456/, "Targeted OCR did not recover the region value from the semi-text page.");
+  const simpleAnalysis = await page.evaluate(() => window.TopGenesisSimpleAnalysis({
+    height_cm:{value:161,status:"within_initial_range_needs_coach_review"},
+    weight_kg:{value:57,status:"within_initial_range_needs_coach_review"},
+    body_fat_percent:{value:24.5,status:"within_initial_range_needs_coach_review"},
+    bmi:{value:22,status:"within_initial_range_needs_coach_review"},
+    fat_mass_kg:{value:14,status:"needs_coach_review"},
+    lean_mass_kg:{value:43,status:"needs_coach_review"},
+    resting_metabolic_rate_kcal:{value:1352,status:"within_initial_range_needs_coach_review"}
+  }));
+  assert.match(simpleAnalysis,/خلاصه ساده و تصویری/);
+  assert.match(simpleAnalysis,/ترکیب وزن ثبت‌شده/,"Consistent fat and lean mass should render a composition chart.");
+  assert.match(simpleAnalysis,/کنترل BMI/,"Height, weight and BMI should be cross-checked.");
+  assert.match(simpleAnalysis,/درصد چربی محاسبه‌شده/,"Body-fat percentage should be cross-checked against fat mass.");
+  assert.match(simpleAnalysis,/معادل کالری مصرفی روزانه نیست/,"RMR must not be presented as daily calorie expenditure.");
+  const suspiciousAnalysis = await page.evaluate(() => window.TopGenesisSimpleAnalysis({
+    weight_kg:{value:57,status:"within_initial_range_needs_coach_review"},
+    fat_mass_kg:{value:14,status:"needs_coach_review"},
+    lean_mass_kg:{value:43,status:"conflict_review"},
+    bmi:{value:90,status:"invalid_range"}
+  }));
+  assert.doesNotMatch(suspiciousAnalysis,/ترکیب وزن ثبت‌شده/,"Conflicting metrics must not enter the chart.");
+  assert.doesNotMatch(suspiciousAnalysis,/BMI گزارش/,"Invalid BMI must not appear in the summary cards.");
+  const escaped = await page.evaluate(() => window.TopGenesisSimpleAnalysis({weight_kg:{value:"<img src=x>",status:"needs_coach_review"}}));
+  assert.doesNotMatch(escaped,/<img src=x>/,"Extracted text must be HTML-escaped.");
   assert.deepEqual(pageErrors, [], `Browser page errors: ${pageErrors.join("; ")}`);
   console.log("PASS: Chromium loaded PDF.js, parsed selectable PDF text, ran OCR on image-only and semi-text measurement pages, and rendered extracted metrics.");
 } finally {
