@@ -62,6 +62,20 @@
     return Number.isFinite(value) ? value : null;
   }
 
+  function numericCandidates(text, regex) {
+    return [...text.matchAll(regex)].map(match => Number(String(match[1]).replace(",", "."))).filter(Number.isFinite);
+  }
+
+  function setCandidateMetric(out, key, values, unit, source, tolerance, flags, label) {
+    if (!values.length) return;
+    const unique = [...new Set(values)];
+    const conflict = Math.max(...unique) - Math.min(...unique) > tolerance;
+    out[key] = metric(values[0], unit, source, conflict ? "conflict_review" : "needs_coach_review");
+    if (unique.length > 1) out[key].alternatives = unique;
+    if (conflict) flags.push("چند مقدار متفاوت برای " + label + " پیدا شد؛ مقدار نخست فقط گزینه اولیه است و باید با گزارش تطبیق داده شود.");
+    else if (unique.length > 1) out[key].status = "consistent_rounding";
+  }
+
   function metric(value, unit, source, status) {
     return value == null ? null : { value, unit, source, status: status || "needs_coach_review" };
   }
@@ -71,34 +85,31 @@
     const out = {};
     const flags = [];
 
-    const heightWeight = text.match(/(?:Height\s*&\s*Weight|Height\s+and\s+Weight)\s*([0-9]+(?:\.[0-9]+)?)\s*cm\s*&?\s*([0-9]+(?:\.[0-9]+)?)\s*kg/i);
-    if (heightWeight) {
-      out.height_cm = metric(Number(heightWeight[1]), "cm", "Basic Info / Height & Weight");
-      out.weight_kg = metric(Number(heightWeight[2]), "kg", "Basic Info / Height & Weight");
+    const heightWeightMatches = [...text.matchAll(/(?:Height\\s*&\\s*Weight|Height\\s+and\\s+Weight)\\s*([0-9]+(?:\\.[0-9]+)?)\\s*cm\\s*&?\\s*([0-9]+(?:\\.[0-9]+)?)\\s*kg/gi)];
+    if (heightWeightMatches.length) {
+      setCandidateMetric(out, "height_cm", heightWeightMatches.map(m => Number(m[1])), "cm", "Basic Info / Height & Weight", 0.5, flags, "قد");
+      setCandidateMetric(out, "weight_kg", heightWeightMatches.map(m => Number(m[2])), "kg", "Basic Info / Height & Weight", 0.5, flags, "وزن");
+    } else {
+      setCandidateMetric(out, "height_cm", numericCandidates(text, /\\bHeight\\s*[:=-]?\\s*([0-9]+(?:\\.[0-9]+)?)\\s*cm/gi), "cm", "Basic Info / Height", 0.5, flags, "قد");
+      setCandidateMetric(out, "weight_kg", numericCandidates(text, /\\bWeight\\s*[:=-]?\\s*([0-9]+(?:\\.[0-9]+)?)\\s*kg/gi), "kg", "Basic Info / Weight", 0.5, flags, "وزن");
     }
 
-    const fatValues = [...text.matchAll(/Body\s*Fat\s*%?\s*([0-9]+(?:\.[0-9]+)?)\s*%/gi)].map(m => Number(m[1]));
-    if (fatValues.length) {
-      // Never discard a legitimate value (including exactly 25%) by special case.
-      // Keep the first occurrence as the primary candidate and expose disagreements.
-      const exact = fatValues[0];
-      const conflict = Math.max(...fatValues) - Math.min(...fatValues) > 1;
-      out.body_fat_percent = metric(exact, "%", "Basic Info / Fitness & Health Metrics", conflict ? "conflict_review" : "needs_coach_review");
-      if (conflict) out.body_fat_percent.alternatives = [...new Set(fatValues)];
-    }
+    const fatValues = numericCandidates(text, /Body\\s*Fat\\s*%?\\s*[:=-]?\\s*([0-9]+(?:\\.[0-9]+)?)\\s*%/gi);
+    setCandidateMetric(out, "body_fat_percent", fatValues, "%", "Basic Info / Fitness & Health Metrics", 1, flags, "درصد چربی بدن");
 
-    const bmi = numberAfter(text, /\bBMI\s*([0-9]+(?:\.[0-9]+)?)/i);
-    if (bmi != null) out.bmi = metric(bmi, "kg/m²", "Basic Info / Fitness & Health Metrics");
+    const bmiValues = numericCandidates(text, /\\bBMI\\s*[:=-]?\\s*([0-9]+(?:\\.[0-9]+)?)/gi);
+    setCandidateMetric(out, "bmi", bmiValues, "kg/m²", "Basic Info / Fitness & Health Metrics", 0.5, flags, "BMI");
 
-    const whr = numberAfter(text, /Waist\s*[- ]?to\s*[- ]?Hip\s*Ratio\s*([0-9]+(?:\.[0-9]+)?)/i);
-    if (whr != null) out.waist_hip_ratio = metric(whr, "ratio", "Basic Info / Fitness & Health Metrics");
+    const whrValues = numericCandidates(text, /Waist\\s*[- ]?to\\s*[- ]?Hip\\s*Ratio\\s*[:=-]?\\s*([0-9]+(?:\\.[0-9]+)?)/gi);
+    setCandidateMetric(out, "waist_hip_ratio", whrValues, "ratio", "Basic Info / Fitness & Health Metrics", 0.01, flags, "نسبت کمر به باسن");
 
-    const rmr = numberAfter(text, /\bRMR\s*([0-9]+(?:\.[0-9]+)?)\s*calories?\s*\/\s*day/i);
-    if (rmr != null) out.resting_metabolic_rate_kcal = metric(rmr, "kcal/day", "Activity & Caloric Expenditure / RMR");
+    const rmrValues = numericCandidates(text, /(?:\\bRMR\\b|Resting\\s*Metabolic\\s*Rate)\\s*[:=-]?\\s*([0-9]+(?:\\.[0-9]+)?)\\s*(?:kcal|calories?)\\s*\\/?\\s*day/gi);
+    setCandidateMetric(out, "resting_metabolic_rate_kcal", rmrValues, "kcal/day", "Activity & Caloric Expenditure / RMR", 25, flags, "سوخت‌وساز پایه");
 
-    const calorieValues = [...text.matchAll(/([0-9]+(?:\.[0-9]+)?)\s*Calories?\s*\/\s*day/gi)].map(m => Number(m[1]));
-    const tdee = calorieValues.length >= 2 ? calorieValues[calorieValues.length - 1] : null;
-    if (tdee != null) out.daily_energy_expenditure_kcal = metric(tdee, "kcal/day", "Activity & Caloric Expenditure / Caloric Expenditure");
+    // TDEE is accepted only when the value is explicitly tied to a daily-expenditure
+    // label. Never infer it as the last generic Calories/day number.
+    const tdeeValues = numericCandidates(text, /(?:TDEE|Total\\s*Daily\\s*Energy\\s*Expenditure|Daily\\s*Energy\\s*Expenditure|Caloric\\s*Expenditure)\\s*[:=-]?\\s*([0-9]+(?:\\.[0-9]+)?)\\s*(?:kcal|calories?)\\s*\\/?\\s*day/gi);
+    setCandidateMetric(out, "daily_energy_expenditure_kcal", tdeeValues, "kcal/day", "Activity & Caloric Expenditure / explicit daily expenditure label", 50, flags, "مصرف انرژی روزانه");
 
     const fatMass = numberAfter(text, /([0-9]+(?:\.[0-9]+)?)\s*kg\s*of\s*fat\s*mass/i);
     if (fatMass != null) out.fat_mass_kg = metric(fatMass, "kg", "Body Composition");
