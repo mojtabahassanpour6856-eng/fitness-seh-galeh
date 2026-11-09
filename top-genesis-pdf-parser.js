@@ -103,12 +103,22 @@
     const whrValues = numericCandidates(text, /Waist\s*[- ]?to\s*[- ]?Hip\s*Ratio\s*[:=-]?\s*([0-9]+(?:\.[0-9]+)?)/gi);
     setCandidateMetric(out, "waist_hip_ratio", whrValues, "ratio", "Basic Info / Fitness & Health Metrics", 0.01, flags, "نسبت کمر به باسن");
 
-    const rmrValues = numericCandidates(text, /(?:\bRMR\b|Resting\s*Metabolic\s*Rate)\s*[:=-]?\s*([0-9]+(?:\.[0-9]+)?)\s*(?:kcal|calories?)\s*\/?\s*day/gi);
+    let rmrValues = numericCandidates(text, /(?:\bRMR\b|Resting\s*Metabolic\s*Rate)\s*[:=-]?\s*([0-9]+(?:\.[0-9]+)?)\s*(?:kcal|calories?)\s*\/?\s*day/gi);
+    // OCR may separate the RMR heading from its graphical value with explanatory text.
+    if (!rmrValues.length && /Resting\s*Metabolic\s*Rate|\bRMR\b/i.test(text)) {
+      const dayValues = numericCandidates(text, /([0-9]{3,4})\s*(?:kcal|calories?)\s*\/?\s*day/gi);
+      if (dayValues.length) rmrValues = [dayValues[0]];
+    }
     setCandidateMetric(out, "resting_metabolic_rate_kcal", rmrValues, "kcal/day", "Activity & Caloric Expenditure / RMR", 25, flags, "سوخت‌وساز پایه");
 
     // TDEE is accepted only when the value is explicitly tied to a daily-expenditure
     // label. Never infer it as the last generic Calories/day number.
-    const tdeeValues = numericCandidates(text, /(?:TDEE|Total\s*Daily\s*Energy\s*Expenditure|Daily\s*Energy\s*Expenditure|Caloric\s*Expenditure)\s*[:=-]?\s*([0-9]+(?:\.[0-9]+)?)\s*(?:kcal|calories?)\s*\/?\s*day/gi);
+    let tdeeValues = numericCandidates(text, /(?:TDEE|Total\s*Daily\s*Energy\s*Expenditure|Daily\s*Energy\s*Expenditure|Caloric\s*Expenditure)\s*[:=-]?\s*([0-9]+(?:\.[0-9]+)?)\s*(?:kcal|calories?)\s*\/?\s*day/gi);
+    // OCR may return the two graphical Calories/day values in reading order: RMR, then total expenditure.
+    if (!tdeeValues.length && /Caloric\s*Expenditure/i.test(text)) {
+      const dayValues = numericCandidates(text, /([0-9]{3,4})\s*(?:kcal|calories?)\s*\/?\s*day/gi);
+      if (dayValues.length > 1) tdeeValues = [dayValues[1]];
+    }
     setCandidateMetric(out, "daily_energy_expenditure_kcal", tdeeValues, "kcal/day", "Activity & Caloric Expenditure / explicit daily expenditure label", 50, flags, "مصرف انرژی روزانه");
 
     const fatMass = numberAfter(text, /([0-9]+(?:\.[0-9]+)?)\s*kg\s*of\s*fat\s*mass/i);
@@ -284,8 +294,11 @@
         const normalizedPageText = normalize(pageText);
         const hasMeasurementContext = /Body\s*Measurements|3D\s*Scan|\bRegion\b/i.test(normalizedPageText);
         const hasRecognizableRegionMeasurement = /(?:Calf|Forearm|Thigh|Upper\s*Arm|Chest|Hip|Lower\s*Waist|Upper\s*Waist)\s*(?:Left|Right)?\s*Region\s*[:=-]?\s*[0-9]/i.test(normalizedPageText);
+        const hasCalorieLabels = /Resting\s*Metabolic\s*Rate|\bRMR\b|Caloric\s*Expenditure/i.test(normalizedPageText);
+        const hasCalorieValues = /[0-9]{3,4}\s*(?:kcal|calories?)\s*\/?\s*day/i.test(normalizedPageText);
         const needsTargetedOcr = normalizedPageText.length < 100 ||
-          (hasMeasurementContext && !hasRecognizableRegionMeasurement);
+          (hasMeasurementContext && !hasRecognizableRegionMeasurement) ||
+          (hasCalorieLabels && !hasCalorieValues);
         if (needsTargetedOcr) {
           if (!ocrWorker) {
             const Tesseract = await loadTesseract();
