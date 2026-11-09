@@ -101,7 +101,7 @@ function buildMultiReportTrend(reports){
   const bars=vals.map((v,i)=>{const width=range===0?100:Math.max(4,((v-min)/range)*100);return "<div class='trend-point'><span>"+escapeHTML(points[i].label)+"</span><div class='bar-track'><div class='bar-fill' style='width:"+width.toFixed(1)+"%'></div></div><b>"+escapeHTML(v)+"</b></div>";}).join("");
   const change=vals[vals.length-1]-vals[0],direction=change>0?"افزایش":change<0?"کاهش":"بدون تغییر";
   const shownUnit=k==="body_fat_percent"?"واحد درصد":(units[unit]||unit||"");
-  output.push("<article class='trend-card'><h3>"+names[k]+"</h3>"+bars+"<p class='small'>تغییر از گزارش اول تا آخر: <strong>"+direction+" "+(change>0?"+":"")+change.toFixed(2)+" "+shownUnit+"</strong></p></article>");
+  output.push("<article class='trend-card'><h3>"+names[k]+"</h3>"+bars+"<p class='small'>تغییر از گزارش اول تا آخر: <strong>"+direction+" "+Math.abs(change).toFixed(2)+" "+shownUnit+"</strong></p></article>");
  });
  if(!output.length)return "<section class='analysis-box'><h2>روند چندمرحله‌ای</h2><p class='analysis-warn'>برای هیچ شاخصی در تمام گزارش‌ها داده معتبر و هم‌واحد پیدا نشد. نقاط ناقص یا متعارض حذف می‌شوند.</p></section>";
  return "<section class='analysis-box'><h2>نمودار روند چندمرحله‌ای</h2><p class='small'>ترتیب فایل‌ها همان ترتیب انتخاب/ورود است؛ گزارش‌ها را از قدیمی به جدید انتخاب کنید. نمودارها تغییر نسبی بین نقاط را نشان می‌دهند و محور هر نمودار مستقل است.</p>"+output.join("")+"<p class='note'>این نمودار فقط روند عددی را نمایش می‌دهد و علت تغییر یا نتیجه پزشکی/تمرینی را تعیین نمی‌کند. شاخص‌های خام Region در این نمودار وارد نشده‌اند.</p></section>";
