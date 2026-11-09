@@ -281,7 +281,29 @@ try {
   assert.doesNotMatch(suspiciousAnalysis,/BMI گزارش/,"Invalid BMI must not appear in the summary cards.");
   const escaped = await page.evaluate(() => window.TopGenesisSimpleAnalysis({weight_kg:{value:"<img src=x>",status:"needs_coach_review"}}));
   assert.doesNotMatch(escaped,/<img src=x>/,"Extracted text must be HTML-escaped.");
+
   assert.deepEqual(pageErrors, [], `Browser page errors: ${pageErrors.join("; ")}`);
+
+  // Verify the coach-only app entry mounts in the existing analysis area,
+  // embeds the isolated analyzer, and stays hidden for trainee sessions.
+  const integrationPage = await browser.newPage();
+  await integrationPage.goto(`http://127.0.0.1:${address.port}/top-genesis-pdf-test.html`);
+  await integrationPage.evaluate(() => {
+    const anchor = document.createElement("section");
+    anchor.id = "bodyAnalysisEntryPanel";
+    document.body.appendChild(anchor);
+    window.authProfile = { role: "coach" };
+  });
+  await integrationPage.addScriptTag({ path: path.join(root, "top-genesis-pdf-app-embed.js") });
+  await integrationPage.waitForSelector("#topGenesisPdfAnalyzerPanel");
+  assert.equal(await integrationPage.locator("#topGenesisPdfAnalyzerPanel").evaluate(el => el.style.display), "block");
+  assert.match(await integrationPage.locator("#topGenesisPdfAnalyzerFrame").getAttribute("src"), /top-genesis-pdf-test\.html\?embedded=1/);
+  await integrationPage.evaluate(() => { window.authProfile = { role: "trainee" }; });
+  await integrationPage.waitForFunction(() => document.querySelector("#topGenesisPdfAnalyzerPanel")?.style.display === "none", null, { timeout: 3000 });
+  const archiveSource = fs.readFileSync(path.join(root, "top-genesis-archive.js"), "utf8");
+  assert.match(archiveSource, /top-genesis-pdf-app-embed\.js/, "The app's existing archive entry must load the new coach-only analyzer card.");
+  await integrationPage.close();
+
   console.log("PASS: Chromium loaded PDF.js, parsed selectable PDF text, ran OCR on image-only and semi-text measurement pages, and rendered extracted metrics.");
 } finally {
   await browser.close();
