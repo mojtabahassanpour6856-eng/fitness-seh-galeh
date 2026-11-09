@@ -43,9 +43,9 @@ height_cm:"قد",weight_kg:"وزن",body_fat_percent:"درصد چربی بدن",
 waist_hip_ratio:"نسبت کمر به باسن",waist_hip_ratio_detailed:"نسبت کمر به باسن (جزئیات)",
 resting_metabolic_rate_kcal:"سوخت‌وساز پایه",daily_energy_expenditure_kcal:"مصرف انرژی روزانه",
 fat_mass_kg:"توده چربی",lean_mass_kg:"توده بدون چربی",waist_circumference_cm:"دور کمر",
-comparison_percentile:"درصد مقایسه‌ای",body_fat_rank_marker:"رتبه نمایش‌داده‌شده در نمودار"
+comparison_percentile:"درصد مقایسه‌ای",body_fat_rank_marker:"رتبه نمایش‌داده‌شده در نمودار",forearm_left_cm:"ساعد چپ",forearm_right_cm:"ساعد راست"
 };
-const statusText={needs_coach_review:"نیازمند تأیید مربی",conflict_review:"تعارض؛ بررسی شود",invalid_range:"خارج از محدوده معتبر",consistent_rounding:"اختلاف ناشی از گرد کردن"};
+const statusText={not_reported:"در این گزارش ثبت نشده",needs_coach_review:"نیازمند تأیید مربی",conflict_review:"تعارض؛ بررسی شود",invalid_range:"خارج از محدوده معتبر",consistent_rounding:"اختلاف ناشی از گرد کردن"};
 const units={"cm":"سانتی‌متر","kg":"کیلوگرم","%":"درصد","kg/m²":"kg/m²","ratio":"نسبت","kcal/day":"کیلوکالری در روز"};
 const fileInput=document.getElementById("pdfFile"),button=document.getElementById("run"),status=document.getElementById("status"),result=document.getElementById("result");
 button.addEventListener("click",async()=>{
@@ -62,6 +62,8 @@ button.addEventListener("click",async()=>{
   let html="<section><h2>نتیجه استخراج</h2><p>تعداد صفحات: "+data.page_count+" | صفحات OCR: "+((data.ocr_pages||[]).join("، ")||"ندارد")+"</p><table><thead><tr><th>شاخص</th><th>مقدار</th><th>وضعیت</th></tr></thead><tbody>"+rows.join("")+"</tbody></table></section>";
   const measures=data.metrics&&data.metrics.raw_body_measurements;
   if(measures){html+="<section><h2>اندازه‌های خام گزارش‌شده دستگاه</h2><p class='note'>این مقادیر عیناً از گزارش دستگاه استخراج شده‌اند. ممکن است هر عدد حاصل چند نقطه یا چند مقطع از ناحیه باشد؛ تا زمان تأیید تعریف خروجی دستگاه، آن را محیط یک دور اندام در نظر نگیرید و با حدود استاندارد محیط تک‌نقطه‌ای مقایسه نکنید.</p><table><tr><th>ناحیه</th><th>مقدار خام گزارش‌شده</th><th>وضعیت</th></tr>"+Object.entries(measures).map(([k,v])=>"<tr><td>"+k+"</td><td>"+v.raw_value+" "+(units[v.unit]||v.unit||"")+"</td><td class='review'>نیازمند تأیید مربی؛ تفسیر ساختار اندازه‌گیری نامشخص</td></tr>").join("")+"</table></section>";}
+  const missing=data.metrics&&data.metrics.missing_measurements;
+  if(missing){html+="<section><h2>اندازه‌های ثبت‌نشده</h2><p class='note'>این موارد صفر نیستند و از گزارش دیگری هم جایگزین نشده‌اند.</p><table><tr><th>ناحیه</th><th>وضعیت</th></tr>"+Object.entries(missing).map(([k,v])=>"<tr><td>"+(labels[k]||k)+"</td><td class='review'>در این گزارش ثبت نشده</td></tr>").join("")+"</table></section>";}
   if(data.flags&&data.flags.length)html+="<section><h2>هشدارها</h2><ul>"+data.flags.map(x=>"<li>"+x+"</li>").join("")+"</ul></section>";
   html+="<p class='note'>این نتیجه آزمایشی است؛ تأیید مربی الزامی است. اطلاعات هویتی از خروجی صفحه حذف شده‌اند.</p>";
   result.innerHTML=html;status.textContent="استخراج تمام شد. هیچ اطلاعاتی ذخیره یا ارسال نشد.";
