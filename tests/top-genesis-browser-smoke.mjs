@@ -37,6 +37,18 @@ try {
     ctx.fillText("Your waist measures 69.87 cm", 45, 180);
     return canvas.toDataURL("image/png");
   });
+  const regionImageDataUrl = await imagePage.evaluate(() => {
+    const canvas = document.createElement("canvas");
+    canvas.width = 1800;
+    canvas.height = 300;
+    const ctx = canvas.getContext("2d");
+    ctx.fillStyle = "#ffffff";
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.fillStyle = "#000000";
+    ctx.font = "bold 72px Arial";
+    ctx.fillText("Forearm Right Region 123.456", 35, 180);
+    return canvas.toDataURL("image/png");
+  });
   await imagePage.close();
 
   const pdfDoc = await PDFDocument.create();
@@ -50,6 +62,17 @@ try {
   const pngBytes = Buffer.from(imageDataUrl.split(",")[1], "base64");
   const ocrImage = await pdfDoc.embedPng(pngBytes);
   ocrPage.drawImage(ocrImage, { x: 40, y: 400, width: 530, height: 114 });
+
+  // Semi-text page: selectable body-measurement heading and enough prose to
+  // exceed the old 100-character cutoff, while the actual region value is raster.
+  const mixedPage = pdfDoc.addPage([612, 792]);
+  mixedPage.drawText(
+    "Body Measurements (cm). This page includes explanatory selectable text about the scan report, but the measurement labels and values are embedded in the chart image rather than the PDF text layer.",
+    { x: 40, y: 700, size: 10, font, color: rgb(0, 0, 0), maxWidth: 530, lineHeight: 16 }
+  );
+  const regionPngBytes = Buffer.from(regionImageDataUrl.split(",")[1], "base64");
+  const regionImage = await pdfDoc.embedPng(regionPngBytes);
+  mixedPage.drawImage(regionImage, { x: 40, y: 400, width: 530, height: 88 });
   const pdfBytes = await pdfDoc.save();
 
   const page = await browser.newPage();
@@ -70,8 +93,8 @@ try {
   const status = await page.locator("#status").innerText();
   assert.match(status, /استخراج تمام شد/, `Parser did not complete: ${status}`);
   const pageInfo = await page.locator("#result").innerText();
-  assert.match(pageInfo, /تعداد صفحات: 2/);
-  assert.match(pageInfo, /صفحات OCR: 2/);
+  assert.match(pageInfo, /تعداد صفحات: 3/);
+  assert.match(pageInfo, /صفحات OCR: 2، 3/);
   assert.match(pageInfo, /161/);
   assert.match(pageInfo, /57/);
   assert.match(pageInfo, /24.5/);
@@ -94,7 +117,7 @@ try {
   assert.match(pageInfo, /ساعد چپ.*ثبت نشده/s, "Missing forearm was not reported as missing.");
   assert.match(pageInfo, /69\.87/, "Tesseract did not recognize the synthetic waist value from the raster page.");
   assert.deepEqual(pageErrors, [], `Browser page errors: ${pageErrors.join("; ")}`);
-  console.log("PASS: Chromium loaded PDF.js, parsed selectable PDF text, initialized Tesseract OCR on the image-only page, and rendered extracted metrics.");
+  console.log("PASS: Chromium loaded PDF.js, parsed selectable PDF text, ran OCR on image-only and semi-text measurement pages, and rendered extracted metrics.");
 } finally {
   await browser.close();
   await new Promise(resolve => server.close(resolve));
