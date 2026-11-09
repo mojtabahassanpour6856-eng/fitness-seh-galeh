@@ -7,6 +7,8 @@ on:
     paths:
       - "top-genesis-pdf-parser.js"
       - "top-genesis-pdf-test.html"
+      - "top-genesis-archive.js"
+      - "top-genesis-pdf-app-embed.js"
       - "tests/top-genesis-browser-smoke.mjs"
       - ".github/workflows/top-genesis-browser-smoke.yml"
   pull_request:
