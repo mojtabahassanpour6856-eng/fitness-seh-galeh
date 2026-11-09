@@ -79,7 +79,9 @@
 
     const fatValues = [...text.matchAll(/Body\s*Fat\s*%?\s*([0-9]+(?:\.[0-9]+)?)\s*%/gi)].map(m => Number(m[1]));
     if (fatValues.length) {
-      const exact = fatValues.find(v => v !== 25) ?? fatValues[0];
+      // Never discard a legitimate value (including exactly 25%) by special case.
+      // Keep the first occurrence as the primary candidate and expose disagreements.
+      const exact = fatValues[0];
       const conflict = Math.max(...fatValues) - Math.min(...fatValues) > 1;
       out.body_fat_percent = metric(exact, "%", "Basic Info / Fitness & Health Metrics", conflict ? "conflict_review" : "needs_coach_review");
       if (conflict) out.body_fat_percent.alternatives = [...new Set(fatValues)];
@@ -230,6 +232,9 @@
       if (item && (item.value < min || item.value > max)) {
         item.status = "invalid_range";
         flags.push(key + ": خارج از محدوده کنترل اولیه");
+      } else if (item && item.status === "needs_coach_review") {
+        // Passing a broad plausibility check is not a medical validation.
+        item.status = "within_initial_range_needs_coach_review";
       }
     });
     if (out.body_fat_percent?.status === "conflict_review") flags.push("درصد چربی در صفحات مختلف با دقت متفاوت درج شده است.");
