@@ -78,7 +78,7 @@
     const tdee = numberAfter(text, /(?:Caloric\s*Expenditure|total\s*calories\s*you\s*burn\s*each\s*day)[^0-9]{0,100}([0-9]+(?:\.[0-9]+)?)\s*Calories?\s*\/\s*day/i);
     if (tdee != null) out.daily_energy_expenditure_kcal = metric(tdee, "kcal/day", "Activity & Caloric Expenditure / Caloric Expenditure");
 
-    const fatMass = numberAfter(text, /(?:Fat\s*Mass\s*|made\s*up\s*of\s*)([0-9]+(?:\.[0-9]+)?)\s*kg\s*(?:of\s*fat|fat\s*mass)/i);
+    const fatMass = numberAfter(text, /([0-9]+(?:\.[0-9]+)?)\s*kg\s*of\s*fat\s*mass/i);
     if (fatMass != null) out.fat_mass_kg = metric(fatMass, "kg", "Body Composition");
 
     const leanMass = numberAfter(text, /([0-9]+(?:\.[0-9]+)?)\s*kg\s*of\s*lean\s*body\s*mass/i);
@@ -90,13 +90,49 @@
     const percentile = numberAfter(text, /Percentile\s*([0-9]+(?:\.[0-9]+)?)\s*%/i);
     if (percentile != null) out.comparison_percentile = metric(percentile, "%", "Basic Info / Percentile");
 
+    const bodyRank = numberAfter(text, /Your\s*Rank\s*([0-9]+(?:\.[0-9]+)?)\s*%\s*places\s*you/i);
+    if (bodyRank != null) out.body_fat_rank_marker = metric(bodyRank, "%", "Body Composition / Your Rank");
+
+    const detailedWaistRatio = numberAfter(text, /Waist\s*[- ]?to\s*[- ]?Hip\s*Ratio\s*([0-9]+(?:\.[0-9]+)?)/i);
+    if (detailedWaistRatio != null) {
+      out.waist_hip_ratio_detailed = metric(detailedWaistRatio, "ratio", "Waist Analysis");
+      if (out.waist_hip_ratio && Math.abs(out.waist_hip_ratio.value - detailedWaistRatio) <= 0.01) {
+        out.waist_hip_ratio.status = "consistent_rounding";
+      } else if (out.waist_hip_ratio && Math.abs(out.waist_hip_ratio.value - detailedWaistRatio) > 0.01) {
+        out.waist_hip_ratio.status = "conflict_review";
+        flags.push("نسبت کمر به باسن در بخش‌های گزارش نیازمند تطبیق است.");
+      }
+    }
+
+    const bodyMeasures = [
+      ["calf_left_cm", /Calf\s*Left\s*Region\s*([0-9]+(?:\.[0-9]+)?)/i, 25, 60],
+      ["calf_right_cm", /Calf\s*Right\s*Region\s*([0-9]+(?:\.[0-9]+)?)/i, 25, 60],
+      ["chest_region_cm", /Chest\s*Region\s*([0-9]+(?:\.[0-9]+)?)/i, 50, 160],
+      ["hip_region_cm", /Hip\s*Region\s*([0-9]+(?:\.[0-9]+)?)/i, 50, 180],
+      ["lower_waist_region_cm", /Lower\s*Waist\s*Region\s*([0-9]+(?:\.[0-9]+)?)/i, 40, 160],
+      ["thigh_left_cm", /Thigh\s*Left\s*Region\s*([0-9]+(?:\.[0-9]+)?)/i, 25, 100],
+      ["thigh_right_cm", /Thigh\s*Right\s*Region\s*([0-9]+(?:\.[0-9]+)?)/i, 25, 100],
+      ["upper_arm_left_cm", /Upper\s*Arm\s*Left\s*Region\s*([0-9]+(?:\.[0-9]+)?)/i, 15, 60],
+      ["upper_arm_right_cm", /Upper\s*Arm\s*Right\s*Region\s*([0-9]+(?:\.[0-9]+)?)/i, 15, 60],
+      ["upper_waist_region_cm", /Upper\s*Waist\s*Region\s*([0-9]+(?:\.[0-9]+)?)/i, 40, 160]
+    ];
+    const rawMeasures = {};
+    bodyMeasures.forEach(([key, pattern, min, max]) => {
+      const value = numberAfter(text, pattern);
+      if (value == null) return;
+      rawMeasures[key] = metric(value, "cm", "3D Scan and Measurements",
+        value < min || value > max ? "invalid_range" : "needs_coach_review");
+      if (value < min || value > max) flags.push(key + ": مقدار گزارش‌شده برای سانتی‌متر غیرواقعی است؛ بدون تبدیل واحد ذخیره نشود.");
+    });
+    if (Object.keys(rawMeasures).length) out.raw_body_measurements = rawMeasures;
+
     const flags = [];
     const checks = [
       ["height_cm", 100, 230], ["weight_kg", 25, 350], ["body_fat_percent", 2, 65],
       ["bmi", 10, 70], ["waist_hip_ratio", 0.3, 1.5], ["resting_metabolic_rate_kcal", 500, 4000],
       ["daily_energy_expenditure_kcal", 700, 7000], ["fat_mass_kg", 1, 250],
       ["lean_mass_kg", 10, 250], ["waist_circumference_cm", 30, 200],
-      ["comparison_percentile", 0, 100]
+      ["comparison_percentile", 0, 100], ["body_fat_rank_marker", 0, 100]
     ];
     checks.forEach(([key, min, max]) => {
       const item = out[key];
