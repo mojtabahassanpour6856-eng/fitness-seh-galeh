@@ -7,6 +7,9 @@
 <style>
 :root{font-family:Tahoma,Arial,sans-serif;color:#29251e;background:#f6f2e9}
 body{max-width:900px;margin:0 auto;padding:18px;line-height:1.8}
+body.embedded{max-width:none;margin:0;padding:0;background:transparent}
+body.embedded main{border:0;border-radius:0;box-shadow:none;padding:12px}
+body.embedded h1{font-size:1.15rem}
 main{background:#fff;border:1px solid #e6dcc8;border-radius:16px;padding:20px;box-shadow:0 4px 18px #0000000a}
 h1{font-size:1.35rem;color:#876b35;margin-top:0}
 .note{background:#fff7df;border-right:4px solid #c49a45;padding:10px 14px;border-radius:8px}
@@ -43,6 +46,11 @@ pre{white-space:pre-wrap;overflow-wrap:anywhere;background:#f7f7f7;padding:12px;
 <script>
 (function(){
 "use strict";
+const embeddedMode=new URLSearchParams(window.location.search).get("embedded")==="1";
+if(embeddedMode)document.body.classList.add("embedded");
+function notifyParentHeight(){if(embeddedMode&&window.parent!==window)window.parent.postMessage({type:"top-genesis-pdf-height",height:document.documentElement.scrollHeight},"*");}
+window.addEventListener("load",notifyParentHeight);
+if(typeof ResizeObserver!=="undefined")new ResizeObserver(()=>requestAnimationFrame(notifyParentHeight)).observe(document.documentElement);
 const labels={
 height_cm:"قد",weight_kg:"وزن",body_fat_percent:"درصد چربی بدن",bmi:"BMI",
 waist_hip_ratio:"نسبت کمر به باسن",waist_hip_ratio_detailed:"نسبت کمر به باسن (جزئیات)",
@@ -126,8 +134,8 @@ button.addEventListener("click",async()=>{
   const rows=[];
   Object.entries(data.metrics||{}).forEach(([key,item])=>{
    if(key==="raw_body_measurements"||!item)return;
-   const alternatives=item.alternatives&&item.alternatives.length>1?"<br><span class='small'>مقادیر مشاهده‌شده: "+item.alternatives.join("، ")+"</span>":"";
-   rows.push("<tr><td>"+(labels[key]||key)+"</td><td>"+item.value+" "+(units[item.unit]||item.unit||"")+alternatives+"</td><td class='"+(item.status==="invalid_range"||item.status==="conflict_review"?"bad":"review")+"'>"+(statusText[item.status]||item.status)+"</td></tr>");
+   const alternatives=item.alternatives&&item.alternatives.length>1?"<br><span class='small'>مقادیر مشاهده‌شده: "+item.alternatives.map(escapeHTML).join("، ")+"</span>":"";
+   rows.push("<tr><td>"+escapeHTML(labels[key]||key)+"</td><td>"+escapeHTML(item.value)+" "+escapeHTML(units[item.unit]||item.unit||"")+alternatives+"</td><td class='"+(item.status==="invalid_range"||item.status==="conflict_review"?"bad":"review")+"'>"+escapeHTML(statusText[item.status]||item.status)+"</td></tr>");
   });
   let html=buildSimpleAnalysis(data.metrics)+(newerData?buildReportComparison(data.metrics,newerData.metrics):"")+(allReports.length>=3?buildMultiReportTrend(allReports):"")+"<section><h2>نتیجه استخراج گزارش اول</h2><p>تعداد صفحات: "+data.page_count+" | صفحات OCR: "+((data.ocr_pages||[]).join("، ")||"ندارد")+"</p><table><thead><tr><th>شاخص</th><th>مقدار</th><th>وضعیت</th></tr></thead><tbody>"+rows.join("")+"</tbody></table></section>";
   const measures=data.metrics&&data.metrics.raw_body_measurements;
@@ -135,16 +143,17 @@ button.addEventListener("click",async()=>{
   const bilateral=data.metrics&&data.metrics.bilateral_measurement_review;
   if(bilateral&&bilateral.length){html+="<section><h2>مقایسه دو سمت بدن</h2><p class='note'>این مقایسه فقط کنترل کیفیت گزارش است؛ به‌دلیل نامشخص بودن تعریف مقادیر Region، اختلاف‌ها را تشخیص پزشکی یا اختلاف قطعی محیط اندام تلقی نکنید.</p><table><tr><th>ناحیه</th><th>چپ</th><th>راست</th><th>اختلاف خام</th><th>وضعیت</th></tr>"+bilateral.map(x=>"<tr><td>"+escapeHTML(x.region)+"</td><td>"+escapeHTML(x.left_value)+"</td><td>"+escapeHTML(x.right_value)+"</td><td>"+escapeHTML(x.absolute_difference)+"</td><td class='"+(x.status==="coach_review_asymmetry"?"bad":"review")+"'>"+(x.status==="coach_review_asymmetry"?"نیازمند بررسی مربی":"اختلاف کمتر از آستانه هشدار اولیه")+"</td></tr>").join("")+"</table></section>";}
   const missing=data.metrics&&data.metrics.missing_measurements;
-  if(missing){html+="<section><h2>اندازه‌های ثبت‌نشده</h2><p class='note'>این موارد صفر نیستند و از گزارش دیگری هم جایگزین نشده‌اند.</p><table><tr><th>ناحیه</th><th>وضعیت</th></tr>"+Object.entries(missing).map(([k,v])=>"<tr><td>"+(labels[k]||k)+"</td><td class='review'>در این گزارش ثبت نشده</td></tr>").join("")+"</table></section>";}
+  if(missing){html+="<section><h2>اندازه‌های ثبت‌نشده</h2><p class='note'>این موارد صفر نیستند و از گزارش دیگری هم جایگزین نشده‌اند.</p><table><tr><th>ناحیه</th><th>وضعیت</th></tr>"+Object.entries(missing).map(([k,v])=>"<tr><td>"+escapeHTML(labels[k]||k)+"</td><td class='review'>در این گزارش ثبت نشده</td></tr>").join("")+"</table></section>";}
   if(data.flags&&data.flags.length)html+="<section><h2>هشدارها</h2><ul>"+data.flags.map(x=>"<li>"+escapeHTML(x)+"</li>").join("")+"</ul></section>";
   html+="<p class='note'>این نتیجه آزمایشی است؛ تأیید مربی الزامی است. اطلاعات هویتی از خروجی صفحه حذف شده‌اند.</p>";
   html="<div class='print-only print-header'><h1>گزارش تحلیل ترکیب بدن</h1><p>باشگاه فیتنس سه‌قلعه | گزارش استخراج‌شده از دستگاه تاپ جنسیس</p><p>ترتیب گزارش‌ها مطابق ترتیب انتخاب فایل‌هاست.</p></div><div class='no-print'><button id='printReport' type='button'>چاپ / ذخیره به‌صورت PDF</button><p class='small'>در پنجره چاپ، گزینه «ذخیره به‌صورت PDF» را انتخاب کنید.</p></div>"+html+"<section class='print-signoff'><h3>یادداشت و تأیید مربی</h3><p>نکات تکمیلی: ........................................................................................................</p><div class='sign-lines'><div>نام و امضای مربی<div class='line'></div></div><div>تاریخ بررسی<div class='line'></div></div></div><p class='small'>این گزارش ابزار کمکی است؛ مقادیر استخراج‌شده باید با گزارش اصلی دستگاه و شرایط اندازه‌گیری تطبیق داده شوند.</p></section>";
   result.innerHTML=html;
+  notifyParentHeight();
   document.getElementById("printReport").addEventListener("click",()=>{document.body.classList.add("print-report");window.print();});
   window.onafterprint=()=>document.body.classList.remove("print-report");
   status.textContent=allReports.length>1?"استخراج و مقایسه "+allReports.length+" گزارش تمام شد. هیچ اطلاعاتی ذخیره یا ارسال نشد.":"استخراج تمام شد. هیچ اطلاعاتی ذخیره یا ارسال نشد.";
  }catch(e){status.textContent="خطا: "+(e&&e.message?e.message:"استخراج ناموفق بود.");}
- finally{button.disabled=false;}
+ finally{button.disabled=false;notifyParentHeight();}
 });
 })();
 </script>
