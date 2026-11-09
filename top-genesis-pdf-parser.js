@@ -259,8 +259,8 @@
         // OCR only when the page is short OR it looks like a measurement page whose
         // key region labels are missing from the selectable text layer.
         const normalizedPageText = normalize(pageText);
-        const hasMeasurementContext = /Body\\s*Measurements|3D\\s*Scan|\\bRegion\\b/i.test(normalizedPageText);
-        const hasRecognizableRegionLabel = /(?:Calf|Forearm|Thigh|Upper\\s*Arm|Chest|Hip|Lower\\s*Waist|Upper\\s*Waist)\\s*(?:Left|Right)?\\s*Region/i.test(normalizedPageText);
+        const hasMeasurementContext = /Body\s*Measurements|3D\s*Scan|\bRegion\b/i.test(normalizedPageText);
+        const hasRecognizableRegionLabel = /(?:Calf|Forearm|Thigh|Upper\s*Arm|Chest|Hip|Lower\s*Waist|Upper\s*Waist)\s*(?:Left|Right)?\s*Region/i.test(normalizedPageText);
         const needsTargetedOcr = normalizedPageText.length < 100 ||
           (hasMeasurementContext && !hasRecognizableRegionLabel);
         if (needsTargetedOcr) {
