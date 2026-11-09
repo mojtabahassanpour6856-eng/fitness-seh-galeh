@@ -61,7 +61,7 @@ button.addEventListener("click",async()=>{
   });
   let html="<section><h2>نتیجه استخراج</h2><p>تعداد صفحات: "+data.page_count+" | صفحات OCR: "+((data.ocr_pages||[]).join("، ")||"ندارد")+"</p><table><thead><tr><th>شاخص</th><th>مقدار</th><th>وضعیت</th></tr></thead><tbody>"+rows.join("")+"</tbody></table></section>";
   const measures=data.metrics&&data.metrics.raw_body_measurements;
-  if(measures){html+="<section><h2>اندازه‌های خام اندام</h2><p class='bad'>این مقادیر به دلیل احتمال خطای واحد/اسکن نباید وارد نمودار یا پرونده شوند.</p><table><tr><th>کد شاخص</th><th>مقدار</th><th>وضعیت</th></tr>"+Object.entries(measures).map(([k,v])=>"<tr><td>"+k+"</td><td>"+v.value+" cm</td><td class='bad'>"+(statusText[v.status]||v.status)+"</td></tr>").join("")+"</table></section>";}
+  if(measures){html+="<section><h2>اندازه‌های خام گزارش‌شده دستگاه</h2><p class='note'>این مقادیر عیناً از گزارش دستگاه استخراج شده‌اند. ممکن است هر عدد حاصل چند نقطه یا چند مقطع از ناحیه باشد؛ تا زمان تأیید تعریف خروجی دستگاه، آن را محیط یک دور اندام در نظر نگیرید و با حدود استاندارد محیط تک‌نقطه‌ای مقایسه نکنید.</p><table><tr><th>ناحیه</th><th>مقدار خام گزارش‌شده</th><th>وضعیت</th></tr>"+Object.entries(measures).map(([k,v])=>"<tr><td>"+k+"</td><td>"+v.raw_value+" "+(units[v.unit]||v.unit||"")+"</td><td class='review'>نیازمند تأیید مربی؛ تفسیر ساختار اندازه‌گیری نامشخص</td></tr>").join("")+"</table></section>";}
   if(data.flags&&data.flags.length)html+="<section><h2>هشدارها</h2><ul>"+data.flags.map(x=>"<li>"+x+"</li>").join("")+"</ul></section>";
   html+="<p class='note'>این نتیجه آزمایشی است؛ تأیید مربی الزامی است. اطلاعات هویتی از خروجی صفحه حذف شده‌اند.</p>";
   result.innerHTML=html;status.textContent="استخراج تمام شد. هیچ اطلاعاتی ذخیره یا ارسال نشد.";
