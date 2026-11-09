@@ -131,6 +131,23 @@ try {
   assert.equal(direct.metrics.missing_measurements.forearm_right_cm.status, "not_reported",
     "Both absent forearms must remain not_reported.");
   assert.equal(direct.metrics.measurement_coverage.status, "partial");
+  // Regression fixture built only from values already extracted from the user's earlier real report.
+  // It is not a fresh OCR run on the original PDF.
+  const priorReport = await page.evaluate(() => window.TopGenesisPdfParser.extractMetrics(
+    "Body Measurements (cm) Calf Left Region 157.686 Calf Right Region 162.757 Chest Region 404.906 Hip Region 680.131 Lower Waist Region 490.499"
+  ));
+  const priorRegions = priorReport.metrics.raw_body_measurements;
+  assert.equal(priorRegions.calf_left_cm.raw_value, 157.686);
+  assert.equal(priorRegions.calf_right_cm.raw_value, 162.757);
+  assert.equal(priorRegions.chest_region_cm.raw_value, 404.906);
+  assert.equal(priorRegions.hip_region_cm.raw_value, 680.131);
+  assert.equal(priorRegions.lower_waist_region_cm.raw_value, 490.499);
+  for (const key of Object.keys(priorRegions)) {
+    assert.equal(priorRegions[key].unit, "raw_reported_unit",
+      "Region values must not be labeled as confirmed centimeters before device semantics are verified.");
+    assert.equal(priorRegions[key].status, "needs_coach_review");
+    assert.equal(priorRegions[key].source, "3D Scan and Measurements");
+  }
   const oneSided = await page.evaluate(() => window.TopGenesisPdfParser.extractMetrics(
     "Body Measurements (cm) Calf Left Region 157.686 Hip Region 680.131"
   ));
