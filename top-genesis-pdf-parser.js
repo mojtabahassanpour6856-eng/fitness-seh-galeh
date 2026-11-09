@@ -8,7 +8,9 @@
   const PDFJS_VERSION = "3.11.174";
   const PDFJS_URL = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/" + PDFJS_VERSION + "/pdf.min.js";
   const PDFJS_WORKER_URL = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/" + PDFJS_VERSION + "/pdf.worker.min.js";
+  const TESSERACT_URL = "https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js";
   let pdfJsPromise;
+  let tesseractPromise;
 
   function loadPdfJs() {
     if (global.pdfjsLib) return Promise.resolve(global.pdfjsLib);
@@ -26,6 +28,22 @@
       document.head.appendChild(script);
     });
     return pdfJsPromise;
+  }
+
+  function loadTesseract() {
+    if (global.Tesseract) return Promise.resolve(global.Tesseract);
+    if (tesseractPromise) return tesseractPromise;
+    tesseractPromise = new Promise((resolve, reject) => {
+      const script = document.createElement("script");
+      script.src = TESSERACT_URL;
+      script.async = true;
+      script.onload = () => global.Tesseract
+        ? resolve(global.Tesseract)
+        : reject(new Error("ابزار OCR بارگذاری شد اما در دسترس نیست."));
+      script.onerror = () => reject(new Error("بارگذاری ابزار OCR ناموفق بود."));
+      document.head.appendChild(script);
+    });
+    return tesseractPromise;
   }
 
   function normalize(text) {
@@ -159,14 +177,41 @@
     const bytes = await file.arrayBuffer();
     const pdf = await pdfjs.getDocument({ data: bytes }).promise;
     const pages = [];
-    for (let pageNo = 1; pageNo <= pdf.numPages; pageNo++) {
-      const page = await pdf.getPage(pageNo);
-      const content = await page.getTextContent();
-      pages.push(content.items.map(item => item.str || "").join(" "));
+    const ocrPages = [];
+    let ocrWorker = null;
+    try {
+      for (let pageNo = 1; pageNo <= pdf.numPages; pageNo++) {
+        const page = await pdf.getPage(pageNo);
+        const content = await page.getTextContent();
+        let pageText = content.items.map(item => item.str || "").join(" ");
+        // Some Top Genesis pages contain charts as raster images, not selectable PDF text.
+        if (normalize(pageText).length < 100) {
+          if (!ocrWorker) {
+            const Tesseract = await loadTesseract();
+            ocrWorker = await Tesseract.createWorker("eng");
+          }
+          const viewport = page.getViewport({ scale: 2.2 });
+          const canvas = document.createElement("canvas");
+          canvas.width = Math.ceil(viewport.width);
+          canvas.height = Math.ceil(viewport.height);
+          const context = canvas.getContext("2d", { willReadFrequently: true });
+          await page.render({ canvasContext: context, viewport }).promise;
+          const recognized = await ocrWorker.recognize(canvas);
+          pageText += " " + (recognized?.data?.text || "");
+          ocrPages.push(pageNo);
+          canvas.width = 0;
+          canvas.height = 0;
+        }
+        pages.push(pageText);
+      }
+    } finally {
+      if (ocrWorker) await ocrWorker.terminate();
     }
     const result = extractMetrics(pages.join(" "));
     result.page_count = pdf.numPages;
-    result.engine = "pdfjs-" + PDFJS_VERSION;
+    result.ocr_pages = ocrPages;
+    result.engine = "pdfjs-" + PDFJS_VERSION + (ocrPages.length ? " + tesseract.js-5" : "");
+    result.review_required = true;
     return result;
   }
 
