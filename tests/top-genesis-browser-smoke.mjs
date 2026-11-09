@@ -55,7 +55,7 @@ try {
   const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
   const textPage = pdfDoc.addPage([612, 792]);
   textPage.drawText(
-    "Height & Weight 161 cm & 57 kg Body Fat 24.5% BMI 22.0 Waist-to-Hip Ratio 0.734 RMR 1352 calories/day Body Measurements (cm) Calf Left Region 157.69 Hip Region 680.13. This is a synthetic browser test fixture with enough selectable text to bypass OCR on this page.",
+    "Height & Weight 161 cm & 57 kg Body Fat 24.5% BMI 22.0 Waist-to-Hip Ratio 0.734 RMR 1352 calories/day Body Measurements (cm) Calf Left Region 157.69 Calf Right Region 162.75 Hip Region 680.13. This is a synthetic browser test fixture with enough selectable text to bypass OCR on this page.",
     { x: 40, y: 700, size: 10, font, color: rgb(0, 0, 0), maxWidth: 530, lineHeight: 16 }
   );
   const ocrPage = pdfDoc.addPage([612, 792]);
@@ -97,6 +97,12 @@ try {
   assert.match(pageInfo, /صفحات OCR: 2، 3/);
   assert.match(pageInfo, /161/);
   assert.match(pageInfo, /57/);
+  assert.match(pageInfo, /مقایسه دو سمت بدن/,
+    "Bilateral region comparison must be rendered in the Persian results.");
+  assert.match(pageInfo, /ساق چپ/,
+    "Region names must be shown in Persian rather than internal keys.");
+  assert.match(pageInfo, /نیازمند بررسی مربی/,
+    "A bilateral difference above the review threshold must be visible to the coach.");
   assert.match(pageInfo, /24.5/);
   const direct = await page.evaluate(() => window.TopGenesisPdfParser.extractMetrics(
     "Body Measurements (cm) Calf Left Region 157.686 Calf Right Region 162.757 Hip Region 680.131"
@@ -184,6 +190,12 @@ try {
     "Height must also be found when reported separately.");
   assert.equal(separatelyLabeled.metrics.weight_kg.value, 68.5,
     "Weight must also be found when reported separately.");
+  const noPii = await page.evaluate(() => window.TopGenesisPdfParser.extractMetrics(
+    "Name: Example Person Email: sample@example.com Height & Weight 170 cm & 65 kg"
+  ));
+  assert.equal(noPii.pii_extracted, false);
+  assert.equal(Object.keys(noPii.metrics).some(key => /name|email/i.test(key)), false,
+    "Personal identity fields must not be exposed in extracted metrics.");
   const conflictingBmi = await page.evaluate(() => window.TopGenesisPdfParser.extractMetrics(
     "BMI 22.0 BMI 29.4"
   ));
