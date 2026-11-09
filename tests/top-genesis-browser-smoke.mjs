@@ -287,7 +287,7 @@ try {
   // Verify the real production app shell contains the integration anchor and loader.
   const appShellSource = fs.readFileSync(path.join(root, "index.html"), "utf8");
   assert.match(appShellSource, /id=["']bodyAnalysisEntryPanel["']/, "The production app must contain the body-analysis mount point.");
-  assert.match(appShellSource, /top-genesis-archive\\.js/, "The production app must load the existing Top Genesis archive module.");
+  assert.match(appShellSource, /top-genesis-archive\.js/, "The production app must load the existing Top Genesis archive module.");
 
   // Verify the coach-only app entry mounts in the existing analysis area,
   // embeds the isolated analyzer, and stays hidden for trainee sessions.
