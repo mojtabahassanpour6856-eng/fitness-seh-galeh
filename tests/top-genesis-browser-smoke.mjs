@@ -128,6 +128,28 @@ try {
   ));
   assert.equal(smallDifference.metrics.bilateral_measurement_review[0].status, "within_initial_review_threshold",
     "A bilateral difference at or below 2 reported units must not trigger the asymmetry flag.");
+  const valid25 = await page.evaluate(() => window.TopGenesisPdfParser.extractMetrics(
+    "Body Fat 25% BMI 22.4"
+  ));
+  assert.equal(valid25.metrics.body_fat_percent.value, 25,
+    "A legitimate body-fat value of exactly 25% must never be discarded.");
+  assert.equal(valid25.metrics.body_fat_percent.status, "within_initial_range_needs_coach_review",
+    "A broad range check must not be presented as medical validation.");
+  const conflictingFat = await page.evaluate(() => window.TopGenesisPdfParser.extractMetrics(
+    "Body Fat 25% Body Fat 29.5% BMI 22.4"
+  ));
+  assert.equal(conflictingFat.metrics.body_fat_percent.value, 25,
+    "The first body-fat candidate must be retained transparently.");
+  assert.equal(conflictingFat.metrics.body_fat_percent.status, "conflict_review",
+    "Materially different body-fat values must require review.");
+  assert.deepEqual(conflictingFat.metrics.body_fat_percent.alternatives, [25, 29.5]);
+  const energy = await page.evaluate(() => window.TopGenesisPdfParser.extractMetrics(
+    "RMR 1352 calories/day Total 2100 Calories/day"
+  ));
+  assert.equal(energy.metrics.resting_metabolic_rate_kcal.value, 1352,
+    "RMR must be extracted only from its explicit label.");
+  assert.equal(energy.metrics.daily_energy_expenditure_kcal.value, 2100,
+    "Daily expenditure must not be confused with the explicit RMR value.");
   assert.match(pageInfo, /ساعد چپ.*ثبت نشده/s, "Missing forearm was not reported as missing.");
   assert.match(pageInfo, /69\.87/, "Tesseract did not recognize the synthetic waist value from the raster page.");
   assert.match(pageInfo, /123\.456/, "Targeted OCR did not recover the region value from the semi-text page.");
