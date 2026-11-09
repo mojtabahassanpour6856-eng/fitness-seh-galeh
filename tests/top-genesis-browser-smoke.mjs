@@ -101,6 +101,15 @@ try {
   const direct = await page.evaluate(() => window.TopGenesisPdfParser.extractMetrics(
     "Body Measurements (cm) Calf Left Region 157.686 Calf Right Region 162.757 Hip Region 680.131"
   ));
+  const colonSeparated = await page.evaluate(() => window.TopGenesisPdfParser.extractMetrics(
+    "Body Measurements (cm) Calf Left Region: 157.686 Hip Region: 680.131 Waist-to-Hip Ratio: 0.734"
+  ));
+  assert.equal(colonSeparated.metrics.raw_body_measurements.calf_left_cm.raw_value, 157.686,
+    "Region values with a colon separator must be extracted.");
+  assert.equal(colonSeparated.metrics.raw_body_measurements.hip_region_cm.raw_value, 680.131,
+    "Hip region values with a colon separator must be extracted.");
+  assert.equal(colonSeparated.metrics.waist_hip_ratio_detailed.value, 0.734,
+    "Detailed WHR must support a colon separator.");
   assert.equal(direct.metrics.raw_body_measurements.calf_left_cm.raw_value, 157.686,
     "Calf raw value must retain its decimal precision.");
   assert.equal(direct.metrics.raw_body_measurements.calf_right_cm.raw_value, 162.757,
