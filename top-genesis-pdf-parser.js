@@ -51,6 +51,7 @@
   function extractMetrics(raw) {
     const text = normalize(raw);
     const out = {};
+    const flags = [];
 
     const heightWeight = text.match(/(?:Height\s*&\s*Weight|Height\s+and\s+Weight)\s*([0-9]+(?:\.[0-9]+)?)\s*cm\s*&?\s*([0-9]+(?:\.[0-9]+)?)\s*kg/i);
     if (heightWeight) {
@@ -93,7 +94,8 @@
     const bodyRank = numberAfter(text, /Your\s*Rank\s*([0-9]+(?:\.[0-9]+)?)\s*%\s*places\s*you/i);
     if (bodyRank != null) out.body_fat_rank_marker = metric(bodyRank, "%", "Body Composition / Your Rank");
 
-    const detailedWaistRatio = numberAfter(text, /Waist\s*[- ]?to\s*[- ]?Hip\s*Ratio\s*([0-9]+(?:\.[0-9]+)?)/i);
+    const ratioMatches = [...text.matchAll(/Waist\s*[- ]?to\s*[- ]?Hip\s*Ratio\s*([0-9]+(?:\.[0-9]+)?)/gi)];
+    const detailedWaistRatio = ratioMatches.length ? Number(ratioMatches[ratioMatches.length - 1][1]) : null;
     if (detailedWaistRatio != null) {
       out.waist_hip_ratio_detailed = metric(detailedWaistRatio, "ratio", "Waist Analysis");
       if (out.waist_hip_ratio && Math.abs(out.waist_hip_ratio.value - detailedWaistRatio) <= 0.01) {
@@ -126,7 +128,6 @@
     });
     if (Object.keys(rawMeasures).length) out.raw_body_measurements = rawMeasures;
 
-    const flags = [];
     const checks = [
       ["height_cm", 100, 230], ["weight_kg", 25, 350], ["body_fat_percent", 2, 65],
       ["bmi", 10, 70], ["waist_hip_ratio", 0.3, 1.5], ["resting_metabolic_rate_kcal", 500, 4000],
