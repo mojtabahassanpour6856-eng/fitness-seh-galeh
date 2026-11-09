@@ -188,3 +188,12 @@
   else mount();
   window.setInterval(() => { mount(); if (mounted) refresh(); }, 15000);
 })();
+/* Load the isolated coach-only Top Genesis PDF analyzer card without touching the manual analysis form. */
+(function () {
+  if (document.querySelector('script[data-top-genesis-pdf-embed-loader]')) return;
+  const script = document.createElement("script");
+  script.src = "./top-genesis-pdf-app-embed.js";
+  script.defer = true;
+  script.dataset.topGenesisPdfEmbedLoader = "1";
+  document.head.appendChild(script);
+})();
