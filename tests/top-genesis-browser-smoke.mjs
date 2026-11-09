@@ -75,8 +75,16 @@ try {
   assert.match(pageInfo, /161/);
   assert.match(pageInfo, /57/);
   assert.match(pageInfo, /24.5/);
-  assert.match(pageInfo, /157\.69/, "Existing calf region value was not extracted.");
-  assert.match(pageInfo, /680\.13/, "Existing hip region value was not extracted.");
+  const direct = await page.evaluate(() => window.TopGenesisPdfParser.extractMetrics(
+    "Body Measurements (cm) Calf Left Region 157.69 Hip Region 680.13"
+  ));
+  assert.equal(direct.metrics.raw_body_measurements.calf_left_cm.raw_value, 157.69,
+    "Calf raw value must retain its decimal precision.");
+  assert.equal(direct.metrics.raw_body_measurements.hip_region_cm.raw_value, 680.13,
+    "Hip raw value must retain its decimal precision.");
+  assert.equal(direct.metrics.missing_measurements.forearm_left_cm.status, "not_reported",
+    "Absent forearm must be represented as not_reported, not zero.");
+  assert.equal(direct.metrics.measurement_coverage.status, "partial");
   assert.match(pageInfo, /ساعد چپ.*ثبت نشده/s, "Missing forearm was not reported as missing.");
   assert.match(pageInfo, /69\.87/, "Tesseract did not recognize the synthetic waist value from the raster page.");
   assert.deepEqual(pageErrors, [], `Browser page errors: ${pageErrors.join("; ")}`);
