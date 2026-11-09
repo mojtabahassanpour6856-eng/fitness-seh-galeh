@@ -257,7 +257,7 @@ try {
   assert.match(multiTrend,/نمودار روند چندمرحله‌ای/);
   assert.match(multiTrend,/گزارش 1/);
   assert.match(multiTrend,/گزارش 3/);
-  assert.match(multiTrend,/کاهش 4.00 kg/,"Multi-visit chart should calculate first-to-last weight change.");
+  assert.match(multiTrend,/کاهش 4.00 کیلوگرم/,"Multi-visit chart should calculate first-to-last weight change.");
   assert.match(multiTrend,/کاهش 5.00 واحد درصد/,"Multi-visit chart should calculate percentage-point change.");
   assert.doesNotMatch(multiTrend,/BMI/,"A metric invalid in any visit must be excluded from the complete trend.");
   assert.equal(await page.locator("#pdfFilesMore").evaluate(el=>el.hasAttribute("multiple")),true,"Additional report picker must allow multiple PDFs.");
