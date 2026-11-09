@@ -249,6 +249,18 @@ try {
     {weight_kg:{value:58,unit:"lb",status:"needs_coach_review"}}
   ));
   assert.match(unitMismatch,/شاخص مشترک و قابل‌مقایسه‌ای/,"Metrics with mismatched units must not be compared.");
+  const multiTrend = await page.evaluate(() => window.TopGenesisMultiReportTrend([
+    {metrics:{weight_kg:{value:62,unit:"kg",status:"needs_coach_review"},body_fat_percent:{value:30,unit:"%",status:"needs_coach_review"},bmi:{value:90,unit:"kg/m²",status:"invalid_range"}}},
+    {metrics:{weight_kg:{value:60,unit:"kg",status:"needs_coach_review"},body_fat_percent:{value:28,unit:"%",status:"needs_coach_review"},bmi:{value:23,unit:"kg/m²",status:"needs_coach_review"}}},
+    {metrics:{weight_kg:{value:58,unit:"kg",status:"needs_coach_review"},body_fat_percent:{value:25,unit:"%",status:"needs_coach_review"},bmi:{value:22,unit:"kg/m²",status:"needs_coach_review"}}}
+  ]));
+  assert.match(multiTrend,/نمودار روند چندمرحله‌ای/);
+  assert.match(multiTrend,/گزارش 1/);
+  assert.match(multiTrend,/گزارش 3/);
+  assert.match(multiTrend,/کاهش 4.00 kg/,"Multi-visit chart should calculate first-to-last weight change.");
+  assert.match(multiTrend,/کاهش 5.00 واحد درصد/,"Multi-visit chart should calculate percentage-point change.");
+  assert.doesNotMatch(multiTrend,/BMI/,"A metric invalid in any visit must be excluded from the complete trend.");
+  assert.match(await page.locator("#pdfFilesMore").getAttribute("multiple") || "",/./);
   const suspiciousAnalysis = await page.evaluate(() => window.TopGenesisSimpleAnalysis({
     weight_kg:{value:57,status:"within_initial_range_needs_coach_review"},
     fat_mass_kg:{value:14,status:"needs_coach_review"},
