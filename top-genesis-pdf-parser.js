@@ -126,26 +126,32 @@
     }
 
     const bodyMeasures = [
-      ["calf_left_cm", /Calf\s*Left\s*Region\s*([0-9]+(?:\.[0-9]+)?)/i, 25, 60],
-      ["calf_right_cm", /Calf\s*Right\s*Region\s*([0-9]+(?:\.[0-9]+)?)/i, 25, 60],
-      ["chest_region_cm", /Chest\s*Region\s*([0-9]+(?:\.[0-9]+)?)/i, 50, 160],
-      ["hip_region_cm", /Hip\s*Region\s*([0-9]+(?:\.[0-9]+)?)/i, 50, 180],
-      ["lower_waist_region_cm", /Lower\s*Waist\s*Region\s*([0-9]+(?:\.[0-9]+)?)/i, 40, 160],
-      ["thigh_left_cm", /Thigh\s*Left\s*Region\s*([0-9]+(?:\.[0-9]+)?)/i, 25, 100],
-      ["thigh_right_cm", /Thigh\s*Right\s*Region\s*([0-9]+(?:\.[0-9]+)?)/i, 25, 100],
-      ["upper_arm_left_cm", /Upper\s*Arm\s*Left\s*Region\s*([0-9]+(?:\.[0-9]+)?)/i, 15, 60],
-      ["upper_arm_right_cm", /Upper\s*Arm\s*Right\s*Region\s*([0-9]+(?:\.[0-9]+)?)/i, 15, 60],
-      ["upper_waist_region_cm", /Upper\s*Waist\s*Region\s*([0-9]+(?:\.[0-9]+)?)/i, 40, 160]
+      ["calf_left_cm", /Calf\\s*Left\\s*Region\\s*([0-9]+(?:\\.[0-9]+)?)/i],
+      ["calf_right_cm", /Calf\\s*Right\\s*Region\\s*([0-9]+(?:\\.[0-9]+)?)/i],
+      ["chest_region_cm", /Chest\\s*Region\\s*([0-9]+(?:\\.[0-9]+)?)/i],
+      ["hip_region_cm", /Hip\\s*Region\\s*([0-9]+(?:\\.[0-9]+)?)/i],
+      ["lower_waist_region_cm", /Lower\\s*Waist\\s*Region\\s*([0-9]+(?:\\.[0-9]+)?)/i],
+      ["thigh_left_cm", /Thigh\\s*Left\\s*Region\\s*([0-9]+(?:\\.[0-9]+)?)/i],
+      ["thigh_right_cm", /Thigh\\s*Right\\s*Region\\s*([0-9]+(?:\\.[0-9]+)?)/i],
+      ["upper_arm_left_cm", /Upper\\s*Arm\\s*Left\\s*Region\\s*([0-9]+(?:\\.[0-9]+)?)/i],
+      ["upper_arm_right_cm", /Upper\\s*Arm\\s*Right\\s*Region\\s*([0-9]+(?:\\.[0-9]+)?)/i],
+      ["upper_waist_region_cm", /Upper\\s*Waist\\s*Region\\s*([0-9]+(?:\\.[0-9]+)?)/i]
     ];
     const rawMeasures = {};
-    bodyMeasures.forEach(([key, pattern, min, max]) => {
+    bodyMeasures.forEach(([key, pattern]) => {
       const value = numberAfter(text, pattern);
       if (value == null) return;
-      rawMeasures[key] = metric(value, "cm", "3D Scan and Measurements",
-        value < min || value > max ? "invalid_range" : "needs_coach_review");
-      if (value < min || value > max) flags.push(key + ": مقدار گزارش‌شده برای سانتی‌متر غیرواقعی است؛ بدون تبدیل واحد ذخیره نشود.");
+      rawMeasures[key] = {
+        ...metric(value, "cm", "3D Scan and Measurements", "needs_coach_review"),
+        raw_value: value,
+        measurement_kind: "multi_point_or_region_reported_value",
+        interpretation: "تفسیر دقیق عدد تا تأیید ساختار اسکن و تعریف خروجی دستگاه مشخص نیست؛ آن را محیط یک مقطع فرض نکنید."
+      };
     });
-    if (Object.keys(rawMeasures).length) out.raw_body_measurements = rawMeasures;
+    if (Object.keys(rawMeasures).length) {
+      out.raw_body_measurements = rawMeasures;
+      flags.push("اندازه‌های اندام عیناً مطابق گزارش دستگاه حفظ شده‌اند؛ به‌دلیل احتمال چندنقطه‌ای یا ناحیه‌ای بودن، به‌عنوان محیط یک مقطع تفسیر نشوند تا تعریف خروجی دستگاه تأیید شود.");
+    }
 
     const checks = [
       ["height_cm", 100, 230], ["weight_kg", 25, 350], ["body_fat_percent", 2, 65],
