@@ -46,7 +46,7 @@ fat_mass_kg:"توده چربی",lean_mass_kg:"توده بدون چربی",waist_
 comparison_percentile:"درصد مقایسه‌ای",body_fat_rank_marker:"رتبه نمایش‌داده‌شده در نمودار",calf_left_cm:"ساق چپ",calf_right_cm:"ساق راست",forearm_left_cm:"ساعد چپ",forearm_right_cm:"ساعد راست",thigh_left_cm:"ران چپ",thigh_right_cm:"ران راست",upper_arm_left_cm:"بازوی چپ",upper_arm_right_cm:"بازوی راست",chest_region_cm:"ناحیه سینه",hip_region_cm:"ناحیه باسن",lower_waist_region_cm:"ناحیه کمر پایین",upper_waist_region_cm:"ناحیه کمر بالا"
 };
 const statusText={not_reported:"در این گزارش ثبت نشده",needs_coach_review:"نیازمند تأیید مربی",within_initial_range_needs_coach_review:"در محدوده کنترل اولیه؛ تأیید مربی همچنان لازم است",conflict_review:"تعارض؛ بررسی شود",invalid_range:"خارج از محدوده کنترل اولیه",consistent_rounding:"اختلاف جزئی؛ احتمالاً ناشی از گرد کردن"};
-const units={"cm":"سانتی‌متر","kg":"کیلوگرم","%":"درصد","kg/m²":"kg/m²","ratio":"نسبت","kcal/day":"کیلوکالری در روز"};
+const units={"raw_reported_unit":"واحد خام گزارش" ,"cm":"سانتی‌متر","kg":"کیلوگرم","%":"درصد","kg/m²":"kg/m²","ratio":"نسبت","kcal/day":"کیلوکالری در روز"};
 const fileInput=document.getElementById("pdfFile"),button=document.getElementById("run"),status=document.getElementById("status"),result=document.getElementById("result");
 button.addEventListener("click",async()=>{
  const file=fileInput.files&&fileInput.files[0];
