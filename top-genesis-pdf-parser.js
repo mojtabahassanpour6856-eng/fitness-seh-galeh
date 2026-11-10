@@ -164,9 +164,9 @@
     ];
     const rawMeasures = {};
     bodyMeasures.forEach(([key, pattern]) => {
-      // Prefer the final labeled value in the PDF. Some device pages list all
-      // region labels first and their values afterward, while the later
-      // Measurement Snapshots page pairs each label with its own value.
+      // Keep the first labeled value and preserve every later alternative.
+      // Some device pages repeat the same region on a summary page and a
+      // Measurement Snapshots page; never silently replace or average values.
       const globalPattern = new RegExp(pattern.source, pattern.flags + "g");
       const matches = [...text.matchAll(globalPattern)];
       const values = matches
