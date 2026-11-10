@@ -397,9 +397,9 @@ try {
   await page.locator("#trainingAdvice").fill("تمرین مقاومتی بر اساس سطح و هدف شاگرد تنظیم شود.");
   await page.locator("#nutritionAdvice").fill("برنامه غذایی پس از بررسی هدف و عادات غذایی شاگرد تنظیم شود.");
   await page.locator("#buildFinalReport").click();
-  await page.waitForFunction(() => document.querySelectorAll("#reportPreview .report-page").length >= 5);
+  await page.waitForFunction(() => document.querySelectorAll("#reportPreview .report-page").length >= 6);
   let reportPagesCount = await page.locator("#reportPreview .report-page").count();
-  assert.equal(reportPagesCount, 5, "Expected cover, details, two scan-image pages, and coach summary.");
+  assert.equal(reportPagesCount, 6, "Expected cover, metrics summary, raw/missing details, two scan-image pages, and coach summary.");
   let reportText = await page.locator("#reportPreview").innerText();
   assert.match(reportText, /گزارش هوشمند آنالیز بدن/);
   assert.match(reportText, /شاگرد آزمایشی/);
@@ -456,8 +456,8 @@ try {
   await page.evaluate(() => document.body.classList.add("print-report"));
   const printPdfBytes = await page.pdf({ format: "A4", printBackground: true });
   const printPdf = await PDFDocument.load(printPdfBytes);
-  assert.ok(printPdf.getPageCount() >= reportPagesCount,
-    "Print output should preserve the multi-page report structure.");
+  assert.equal(printPdf.getPageCount(), reportPagesCount,
+    "Each branded report page should fit exactly one printed page without an extra spillover page.");
   assert.ok(printPdfBytes.byteLength > 10000, "The printable report should not be an empty PDF.");
   await page.evaluate(() => document.body.classList.remove("print-report"));
 
@@ -478,7 +478,7 @@ try {
     });
   });
   await page.locator("#shareReport").click();
-  await page.waitForFunction(() => Array.isArray(window.__sharedReportPngData) && window.__sharedReportPngData.length === 5,
+  await page.waitForFunction(() => Array.isArray(window.__sharedReportPngData) && window.__sharedReportPngData.length === 6,
     null, { timeout: 120000 });
   const sharedPngData = await page.evaluate(() => window.__sharedReportPngData);
   const artifactDir = path.join(process.env.RUNNER_TEMP || os.tmpdir(), "top-genesis-report-artifacts");
