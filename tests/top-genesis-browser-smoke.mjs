@@ -50,13 +50,52 @@ try {
     ctx.fillText("Forearm Right Region 123.456", 35, 180);
     return canvas.toDataURL("image/png");
   });
+  const scanFrontDataUrl = await imagePage.evaluate(() => {
+    const canvas = document.createElement("canvas");
+    canvas.width = 1000; canvas.height = 1300;
+    const ctx = canvas.getContext("2d");
+    ctx.fillStyle = "#ffffff"; ctx.fillRect(0,0,1000,1300);
+    ctx.strokeStyle = "#e8e4dc"; ctx.lineWidth = 2;
+    for(let x=60;x<1000;x+=80){ctx.beginPath();ctx.moveTo(x,40);ctx.lineTo(x,1260);ctx.stroke();}
+    for(let y=40;y<1300;y+=80){ctx.beginPath();ctx.moveTo(40,y);ctx.lineTo(960,y);ctx.stroke();}
+    ctx.fillStyle = "#668d78";
+    ctx.beginPath();ctx.arc(500,180,72,0,Math.PI*2);ctx.fill();
+    ctx.beginPath();
+    ctx.moveTo(430,270);ctx.bezierCurveTo(340,285,300,355,300,470);
+    ctx.lineTo(210,680);ctx.lineTo(275,710);ctx.lineTo(390,500);
+    ctx.lineTo(405,770);ctx.lineTo(370,1180);ctx.lineTo(465,1180);
+    ctx.lineTo(500,850);ctx.lineTo(535,1180);ctx.lineTo(630,1180);
+    ctx.lineTo(595,770);ctx.lineTo(610,500);ctx.lineTo(725,710);
+    ctx.lineTo(790,680);ctx.lineTo(700,470);ctx.bezierCurveTo(700,355,660,285,570,270);
+    ctx.closePath();ctx.fill();
+    return canvas.toDataURL("image/png");
+  });
+  const scanSideDataUrl = await imagePage.evaluate(() => {
+    const canvas = document.createElement("canvas");
+    canvas.width = 1000; canvas.height = 1300;
+    const ctx = canvas.getContext("2d");
+    ctx.fillStyle = "#ffffff"; ctx.fillRect(0,0,1000,1300);
+    ctx.strokeStyle = "#e8e4dc"; ctx.lineWidth = 2;
+    for(let x=60;x<1000;x+=80){ctx.beginPath();ctx.moveTo(x,40);ctx.lineTo(x,1260);ctx.stroke();}
+    for(let y=40;y<1300;y+=80){ctx.beginPath();ctx.moveTo(40,y);ctx.lineTo(960,y);ctx.stroke();}
+    ctx.fillStyle = "#668d78";
+    ctx.beginPath();ctx.ellipse(510,180,65,82,0,0,Math.PI*2);ctx.fill();
+    ctx.beginPath();
+    ctx.moveTo(500,270);ctx.bezierCurveTo(610,290,640,390,600,520);
+    ctx.lineTo(640,700);ctx.lineTo(610,770);ctx.lineTo(580,680);
+    ctx.lineTo(570,900);ctx.lineTo(620,1180);ctx.lineTo(520,1180);
+    ctx.lineTo(490,900);ctx.lineTo(450,1180);ctx.lineTo(360,1180);
+    ctx.lineTo(430,800);ctx.lineTo(420,610);ctx.lineTo(390,470);
+    ctx.bezierCurveTo(360,350,400,285,500,270);ctx.closePath();ctx.fill();
+    return canvas.toDataURL("image/png");
+  });
   await imagePage.close();
 
   const pdfDoc = await PDFDocument.create();
   const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
   const textPage = pdfDoc.addPage([612, 792]);
   textPage.drawText(
-    "Height & Weight 161 cm & 57 kg Body Fat 24.5% BMI 22.0 Waist-to-Hip Ratio 0.734 RMR 1352 calories/day Body Measurements (cm) Calf Left Region 157.69 Calf Right Region 162.75 Hip Region 680.13. This is a synthetic browser test fixture with enough selectable text to bypass OCR on this page.",
+    "Height & Weight 161 cm & 57 kg Body Fat 24.5% BMI 22.0 Waist-to-Hip Ratio 0.734 RMR 1352 calories/day Caloric Expenditure 1623 Calories/day 14 kg of fat mass 43 kg of lean body mass Your waist measures 69.87 cm Body Measurements (cm) Calf Left Region 157.69 Calf Right Region 162.75 Hip Region 680.13. This is a synthetic browser test fixture using values previously extracted from the user's sample report; it is not the original PDF.",
     { x: 40, y: 700, size: 10, font, color: rgb(0, 0, 0), maxWidth: 530, lineHeight: 16 }
   );
   const ocrPage = pdfDoc.addPage([612, 792]);
@@ -74,6 +113,27 @@ try {
   const regionPngBytes = Buffer.from(regionImageDataUrl.split(",")[1], "base64");
   const regionImage = await pdfDoc.embedPng(regionPngBytes);
   mixedPage.drawImage(regionImage, { x: 40, y: 400, width: 530, height: 88 });
+
+  // Synthetic scan-image pages and supplementary pages make this a 12-page
+  // fixture for testing page selection, source-image rendering and long reports.
+  const frontPage = pdfDoc.addPage([612,792]);
+  frontPage.drawText("3D Scan Images. This synthetic page contains a front-view body outline for visual export testing only.", {
+    x:40,y:740,size:10,font,color:rgb(0,0,0),maxWidth:530,lineHeight:16
+  });
+  const frontPng = await pdfDoc.embedPng(Buffer.from(scanFrontDataUrl.split(",")[1],"base64"));
+  frontPage.drawImage(frontPng,{x:90,y:70,width:432,height:562});
+  const sidePage = pdfDoc.addPage([612,792]);
+  sidePage.drawText("3D Scan Images. This synthetic page contains a side-view body outline for visual export testing only.", {
+    x:40,y:740,size:10,font,color:rgb(0,0,0),maxWidth:530,lineHeight:16
+  });
+  const sidePng = await pdfDoc.embedPng(Buffer.from(scanSideDataUrl.split(",")[1],"base64"));
+  sidePage.drawImage(sidePng,{x:90,y:70,width:432,height:562});
+  for(let pageNo=6;pageNo<=12;pageNo++){
+    const extraPage=pdfDoc.addPage([612,792]);
+    extraPage.drawText("Supplementary report page "+pageNo+". This synthetic page is included to verify twelve-page PDF navigation and thumbnail rendering without additional measurements.", {
+      x:40,y:740,size:10,font,color:rgb(0,0,0),maxWidth:530,lineHeight:16
+    });
+  }
   const pdfBytes = await pdfDoc.save();
 
   const page = await browser.newPage();
@@ -99,7 +159,7 @@ try {
   const status = await page.locator("#status").innerText();
   assert.match(status, /استخراج تمام شد/, `Parser did not complete: ${status}`);
   const pageInfo = await page.locator("#result").innerText();
-  assert.match(pageInfo, /تعداد صفحات: 3/);
+  assert.match(pageInfo, /تعداد صفحات: 12/);
   assert.match(pageInfo, /صفحات OCR: 2، 3/);
   assert.match(pageInfo, /161/);
   assert.match(pageInfo, /57/);
@@ -110,6 +170,10 @@ try {
   assert.match(pageInfo, /نیازمند بررسی مربی/,
     "A bilateral difference above the review threshold must be visible to the coach.");
   assert.match(pageInfo, /24.5/);
+  assert.match(pageInfo, /14/);
+  assert.match(pageInfo, /43/);
+  assert.match(pageInfo, /1623/);
+  assert.match(pageInfo, /69.87/);
   const direct = await page.evaluate(() => window.TopGenesisPdfParser.extractMetrics(
     "Body Measurements (cm) Calf Left Region 157.686 Calf Right Region 162.757 Hip Region 680.131"
   ));
@@ -306,16 +370,16 @@ try {
 
   // The report picker renders real source-PDF pages, then builds separate branded report pages.
   const selectableScanPages = page.locator("#scanPageGrid input[data-scan-page]");
-  assert.equal(await selectableScanPages.count(), 3, "All three PDF pages should be available for coach selection.");
-  assert.equal(await page.locator("#scanPageGrid img").count(), 3, "Each PDF page should have a rendered thumbnail.");
-  await page.locator("#scanPageGrid input[data-scan-page='2']").check();
-  await page.locator("#scanPageGrid input[data-scan-page='3']").check();
-  await page.locator("#scanQualityReview [data-quality-page='2'] select[data-quality='lighting']").selectOption("balanced");
-  await page.locator("#scanQualityReview [data-quality-page='2'] select[data-quality='background']").selectOption("plain");
-  await page.locator("#scanQualityReview [data-quality-page='2'] select[data-quality='completeness']").selectOption("full");
-  await page.locator("#scanQualityReview [data-quality-page='2'] select[data-quality='clarity']").selectOption("clear");
-  await page.locator("#scanQualityReview [data-quality-page='3'] select[data-quality='lighting']").selectOption("uneven");
-  await page.locator("#scanQualityReview [data-quality-page='3'] select[data-quality='completeness']").selectOption("cropped");
+  assert.equal(await selectableScanPages.count(), 12, "All twelve PDF pages should be available for coach selection.");
+  assert.equal(await page.locator("#scanPageGrid img").count(), 12, "Each PDF page should have a rendered thumbnail.");
+  await page.locator("#scanPageGrid input[data-scan-page='4']").check();
+  await page.locator("#scanPageGrid input[data-scan-page='5']").check();
+  await page.locator("#scanQualityReview [data-quality-page='4'] select[data-quality='lighting']").selectOption("balanced");
+  await page.locator("#scanQualityReview [data-quality-page='4'] select[data-quality='background']").selectOption("plain");
+  await page.locator("#scanQualityReview [data-quality-page='4'] select[data-quality='completeness']").selectOption("full");
+  await page.locator("#scanQualityReview [data-quality-page='4'] select[data-quality='clarity']").selectOption("clear");
+  await page.locator("#scanQualityReview [data-quality-page='5'] select[data-quality='lighting']").selectOption("uneven");
+  await page.locator("#scanQualityReview [data-quality-page='5'] select[data-quality='completeness']").selectOption("cropped");
   await page.locator("#reportSubjectName").fill("شاگرد آزمایشی");
   await page.locator("#trainingAdvice").fill("تمرین مقاومتی بر اساس سطح و هدف شاگرد تنظیم شود.");
   await page.locator("#nutritionAdvice").fill("برنامه غذایی پس از بررسی هدف و عادات غذایی شاگرد تنظیم شود.");
@@ -329,6 +393,11 @@ try {
   assert.match(reportText, /نور: متعادل/);
   assert.match(reportText, /بدن کامل داخل کادر/);
   assert.match(reportText, /پیشنهاد تمرینی/);
+  assert.match(reportText, /ترکیب وزن ثبت‌شده/);
+  assert.match(reportText, /تصویر واقعی اسکن بدن · صفحه 4/);
+  assert.match(reportText, /تصویر واقعی اسکن بدن · صفحه 5/);
+  assert.equal(await page.locator("#reportPreview .report-composition").count(), 1,
+    "A composition chart should appear when fat mass plus lean mass reconciles to total weight.");
   assert.match(reportText, /مجتبی/);
   assert.equal(await page.locator("#reportPreview .report-scan-frame img").count(), 2,
     "Two selected original PDF pages must appear as report images.");
