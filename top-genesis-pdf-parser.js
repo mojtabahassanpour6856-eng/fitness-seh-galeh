@@ -347,7 +347,7 @@
         // Preserve real scan pages from the source PDF. These are page renders,
         // not generated silhouettes or substituted stock imagery.
         const scanText = normalize(pageText);
-        const hasScanVisualCue = /Silhouette|Profile|3D\s*Scan|Front\s*View|Side\s*View/i.test(scanText);
+        const hasScanVisualCue = /Silhouette|3D\s*Scan|Front\s*View|Side\s*View/i.test(scanText);
         if (hasScanVisualCue && scanPages.length < 4) {
           const scanViewport = page.getViewport({ scale: 1.5 });
           const scanCanvas = document.createElement("canvas");
