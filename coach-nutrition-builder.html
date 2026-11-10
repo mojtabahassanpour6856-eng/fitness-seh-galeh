@@ -312,7 +312,6 @@ async function saveNutritionTemplate(id){
  }
 }
 function copyNutritionTemplate(id){
- nutritionTemplateEditingId=null;
  const row=nutritionTemplateCache[id],data=row&&row.template_data;
  if(!data||!Array.isArray(data.state)){notify('اطلاعات این الگو کامل نیست؛ دوباره الگوها را دریافت کن.');return}
  if(nutritionTemplateHasFood(state)&&!confirm('محتوای فعلی برنامه‌ساز جایگزین الگو می‌شود. هنوز چیزی در پرونده شاگرد ثبت نمی‌شود. ادامه می‌دهی؟'))return;
@@ -323,13 +322,22 @@ function copyNutritionTemplate(id){
   carbs_target:document.getElementById('targetCarbsInput').value,
   fat_target:document.getElementById('targetFatInput').value
  };
- state.splice(0,state.length,...JSON.parse(JSON.stringify(data.state)));
+ // Replace any coach-only draft so it cannot restore the previous template
+ // over the newly selected one after an iframe reload.
+ clearTimeout(nutritionDraftTimer);
+ try{localStorage.removeItem(nutritionDraftStorageKey)}catch(e){console.warn('Nutrition draft cleanup failed',e)}
+ nutritionTemplateEditingId=null;
+ const copiedState=JSON.parse(JSON.stringify(data.state));
+ state.splice(0,state.length,...copiedState);
  const p=data.plan||{};
- document.getElementById('planTitle').value=p.title||row.name||'برنامه غذایی';
+ const definition=nutritionTemplateDefinitions.find(x=>x.id===id);
+ document.getElementById('planTitle').value=p.title||row.name||(definition&&definition.name)||'برنامه غذایی';
  syncTargetFields(traineeTargets);
  targetManualDirty=true;
+ renderNutritionTemplateCards();
  draw();
- notify('الگوی «'+row.name+'» در برنامه غذایی کپی شد؛ اهداف کالری و درشت‌مغذی‌های شاگرد حفظ شدند. برای ثبت نهایی، دکمه ثبت برنامه را بزن.');
+ setConnectionStatus('الگوی «'+(definition&&definition.name||row.name||'برنامه غذایی')+'» در برنامه‌ساز جایگزین شد. هنوز در پرونده شاگرد ثبت نشده است؛ برای ثبت نهایی دکمه ثبت تمام برنامه غذایی را بزن.',true);
+ notify('الگوی «'+(definition&&definition.name||row.name||'برنامه غذایی')+'» با موفقیت جایگزین شد؛ برای ثبت نهایی دکمه ثبت برنامه را بزن.');
 }
 
 let pickerContext=null,draft=[];
