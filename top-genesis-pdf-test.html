@@ -70,7 +70,7 @@ function buildSimpleAnalysis(m){
  const safe=k=>m[k]&&m[k].value!==null&&m[k].value!==undefined&&Number.isFinite(Number(m[k].value))&&!['invalid_range','conflict_review','not_reported'].includes(m[k].status)?Number(m[k].value):null;
  const w=safe('weight_kg'),h=safe('height_cm'),f=safe('fat_mass_kg'),l=safe('lean_mass_kg'),p=safe('body_fat_percent'),b=safe('bmi'),r=safe('resting_metabolic_rate_kcal');
  const cards=[];if(w!==null)cards.push(['وزن ثبت‌شده',w+' کیلوگرم','مقدار گزارش']);if(p!==null)cards.push(['درصد چربی',p+'٪','بدون طبقه‌بندی پزشکی']);if(b!==null)cards.push(['BMI گزارش',b,'تفسیر به سن و شرایط فرد وابسته است']);if(r!==null)cards.push(['سوخت‌وساز پایه',r+' kcal/day','معادل کالری مصرفی روزانه نیست']);
- let o='<section class="analysis-box"><h2>خلاصه ساده و تصویری</h2><p class="small">این بخش فقط داده‌های گزارش و کنترل سازگاری را توضیح می‌دهد؛ تشخیص یا نسخه تمرین و تغذیه نیست.</p>';
+ let o='<section class="analysis-box report-page"><h2>خلاصه ساده و تصویری</h2><p class="small">این بخش فقط داده‌های گزارش و کنترل سازگاری را توضیح می‌دهد؛ تشخیص یا نسخه تمرین و تغذیه نیست.</p>';
  if(cards.length)o+='<div class="analysis-grid">'+cards.map(c=>'<div class="analysis-card"><span>'+escapeHTML(c[0])+'</span><strong>'+escapeHTML(c[1])+'</strong><span>'+escapeHTML(c[2])+'</span></div>').join('')+'</div>';
  if(w!==null&&h!==null&&b!==null){const x=w/Math.pow(h/100,2),d=Math.abs(x-b);o+='<p class="'+(d<=1?'analysis-good':'analysis-warn')+'">کنترل BMI: از قد و وزن '+x.toFixed(1)+' محاسبه می‌شود؛ گزارش '+b+'. '+(d<=1?'دو مقدار نزدیک‌اند.':'اختلاف نیازمند بازبینی است.')+'</p>';}
  if(w!==null&&f!==null&&l!==null){const sum=f+l,d=Math.abs(sum-w);if(d<=1.5){const fw=Math.max(0,Math.min(100,f/sum*100)),lw=100-fw;o+='<h3>ترکیب وزن ثبت‌شده</h3><div class="chart-row"><span>توده چربی</span><div class="bar-track"><div class="bar-fill" style="width:'+fw.toFixed(1)+'%"></div></div><b>'+f.toFixed(1)+' kg</b></div><div class="chart-row"><span>بدون چربی</span><div class="bar-track"><div class="bar-fill" style="width:'+lw.toFixed(1)+'%"></div></div><b>'+l.toFixed(1)+' kg</b></div><p class="analysis-good">جمع دو بخش '+sum.toFixed(1)+' کیلوگرم است و با وزن کل سازگاری اولیه دارد.</p>';}else{o+='<p class="analysis-warn">جمع توده چربی و بدون چربی با وزن کل سازگار نیست؛ نمودار نمایش داده نشد.</p>';}}
@@ -121,8 +121,8 @@ function buildReportComparison(older,newer){
   const deltaText=(diff>0?"+":"")+diff.toFixed(2)+" "+(k==="body_fat_percent"?"واحد درصد":unit);
   rows.push("<tr><td>"+escapeHTML(label)+"</td><td>"+escapeHTML(av)+"</td><td>"+escapeHTML(bv)+"</td><td>"+escapeHTML(deltaText)+"</td><td>"+delta+(raw?"؛ مقایسه خام، بدون تفسیر محیطی":"")+"</td></tr>");
  });
- if(!rows.length)return "<section class='analysis-box'><h2>مقایسه دو گزارش</h2><p class='analysis-warn'>شاخص مشترک و قابل‌مقایسه‌ای در هر دو گزارش پیدا نشد. مقادیر ناقص، متعارض یا با واحد متفاوت مقایسه نمی‌شوند.</p></section>";
- return "<section class='analysis-box'><h2>مقایسه روند دو گزارش</h2><p class='small'>گزارش اول به‌عنوان قدیمی‌تر و گزارش دوم به‌عنوان جدیدتر در نظر گرفته شده است. این مقایسه صرفاً عددی است و به‌تنهایی علت تغییر را مشخص نمی‌کند.</p><table><thead><tr><th>شاخص</th><th>قدیمی‌تر</th><th>جدیدتر</th><th>تغییر</th><th>نتیجه</th></tr></thead><tbody>"+rows.join("")+"</tbody></table><p class='note'>اندازه‌های Region فقط به‌صورت اختلاف عدد خام نمایش داده می‌شوند؛ تا زمان تأیید معنای واحد دستگاه، افزایش یا کاهش آن‌ها را تغییر قطعی محیط بدن تلقی نکنید.</p></section>";
+ if(!rows.length)return "<section class='analysis-box report-page'><h2>مقایسه دو گزارش</h2><p class='analysis-warn'>شاخص مشترک و قابل‌مقایسه‌ای در هر دو گزارش پیدا نشد. مقادیر ناقص، متعارض یا با واحد متفاوت مقایسه نمی‌شوند.</p></section>";
+ return "<section class='analysis-box report-page'><h2>مقایسه روند دو گزارش</h2><p class='small'>گزارش اول به‌عنوان قدیمی‌تر و گزارش دوم به‌عنوان جدیدتر در نظر گرفته شده است. این مقایسه صرفاً عددی است و به‌تنهایی علت تغییر را مشخص نمی‌کند.</p><table><thead><tr><th>شاخص</th><th>قدیمی‌تر</th><th>جدیدتر</th><th>تغییر</th><th>نتیجه</th></tr></thead><tbody>"+rows.join("")+"</tbody></table><p class='note'>اندازه‌های Region فقط به‌صورت اختلاف عدد خام نمایش داده می‌شوند؛ تا زمان تأیید معنای واحد دستگاه، افزایش یا کاهش آن‌ها را تغییر قطعی محیط بدن تلقی نکنید.</p></section>";
 }
 window.TopGenesisReportComparison=buildReportComparison;
 
@@ -142,8 +142,8 @@ function buildMultiReportTrend(reports){
   const shownUnit=k==="body_fat_percent"?"واحد درصد":(units[unit]||unit||"");
   output.push("<article class='trend-card'><h3>"+names[k]+"</h3>"+bars+"<p class='small'>تغییر از گزارش اول تا آخر: <strong>"+direction+" "+Math.abs(change).toFixed(2)+" "+shownUnit+"</strong></p></article>");
  });
- if(!output.length)return "<section class='analysis-box'><h2>روند چندمرحله‌ای</h2><p class='analysis-warn'>برای هیچ شاخصی در تمام گزارش‌ها داده معتبر و هم‌واحد پیدا نشد. نقاط ناقص یا متعارض حذف می‌شوند.</p></section>";
- return "<section class='analysis-box'><h2>نمودار روند چندمرحله‌ای</h2><p class='small'>ترتیب فایل‌ها همان ترتیب انتخاب/ورود است؛ گزارش‌ها را از قدیمی به جدید انتخاب کنید. نمودارها تغییر نسبی بین نقاط را نشان می‌دهند و محور هر نمودار مستقل است.</p>"+output.join("")+"<p class='note'>این نمودار فقط روند عددی را نمایش می‌دهد و علت تغییر یا نتیجه پزشکی/تمرینی را تعیین نمی‌کند. شاخص‌های خام Region در این نمودار وارد نشده‌اند.</p></section>";
+ if(!output.length)return "<section class='analysis-box report-page'><h2>روند چندمرحله‌ای</h2><p class='analysis-warn'>برای هیچ شاخصی در تمام گزارش‌ها داده معتبر و هم‌واحد پیدا نشد. نقاط ناقص یا متعارض حذف می‌شوند.</p></section>";
+ return "<section class='analysis-box report-page'><h2>نمودار روند چندمرحله‌ای</h2><p class='small'>ترتیب فایل‌ها همان ترتیب انتخاب/ورود است؛ گزارش‌ها را از قدیمی به جدید انتخاب کنید. نمودارها تغییر نسبی بین نقاط را نشان می‌دهند و محور هر نمودار مستقل است.</p>"+output.join("")+"<p class='note'>این نمودار فقط روند عددی را نمایش می‌دهد و علت تغییر یا نتیجه پزشکی/تمرینی را تعیین نمی‌کند. شاخص‌های خام Region در این نمودار وارد نشده‌اند.</p></section>";
 }
 window.TopGenesisMultiReportTrend=buildMultiReportTrend;
 
