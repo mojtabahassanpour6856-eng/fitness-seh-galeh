@@ -220,7 +220,70 @@ try {
   assert.deepEqual(conflictingBmi.metrics.bmi.alternatives, [22, 29.4]);
   assert.match(pageInfo, /ساعد چپ.*ثبت نشده/s, "Missing forearm was not reported as missing.");
   assert.match(pageInfo, /69\.87/, "Tesseract did not recognize the synthetic waist value from the raster page.");
-  assert.match(pageInfo, /123\.456/, "Targeted OCR did not recover the region value from the semi-text page.");
+
+  assert.match(pageInfo, /123\\.456/, "Targeted OCR did not recover the region value from the semi-text page.");
+
+  // The coach report must use original PDF page renders, not generated imagery.
+  const scanImages = page.locator(".scan-figure img");
+  assert.ok(await scanImages.count() > 0, "At least one original scan page should be rendered in the report.");
+  const scanSources = await scanImages.evaluateAll(items => items.map(item => item.getAttribute("src") || ""));
+  assert.ok(scanSources.every(src => src.startsWith("data:image/png;base64,")),
+    "Scan images must be rendered from the PDF in-browser as PNG data URLs.");
+  assert.equal(await page.locator("[data-review]").count(), 4,
+    "The coach must be able to review lighting, background, movement and scan completeness.");
+  assert.equal(await page.locator("#pngReport").isDisabled(), true,
+    "Multi-page PNG export must remain locked until manual review and coach approval.");
+  await page.locator("[data-review]").evaluateAll(items => items.forEach(item => {
+    item.value = "ok";
+    item.dispatchEvent(new Event("change", { bubbles: true }));
+  }));
+  await page.locator("#trainingNotes").fill("برنامه تمرینی پس از بررسی سابقه و هدف شاگرد تنظیم شود.");
+  await page.locator("#nutritionNotes").fill("توصیه تغذیه‌ای پس از بررسی هدف و فعالیت شاگرد تکمیل شود.");
+  await page.locator("#coachApprove").check();
+  assert.equal(await page.locator("#pngReport").isDisabled(), false);
+  assert.equal(await page.locator("#shareReport").isDisabled(), false);
+
+  // Mock browser capture/share APIs to verify one PNG file is created per report page.
+  await page.evaluate(() => {
+    window.html2canvas = async () => {
+      const canvas = document.createElement("canvas");
+      canvas.width = 640;
+      canvas.height = 900;
+      const ctx = canvas.getContext("2d");
+      ctx.fillStyle = "#fffdf7";
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      ctx.fillStyle = "#765b2e";
+      ctx.font = "18px Arial";
+      ctx.fillText("Report page", 20, 40);
+      return canvas;
+    };
+    Object.defineProperty(navigator, "canShare", {
+      configurable: true,
+      value: ({ files }) => Array.isArray(files) && files.length > 1
+    });
+    Object.defineProperty(navigator, "share", {
+      configurable: true,
+      value: async ({ files }) => {
+        window.__sharedReportFiles = files.map(file => ({
+          name: file.name, type: file.type, size: file.size
+        }));
+      }
+    });
+  });
+  const expectedPngPages = await page.locator(".report-page").count();
+  await page.locator("#shareReport").click();
+  await page.waitForFunction(() => Array.isArray(window.__sharedReportFiles), null, { timeout: 30000 });
+  const sharedFiles = await page.evaluate(() => window.__sharedReportFiles);
+  assert.equal(sharedFiles.length, expectedPngPages,
+    "Every report page must be included as a separate PNG file in sharing.");
+  assert.ok(sharedFiles.every(file => file.type === "image/png" && file.size > 0),
+    "Shared report pages must be non-empty PNG files.");
+
+  const nullMetricVisual = await page.evaluate(() => window.TopGenesisVisualReport({
+    weight_kg: { value: null, unit: "kg", status: "not_reported" }
+  }, []));
+  assert.doesNotMatch(nullMetricVisual, /0\\s*kg/,
+    "A null or missing metric must never be rendered as zero.");
   const simpleAnalysis = await page.evaluate(() => window.TopGenesisSimpleAnalysis({
     height_cm:{value:161,status:"within_initial_range_needs_coach_review"},
     weight_kg:{value:57,status:"within_initial_range_needs_coach_review"},
