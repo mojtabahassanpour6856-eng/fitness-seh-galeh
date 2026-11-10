@@ -49,6 +49,22 @@ try {
     ctx.fillText("Forearm Right Region 123.456", 35, 180);
     return canvas.toDataURL("image/png");
   });
+  const silhouetteImageDataUrl = await imagePage.evaluate(() => {
+    const canvas = document.createElement("canvas");
+    canvas.width = 600; canvas.height = 700;
+    const ctx = canvas.getContext("2d");
+    ctx.fillStyle = "#ffffff"; ctx.fillRect(0, 0, 600, 700);
+    ctx.strokeStyle = "#27965a"; ctx.lineWidth = 10; ctx.lineCap = "round";
+    ctx.beginPath(); ctx.ellipse(300, 85, 48, 58, 0, 0, Math.PI * 2); ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(300,145);ctx.lineTo(300,390);
+    ctx.moveTo(300,190);ctx.lineTo(170,300);
+    ctx.moveTo(300,190);ctx.lineTo(430,300);
+    ctx.moveTo(300,390);ctx.lineTo(205,650);
+    ctx.moveTo(300,390);ctx.lineTo(395,650);
+    ctx.stroke();
+    return canvas.toDataURL("image/png");
+  });
   await imagePage.close();
 
   const pdfDoc = await PDFDocument.create();
@@ -73,6 +89,14 @@ try {
   const regionPngBytes = Buffer.from(regionImageDataUrl.split(",")[1], "base64");
   const regionImage = await pdfDoc.embedPng(regionPngBytes);
   mixedPage.drawImage(regionImage, { x: 40, y: 400, width: 530, height: 88 });
+  const scanPage = pdfDoc.addPage([612, 792]);
+  scanPage.drawText(
+    "Silhouette Profile 3D Scan. This synthetic fixture includes a front-facing body outline and a side-profile outline to verify that only original scan pages are selected for the final report.",
+    { x: 40, y: 700, size: 10, font, color: rgb(0, 0, 0), maxWidth: 530, lineHeight: 16 }
+  );
+  const silhouettePngBytes = Buffer.from(silhouetteImageDataUrl.split(",")[1], "base64");
+  const silhouetteImage = await pdfDoc.embedPng(silhouettePngBytes);
+  scanPage.drawImage(silhouetteImage, { x: 185, y: 160, width: 240, height: 520 });
   const pdfBytes = await pdfDoc.save();
 
   const page = await browser.newPage();
@@ -93,7 +117,7 @@ try {
   const status = await page.locator("#status").innerText();
   assert.match(status, /استخراج تمام شد/, `Parser did not complete: ${status}`);
   const pageInfo = await page.locator("#result").innerText();
-  assert.match(pageInfo, /تعداد صفحات: 3/);
+  assert.match(pageInfo, /تعداد صفحات: 4/);
   assert.match(pageInfo, /صفحات OCR: 2، 3/);
   assert.match(pageInfo, /161/);
   assert.match(pageInfo, /57/);
@@ -167,6 +191,30 @@ try {
     "A legitimate body-fat value of exactly 25% must never be discarded.");
   assert.equal(valid25.metrics.body_fat_percent.status, "within_initial_range_needs_coach_review",
     "A broad range check must not be presented as medical validation.");
+  const conflictingRegion = await page.evaluate(() => window.TopGenesisPdfParser.extractMetrics(
+    "Body Measurements (cm) Calf Left Region 157.69 Calf Left Region 180.25 Calf Right Region 162.75"
+  ));
+  assert.equal(conflictingRegion.metrics.raw_body_measurements.calf_left_cm.status, "conflict_review");
+  assert.deepEqual(conflictingRegion.metrics.raw_body_measurements.calf_left_cm.alternatives, [157.69, 180.25]);
+  assert.equal(conflictingRegion.metrics.bilateral_measurement_review, undefined);
+  const roundedRegion = await page.evaluate(() => window.TopGenesisPdfParser.extractMetrics(
+    "Body Measurements (cm) Calf Left Region 157.69 Calf Left Region 157.686 Calf Right Region 162.75"
+  ));
+  assert.equal(roundedRegion.metrics.raw_body_measurements.calf_left_cm.status, "consistent_rounding");
+  assert.deepEqual(roundedRegion.metrics.raw_body_measurements.calf_left_cm.alternatives, [157.69, 157.686]);
+  const nargesKnownValues = await page.evaluate(() => window.TopGenesisPdfParser.extractMetrics(
+    "Height & Weight 161 cm & 57 kg Body Fat 24.5% BMI 22.0 Waist-to-Hip Ratio 0.734 14 kg of fat mass 43 kg of lean body mass Your waist measures 69.87 cm RMR 1352 calories/day Caloric Expenditure 1623 Calories/day"
+  ));
+  assert.equal(nargesKnownValues.metrics.weight_kg.value, 57);
+  assert.equal(nargesKnownValues.metrics.height_cm.value, 161);
+  assert.equal(nargesKnownValues.metrics.body_fat_percent.value, 24.5);
+  assert.equal(nargesKnownValues.metrics.bmi.value, 22);
+  assert.equal(nargesKnownValues.metrics.waist_hip_ratio.value, 0.734);
+  assert.equal(nargesKnownValues.metrics.fat_mass_kg.value, 14);
+  assert.equal(nargesKnownValues.metrics.lean_mass_kg.value, 43);
+  assert.equal(nargesKnownValues.metrics.waist_circumference_cm.value, 69.87);
+  assert.equal(nargesKnownValues.metrics.resting_metabolic_rate_kcal.value, 1352);
+  assert.equal(nargesKnownValues.metrics.daily_energy_expenditure_kcal.value, 1623);
   const conflictingFat = await page.evaluate(() => window.TopGenesisPdfParser.extractMetrics(
     "Body Fat 25% Body Fat 29.5% BMI 22.4"
   ));
@@ -225,18 +273,17 @@ try {
 
   // The coach report must use original PDF page renders, not generated imagery.
   const scanImages = page.locator(".scan-figure img");
-  assert.ok(await scanImages.count() > 0, "At least one original scan page should be rendered in the report.");
+  assert.equal(await scanImages.count(), 1,
+    "Only the PDF page explicitly labeled as a body scan should be selected; measurement pages are not scan images.");
   const scanSources = await scanImages.evaluateAll(items => items.map(item => item.getAttribute("src") || ""));
-  assert.ok(scanSources.every(src => src.startsWith("data:image/png;base64,")),
-    "Scan images must be rendered from the PDF in-browser as PNG data URLs.");
-
-  const brandLogo = page.locator(".brand-logo").first();
-  assert.ok(await brandLogo.count() > 0, "The report cover must include the existing club logo.");
-  await brandLogo.evaluate(img => img.decode());
-  assert.ok(await brandLogo.evaluate(img => img.naturalWidth > 0),
-    "The existing Fitness Seh Galeh logo asset must load in the report.");
-  assert.equal(await page.locator("[data-review]").count(), 4,
-    "The coach must be able to review lighting, background, movement and scan completeness.");
+  assert.ok(scanSources.every(src => src.startsWith("data:image/png;base64,")));
+  assert.match(await page.locator(".scan-figure figcaption").innerText(), /صفحه 4/);
+  const coverLogo = page.locator(".report-cover .cover-logo");
+  assert.equal(await coverLogo.count(), 1);
+  await coverLogo.evaluate(img => img.decode());
+  assert.ok(await coverLogo.evaluate(img => img.naturalWidth > 0));
+  assert.equal(await page.locator("[data-review]").count(), 5,
+    "The coach must review lighting, background, image clarity, movement and scan completeness.");
   assert.equal(await page.locator("#pngReport").isDisabled(), true,
     "Multi-page PNG export must remain locked until manual review and coach approval.");
   await page.locator("[data-review]").evaluateAll(items => items.forEach(item => {
@@ -261,8 +308,10 @@ try {
     Object.defineProperty(navigator, "share", {
       configurable: true,
       value: async ({ files }) => {
-        window.__sharedReportFiles = files.map(file => ({
-          name: file.name, type: file.type, size: file.size
+        window.__sharedReportFiles = await Promise.all(files.map(async file => {
+          const bytes = new Uint8Array(await file.arrayBuffer());
+          const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+          return { name:file.name, type:file.type, size:file.size, width:view.getUint32(16), height:view.getUint32(20) };
         }));
       }
     });
@@ -273,9 +322,20 @@ try {
   const sharedFiles = await page.evaluate(() => window.__sharedReportFiles);
   assert.equal(sharedFiles.length, expectedPngPages,
     "Every report page must be included as a separate PNG file in sharing.");
-  assert.ok(sharedFiles.every(file => file.type === "image/png" && file.size > 0),
-    "Shared report pages must be non-empty PNG files.");
-
+  assert.ok(sharedFiles.every(file => file.type === "image/png" && file.size > 0 && file.width >= 1200 && file.height >= 500),
+    "Shared report pages must be non-empty, high-resolution PNG files.");
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.waitForTimeout(200);
+  const mobileLayout = await page.evaluate(() => ({
+    viewport: window.innerWidth,
+    scrollWidth: document.documentElement.scrollWidth,
+    pages: [...document.querySelectorAll(".report-page")].map(node => {
+      const rect = node.getBoundingClientRect(); return { left:rect.left, right:rect.right };
+    })
+  }));
+  assert.ok(mobileLayout.scrollWidth <= mobileLayout.viewport + 1,
+    "The report must not create horizontal scrolling on a 390px mobile viewport.");
+  assert.ok(mobileLayout.pages.every(item => item.left >= -1 && item.right <= mobileLayout.viewport + 1));
   const nullMetricVisual = await page.evaluate(() => window.TopGenesisVisualReport({
     weight_kg: { value: null, unit: "kg", status: "not_reported" }
   }, []));
