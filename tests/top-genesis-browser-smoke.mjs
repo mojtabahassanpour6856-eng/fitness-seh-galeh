@@ -125,8 +125,8 @@ try {
     "Bilateral region comparison must be rendered in the Persian results.");
   assert.match(pageInfo, /ساق چپ/,
     "Region names must be shown in Persian rather than internal keys.");
-  assert.match(pageInfo, /نیازمند بررسی مربی/,
-    "A bilateral difference above the review threshold must be visible to the coach.");
+  assert.match(pageInfo, /اختلاف عددی خام/,
+    "Unvalidated Region units must be presented as uninterpreted raw differences.");
   assert.match(pageInfo, /24.5/);
   const direct = await page.evaluate(() => window.TopGenesisPdfParser.extractMetrics(
     "Body Measurements (cm) Calf Left Region 157.686 Calf Right Region 162.757 Hip Region 680.131"
@@ -144,8 +144,8 @@ try {
     "Calf raw value must retain its decimal precision.");
   assert.equal(direct.metrics.raw_body_measurements.calf_right_cm.raw_value, 162.757,
     "Opposite-side calf raw value must retain its decimal precision.");
-  assert.equal(direct.metrics.bilateral_measurement_review[0].status, "coach_review_asymmetry",
-    "A left/right difference above the initial 2-unit review threshold must be flagged.");
+  assert.equal(direct.metrics.bilateral_measurement_review[0].status, "raw_difference_needs_unit_validation",
+    "A left/right raw difference must not be classified as asymmetry before unit semantics are validated.");
   assert.equal(direct.metrics.bilateral_measurement_review[0].absolute_difference, 5.071,
     "The bilateral difference must be calculated without losing decimal precision.");
   assert.equal(direct.metrics.raw_body_measurements.hip_region_cm.raw_value, 680.131,
@@ -182,8 +182,8 @@ try {
   const smallDifference = await page.evaluate(() => window.TopGenesisPdfParser.extractMetrics(
     "Body Measurements (cm) Calf Left Region 157.686 Calf Right Region 159.000"
   ));
-  assert.equal(smallDifference.metrics.bilateral_measurement_review[0].status, "within_initial_review_threshold",
-    "A bilateral difference at or below 2 reported units must not trigger the asymmetry flag.");
+  assert.equal(smallDifference.metrics.bilateral_measurement_review[0].status, "raw_difference_needs_unit_validation",
+    "Even a small raw difference remains uninterpreted until device units are validated.");
   const valid25 = await page.evaluate(() => window.TopGenesisPdfParser.extractMetrics(
     "Body Fat 25% BMI 22.4"
   ));
