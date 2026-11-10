@@ -589,12 +589,22 @@ async function saveAllToTrainee(){
   }
  }
  if(meals.length>32){notify('تعداد گزینه‌های برنامه بیشتر از حد مجاز است.');return}
+ const primaryMeals=meals.filter(x=>x.option_no===1);
+ const totalFoodRows=meals.reduce((sum,x)=>sum+x.foods.length,0);
+ if(primaryMeals.length!==8||primaryMeals.some(x=>x.foods.length===0)||totalFoodRows===0){
+  notify('ثبت متوقف شد: هر ۸ وعده اصلی باید حداقل یک ماده غذایی داشته باشد. قالب را دوباره انتخاب و بررسی کن.');
+  setConnectionStatus('ثبت انجام نشد؛ اطلاعات ناقص است و چیزی در پرونده شاگرد تغییر نکرد.',false);
+  return;
+ }
  const plan={title:document.getElementById('planTitle').value.trim()||'برنامه غذایی',start_date:document.getElementById('planStart').value||null,end_date:document.getElementById('planEnd').value||null,daily_calories:Number(document.getElementById('targetCaloriesInput').value)||null,protein_target:Number(document.getElementById('targetProteinInput').value)||null,carbs_target:Number(document.getElementById('targetCarbsInput').value)||null,fat_target:Number(document.getElementById('targetFatInput').value)||null,notes:builderExistingNotes}
  builderBusy=true;const btn=document.getElementById('saveAllBtn');btn.disabled=true;btn.textContent='در حال ثبت امن برنامه…';
  try{
   const result=await parentBridge().save({trainee_id:String(builderTrainee.id),plan,meals});
-  setConnectionStatus('برنامه غذایی برای '+(builderTrainee.name||'شاگرد')+' با موفقیت ثبت شد؛ نسخه قبلی حفظ شده است.',true);
-  notify('برنامه در پرونده شاگرد ثبت شد.');
+  if(!result||!Number.isFinite(Number(result.food_rows))||Number(result.food_rows)<1||Number(result.meal_options)<8){
+   throw new Error('تأیید نهایی سرور نشان می‌دهد غذاها یا وعده‌ها کامل ثبت نشده‌اند؛ برنامه را دوباره بررسی کن.');
+  }
+  setConnectionStatus('برنامه غذایی کامل برای '+(builderTrainee.name||'شاگرد')+' با موفقیت ثبت شد؛ نسخه قبلی حفظ شده است.',true);
+  notify('برنامه کامل در پرونده شاگرد ثبت شد.');
  }catch(e){setConnectionStatus('ذخیره انجام نشد: '+e.message,false);notify('ذخیره انجام نشد؛ اطلاعات واردشده پاک نشده است.')}
  finally{builderBusy=false;btn.disabled=false;btn.textContent='💾 ثبت تمام برنامه غذایی در پرونده شاگرد'}
 }
