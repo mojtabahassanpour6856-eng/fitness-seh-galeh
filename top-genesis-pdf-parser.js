@@ -198,10 +198,9 @@
         flags.push("برای " + (regionLabels[key] || key) + " در صفحات مختلف PDF مقادیر متفاوت ثبت شده است؛ همه مقدارها بدون میانگین‌گیری حفظ شده‌اند و باید با صفحات اصلی تطبیق داده شوند.");
       }
     });
-    // Compare left/right values only as a report-quality check. The device's
-    // "Region" values are not yet confirmed to be circumference in cm, so the
-    // threshold is expressed in raw reported units and must not be interpreted
-    // as a clinical or body-measurement diagnosis.
+    // Preserve left/right arithmetic only as an uninterpreted raw difference.
+    // Region unit/semantics are not validated, so never classify asymmetry or
+    // raise a >2-unit warning until the device definition is confirmed.
     const bilateralPairs = [
       ["calf_left_cm", "calf_right_cm", "ساق"],
       ["forearm_left_cm", "forearm_right_cm", "ساعد"],
@@ -227,13 +226,10 @@
         region: label, left_value: left, right_value: right,
         absolute_difference: Number(difference.toFixed(3)),
         relative_difference_percent: average ? Number((difference / average * 100).toFixed(2)) : null,
-        status: difference > 2 ? "coach_review_asymmetry" : "within_initial_review_threshold",
-        interpretation: "مقایسه صرفاً برای کنترل کیفیت گزارش است؛ واحد و معنای دقیق مقادیر ناحیه‌ای هنوز باید با دستگاه تأیید شود."
+        status: "raw_difference_needs_unit_validation",
+        interpretation: "اختلاف عددی خام حفظ شده است؛ تا تأیید واحد و معنای Region، از آن عدم‌تقارن یا هشدار بدنی استنباط نمی‌شود."
       };
       bilateralComparisons.push(comparison);
-      if (difference > 2) {
-        flags.push("اختلاف گزارش‌شده بین " + label + " چپ و راست بیش از ۲ واحد است؛ احتمال خطای ثبت/حرکت/نور یا تفاوت واقعی وجود دارد و باید با اسکن و مشاهده مربی بررسی شود.");
-      }
     });
     if (bilateralComparisons.length) out.bilateral_measurement_review = bilateralComparisons;
 
@@ -347,7 +343,7 @@
         // Preserve real scan pages from the source PDF. These are page renders,
         // not generated silhouettes or substituted stock imagery.
         const scanText = normalize(pageText);
-        const hasScanVisualCue = /Silhouette|3D\s*Scan|Front\s*View|Side\s*View/i.test(scanText);
+        const hasScanVisualCue = /Silhouette|3D\s*Scan|Front\s*View|Side\s*View|Upper\s*Body\s*Posture|Shoulder\s*Slope|Back\s*Posture/i.test(scanText);
         if (hasScanVisualCue && scanPages.length < 4) {
           const scanViewport = page.getViewport({ scale: 1.5 });
           const scanCanvas = document.createElement("canvas");
