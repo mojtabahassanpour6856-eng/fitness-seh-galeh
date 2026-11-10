@@ -56,10 +56,10 @@ pre{white-space:pre-wrap;overflow-wrap:anywhere;background:#f7f7f7;padding:12px;
 .report-metric-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin:16px 0}
 .report-metric-card{background:#fff;border:1px solid #eadfc9;border-radius:13px;padding:12px;min-width:0}
 .report-metric-card span{display:block;color:#756b59;font-size:.82rem}
-.report-metric-card b{display:block;color:#765b2e;font-size:1.35rem;direction:ltr;text-align:right;overflow-wrap:anywhere}
+.report-metric-card b{display:block;color:#765b2e;font-size:1.35rem;direction:ltr;text-align:right;unicode-bidi:isolate;overflow-wrap:anywhere}
 .report-metric-card small{display:block;color:#7b7469;font-size:.72rem}
 .report-composition{background:#fff;border:1px solid #eadfc9;border-radius:13px;padding:14px;margin-top:12px}
-.report-composition-row{display:grid;grid-template-columns:100px 1fr 70px;gap:8px;align-items:center;margin:10px 0;font-size:.86rem}
+.report-composition-row{display:grid;grid-template-columns:100px 1fr 70px;gap:8px;align-items:center;margin:10px 0;font-size:.86rem}.report-composition-row b{direction:ltr;text-align:left;unicode-bidi:isolate}
 .report-composition-track{height:14px;background:#ece5d9;border-radius:20px;overflow:hidden}
 .report-composition-fill{height:100%;border-radius:20px;background:linear-gradient(90deg,#d5b66f,#8d713b)}
 .report-composition-fill.lean{background:linear-gradient(90deg,#a5c8b2,#397c5d)}
@@ -230,7 +230,7 @@ button.addEventListener("click",async()=>{
   reportBuilder.innerHTML =
     '<div class="report-builder-controls no-print">' +
       '<h2>ساخت گزارش تحویلی حرفه‌ای</h2>' +
-      '<p class="small">صفحه‌های دارای تصویر اسکن را خودتان انتخاب کنید. تصاویر از PDF اصلی با PDF.js رندر می‌شوند؛ هیچ تصویر ساختگی جایگزین نمی‌شود و فایل در مرورگر می‌ماند.</p>' +
+      '<p class="small">فقط صفحه‌هایی را انتخاب کنید که ناحیه اسکن در آن‌ها دیده می‌شود. تصویر کامل صفحه PDF اصلی حفظ می‌شود و برش خودکار انجام نمی‌شود؛ هیچ تصویر ساختگی جایگزین نمی‌شود و فایل در مرورگر می‌ماند.</p>' +
       '<div class="grid2">' +
         '<div><label for="reportSubjectName">نام شاگرد (اختیاری)</label><input id="reportSubjectName" type="text" maxlength="80" placeholder="نام را در صورت نیاز وارد کنید"></div>' +
         '<div><label for="reportDate">تاریخ تهیه گزارش</label><input id="reportDate" type="date"></div>' +
@@ -455,9 +455,9 @@ button.addEventListener("click",async()=>{
           '<div>پس‌زمینه: ' + escapeHTML(makeQualityText(quality,"background")) + '</div>' +
           '<div>کامل بودن بدن: ' + escapeHTML(makeQualityText(quality,"completeness")) + '</div>' +
           '<div>وضوح: ' + escapeHTML(makeQualityText(quality,"clarity")) + '</div></div>';
-        pageContents.push('<h2 class="report-title" style="font-size:1.45rem">تصویر واقعی اسکن بدن · صفحه ' + imageData.page_no + '</h2>' +
-          '<p class="report-subtitle">رندر مستقیم صفحه انتخاب‌شده از PDF اصلی؛ بدون ساختن یا جایگزین‌کردن تصویر اسکن.</p>' +
-          '<div class="report-scan-frame"><img src="' + imageData.data_url + '" alt="تصویر اصلی صفحه اسکن ' + imageData.page_no + '"></div>' +
+        pageContents.push('<h2 class="report-title" style="font-size:1.45rem">تصویر صفحه اصلی PDF · صفحه ' + imageData.page_no + '</h2>' +
+          '<p class="report-subtitle">رندر مستقیم صفحه کامل انتخاب‌شده از PDF اصلی؛ فقط صفحه‌هایی را انتخاب کنید که تصویر اسکن در آن‌ها دیده می‌شود. برش خودکار انجام نمی‌شود.</p>' +
+          '<div class="report-scan-frame"><img src="' + imageData.data_url + '" alt="تصویر صفحه ' + imageData.page_no + ' از PDF اصلی"></div>' +
           qualityHtml +
           '<p class="small">این تصویر فقط برای مشاهده مربی و تکمیل بررسی کیفیت استفاده شده است.</p>');
       });
