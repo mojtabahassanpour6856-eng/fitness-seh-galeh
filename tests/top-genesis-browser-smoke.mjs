@@ -378,6 +378,19 @@ try {
   await page.locator("#scanQualityReview [data-quality-page='4'] select[data-quality='background']").selectOption("plain");
   await page.locator("#scanQualityReview [data-quality-page='4'] select[data-quality='completeness']").selectOption("full");
   await page.locator("#scanQualityReview [data-quality-page='4'] select[data-quality='clarity']").selectOption("clear");
+  // Changing selected scan pages must not erase quality checks already entered for another page.
+  await page.locator("#scanPageGrid input[data-scan-page='5']").uncheck();
+  assert.equal(
+    await page.locator("#scanQualityReview [data-quality-page='4'] select[data-quality='background']").inputValue(),
+    "plain",
+    "Quality values must survive when another scan page is deselected."
+  );
+  await page.locator("#scanPageGrid input[data-scan-page='5']").check();
+  assert.equal(
+    await page.locator("#scanQualityReview [data-quality-page='4'] select[data-quality='clarity']").inputValue(),
+    "clear",
+    "Quality values must be restored when a scan page is reselected."
+  );
   await page.locator("#scanQualityReview [data-quality-page='5'] select[data-quality='lighting']").selectOption("uneven");
   await page.locator("#scanQualityReview [data-quality-page='5'] select[data-quality='completeness']").selectOption("cropped");
   await page.locator("#reportSubjectName").fill("شاگرد آزمایشی");
@@ -402,6 +415,12 @@ try {
   assert.equal(await page.locator("#reportPreview .report-composition").count(), 1,
     "A composition chart should appear when fat mass plus lean mass reconciles to total weight.");
   assert.match(reportText, /مجتبی/);
+  assert.match(reportText, /جمع‌بندی ساده داده‌ها/);
+  assert.match(reportText, /کنترل BMI: مقدار گزارش 22\.0 و محاسبه از قد و وزن 22\.0 است؛ همخوانی اولیه دیده می‌شود/);
+  assert.match(reportText, /کنترل درصد چربی: نسبت توده چربی به وزن 24\.6٪ و مقدار گزارش 24\.5٪ است؛ همخوانی اولیه دیده می‌شود/);
+  assert.match(reportText, /سوخت‌وساز پایه و مصرف انرژی روزانه دو شاخص جدا هستند/);
+  assert.match(reportText, /ساعد چپ.*ثبت نشده است/);
+  assert.match(reportText, /واحد خام نگهداری شده‌اند/);
   assert.equal(await page.locator("#reportPreview .report-scan-frame img").count(), 2,
     "Two selected original PDF pages must appear as report images.");
   assert.equal(await page.locator("#reportPreview .report-watermark").count(), reportPagesCount,
