@@ -744,7 +744,8 @@ body.locked{overflow:hidden!important}
 <div><label>چربی هدف (گرم)</label><input id="mealFat" type="number" value="60"></div>
 </div>
 <label>یادداشت برنامه</label><textarea id="mealNotes" placeholder="توضیحات مربی..."></textarea>
-<button onclick="saveNutritionPlan()">💾 ذخیره اطلاعات برنامه</button>
+<p class="muted" style="font-size:12px;line-height:1.9">این دکمه فقط عنوان، تاریخ و اهداف برنامه را ذخیره می‌کند و غذاهای الگوی انتخاب‌شده را به پرونده شاگرد منتقل نمی‌کند. برای ثبت وعده‌ها و غذاها، از دکمه «ثبت تمام برنامه غذایی در پرونده شاگرد» در برنامه‌ساز بالا استفاده کن.</p>
+<button onclick="saveNutritionPlan()">💾 ذخیره اطلاعات کلی برنامه</button>
 </div>
 
 <div class="card" id="mealTargetPlanner">
@@ -1960,6 +1961,7 @@ async function saveNutritionPlan(){
    await sbWrite(`/nutrition_plans?id=eq.${encodeURIComponent(planId)}&trainee_id=eq.${encodeURIComponent(traineeId)}`,"PATCH",body);
   }else{
    if(!currentClient||String(currentClient.id)!==String(traineeId)||currentPlanId)throw new Error("وضعیت شاگرد تغییر کرده است؛ دوباره برنامه را بارگذاری کنید.");
+   if(!confirm("هنوز هیچ برنامه‌ای برای این شاگرد وجود ندارد. این عملیات فقط اطلاعات کلی برنامه را ذخیره می‌کند و هیچ وعده یا ماده غذایی از قالب انتخاب‌شده ثبت نمی‌شود. برای ثبت برنامه کامل باید از دکمه ثبت در برنامه‌ساز بالا استفاده کنی.\\n\\nبا ایجاد یک برنامه خالیِ اولیه موافقی؟"))return;
    const a=await sbWrite("/nutrition_plans","POST",body);
    if(!currentClient||String(currentClient.id)!==String(traineeId)){alert("برنامه ذخیره شد، اما شاگرد عوض شده است؛ برای مشاهده دوباره شاگرد قبلی را انتخاب کنید.");return;}
    currentPlanId=a[0]?.id||null;
