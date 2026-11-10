@@ -391,6 +391,22 @@ try {
   assert.equal(printableReportScaffold.hasPrintButtonCode,true,"Printable report must expose a print action after extraction.");
   assert.equal(printableReportScaffold.hasCoachSignoff,true,"Printable report must include coach sign-off fields.");
   assert.equal(printableReportScaffold.hasPersianReportTitle,true,"Printable report must have a Persian title.");
+  await page.emulateMedia({ media: "print" });
+  const printLayout = await page.evaluate(() => ({
+    font: getComputedStyle(document.querySelector(".report-cover")).fontFamily,
+    pageBreaks: [...document.querySelectorAll(".report-page")].every(node => {
+      const style = getComputedStyle(node);
+      return style.breakAfter === "page" || style.pageBreakAfter === "always";
+    }),
+    noHorizontalOverflow: document.documentElement.scrollWidth <= window.innerWidth + 1
+  }));
+  assert.match(printLayout.font, /Vazirmatn/,
+    "Print layout must retain the Persian-capable report font.");
+  assert.equal(printLayout.pageBreaks, true,
+    "Each report section must be separated cleanly when printed.");
+  assert.equal(printLayout.noHorizontalOverflow, true,
+    "Print layout must not overflow horizontally.");
+  await page.emulateMedia({ media: "screen" });
   const suspiciousAnalysis = await page.evaluate(() => window.TopGenesisSimpleAnalysis({
     weight_kg:{value:57,status:"within_initial_range_needs_coach_review"},
     fat_mass_kg:{value:14,status:"needs_coach_review"},
