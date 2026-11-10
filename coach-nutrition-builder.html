@@ -29,6 +29,7 @@ td input,td select{width:100%;min-width:0;border:1px solid #e5dcc8;border-radius
 .nutrition-template-card-name{font-size:11px;font-weight:bold;color:#5d4920;line-height:1.6}
 .nutrition-template-card-status{font-size:9px;color:#85795f}
 .nutrition-template-card-status.saved{color:#3f7137}
+.nutrition-template-calories{background:#fbf5e7;border:1px solid #ead9b4;border-radius:7px;padding:7px 6px;font-size:9px;line-height:1.8;color:#70551c}.nutrition-template-calories strong{font-size:13px;color:#5b4315}.nutrition-template-calories small{display:block;color:#956b24;font-size:8px}.nutrition-template-calories.empty{color:#8a806d;background:#faf8f2}
 .nutrition-template-card button{width:100%;border:1px solid #c7a34b;border-radius:7px;background:#fbf5e7;color:#70551c;padding:8px 5px;font:inherit;font-size:10px;font-weight:bold}
 .nutrition-template-card button.primary{background:#b8943d;color:#fff}
 .nutrition-template-card button.secondary{background:#fff;color:#70551c;border-style:dashed}
@@ -164,19 +165,37 @@ function startNutritionTemplate(id){
  if(meals)setTimeout(()=>meals.scrollIntoView({behavior:'smooth',block:'start'}),80);
  notify('الگوی «'+def.name+'» باز شد؛ غذاها را به وعده‌ها اضافه کن و در پایان دکمه ذخیره همین کارت را بزن.');
 }
+function templateFirstOptionCalories(templateData){
+ const meals=Array.isArray(templateData&&templateData.state)?templateData.state:[];
+ if(!meals.length)return null;
+ let calories=0,hasFood=false,hasUnconverted=false;
+ meals.forEach(meal=>{
+  const first=meal&&meal.options&&meal.options[1];
+  const rows=first&&Array.isArray(first.rows)?first.rows:[];
+  if(rows.length)hasFood=true;
+  if(rows.some(row=>!metric(row)))hasUnconverted=true;
+  calories+=total(rows).cal;
+ });
+ if(!hasFood)return null;
+ return {calories:fmt(calories),hasUnconverted};
+}
 function renderNutritionTemplateCards(){
  const host=document.getElementById('nutritionTemplateCards');if(!host)return;
  host.innerHTML=nutritionTemplateDefinitions.map(t=>{
   const row=nutritionTemplateCache[t.id];
   const saved=!!(row&&row.template_data&&Array.isArray(row.template_data.state));
   const editing=nutritionTemplateEditingId===t.id;
+  const estimate=saved?templateFirstOptionCalories(row.template_data):null;
+  const calorieLine=estimate
+   ?'<div class="nutrition-template-calories">🔥 مجموع کالری گزینه اول همه وعده‌ها: <strong>'+estimate.calories.toLocaleString('fa-IR')+'</strong> کیلوکالری'+(estimate.hasUnconverted?'<small>بخشی از مواد با واحد غیرقابل‌تبدیل در جمع نیامده است.</small>':'')+'</div>'
+   :(saved?'<div class="nutrition-template-calories empty">هنوز گزینه اول وعده‌ها غذای قابل محاسبه ندارد.</div>':'');
   const actions=editing
    ?'<button class="primary" type="button" onclick="saveNutritionTemplate(\''+t.id+'\')" '+(nutritionTemplatesBusy?'disabled':'')+'>'+(nutritionTemplatesBusy?'در حال ذخیره…':'ذخیره این الگو')+'</button><button class="secondary" type="button" onclick="copyNutritionTemplate(\''+t.id+'\')">کپی در برنامه</button>'
    :(saved
     ?'<button class="primary" type="button" onclick="copyNutritionTemplate(\''+t.id+'\')">کپی در برنامه</button><button class="secondary" type="button" onclick="startNutritionTemplate(\''+t.id+'\')">ویرایش این الگو</button>'
     :'<button class="primary" type="button" onclick="startNutritionTemplate(\''+t.id+'\')">ورود و تکمیل این الگو</button>');
   const status=editing?(nutritionTemplatesBusy?'⏳ در حال ذخیره الگو…':'✏️ در حال تکمیل؛ پس از پایان ذخیره کن'):(saved?'✓ الگو ذخیره شده':'برای شروع وارد کارت شو');
-  return '<article class="nutrition-template-card '+(editing?'is-editing':'')+'"><div class="nutrition-template-card-name">'+t.name+'</div><div class="nutrition-template-card-status '+(saved?'saved':'')+'">'+status+'</div>'+actions+'</article>';
+  return '<article class="nutrition-template-card '+(editing?'is-editing':'')+'"><div class="nutrition-template-card-name">'+t.name+'</div><div class="nutrition-template-card-status '+(saved?'saved':'')+'">'+status+'</div>'+calorieLine+actions+'</article>';
  }).join('');
 }
 async function loadNutritionTemplates(){
