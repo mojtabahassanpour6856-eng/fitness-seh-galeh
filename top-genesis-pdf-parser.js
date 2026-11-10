@@ -168,17 +168,35 @@
       // region labels first and their values afterward, while the later
       // Measurement Snapshots page pairs each label with its own value.
       const globalPattern = new RegExp(pattern.source, pattern.flags + "g");
-      const matches = [...text.matchAll(globalPattern)];
-      const value = matches.length
-        ? Number(String(matches[matches.length - 1][1]).replace(",", "."))
-        : null;
-      if (value == null || !Number.isFinite(value)) return;
+      const values = numericCandidates(text, globalPattern);
+      if (!values.length) return;
+      // Keep every distinct value found across report pages. Never silently
+      // replace one page's value with another or average conflicting readings.
+      const uniqueValues = [...new Set(values)];
+      const spread = Math.max(...uniqueValues) - Math.min(...uniqueValues);
+      const hasConflict = spread > 0.01;
+      const status = hasConflict
+        ? "conflict_review"
+        : uniqueValues.length > 1 ? "consistent_rounding" : "needs_coach_review";
+      const value = values[0];
       rawMeasures[key] = {
-        ...metric(value, "raw_reported_unit", "3D Scan and Measurements", "needs_coach_review"),
+        ...metric(value, "raw_reported_unit", "3D Scan and Measurements", status),
         raw_value: value,
+        ...(uniqueValues.length > 1 ? { alternatives: uniqueValues } : {}),
         measurement_kind: "multi_point_or_region_reported_value",
         interpretation: "تفسیر دقیق عدد تا تأیید ساختار اسکن و تعریف خروجی دستگاه مشخص نیست؛ آن را محیط یک مقطع فرض نکنید."
       };
+      if (hasConflict) {
+        const regionLabels = {
+          calf_left_cm: "ساق چپ", calf_right_cm: "ساق راست",
+          forearm_left_cm: "ساعد چپ", forearm_right_cm: "ساعد راست",
+          thigh_left_cm: "ران چپ", thigh_right_cm: "ران راست",
+          upper_arm_left_cm: "بازوی چپ", upper_arm_right_cm: "بازوی راست",
+          chest_region_cm: "ناحیه سینه", hip_region_cm: "ناحیه باسن",
+          lower_waist_region_cm: "ناحیه کمر پایین", upper_waist_region_cm: "ناحیه کمر بالا"
+        };
+        flags.push("برای " + (regionLabels[key] || key) + " در صفحات مختلف PDF مقادیر متفاوت ثبت شده است؛ همه مقدارها بدون میانگین‌گیری حفظ شده‌اند و باید با صفحات اصلی تطبیق داده شوند.");
+      }
     });
     // Compare left/right values only as a report-quality check. The device's
     // "Region" values are not yet confirmed to be circumference in cm, so the
@@ -192,8 +210,16 @@
     ];
     const bilateralComparisons = [];
     bilateralPairs.forEach(([leftKey, rightKey, label]) => {
-      const left = rawMeasures[leftKey]?.raw_value;
-      const right = rawMeasures[rightKey]?.raw_value;
+      const leftItem = rawMeasures[leftKey];
+      const rightItem = rawMeasures[rightKey];
+      if (!leftItem || !rightItem) return;
+      if (["conflict_review", "invalid_range"].includes(leftItem.status) ||
+          ["conflict_review", "invalid_range"].includes(rightItem.status)) {
+        flags.push("مقایسه دو سمت " + label + " انجام نشد؛ دست‌کم یکی از مقادیر در صفحات مختلف PDF ناسازگار است.");
+        return;
+      }
+      const left = leftItem.raw_value;
+      const right = rightItem.raw_value;
       if (left == null || right == null) return;
       const difference = Math.abs(left - right);
       const average = (Math.abs(left) + Math.abs(right)) / 2;
@@ -321,7 +347,7 @@
         // Preserve real scan pages from the source PDF. These are page renders,
         // not generated silhouettes or substituted stock imagery.
         const scanText = normalize(pageText);
-        const hasScanVisualCue = /Silhouette|Profile|3D\s*Scan|Body\s*Measurements|Scan\s*Report/i.test(scanText);
+        const hasScanVisualCue = /Silhouette|Profile|3D\\s*Scan|Front\\s*View|Side\\s*View/i.test(scanText);
         if (hasScanVisualCue && scanPages.length < 4) {
           const scanViewport = page.getViewport({ scale: 1.5 });
           const scanCanvas = document.createElement("canvas");
