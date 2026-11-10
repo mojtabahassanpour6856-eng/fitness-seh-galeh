@@ -71,7 +71,7 @@ try {
   const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
   const textPage = pdfDoc.addPage([612, 792]);
   textPage.drawText(
-    "Height & Weight 161 cm & 57 kg Body Fat 24.5% BMI 22.0 Waist-to-Hip Ratio 0.734 RMR 1352 calories/day Body Measurements (cm) Calf Left Region 157.69 Calf Right Region 162.75 Hip Region 680.13. This is a synthetic browser test fixture with enough selectable text to bypass OCR on this page.",
+    "Height & Weight 161 cm & 57 kg Body Fat 24.5% BMI 22.0 Waist-to-Hip Ratio 0.734 RMR 1352 calories/day Body Measurements (cm) Calf Left Region 157.69 Calf Right Region 162.75 Hip Region 680.13. This is a synthetic browser test fixture with a profile summary and enough selectable text to bypass OCR on this page.",
     { x: 40, y: 700, size: 10, font, color: rgb(0, 0, 0), maxWidth: 530, lineHeight: 16 }
   );
   const ocrPage = pdfDoc.addPage([612, 792]);
