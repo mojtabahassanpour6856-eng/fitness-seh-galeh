@@ -168,11 +168,11 @@ function renderNutritionTemplateCards(){
   const saved=!!(row&&row.template_data&&Array.isArray(row.template_data.state));
   const editing=nutritionTemplateEditingId===t.id;
   const actions=editing
-   ?'<button class="primary" type="button" onclick="saveNutritionTemplate(\''+t.id+'\')" '+(nutritionTemplatesBusy?'disabled':'')+'>ذخیره این الگو</button><button class="secondary" type="button" onclick="copyNutritionTemplate(\''+t.id+'\')">کپی در برنامه</button>'
+   ?'<button class="primary" type="button" onclick="saveNutritionTemplate(\''+t.id+'\')" '+(nutritionTemplatesBusy?'disabled':'')+'>'+(nutritionTemplatesBusy?'در حال ذخیره…':'ذخیره این الگو')+'</button><button class="secondary" type="button" onclick="copyNutritionTemplate(\''+t.id+'\')">کپی در برنامه</button>'
    :(saved
     ?'<button class="primary" type="button" onclick="copyNutritionTemplate(\''+t.id+'\')">کپی در برنامه</button><button class="secondary" type="button" onclick="startNutritionTemplate(\''+t.id+'\')">ویرایش این الگو</button>'
     :'<button class="primary" type="button" onclick="startNutritionTemplate(\''+t.id+'\')">ورود و تکمیل این الگو</button>');
-  const status=editing?'✏️ در حال تکمیل؛ پس از پایان ذخیره کن':(saved?'✓ الگو ذخیره شده':'برای شروع وارد کارت شو');
+  const status=editing?(nutritionTemplatesBusy?'⏳ در حال ذخیره الگو…':'✏️ در حال تکمیل؛ پس از پایان ذخیره کن'):(saved?'✓ الگو ذخیره شده':'برای شروع وارد کارت شو');
   return '<article class="nutrition-template-card '+(editing?'is-editing':'')+'"><div class="nutrition-template-card-name">'+t.name+'</div><div class="nutrition-template-card-status '+(saved?'saved':'')+'">'+status+'</div>'+actions+'</article>';
  }).join('');
 }
@@ -237,17 +237,25 @@ async function saveNutritionTemplate(id){
  };
  nutritionTemplatesBusy=true;renderNutritionTemplateCards();
  try{
-  const {data,error}=await nutritionTemplateClient().from('coach_nutrition_templates')
-   .upsert({template_key:id,name:def.name,template_data:templateData},{onConflict:'coach_user_id,template_key'})
+  const client=nutritionTemplateClient();
+  if(!client.auth||typeof client.auth.getSession!=='function')throw new Error('نشست مربی قابل بررسی نیست؛ یک‌بار صفحه را تازه‌سازی کن.');
+  const {data:sessionData,error:sessionError}=await client.auth.getSession();
+  if(sessionError)throw sessionError;
+  const coachUserId=sessionData&&sessionData.session&&sessionData.session.user&&sessionData.session.user.id;
+  if(!coachUserId)throw new Error('نشست مربی منقضی شده است؛ بدون خروج از حساب صفحه را تازه‌سازی کن و دوباره ذخیره کن.');
+  const {data,error}=await client.from('coach_nutrition_templates')
+   .upsert({coach_user_id:coachUserId,template_key:id,name:def.name,template_data:templateData},{onConflict:'coach_user_id,template_key'})
    .select('id,template_key,name,template_data,updated_at').single();
   if(error)throw error;
+  if(!data||data.template_key!==id||!Array.isArray(data.template_data?.state))throw new Error('پاسخ ذخیره معتبر نبود؛ الگو دوباره دریافت شود.');
   nutritionTemplateCache[id]=data;
   nutritionTemplateEditingId=null;
   try{localStorage.removeItem(nutritionDraftStorageKey)}catch(e){}
   renderNutritionTemplateCards();
-  notify('الگوی «'+def.name+'» در دیتابیس ذخیره شد.');
+  notify('الگوی «'+def.name+'» با موفقیت در دیتابیس ذخیره شد.');
  }catch(e){
-  notify('ذخیره الگو انجام نشد: '+(e.message||'خطای دیتابیس'));
+  const detail=[e&&e.message,e&&e.details,e&&e.hint,e&&e.code?'کد '+e.code:null].filter(Boolean).join(' · ');
+  notify('ذخیره الگو انجام نشد: '+(detail||'خطای نامشخص دیتابیس'));
   console.error('Nutrition template save failed',e);
  }finally{
   nutritionTemplatesBusy=false;
