@@ -282,6 +282,7 @@
     const pdf = await pdfjs.getDocument({ data: bytes }).promise;
     const pages = [];
     const ocrPages = [];
+    const scanPages = [];
     let ocrWorker = null;
     try {
       for (let pageNo = 1; pageNo <= pdf.numPages; pageNo++) {
@@ -317,6 +318,25 @@
           canvas.height = 0;
         }
         pages.push(pageText);
+        // Preserve real scan pages from the source PDF. These are page renders,
+        // not generated silhouettes or substituted stock imagery.
+        const scanText = normalize(pageText);
+        const hasScanVisualCue = /Silhouette|Profile|3D\\s*Scan|Body\\s*Measurements|Scan\\s*Report/i.test(scanText);
+        if (hasScanVisualCue && scanPages.length < 4) {
+          const scanViewport = page.getViewport({ scale: 1.5 });
+          const scanCanvas = document.createElement("canvas");
+          scanCanvas.width = Math.ceil(scanViewport.width);
+          scanCanvas.height = Math.ceil(scanViewport.height);
+          const scanContext = scanCanvas.getContext("2d");
+          await page.render({ canvasContext: scanContext, viewport: scanViewport }).promise;
+          scanPages.push({
+            page_number: pageNo,
+            image_data_url: scanCanvas.toDataURL("image/png"),
+            source: "original_pdf_page"
+          });
+          scanCanvas.width = 0;
+          scanCanvas.height = 0;
+        }
       }
     } finally {
       if (ocrWorker) await ocrWorker.terminate();
@@ -324,6 +344,11 @@
     const result = extractMetrics(pages.join(" "));
     result.page_count = pdf.numPages;
     result.ocr_pages = ocrPages;
+    result.scan_pages = scanPages;
+    result.scan_page_numbers = scanPages.map(item => item.page_number);
+    if (!scanPages.length) {
+      result.flags.push("صفحه تصویری قابل‌شناسایی از اسکن در PDF پیدا نشد؛ گزارش بدون تصویر اسکن نباید برای تحویل نهایی تأیید شود.");
+    }
     result.engine = "pdfjs-" + PDFJS_VERSION + (ocrPages.length ? " + tesseract.js-5" : "");
     result.review_required = true;
     return result;
