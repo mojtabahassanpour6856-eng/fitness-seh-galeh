@@ -1858,7 +1858,9 @@ async function loadNutritionForClient(){
  const sameTrainee=()=>!!currentClient&&String(currentClient.id)===String(requestedTraineeId);
  let nutritionLoadStage="خواندن برنامه از جدول nutrition_plans";
  try{
-  const r=await sbGet(`/nutrition_plans?trainee_id=eq.${encodeURIComponent(requestedTraineeId)}&select=*&order=created_at.desc&limit=1`);
+  const traineeView=authProfile?.role==="trainee";
+  const planQuery=`/nutrition_plans?trainee_id=eq.${encodeURIComponent(requestedTraineeId)}${traineeView?"&is_active=eq.true":""}&select=*&order=is_active.desc,created_at.desc,id.desc&limit=1`;
+  const r=await sbGet(planQuery);
   if(!sameTrainee())return; // Discard stale response; another trainee was selected.
   const p=r[0]||null, requestedPlanId=p?.id||null;
   currentPlanId=requestedPlanId;
@@ -15094,7 +15096,7 @@ window.sehNutritionBuilderBridge={
   if(!currentClient||currentClient.id==null)throw new Error('ابتدا یک شاگرد را انتخاب کن.');
   if(!authProfile||authProfile.role!=='coach')throw new Error('دسترسی مربی تأیید نشد.');
   const traineeId=String(currentClient.id);
-  const plans=await sbGet('/nutrition_plans?trainee_id=eq.'+encodeURIComponent(traineeId)+'&select=*&order=created_at.desc&limit=1');
+  const plans=await sbGet('/nutrition_plans?trainee_id=eq.'+encodeURIComponent(traineeId)+'&select=*&order=is_active.desc,created_at.desc,id.desc&limit=1');
   if(!currentClient||String(currentClient.id)!==traineeId)throw new Error('شاگرد هنگام بارگذاری تغییر کرد.');
   const plan=plans[0]||null;let meals=[];
   if(plan){
