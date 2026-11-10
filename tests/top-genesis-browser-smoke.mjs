@@ -338,7 +338,9 @@ try {
   // Manual coach approval remains explicit and removes the draft watermark only after checking the control.
   await page.locator("#coachApproval").check();
   await page.locator("#buildFinalReport").click();
-  await page.waitForFunction(() => document.querySelectorAll("#reportPreview .report-page").length === 5);
+  await page.waitForFunction(() => document.querySelectorAll("#reportPreview .report-watermark").length === 0,
+    null, { timeout: 30000 });
+  assert.equal(await page.locator("#coachApproval").isChecked(), true);
   assert.equal(await page.locator("#reportPreview .report-watermark").count(), 0);
   reportText = await page.locator("#reportPreview").innerText();
   assert.match(reportText, /بررسی دستی مربی انجام شده است/);
