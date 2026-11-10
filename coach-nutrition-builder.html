@@ -168,7 +168,7 @@ function renderNutritionTemplateCards(){
   const saved=!!(row&&row.template_data&&Array.isArray(row.template_data.state));
   const editing=nutritionTemplateEditingId===t.id;
   const actions=editing
-   ?'<button class="primary" type="button" onclick="saveNutritionTemplate(\\''+t.id+'\\')" '+(nutritionTemplatesBusy?'disabled':'')+'>'+(nutritionTemplatesBusy?'در حال ذخیره…':'ذخیره این الگو')+'</button><button class="secondary" type="button" onclick="copyNutritionTemplate(\\''+t.id+'\\')">کپی در برنامه</button>'
+   ?'<button class="primary" type="button" onclick="saveNutritionTemplate(\''+t.id+'\')" '+(nutritionTemplatesBusy?'disabled':'')+'>'+(nutritionTemplatesBusy?'در حال ذخیره…':'ذخیره این الگو')+'</button><button class="secondary" type="button" onclick="copyNutritionTemplate(\''+t.id+'\')">کپی در برنامه</button>'
    :(saved
     ?'<button class="primary" type="button" onclick="copyNutritionTemplate(\''+t.id+'\')">کپی در برنامه</button><button class="secondary" type="button" onclick="startNutritionTemplate(\''+t.id+'\')">ویرایش این الگو</button>'
     :'<button class="primary" type="button" onclick="startNutritionTemplate(\''+t.id+'\')">ورود و تکمیل این الگو</button>');
