@@ -293,18 +293,20 @@ function copyNutritionTemplate(id){
  const row=nutritionTemplateCache[id],data=row&&row.template_data;
  if(!data||!Array.isArray(data.state)){notify('اطلاعات این الگو کامل نیست؛ دوباره الگوها را دریافت کن.');return}
  if(nutritionTemplateHasFood(state)&&!confirm('محتوای فعلی برنامه‌ساز جایگزین الگو می‌شود. هنوز چیزی در پرونده شاگرد ثبت نمی‌شود. ادامه می‌دهی؟'))return;
+ // Keep the selected trainee's calculated or manually entered nutrition targets.
+ const traineeTargets={
+  daily_calories:document.getElementById('targetCaloriesInput').value,
+  protein_target:document.getElementById('targetProteinInput').value,
+  carbs_target:document.getElementById('targetCarbsInput').value,
+  fat_target:document.getElementById('targetFatInput').value
+ };
  state.splice(0,state.length,...JSON.parse(JSON.stringify(data.state)));
  const p=data.plan||{};
  document.getElementById('planTitle').value=p.title||row.name||'برنامه غذایی';
- syncTargetFields({
-  daily_calories:p.daily_calories,
-  protein_target:p.protein_target,
-  carbs_target:p.carbs_target,
-  fat_target:p.fat_target
- });
+ syncTargetFields(traineeTargets);
  targetManualDirty=true;
  draw();
- notify('الگوی «'+row.name+'» در قالب برنامه غذایی کپی شد؛ برای شاگرد بررسی و در صورت نیاز ثبت کن.');
+ notify('الگوی «'+row.name+'» در برنامه غذایی کپی شد؛ اهداف کالری و درشت‌مغذی‌های شاگرد حفظ شدند. برای ثبت نهایی، دکمه ثبت برنامه را بزن.');
 }
 
 let pickerContext=null,draft=[];
