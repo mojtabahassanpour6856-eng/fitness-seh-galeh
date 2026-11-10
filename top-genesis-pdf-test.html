@@ -79,6 +79,7 @@ pre{white-space:pre-wrap;overflow-wrap:anywhere;background:#f7f7f7;padding:12px;
 @media(max-width:520px){.report-page{padding:16px;min-height:0;border-radius:12px}.report-title{font-size:1.45rem}.report-brand img{width:54px;height:54px}.report-quality-card .quality-fields{grid-template-columns:1fr}.report-metric-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.report-composition-row{grid-template-columns:82px 1fr 56px;font-size:.76rem}.report-page-footer{font-size:.72rem}}
 @media print{.report-page{break-after:page;page-break-after:always;max-width:none;width:100%;min-height:0;border-radius:0;box-shadow:none;print-color-adjust:exact;-webkit-print-color-adjust:exact}.report-page:last-child{break-after:auto;page-break-after:auto}#reportBuilder .report-builder-controls,#reportBuilder .report-export-actions{display:none!important}#reportPreview{display:block!important}.report-page .report-metric-card,.report-page .report-composition,.report-page .report-advice{break-inside:avoid;page-break-inside:avoid}}
 
+.report-plain-summary{background:#fffdf7;border:1px solid #e5d7b7;border-radius:12px;padding:12px;margin:12px 0;break-inside:avoid;page-break-inside:avoid}.report-plain-summary h3{margin:0 0 8px;color:#765b2e;font-size:1rem}.report-plain-summary ul{margin:0;padding-right:20px}.report-plain-summary li{margin:6px 0;line-height:1.8}.report-plain-summary li.good{color:#287447}.report-plain-summary li.warn{color:#8a641f}.report-plain-summary li.neutral{color:#665638}
 </style>
 </head>
 <body>
@@ -257,33 +258,53 @@ button.addEventListener("click",async()=>{
   const reportPreview = document.getElementById("reportPreview");
   const reportExportActions = document.getElementById("reportExportActions");
   const reportBuildStatus = document.getElementById("reportBuildStatus");
+  const qualityReviewState = new Map();
+  const qualityKeys = ["lighting","background","completeness","clarity"];
 
-  function qualitySelect(key, label, options) {
+  function rememberQualityControls() {
+    scanQualityReview.querySelectorAll("[data-quality-page]").forEach(row => {
+      const pageNo = Number(row.dataset.qualityPage);
+      const state = qualityReviewState.get(pageNo) || {};
+      qualityKeys.forEach(key => {
+        const field = row.querySelector('select[data-quality="' + key + '"]');
+        if (field) state[key] = field.value;
+      });
+      qualityReviewState.set(pageNo, state);
+    });
+  }
+  function qualitySelect(key, label, options, selectedValue) {
+    const selected = value => value === selectedValue ? " selected" : "";
     return '<label>' + label + '<select data-quality="' + key + '">' +
-      '<option value="">بررسی نشده</option>' +
-      options.map(option => '<option value="' + option[0] + '">' + option[1] + '</option>').join('') +
+      '<option value=""' + selected("") + '>بررسی نشده</option>' +
+      options.map(option => '<option value="' + option[0] + '"' + selected(option[0]) + '>' + option[1] + '</option>').join('') +
       '</select></label>';
   }
   function refreshQualityControls() {
+    rememberQualityControls();
     const selected = Array.from(scanPageGrid.querySelectorAll("input[data-scan-page]:checked"))
       .map(input => Number(input.dataset.scanPage));
     if (!selected.length) {
       scanQualityReview.innerHTML = '<p class="small">هنوز صفحه‌ای انتخاب نشده است. برای هر تصویر انتخاب‌شده، چهار مورد کیفیت را جداگانه بررسی کنید.</p>';
       return;
     }
-    scanQualityReview.innerHTML = selected.map(pageNo =>
-      '<div class="report-quality-card" data-quality-page="' + pageNo + '">' +
+    scanQualityReview.innerHTML = selected.map(pageNo => {
+      const state = qualityReviewState.get(pageNo) || {};
+      return '<div class="report-quality-card" data-quality-page="' + pageNo + '">' +
         '<strong>کیفیت اسکن صفحه ' + pageNo + '</strong>' +
         '<div class="quality-fields">' +
-          qualitySelect("lighting", "تعادل نور", [["balanced","متعادل"],["dim","کم‌نور"],["overexposed","بیش‌ازحد روشن"],["uneven","ناهمگون"]]) +
-          qualitySelect("background", "پس‌زمینه", [["plain","ساده و یکنواخت"],["cluttered","شلوغ یا دارای اشیاء"],["unclear","نامشخص"]]) +
-          qualitySelect("completeness", "کامل بودن بدن", [["full","بدن کامل داخل کادر"],["cropped","بخشی از بدن خارج کادر"],["obscured","بخشی پوشیده یا نامشخص"]]) +
-          qualitySelect("clarity", "وضوح تصویر", [["clear","واضح"],["medium","متوسط"],["blurred","تار یا کم‌وضوح"]]) +
+          qualitySelect("lighting", "تعادل نور", [["balanced","متعادل"],["dim","کم‌نور"],["overexposed","بیش‌ازحد روشن"],["uneven","ناهمگون"]], state.lighting || "") +
+          qualitySelect("background", "پس‌زمینه", [["plain","ساده و یکنواخت"],["cluttered","شلوغ یا دارای اشیاء"],["unclear","نامشخص"]], state.background || "") +
+          qualitySelect("completeness", "کامل بودن بدن", [["full","بدن کامل داخل کادر"],["cropped","بخشی از بدن خارج کادر"],["obscured","بخشی پوشیده یا نامشخص"]], state.completeness || "") +
+          qualitySelect("clarity", "وضوح تصویر", [["clear","واضح"],["medium","متوسط"],["blurred","تار یا کم‌وضوح"]], state.clarity || "") +
         '</div>' +
-      '</div>'
-    ).join("");
+      '</div>';
+    }).join("");
   }
   async function renderScanPagePicker(report) {
+    qualityReviewState.clear();
+    scanPageGrid.onchange = event => {
+      if (event.target && event.target.matches("input[data-scan-page]")) refreshQualityControls();
+    };
     if (!report || typeof report.renderPage !== "function") {
       scanPageGrid.textContent = "رندر تصویر صفحات PDF در این نسخه در دسترس نیست.";
       return;
@@ -325,9 +346,6 @@ button.addEventListener("click",async()=>{
       note.textContent = "برای جلوگیری از فشار روی گوشی، فقط ۲۴ صفحه اول برای انتخاب پیش‌نمایش داده شده‌اند.";
       scanPageGrid.appendChild(note);
     }
-    scanPageGrid.addEventListener("change", event => {
-      if (event.target && event.target.matches("input[data-scan-page]")) refreshQualityControls();
-    });
     refreshQualityControls();
   }
 
@@ -341,6 +359,74 @@ button.addEventListener("click",async()=>{
     const number = escapeHTML(Number(item.value).toLocaleString("en-US"));
     const unitHtml = unit ? ' <span dir="rtl">' + escapeHTML(unit) + '</span>' : '';
     return '<span class="report-ltr-value" dir="ltr">' + number + unitHtml + '</span>';
+  }
+  function buildPlainLanguageSummary(metrics) {
+    const value = key => metricIsUsable(metrics[key]) ? Number(metrics[key].value) : null;
+    const weight = value("weight_kg");
+    const height = value("height_cm");
+    const bmi = value("bmi");
+    const fat = value("fat_mass_kg");
+    const lean = value("lean_mass_kg");
+    const fatPercent = value("body_fat_percent");
+    const rmr = value("resting_metabolic_rate_kcal");
+    const dailyEnergy = value("daily_energy_expenditure_kcal");
+    const items = [];
+    if (weight !== null && height !== null && bmi !== null && height > 0) {
+      const calculated = weight / Math.pow(height / 100, 2);
+      const consistent = Math.abs(calculated - bmi) <= 1;
+      items.push({
+        tone: consistent ? "good" : "warn",
+        text: "کنترل BMI: مقدار گزارش " + bmi.toFixed(1) + " و محاسبه از قد و وزن " + calculated.toFixed(1) +
+          " است؛ " + (consistent ? "همخوانی اولیه دیده می‌شود." : "اختلاف نیازمند بررسی دستی مربی است.")
+      });
+    }
+    if (weight !== null && fat !== null && fatPercent !== null && weight > 0) {
+      const calculated = fat / weight * 100;
+      const consistent = Math.abs(calculated - fatPercent) <= 1.5;
+      items.push({
+        tone: consistent ? "good" : "warn",
+        text: "کنترل درصد چربی: نسبت توده چربی به وزن " + calculated.toFixed(1) + "٪ و مقدار گزارش " + fatPercent.toFixed(1) +
+          "٪ است؛ " + (consistent ? "همخوانی اولیه دیده می‌شود." : "اختلاف نیازمند بررسی دستی مربی است.")
+      });
+    }
+    if (weight !== null && fat !== null && lean !== null) {
+      const sum = fat + lean;
+      const consistent = Math.abs(sum - weight) <= 1.5;
+      items.push({
+        tone: consistent ? "good" : "warn",
+        text: "کنترل جمع ترکیب بدن: توده چربی و بدون چربی روی‌هم " + sum.toFixed(1) + " کیلوگرم است؛ " +
+          (consistent ? "با وزن کل همخوانی اولیه دارد." : "با وزن کل سازگار نیست و نمودار ترکیب وزن نمایش داده نمی‌شود.")
+      });
+    }
+    if (rmr !== null && dailyEnergy !== null) {
+      items.push({
+        tone: "neutral",
+        text: "سوخت‌وساز پایه و مصرف انرژی روزانه دو شاخص جدا هستند؛ هر دو از برچسب مربوط به خود گزارش شده‌اند و جای یکدیگر استفاده نمی‌شوند."
+      });
+    } else if (rmr !== null) {
+      items.push({
+        tone: "neutral",
+        text: "سوخت‌وساز پایه ثبت شده است؛ این عدد به‌تنهایی معادل مصرف انرژی روزانه نیست."
+      });
+    }
+    const missing = metrics.missing_measurements || {};
+    const missingNames = Object.keys(missing).map(key => labels[key] || key);
+    if (missingNames.length) {
+      items.push({
+        tone: "warn",
+        text: "اندازه " + missingNames.join("، ") + " در این فایل ثبت نشده است؛ صفر یا مقدار حدسی نیست."
+      });
+    }
+    if (metrics.raw_body_measurements && Object.keys(metrics.raw_body_measurements).length) {
+      items.push({
+        tone: "warn",
+        text: "مقادیر ناحیه‌ای Region با واحد خام نگهداری شده‌اند و تا تأیید تعریف خروجی دستگاه، سانتی‌متر یا محیط یک‌دور اندام تلقی نمی‌شوند."
+      });
+    }
+    if (!items.length) items.push({ tone: "neutral", text: "داده کافی برای کنترل سازگاری شاخص‌ها در این گزارش استخراج نشده است." });
+    return '<section class="report-plain-summary"><h3>جمع‌بندی ساده داده‌ها</h3><ul>' +
+      items.map(item => '<li class="' + item.tone + '">' + escapeHTML(item.text) + '</li>').join("") +
+      '</ul><p class="small">این موارد کنترل سازگاری داده‌ها هستند، نه تشخیص پزشکی یا نسخه خودکار تمرین و تغذیه.</p></section>';
   }
   function makeReportPage(content, index, total, approved) {
     return '<article class="report-page">' +
@@ -441,6 +527,7 @@ button.addEventListener("click",async()=>{
       ).join("");
       const flagRows = (data.flags || []).map(flag => '<li>' + escapeHTML(flag) + '</li>').join("");
       const details = '<h2 class="report-title" style="font-size:1.45rem">جزئیات استخراج و کنترل سازگاری</h2>' +
+        buildPlainLanguageSummary(metrics) +
         '<table class="report-data-table"><thead><tr><th>شاخص</th><th>مقدار</th><th>وضعیت</th></tr></thead><tbody>' + detailRows + '</tbody></table>' +
         (rawRows ? '<h3 class="report-section-title">مقادیر خام نواحی Region</h3><p class="small">این اعداد تا تأیید تعریف و واحد دستگاه، سانتی‌متر یا محیط یک‌دور اندام تلقی نمی‌شوند.</p><table class="report-data-table"><thead><tr><th>ناحیه</th><th>مقدار خام</th><th>وضعیت</th></tr></thead><tbody>' + rawRows + '</tbody></table>' : '') +
         (missingRows ? '<h3 class="report-section-title">اندازه‌های ثبت‌نشده</h3><table class="report-data-table"><tbody>' + missingRows + '</tbody></table>' : '') +
