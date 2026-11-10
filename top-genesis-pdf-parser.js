@@ -103,22 +103,32 @@
     const whrValues = numericCandidates(text, /Waist\s*[- ]?to\s*[- ]?Hip\s*Ratio\s*[:=-]?\s*([0-9]+(?:\.[0-9]+)?)/gi);
     setCandidateMetric(out, "waist_hip_ratio", whrValues, "ratio", "Basic Info / Fitness & Health Metrics", 0.01, flags, "نسبت کمر به باسن");
 
-    const rmrValues = numericCandidates(text, /(?:\bRMR\b|Resting\s*Metabolic\s*Rate)\s*[:=-]?\s*([0-9]+(?:\.[0-9]+)?)\s*(?:kcal|calories?)\s*\/?\s*day/gi);
+    let rmrValues = numericCandidates(text, /(?:\bRMR\b|Resting\s*Metabolic\s*Rate)\s*[:=-]?\s*([0-9]+(?:\.[0-9]+)?)\s*(?:kcal|calories?)\s*\/?\s*day/gi);
+    // OCR may separate the RMR heading from its graphical value with explanatory text.
+    if (!rmrValues.length && /Resting\s*Metabolic\s*Rate|\bRMR\b/i.test(text)) {
+      const dayValues = numericCandidates(text, /([0-9]{3,4})\s*(?:kcal|calories?)\s*\/?\s*day/gi);
+      if (dayValues.length) rmrValues = [dayValues[0]];
+    }
     setCandidateMetric(out, "resting_metabolic_rate_kcal", rmrValues, "kcal/day", "Activity & Caloric Expenditure / RMR", 25, flags, "سوخت‌وساز پایه");
 
     // TDEE is accepted only when the value is explicitly tied to a daily-expenditure
     // label. Never infer it as the last generic Calories/day number.
-    const tdeeValues = numericCandidates(text, /(?:TDEE|Total\s*Daily\s*Energy\s*Expenditure|Daily\s*Energy\s*Expenditure|Caloric\s*Expenditure)\s*[:=-]?\s*([0-9]+(?:\.[0-9]+)?)\s*(?:kcal|calories?)\s*\/?\s*day/gi);
+    let tdeeValues = numericCandidates(text, /(?:TDEE|Total\s*Daily\s*Energy\s*Expenditure|Daily\s*Energy\s*Expenditure|Caloric\s*Expenditure)\s*[:=-]?\s*([0-9]+(?:\.[0-9]+)?)\s*(?:kcal|calories?)\s*\/?\s*day/gi);
+    // OCR may return the two graphical Calories/day values in reading order: RMR, then total expenditure.
+    if (!tdeeValues.length && /Caloric\s*Expenditure/i.test(text)) {
+      const dayValues = numericCandidates(text, /([0-9]{3,4})\s*(?:kcal|calories?)\s*\/?\s*day/gi);
+      if (dayValues.length > 1) tdeeValues = [dayValues[1]];
+    }
     setCandidateMetric(out, "daily_energy_expenditure_kcal", tdeeValues, "kcal/day", "Activity & Caloric Expenditure / explicit daily expenditure label", 50, flags, "مصرف انرژی روزانه");
 
-    const fatMass = numberAfter(text, /([0-9]+(?:\.[0-9]+)?)\s*kg\s*of\s*fat\s*mass/i);
-    if (fatMass != null) out.fat_mass_kg = metric(fatMass, "kg", "Body Composition");
+    const fatMassValues = numericCandidates(text, /([0-9]+(?:\.[0-9]+)?)\s*kg\s*of\s*fat\s*mass/gi);
+    setCandidateMetric(out, "fat_mass_kg", fatMassValues, "kg", "Body Composition", 0.5, flags, "توده چربی");
 
-    const leanMass = numberAfter(text, /([0-9]+(?:\.[0-9]+)?)\s*kg\s*of\s*lean\s*body\s*mass/i);
-    if (leanMass != null) out.lean_mass_kg = metric(leanMass, "kg", "Body Composition");
+    const leanMassValues = numericCandidates(text, /([0-9]+(?:\.[0-9]+)?)\s*kg\s*of\s*lean\s*body\s*mass/gi);
+    setCandidateMetric(out, "lean_mass_kg", leanMassValues, "kg", "Body Composition", 0.5, flags, "توده بدون چربی");
 
-    const waist = numberAfter(text, /(?:Your\s*waist\s*measures|Waist\s*Circumference)\s*([0-9]+(?:\.[0-9]+)?)\s*cm/i);
-    if (waist != null) out.waist_circumference_cm = metric(waist, "cm", "Waist Analysis");
+    const waistValues = numericCandidates(text, /(?:Your\s*waist\s*measures|Waist\s*Circumference)\s*([0-9]+(?:\.[0-9]+)?)\s*cm/gi);
+    setCandidateMetric(out, "waist_circumference_cm", waistValues, "cm", "Waist Analysis", 1, flags, "دور کمر");
 
     const percentile = numberAfter(text, /Percentile\s*([0-9]+(?:\.[0-9]+)?)\s*%/i);
     if (percentile != null) out.comparison_percentile = metric(percentile, "%", "Basic Info / Percentile");
@@ -126,12 +136,12 @@
     const bodyRank = numberAfter(text, /Your\s*Rank\s*([0-9]+(?:\.[0-9]+)?)\s*%\s*places\s*you/i);
     if (bodyRank != null) out.body_fat_rank_marker = metric(bodyRank, "%", "Body Composition / Your Rank");
 
-    const ratioMatches = [...text.matchAll(/Waist\s*[- ]?to\s*[- ]?Hip\s*Ratio\s*[:=-]?\s*([0-9]+(?:\.[0-9]+)?)/gi)];
-    const detailedWaistRatio = ratioMatches.length ? Number(ratioMatches[ratioMatches.length - 1][1]) : null;
+    const detailedRatioValues = numericCandidates(text, /Waist\s*[- ]?to\s*[- ]?Hip\s*Ratio\s*[:=-]?\s*([0-9]+(?:\.[0-9]+)?)/gi);
+    setCandidateMetric(out, "waist_hip_ratio_detailed", detailedRatioValues, "ratio", "Waist Analysis", 0.01, flags, "نسبت کمر به باسن در جزئیات");
+    const detailedWaistRatio = out.waist_hip_ratio_detailed?.value ?? null;
     if (detailedWaistRatio != null) {
-      out.waist_hip_ratio_detailed = metric(detailedWaistRatio, "ratio", "Waist Analysis");
       if (out.waist_hip_ratio && Math.abs(out.waist_hip_ratio.value - detailedWaistRatio) <= 0.01) {
-        out.waist_hip_ratio.status = "consistent_rounding";
+        if (out.waist_hip_ratio.status !== "conflict_review") out.waist_hip_ratio.status = "consistent_rounding";
       } else if (out.waist_hip_ratio && Math.abs(out.waist_hip_ratio.value - detailedWaistRatio) > 0.01) {
         out.waist_hip_ratio.status = "conflict_review";
         flags.push("نسبت کمر به باسن در بخش‌های گزارش نیازمند تطبیق است.");
@@ -139,29 +149,42 @@
     }
 
     const bodyMeasures = [
-      ["calf_left_cm", /Calf\s*Left\s*Region\s*[:=-]?\s*([0-9]+(?:\.[0-9]+)?)/i],
-      ["forearm_left_cm", /Forearm\s*Left\s*Region\s*[:=-]?\s*([0-9]+(?:\.[0-9]+)?)/i],
-      ["forearm_right_cm", /Forearm\s*Right\s*Region\s*[:=-]?\s*([0-9]+(?:\.[0-9]+)?)/i],
-      ["calf_right_cm", /Calf\s*Right\s*Region\s*[:=-]?\s*([0-9]+(?:\.[0-9]+)?)/i],
-      ["chest_region_cm", /Chest\s*Region\s*[:=-]?\s*([0-9]+(?:\.[0-9]+)?)/i],
-      ["hip_region_cm", /Hip\s*Region\s*[:=-]?\s*([0-9]+(?:\.[0-9]+)?)/i],
-      ["lower_waist_region_cm", /Lower\s*Waist\s*Region\s*[:=-]?\s*([0-9]+(?:\.[0-9]+)?)/i],
-      ["thigh_left_cm", /Thigh\s*Left\s*Region\s*[:=-]?\s*([0-9]+(?:\.[0-9]+)?)/i],
-      ["thigh_right_cm", /Thigh\s*Right\s*Region\s*[:=-]?\s*([0-9]+(?:\.[0-9]+)?)/i],
-      ["upper_arm_left_cm", /Upper\s*Arm\s*Left\s*Region\s*[:=-]?\s*([0-9]+(?:\.[0-9]+)?)/i],
-      ["upper_arm_right_cm", /Upper\s*Arm\s*Right\s*Region\s*[:=-]?\s*([0-9]+(?:\.[0-9]+)?)/i],
-      ["upper_waist_region_cm", /Upper\s*Waist\s*Region\s*[:=-]?\s*([0-9]+(?:\.[0-9]+)?)/i]
+      ["calf_left_cm", /Calf\s*Left\s*Region\s*[|:=-]?\s*([0-9]+(?:\.[0-9]+)?)/i],
+      ["forearm_left_cm", /Forearm\s*Left\s*Region\s*[|:=-]?\s*([0-9]+(?:\.[0-9]+)?)/i],
+      ["forearm_right_cm", /Forearm\s*Right\s*Region\s*[|:=-]?\s*([0-9]+(?:\.[0-9]+)?)/i],
+      ["calf_right_cm", /Calf\s*Right\s*Region\s*[|:=-]?\s*([0-9]+(?:\.[0-9]+)?)/i],
+      ["chest_region_cm", /Chest\s*Region\s*[|:=-]?\s*([0-9]+(?:\.[0-9]+)?)/i],
+      ["hip_region_cm", /Hip\s*Region\s*[|:=-]?\s*([0-9]+(?:\.[0-9]+)?)/i],
+      ["lower_waist_region_cm", /Lower\s*Waist\s*Region\s*[|:=-]?\s*([0-9]+(?:\.[0-9]+)?)/i],
+      ["thigh_left_cm", /Thigh\s*Left\s*Region\s*[|:=-]?\s*([0-9]+(?:\.[0-9]+)?)/i],
+      ["thigh_right_cm", /Thigh\s*Right\s*Region\s*[|:=-]?\s*([0-9]+(?:\.[0-9]+)?)/i],
+      ["upper_arm_left_cm", /Upper\s*Arm\s*Left\s*Region\s*[|:=-]?\s*([0-9]+(?:\.[0-9]+)?)/i],
+      ["upper_arm_right_cm", /Upper\s*Arm\s*Right\s*Region\s*[|:=-]?\s*([0-9]+(?:\.[0-9]+)?)/i],
+      ["upper_waist_region_cm", /Upper\s*Waist\s*Region\s*[|:=-]?\s*([0-9]+(?:\.[0-9]+)?)/i]
     ];
     const rawMeasures = {};
     bodyMeasures.forEach(([key, pattern]) => {
-      const value = numberAfter(text, pattern);
-      if (value == null) return;
+      // Prefer the final labeled value in the PDF. Some device pages list all
+      // region labels first and their values afterward, while the later
+      // Measurement Snapshots page pairs each label with its own value.
+      const globalPattern = new RegExp(pattern.source, pattern.flags + "g");
+      const matches = [...text.matchAll(globalPattern)];
+      const values = matches
+        .map(match => Number(String(match[1]).replace(",", ".")))
+        .filter(Number.isFinite);
+      if (!values.length) return;
+      const uniqueValues = [...new Set(values)];
+      const conflict = Math.max(...uniqueValues) - Math.min(...uniqueValues) > 0.01;
+      const value = values[0];
       rawMeasures[key] = {
-        ...metric(value, "raw_reported_unit", "3D Scan and Measurements", "needs_coach_review"),
+        ...metric(value, "raw_reported_unit", "3D Scan and Measurements", conflict ? "conflict_review" : "needs_coach_review"),
         raw_value: value,
+        ...(uniqueValues.length > 1 ? { alternatives: uniqueValues } : {}),
         measurement_kind: "multi_point_or_region_reported_value",
         interpretation: "تفسیر دقیق عدد تا تأیید ساختار اسکن و تعریف خروجی دستگاه مشخص نیست؛ آن را محیط یک مقطع فرض نکنید."
       };
+      if (conflict) flags.push("مقدار خام ناحیه " + key + " در چند بخش PDF متفاوت است؛ مقدار نخست حفظ شده و همه گزینه‌ها برای بررسی مربی نمایش داده می‌شوند.");
+      else if (uniqueValues.length > 1) rawMeasures[key].status = "consistent_rounding";
     });
     // Compare left/right values only as a report-quality check. The device's
     // "Region" values are not yet confirmed to be circumference in cm, so the
@@ -175,8 +198,15 @@
     ];
     const bilateralComparisons = [];
     bilateralPairs.forEach(([leftKey, rightKey, label]) => {
-      const left = rawMeasures[leftKey]?.raw_value;
-      const right = rawMeasures[rightKey]?.raw_value;
+      const leftItem = rawMeasures[leftKey];
+      const rightItem = rawMeasures[rightKey];
+      if (!leftItem || !rightItem) return;
+      if (leftItem.status === "conflict_review" || rightItem.status === "conflict_review") {
+        flags.push("مقایسه دو سمت " + label + " به دلیل تعارض مقادیر خام در PDF انجام نشد.");
+        return;
+      }
+      const left = leftItem.raw_value;
+      const right = rightItem.raw_value;
       if (left == null || right == null) return;
       const difference = Math.abs(left - right);
       const average = (Math.abs(left) + Math.abs(right)) / 2;
@@ -277,8 +307,11 @@
         const normalizedPageText = normalize(pageText);
         const hasMeasurementContext = /Body\s*Measurements|3D\s*Scan|\bRegion\b/i.test(normalizedPageText);
         const hasRecognizableRegionMeasurement = /(?:Calf|Forearm|Thigh|Upper\s*Arm|Chest|Hip|Lower\s*Waist|Upper\s*Waist)\s*(?:Left|Right)?\s*Region\s*[:=-]?\s*[0-9]/i.test(normalizedPageText);
+        const hasCalorieLabels = /Resting\s*Metabolic\s*Rate|\bRMR\b|Caloric\s*Expenditure/i.test(normalizedPageText);
+        const hasCalorieValues = /[0-9]{3,4}\s*(?:kcal|calories?)\s*\/?\s*day/i.test(normalizedPageText);
         const needsTargetedOcr = normalizedPageText.length < 100 ||
-          (hasMeasurementContext && !hasRecognizableRegionMeasurement);
+          (hasMeasurementContext && !hasRecognizableRegionMeasurement) ||
+          (hasCalorieLabels && !hasCalorieValues);
         if (needsTargetedOcr) {
           if (!ocrWorker) {
             const Tesseract = await loadTesseract();
@@ -306,6 +339,32 @@
     result.ocr_pages = ocrPages;
     result.engine = "pdfjs-" + PDFJS_VERSION + (ocrPages.length ? " + tesseract.js-5" : "");
     result.review_required = true;
+    // Render original PDF pages on demand for the coach to select genuine scan images.
+    // The source PDF remains in browser memory and is never uploaded or persisted.
+    result.renderPage = async function (pageNo, options = {}) {
+      const pageNumber = Number(pageNo);
+      if (!Number.isInteger(pageNumber) || pageNumber < 1 || pageNumber > pdf.numPages) {
+        throw new Error("شماره صفحه PDF معتبر نیست.");
+      }
+      const requestedScale = Number(options.scale);
+      const scale = Number.isFinite(requestedScale) ? Math.min(2.4, Math.max(0.25, requestedScale)) : 1;
+      const page = await pdf.getPage(pageNumber);
+      const viewport = page.getViewport({ scale });
+      const canvas = document.createElement("canvas");
+      canvas.width = Math.ceil(viewport.width);
+      canvas.height = Math.ceil(viewport.height);
+      const context = canvas.getContext("2d", { alpha: false });
+      if (!context) throw new Error("ساخت تصویر صفحه PDF در این مرورگر ممکن نشد.");
+      await page.render({ canvasContext: context, viewport }).promise;
+      const type = options.type === "image/png" ? "image/png" : "image/jpeg";
+      const requestedQuality = Number(options.quality);
+      const quality = Number.isFinite(requestedQuality) ? Math.max(0.5, Math.min(0.95, requestedQuality)) : 0.86;
+      const dataUrl = type === "image/png" ? canvas.toDataURL(type) : canvas.toDataURL(type, quality);
+      const rendered = { page_no: pageNumber, width: canvas.width, height: canvas.height, data_url: dataUrl };
+      canvas.width = 0;
+      canvas.height = 0;
+      return rendered;
+    };
     return result;
   }
 
