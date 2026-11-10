@@ -625,8 +625,8 @@ body.locked{overflow:hidden!important}
 <div><label>نام و نام خانوادگی</label><input id="pn"></div>
 <div><label>سن</label><input id="page" type="text" inputmode="numeric" pattern="[0-9۰-۹٠-٩]*"></div>
 <div><label>تاریخ تولد</label><input id="pbirth" type="text" inputmode="numeric" placeholder="مثلاً ۱۳۷۵/۰۷/۱۸" autocomplete="off"></div>
-<div><label>وزن</label><input id="pweight" type="text" inputmode="decimal"</div>
-<div><label>قد</label><input id="pheight" type="text" inputmode="decimal"</div>
+<div><label>وزن</label><input id="pweight" type="text" inputmode="decimal"></div>
+<div><label>قد</label><input id="pheight" type="text" inputmode="decimal"></div>
 <div><label>هدف</label><select id="pgoal"><option>کاهش وزن</option><option>افزایش وزن</option><option>عضله‌سازی</option><option>چربی‌سوزی</option><option>تناسب اندام</option></select></div>
 <div><label>سطح تمرینی</label><select id="plevel"><option>مبتدی</option><option>متوسط</option><option>پیشرفته</option></select></div>
 <div><label>نوع شاگرد</label><select id="ptype"><option value="gym">🏋️ باشگاه / حضوری</option><option value="home">🏠 تمرین در منزل</option><option value="online">📱 آنلاین</option></select></div>
@@ -1381,7 +1381,7 @@ function selectClient(id){
 
 function sehParseProfileNumber(raw){
  let v=String(raw??"").replace(/[۰-۹]/g,d=>"۰۱۲۳۴۵۶۷۸۹".indexOf(d)).replace(/[٠-٩]/g,d=>"٠١٢٣٤٥٦٧٨٩".indexOf(d));
- v=v.replace(/[٬,]/g,"").replace(/٫/g,".").replace(/[^0-9.\\-]/g,"");
+ v=v.replace(/[٬,]/g,"").replace(/٫/g,".").replace(/[^0-9.-]/g,"");
  if(!v||v==="."||v==="-"||v==="-.")return null;
  const n=Number(v);return Number.isFinite(n)&&n>0?n:null;
 }
