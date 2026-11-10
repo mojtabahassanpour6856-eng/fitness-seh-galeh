@@ -623,10 +623,10 @@ body.locked{overflow:hidden!important}
 <h2>👤 پروفایل شاگرد</h2>
 <div class="grid2">
 <div><label>نام و نام خانوادگی</label><input id="pn"></div>
-<div><label>سن</label><input id="page" type="number"></div>
+<div><label>سن</label><input id="page" type="text" inputmode="numeric" pattern="[0-9۰-۹٠-٩]*"></div>
 <div><label>تاریخ تولد</label><input id="pbirth" type="text" inputmode="numeric" placeholder="مثلاً ۱۳۷۵/۰۷/۱۸" autocomplete="off"></div>
-<div><label>وزن</label><input id="pweight" type="number"></div>
-<div><label>قد</label><input id="pheight" type="number"></div>
+<div><label>وزن</label><input id="pweight" type="text" inputmode="decimal"</div>
+<div><label>قد</label><input id="pheight" type="text" inputmode="decimal"</div>
 <div><label>هدف</label><select id="pgoal"><option>کاهش وزن</option><option>افزایش وزن</option><option>عضله‌سازی</option><option>چربی‌سوزی</option><option>تناسب اندام</option></select></div>
 <div><label>سطح تمرینی</label><select id="plevel"><option>مبتدی</option><option>متوسط</option><option>پیشرفته</option></select></div>
 <div><label>نوع شاگرد</label><select id="ptype"><option value="gym">🏋️ باشگاه / حضوری</option><option value="home">🏠 تمرین در منزل</option><option value="online">📱 آنلاین</option></select></div>
@@ -1370,8 +1370,8 @@ function selectClient(id){
   currentClient=clients.find(x=>String(x.id)===String(id));if(!currentClient)return;
   renderCoachSelectedTraineeHeader();
   if(typeof window.sehUseCalorieTrainee==="function")window.sehUseCalorieTrainee(currentClient.id);
-  $("pn").value=currentClient.name||"";$("page").value=currentClient.age||"";$("pweight").value=currentClient.weight||"";
-  $("pheight").value=currentClient.height||"";$("pgoal").value=currentClient.goal||"کاهش وزن";
+  $("pn").value=currentClient.name||"";$("page").value=currentClient.age??"";$("pbirth").value=window.isoToJalaliDate?window.isoToJalaliDate(currentClient.birth_date)||"":"";$("pweight").value=currentClient.weight??"";
+  $("pheight").value=currentClient.height??"";$("pgoal").value=currentClient.goal||"کاهش وزن";
   $("plevel").value=currentClient.level||"مبتدی";loadNutritionForClient();loadWorkoutForClient();loadDietSummary();
   showSection("client",document.querySelectorAll(".nav button")[2]); if($("ptype"))$("ptype").value=currentClient.training_type||"gym"; if($("ptype2"))$("ptype2").value=currentClient.training_type||"gym"; if($("pequipment"))$("pequipment").value=currentClient.home_equipment||""; if($("pequipment2"))$("pequipment2").value=currentClient.home_equipment||""; if($("plimit"))$("plimit").value=currentClient.limitations||""; if($("actDate"))$("actDate").value=today(); loadActivityToday(); loadSupplements(); loadInjuries(); loadLibraryExercises();
    // Explicitly refresh coach goal panel from the selected trainee record.
@@ -1379,35 +1379,39 @@ function selectClient(id){
 }
 
 
+function sehParseProfileNumber(raw){
+ let v=String(raw??"").replace(/[۰-۹]/g,d=>"۰۱۲۳۴۵۶۷۸۹".indexOf(d)).replace(/[٠-٩]/g,d=>"٠١٢٣٤٥٦٧٨٩".indexOf(d));
+ v=v.replace(/[٬,]/g,"").replace(/٫/g,".").replace(/[^0-9.\\-]/g,"");
+ if(!v||v==="."||v==="-"||v==="-.")return null;
+ const n=Number(v);return Number.isFinite(n)&&n>0?n:null;
+}
 async function saveProfile(){
-  if(!currentClient){alert("اول یک شاگرد را از پنل مربی انتخاب کنید.");return;}
-  // Capture the target ID before any asynchronous operation; never redirect
-  // an in-flight save to whichever trainee happens to be selected later.
-  const traineeId=currentClient.id;
-  const payload={full_name:$("pn").value.trim(),current_weight:+$("pweight").value||null,
-    height:+$("pheight").value||null,goal:$("pgoal").value||null,training_level:$("plevel").value||null,training_type:$("ptype").value||null,home_equipment:$("pequipment").value.trim()||null};
-  if(!payload.full_name){alert("نام شاگرد را وارد کنید.");return;}
-  try{
-    if(typeof window.sbWrite!=="function")throw new Error("اتصال امن ذخیره‌سازی آماده نیست؛ صفحه را تازه‌سازی کنید.");
-    const rows=await window.sbWrite("/trainees?id=eq."+encodeURIComponent(traineeId),"PATCH",payload);
-    // Require the database to return the exact row and accepted values.
-    if(!Array.isArray(rows)||!rows.some(row=>String(row.id)===String(traineeId)&&
-      row.full_name===payload.full_name&&
-      (row.current_weight==null?payload.current_weight===null:Number(row.current_weight)===payload.current_weight)&&
-      (row.height==null?payload.height===null:Number(row.height)===payload.height)&&
-      (row.goal??null)===payload.goal&&
-      (row.training_level??null)===payload.training_level&&
-      (row.training_type??null)===payload.training_type&&
-      (row.home_equipment??null)===payload.home_equipment)){
-      throw new Error("ذخیره در پایگاه داده تأیید نشد؛ صفحه را تازه‌سازی کنید و دوباره بررسی کنید.");
-    }
-    await loadClients();
-    // Do not switch the user's active selection if they changed trainees mid-save.
-    if(currentClient&&String(currentClient.id)===String(traineeId)){
-      currentClient=clients.find(x=>String(x.id)===String(traineeId))||currentClient;
-    }
-    alert("پروفایل شاگرد ذخیره شد و پاسخ پایگاه داده هم تأیید شد.");
-  }catch(e){console.error(e);alert("ذخیره پروفایل تأیید نشد.\n"+(e.message||String(e)));}
+ if(!currentClient){alert("اول یک شاگرد را از پنل مربی انتخاب کنید.");return;}
+ const traineeId=currentClient.id, readText=id=>(document.getElementById(id)?.value??"").trim();
+ const name=readText("pn");if(name.length<2){alert("نام شاگرد را وارد کنید.");return;}
+ const payload={full_name:name};
+ for(const [id,key,label] of [["pweight","current_weight","وزن"],["pheight","height","قد"]]){
+  const raw=readText(id);if(raw){const n=sehParseProfileNumber(raw);if(n===null){alert(label+" را با عدد معتبر وارد کنید.");return;}payload[key]=n;}
+ }
+ const ageRaw=readText("page");
+ if(ageRaw){const n=sehParseProfileNumber(ageRaw);if(n===null||!Number.isInteger(n)||n>120){alert("سن را به صورت عدد صحیح معتبر وارد کنید.");return;}payload.age=n;}
+ const birthRaw=readText("pbirth");
+ if(birthRaw){const iso=window.jalaliToISODate?.(birthRaw);if(!iso){alert("تاریخ تولد معتبر نیست؛ مانند ۱۳۷۵/۰۷/۱۸ وارد کنید.");return;}payload.birth_date=iso;}
+ for(const [id,key] of [["pgoal","goal"],["plevel","training_level"],["ptype","training_type"]]){const v=readText(id);if(v)payload[key]=v;}
+ const equipment=readText("pequipment");if(equipment)payload.home_equipment=equipment;
+ try{
+  if(typeof window.sbWrite!=="function")throw new Error("اتصال امن ذخیره‌سازی آماده نیست؛ صفحه را تازه‌سازی کنید.");
+  const rows=await window.sbWrite("/trainees?id=eq."+encodeURIComponent(traineeId),"PATCH",payload);
+  const saved=Array.isArray(rows)?rows.find(row=>String(row.id)===String(traineeId)):null;
+  if(!saved)throw new Error("پاسخ تأییدشده‌ای از پایگاه داده دریافت نشد؛ ذخیره را دوباره بررسی کنید.");
+  await loadClients();
+  if(currentClient&&String(currentClient.id)===String(traineeId)){
+   currentClient=clients.find(x=>String(x.id)===String(traineeId))||currentClient;
+   if(document.getElementById("page"))document.getElementById("page").value=currentClient.age??"";
+   if(document.getElementById("pbirth"))document.getElementById("pbirth").value=window.isoToJalaliDate?.(currentClient.birth_date)||"";
+  }
+  alert("پروفایل شاگرد ذخیره شد و پاسخ پایگاه داده تأیید شد.");
+ }catch(e){console.error("saveProfile failed",e);alert("ذخیره پروفایل تأیید نشد.\\n"+(e.message||String(e)));}
 }
 
 async function saveProfileExtras(){if(!currentClient)return alert('اول شاگرد را انتخاب کنید.');try{await sbWrite(`/trainees?id=eq.${encodeURIComponent(currentClient.id)}`,'PATCH',{training_type:$('ptype2').value,home_equipment:$('pequipment2').value.trim()||null,limitations:$('plimit').value.trim()||null});alert('اطلاعات تکمیلی ذخیره شد.');await loadClients();}catch(e){alert('ذخیره اطلاعات تکمیلی انجام نشد.\n'+e.message);}}
@@ -7145,20 +7149,18 @@ else loadCoachExerciseListsWhenReady();
    if(!traineeId||!currentClient||String(currentClient.id)!==String(traineeId)){
     alert("پروفایل به حساب شاگرد فعلی متصل نیست؛ برای امنیت، ذخیره انجام نشد.");return;
    }
-   const birthRaw=(document.getElementById("pbirth")?.value||"").trim();
-   const birthISO=birthRaw&&typeof window.jalaliToISODate==="function"?window.jalaliToISODate(birthRaw):null;
-   if(birthRaw&&!birthISO){alert("تاریخ تولد را به صورت شمسی مانند ۱۴۰۵/۰۷/۱۸ وارد کنید.");return;}
-   const name=(document.getElementById("pn")?.value||"").trim();
-   if(name.length<2){alert("نام و نام خانوادگی را وارد کنید.");return;}
-   const payload={
-    full_name:name,
-    current_weight:Number(document.getElementById("pweight")?.value)||null,
-    height:Number(document.getElementById("pheight")?.value)||null,
-    training_type:document.getElementById("ptype")?.value||"gym",
-    home_equipment:(document.getElementById("pequipment")?.value||"").trim()||null,
-    birth_date:birthRaw?birthISO:null,
-    gender:document.getElementById("pgender")?.value||null
-   };
+   const readText=id=>(document.getElementById(id)?.value??"").trim();
+   const name=readText("pn");if(name.length<2){alert("نام و نام خانوادگی را وارد کنید.");return;}
+   const payload={full_name:name};
+   for(const [id,key,label] of [["pweight","current_weight","وزن"],["pheight","height","قد"]]){
+    const raw=readText(id);if(raw){const n=sehParseProfileNumber(raw);if(n===null){alert(label+" را با عدد معتبر وارد کنید.");return;}payload[key]=n;}
+   }
+   const ageRaw=readText("page");
+   if(ageRaw){const n=sehParseProfileNumber(ageRaw);if(n===null||!Number.isInteger(n)||n>120){alert("سن را به صورت عدد صحیح معتبر وارد کنید.");return;}payload.age=n;}
+   const birthRaw=readText("pbirth");
+   if(birthRaw){const iso=window.jalaliToISODate?.(birthRaw);if(!iso){alert("تاریخ تولد را به صورت شمسی مانند ۱۴۰۵/۰۷/۱۸ وارد کنید.");return;}payload.birth_date=iso;}
+   const type=readText("ptype"),equipment=readText("pequipment"),gender=readText("pgender");
+   if(type)payload.training_type=type;if(equipment)payload.home_equipment=equipment;if(gender)payload.gender=gender;
    const btn=document.querySelector('#client button[onclick="saveProfile()"]');
    if(btn){btn.disabled=true;btn.textContent="⏳ در حال ذخیره…";}
    try{
