@@ -55,7 +55,7 @@ pre{white-space:pre-wrap;overflow-wrap:anywhere;background:#f7f7f7;padding:12px;
 .report-section-title{font-size:1.15rem;color:#765b2e;border-right:4px solid #c5a35b;padding-right:10px;margin:20px 0 12px}
 .report-metric-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin:16px 0}
 .report-metric-card{background:#fff;border:1px solid #eadfc9;border-radius:13px;padding:12px;min-width:0}
-.report-metric-card span{display:block;color:#756b59;font-size:.82rem}
+.report-metric-card span{display:block;color:#756b59;font-size:.82rem}.report-ltr-value{direction:ltr;unicode-bidi:isolate;display:inline-block;white-space:nowrap}
 .report-metric-card b{display:block;color:#765b2e;font-size:1.35rem;direction:ltr;text-align:right;unicode-bidi:isolate;overflow-wrap:anywhere}
 .report-metric-card small{display:block;color:#7b7469;font-size:.72rem}
 .report-composition{background:#fff;border:1px solid #eadfc9;border-radius:13px;padding:14px;margin-top:12px}
@@ -336,9 +336,11 @@ button.addEventListener("click",async()=>{
       !["invalid_range","conflict_review","not_reported"].includes(item.status);
   }
   function metricDisplay(item, unit) {
-    if (!item) return "در گزارش ثبت نشده";
-    if (!metricIsUsable(item)) return "نیازمند بررسی مربی";
-    return Number(item.value).toLocaleString("en-US") + (unit ? " " + unit : "");
+    if (!item) return '<span dir="rtl">در گزارش ثبت نشده</span>';
+    if (!metricIsUsable(item)) return '<span dir="rtl">نیازمند بررسی مربی</span>';
+    const number = escapeHTML(Number(item.value).toLocaleString("en-US"));
+    const unitHtml = unit ? ' <span dir="rtl">' + escapeHTML(unit) + '</span>' : '';
+    return '<span class="report-ltr-value" dir="ltr">' + number + unitHtml + '</span>';
   }
   function makeReportPage(content, index, total, approved) {
     return '<article class="report-page">' +
@@ -393,7 +395,7 @@ button.addEventListener("click",async()=>{
         const alternatives = item && item.alternatives && item.alternatives.length > 1
           ? '<small>مقادیر مشاهده‌شده: ' + item.alternatives.map(escapeHTML).join("، ") + '</small>' : '';
         return '<div class="report-metric-card"><span>' + def[1] + '</span><b>' +
-          escapeHTML(metricDisplay(item, def[2])) + '</b><small>' + escapeHTML(status) + '</small>' + alternatives + '</div>';
+          metricDisplay(item, def[2]) + '</b><small>' + escapeHTML(status) + '</small>' + alternatives + '</div>';
       }).join("");
       const weight = metricIsUsable(metrics.weight_kg) ? Number(metrics.weight_kg.value) : null;
       const fat = metricIsUsable(metrics.fat_mass_kg) ? Number(metrics.fat_mass_kg.value) : null;
@@ -421,11 +423,11 @@ button.addEventListener("click",async()=>{
         '<div class="report-note">این گزارش از PDF دستگاه استخراج شده است. مقادیر مشکوک یا متعارض به‌عنوان مقدار قطعی تفسیر نمی‌شوند. کیفیت نور، پس‌زمینه، کامل بودن بدن و وضوح اسکن بر خروجی اثر می‌گذارد؛ دقت ۱۰۰٪ تضمین نمی‌شود و بررسی مربی لازم است.</div>';
       const detailRows = metricDefs.map(def => {
         const item = metrics[def[0]];
-        const value = item ? metricDisplay(item, def[2]) : "در گزارش ثبت نشده";
+        const value = metricDisplay(item, def[2]);
         const alternatives = item && item.alternatives && item.alternatives.length > 1
           ? '<br><small>مقادیر جایگزین: ' + item.alternatives.map(escapeHTML).join("، ") + '</small>' : '';
         const status = item && item.status ? (statusText[item.status] || item.status) : "در گزارش ثبت نشده";
-        return '<tr><td>' + def[1] + '</td><td>' + escapeHTML(value) + alternatives + '</td><td>' + escapeHTML(status) + '</td></tr>';
+        return '<tr><td>' + def[1] + '</td><td>' + value + alternatives + '</td><td>' + escapeHTML(status) + '</td></tr>';
       }).join("");
       const rawMeasures = metrics.raw_body_measurements || {};
       const rawRows = Object.entries(rawMeasures).map(([key,item]) =>
