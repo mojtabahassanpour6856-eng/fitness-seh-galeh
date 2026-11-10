@@ -221,7 +221,7 @@ try {
   assert.match(pageInfo, /ساعد چپ.*ثبت نشده/s, "Missing forearm was not reported as missing.");
   assert.match(pageInfo, /69\.87/, "Tesseract did not recognize the synthetic waist value from the raster page.");
 
-  assert.match(pageInfo, /123\\.456/, "Targeted OCR did not recover the region value from the semi-text page.");
+  assert.match(pageInfo, /123\.456/, "Targeted OCR did not recover the region value from the semi-text page.");
 
   // The coach report must use original PDF page renders, not generated imagery.
   const scanImages = page.locator(".scan-figure img");
@@ -282,7 +282,7 @@ try {
   const nullMetricVisual = await page.evaluate(() => window.TopGenesisVisualReport({
     weight_kg: { value: null, unit: "kg", status: "not_reported" }
   }, []));
-  assert.doesNotMatch(nullMetricVisual, /0\\s*kg/,
+  assert.doesNotMatch(nullMetricVisual, /0\s*kg/,
     "A null or missing metric must never be rendered as zero.");
   const simpleAnalysis = await page.evaluate(() => window.TopGenesisSimpleAnalysis({
     height_cm:{value:161,status:"within_initial_range_needs_coach_review"},
