@@ -229,6 +229,12 @@ try {
   const scanSources = await scanImages.evaluateAll(items => items.map(item => item.getAttribute("src") || ""));
   assert.ok(scanSources.every(src => src.startsWith("data:image/png;base64,")),
     "Scan images must be rendered from the PDF in-browser as PNG data URLs.");
+
+  const brandLogo = page.locator(".brand-logo").first();
+  assert.ok(await brandLogo.count() > 0, "The report cover must include the existing club logo.");
+  await brandLogo.evaluate(img => img.decode());
+  assert.ok(await brandLogo.evaluate(img => img.naturalWidth > 0),
+    "The existing Fitness Seh Galeh logo asset must load in the report.");
   assert.equal(await page.locator("[data-review]").count(), 4,
     "The coach must be able to review lighting, background, movement and scan completeness.");
   assert.equal(await page.locator("#pngReport").isDisabled(), true,
