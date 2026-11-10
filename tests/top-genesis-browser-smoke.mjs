@@ -117,13 +117,13 @@ try {
   // Synthetic scan-image pages and supplementary pages make this a 12-page
   // fixture for testing page selection, source-image rendering and long reports.
   const frontPage = pdfDoc.addPage([612,792]);
-  frontPage.drawText("3D Scan Images. This synthetic page contains a front-view body outline for visual export testing only.", {
+  frontPage.drawText("Visual Image Page. This synthetic page contains a front-view body outline for visual export testing only and no text measurements.", {
     x:40,y:740,size:10,font,color:rgb(0,0,0),maxWidth:530,lineHeight:16
   });
   const frontPng = await pdfDoc.embedPng(Buffer.from(scanFrontDataUrl.split(",")[1],"base64"));
   frontPage.drawImage(frontPng,{x:90,y:70,width:432,height:562});
   const sidePage = pdfDoc.addPage([612,792]);
-  sidePage.drawText("3D Scan Images. This synthetic page contains a side-view body outline for visual export testing only.", {
+  sidePage.drawText("Visual Image Page. This synthetic page contains a side-view body outline for visual export testing only and no text measurements.", {
     x:40,y:740,size:10,font,color:rgb(0,0,0),maxWidth:530,lineHeight:16
   });
   const sidePng = await pdfDoc.embedPng(Buffer.from(scanSideDataUrl.split(",")[1],"base64"));
