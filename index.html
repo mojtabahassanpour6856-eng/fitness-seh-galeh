@@ -623,10 +623,10 @@ body.locked{overflow:hidden!important}
 <h2>👤 پروفایل شاگرد</h2>
 <div class="grid2">
 <div><label>نام و نام خانوادگی</label><input id="pn"></div>
-<div><label>سن</label><input id="page" type="number"></div>
+<div><label>سن</label><input id="page" type="text" inputmode="numeric" pattern="[0-9۰-۹٠-٩]*"></div>
 <div><label>تاریخ تولد</label><input id="pbirth" type="text" inputmode="numeric" placeholder="مثلاً ۱۳۷۵/۰۷/۱۸" autocomplete="off"></div>
-<div><label>وزن</label><input id="pweight" type="number"></div>
-<div><label>قد</label><input id="pheight" type="number"></div>
+<div><label>وزن</label><input id="pweight" type="text" inputmode="decimal"></div>
+<div><label>قد</label><input id="pheight" type="text" inputmode="decimal"></div>
 <div><label>هدف</label><select id="pgoal"><option>کاهش وزن</option><option>افزایش وزن</option><option>عضله‌سازی</option><option>چربی‌سوزی</option><option>تناسب اندام</option></select></div>
 <div><label>سطح تمرینی</label><select id="plevel"><option>مبتدی</option><option>متوسط</option><option>پیشرفته</option></select></div>
 <div><label>نوع شاگرد</label><select id="ptype"><option value="gym">🏋️ باشگاه / حضوری</option><option value="home">🏠 تمرین در منزل</option><option value="online">📱 آنلاین</option></select></div>
@@ -1223,7 +1223,7 @@ async function loadClients(){
     // Read with the signed-in user's access token so RLS, not the public key,
     // decides which trainee records this coach is allowed to see.
     if(typeof window.sbGet!=="function")throw new Error("اتصال امن اطلاعات شاگردان هنوز آماده نیست؛ صفحه را تازه‌سازی کنید.");
-    const data=await window.sbGet("/trainees?select=id,full_name,phone,gender,birth_date,current_weight,height,goal,training_level,training_history,limitations,training_type,home_equipment,profile_image,created_at&order=created_at.desc");
+    const data=await window.sbGet("/trainees?select=id,full_name,phone,gender,birth_date,age,current_weight,height,goal,training_level,training_history,limitations,training_type,home_equipment,profile_image,created_at&order=created_at.desc");
     if(!Array.isArray(data))throw new Error("پاسخ فهرست شاگردان معتبر نیست.");
 
     clients=data.map(c=>({
@@ -1370,8 +1370,8 @@ function selectClient(id){
   currentClient=clients.find(x=>String(x.id)===String(id));if(!currentClient)return;
   renderCoachSelectedTraineeHeader();
   if(typeof window.sehUseCalorieTrainee==="function")window.sehUseCalorieTrainee(currentClient.id);
-  $("pn").value=currentClient.name||"";$("page").value=currentClient.age||"";$("pweight").value=currentClient.weight||"";
-  $("pheight").value=currentClient.height||"";$("pgoal").value=currentClient.goal||"کاهش وزن";
+  $("pn").value=currentClient.name||"";$("page").value=currentClient.age??"";$("pbirth").value=window.isoToJalaliDate?window.isoToJalaliDate(currentClient.birth_date)||"":"";$("pweight").value=currentClient.weight??"";
+  $("pheight").value=currentClient.height??"";$("pgoal").value=currentClient.goal||"کاهش وزن";
   $("plevel").value=currentClient.level||"مبتدی";loadNutritionForClient();loadWorkoutForClient();loadDietSummary();
   showSection("client",document.querySelectorAll(".nav button")[2]); if($("ptype"))$("ptype").value=currentClient.training_type||"gym"; if($("ptype2"))$("ptype2").value=currentClient.training_type||"gym"; if($("pequipment"))$("pequipment").value=currentClient.home_equipment||""; if($("pequipment2"))$("pequipment2").value=currentClient.home_equipment||""; if($("plimit"))$("plimit").value=currentClient.limitations||""; if($("actDate"))$("actDate").value=today(); loadActivityToday(); loadSupplements(); loadInjuries(); loadLibraryExercises();
    // Explicitly refresh coach goal panel from the selected trainee record.
@@ -1379,35 +1379,39 @@ function selectClient(id){
 }
 
 
+function sehParseProfileNumber(raw){
+ let v=String(raw??"").replace(/[۰-۹]/g,d=>"۰۱۲۳۴۵۶۷۸۹".indexOf(d)).replace(/[٠-٩]/g,d=>"٠١٢٣٤٥٦٧٨٩".indexOf(d));
+ v=v.replace(/[٬,]/g,"").replace(/٫/g,".").replace(/[^0-9.-]/g,"");
+ if(!v||v==="."||v==="-"||v==="-.")return null;
+ const n=Number(v);return Number.isFinite(n)&&n>0?n:null;
+}
 async function saveProfile(){
-  if(!currentClient){alert("اول یک شاگرد را از پنل مربی انتخاب کنید.");return;}
-  // Capture the target ID before any asynchronous operation; never redirect
-  // an in-flight save to whichever trainee happens to be selected later.
-  const traineeId=currentClient.id;
-  const payload={full_name:$("pn").value.trim(),current_weight:+$("pweight").value||null,
-    height:+$("pheight").value||null,goal:$("pgoal").value||null,training_level:$("plevel").value||null,training_type:$("ptype").value||null,home_equipment:$("pequipment").value.trim()||null};
-  if(!payload.full_name){alert("نام شاگرد را وارد کنید.");return;}
-  try{
-    if(typeof window.sbWrite!=="function")throw new Error("اتصال امن ذخیره‌سازی آماده نیست؛ صفحه را تازه‌سازی کنید.");
-    const rows=await window.sbWrite("/trainees?id=eq."+encodeURIComponent(traineeId),"PATCH",payload);
-    // Require the database to return the exact row and accepted values.
-    if(!Array.isArray(rows)||!rows.some(row=>String(row.id)===String(traineeId)&&
-      row.full_name===payload.full_name&&
-      (row.current_weight==null?payload.current_weight===null:Number(row.current_weight)===payload.current_weight)&&
-      (row.height==null?payload.height===null:Number(row.height)===payload.height)&&
-      (row.goal??null)===payload.goal&&
-      (row.training_level??null)===payload.training_level&&
-      (row.training_type??null)===payload.training_type&&
-      (row.home_equipment??null)===payload.home_equipment)){
-      throw new Error("ذخیره در پایگاه داده تأیید نشد؛ صفحه را تازه‌سازی کنید و دوباره بررسی کنید.");
-    }
-    await loadClients();
-    // Do not switch the user's active selection if they changed trainees mid-save.
-    if(currentClient&&String(currentClient.id)===String(traineeId)){
-      currentClient=clients.find(x=>String(x.id)===String(traineeId))||currentClient;
-    }
-    alert("پروفایل شاگرد ذخیره شد و پاسخ پایگاه داده هم تأیید شد.");
-  }catch(e){console.error(e);alert("ذخیره پروفایل تأیید نشد.\n"+(e.message||String(e)));}
+ if(!currentClient){alert("اول یک شاگرد را از پنل مربی انتخاب کنید.");return;}
+ const traineeId=currentClient.id, readText=id=>(document.getElementById(id)?.value??"").trim();
+ const name=readText("pn");if(name.length<2){alert("نام شاگرد را وارد کنید.");return;}
+ const payload={full_name:name};
+ for(const [id,key,label] of [["pweight","current_weight","وزن"],["pheight","height","قد"]]){
+  const raw=readText(id);if(raw){const n=sehParseProfileNumber(raw);if(n===null){alert(label+" را با عدد معتبر وارد کنید.");return;}payload[key]=n;}
+ }
+ const ageRaw=readText("page");
+ if(ageRaw){const n=sehParseProfileNumber(ageRaw);if(n===null||!Number.isInteger(n)||n>120){alert("سن را به صورت عدد صحیح معتبر وارد کنید.");return;}payload.age=n;}
+ const birthRaw=readText("pbirth");
+ if(birthRaw){const iso=window.jalaliToISODate?.(birthRaw);if(!iso){alert("تاریخ تولد معتبر نیست؛ مانند ۱۳۷۵/۰۷/۱۸ وارد کنید.");return;}payload.birth_date=iso;}
+ for(const [id,key] of [["pgoal","goal"],["plevel","training_level"],["ptype","training_type"]]){const v=readText(id);if(v)payload[key]=v;}
+ const equipment=readText("pequipment");if(equipment)payload.home_equipment=equipment;
+ try{
+  if(typeof window.sbWrite!=="function")throw new Error("اتصال امن ذخیره‌سازی آماده نیست؛ صفحه را تازه‌سازی کنید.");
+  const rows=await window.sbWrite("/trainees?id=eq."+encodeURIComponent(traineeId),"PATCH",payload);
+  const saved=Array.isArray(rows)?rows.find(row=>String(row.id)===String(traineeId)):null;
+  if(!saved)throw new Error("پاسخ تأییدشده‌ای از پایگاه داده دریافت نشد؛ ذخیره را دوباره بررسی کنید.");
+  await loadClients();
+  if(currentClient&&String(currentClient.id)===String(traineeId)){
+   currentClient=clients.find(x=>String(x.id)===String(traineeId))||currentClient;
+   if(document.getElementById("page"))document.getElementById("page").value=currentClient.age??"";
+   if(document.getElementById("pbirth"))document.getElementById("pbirth").value=window.isoToJalaliDate?.(currentClient.birth_date)||"";
+  }
+  alert("پروفایل شاگرد ذخیره شد و پاسخ پایگاه داده تأیید شد.");
+ }catch(e){console.error("saveProfile failed",e);alert("ذخیره پروفایل تأیید نشد.\\n"+(e.message||String(e)));}
 }
 
 async function saveProfileExtras(){if(!currentClient)return alert('اول شاگرد را انتخاب کنید.');try{await sbWrite(`/trainees?id=eq.${encodeURIComponent(currentClient.id)}`,'PATCH',{training_type:$('ptype2').value,home_equipment:$('pequipment2').value.trim()||null,limitations:$('plimit').value.trim()||null});alert('اطلاعات تکمیلی ذخیره شد.');await loadClients();}catch(e){alert('ذخیره اطلاعات تکمیلی انجام نشد.\n'+e.message);}}
@@ -2632,7 +2636,23 @@ if($("prDate"))$("prDate").value=today();if($("anDate"))$("anDate").value=today(
   function sehCropDraw(){const canvas=document.getElementById('sehPhotoCropCanvas');if(!canvas||!sehCropBitmap)return;const ctx=canvas.getContext('2d'),w=320,h=320;ctx.clearRect(0,0,w,h);const base=Math.max(w/sehCropBitmap.width,h/sehCropBitmap.height),scale=base*sehCropScale,dw=sehCropBitmap.width*scale,dh=sehCropBitmap.height*scale;ctx.save();ctx.beginPath();ctx.arc(160,160,160,0,Math.PI*2);ctx.clip();ctx.drawImage(sehCropBitmap,(w-dw)/2+sehCropX,(h-dh)/2+sehCropY,dw,dh);ctx.restore();}
   function sehClosePhotoCrop(){const modal=document.getElementById('sehPhotoCropModal');if(modal)modal.classList.remove('show');if(sehCropBitmap&&sehCropBitmap.close)sehCropBitmap.close();sehCropBitmap=null;sehCropPointer=null;}
   function sehEnsurePhotoCropModal(){let modal=document.getElementById('sehPhotoCropModal');if(modal)return modal;modal=document.createElement('div');modal.id='sehPhotoCropModal';modal.innerHTML='<div class="seh-crop-panel"><h3>برش عکس پروفایل</h3><p class="muted">عکس را با انگشت جابه‌جا کنید و اندازه را تنظیم کنید.</p><canvas id="sehPhotoCropCanvas" width="320" height="320"></canvas><label for="sehPhotoCropZoom">بزرگ‌نمایی</label><input id="sehPhotoCropZoom" type="range" min="1" max="3" step=".01" value="1"><div class="seh-crop-actions"><button type="button" class="secondary" id="sehPhotoCropCancel">انصراف</button><button type="button" id="sehPhotoCropSave">ذخیره برش</button></div></div>';document.body.appendChild(modal);modal.querySelector('#sehPhotoCropCancel').onclick=sehClosePhotoCrop;modal.querySelector('#sehPhotoCropZoom').oninput=e=>{sehCropScale=Number(e.target.value)||1;sehCropDraw();};const canvas=modal.querySelector('canvas');canvas.addEventListener('pointerdown',e=>{sehCropPointer={x:e.clientX,y:e.clientY,ox:sehCropX,oy:sehCropY};canvas.setPointerCapture(e.pointerId);});canvas.addEventListener('pointermove',e=>{if(!sehCropPointer)return;const factor=320/canvas.getBoundingClientRect().width;sehCropX=sehCropPointer.ox+(e.clientX-sehCropPointer.x)*factor;sehCropY=sehCropPointer.oy+(e.clientY-sehCropPointer.y)*factor;sehCropDraw();});['pointerup','pointercancel','lostpointercapture'].forEach(ev=>canvas.addEventListener(ev,()=>{sehCropPointer=null;}));modal.querySelector('#sehPhotoCropSave').onclick=window.sehCommitTraineePhotoCrop;return modal;}
-  window.sehSaveTraineePhoto=async function(input){const file=input&&input.files&&input.files[0];if(!file)return;if(!file.type||!file.type.startsWith('image/')){alert('لطفاً یک فایل تصویری انتخاب کنید.');input.value='';return;}if(file.size>8*1024*1024){alert('حجم عکس باید کمتر از ۸ مگابایت باشد.');input.value='';return;}if(!currentClient||!currentClient.id){alert('پرونده شاگرد پیدا نشد؛ دوباره وارد شوید.');input.value='';return;}try{if(!('createImageBitmap' in window))throw new Error('مرورگر این گوشی امکان برش عکس را پشتیبانی نمی‌کند.');sehCropBitmap=await createImageBitmap(file);sehCropScale=1;sehCropX=0;sehCropY=0;const modal=sehEnsurePhotoCropModal();modal.classList.add('show');modal.querySelector('#sehPhotoCropZoom').value='1';sehCropDraw();}catch(e){console.error('Trainee photo crop open failed',e);alert('باز کردن برش عکس انجام نشد. '+(e.message||''));}finally{if(input)input.value='';}};
+  async function sehDecodePhotoFile(file){
+    if(typeof createImageBitmap==='function'){
+      try{return await createImageBitmap(file);}catch(e){console.warn('createImageBitmap failed; using Image fallback',e);}
+    }
+    return await new Promise((resolve,reject)=>{
+      const reader=new FileReader();
+      reader.onerror=()=>reject(new Error('خواندن فایل عکس ممکن نشد.'));
+      reader.onload=()=>{
+        const img=new Image();
+        img.onload=()=>{img.width=img.naturalWidth;img.height=img.naturalHeight;resolve(img);};
+        img.onerror=()=>reject(new Error('فرمت عکس در این مرورگر قابل خواندن نیست.'));
+        img.src=String(reader.result||'');
+      };
+      reader.readAsDataURL(file);
+    });
+  }
+  window.sehSaveTraineePhoto=async function(input){const file=input&&input.files&&input.files[0];if(!file)return;if(!file.type||!file.type.startsWith('image/')){alert('لطفاً یک فایل تصویری انتخاب کنید.');input.value='';return;}if(file.size>8*1024*1024){alert('حجم عکس باید کمتر از ۸ مگابایت باشد.');input.value='';return;}if(!currentClient||!currentClient.id){alert('پرونده شاگرد پیدا نشد؛ دوباره وارد شوید.');input.value='';return;}try{sehCropBitmap=await sehDecodePhotoFile(file);sehCropScale=1;sehCropX=0;sehCropY=0;const modal=sehEnsurePhotoCropModal();modal.classList.add('show');modal.querySelector('#sehPhotoCropZoom').value='1';sehCropDraw();}catch(e){console.error('Trainee photo crop open failed',e);alert('باز کردن برش عکس انجام نشد. '+(e.message||''));}finally{if(input)input.value='';}};
   window.sehCommitTraineePhotoCrop=async function(){if(!sehCropBitmap||!currentClient||!currentClient.id)return;const button=document.getElementById('sehPhotoCropSave');if(button){button.disabled=true;button.textContent='در حال ذخیره…';}try{const canvas=document.createElement('canvas');canvas.width=320;canvas.height=320;const ctx=canvas.getContext('2d'),base=Math.max(320/sehCropBitmap.width,320/sehCropBitmap.height),scale=base*sehCropScale,dw=sehCropBitmap.width*scale,dh=sehCropBitmap.height*scale;ctx.save();ctx.beginPath();ctx.arc(160,160,160,0,Math.PI*2);ctx.clip();ctx.drawImage(sehCropBitmap,(320-dw)/2+sehCropX,(320-dh)/2+sehCropY,dw,dh);ctx.restore();const imageData=canvas.toDataURL('image/jpeg',.8),traineeId=String(currentClient.id);const rows=await window.sbWrite('/trainees?id=eq.'+encodeURIComponent(traineeId),'PATCH',{profile_image:imageData});if(!Array.isArray(rows)||!rows.some(row=>String(row.id)===traineeId&&row.profile_image===imageData))throw new Error('ذخیره عکس در پایگاه داده تأیید نشد.');currentClient.profile_image=imageData;if(Array.isArray(clients)){const row=clients.find(x=>String(x.id)===traineeId);if(row)row.profile_image=imageData;}sehClosePhotoCrop();const root=document.getElementById('traineeDashboard');if(root)renderTraineeProfileHeader(root);alert('عکس پروفایل ذخیره شد.');}catch(e){console.error('Trainee profile photo save failed',e);alert('ذخیره عکس انجام نشد. '+(e.message||''));}finally{if(button){button.disabled=false;button.textContent='ذخیره برش';}}};
   window.sehDeleteTraineePhoto=async function(){if(!currentClient||!currentClient.id||!currentClient.profile_image)return;if(!confirm('عکس پروفایل حذف شود؟'))return;const traineeId=String(currentClient.id);try{const rows=await window.sbWrite('/trainees?id=eq.'+encodeURIComponent(traineeId),'PATCH',{profile_image:null});if(!Array.isArray(rows)||!rows.some(row=>String(row.id)===traineeId&&row.profile_image==null))throw new Error('حذف عکس در پایگاه داده تأیید نشد.');currentClient.profile_image=null;if(Array.isArray(clients)){const row=clients.find(x=>String(x.id)===traineeId);if(row)row.profile_image=null;}const root=document.getElementById('traineeDashboard');if(root)renderTraineeProfileHeader(root);alert('عکس پروفایل حذف شد.');}catch(e){console.error('Trainee profile photo delete failed',e);alert('حذف عکس انجام نشد. '+(e.message||''));}};
 
@@ -3011,8 +3031,12 @@ window.loadDashboard = loadDashboard;
     const setProfileValue=(id,value)=>{const el=$id(id);if(el)el.value=value==null?'':String(value);};
     setProfileValue('pn',c.full_name||'');
     setProfileValue('page',c.age??calcAge(c.birth_date)??'');
+    setProfileValue('pbirth',window.isoToJalaliDate?window.isoToJalaliDate(c.birth_date)||'':'');
+    setProfileValue('pgender',c.gender||'زن');
     setProfileValue('pweight',c.current_weight??'');
     setProfileValue('pheight',c.height??'');
+    setProfileValue('ptype',c.training_type||'gym');
+    setProfileValue('pequipment',c.home_equipment||'');
     setProfileValue('pgoal',c.goal||'کاهش وزن');
     setProfileValue('plevel',c.training_level||'مبتدی');
     // Paint the dashboard first; optional panels refresh without blocking login.
@@ -7125,20 +7149,18 @@ else loadCoachExerciseListsWhenReady();
    if(!traineeId||!currentClient||String(currentClient.id)!==String(traineeId)){
     alert("پروفایل به حساب شاگرد فعلی متصل نیست؛ برای امنیت، ذخیره انجام نشد.");return;
    }
-   const birthRaw=(document.getElementById("pbirth")?.value||"").trim();
-   const birthISO=birthRaw&&typeof window.jalaliToISODate==="function"?window.jalaliToISODate(birthRaw):null;
-   if(birthRaw&&!birthISO){alert("تاریخ تولد را به صورت شمسی مانند ۱۴۰۵/۰۷/۱۸ وارد کنید.");return;}
-   const name=(document.getElementById("pn")?.value||"").trim();
-   if(name.length<2){alert("نام و نام خانوادگی را وارد کنید.");return;}
-   const payload={
-    full_name:name,
-    current_weight:Number(document.getElementById("pweight")?.value)||null,
-    height:Number(document.getElementById("pheight")?.value)||null,
-    training_type:document.getElementById("ptype")?.value||"gym",
-    home_equipment:(document.getElementById("pequipment")?.value||"").trim()||null,
-    birth_date:birthRaw?birthISO:null,
-    gender:document.getElementById("pgender")?.value||null
-   };
+   const readText=id=>(document.getElementById(id)?.value??"").trim();
+   const name=readText("pn");if(name.length<2){alert("نام و نام خانوادگی را وارد کنید.");return;}
+   const payload={full_name:name};
+   for(const [id,key,label] of [["pweight","current_weight","وزن"],["pheight","height","قد"]]){
+    const raw=readText(id);if(raw){const n=sehParseProfileNumber(raw);if(n===null){alert(label+" را با عدد معتبر وارد کنید.");return;}payload[key]=n;}
+   }
+   const ageRaw=readText("page");
+   if(ageRaw){const n=sehParseProfileNumber(ageRaw);if(n===null||!Number.isInteger(n)||n>120){alert("سن را به صورت عدد صحیح معتبر وارد کنید.");return;}payload.age=n;}
+   const birthRaw=readText("pbirth");
+   if(birthRaw){const iso=window.jalaliToISODate?.(birthRaw);if(!iso){alert("تاریخ تولد را به صورت شمسی مانند ۱۴۰۵/۰۷/۱۸ وارد کنید.");return;}payload.birth_date=iso;}
+   const type=readText("ptype"),equipment=readText("pequipment"),gender=readText("pgender");
+   if(type)payload.training_type=type;if(equipment)payload.home_equipment=equipment;if(gender)payload.gender=gender;
    const btn=document.querySelector('#client button[onclick="saveProfile()"]');
    if(btn){btn.disabled=true;btn.textContent="⏳ در حال ذخیره…";}
    try{
@@ -7146,7 +7168,7 @@ else loadCoachExerciseListsWhenReady();
     const updated=await sbGet("/trainees?id=eq."+encodeURIComponent(traineeId)+"&select=*&limit=1");
     if(!updated.length)throw new Error("ذخیره ارسال شد اما رکورد شاگرد از دیتابیس دوباره خوانده نشد.");
     const c=updated[0];
-    currentClient={...currentClient,id:c.id,name:c.full_name,phone:c.phone,gender:c.gender,birth_date:c.birth_date,age:typeof calcAge==="function"?calcAge(c.birth_date):currentClient.age,weight:c.current_weight,height:c.height,goal:c.goal,level:c.training_level,training_type:c.training_type||"gym",home_equipment:c.home_equipment||"",training_days:c.training_days||"",training_time:c.training_time||"",weekly_sessions:c.weekly_sessions||null};
+    currentClient={...currentClient,id:c.id,name:c.full_name,phone:c.phone,gender:c.gender,birth_date:c.birth_date,age:c.age??(typeof calcAge==="function"?calcAge(c.birth_date):currentClient.age),weight:c.current_weight,height:c.height,goal:c.goal,level:c.training_level,training_type:c.training_type||"gym",home_equipment:c.home_equipment||"",training_days:c.training_days||"",training_time:c.training_time||"",weekly_sessions:c.weekly_sessions||null};
     clients=clients.map(x=>String(x.id)===String(traineeId)?currentClient:x);
     if(document.getElementById("pn"))document.getElementById("pn").value=c.full_name||"";
     if(document.getElementById("pweight"))document.getElementById("pweight").value=c.current_weight||"";
