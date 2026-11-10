@@ -394,8 +394,9 @@ try {
   assert.match(reportText, /بدن کامل داخل کادر/);
   assert.match(reportText, /پیشنهاد تمرینی/);
   assert.match(reportText, /ترکیب وزن ثبت‌شده/);
-  assert.match(reportText, /تصویر واقعی اسکن بدن · صفحه 4/);
-  assert.match(reportText, /تصویر واقعی اسکن بدن · صفحه 5/);
+  assert.match(reportText, /تصویر صفحه اصلی PDF · صفحه 4/);
+  assert.match(reportText, /تصویر صفحه اصلی PDF · صفحه 5/);
+  assert.match(reportText, /برش خودکار انجام نمی‌شود/);
   assert.equal(await page.locator("#reportPreview .report-composition").count(), 1,
     "A composition chart should appear when fat mass plus lean mass reconciles to total weight.");
   assert.match(reportText, /مجتبی/);
