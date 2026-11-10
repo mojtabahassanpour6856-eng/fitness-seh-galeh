@@ -7,7 +7,7 @@ import { chromium } from "playwright";
 import { PDFDocument, StandardFonts, rgb } from "pdf-lib";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
-const mime = { ".html": "text/html; charset=utf-8", ".js": "text/javascript; charset=utf-8" };
+const mime = { ".html": "text/html; charset=utf-8", ".js": "text/javascript; charset=utf-8", ".png": "image/png" };
 const server = http.createServer((req, res) => {
   const pathname = decodeURIComponent(new URL(req.url, "http://127.0.0.1").pathname);
   const file = path.resolve(root, "." + pathname);
