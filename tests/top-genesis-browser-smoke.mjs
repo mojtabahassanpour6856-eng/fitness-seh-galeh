@@ -390,6 +390,8 @@ try {
   let reportText = await page.locator("#reportPreview").innerText();
   assert.match(reportText, /گزارش هوشمند آنالیز بدن/);
   assert.match(reportText, /شاگرد آزمایشی/);
+  assert.match(reportText, /57 کیلوگرم/);
+  assert.match(reportText, /14 کیلوگرم/);
   assert.match(reportText, /نور: متعادل/);
   assert.match(reportText, /بدن کامل داخل کادر/);
   assert.match(reportText, /پیشنهاد تمرینی/);
