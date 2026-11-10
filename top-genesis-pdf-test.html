@@ -30,7 +30,7 @@ pre{white-space:pre-wrap;overflow-wrap:anywhere;background:#f7f7f7;padding:12px;
 .small{font-size:.88rem;color:#625d54}
 .visual-report{font-family:"Vazirmatn",Tahoma,Arial,sans-serif;line-height:1.9;overflow-wrap:anywhere;background:linear-gradient(145deg,#fffdf7,#f4ead5);border:1px solid #d9bd7b;border-radius:18px;padding:18px;margin:16px 0;color:#30291e;box-shadow:0 8px 24px #6e552014;direction:rtl}.visual-report .brandline{display:flex;justify-content:space-between;gap:10px;align-items:center;border-bottom:2px solid #c5a35b;padding-bottom:12px}.visual-report .brandname{font-weight:800;color:#765b2e;font-size:1.05rem}.visual-report h2{color:#765b2e}.visual-report .hero{font-size:1.45rem;font-weight:800;margin:12px 0 2px}.visual-report .sub{color:#716958;font-size:.85rem}.visual-report .vgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(135px,1fr));gap:9px;margin:14px 0}.visual-report .vcard{background:#fff;border:1px solid #eadfc9;border-radius:13px;padding:12px;min-height:76px}.visual-report .vcard span{display:block;color:#756b59;font-size:.8rem}.visual-report .vcard b{display:block;color:#765b2e;font-size:1.2rem;margin-top:4px;direction:ltr;text-align:right}.visual-report .vcard small{font-size:.72rem;color:#777}.visual-report .vbar{display:grid;grid-template-columns:95px 1fr 58px;gap:8px;align-items:center;margin:9px 0;font-size:.83rem}.visual-report .track{height:13px;background:#e9e1d2;border-radius:20px;overflow:hidden}.visual-report .fill{height:100%;border-radius:20px;background:linear-gradient(90deg,#c8a65d,#8d713b)}.visual-report .fill.lean{background:linear-gradient(90deg,#8bb5a0,#347b5a)}.visual-report .insights{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:10px;margin-top:14px}.visual-report .insight{border-radius:12px;padding:12px;background:#fff;border:1px solid #e8dfce;min-width:0;overflow-wrap:anywhere;line-height:1.9}.visual-report .insight.good{border-right:4px solid #4c9870}.visual-report .insight.watch{border-right:4px solid #c49439}.visual-report .insight h3{margin:0 0 6px;font-size:.95rem}.visual-report .insight p{font-size:.82rem;margin:0;color:#5f584d;line-height:2;overflow-wrap:anywhere}.visual-report .foot{border-top:1px solid #d9c89e;margin-top:14px;padding-top:10px;font-size:.78rem;color:#756b59;line-height:2;overflow-wrap:anywhere}.export-actions{display:flex;gap:8px;flex-wrap:wrap;margin:12px 0}.export-actions button{font-size:.88rem;padding:9px 13px}.export-actions .secondary{background:#5d725f}@media(max-width:480px){.visual-report{padding:12px}.visual-report .brandline{align-items:flex-start;flex-direction:column}}@media print{html,body,button,input,table{font-family:"Vazirmatn",Tahoma,Arial,sans-serif!important}.visual-report{break-inside:auto;print-color-adjust:exact;-webkit-print-color-adjust:exact}.visual-report .vcard,.visual-report .insight,.analysis-box,.trend-card{break-inside:avoid;page-break-inside:avoid}.export-actions{display:none!important}body.print-report #result section{break-inside:auto}body.print-report #result table tr{break-inside:avoid;page-break-inside:avoid}}
 
-</style>
+.report-page{background:#fffdf8;border:1px solid #e6d4a8;border-radius:16px;padding:20px;margin:18px 0;direction:rtl;overflow-wrap:anywhere;break-inside:avoid;page-break-inside:avoid}.report-page h2,.report-page h3{color:#80632e}.scan-figure{margin:14px 0;padding:12px;background:#fff;border:1px solid #eadfc9;border-radius:14px;text-align:center}.scan-figure figcaption{font-size:.85rem;color:#756b59;margin-bottom:8px}.scan-figure img{display:block;max-width:100%;max-height:980px;object-fit:contain;margin:0 auto;border-radius:8px}.review-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:10px;margin:14px 0}.review-field{display:flex;flex-direction:column;gap:6px;background:#fff;border:1px solid #e8dfce;border-radius:12px;padding:10px;font-size:.86rem}.review-field select,.coach-review-page textarea{width:100%;box-sizing:border-box;border:1px solid #d9c89e;border-radius:9px;padding:10px;background:#fffdf8;font:inherit;color:#30291e}.coach-review-page textarea{margin:8px 0 14px;min-height:92px}.approval-check{display:flex;align-items:center;gap:8px;background:#f7efd9;border:1px solid #d9bd7b;border-radius:10px;padding:12px;font-weight:700}.approval-check input{margin:0}.report-page .foot{border-top:1px solid #d9c89e;margin-top:14px;padding-top:10px;color:#756b59}.export-actions button:disabled{opacity:.45;cursor:not-allowed}@media print{.report-page{break-after:page;page-break-after:always;border:0;box-shadow:none;margin:0;padding:12mm}.scan-figure img{max-height:235mm}}</style>
 </head>
 <body>
 <main>
@@ -67,7 +67,7 @@ const statusText={not_reported:"در این گزارش ثبت نشده",needs_co
 const units={"raw_reported_unit":"واحد خام گزارش" ,"cm":"سانتی‌متر","kg":"کیلوگرم","%":"درصد","kg/m²":"kg/m²","ratio":"نسبت","kcal/day":"کیلوکالری در روز"};
 function escapeHTML(v){return String(v==null?'':v).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
 function buildSimpleAnalysis(m){
- const safe=k=>m[k]&&Number.isFinite(Number(m[k].value))&&!['invalid_range','conflict_review','not_reported'].includes(m[k].status)?Number(m[k].value):null;
+ const safe=k=>m[k]&&m[k].value!==null&&m[k].value!==undefined&&Number.isFinite(Number(m[k].value))&&!['invalid_range','conflict_review','not_reported'].includes(m[k].status)?Number(m[k].value):null;
  const w=safe('weight_kg'),h=safe('height_cm'),f=safe('fat_mass_kg'),l=safe('lean_mass_kg'),p=safe('body_fat_percent'),b=safe('bmi'),r=safe('resting_metabolic_rate_kcal');
  const cards=[];if(w!==null)cards.push(['وزن ثبت‌شده',w+' کیلوگرم','مقدار گزارش']);if(p!==null)cards.push(['درصد چربی',p+'٪','بدون طبقه‌بندی پزشکی']);if(b!==null)cards.push(['BMI گزارش',b,'تفسیر به سن و شرایط فرد وابسته است']);if(r!==null)cards.push(['سوخت‌وساز پایه',r+' kcal/day','معادل کالری مصرفی روزانه نیست']);
  let o='<section class="analysis-box"><h2>خلاصه ساده و تصویری</h2><p class="small">این بخش فقط داده‌های گزارش و کنترل سازگاری را توضیح می‌دهد؛ تشخیص یا نسخه تمرین و تغذیه نیست.</p>';
@@ -79,21 +79,35 @@ function buildSimpleAnalysis(m){
  o+='<p class="note">مقادیر مشکوک یا متعارض وارد محاسبات نمی‌شوند. مقدار کالری روزانه از روی RMR حدس زده نمی‌شود.</p></section>';return o;
 }
 function buildVisualReport(m,flags){
- const valid=k=>m[k]&&Number.isFinite(Number(m[k].value))&&!['invalid_range','conflict_review','not_reported'].includes(m[k].status)?Number(m[k].value):null;
+ const valid=k=>m[k]&&m[k].value!==null&&m[k].value!==undefined&&Number.isFinite(Number(m[k].value))&&!['invalid_range','conflict_review','not_reported'].includes(m[k].status)?Number(m[k].value):null;
  const defs=[['weight_kg','وزن','kg'],['height_cm','قد','cm'],['body_fat_percent','درصد چربی','%'],['bmi','BMI',''],['lean_mass_kg','توده بدون چربی','kg'],['fat_mass_kg','توده چربی','kg'],['waist_hip_ratio','نسبت کمر به باسن',''],['waist_circumference_cm','دور کمر','cm'],['resting_metabolic_rate_kcal','سوخت‌وساز پایه','kcal/day'],['daily_energy_expenditure_kcal','مصرف انرژی روزانه','kcal/day']];
  const cards=defs.map(([k,label,u])=>{const v=valid(k);return v===null?'':'<div class="vcard"><span>'+label+'</span><b>'+v.toLocaleString('en-US')+' '+u+'</b><small>استخراج‌شده از PDF</small></div>';}).join('');
  const fat=valid('fat_mass_kg'),lean=valid('lean_mass_kg'),sum=(fat||0)+(lean||0),weight=valid('weight_kg');let composition='';
  if(fat!==null&&lean!==null&&sum>0&&weight!==null&&Math.abs(sum-weight)<=1.5){const fp=fat/sum*100,lp=100-fp;composition='<h3>ترکیب وزن</h3><div class="vbar"><span>توده چربی</span><div class="track"><div class="fill" style="width:'+fp.toFixed(1)+'%"></div></div><b>'+fat+' kg</b></div><div class="vbar"><span>بدون چربی</span><div class="track"><div class="fill lean" style="width:'+lp.toFixed(1)+'%"></div></div><b>'+lean+' kg</b></div>';}
  const positives=[];if(valid('weight_kg')!==null&&valid('height_cm')!==null)positives.push('قد و وزن از گزارش استخراج شده‌اند.');if(valid('resting_metabolic_rate_kcal')!==null)positives.push('سوخت‌وساز پایه به‌صورت مستقل ثبت شده است.');if(valid('daily_energy_expenditure_kcal')!==null)positives.push('مصرف انرژی روزانه با برچسب اختصاصی دستگاه استخراج شده است.');if(valid('body_fat_percent')!==null)positives.push('درصد چربی بدن در گزارش موجود است.');
  const concerns=[];if(flags&&flags.length)concerns.push(flags.slice(0,3).join(' '));if(m.raw_body_measurements)concerns.push('اندازه‌های Region تا تأیید واحد و روش دستگاه، فقط مقدار خام هستند.');if(m.missing_measurements)concerns.push('برخی اندازه‌ها ثبت نشده‌اند؛ مقدارشان صفر یا حدس زده نشده است.');
- return '<section id="visualReport" class="visual-report"><div class="brandline"><div class="brandname">FITNESS SEH GALEH · باشگاه فیتنس سه‌قلعه</div><div class="sub">گزارش هوشمند آنالیز بدن | خروجی آزمایشی مربی</div></div><div class="hero">نمای کلی وضعیت بدن</div><div class="sub">شاخص‌های استخراج‌شده از فایل دستگاه؛ نیازمند تأیید مربی</div><div class="vgrid">'+(cards||'<p>شاخص کافی برای نمایش پیدا نشد.</p>')+'</div>'+composition+'<div class="insights"><div class="insight good"><h3>نقاط مثبت اطلاعات ثبت‌شده</h3><p>'+(positives.join(' ')||'داده کافی برای مشخص‌کردن شاخص‌های مثبت استخراج نشده است.')+'</p></div><div class="insight watch"><h3>موارد نیازمند پیگیری</h3><p>'+(concerns.join(' ')||'هشدار مهمی در کنترل اولیه ثبت نشده؛ تأیید مربی همچنان لازم است.')+'</p></div></div><div class="foot">نقاط قوت و ضعف عضلانی از روی حدس تعیین نمی‌شوند. تحلیل موضعی فقط پس از تأیید اندازه‌های معتبر یا مشاهده تصویر اسکن انجام می‌شود. مربی: مجتبی</div></section>';
+ return '<section id="visualReport" class="visual-report report-page"><div class="brandline"><div class="brandname">FITNESS SEH GALEH · باشگاه فیتنس سه‌قلعه</div><div class="sub">گزارش هوشمند آنالیز بدن</div></div><div class="hero">نمای کلی وضعیت بدن</div><div class="sub">شاخص‌های استخراج‌شده از فایل دستگاه؛ نیازمند تأیید مربی</div><div class="vgrid">'+(cards||'<p>شاخص کافی برای نمایش پیدا نشد.</p>')+'</div>'+composition+'<div class="insights"><div class="insight good"><h3>نقاط مثبت اطلاعات ثبت‌شده</h3><p>'+(positives.join(' ')||'داده کافی برای مشخص‌کردن شاخص‌های مثبت استخراج نشده است.')+'</p></div><div class="insight watch"><h3>موارد نیازمند پیگیری</h3><p>'+(concerns.join(' ')||'هشدار مهمی در کنترل اولیه ثبت نشده؛ تأیید مربی همچنان لازم است.')+'</p></div></div><div class="foot">نقاط قوت و ضعف عضلانی از روی حدس تعیین نمی‌شوند. تحلیل موضعی فقط پس از تأیید اندازه‌های معتبر یا مشاهده تصویر اسکن انجام می‌شود. مربی: مجتبی</div></section>';
 }
 window.TopGenesisVisualReport=buildVisualReport;
 window.TopGenesisSimpleAnalysis=buildSimpleAnalysis;
 
+function buildScanPage(scanPages){
+ const pages=Array.isArray(scanPages)?scanPages:[];
+ const body=pages.length?pages.map((p,i)=>'<figure class="scan-figure"><figcaption>تصویر اصلی اسکن · صفحه '+escapeHTML(p.page_number||i+1)+' از PDF</figcaption><img src="'+p.image_data_url+'" alt="تصویر واقعی اسکن بدن استخراج‌شده از PDF" loading="eager"></figure>').join(''):'<p class="note">تصویر قابل‌شناسایی از صفحه اسکن در PDF پیدا نشد. تا افزودن تصویر واقعی، گزارش برای تحویل نهایی قابل تأیید نیست.</p>';
+ return '<section class="visual-report report-page"><div class="brandline"><div class="brandname">باشگاه فیتنس سه‌قلعه</div><div class="sub">تصاویر واقعی استخراج‌شده از PDF اصلی</div></div><h2>تصاویر اسکن بدن</h2><p class="small">این تصاویر مستقیماً از صفحه‌های PDF رندر شده‌اند؛ هیچ تصویر ساختگی یا جایگزین استفاده نشده است.</p>'+body+'</section>';
+}
+
+function buildCoachReviewPage(m,scanPages){
+ const missing=m&&m.missing_measurements?Object.keys(m.missing_measurements):[];
+ const missingText=missing.length?'موارد ثبت‌نشده: '+missing.map(k=>escapeHTML(labels[k]||k)).join('، '):'در استخراج اولیه، ناحیه جفتیِ ثبت‌نشده‌ای شناسایی نشد؛ کامل بودن اسکن باید چشمی بررسی شود.';
+ const checks=[['light','نور و کنتراست تصویر'],['background','وضوح و یکنواختی پس‌زمینه'],['movement','حرکت یا جابه‌جایی فرد'],['coverage','کامل بودن نواحی اسکن']];
+ const fields=checks.map(([key,label])=>'<label class="review-field">'+label+'<select data-review="'+key+'"><option value="">بررسی نشده</option><option value="ok">بررسی شد؛ قابل قبول</option><option value="partial">محدودیت دارد؛ در گزارش ذکر شود</option><option value="fix">نیازمند اصلاح یا اسکن مجدد</option></select></label>').join('');
+ return '<section class="visual-report report-page coach-review-page"><div class="brandline"><div class="brandname">کنترل نهایی مربی</div><div class="sub">پیش از تحویل گزارش</div></div><h2>کنترل کیفیت اسکن و تأیید دستی</h2><p class="note">'+missingText+'</p><p class="small">نور، پس‌زمینه، حرکت فرد و کامل بودن اسکن با OCR به‌تنهایی قابل تأیید قطعی نیستند؛ این موارد باید توسط مربی روی تصویر اصلی بررسی شوند. تعداد صفحه‌های تصویری استخراج‌شده: '+(Array.isArray(scanPages)?scanPages.length:0)+'</p><div class="review-grid">'+fields+'</div><h3>پیشنهاد تمرینی مربی</h3><textarea id="trainingNotes" rows="4" placeholder="پیشنهاد تمرینی را پس از بررسی هدف، سابقه و کیفیت اسکن وارد کنید."></textarea><h3>پیشنهاد تغذیه‌ای مربی</h3><textarea id="nutritionNotes" rows="4" placeholder="پیشنهاد تغذیه‌ای را پس از بررسی هدف، فعالیت و شرایط شاگرد وارد کنید."></textarea><label class="approval-check"><input id="coachApprove" type="checkbox" disabled> تأیید نهایی مربی برای تحویل و اشتراک‌گذاری</label><p id="approvalState" class="note" aria-live="polite">تا تکمیل بررسی‌های دستی و ثبت پیشنهادها، خروجی PNG قابل تحویل نیست.</p><div class="foot">مربی و امضای نهایی: مجتبی</div></section>';
+}
+
 function buildReportComparison(older,newer){
  const keys=["weight_kg","body_fat_percent","bmi","fat_mass_kg","lean_mass_kg","waist_circumference_cm","waist_hip_ratio","resting_metabolic_rate_kcal","daily_energy_expenditure_kcal","calf_left_cm","calf_right_cm","thigh_left_cm","thigh_right_cm","upper_arm_left_cm","upper_arm_right_cm","forearm_left_cm","forearm_right_cm","chest_region_cm","hip_region_cm","lower_waist_region_cm","upper_waist_region_cm"];
- const usable=x=>x&&Number.isFinite(Number(x.value))&&!["invalid_range","conflict_review","not_reported"].includes(x.status);
+ const usable=x=>x&&x.value!==null&&x.value!==undefined&&Number.isFinite(Number(x.value))&&!["invalid_range","conflict_review","not_reported"].includes(x.status);
  const rows=[];
  keys.forEach(k=>{
   const a=older&&older[k],b=newer&&newer[k];
@@ -114,7 +128,7 @@ window.TopGenesisReportComparison=buildReportComparison;
 
 function buildMultiReportTrend(reports){
  const keys=["weight_kg","body_fat_percent","bmi","fat_mass_kg","lean_mass_kg","resting_metabolic_rate_kcal"];
- const usable=x=>x&&Number.isFinite(Number(x.value))&&!["invalid_range","conflict_review","not_reported"].includes(x.status);
+ const usable=x=>x&&x.value!==null&&x.value!==undefined&&Number.isFinite(Number(x.value))&&!["invalid_range","conflict_review","not_reported"].includes(x.status);
  const names={weight_kg:"وزن",body_fat_percent:"درصد چربی",bmi:"BMI",fat_mass_kg:"توده چربی",lean_mass_kg:"توده بدون چربی",resting_metabolic_rate_kcal:"سوخت‌وساز پایه"};
  const output=[];
  keys.forEach(k=>{
@@ -154,24 +168,80 @@ button.addEventListener("click",async()=>{
   const allReports=[data,...(newerData?[newerData]:[]),...moreData];
   const rows=[];
   Object.entries(data.metrics||{}).forEach(([key,item])=>{
-   if(key==="raw_body_measurements"||!item)return;
+   if(key==="raw_body_measurements"||!item||Array.isArray(item)||typeof item!=="object"||!("value" in item)||item.value===null||item.value===undefined)return;
    const alternatives=item.alternatives&&item.alternatives.length>1?"<br><span class='small'>مقادیر مشاهده‌شده: "+item.alternatives.map(escapeHTML).join("، ")+"</span>":"";
    rows.push("<tr><td>"+escapeHTML(labels[key]||key)+"</td><td>"+escapeHTML(item.value)+" "+escapeHTML(units[item.unit]||item.unit||"")+alternatives+"</td><td class='"+(item.status==="invalid_range"||item.status==="conflict_review"?"bad":"review")+"'>"+escapeHTML(statusText[item.status]||item.status)+"</td></tr>");
   });
-  let html=buildVisualReport(data.metrics,data.flags)+buildSimpleAnalysis(data.metrics)+(newerData?buildReportComparison(data.metrics,newerData.metrics):"")+(allReports.length>=3?buildMultiReportTrend(allReports):"")+"<section><h2>نتیجه استخراج گزارش اول</h2><p>تعداد صفحات: "+data.page_count+" | صفحات OCR: "+((data.ocr_pages||[]).join("، ")||"ندارد")+"</p><table><thead><tr><th>شاخص</th><th>مقدار</th><th>وضعیت</th></tr></thead><tbody>"+rows.join("")+"</tbody></table></section>";
+  let html=buildVisualReport(data.metrics,data.flags,data.scan_pages)+buildScanPage(data.scan_pages)+buildSimpleAnalysis(data.metrics)+buildCoachReviewPage(data.metrics,data.scan_pages)+(newerData?buildReportComparison(data.metrics,newerData.metrics):"")+(allReports.length>=3?buildMultiReportTrend(allReports):"")+"<section class='report-page'><h2>نتیجه استخراج گزارش اول</h2><p>تعداد صفحات: "+data.page_count+" | صفحات OCR: "+((data.ocr_pages||[]).join("، ")||"ندارد")+"</p><table><thead><tr><th>شاخص</th><th>مقدار</th><th>وضعیت</th></tr></thead><tbody>"+rows.join("")+"</tbody></table></section>";
   const measures=data.metrics&&data.metrics.raw_body_measurements;
-  if(measures){html+="<section><h2>اندازه‌های خام گزارش‌شده دستگاه</h2><p class='note'>این مقادیر عیناً از گزارش دستگاه استخراج شده‌اند. ممکن است هر عدد حاصل چند نقطه یا چند مقطع از ناحیه باشد؛ تا زمان تأیید تعریف خروجی دستگاه، آن را محیط یک دور اندام در نظر نگیرید و با حدود استاندارد محیط تک‌نقطه‌ای مقایسه نکنید.</p><table><tr><th>ناحیه</th><th>مقدار خام گزارش‌شده</th><th>وضعیت</th></tr>"+Object.entries(measures).map(([k,v])=>"<tr><td>"+escapeHTML(labels[k]||k)+"</td><td>"+escapeHTML(v.raw_value)+" "+escapeHTML(units[v.unit]||v.unit||"")+"</td><td class='review'>نیازمند تأیید مربی؛ تفسیر ساختار اندازه‌گیری نامشخص</td></tr>").join("")+"</table></section>";}
+  if(measures){html+="<section class='report-page'><h2>اندازه‌های خام گزارش‌شده دستگاه</h2><p class='note'>این مقادیر عیناً از گزارش دستگاه استخراج شده‌اند. ممکن است هر عدد حاصل چند نقطه یا چند مقطع از ناحیه باشد؛ تا زمان تأیید تعریف خروجی دستگاه، آن را محیط یک دور اندام در نظر نگیرید و با حدود استاندارد محیط تک‌نقطه‌ای مقایسه نکنید.</p><table><tr><th>ناحیه</th><th>مقدار خام گزارش‌شده</th><th>وضعیت</th></tr>"+Object.entries(measures).map(([k,v])=>"<tr><td>"+escapeHTML(labels[k]||k)+"</td><td>"+escapeHTML(v.raw_value)+" "+escapeHTML(units[v.unit]||v.unit||"")+"</td><td class='review'>نیازمند تأیید مربی؛ تفسیر ساختار اندازه‌گیری نامشخص</td></tr>").join("")+"</table></section>";}
   const bilateral=data.metrics&&data.metrics.bilateral_measurement_review;
-  if(bilateral&&bilateral.length){html+="<section><h2>مقایسه دو سمت بدن</h2><p class='note'>این مقایسه فقط کنترل کیفیت گزارش است؛ به‌دلیل نامشخص بودن تعریف مقادیر Region، اختلاف‌ها را تشخیص پزشکی یا اختلاف قطعی محیط اندام تلقی نکنید.</p><table><tr><th>ناحیه</th><th>چپ</th><th>راست</th><th>اختلاف خام</th><th>وضعیت</th></tr>"+bilateral.map(x=>"<tr><td>"+escapeHTML(x.region)+"</td><td>"+escapeHTML(x.left_value)+"</td><td>"+escapeHTML(x.right_value)+"</td><td>"+escapeHTML(x.absolute_difference)+"</td><td class='"+(x.status==="coach_review_asymmetry"?"bad":"review")+"'>"+(x.status==="coach_review_asymmetry"?"نیازمند بررسی مربی":"اختلاف کمتر از آستانه هشدار اولیه")+"</td></tr>").join("")+"</table></section>";}
+  if(bilateral&&bilateral.length){html+="<section class='report-page'><h2>مقایسه دو سمت بدن</h2><p class='note'>این مقایسه فقط کنترل کیفیت گزارش است؛ به‌دلیل نامشخص بودن تعریف مقادیر Region، اختلاف‌ها را تشخیص پزشکی یا اختلاف قطعی محیط اندام تلقی نکنید.</p><table><tr><th>ناحیه</th><th>چپ</th><th>راست</th><th>اختلاف خام</th><th>وضعیت</th></tr>"+bilateral.map(x=>"<tr><td>"+escapeHTML(x.region)+"</td><td>"+escapeHTML(x.left_value)+"</td><td>"+escapeHTML(x.right_value)+"</td><td>"+escapeHTML(x.absolute_difference)+"</td><td class='"+(x.status==="coach_review_asymmetry"?"bad":"review")+"'>"+(x.status==="coach_review_asymmetry"?"نیازمند بررسی مربی":"اختلاف کمتر از آستانه هشدار اولیه")+"</td></tr>").join("")+"</table></section>";}
   const missing=data.metrics&&data.metrics.missing_measurements;
-  if(missing){html+="<section><h2>اندازه‌های ثبت‌نشده</h2><p class='note'>این موارد صفر نیستند و از گزارش دیگری هم جایگزین نشده‌اند.</p><table><tr><th>ناحیه</th><th>وضعیت</th></tr>"+Object.entries(missing).map(([k,v])=>"<tr><td>"+escapeHTML(labels[k]||k)+"</td><td class='review'>در این گزارش ثبت نشده</td></tr>").join("")+"</table></section>";}
-  if(data.flags&&data.flags.length)html+="<section><h2>هشدارها</h2><ul>"+data.flags.map(x=>"<li>"+escapeHTML(x)+"</li>").join("")+"</ul></section>";
+  if(missing){html+="<section class='report-page'><h2>اندازه‌های ثبت‌نشده</h2><p class='note'>این موارد صفر نیستند و از گزارش دیگری هم جایگزین نشده‌اند.</p><table><tr><th>ناحیه</th><th>وضعیت</th></tr>"+Object.entries(missing).map(([k,v])=>"<tr><td>"+escapeHTML(labels[k]||k)+"</td><td class='review'>در این گزارش ثبت نشده</td></tr>").join("")+"</table></section>";}
+  if(data.flags&&data.flags.length)html+="<section class='report-page'><h2>هشدارها</h2><ul>"+data.flags.map(x=>"<li>"+escapeHTML(x)+"</li>").join("")+"</ul></section>";
   html+="<p class='note'>این نتیجه آزمایشی است؛ تأیید مربی الزامی است. اطلاعات هویتی از خروجی صفحه حذف شده‌اند.</p>";
-  html="<div class='print-only print-header'><h1>گزارش تحلیل ترکیب بدن</h1><p>باشگاه فیتنس سه‌قلعه | گزارش استخراج‌شده از دستگاه تاپ جنسیس</p><p>ترتیب گزارش‌ها مطابق ترتیب انتخاب فایل‌هاست.</p></div><div class='no-print export-actions'><button id='printReport' type='button'>چاپ / ذخیره PDF</button><button id='pngReport' class='secondary' type='button'>دریافت تصویر PNG از خلاصه</button><p class='small'>جدول کامل اندازه‌ها و جزئیات در ادامه گزارش و نسخه PDF باقی می‌ماند.</p></div>"+html+"<section class='print-signoff'><h3>یادداشت و تأیید مربی</h3><p>نکات تکمیلی: ........................................................................................................</p><div class='sign-lines'><div>نام و امضای مربی<div class='line'></div></div><div>تاریخ بررسی<div class='line'></div></div></div><p class='small'>این گزارش ابزار کمکی است؛ مقادیر استخراج‌شده باید با گزارش اصلی دستگاه و شرایط اندازه‌گیری تطبیق داده شوند.</p></section>";
+  html="<div class='print-only print-header'><h1>گزارش هوشمند آنالیز بدن</h1><p>باشگاه فیتنس سه‌قلعه | گزارش استخراج‌شده از دستگاه تاپ جنسیس</p><p>ترتیب گزارش‌ها مطابق ترتیب انتخاب فایل‌هاست.</p></div><div class='no-print export-actions'><button id='printReport' type='button'>چاپ / ذخیره PDF</button><button id='pngReport' class='secondary' type='button' disabled>دریافت همه صفحات PNG</button><button id='shareReport' type='button' disabled>اشتراک‌گذاری گزارش</button><p class='small'>خروجی PNG چندصفحه‌ای است. در تلفن همراه، پنجره اشتراک‌گذاری سیستم می‌تواند واتساپ یا تلگرام را نمایش دهد؛ در صورت پشتیبانی‌نشدن، تصاویر جداگانه ذخیره می‌شوند.</p></div>"+html+"<section class='print-signoff report-page'><h3>یادداشت و تأیید مربی</h3><p>نکات تکمیلی: ........................................................................................................</p><div class='sign-lines'><div>نام و امضای مربی<div class='line'></div></div><div>تاریخ بررسی<div class='line'></div></div></div><p class='small'>این گزارش ابزار کمکی است؛ مقادیر استخراج‌شده باید با گزارش اصلی دستگاه و شرایط اندازه‌گیری تطبیق داده شوند.</p></section>";
   result.innerHTML=html;
+  const reviewSelects=[...result.querySelectorAll("[data-review]")];
+  const approveBox=document.getElementById("coachApprove");
+  const trainingNotes=document.getElementById("trainingNotes");
+  const nutritionNotes=document.getElementById("nutritionNotes");
+  function updateApprovalState(){
+   const checksComplete=reviewSelects.length===4&&reviewSelects.every(x=>x.value&&x.value!=="fix");
+   const notesComplete=trainingNotes&&trainingNotes.value.trim()&&nutritionNotes&&nutritionNotes.value.trim();
+   const hasOriginalScan=Array.isArray(data.scan_pages)&&data.scan_pages.length>0;
+   const canApprove=Boolean(checksComplete&&notesComplete&&hasOriginalScan);
+   approveBox.disabled=!canApprove;
+   if(!canApprove)approveBox.checked=false;
+   const approved=canApprove&&approveBox.checked;
+   document.getElementById("pngReport").disabled=!approved;
+   document.getElementById("shareReport").disabled=!approved;
+   document.getElementById("approvalState").textContent=approved?"کنترل‌ها تکمیل شده و مربی گزارش را برای تحویل تأیید کرده است.":"برای فعال شدن خروجی، چهار مورد کیفیت را بررسی کنید، پیشنهاد تمرینی و تغذیه‌ای را بنویسید و تأیید نهایی مربی را بزنید.";
+  }
+  reviewSelects.forEach(x=>x.addEventListener("change",updateApprovalState));
+  trainingNotes.addEventListener("input",updateApprovalState);
+  nutritionNotes.addEventListener("input",updateApprovalState);
+  approveBox.addEventListener("change",updateApprovalState);
+  updateApprovalState();
   notifyParentHeight();
   document.getElementById("printReport").addEventListener("click",()=>{document.body.classList.add("print-report");window.print();});
-  document.getElementById("pngReport").addEventListener("click",async()=>{const btn=document.getElementById("pngReport");btn.disabled=true;btn.textContent="در حال آماده‌سازی تصویر…";try{if(!window.html2canvas){await new Promise((resolve,reject)=>{const sc=document.createElement("script");sc.src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js";sc.onload=resolve;sc.onerror=()=>reject(new Error("بارگذاری ابزار تصویر ناموفق بود."));document.head.appendChild(sc);});}const node=document.getElementById("visualReport");const canvas=await html2canvas(node,{scale:2,backgroundColor:"#fffdf7",useCORS:true});const a=document.createElement("a");a.download="fitness-seh-galeh-body-summary.png";a.href=canvas.toDataURL("image/png");a.click();}catch(e){alert(e.message||"ساخت تصویر انجام نشد.");}finally{btn.disabled=false;btn.textContent="دریافت تصویر PNG از خلاصه";}});
+  async function ensureHtml2Canvas(){
+ if(window.html2canvas)return;
+ await new Promise((resolve,reject)=>{const sc=document.createElement("script");sc.src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js";sc.onload=resolve;sc.onerror=()=>reject(new Error("بارگذاری ابزار ساخت PNG ناموفق بود."));document.head.appendChild(sc);});
+}
+async function renderReportPngFiles(){
+ await ensureHtml2Canvas();
+ const nodes=[...result.querySelectorAll(".report-page")];
+ if(!nodes.length)throw new Error("صفحه‌ای برای خروجی PNG پیدا نشد.");
+ const files=[];
+ for(let i=0;i<nodes.length;i++){
+  const canvas=await html2canvas(nodes[i],{scale:2.4,backgroundColor:"#fffdf7",useCORS:true,logging:false});
+  const blob=await new Promise(resolve=>canvas.toBlob(resolve,"image/png"));
+  canvas.width=0;canvas.height=0;
+  if(!blob)throw new Error("ساخت یکی از صفحات PNG ناموفق بود.");
+  files.push(new File([blob],"fitness-seh-galeh-body-report-"+String(i+1).padStart(2,"0")+".png",{type:"image/png"}));
+ }
+ return files;
+}
+function downloadReportFiles(files){
+ files.forEach((file,i)=>{const url=URL.createObjectURL(file);const a=document.createElement("a");a.href=url;a.download=file.name;a.click();setTimeout(()=>URL.revokeObjectURL(url),1500+i*250);});
+}
+async function exportReport(mode,button){
+ button.disabled=true;const old=button.textContent;button.textContent="در حال آماده‌سازی صفحات…";
+ try{
+  const files=await renderReportPngFiles();
+  if(mode==="share"&&navigator.share&&navigator.canShare&&navigator.canShare({files})){
+   await navigator.share({files,title:"گزارش هوشمند آنالیز بدن",text:"گزارش آنالیز بدن · باشگاه فیتنس سه‌قلعه"});
+  }else{
+   downloadReportFiles(files);
+   if(mode==="share")alert("اشتراک‌گذاری مستقیم فایل در این مرورگر پشتیبانی نشد؛ صفحات PNG ذخیره شدند و می‌توانید آن‌ها را از گالری با واتساپ یا تلگرام ارسال کنید.");
+  }
+ }catch(e){if(e&&e.name!=="AbortError")alert(e.message||"خروجی گزارش انجام نشد.");}
+ finally{button.textContent=old;updateApprovalState();}
+}
+document.getElementById("pngReport").addEventListener("click",()=>exportReport("download",document.getElementById("pngReport")));
+document.getElementById("shareReport").addEventListener("click",()=>exportReport("share",document.getElementById("shareReport")));
   window.onafterprint=()=>document.body.classList.remove("print-report");
   status.textContent=allReports.length>1?"استخراج و مقایسه "+allReports.length+" گزارش تمام شد. هیچ اطلاعاتی ذخیره یا ارسال نشد.":"استخراج تمام شد. هیچ اطلاعاتی ذخیره یا ارسال نشد.";
  }catch(e){status.textContent="خطا: "+(e&&e.message?e.message:"استخراج ناموفق بود.");}
