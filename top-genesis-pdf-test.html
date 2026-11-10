@@ -209,7 +209,7 @@ button.addEventListener("click",async()=>{
   });
   let html=buildVisualReport(data.metrics,data.flags)+buildSimpleAnalysis(data.metrics)+(newerData?buildReportComparison(data.metrics,newerData.metrics):"")+(allReports.length>=3?buildMultiReportTrend(allReports):"")+"<section><h2>نتیجه استخراج گزارش اول</h2><p>تعداد صفحات: "+data.page_count+" | صفحات OCR: "+((data.ocr_pages||[]).join("، ")||"ندارد")+"</p><table><thead><tr><th>شاخص</th><th>مقدار</th><th>وضعیت</th></tr></thead><tbody>"+rows.join("")+"</tbody></table></section>";
   const measures=data.metrics&&data.metrics.raw_body_measurements;
-  if(measures){html+="<section><h2>اندازه‌های خام گزارش‌شده دستگاه</h2><p class='note'>این مقادیر عیناً از گزارش دستگاه استخراج شده‌اند. ممکن است هر عدد حاصل چند نقطه یا چند مقطع از ناحیه باشد؛ تا زمان تأیید تعریف خروجی دستگاه، آن را محیط یک دور اندام در نظر نگیرید و با حدود استاندارد محیط تک‌نقطه‌ای مقایسه نکنید.</p><table><tr><th>ناحیه</th><th>مقدار خام گزارش‌شده</th><th>وضعیت</th></tr>"+Object.entries(measures).map(([k,v])=>"<tr><td>"+escapeHTML(labels[k]||k)+"</td><td>"+escapeHTML(v.raw_value)+" "+escapeHTML(units[v.unit]||v.unit||"")+"</td><td class='review'>نیازمند تأیید مربی؛ تفسیر ساختار اندازه‌گیری نامشخص</td></tr>").join("")+"</table></section>";}
+  if(measures){html+="<section><h2>اندازه‌های خام گزارش‌شده دستگاه</h2><p class='note'>این مقادیر عیناً از گزارش دستگاه استخراج شده‌اند. ممکن است هر عدد حاصل چند نقطه یا چند مقطع از ناحیه باشد؛ تا زمان تأیید تعریف خروجی دستگاه، آن را محیط یک دور اندام در نظر نگیرید و با حدود استاندارد محیط تک‌نقطه‌ای مقایسه نکنید.</p><table><tr><th>ناحیه</th><th>مقدار خام گزارش‌شده</th><th>وضعیت</th></tr>"+Object.entries(measures).map(([k,v])=>{const alternatives=v.alternatives&&v.alternatives.length>1?"<br><span class='small'>مقادیر دیگر: "+v.alternatives.map(escapeHTML).join("، ")+"</span>":"";const state=statusText[v.status]||v.status||"نیازمند تأیید مربی";return "<tr><td>"+escapeHTML(labels[k]||k)+"</td><td>"+escapeHTML(v.raw_value)+" "+escapeHTML(units[v.unit]||v.unit||"")+alternatives+"</td><td class='"+(v.status==="conflict_review"?"bad":"review")+"'>"+escapeHTML(state)+"</td></tr>";}).join("")+"</table></section>";}
   const bilateral=data.metrics&&data.metrics.bilateral_measurement_review;
   if(bilateral&&bilateral.length){html+="<section><h2>مقایسه دو سمت بدن</h2><p class='note'>این مقایسه فقط کنترل کیفیت گزارش است؛ به‌دلیل نامشخص بودن تعریف مقادیر Region، اختلاف‌ها را تشخیص پزشکی یا اختلاف قطعی محیط اندام تلقی نکنید.</p><table><tr><th>ناحیه</th><th>چپ</th><th>راست</th><th>اختلاف خام</th><th>وضعیت</th></tr>"+bilateral.map(x=>"<tr><td>"+escapeHTML(x.region)+"</td><td>"+escapeHTML(x.left_value)+"</td><td>"+escapeHTML(x.right_value)+"</td><td>"+escapeHTML(x.absolute_difference)+"</td><td class='"+(x.status==="coach_review_asymmetry"?"bad":"review")+"'>"+(x.status==="coach_review_asymmetry"?"نیازمند بررسی مربی":"اختلاف کمتر از آستانه هشدار اولیه")+"</td></tr>").join("")+"</table></section>";}
   const missing=data.metrics&&data.metrics.missing_measurements;
@@ -251,7 +251,7 @@ button.addEventListener("click",async()=>{
     '<div id="reportExportActions" class="report-export-actions no-print"></div>';
   result.appendChild(reportBuilder);
   const reportDateField = document.getElementById("reportDate");
-  if (reportDateField) reportDateField.value = new Date().toISOString().slice(0,10);
+  if (reportDateField) { const today = new Date(); reportDateField.value = [today.getFullYear(),String(today.getMonth()+1).padStart(2,"0"),String(today.getDate()).padStart(2,"0")].join("-"); }
   const scanPageGrid = document.getElementById("scanPageGrid");
   const scanQualityReview = document.getElementById("scanQualityReview");
   const reportPreview = document.getElementById("reportPreview");
@@ -292,6 +292,7 @@ button.addEventListener("click",async()=>{
     const limit = Math.min(Number(report.page_count) || 0, 24);
     scanPageGrid.innerHTML = "";
     for (let pageNo = 1; pageNo <= limit; pageNo++) {
+      status.textContent = "در حال ساخت پیش‌نمایش صفحه " + pageNo + " از " + limit + "…";
       try {
         const preview = await report.renderPage(pageNo, { scale: 0.42, type: "image/jpeg", quality: 0.62 });
         const card = document.createElement("label");
