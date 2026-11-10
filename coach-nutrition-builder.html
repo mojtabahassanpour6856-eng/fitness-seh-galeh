@@ -180,7 +180,21 @@ function renderNutritionTemplateCards(){
 }
 async function loadNutritionTemplates(){
  const host=document.getElementById('nutritionTemplateCards');
- if(host)host.innerHTML='<div class="nutrition-template-loading">در حال آماده‌شدن اتصال امن مربی…</div>';
+ // Show built-in templates immediately; the card must not depend on a successful
+ // database round-trip just to become visible.
+ nutritionTemplateCache=nutritionTemplateCache||{};
+ const builtIns=[
+  ['weight-loss-severe','کاهش وزن شدید',builtInSevereWeightLossTemplate],
+  ['weight-loss-normal','کاهش وزن معمولی',builtInNormalWeightLossTemplate],
+  ['fitness-maintenance','تناسب اندام',builtInFitnessTemplate],
+  ['weight-gain-normal','افزایش وزن معمولی',builtInWeightGainNormalTemplate]
+ ];
+ builtIns.forEach(([id,name,data])=>{
+  if(!nutritionTemplateCache[id]||!Array.isArray(nutritionTemplateCache[id].template_data?.state)){
+   nutritionTemplateCache[id]={template_key:id,name,template_data:data,_builtin:true};
+  }
+ });
+ renderNutritionTemplateCards();
  try{
   const client=nutritionTemplateClient();
   // The iframe is loaded eagerly, before the parent app finishes creating
@@ -192,12 +206,11 @@ async function loadNutritionTemplates(){
    if(!sessionResult.data||!sessionResult.data.session||!sessionResult.data.session.user){
     if(nutritionTemplateLoadAttempts<40){
      nutritionTemplateLoadAttempts++;
-     if(host)host.innerHTML='<div class="nutrition-template-loading">در انتظار آماده‌شدن نشست مربی…</div>';
      clearTimeout(nutritionTemplateLoadTimer);
      nutritionTemplateLoadTimer=setTimeout(loadNutritionTemplates,500);
      return;
     }
-    throw new Error('نشست مربی هنوز آماده نشده است؛ بدون خروج از حساب، صفحه را دوباره باز کن.');
+    throw new Error('نشست مربی هنوز آماده نشده است؛ قالب‌های آماده همچنان قابل استفاده‌اند.');
    }
   }
   const {data,error}=await client.from('coach_nutrition_templates')
@@ -205,12 +218,17 @@ async function loadNutritionTemplates(){
   if(error)throw error;
   nutritionTemplateLoadAttempts=0;
   clearTimeout(nutritionTemplateLoadTimer);
-  nutritionTemplateCache={};
-  (data||[]).forEach(row=>{nutritionTemplateCache[row.template_key]=row});
-  if(!nutritionTemplateCache['weight-loss-severe']||!Array.isArray(nutritionTemplateCache['weight-loss-severe'].template_data?.state))nutritionTemplateCache['weight-loss-severe']={template_key:'weight-loss-severe',name:'کاهش وزن شدید',template_data:builtInSevereWeightLossTemplate,_builtin:true};
-  if(!nutritionTemplateCache['weight-loss-normal']||!Array.isArray(nutritionTemplateCache['weight-loss-normal'].template_data?.state))nutritionTemplateCache['weight-loss-normal']={template_key:'weight-loss-normal',name:'کاهش وزن معمولی',template_data:builtInNormalWeightLossTemplate,_builtin:true};
-  if(!nutritionTemplateCache['fitness-maintenance']||!Array.isArray(nutritionTemplateCache['fitness-maintenance'].template_data?.state))nutritionTemplateCache['fitness-maintenance']={template_key:'fitness-maintenance',name:'تناسب اندام',template_data:builtInFitnessTemplate,_builtin:true};
-  if(!nutritionTemplateCache['weight-gain-normal']||!Array.isArray(nutritionTemplateCache['weight-gain-normal'].template_data?.state))nutritionTemplateCache['weight-gain-normal']={template_key:'weight-gain-normal',name:'افزایش وزن معمولی',template_data:builtInWeightGainNormalTemplate,_builtin:true};
+  // Keep built-ins as fallbacks, then let saved coach versions override them.
+  (data||[]).forEach(row=>{
+   if(row&&row.template_key&&row.template_data&&Array.isArray(row.template_data.state)){
+    nutritionTemplateCache[row.template_key]=row;
+   }
+  });
+  builtIns.forEach(([id,name,data])=>{
+   if(!nutritionTemplateCache[id]||!Array.isArray(nutritionTemplateCache[id].template_data?.state)){
+    nutritionTemplateCache[id]={template_key:id,name,template_data:data,_builtin:true};
+   }
+  });
   renderNutritionTemplateCards();
  }catch(e){
   const message=String(e&&e.message||e);
@@ -220,8 +238,10 @@ async function loadNutritionTemplates(){
    nutritionTemplateLoadTimer=setTimeout(loadNutritionTemplates,500);
    return;
   }
-  if(host)host.innerHTML='<div class="nutrition-template-loading">دریافت الگوها انجام نشد: '+message.replace(/[<>]/g,'')+'</div>';
-  console.error('Nutrition templates load failed',e);
+  // Do not replace the cards with an error panel: built-in templates work
+  // without the database and can still be copied into the coach's plan.
+  renderNutritionTemplateCards();
+  console.error('Nutrition templates load failed; built-in templates remain available',e);
  }
 }
 async function saveNutritionTemplate(id){
