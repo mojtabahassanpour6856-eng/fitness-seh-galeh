@@ -3,9 +3,12 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <title>آزمایش تحلیل PDF تاپ جنسیس</title>
 <style>
-:root{font-family:Tahoma,Arial,sans-serif;color:#29251e;background:#f6f2e9}
+:root{font-family:"Vazirmatn",Tahoma,Arial,sans-serif;color:#29251e;background:#f6f2e9}
 body{max-width:900px;margin:0 auto;padding:18px;line-height:1.8}
 body.embedded{max-width:none;margin:0;padding:0;background:transparent}
 body.embedded main{border:0;border-radius:0;box-shadow:none;padding:12px}
@@ -25,6 +28,57 @@ section{margin-top:22px}.analysis-grid{display:grid;grid-template-columns:repeat
 @media print{body{background:#fff;max-width:none;padding:0;color:#111}body.print-report main{border:0;box-shadow:none;padding:0}body.print-report main>:not(#result){display:none!important}body.print-report #result{display:block!important}body.print-report #result .no-print{display:none!important}.print-only{display:block!important}.analysis-box,.trend-card,table{break-inside:avoid}h1,h2,h3{break-after:avoid}table{font-size:10pt}th{background:#eee!important;-webkit-print-color-adjust:exact;print-color-adjust:exact}}.print-only{display:none}.print-header{text-align:center;border-bottom:2px solid #b9944d;padding-bottom:12px;margin-bottom:18px}.print-signoff{margin-top:28px;padding-top:14px;border-top:1px solid #aaa;break-inside:avoid}.print-signoff .sign-lines{display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-top:28px}.print-signoff .line{border-bottom:1px solid #777;height:28px}
 pre{white-space:pre-wrap;overflow-wrap:anywhere;background:#f7f7f7;padding:12px;border-radius:8px}
 .small{font-size:.88rem;color:#625d54}
+.visual-report{font-family:"Vazirmatn",Tahoma,Arial,sans-serif;line-height:1.9;overflow-wrap:anywhere;background:linear-gradient(145deg,#fffdf7,#f4ead5);border:1px solid #d9bd7b;border-radius:18px;padding:18px;margin:16px 0;color:#30291e;box-shadow:0 8px 24px #6e552014;direction:rtl}.visual-report .brandline{display:flex;justify-content:space-between;gap:10px;align-items:center;border-bottom:2px solid #c5a35b;padding-bottom:12px}.visual-report .brandname{font-weight:800;color:#765b2e;font-size:1.05rem}.visual-report h2{color:#765b2e}.visual-report .hero{font-size:1.45rem;font-weight:800;margin:12px 0 2px}.visual-report .sub{color:#716958;font-size:.85rem}.visual-report .vgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(135px,1fr));gap:9px;margin:14px 0}.visual-report .vcard{background:#fff;border:1px solid #eadfc9;border-radius:13px;padding:12px;min-height:76px}.visual-report .vcard span{display:block;color:#756b59;font-size:.8rem}.visual-report .vcard b{display:block;color:#765b2e;font-size:1.2rem;margin-top:4px;direction:ltr;text-align:right}.visual-report .vcard small{font-size:.72rem;color:#777}.visual-report .vbar{display:grid;grid-template-columns:95px 1fr 58px;gap:8px;align-items:center;margin:9px 0;font-size:.83rem}.visual-report .track{height:13px;background:#e9e1d2;border-radius:20px;overflow:hidden}.visual-report .fill{height:100%;border-radius:20px;background:linear-gradient(90deg,#c8a65d,#8d713b)}.visual-report .fill.lean{background:linear-gradient(90deg,#8bb5a0,#347b5a)}.visual-report .insights{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:10px;margin-top:14px}.visual-report .insight{border-radius:12px;padding:12px;background:#fff;border:1px solid #e8dfce;min-width:0;overflow-wrap:anywhere;line-height:1.9}.visual-report .insight.good{border-right:4px solid #4c9870}.visual-report .insight.watch{border-right:4px solid #c49439}.visual-report .insight h3{margin:0 0 6px;font-size:.95rem}.visual-report .insight p{font-size:.82rem;margin:0;color:#5f584d;line-height:2;overflow-wrap:anywhere}.visual-report .foot{border-top:1px solid #d9c89e;margin-top:14px;padding-top:10px;font-size:.78rem;color:#756b59;line-height:2;overflow-wrap:anywhere}.export-actions{display:flex;gap:8px;flex-wrap:wrap;margin:12px 0}.export-actions button{font-size:.88rem;padding:9px 13px}.export-actions .secondary{background:#5d725f}@media(max-width:480px){.visual-report{padding:12px}.visual-report .brandline{align-items:flex-start;flex-direction:column}}@media print{html,body,button,input,table{font-family:"Vazirmatn",Tahoma,Arial,sans-serif!important}.visual-report{break-inside:auto;print-color-adjust:exact;-webkit-print-color-adjust:exact}.visual-report .vcard,.visual-report .insight,.analysis-box,.trend-card{break-inside:avoid;page-break-inside:avoid}.export-actions{display:none!important}body.print-report #result section{break-inside:auto}body.print-report #result table tr{break-inside:avoid;page-break-inside:avoid}}
+
+.scan-picker-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(128px,1fr));gap:10px;margin:12px 0}
+.scan-page-card{display:flex;flex-direction:column;gap:6px;align-items:stretch;padding:8px;border:1px solid #e5d8bd;border-radius:12px;background:#fff;min-width:0}
+.scan-page-card img{width:100%;height:150px;object-fit:contain;background:#f4f0e7;border-radius:7px}
+.scan-page-card .pick-line{display:flex;align-items:center;gap:7px;font-weight:700;color:#6f5529}
+.scan-page-card input{margin:0}
+.report-quality-card{background:#fff;border:1px solid #e9dfcc;border-radius:12px;padding:12px;margin:10px 0}
+.report-quality-card .quality-fields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.report-quality-card label{display:block;font-size:.82rem;color:#6a604e}
+.report-quality-card select{width:100%;max-width:100%;padding:8px;border:1px solid #d9c89e;border-radius:8px;background:#fff}
+.report-builder-controls{background:#fffdf7;border:1px solid #e4d3ad;border-radius:14px;padding:14px}
+.report-builder-controls textarea{width:100%;min-height:72px;box-sizing:border-box;border:1px solid #dfd2b8;border-radius:9px;padding:9px;font:inherit}
+.report-builder-controls input[type=text],.report-builder-controls input[type=date]{width:100%;max-width:100%;box-sizing:border-box;border:1px solid #dfd2b8;border-radius:9px;padding:9px}
+.report-preview{margin-top:16px}
+.report-page{position:relative;box-sizing:border-box;width:100%;max-width:900px;min-height:1120px;margin:18px auto;padding:38px 42px;display:flex;flex-direction:column;overflow:hidden;direction:rtl;color:#30291e;background:linear-gradient(145deg,#fffdf8,#f5ecd9);border:1px solid #d9bd7b;border-radius:18px;box-shadow:0 8px 24px #6e552014;font-family:"Vazirmatn",Tahoma,Arial,sans-serif;line-height:1.9}
+.report-page-body{position:relative;z-index:1;flex:1;min-width:0}
+.report-page-header{display:flex;align-items:center;justify-content:space-between;gap:14px;border-bottom:2px solid #c5a35b;padding-bottom:14px;margin-bottom:24px}
+.report-brand{display:flex;align-items:center;gap:12px;min-width:0}
+.report-brand img{width:70px;height:70px;object-fit:contain;border-radius:12px;background:#fff}
+.report-brand strong{display:block;color:#765b2e;font-size:1.05rem}
+.report-brand small{display:block;color:#756b59}
+.report-title{font-size:2rem;font-weight:800;color:#6e5328;margin:20px 0 4px}
+.report-subtitle{color:#756b59;font-size:.95rem}
+.report-section-title{font-size:1.15rem;color:#765b2e;border-right:4px solid #c5a35b;padding-right:10px;margin:20px 0 12px}
+.report-metric-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin:16px 0}
+.report-metric-card{background:#fff;border:1px solid #eadfc9;border-radius:13px;padding:12px;min-width:0}
+.report-metric-card span{display:block;color:#756b59;font-size:.82rem}
+.report-metric-card b{display:block;color:#765b2e;font-size:1.35rem;direction:ltr;text-align:right;overflow-wrap:anywhere}
+.report-metric-card small{display:block;color:#7b7469;font-size:.72rem}
+.report-composition{background:#fff;border:1px solid #eadfc9;border-radius:13px;padding:14px;margin-top:12px}
+.report-composition-row{display:grid;grid-template-columns:100px 1fr 70px;gap:8px;align-items:center;margin:10px 0;font-size:.86rem}
+.report-composition-track{height:14px;background:#ece5d9;border-radius:20px;overflow:hidden}
+.report-composition-fill{height:100%;border-radius:20px;background:linear-gradient(90deg,#d5b66f,#8d713b)}
+.report-composition-fill.lean{background:linear-gradient(90deg,#a5c8b2,#397c5d)}
+.report-note{background:#fff8e8;border:1px solid #ead8b2;border-radius:11px;padding:12px;color:#665638;font-size:.85rem;margin-top:14px}
+.report-data-table{width:100%;border-collapse:collapse;background:#fff;border-radius:10px;overflow:hidden;font-size:.82rem}
+.report-data-table th,.report-data-table td{padding:8px;border-bottom:1px solid #eee5d5;text-align:right;vertical-align:top}
+.report-data-table th{background:#f1e7d2;color:#604b27}
+.report-scan-frame{background:#fff;border:1px solid #e4d5b7;border-radius:14px;padding:12px;text-align:center;margin:14px 0}
+.report-scan-frame img{display:block;max-width:100%;max-height:900px;width:auto;height:auto;object-fit:contain;margin:0 auto}
+.report-quality-summary{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin:12px 0}
+.report-quality-summary div{background:#fff;border:1px solid #eadfc9;border-radius:10px;padding:9px;font-size:.82rem}
+.report-advice{background:#fff;border:1px solid #eadfc9;border-radius:12px;padding:12px;margin:10px 0;white-space:pre-wrap;overflow-wrap:anywhere;min-height:48px}
+.report-watermark{position:absolute;z-index:2;left:24px;top:45%;transform:rotate(-24deg);font-size:2rem;font-weight:800;color:#a36d2b26;border:5px solid #a36d2b26;padding:8px 20px;pointer-events:none}
+.report-page-footer{display:flex;justify-content:space-between;gap:12px;align-items:center;border-top:1px solid #d9c89e;padding-top:10px;margin-top:26px;color:#765b2e;font-size:.8rem}
+.report-export-actions{display:flex;gap:8px;flex-wrap:wrap;margin:14px 0}
+.report-export-actions button{width:auto}
+@media(max-width:520px){.report-page{padding:16px;min-height:0;border-radius:12px}.report-title{font-size:1.45rem}.report-brand img{width:54px;height:54px}.report-quality-card .quality-fields{grid-template-columns:1fr}.report-metric-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.report-composition-row{grid-template-columns:82px 1fr 56px;font-size:.76rem}.report-page-footer{font-size:.72rem}}
+@media print{.report-page{break-after:page;page-break-after:always;max-width:none;width:100%;min-height:0;border-radius:0;box-shadow:none;print-color-adjust:exact;-webkit-print-color-adjust:exact}.report-page:last-child{break-after:auto;page-break-after:auto}#reportBuilder .report-builder-controls,#reportBuilder .report-export-actions{display:none!important}#reportPreview{display:block!important}.report-page .report-metric-card,.report-page .report-composition,.report-page .report-advice{break-inside:avoid;page-break-inside:avoid}}
+
 </style>
 </head>
 <body>
@@ -60,7 +114,7 @@ comparison_percentile:"درصد مقایسه‌ای",body_fat_rank_marker:"رت�
 };
 const statusText={not_reported:"در این گزارش ثبت نشده",needs_coach_review:"نیازمند تأیید مربی",within_initial_range_needs_coach_review:"در محدوده کنترل اولیه؛ تأیید مربی همچنان لازم است",conflict_review:"تعارض؛ بررسی شود",invalid_range:"خارج از محدوده کنترل اولیه",consistent_rounding:"اختلاف جزئی؛ احتمالاً ناشی از گرد کردن"};
 const units={"raw_reported_unit":"واحد خام گزارش" ,"cm":"سانتی‌متر","kg":"کیلوگرم","%":"درصد","kg/m²":"kg/m²","ratio":"نسبت","kcal/day":"کیلوکالری در روز"};
-function escapeHTML(v){return String(v==null?'':v).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+function escapeHTML(v){return String(v==null?'':v).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');}
 function buildSimpleAnalysis(m){
  const safe=k=>m[k]&&Number.isFinite(Number(m[k].value))&&!['invalid_range','conflict_review','not_reported'].includes(m[k].status)?Number(m[k].value):null;
  const w=safe('weight_kg'),h=safe('height_cm'),f=safe('fat_mass_kg'),l=safe('lean_mass_kg'),p=safe('body_fat_percent'),b=safe('bmi'),r=safe('resting_metabolic_rate_kcal');
@@ -73,6 +127,17 @@ function buildSimpleAnalysis(m){
  if(!cards.length)o+='<p>شاخص کافی برای ساخت خلاصه پیدا نشد.</p>';
  o+='<p class="note">مقادیر مشکوک یا متعارض وارد محاسبات نمی‌شوند. مقدار کالری روزانه از روی RMR حدس زده نمی‌شود.</p></section>';return o;
 }
+function buildVisualReport(m,flags){
+ const valid=k=>m[k]&&Number.isFinite(Number(m[k].value))&&!['invalid_range','conflict_review','not_reported'].includes(m[k].status)?Number(m[k].value):null;
+ const defs=[['weight_kg','وزن','kg'],['height_cm','قد','cm'],['body_fat_percent','درصد چربی','%'],['bmi','BMI',''],['lean_mass_kg','توده بدون چربی','kg'],['fat_mass_kg','توده چربی','kg'],['waist_hip_ratio','نسبت کمر به باسن',''],['waist_circumference_cm','دور کمر','cm'],['resting_metabolic_rate_kcal','سوخت‌وساز پایه','kcal/day'],['daily_energy_expenditure_kcal','مصرف انرژی روزانه','kcal/day']];
+ const cards=defs.map(([k,label,u])=>{const v=valid(k);return v===null?'':'<div class="vcard"><span>'+label+'</span><b>'+v.toLocaleString('en-US')+' '+u+'</b><small>استخراج‌شده از PDF</small></div>';}).join('');
+ const fat=valid('fat_mass_kg'),lean=valid('lean_mass_kg'),sum=(fat||0)+(lean||0),weight=valid('weight_kg');let composition='';
+ if(fat!==null&&lean!==null&&sum>0&&weight!==null&&Math.abs(sum-weight)<=1.5){const fp=fat/sum*100,lp=100-fp;composition='<h3>ترکیب وزن</h3><div class="vbar"><span>توده چربی</span><div class="track"><div class="fill" style="width:'+fp.toFixed(1)+'%"></div></div><b>'+fat+' kg</b></div><div class="vbar"><span>بدون چربی</span><div class="track"><div class="fill lean" style="width:'+lp.toFixed(1)+'%"></div></div><b>'+lean+' kg</b></div>';}
+ const positives=[];if(valid('weight_kg')!==null&&valid('height_cm')!==null)positives.push('قد و وزن از گزارش استخراج شده‌اند.');if(valid('resting_metabolic_rate_kcal')!==null)positives.push('سوخت‌وساز پایه به‌صورت مستقل ثبت شده است.');if(valid('daily_energy_expenditure_kcal')!==null)positives.push('مصرف انرژی روزانه با برچسب اختصاصی دستگاه استخراج شده است.');if(valid('body_fat_percent')!==null)positives.push('درصد چربی بدن در گزارش موجود است.');
+ const concerns=[];if(flags&&flags.length)concerns.push(flags.slice(0,3).join(' '));if(m.raw_body_measurements)concerns.push('اندازه‌های Region تا تأیید واحد و روش دستگاه، فقط مقدار خام هستند.');if(m.missing_measurements)concerns.push('برخی اندازه‌ها ثبت نشده‌اند؛ مقدارشان صفر یا حدس زده نشده است.');
+ return '<section id="visualReport" class="visual-report"><div class="brandline"><div class="brandname">FITNESS SEH GALEH · باشگاه فیتنس سه‌قلعه</div><div class="sub">گزارش هوشمند آنالیز بدن | خروجی آزمایشی مربی</div></div><div class="hero">نمای کلی وضعیت بدن</div><div class="sub">شاخص‌های استخراج‌شده از فایل دستگاه؛ نیازمند تأیید مربی</div><div class="vgrid">'+(cards||'<p>شاخص کافی برای نمایش پیدا نشد.</p>')+'</div>'+composition+'<div class="insights"><div class="insight good"><h3>نقاط مثبت اطلاعات ثبت‌شده</h3><p>'+(positives.join(' ')||'داده کافی برای مشخص‌کردن شاخص‌های مثبت استخراج نشده است.')+'</p></div><div class="insight watch"><h3>موارد نیازمند پیگیری</h3><p>'+(concerns.join(' ')||'هشدار مهمی در کنترل اولیه ثبت نشده؛ تأیید مربی همچنان لازم است.')+'</p></div></div><div class="foot">نقاط قوت و ضعف عضلانی از روی حدس تعیین نمی‌شوند. تحلیل موضعی فقط پس از تأیید اندازه‌های معتبر یا مشاهده تصویر اسکن انجام می‌شود. مربی: مجتبی</div></section>';
+}
+window.TopGenesisVisualReport=buildVisualReport;
 window.TopGenesisSimpleAnalysis=buildSimpleAnalysis;
 
 function buildReportComparison(older,newer){
@@ -121,15 +186,20 @@ window.TopGenesisMultiReportTrend=buildMultiReportTrend;
 const fileInput=document.getElementById("pdfFile"),fileInput2=document.getElementById("pdfFile2"),fileInputMore=document.getElementById("pdfFilesMore"),button=document.getElementById("run"),status=document.getElementById("status"),result=document.getElementById("result");
 button.addEventListener("click",async()=>{
  const file=fileInput.files&&fileInput.files[0];
- if(!file){status.textContent="ابتدا یک فایل PDF انتخاب کنید.";return;}
+ const newerFile=fileInput2.files&&fileInput2.files[0];
+ const moreFiles=Array.from(fileInputMore.files||[]);
+ if(!file){status.textContent="ابتدا فایل PDF اصلی را انتخاب کنید.";return;}
+ const selectedFiles=[file,...(newerFile?[newerFile]:[]),...moreFiles];
+ const invalidFile=selectedFiles.find(f=>!(/\.pdf$/i.test(f.name)||f.type==="application/pdf"));
+ if(invalidFile){status.textContent="فایل «"+invalidFile.name+"» از نوع PDF نیست.";return;}
+ const oversizedFile=selectedFiles.find(f=>f.size>10*1024*1024);
+ if(oversizedFile){status.textContent="حجم فایل «"+oversizedFile.name+"» بیشتر از ۱۰ مگابایت است. لطفاً فایل کوچک‌تری انتخاب کنید.";return;}
  button.disabled=true;result.innerHTML="";status.textContent="در حال خواندن صفحات PDF؛ در صورت نیاز OCR نیز اجرا می‌شود. لطفاً صفحه را نبندید.";
  try{
   const data=await window.TopGenesisPdfParser.extract(file);
-  const newerFile=fileInput2.files&&fileInput2.files[0];
   const newerData=newerFile?await window.TopGenesisPdfParser.extract(newerFile):null;
-  const moreFiles=Array.from(fileInputMore.files||[]);
   const moreData=[];
-  for(const extraFile of moreFiles){if(extraFile.size>10*1024*1024)throw new Error("حجم هر فایل باید حداکثر ۱۰ مگابایت باشد.");moreData.push(await window.TopGenesisPdfParser.extract(extraFile));}
+  for(const extraFile of moreFiles){moreData.push(await window.TopGenesisPdfParser.extract(extraFile));}
   const allReports=[data,...(newerData?[newerData]:[]),...moreData];
   const rows=[];
   Object.entries(data.metrics||{}).forEach(([key,item])=>{
@@ -137,7 +207,7 @@ button.addEventListener("click",async()=>{
    const alternatives=item.alternatives&&item.alternatives.length>1?"<br><span class='small'>مقادیر مشاهده‌شده: "+item.alternatives.map(escapeHTML).join("، ")+"</span>":"";
    rows.push("<tr><td>"+escapeHTML(labels[key]||key)+"</td><td>"+escapeHTML(item.value)+" "+escapeHTML(units[item.unit]||item.unit||"")+alternatives+"</td><td class='"+(item.status==="invalid_range"||item.status==="conflict_review"?"bad":"review")+"'>"+escapeHTML(statusText[item.status]||item.status)+"</td></tr>");
   });
-  let html=buildSimpleAnalysis(data.metrics)+(newerData?buildReportComparison(data.metrics,newerData.metrics):"")+(allReports.length>=3?buildMultiReportTrend(allReports):"")+"<section><h2>نتیجه استخراج گزارش اول</h2><p>تعداد صفحات: "+data.page_count+" | صفحات OCR: "+((data.ocr_pages||[]).join("، ")||"ندارد")+"</p><table><thead><tr><th>شاخص</th><th>مقدار</th><th>وضعیت</th></tr></thead><tbody>"+rows.join("")+"</tbody></table></section>";
+  let html=buildVisualReport(data.metrics,data.flags)+buildSimpleAnalysis(data.metrics)+(newerData?buildReportComparison(data.metrics,newerData.metrics):"")+(allReports.length>=3?buildMultiReportTrend(allReports):"")+"<section><h2>نتیجه استخراج گزارش اول</h2><p>تعداد صفحات: "+data.page_count+" | صفحات OCR: "+((data.ocr_pages||[]).join("، ")||"ندارد")+"</p><table><thead><tr><th>شاخص</th><th>مقدار</th><th>وضعیت</th></tr></thead><tbody>"+rows.join("")+"</tbody></table></section>";
   const measures=data.metrics&&data.metrics.raw_body_measurements;
   if(measures){html+="<section><h2>اندازه‌های خام گزارش‌شده دستگاه</h2><p class='note'>این مقادیر عیناً از گزارش دستگاه استخراج شده‌اند. ممکن است هر عدد حاصل چند نقطه یا چند مقطع از ناحیه باشد؛ تا زمان تأیید تعریف خروجی دستگاه، آن را محیط یک دور اندام در نظر نگیرید و با حدود استاندارد محیط تک‌نقطه‌ای مقایسه نکنید.</p><table><tr><th>ناحیه</th><th>مقدار خام گزارش‌شده</th><th>وضعیت</th></tr>"+Object.entries(measures).map(([k,v])=>"<tr><td>"+escapeHTML(labels[k]||k)+"</td><td>"+escapeHTML(v.raw_value)+" "+escapeHTML(units[v.unit]||v.unit||"")+"</td><td class='review'>نیازمند تأیید مربی؛ تفسیر ساختار اندازه‌گیری نامشخص</td></tr>").join("")+"</table></section>";}
   const bilateral=data.metrics&&data.metrics.bilateral_measurement_review;
@@ -146,12 +216,382 @@ button.addEventListener("click",async()=>{
   if(missing){html+="<section><h2>اندازه‌های ثبت‌نشده</h2><p class='note'>این موارد صفر نیستند و از گزارش دیگری هم جایگزین نشده‌اند.</p><table><tr><th>ناحیه</th><th>وضعیت</th></tr>"+Object.entries(missing).map(([k,v])=>"<tr><td>"+escapeHTML(labels[k]||k)+"</td><td class='review'>در این گزارش ثبت نشده</td></tr>").join("")+"</table></section>";}
   if(data.flags&&data.flags.length)html+="<section><h2>هشدارها</h2><ul>"+data.flags.map(x=>"<li>"+escapeHTML(x)+"</li>").join("")+"</ul></section>";
   html+="<p class='note'>این نتیجه آزمایشی است؛ تأیید مربی الزامی است. اطلاعات هویتی از خروجی صفحه حذف شده‌اند.</p>";
-  html="<div class='print-only print-header'><h1>گزارش تحلیل ترکیب بدن</h1><p>باشگاه فیتنس سه‌قلعه | گزارش استخراج‌شده از دستگاه تاپ جنسیس</p><p>ترتیب گزارش‌ها مطابق ترتیب انتخاب فایل‌هاست.</p></div><div class='no-print'><button id='printReport' type='button'>چاپ / ذخیره به‌صورت PDF</button><p class='small'>در پنجره چاپ، گزینه «ذخیره به‌صورت PDF» را انتخاب کنید.</p></div>"+html+"<section class='print-signoff'><h3>یادداشت و تأیید مربی</h3><p>نکات تکمیلی: ........................................................................................................</p><div class='sign-lines'><div>نام و امضای مربی<div class='line'></div></div><div>تاریخ بررسی<div class='line'></div></div></div><p class='small'>این گزارش ابزار کمکی است؛ مقادیر استخراج‌شده باید با گزارش اصلی دستگاه و شرایط اندازه‌گیری تطبیق داده شوند.</p></section>";
+  html="<div class='print-only print-header'><h1>گزارش تحلیل ترکیب بدن</h1><p>باشگاه فیتنس سه‌قلعه | گزارش استخراج‌شده از دستگاه تاپ جنسیس</p><p>ترتیب گزارش‌ها مطابق ترتیب انتخاب فایل‌هاست.</p></div><div class='no-print export-actions'><button id='printReport' type='button'>چاپ / ذخیره PDF</button><button id='pngReport' class='secondary' type='button'>دریافت تصویر PNG از خلاصه</button><p class='small'>جدول کامل اندازه‌ها و جزئیات در ادامه گزارش و نسخه PDF باقی می‌ماند.</p></div>"+html+"<section class='print-signoff'><h3>یادداشت و تأیید مربی</h3><p>نکات تکمیلی: ........................................................................................................</p><div class='sign-lines'><div>نام و امضای مربی<div class='line'></div></div><div>تاریخ بررسی<div class='line'></div></div></div><p class='small'>این گزارش ابزار کمکی است؛ مقادیر استخراج‌شده باید با گزارش اصلی دستگاه و شرایط اندازه‌گیری تطبیق داده شوند.</p></section>";
   result.innerHTML=html;
+
+  // Dedicated report builder: selected source-PDF pages are rendered as genuine scan images.
+  document.getElementById("visualReport")?.remove();
+  document.querySelector("#result .print-header")?.remove();
+  document.querySelector("#result .print-signoff")?.remove();
+  document.getElementById("pngReport")?.remove();
+  const reportBuilder = document.createElement("section");
+  reportBuilder.id = "reportBuilder";
+  reportBuilder.className = "analysis-box";
+  reportBuilder.innerHTML =
+    '<div class="report-builder-controls no-print">' +
+      '<h2>ساخت گزارش تحویلی حرفه‌ای</h2>' +
+      '<p class="small">صفحه‌های دارای تصویر اسکن را خودتان انتخاب کنید. تصاویر از PDF اصلی با PDF.js رندر می‌شوند؛ هیچ تصویر ساختگی جایگزین نمی‌شود و فایل در مرورگر می‌ماند.</p>' +
+      '<div class="grid2">' +
+        '<div><label for="reportSubjectName">نام شاگرد (اختیاری)</label><input id="reportSubjectName" type="text" maxlength="80" placeholder="نام را در صورت نیاز وارد کنید"></div>' +
+        '<div><label for="reportDate">تاریخ تهیه گزارش</label><input id="reportDate" type="date"></div>' +
+      '</div>' +
+      '<h3 class="report-section-title">انتخاب صفحات PDF برای تصاویر اسکن</h3>' +
+      '<div id="scanPageGrid" class="scan-picker-grid">در حال آماده‌سازی پیش‌نمایش صفحات…</div>' +
+      '<div id="scanQualityReview" style="margin-top:12px"><p class="small">پس از انتخاب صفحات، کیفیت نور، پس‌زمینه، کامل بودن بدن و وضوح را برای هر صفحه ثبت کنید.</p></div>' +
+      '<div class="grid2" style="margin-top:12px">' +
+        '<div><label for="trainingAdvice">پیشنهاد تمرینی مربی</label><textarea id="trainingAdvice" placeholder="بر اساس هدف، سابقه تمرینی و محدودیت‌های شاگرد تکمیل شود."></textarea></div>' +
+        '<div><label for="nutritionAdvice">پیشنهاد تغذیه‌ای مربی</label><textarea id="nutritionAdvice" placeholder="بر اساس هدف، عادات غذایی و شرایط شاگرد تکمیل شود."></textarea></div>' +
+      '</div>' +
+      '<div style="margin-top:10px"><label for="coachNote">یادداشت تکمیلی مربی</label><textarea id="coachNote" placeholder="نکات مهم، محدودیت‌ها یا موارد نیازمند پیگیری…"></textarea></div>' +
+      '<label style="display:flex;align-items:center;gap:8px;margin:12px 0"><input id="coachApproval" type="checkbox" style="margin:0"> بررسی دستی مربی انجام شده است</label>' +
+      '<button id="buildFinalReport" type="button">ساخت گزارش نهایی</button>' +
+      '<div id="reportBuildStatus" role="status" aria-live="polite" class="small" style="margin-top:8px"></div>' +
+    '</div>' +
+    '<div id="reportPreview" class="report-preview"></div>' +
+    '<div id="reportExportActions" class="report-export-actions no-print"></div>';
+  result.appendChild(reportBuilder);
+  const reportDateField = document.getElementById("reportDate");
+  if (reportDateField) reportDateField.value = new Date().toISOString().slice(0,10);
+  const scanPageGrid = document.getElementById("scanPageGrid");
+  const scanQualityReview = document.getElementById("scanQualityReview");
+  const reportPreview = document.getElementById("reportPreview");
+  const reportExportActions = document.getElementById("reportExportActions");
+  const reportBuildStatus = document.getElementById("reportBuildStatus");
+
+  function qualitySelect(key, label, options) {
+    return '<label>' + label + '<select data-quality="' + key + '">' +
+      '<option value="">بررسی نشده</option>' +
+      options.map(option => '<option value="' + option[0] + '">' + option[1] + '</option>').join('') +
+      '</select></label>';
+  }
+  function refreshQualityControls() {
+    const selected = Array.from(scanPageGrid.querySelectorAll("input[data-scan-page]:checked"))
+      .map(input => Number(input.dataset.scanPage));
+    if (!selected.length) {
+      scanQualityReview.innerHTML = '<p class="small">هنوز صفحه‌ای انتخاب نشده است. برای هر تصویر انتخاب‌شده، چهار مورد کیفیت را جداگانه بررسی کنید.</p>';
+      return;
+    }
+    scanQualityReview.innerHTML = selected.map(pageNo =>
+      '<div class="report-quality-card" data-quality-page="' + pageNo + '">' +
+        '<strong>کیفیت اسکن صفحه ' + pageNo + '</strong>' +
+        '<div class="quality-fields">' +
+          qualitySelect("lighting", "تعادل نور", [["balanced","متعادل"],["dim","کم‌نور"],["overexposed","بیش‌ازحد روشن"],["uneven","ناهمگون"]]) +
+          qualitySelect("background", "پس‌زمینه", [["plain","ساده و یکنواخت"],["cluttered","شلوغ یا دارای اشیاء"],["unclear","نامشخص"]]) +
+          qualitySelect("completeness", "کامل بودن بدن", [["full","بدن کامل داخل کادر"],["cropped","بخشی از بدن خارج کادر"],["obscured","بخشی پوشیده یا نامشخص"]]) +
+          qualitySelect("clarity", "وضوح تصویر", [["clear","واضح"],["medium","متوسط"],["blurred","تار یا کم‌وضوح"]]) +
+        '</div>' +
+      '</div>'
+    ).join("");
+  }
+  async function renderScanPagePicker(report) {
+    if (!report || typeof report.renderPage !== "function") {
+      scanPageGrid.textContent = "رندر تصویر صفحات PDF در این نسخه در دسترس نیست.";
+      return;
+    }
+    scanPageGrid.textContent = "در حال ساخت پیش‌نمایش صفحه‌ها…";
+    const limit = Math.min(Number(report.page_count) || 0, 24);
+    scanPageGrid.innerHTML = "";
+    for (let pageNo = 1; pageNo <= limit; pageNo++) {
+      try {
+        const preview = await report.renderPage(pageNo, { scale: 0.42, type: "image/jpeg", quality: 0.62 });
+        const card = document.createElement("label");
+        card.className = "scan-page-card";
+        const pickLine = document.createElement("span");
+        pickLine.className = "pick-line";
+        const checkbox = document.createElement("input");
+        checkbox.type = "checkbox";
+        checkbox.dataset.scanPage = String(pageNo);
+        const caption = document.createElement("span");
+        caption.textContent = "افزودن صفحه " + pageNo;
+        pickLine.append(checkbox, caption);
+        const image = document.createElement("img");
+        image.src = preview.data_url;
+        image.alt = "پیش‌نمایش صفحه " + pageNo + " از PDF اصلی";
+        const pageLabel = document.createElement("small");
+        pageLabel.textContent = "صفحه " + pageNo + " از " + report.page_count;
+        card.append(pickLine, image, pageLabel);
+        scanPageGrid.appendChild(card);
+      } catch (error) {
+        const failed = document.createElement("div");
+        failed.className = "scan-page-card";
+        failed.textContent = "پیش‌نمایش صفحه " + pageNo + " ساخته نشد.";
+        scanPageGrid.appendChild(failed);
+      }
+    }
+    if (Number(report.page_count) > limit) {
+      const note = document.createElement("p");
+      note.className = "small";
+      note.textContent = "برای جلوگیری از فشار روی گوشی، فقط ۲۴ صفحه اول برای انتخاب پیش‌نمایش داده شده‌اند.";
+      scanPageGrid.appendChild(note);
+    }
+    scanPageGrid.addEventListener("change", event => {
+      if (event.target && event.target.matches("input[data-scan-page]")) refreshQualityControls();
+    });
+    refreshQualityControls();
+  }
+
+  function metricIsUsable(item) {
+    return !!item && Number.isFinite(Number(item.value)) &&
+      !["invalid_range","conflict_review","not_reported"].includes(item.status);
+  }
+  function metricDisplay(item, unit) {
+    if (!item) return "در گزارش ثبت نشده";
+    if (!metricIsUsable(item)) return "نیازمند بررسی مربی";
+    return Number(item.value).toLocaleString("en-US") + (unit ? " " + unit : "");
+  }
+  function makeReportPage(content, index, total, approved) {
+    return '<article class="report-page">' +
+      '<div class="report-page-body">' + content + '</div>' +
+      (!approved ? '<div class="report-watermark">پیش‌نویس · نیازمند تأیید</div>' : '') +
+      '<footer class="report-page-footer"><strong>FITNESS SEH GALEH · مجتبی</strong><span>صفحه ' + (index + 1) + ' از ' + total + '</span></footer>' +
+    '</article>';
+  }
+  function makeQualityText(row, key) {
+    return row && row[key] ? row[key] : "بررسی نشده";
+  }
+
+  async function buildFinalReport() {
+    const buildButton = document.getElementById("buildFinalReport");
+    buildButton.disabled = true;
+    reportBuildStatus.textContent = "در حال آماده‌سازی تصاویر اصلی PDF و صفحه‌های گزارش…";
+    try {
+      const selectedPages = Array.from(scanPageGrid.querySelectorAll("input[data-scan-page]:checked"))
+        .map(input => Number(input.dataset.scanPage));
+      const scanImages = [];
+      for (const pageNo of selectedPages) {
+        const rendered = await data.renderPage(pageNo, { scale: 1.35, type: "image/jpeg", quality: 0.9 });
+        scanImages.push(rendered);
+        reportBuildStatus.textContent = "تصویر صفحه " + pageNo + " آماده شد.";
+      }
+      const qualityRows = selectedPages.map(pageNo => {
+        const row = scanQualityReview.querySelector('[data-quality-page="' + pageNo + '"]');
+        const read = key => {
+          const field = row && row.querySelector('select[data-quality="' + key + '"]');
+          return field && field.selectedOptions[0] ? field.selectedOptions[0].textContent : "بررسی نشده";
+        };
+        return {
+          page_no: pageNo,
+          lighting: read("lighting"),
+          background: read("background"),
+          completeness: read("completeness"),
+          clarity: read("clarity")
+        };
+      });
+      const metrics = data.metrics || {};
+      const metricDefs = [
+        ["weight_kg","وزن","کیلوگرم"],["height_cm","قد","سانتی‌متر"],
+        ["body_fat_percent","درصد چربی بدن","درصد"],["bmi","BMI",""],
+        ["fat_mass_kg","توده چربی","کیلوگرم"],["lean_mass_kg","توده بدون چربی","کیلوگرم"],
+        ["waist_hip_ratio","نسبت کمر به باسن",""],["waist_circumference_cm","دور کمر","سانتی‌متر"],
+        ["resting_metabolic_rate_kcal","سوخت‌وساز پایه","کیلوکالری در روز"],
+        ["daily_energy_expenditure_kcal","مصرف انرژی روزانه","کیلوکالری در روز"]
+      ];
+      const cards = metricDefs.map(def => {
+        const item = metrics[def[0]];
+        const status = item && item.status ? (statusText[item.status] || item.status) : "در گزارش ثبت نشده";
+        const alternatives = item && item.alternatives && item.alternatives.length > 1
+          ? '<small>مقادیر مشاهده‌شده: ' + item.alternatives.map(escapeHTML).join("، ") + '</small>' : '';
+        return '<div class="report-metric-card"><span>' + def[1] + '</span><b>' +
+          escapeHTML(metricDisplay(item, def[2])) + '</b><small>' + escapeHTML(status) + '</small>' + alternatives + '</div>';
+      }).join("");
+      const weight = metricIsUsable(metrics.weight_kg) ? Number(metrics.weight_kg.value) : null;
+      const fat = metricIsUsable(metrics.fat_mass_kg) ? Number(metrics.fat_mass_kg.value) : null;
+      const lean = metricIsUsable(metrics.lean_mass_kg) ? Number(metrics.lean_mass_kg.value) : null;
+      let composition = '<div class="report-note">نمودار ترکیب وزن نمایش داده نشد؛ داده‌ها ناقص یا با یکدیگر ناسازگارند.</div>';
+      if (weight !== null && fat !== null && lean !== null && fat + lean > 0 && Math.abs(fat + lean - weight) <= 1.5) {
+        const fatPercent = fat / (fat + lean) * 100;
+        const leanPercent = 100 - fatPercent;
+        composition = '<div class="report-composition"><h3 class="report-section-title">ترکیب وزن ثبت‌شده</h3>' +
+          '<div class="report-composition-row"><span>توده چربی</span><div class="report-composition-track"><div class="report-composition-fill" style="width:' + fatPercent.toFixed(1) + '%"></div></div><b>' + fat.toFixed(1) + ' kg</b></div>' +
+          '<div class="report-composition-row"><span>بدون چربی</span><div class="report-composition-track"><div class="report-composition-fill lean" style="width:' + leanPercent.toFixed(1) + '%"></div></div><b>' + lean.toFixed(1) + ' kg</b></div></div>';
+      }
+      const subjectName = (document.getElementById("reportSubjectName").value || "").trim();
+      const reportDateValue = document.getElementById("reportDate").value;
+      const reportDateText = reportDateValue
+        ? new Date(reportDateValue + "T12:00:00").toLocaleDateString("fa-IR")
+        : new Date().toLocaleDateString("fa-IR");
+      const approved = document.getElementById("coachApproval").checked;
+      const subjectLine = subjectName ? '<p class="report-subtitle">نام شاگرد: <strong>' + escapeHTML(subjectName) + '</strong></p>' : '';
+      const cover = '<div class="report-page-header"><div class="report-brand"><img src="./icon-512-2.png" alt="نشان باشگاه"><div><strong>باشگاه فیتنس سه‌قلعه</strong><small>FITNESS SEH GALEH</small></div></div><span class="report-subtitle">گزارش اختصاصی مربی</span></div>' +
+        '<div class="report-title">گزارش هوشمند آنالیز بدن</div>' +
+        '<p class="report-subtitle">تاریخ تهیه گزارش: ' + escapeHTML(reportDateText) + '</p>' + subjectLine +
+        '<h2 class="report-section-title">شاخص‌های اصلی بدن</h2><div class="report-metric-grid">' + cards + '</div>' +
+        composition +
+        '<div class="report-note">این گزارش از PDF دستگاه استخراج شده است. مقادیر مشکوک یا متعارض به‌عنوان مقدار قطعی تفسیر نمی‌شوند. کیفیت نور، پس‌زمینه، کامل بودن بدن و وضوح اسکن بر خروجی اثر می‌گذارد؛ دقت ۱۰۰٪ تضمین نمی‌شود و بررسی مربی لازم است.</div>';
+      const detailRows = metricDefs.map(def => {
+        const item = metrics[def[0]];
+        const value = item ? metricDisplay(item, def[2]) : "در گزارش ثبت نشده";
+        const alternatives = item && item.alternatives && item.alternatives.length > 1
+          ? '<br><small>مقادیر جایگزین: ' + item.alternatives.map(escapeHTML).join("، ") + '</small>' : '';
+        const status = item && item.status ? (statusText[item.status] || item.status) : "در گزارش ثبت نشده";
+        return '<tr><td>' + def[1] + '</td><td>' + escapeHTML(value) + alternatives + '</td><td>' + escapeHTML(status) + '</td></tr>';
+      }).join("");
+      const rawMeasures = metrics.raw_body_measurements || {};
+      const rawRows = Object.entries(rawMeasures).map(([key,item]) =>
+        '<tr><td>' + escapeHTML(labels[key] || key) + '</td><td>' + escapeHTML(item.raw_value) + ' · واحد خام گزارش' +
+        (item.alternatives && item.alternatives.length > 1 ? '<br><small>مقادیر دیگر: ' + item.alternatives.map(escapeHTML).join("، ") + '</small>' : '') +
+        '</td><td>' + escapeHTML(statusText[item.status] || item.status || "نیازمند تأیید مربی") + '</td></tr>'
+      ).join("");
+      const missing = metrics.missing_measurements || {};
+      const missingRows = Object.keys(missing).map(key =>
+        '<tr><td>' + escapeHTML(labels[key] || key) + '</td><td>در این گزارش ثبت نشده؛ صفر یا مقدار حدسی نیست</td></tr>'
+      ).join("");
+      const flagRows = (data.flags || []).map(flag => '<li>' + escapeHTML(flag) + '</li>').join("");
+      const details = '<h2 class="report-title" style="font-size:1.45rem">جزئیات استخراج و کنترل سازگاری</h2>' +
+        '<table class="report-data-table"><thead><tr><th>شاخص</th><th>مقدار</th><th>وضعیت</th></tr></thead><tbody>' + detailRows + '</tbody></table>' +
+        (rawRows ? '<h3 class="report-section-title">مقادیر خام نواحی Region</h3><p class="small">این اعداد تا تأیید تعریف و واحد دستگاه، سانتی‌متر یا محیط یک‌دور اندام تلقی نمی‌شوند.</p><table class="report-data-table"><thead><tr><th>ناحیه</th><th>مقدار خام</th><th>وضعیت</th></tr></thead><tbody>' + rawRows + '</tbody></table>' : '') +
+        (missingRows ? '<h3 class="report-section-title">اندازه‌های ثبت‌نشده</h3><table class="report-data-table"><tbody>' + missingRows + '</tbody></table>' : '') +
+        (flagRows ? '<h3 class="report-section-title">هشدارهای استخراج</h3><ul>' + flagRows + '</ul>' : '');
+      const pageContents = [cover, details];
+      const comparison = allReports.length >= 3
+        ? buildMultiReportTrend(allReports)
+        : (newerData ? buildReportComparison(data.metrics, newerData.metrics) : "");
+      if (comparison) pageContents.push('<h2 class="report-title" style="font-size:1.45rem">مقایسه گزارش‌های قبلی</h2>' + comparison);
+      scanImages.forEach((imageData, index) => {
+        const quality = qualityRows.find(row => row.page_no === imageData.page_no) || {};
+        const qualityHtml = '<div class="report-quality-summary">' +
+          '<div>نور: ' + escapeHTML(makeQualityText(quality,"lighting")) + '</div>' +
+          '<div>پس‌زمینه: ' + escapeHTML(makeQualityText(quality,"background")) + '</div>' +
+          '<div>کامل بودن بدن: ' + escapeHTML(makeQualityText(quality,"completeness")) + '</div>' +
+          '<div>وضوح: ' + escapeHTML(makeQualityText(quality,"clarity")) + '</div></div>';
+        pageContents.push('<h2 class="report-title" style="font-size:1.45rem">تصویر واقعی اسکن بدن · صفحه ' + imageData.page_no + '</h2>' +
+          '<p class="report-subtitle">رندر مستقیم صفحه انتخاب‌شده از PDF اصلی؛ بدون ساختن یا جایگزین‌کردن تصویر اسکن.</p>' +
+          '<div class="report-scan-frame"><img src="' + imageData.data_url + '" alt="تصویر اصلی صفحه اسکن ' + imageData.page_no + '"></div>' +
+          qualityHtml +
+          '<p class="small">این تصویر فقط برای مشاهده مربی و تکمیل بررسی کیفیت استفاده شده است.</p>');
+      });
+      const qualityTable = qualityRows.length
+        ? '<table class="report-data-table"><thead><tr><th>صفحه</th><th>نور</th><th>پس‌زمینه</th><th>کامل بودن بدن</th><th>وضوح</th></tr></thead><tbody>' +
+          qualityRows.map(row => '<tr><td>' + row.page_no + '</td><td>' + escapeHTML(row.lighting) + '</td><td>' + escapeHTML(row.background) + '</td><td>' + escapeHTML(row.completeness) + '</td><td>' + escapeHTML(row.clarity) + '</td></tr>').join("") +
+          '</tbody></table>'
+        : '<p class="report-note">هیچ صفحه‌ای برای نمایش تصویر اسکن انتخاب نشده است؛ تصاویر را می‌توان در مرحله انتخاب صفحه افزود.</p>';
+      const training = (document.getElementById("trainingAdvice").value || "").trim();
+      const nutrition = (document.getElementById("nutritionAdvice").value || "").trim();
+      const coachNote = (document.getElementById("coachNote").value || "").trim();
+      const coachPage = '<h2 class="report-title" style="font-size:1.45rem">جمع‌بندی و تأیید مربی</h2>' +
+        '<h3 class="report-section-title">کنترل کیفیت تصاویر اسکن</h3>' + qualityTable +
+        '<h3 class="report-section-title">پیشنهاد تمرینی</h3><div class="report-advice">' + escapeHTML(training || "توسط مربی پس از بررسی هدف، سابقه و محدودیت‌های شاگرد تکمیل شود.") + '</div>' +
+        '<h3 class="report-section-title">پیشنهاد تغذیه‌ای</h3><div class="report-advice">' + escapeHTML(nutrition || "توسط مربی پس از بررسی هدف، عادات غذایی و شرایط شاگرد تکمیل شود.") + '</div>' +
+        '<h3 class="report-section-title">یادداشت مربی</h3><div class="report-advice">' + escapeHTML(coachNote || "یادداشتی ثبت نشده است.") + '</div>' +
+        '<div class="report-note">' + (approved ? "بررسی دستی مربی انجام شده است." : "این گزارش پیش‌نویس است و پیش از تحویل باید توسط مربی بررسی و تأیید شود.") + ' کیفیت اسکن و شرایط تصویربرداری می‌تواند بر دقت اندازه‌ها اثر بگذارد؛ نتیجه قطعی یا دقت ۱۰۰٪ ادعا نمی‌شود.</div>' +
+        '<div style="margin-top:24px;text-align:left;color:#765b2e;font-weight:800">مربی: مجتبی</div>';
+      pageContents.push(coachPage);
+      reportPreview.innerHTML = pageContents.map((content,index) =>
+        makeReportPage(content,index,pageContents.length,approved)
+      ).join("");
+      reportExportActions.innerHTML =
+        '<button id="downloadReportPng" type="button">دریافت همه صفحه‌ها به‌صورت PNG</button>' +
+        '<button id="shareReport" class="secondary" type="button">اشتراک‌گذاری تصاویر (واتساپ / تلگرام)</button>' +
+        '<p class="small">خروجی از صفحه‌های اختصاصی گزارش ساخته می‌شود، نه اسکرین‌شات ساده از رابط اپ. در گوشی، اشتراک‌گذاری فایل‌ها به فهرست برنامه‌های نصب‌شده سپرده می‌شود.</p>';
+      document.getElementById("downloadReportPng").addEventListener("click", async () => {
+        const button = document.getElementById("downloadReportPng");
+        button.disabled = true;
+        try {
+          const files = await generateReportPngFiles();
+          downloadReportFiles(files);
+          reportBuildStatus.textContent = files.length + " تصویر PNG باکیفیت آماده و برای ذخیره ارسال شد.";
+        } catch (error) {
+          reportBuildStatus.textContent = "ساخت PNG انجام نشد: " + (error.message || String(error));
+        } finally { button.disabled = false; }
+      });
+      document.getElementById("shareReport").addEventListener("click", async () => {
+        const button = document.getElementById("shareReport");
+        button.disabled = true;
+        try {
+          const files = await generateReportPngFiles();
+          if (navigator.share && navigator.canShare && navigator.canShare({ files })) {
+            await navigator.share({ files, title: "گزارش هوشمند آنالیز بدن", text: "باشگاه فیتنس سه‌قلعه · مربی مجتبی" });
+            reportBuildStatus.textContent = "تصاویر گزارش برای اشتراک‌گذاری آماده شدند.";
+          } else {
+            downloadReportFiles(files);
+            reportBuildStatus.textContent = "اشتراک‌گذاری مستقیم این مرورگر پشتیبانی نمی‌شود؛ تصاویر PNG ذخیره شدند تا از واتساپ یا تلگرام ارسال کنید.";
+          }
+        } catch (error) {
+          if (error && error.name === "AbortError") reportBuildStatus.textContent = "اشتراک‌گذاری لغو شد.";
+          else reportBuildStatus.textContent = "اشتراک‌گذاری انجام نشد: " + (error.message || String(error));
+        } finally { button.disabled = false; }
+      });
+      reportBuildStatus.textContent = "گزارش با " + pageContents.length + " صفحه آماده شد. پیش از تحویل، تمام اعداد، تصاویر و موارد کیفیت را بررسی کنید.";
+      notifyParentHeight();
+    } catch (error) {
+      reportBuildStatus.textContent = "ساخت گزارش انجام نشد: " + (error.message || String(error));
+    } finally {
+      buildButton.disabled = false;
+    }
+  }
+
+  async function loadHtml2Canvas() {
+    if (window.html2canvas) return window.html2canvas;
+    if (window.__topGenesisHtml2CanvasPromise) return window.__topGenesisHtml2CanvasPromise;
+    window.__topGenesisHtml2CanvasPromise = new Promise((resolve,reject) => {
+      const script = document.createElement("script");
+      script.src = "https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js";
+      script.onload = () => window.html2canvas ? resolve(window.html2canvas) : reject(new Error("ابزار ساخت PNG در دسترس نیست."));
+      script.onerror = () => reject(new Error("بارگذاری ابزار ساخت PNG ناموفق بود."));
+      document.head.appendChild(script);
+    });
+    return window.__topGenesisHtml2CanvasPromise;
+  }
+  async function generateReportPngFiles() {
+    if (!reportPreview.querySelector(".report-page")) throw new Error("ابتدا گزارش نهایی را بسازید.");
+    const html2canvas = await loadHtml2Canvas();
+    if (document.fonts && document.fonts.ready) await document.fonts.ready;
+    const exportHost = document.createElement("div");
+    exportHost.style.cssText = "position:fixed;left:-20000px;top:0;width:1120px;z-index:-1;pointer-events:none";
+    document.body.appendChild(exportHost);
+    const pages = Array.from(reportPreview.querySelectorAll(".report-page"));
+    const files = [];
+    try {
+      for (let index = 0; index < pages.length; index++) {
+        const clone = pages[index].cloneNode(true);
+        clone.style.width = "1120px";
+        clone.style.maxWidth = "1120px";
+        clone.style.minHeight = "1584px";
+        clone.style.padding = "56px";
+        clone.style.margin = "0";
+        clone.style.borderRadius = "0";
+        clone.style.boxShadow = "none";
+        clone.style.height = "auto";
+        clone.style.overflow = "visible";
+        exportHost.appendChild(clone);
+        await Promise.all(Array.from(clone.querySelectorAll("img")).map(img =>
+          img.decode ? img.decode().catch(() => {}) : Promise.resolve()
+        ));
+        const canvas = await html2canvas(clone, {
+          scale: 2, backgroundColor: "#fffdf7", useCORS: true, allowTaint: false,
+          windowWidth: 1120, scrollX: 0, scrollY: 0
+        });
+        let blob = await new Promise(resolve => canvas.toBlob(resolve,"image/png"));
+        if (!blob) blob = await (await fetch(canvas.toDataURL("image/png")).then(response => response.blob()));
+        files.push(new File([blob], "fitness-seh-galeh-body-report-" + String(index + 1).padStart(2,"0") + ".png", { type:"image/png" }));
+        clone.remove();
+        reportBuildStatus.textContent = "ساخت تصویر " + (index + 1) + " از " + pages.length + "…";
+      }
+    } finally {
+      exportHost.remove();
+    }
+    return files;
+  }
+  function downloadReportFiles(files) {
+    files.forEach((file,index) => {
+      const url = URL.createObjectURL(file);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = file.name;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 60000 + index * 1000);
+    });
+  }
+  document.getElementById("buildFinalReport").addEventListener("click", buildFinalReport);
+  await renderScanPagePicker(data);
+
   notifyParentHeight();
   document.getElementById("printReport").addEventListener("click",()=>{document.body.classList.add("print-report");window.print();});
+
   window.onafterprint=()=>document.body.classList.remove("print-report");
-  status.textContent=allReports.length>1?"استخراج و مقایسه "+allReports.length+" گزارش تمام شد. هیچ اطلاعاتی ذخیره یا ارسال نشد.":"استخراج تمام شد. هیچ اطلاعاتی ذخیره یا ارسال نشد.";
+  status.textContent=(allReports.length>1?"استخراج و مقایسه "+allReports.length+" گزارش تمام شد. ":"استخراج تمام شد. ")+"هیچ اطلاعاتی ذخیره یا ارسال نشد. اکنون صفحه‌های اسکن را انتخاب کنید و گزارش تحویلی را بسازید.";
  }catch(e){status.textContent="خطا: "+(e&&e.message?e.message:"استخراج ناموفق بود.");}
  finally{button.disabled=false;notifyParentHeight();}
 });
