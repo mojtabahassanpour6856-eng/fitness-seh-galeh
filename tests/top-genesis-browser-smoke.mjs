@@ -249,20 +249,11 @@ try {
   assert.equal(await page.locator("#pngReport").isDisabled(), false);
   assert.equal(await page.locator("#shareReport").isDisabled(), false);
 
-  // Mock browser capture/share APIs to verify one PNG file is created per report page.
+  // Use the real html2canvas renderer; mock only the operating-system share sheet.
+  await page.addScriptTag({ url: "https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js" });
+  assert.equal(await page.evaluate(() => typeof window.html2canvas), "function",
+    "The real PNG rendering library must load before multi-page export.");
   await page.evaluate(() => {
-    window.html2canvas = async () => {
-      const canvas = document.createElement("canvas");
-      canvas.width = 640;
-      canvas.height = 900;
-      const ctx = canvas.getContext("2d");
-      ctx.fillStyle = "#fffdf7";
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
-      ctx.fillStyle = "#765b2e";
-      ctx.font = "18px Arial";
-      ctx.fillText("Report page", 20, 40);
-      return canvas;
-    };
     Object.defineProperty(navigator, "canShare", {
       configurable: true,
       value: ({ files }) => Array.isArray(files) && files.length > 1
