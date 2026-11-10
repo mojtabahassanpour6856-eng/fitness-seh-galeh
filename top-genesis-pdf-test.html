@@ -526,13 +526,15 @@ button.addEventListener("click",async()=>{
         '<tr><td>' + escapeHTML(labels[key] || key) + '</td><td>در این گزارش ثبت نشده؛ صفر یا مقدار حدسی نیست</td></tr>'
       ).join("");
       const flagRows = (data.flags || []).map(flag => '<li>' + escapeHTML(flag) + '</li>').join("");
-      const details = '<h2 class="report-title" style="font-size:1.45rem">جزئیات استخراج و کنترل سازگاری</h2>' +
+      const details = '<h2 class="report-title" style="font-size:1.45rem">خلاصه شاخص‌ها و کنترل سازگاری</h2>' +
         buildPlainLanguageSummary(metrics) +
-        '<table class="report-data-table"><thead><tr><th>شاخص</th><th>مقدار</th><th>وضعیت</th></tr></thead><tbody>' + detailRows + '</tbody></table>' +
+        '<table class="report-data-table"><thead><tr><th>شاخص</th><th>مقدار</th><th>وضعیت</th></tr></thead><tbody>' + detailRows + '</tbody></table>';
+      const regionDetails = '<h2 class="report-title" style="font-size:1.45rem">اندازه‌های خام و موارد نیازمند بررسی</h2>' +
         (rawRows ? '<h3 class="report-section-title">مقادیر خام نواحی Region</h3><p class="small">این اعداد تا تأیید تعریف و واحد دستگاه، سانتی‌متر یا محیط یک‌دور اندام تلقی نمی‌شوند.</p><table class="report-data-table"><thead><tr><th>ناحیه</th><th>مقدار خام</th><th>وضعیت</th></tr></thead><tbody>' + rawRows + '</tbody></table>' : '') +
         (missingRows ? '<h3 class="report-section-title">اندازه‌های ثبت‌نشده</h3><table class="report-data-table"><tbody>' + missingRows + '</tbody></table>' : '') +
         (flagRows ? '<h3 class="report-section-title">هشدارهای استخراج</h3><ul>' + flagRows + '</ul>' : '');
       const pageContents = [cover, details];
+      if (rawRows || missingRows || flagRows) pageContents.push(regionDetails);
       const comparison = allReports.length >= 3
         ? buildMultiReportTrend(allReports)
         : (newerData ? buildReportComparison(data.metrics, newerData.metrics) : "");
