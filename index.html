@@ -2016,7 +2016,11 @@ function renderMealCoach(meals){
   if(addOther)$("mealList").insertAdjacentHTML("beforeend",'<div class="card"><h3>➕ ساخت وعده‌های دیگر</h3><div class="row" style="flex-wrap:wrap;gap:8px">'+addOther+'</div></div>');
  }
  if(!meals.length)$("mealList").innerHTML='<div class="card"><p class="muted">هیچ وعده‌ای برای این برنامه ثبت نشده است.</p><button onclick="createDefaultMeals()">＋ ساخت ۶ وعده استاندارد</button><p class="muted">بعد از ساخت وعده‌ها، برای هرکدام می‌توانی تا ۴ گزینه جداگانه داشته باشی.</p></div>';
- updateDayTotals(meals);updateMealTargets();
+ // Older builds referenced optional summary helpers that are not defined in this page.
+ // Keep meal rendering independent from those helpers so a missing optional function
+ // cannot abort loading the coach's saved nutrition plan.
+ if(typeof window.updateDayTotals==='function')window.updateDayTotals(meals);
+ if(typeof window.updateMealTargets==='function')window.updateMealTargets();
 }
 
 function foodLine(x){const f=x.food||{},m=foodMetrics(f,x.amount,x.unit),note=String(x.notes||""),recipePrefix="[دستور ترکیبی: ",recipeTag=note.includes(recipePrefix)?note.split(" | ")[0]:"";return `<div class="food-line"><div><div class="food-name">${esc(f.name||"غذا")}</div>${recipeTag?`<div class="food-meta">🍽️ ${esc(recipeTag.slice(recipePrefix.length,-1))}</div>`:""}<div class="food-meta">${m.valid?`🔥 ${m.cal.toFixed(0)} kcal | P ${m.pro.toFixed(1)} | C ${m.carb.toFixed(1)} | F ${m.fat.toFixed(1)}`:'⚠️ کالری این غذا ناقص است یا واحد/مقدار آن نیاز به اصلاح دارد؛ تا اصلاح، در جمع کالری محاسبه نمی‌شود.'}</div></div><span>${x.amount} ${esc(x.unit||"گرم")}</span><button class="mini danger" onclick="deleteMealFood('${x.id}')">🗑</button></div>`;}
