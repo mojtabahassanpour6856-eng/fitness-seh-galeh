@@ -365,7 +365,9 @@ function copyNutritionTemplate(id){
  state.splice(0,state.length,...copiedState);
  const p=data.plan||{};
  const definition=nutritionTemplateDefinitions.find(x=>x.id===id);
- document.getElementById('planTitle').value=(definition&&definition.name)||row.name||p.title||'برنامه غذایی';
+ const copiedTitle=(definition&&definition.name)||row.name||p.title||'برنامه غذایی';
+ document.getElementById('planTitle').value=copiedTitle;
+ document.getElementById('planTitleInput').value=copiedTitle;
  syncTargetFields(traineeTargets);
  targetManualDirty=true;
  renderNutritionTemplateCards();
