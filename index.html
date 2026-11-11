@@ -2557,13 +2557,15 @@ if($("prDate"))$("prDate").value=today();if($("anDate"))$("anDate").value=today(
     const name=c.full_name||c.name||authProfile.full_name||'شاگرد';
     const gender=String(c.gender||'').toLowerCase();
     const fallback=(gender==='زن'||gender==='female'||gender==='f')?'👩':'👨';
-    wrap.innerHTML='<div class="seh-profile-summary" role="button" tabindex="0" aria-label="باز کردن پروفایل من" onclick="dashOpen(\'client\')" onkeydown="if(event.key===\'Enter\'||event.key===\' \'){event.preventDefault();dashOpen(\'client\')}">'+
-      '<div class="seh-profile-avatar"><span class="seh-profile-fallback">'+fallback+'</span><img class="seh-profile-image" alt="عکس پروفایل"><button type="button" class="seh-profile-photo-add" aria-label="افزودن عکس پروفایل" onclick="event.stopPropagation();document.getElementById(\'sehTraineePhotoInput\').click()">+</button></div>'+
-      '<div class="seh-profile-info"><div class="seh-profile-name"></div><div class="seh-profile-birth"></div></div></div>'+
-      '<input id="sehTraineePhotoInput" type="file" accept="image/*" hidden onchange="window.sehSaveTraineePhoto(this)">'+
-      '<button type="button" class="seh-profile-exit" onclick="logoutApp()"><span>↪</span> خروج از حساب کاربری</button>'+
-      '';
-    wrap.querySelector('.seh-profile-name').textContent=name;
+    if(!wrap.querySelector('.seh-profile-summary')){
+      wrap.innerHTML='<div class="seh-profile-summary" role="button" tabindex="0" aria-label="باز کردن پروفایل من" onclick="dashOpen(\\'client\\')" onkeydown="if(event.key===\\'Enter\\'||event.key===\\' \\'){event.preventDefault();dashOpen(\\'client\\')}">'+
+        '<div class="seh-profile-avatar"><span class="seh-profile-fallback">'+fallback+'</span><img class="seh-profile-image" alt="عکس پروفایل" width="76" height="76"><button type="button" class="seh-profile-photo-add" aria-label="افزودن عکس پروفایل" onclick="event.stopPropagation();document.getElementById(\\'sehTraineePhotoInput\\').click()">+</button></div>'+
+        '<div class="seh-profile-info"><div class="seh-profile-name"></div><div class="seh-profile-birth"></div></div></div>'+
+        '<input id="sehTraineePhotoInput" type="file" accept="image/*" hidden onchange="window.sehSaveTraineePhoto(this)">'+
+        '<button type="button" class="seh-profile-exit" onclick="logoutApp()"><span>↪</span> خروج از حساب کاربری</button>';
+    }
+    const nameNode=wrap.querySelector('.seh-profile-name');
+    if(nameNode)nameNode.textContent=name;
     const birthNode=wrap.querySelector('.seh-profile-birth');
     const birthText=window.isoToJalaliDate?window.isoToJalaliDate(c.birth_date):'';
     if(birthNode)birthNode.textContent=birthText?'🎂 '+birthText:'🎂 تاریخ تولد ثبت نشده';
@@ -2571,11 +2573,20 @@ if($("prDate"))$("prDate").value=today();if($("anDate"))$("anDate").value=today(
     const fallbackNode=wrap.querySelector('.seh-profile-fallback');
     const editDeleteButton=document.getElementById('sehDeleteTraineePhotoEdit');
     if(editDeleteButton)editDeleteButton.style.display=(authProfile&&authProfile.role==='trainee'&&c.profile_image)?'inline-flex':'none';
-    if(c.profile_image){
-      img.onload=()=>{img.style.display='block';fallbackNode.style.display='none';};
-      img.onerror=()=>{img.style.display='none';fallbackNode.style.display='block';};
-      img.src=c.profile_image;
-    }else{img.style.display='none';fallbackNode.style.display='block';}
+    const nextImage=String(c.profile_image||'');
+    if(nextImage){
+      if(img.getAttribute('src')!==nextImage){
+        img.onload=()=>{img.style.display='block';if(fallbackNode)fallbackNode.style.display='none';};
+        img.onerror=()=>{img.style.display='none';if(fallbackNode)fallbackNode.style.display='block';};
+        img.style.display='block';
+        img.src=nextImage;
+      }else if(img.complete&&img.naturalWidth>0){
+        img.style.display='block';if(fallbackNode)fallbackNode.style.display='none';
+      }
+    }else{
+      img.removeAttribute('src');img.style.display='none';
+      if(fallbackNode)fallbackNode.style.display='block';
+    }
   }
   window.renderTraineeProfileHeader = renderTraineeProfileHeader;
 
@@ -3701,7 +3712,11 @@ const plans=workoutResult.data||[], nutrition=nutritionResult.data||[];
   const oldLoadWorkout=window.loadWorkoutForClient;
   window.loadWorkoutForClient=async function(){await oldLoadWorkout();buildWorkoutManagement();};
   function buildWorkoutManagement(){
-    const box=$f('workoutList');if(!box||$f('workoutMgmt'))return;
+    const box=$f('workoutList');
+    const existing=$f('workoutMgmt');
+    const coachMode=!!(authProfile&&authProfile.role==='coach');
+    if(!coachMode){if(existing)existing.remove();return;}
+    if(!box||existing)return;
     const card=document.createElement('div');card.className='card';card.id='workoutMgmt';card.innerHTML=`<div class="f18-actions"><button class="secondary" onclick="copyPreviousWorkoutPlan()">📋 کپی برنامه قبلی</button><button class="secondary" onclick="moveWorkoutSelected(-1)">⬆️ جابه‌جایی بالا</button><button class="secondary" onclick="moveWorkoutSelected(1)">⬇️ جابه‌جایی پایین</button></div><p class="f18-muted">برای ویرایش، روی «ویرایش» همان حرکت بزنید. برای سیستم‌های گروهی، یک نام گروه مثل A وارد کنید.</p>`;
     box.parentNode.insertBefore(card,box);
   }
