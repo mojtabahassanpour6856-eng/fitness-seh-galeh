@@ -731,22 +731,17 @@ body.locked{overflow:hidden!important}
  });
 })();
 </script>
-<div class="card">
-<h2>اطلاعات برنامه</h2>
-<div class="grid2">
-<div><label>عنوان برنامه</label><input id="mealTitle" value=""></div>
-<div><label>تاریخ شروع</label><input id="mealStart" type="date"></div>
-<div><label>تاریخ پایان</label><input id="mealEnd" type="date"></div>
-</div>
-<label>یادداشت برنامه</label><textarea id="mealNotes" placeholder="توضیحات مربی..."></textarea>
-<!-- فیلدهای داخلی برای سازگاری با توابع قدیمی؛ دیگر در رابط مربی نمایش داده نمی‌شوند. -->
+<!-- فیلدهای داخلی قدیمی برای سازگاری با توابع برنامه غذایی؛ در رابط کاربری نمایش داده نمی‌شوند. -->
 <div hidden aria-hidden="true">
+<input id="mealTitle" value="">
+<input id="mealStart" type="date">
+<input id="mealEnd" type="date">
+<textarea id="mealNotes"></textarea>
 <select id="mealActive"><option value="true" selected>فعال</option><option value="false">غیرفعال</option></select>
 <input id="mealCalories" type="number" value="">
 <input id="mealProtein" type="number" value="">
 <input id="mealCarbs" type="number" value="">
 <input id="mealFat" type="number" value="">
-</div>
 </div>
 
 <div id="mealList"></div>
