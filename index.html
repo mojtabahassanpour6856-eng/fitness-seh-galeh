@@ -749,31 +749,7 @@ body.locked{overflow:hidden!important}
 </div>
 </div>
 
-<div class="card" id="mealTargetPlanner">
-<h2>🎯 تقسیم هدف روزانه بین وعده‌ها</h2>
-<p class="muted">اهداف کالری و درشت‌مغذی‌ها در بالای برنامه‌ساز سریع تعیین می‌شوند. در این بخش فقط درصد تقسیم هدف روزانه بین وعده‌ها را تنظیم کن؛ سهم‌ها بر اساس مجموع درصدها نرمال می‌شوند.</p>
-<div class="grid2">
-<div><label>صبحانه ٪</label><input id="mealPct0" type="number" min="0" max="100" value="25" oninput="updateMealTargets()"></div>
-<div><label>میان‌وعده صبح ٪</label><input id="mealPct1" type="number" min="0" max="100" value="10" oninput="updateMealTargets()"></div>
-<div><label>ناهار ٪</label><input id="mealPct2" type="number" min="0" max="100" value="30" oninput="updateMealTargets()"></div>
-<div><label>میان‌وعده عصر ٪</label><input id="mealPct3" type="number" min="0" max="100" value="10" oninput="updateMealTargets()"></div>
-<div><label>شام ٪</label><input id="mealPct4" type="number" min="0" max="100" value="20" oninput="updateMealTargets()"></div>
- <div><label>قبل خواب ٪</label><input id="mealPct5" type="number" min="0" max="100" value="5" oninput="updateMealTargets()"></div>
-<div><label>قبل تمرین ٪ (اختیاری)</label><input id="mealPct6" type="number" min="0" max="100" value="0" oninput="updateMealTargets()"></div>
-<div><label>بعد تمرین ٪ (اختیاری)</label><input id="mealPct7" type="number" min="0" max="100" value="0" oninput="updateMealTargets()"></div>
-</div>
-<div id="mealTargetSummary" class="muted">برای دیدن سهم هر وعده، ابتدا هدف روزانه برنامه را وارد کن.</div>
-</div>
 <div id="mealList"></div>
-<div class="card">
-<h2>📊 جمع کل روز</h2>
-<div class="meal-summary">
-<div class="stat"><b id="dayCal">۰</b>کالری</div>
-<div class="stat"><b id="dayPro">۰</b>پروتئین</div>
-<div class="stat"><b id="dayCarb">۰</b>کربوهیدرات</div>
-<div class="stat"><b id="dayFat">۰</b>چربی</div>
-</div>
-</div>
 </div>
 
 <div id="mealStudentView" class="hide">
@@ -1974,19 +1950,6 @@ async function saveNutritionPlan(){
  }catch(e){alert("ذخیره برنامه غذایی انجام نشد.\n"+e.message);}
  finally{nutritionPlanSaveBusy=false;}
 }
-function getMealTargetShares(){
-  const raw=[0,1,2,3,4,5,6,7].map(i=>Math.max(0,Number($("mealPct"+i)?.value)||0)),sum=raw.reduce((a,b)=>a+b,0);
-  return sum>0?raw.map(v=>v/sum):[.25,.10,.30,.10,.20,.05,0,0];
-}
-function mealTargetValues(i){
- const p=getMealTargetShares()[i]||0;
- return {pct:p*100,cal:(Number($("mealCalories").value)||0)*p,pro:(Number($("mealProtein").value)||0)*p,carb:(Number($("mealCarbs").value)||0)*p,fat:(Number($("mealFat").value)||0)*p};
-}
-function updateMealTargets(){
-  const ids=[0,1,2,3,4,5,6,7],names=["صبحانه","میان‌وعده صبح","ناهار","میان‌وعده عصر","شام","قبل خواب","قبل تمرین","بعد تمرین"],shares=getMealTargetShares();
- ids.forEach(i=>{const el=document.querySelector('[data-meal-target="'+i+'"]');if(!el)return;const t=mealTargetValues(i);el.textContent=(Number($("mealCalories").value)>0?("🎯 هدف: "+t.cal.toFixed(0)+" kcal | P "+t.pro.toFixed(1)+"g · C "+t.carb.toFixed(1)+"g · F "+t.fat.toFixed(1)+"g"):"🎯 ابتدا کالری و ماکروهای هدف روز را وارد کن")+" | سهم محاسباتی "+t.pct.toFixed(1)+"٪";});
- const summary=$("mealTargetSummary");if(summary){const rawTotal=ids.reduce((a,i)=>a+Math.max(0,Number($("mealPct"+i)?.value)||0),0);summary.textContent="مجموع درصدهای واردشده: "+rawTotal.toFixed(1)+"٪. سهم نهایی محاسباتی: "+names.map((n,i)=>n+" "+(shares[i]*100).toFixed(1)+"٪").join("، ")+". اگر مجموع درصدها ۱۰۰ نباشد، سهم‌ها خودکار نرمال می‌شوند.";}
-}
 let currentCoachMeals=[];
 let selectedMealOptions={};
 function selectMealOption(kind,mealId){
@@ -2033,7 +1996,7 @@ function renderMealCoach(meals){
   const fs=m.foods||[];
   const total=fs.reduce((a,x)=>{const v=foodMetrics(x.food||{},x.amount,x.unit);return v.valid?[a[0]+v.cal,a[1]+v.pro,a[2]+v.carb,a[3]+v.fat]:a},[0,0,0,0]);
   const ti=targetIndex(m.meal_name||"");
-  return '<div class="meal-card"><div class="meal-head"><h3>🍽️ '+esc(m.meal_name||"وعده")+'</h3><span class="meal-total">'+total[0].toFixed(0)+' kcal</span></div><div class="muted" data-meal-target="'+ti+'" style="margin:8px 0;padding:8px;background:#172636;border-radius:9px">هدف وعده در حال محاسبه…</div><div class="muted">مصرف فعلی: '+total[0].toFixed(0)+' kcal | پروتئین '+total[1].toFixed(1)+'g | کربوهیدرات '+total[2].toFixed(1)+'g | چربی '+total[3].toFixed(1)+'g</div>'+(fs.length?renderRecipeFoodLines(fs):"<p class='muted'>هنوز غذایی در این گزینه ثبت نشده است.</p>")+'<div class="row" style="flex-wrap:wrap;gap:8px"><button type="button" class="mini" onclick="openMealFoodModal(&quot;'+m.id+'&quot;)">＋ افزودن غذا به '+esc(m.meal_name||"این گزینه")+'</button></div></div>';
+  return '<div class="meal-card"><div class="meal-head"><h3>🍽️ '+esc(m.meal_name||"وعده")+'</h3><span class="meal-total">'+total[0].toFixed(0)+' kcal</span></div><div class="muted">مصرف فعلی: '+total[0].toFixed(0)+' kcal | پروتئین '+total[1].toFixed(1)+'g | کربوهیدرات '+total[2].toFixed(1)+'g | چربی '+total[3].toFixed(1)+'g</div>'+(fs.length?renderRecipeFoodLines(fs):"<p class='muted'>هنوز غذایی در این گزینه ثبت نشده است.</p>")+'<div class="row" style="flex-wrap:wrap;gap:8px"><button type="button" class="mini" onclick="openMealFoodModal(&quot;'+m.id+'&quot;)">＋ افزودن غذا به '+esc(m.meal_name||"این گزینه")+'</button></div></div>';
  };
  const renderedKinds=new Set();
  const sections=kinds.map(k=>{
@@ -2062,7 +2025,6 @@ function renderMealCoach(meals){
 }
 
 function foodLine(x){const f=x.food||{},m=foodMetrics(f,x.amount,x.unit),note=String(x.notes||""),recipePrefix="[دستور ترکیبی: ",recipeTag=note.includes(recipePrefix)?note.split(" | ")[0]:"";return `<div class="food-line"><div><div class="food-name">${esc(f.name||"غذا")}</div>${recipeTag?`<div class="food-meta">🍽️ ${esc(recipeTag.slice(recipePrefix.length,-1))}</div>`:""}<div class="food-meta">${m.valid?`🔥 ${m.cal.toFixed(0)} kcal | P ${m.pro.toFixed(1)} | C ${m.carb.toFixed(1)} | F ${m.fat.toFixed(1)}`:'⚠️ کالری این غذا ناقص است یا واحد/مقدار آن نیاز به اصلاح دارد؛ تا اصلاح، در جمع کالری محاسبه نمی‌شود.'}</div></div><span>${x.amount} ${esc(x.unit||"گرم")}</span><button class="mini danger" onclick="deleteMealFood('${x.id}')">🗑</button></div>`;}
-function updateDayTotals(meals){const t=meals.reduce((a,m)=>(m.foods||[]).reduce((b,x)=>{const v=foodMetrics(x.food||{},x.amount,x.unit);return v.valid?[b[0]+v.cal,b[1]+v.pro,b[2]+v.carb,b[3]+v.fat]:b},a),[0,0,0,0]);$("dayCal").textContent=t[0].toFixed(0);$("dayPro").textContent=t[1].toFixed(1)+" g";$("dayCarb").textContent=t[2].toFixed(1)+" g";$("dayFat").textContent=t[3].toFixed(1)+" g";}
 let defaultMealsBusy=false;
 async function addMealOption(kind){
  if(defaultMealsBusy){
@@ -2523,7 +2485,7 @@ async function initAuth(){
 }
 
 if($("prDate"))$("prDate").value=today();if($("anDate"))$("anDate").value=today();if($("actDate"))$("actDate").value=today();if($("mealStart"))$("mealStart").value=today();
-["mealCalories","mealProtein","mealCarbs","mealFat"].forEach(id=>{if($(id))$(id).addEventListener("input",updateMealTargets);});
+
 /* Session restoration runs once after all wrappers are installed. Do not fetch the exercise catalog here:
    it was being requested before authentication and again by multiple DOMContentLoaded/login handlers.
    The authenticated coach flow loads the selector when needed. */
