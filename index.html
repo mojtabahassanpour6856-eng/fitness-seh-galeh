@@ -2376,7 +2376,7 @@ function esc(s){return String(s).replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",
 </script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2" onerror="this.onerror=null;this.src='https://unpkg.com/@supabase/supabase-js@2'"></script>
 <script>
-window.AUTH_SUPABASE=window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
+window.AUTH_SUPABASE=window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY,{auth:{autoRefreshToken:true,persistSession:true,detectSessionInUrl:true,storage:window.localStorage}});
 /* SEH_FIX_ORIGINAL_FETCH_SCOPE_20261016: expose the original browser fetch across classic-script scopes */
 const AUTH_SUPABASE=window.AUTH_SUPABASE;const ORIGINAL_FETCH=(typeof window.__SEH_ORIGINAL_FETCH==="function"?window.__SEH_ORIGINAL_FETCH:window.fetch.bind(window));window.__SEH_ORIGINAL_FETCH=ORIGINAL_FETCH;
 
@@ -15092,5 +15092,32 @@ window.sehNutritionBuilderBridge={
 };
 </script>
 <script src="./top-genesis-archive.js" defer></script>
+
+<script id="seh-auth-session-restore-watchdog-v1">
+(function(){
+  if(window.__sehAuthRestoreWatchdog)return;window.__sehAuthRestoreWatchdog=true;
+  let running=false;
+  async function restoreSavedSession(){
+    if(running||!document.body||!document.body.classList.contains('locked'))return;
+    const auth=window.AUTH_SUPABASE;
+    if(!auth?.auth||typeof window.finishLogin!=='function')return;
+    running=true;
+    try{
+      for(let attempt=0;attempt<3;attempt++){
+        const result=await auth.auth.getSession();
+        if(result.error)throw result.error;
+        const session=result.data?.session;
+        if(session?.user){await window.finishLogin(session.user);return;}
+        if(attempt<2)await new Promise(resolve=>setTimeout(resolve,700*(attempt+1)));
+      }
+    }catch(error){console.warn('Saved sign-in session restoration deferred:',error);}
+    finally{running=false;}
+  }
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>setTimeout(restoreSavedSession,900),{once:true});
+  else setTimeout(restoreSavedSession,900);
+  window.addEventListener('pageshow',()=>setTimeout(restoreSavedSession,250));
+  document.addEventListener('visibilitychange',()=>{if(!document.hidden)setTimeout(restoreSavedSession,250);});
+})();
+</script>
 </body>
 </html>
