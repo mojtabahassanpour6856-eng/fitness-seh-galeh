@@ -735,22 +735,23 @@ body.locked{overflow:hidden!important}
 <h2>اطلاعات برنامه</h2>
 <div class="grid2">
 <div><label>عنوان برنامه</label><input id="mealTitle" value=""></div>
-<div><label>وضعیت</label><select id="mealActive"><option value="true">فعال</option><option value="false">غیرفعال</option></select></div>
 <div><label>تاریخ شروع</label><input id="mealStart" type="date"></div>
 <div><label>تاریخ پایان</label><input id="mealEnd" type="date"></div>
-<div><label>کالری روزانه</label><input id="mealCalories" type="number" value="2000"></div>
-<div><label>پروتئین هدف (گرم)</label><input id="mealProtein" type="number" value="150"></div>
-<div><label>کربوهیدرات هدف (گرم)</label><input id="mealCarbs" type="number" value="200"></div>
-<div><label>چربی هدف (گرم)</label><input id="mealFat" type="number" value="60"></div>
 </div>
 <label>یادداشت برنامه</label><textarea id="mealNotes" placeholder="توضیحات مربی..."></textarea>
-<p class="muted" style="font-size:12px;line-height:1.9">این دکمه فقط عنوان، تاریخ و اهداف برنامه را ذخیره می‌کند و غذاهای الگوی انتخاب‌شده را به پرونده شاگرد منتقل نمی‌کند. برای ثبت وعده‌ها و غذاها، از دکمه «ثبت تمام برنامه غذایی در پرونده شاگرد» در برنامه‌ساز بالا استفاده کن.</p>
-<button onclick="saveNutritionPlan()">💾 ذخیره اطلاعات کلی برنامه</button>
+<!-- فیلدهای داخلی برای سازگاری با توابع قدیمی؛ دیگر در رابط مربی نمایش داده نمی‌شوند. -->
+<div hidden aria-hidden="true">
+<select id="mealActive"><option value="true" selected>فعال</option><option value="false">غیرفعال</option></select>
+<input id="mealCalories" type="number" value="">
+<input id="mealProtein" type="number" value="">
+<input id="mealCarbs" type="number" value="">
+<input id="mealFat" type="number" value="">
+</div>
 </div>
 
 <div class="card" id="mealTargetPlanner">
 <h2>🎯 تقسیم هدف روزانه بین وعده‌ها</h2>
-<p class="muted">کالری و درشت‌مغذی‌های هدف روز را در اطلاعات برنامه وارد کن. درصد هر وعده قابل تنظیم است؛ سهم‌ها بر اساس مجموع درصدها نرمال می‌شوند. این تقسیم‌بندی نقطه شروع است و با هدف و شرایط شاگرد تنظیمش کن.</p>
+<p class="muted">اهداف کالری و درشت‌مغذی‌ها در بالای برنامه‌ساز سریع تعیین می‌شوند. در این بخش فقط درصد تقسیم هدف روزانه بین وعده‌ها را تنظیم کن؛ سهم‌ها بر اساس مجموع درصدها نرمال می‌شوند.</p>
 <div class="grid2">
 <div><label>صبحانه ٪</label><input id="mealPct0" type="number" min="0" max="100" value="25" oninput="updateMealTargets()"></div>
 <div><label>میان‌وعده صبح ٪</label><input id="mealPct1" type="number" min="0" max="100" value="10" oninput="updateMealTargets()"></div>
