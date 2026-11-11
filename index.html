@@ -1614,6 +1614,8 @@ function mealUnitGrams(name,unit){
  if(u==="لیوان" && /چای|قهوه|اسپرسو|دمنوش|دوغ|شیک پروتئینی|شیر\s*کم[\s‌-]*چرب|شیر\s*پر[\s‌-]*چرب/.test(n))return 250;
  if(u==="پیمانه" && /پودر وی|پودر پروتئین/.test(n))return 30;
  if(u==="عدد"){
+  // A single raisin is roughly 0.5 g; avoid the generic 100 g fallback.
+  if(/کشمش/.test(n))return 0.5;
   if(/بادام\s*هندی/.test(n))return 1.5;
   if(/بادام/.test(n))return 1.2;
   if(/پسته|تخمه/.test(n))return 0.6;
