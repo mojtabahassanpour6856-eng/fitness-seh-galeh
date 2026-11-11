@@ -46,6 +46,7 @@ td input,td select{width:100%;min-width:0;border:1px solid #e5dcc8;border-radius
 .plan-meta-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
 .plan-meta-grid label{display:flex;flex-direction:column;gap:5px;font-size:13px;font-weight:700;color:#55482f}
 .plan-meta-grid input,.plan-meta-grid textarea{box-sizing:border-box;width:100%;min-width:0;padding:10px;border:1px solid #d8cfbb;border-radius:9px;background:#fff;color:#29251d;font:inherit}
+.date-hint{font-size:10px;font-weight:400;color:#887b62;line-height:1.6}
 .plan-meta-grid textarea{resize:vertical;min-height:58px}
 .plan-notes-field{grid-column:1/-1}
 @media(max-width:420px){.plan-meta-grid{grid-template-columns:1fr}.plan-notes-field{grid-column:auto}}
@@ -71,8 +72,8 @@ td input,td select{width:100%;min-width:0;border:1px solid #e5dcc8;border-radius
  <div class="plan-meta-title">📝 مشخصات برنامه غذایی</div>
  <div class="plan-meta-grid">
   <label>عنوان برنامه<input id="planTitleInput" type="text" maxlength="120" placeholder="مثلاً برنامه افزایش وزن معمولی"></label>
-  <label>تاریخ شروع<input id="planStartInput" type="date"></label>
-  <label>تاریخ پایان<input id="planEndInput" type="date"></label>
+  <label>تاریخ شروع<input id="planStartInput" type="text" inputmode="numeric" autocomplete="off" maxlength="10" placeholder="۱۴۰۵/۰۸/۲۰" aria-label="تاریخ شروع به شمسی"><small class="date-hint">شمسی؛ نمونه: ۱۴۰۵/۰۸/۲۰</small></label>
+  <label>تاریخ پایان<input id="planEndInput" type="text" inputmode="numeric" autocomplete="off" maxlength="10" placeholder="۱۴۰۵/۰۹/۲۰" aria-label="تاریخ پایان به شمسی"><small class="date-hint">اختیاری؛ شمسی</small></label>
   <label class="plan-notes-field">یادداشت برنامه<textarea id="planNotesInput" rows="2" maxlength="2000" placeholder="توضیحات و نکات مربی برای شاگرد…"></textarea></label>
  </div>
 </section>
@@ -493,6 +494,12 @@ let builderTrainee=null,builderBusy=false,builderExistingNotes='';
 function setConnectionStatus(msg,ok=false){const el=document.getElementById('connectionStatus');if(el){el.textContent=msg;el.classList.toggle('connection-ok',ok);el.classList.toggle('connection-warn',!ok)}}
 function parentBridge(){if(window.parent===window||window.location.origin!==window.parent.location.origin)throw new Error('این صفحه باید از داخل پنل مربی باز شود.');const b=window.parent.sehNutritionBuilderBridge;if(!b)throw new Error('پل ارتباطی پنل مربی هنوز آماده نیست؛ صفحه را یک‌بار تازه‌سازی کن.');return b}
 function toPersianDigits(n){return String(n).replace(/[0-9]/g,d=>'۰۱۲۳۴۵۶۷۸۹'[Number(d)])}
+function normalizeDateDigits(v){return String(v||'').replace(/[۰-۹]/g,d=>'۰۱۲۳۴۵۶۷۸۹'.indexOf(d)).replace(/[٠-٩]/g,d=>'٠١٢٣٤٥٦٧٨٩'.indexOf(d)).replace(/[^0-9]/g,'')}
+function formatJalaliInput(input){let d=normalizeDateDigits(input.value).slice(0,8);if(d.length>4)d=d.slice(0,4)+'/'+d.slice(4,6)+(d.length>6?'/'+d.slice(6,8):'');else if(d.length>4)d=d.slice(0,4)+'/'+d.slice(4);input.value=toPersianDigits(d)}
+const persianCalendar=new Intl.DateTimeFormat('en-US-u-ca-persian-nu-latn',{year:'numeric',month:'2-digit',day:'2-digit',timeZone:'UTC'});
+function isoToJalali(iso){if(!iso)return '';const m=String(iso).match(/^(\\d{4})-(\\d{2})-(\\d{2})$/);if(!m)return '';const parts=persianCalendar.formatToParts(new Date(Date.UTC(+m[1],+m[2]-1,+m[3])));const p={};parts.forEach(x=>p[x.type]=x.value);return toPersianDigits(p.year+'/'+p.month+'/'+p.day)}
+function jalaliToIso(value){const d=normalizeDateDigits(value);if(d.length!==8)return null;const jy=+d.slice(0,4),jm=+d.slice(4,6),jd=+d.slice(6,8);if(jy<1300||jy>1500||jm<1||jm>12||jd<1||jd>31)return null;const start=Date.UTC(jy+621,2,18),end=Date.UTC(jy+622,3,5);for(let t=start;t<=end;t+=86400000){const parts=persianCalendar.formatToParts(new Date(t)),p={};parts.forEach(x=>p[x.type]=x.value);if(+p.year===jy&&+p.month===jm&&+p.day===jd){const dt=new Date(t);return dt.getUTCFullYear()+'-'+String(dt.getUTCMonth()+1).padStart(2,'0')+'-'+String(dt.getUTCDate()).padStart(2,'0')}}return null}
+function bindJalaliDateInputs(){[['planStartInput','planStart'],['planEndInput','planEnd']].forEach(([visibleId,hiddenId])=>{const input=document.getElementById(visibleId);if(!input||input.dataset.jalaliBound)return;input.dataset.jalaliBound='1';input.addEventListener('input',()=>formatJalaliInput(input));input.addEventListener('blur',()=>{if(!input.value.trim())return;const iso=jalaliToIso(input.value);if(iso)input.value=isoToJalali(iso);});});}
 function builderMealName(index,optionNo){return dbMealNames[index]+(optionNo===1?'':toPersianDigits(optionNo))}
 function decodeMealName(name){const n=String(name||'').normalize('NFC').replace(/[\s\u200c\u200f]/g,'');for(let i=0;i<dbMealNames.length;i++){const base=dbMealNames[i].replace(/[\s\u200c\u200f]/g,'');if(!n.startsWith(base))continue;const tail=n.slice(base.length).replace(/[۰-۹]/g,d=>'۰۱۲۳۴۵۶۷۸۹'.indexOf(d));const opt=tail?Number(tail):1;if(Number.isInteger(opt)&&opt>=1&&opt<=4)return {index:i,opt}}return null}
 function fromDbUnitNote(note){const m=String(note||'').match(/\[seh-gpu:([0-9]+(?:\.[0-9]+)?)\]/);return m?Number(m[1]):null}
@@ -540,8 +547,10 @@ async function loadBuilderContext(){
   document.getElementById('planStart').value=ctx.plan?.start_date||new Date().toISOString().slice(0,10);
   document.getElementById('planEnd').value=ctx.plan?.end_date||'';
   document.getElementById('planTitleInput').value=ctx.plan?.title||'برنامه غذایی';
-  document.getElementById('planStartInput').value=ctx.plan?.start_date||new Date().toISOString().slice(0,10);
-  document.getElementById('planEndInput').value=ctx.plan?.end_date||'';
+  bindJalaliDateInputs();
+  const startIso=ctx.plan?.start_date||new Date().toISOString().slice(0,10);
+  document.getElementById('planStartInput').value=isoToJalali(startIso);
+  document.getElementById('planEndInput').value=isoToJalali(ctx.plan?.end_date||'');
   document.getElementById('planNotesInput').value=ctx.plan?.notes||'';
   const savedTargets={daily_calories:ctx.plan?.daily_calories,protein_target:ctx.plan?.protein_target,carbs_target:ctx.plan?.carbs_target,fat_target:ctx.plan?.fat_target};
   const hasSavedTargets=Object.values(savedTargets).some(v=>v!==null&&v!==undefined&&v!=='');
@@ -619,8 +628,12 @@ async function saveAllToTrainee(){
   return;
  }
  const titleValue=document.getElementById('planTitleInput').value.trim()||'برنامه غذایی';
- const startValue=document.getElementById('planStartInput').value||null;
- const endValue=document.getElementById('planEndInput').value||null;
+ const startText=document.getElementById('planStartInput').value.trim();
+ const endText=document.getElementById('planEndInput').value.trim();
+ const startValue=startText?jalaliToIso(startText):null;
+ const endValue=endText?jalaliToIso(endText):null;
+ if(startText&&!startValue){notify('تاریخ شروع را به‌صورت شمسی و معتبر مثل ۱۴۰۵/۰۸/۲۰ وارد کن.');document.getElementById('planStartInput').focus();return}
+ if(endText&&!endValue){notify('تاریخ پایان را به‌صورت شمسی و معتبر مثل ۱۴۰۵/۰۹/۲۰ وارد کن.');document.getElementById('planEndInput').focus();return}
  if(startValue&&endValue&&endValue<startValue){notify('تاریخ پایان نمی‌تواند قبل از تاریخ شروع باشد.');return}
  const notesValue=document.getElementById('planNotesInput').value.trim();
  const plan={title:titleValue,start_date:startValue,end_date:endValue,daily_calories:Number(document.getElementById('targetCaloriesInput').value)||null,protein_target:Number(document.getElementById('targetProteinInput').value)||null,carbs_target:Number(document.getElementById('targetCarbsInput').value)||null,fat_target:Number(document.getElementById('targetFatInput').value)||null,notes:notesValue}
