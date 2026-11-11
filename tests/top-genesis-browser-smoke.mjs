@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import http from "node:http";
 import fs from "node:fs";
+import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { chromium } from "playwright";
@@ -49,13 +50,52 @@ try {
     ctx.fillText("Forearm Right Region 123.456", 35, 180);
     return canvas.toDataURL("image/png");
   });
+  const scanFrontDataUrl = await imagePage.evaluate(() => {
+    const canvas = document.createElement("canvas");
+    canvas.width = 1000; canvas.height = 1300;
+    const ctx = canvas.getContext("2d");
+    ctx.fillStyle = "#ffffff"; ctx.fillRect(0,0,1000,1300);
+    ctx.strokeStyle = "#e8e4dc"; ctx.lineWidth = 2;
+    for(let x=60;x<1000;x+=80){ctx.beginPath();ctx.moveTo(x,40);ctx.lineTo(x,1260);ctx.stroke();}
+    for(let y=40;y<1300;y+=80){ctx.beginPath();ctx.moveTo(40,y);ctx.lineTo(960,y);ctx.stroke();}
+    ctx.fillStyle = "#668d78";
+    ctx.beginPath();ctx.arc(500,180,72,0,Math.PI*2);ctx.fill();
+    ctx.beginPath();
+    ctx.moveTo(430,270);ctx.bezierCurveTo(340,285,300,355,300,470);
+    ctx.lineTo(210,680);ctx.lineTo(275,710);ctx.lineTo(390,500);
+    ctx.lineTo(405,770);ctx.lineTo(370,1180);ctx.lineTo(465,1180);
+    ctx.lineTo(500,850);ctx.lineTo(535,1180);ctx.lineTo(630,1180);
+    ctx.lineTo(595,770);ctx.lineTo(610,500);ctx.lineTo(725,710);
+    ctx.lineTo(790,680);ctx.lineTo(700,470);ctx.bezierCurveTo(700,355,660,285,570,270);
+    ctx.closePath();ctx.fill();
+    return canvas.toDataURL("image/png");
+  });
+  const scanSideDataUrl = await imagePage.evaluate(() => {
+    const canvas = document.createElement("canvas");
+    canvas.width = 1000; canvas.height = 1300;
+    const ctx = canvas.getContext("2d");
+    ctx.fillStyle = "#ffffff"; ctx.fillRect(0,0,1000,1300);
+    ctx.strokeStyle = "#e8e4dc"; ctx.lineWidth = 2;
+    for(let x=60;x<1000;x+=80){ctx.beginPath();ctx.moveTo(x,40);ctx.lineTo(x,1260);ctx.stroke();}
+    for(let y=40;y<1300;y+=80){ctx.beginPath();ctx.moveTo(40,y);ctx.lineTo(960,y);ctx.stroke();}
+    ctx.fillStyle = "#668d78";
+    ctx.beginPath();ctx.ellipse(510,180,65,82,0,0,Math.PI*2);ctx.fill();
+    ctx.beginPath();
+    ctx.moveTo(500,270);ctx.bezierCurveTo(610,290,640,390,600,520);
+    ctx.lineTo(640,700);ctx.lineTo(610,770);ctx.lineTo(580,680);
+    ctx.lineTo(570,900);ctx.lineTo(620,1180);ctx.lineTo(520,1180);
+    ctx.lineTo(490,900);ctx.lineTo(450,1180);ctx.lineTo(360,1180);
+    ctx.lineTo(430,800);ctx.lineTo(420,610);ctx.lineTo(390,470);
+    ctx.bezierCurveTo(360,350,400,285,500,270);ctx.closePath();ctx.fill();
+    return canvas.toDataURL("image/png");
+  });
   await imagePage.close();
 
   const pdfDoc = await PDFDocument.create();
   const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
   const textPage = pdfDoc.addPage([612, 792]);
   textPage.drawText(
-    "Height & Weight 161 cm & 57 kg Body Fat 24.5% BMI 22.0 Waist-to-Hip Ratio 0.734 RMR 1352 calories/day Body Measurements (cm) Calf Left Region 157.69 Calf Right Region 162.75 Hip Region 680.13. This is a synthetic browser test fixture with enough selectable text to bypass OCR on this page.",
+    "Height & Weight 161 cm & 57 kg Body Fat 24.5% BMI 22.0 Waist-to-Hip Ratio 0.734 RMR 1352 calories/day Caloric Expenditure 1623 Calories/day 14 kg of fat mass 43 kg of lean body mass Your waist measures 69.87 cm Body Measurements (cm) Calf Left Region 157.69 Calf Right Region 162.75 Hip Region 680.13. This is a synthetic browser test fixture using values previously extracted from the user's sample report; it is not the original PDF.",
     { x: 40, y: 700, size: 10, font, color: rgb(0, 0, 0), maxWidth: 530, lineHeight: 16 }
   );
   const ocrPage = pdfDoc.addPage([612, 792]);
@@ -73,12 +113,38 @@ try {
   const regionPngBytes = Buffer.from(regionImageDataUrl.split(",")[1], "base64");
   const regionImage = await pdfDoc.embedPng(regionPngBytes);
   mixedPage.drawImage(regionImage, { x: 40, y: 400, width: 530, height: 88 });
+
+  // Synthetic scan-image pages and supplementary pages make this a 12-page
+  // fixture for testing page selection, source-image rendering and long reports.
+  const frontPage = pdfDoc.addPage([612,792]);
+  frontPage.drawText("Visual Image Page. This synthetic page contains a front-view body outline for visual export testing only and no text measurements.", {
+    x:40,y:740,size:10,font,color:rgb(0,0,0),maxWidth:530,lineHeight:16
+  });
+  const frontPng = await pdfDoc.embedPng(Buffer.from(scanFrontDataUrl.split(",")[1],"base64"));
+  frontPage.drawImage(frontPng,{x:90,y:70,width:432,height:562});
+  const sidePage = pdfDoc.addPage([612,792]);
+  sidePage.drawText("Visual Image Page. This synthetic page contains a side-view body outline for visual export testing only and no text measurements.", {
+    x:40,y:740,size:10,font,color:rgb(0,0,0),maxWidth:530,lineHeight:16
+  });
+  const sidePng = await pdfDoc.embedPng(Buffer.from(scanSideDataUrl.split(",")[1],"base64"));
+  sidePage.drawImage(sidePng,{x:90,y:70,width:432,height:562});
+  for(let pageNo=6;pageNo<=12;pageNo++){
+    const extraPage=pdfDoc.addPage([612,792]);
+    extraPage.drawText("Supplementary report page "+pageNo+". This synthetic page is included to verify twelve-page PDF navigation and thumbnail rendering without additional measurements.", {
+      x:40,y:740,size:10,font,color:rgb(0,0,0),maxWidth:530,lineHeight:16
+    });
+  }
   const pdfBytes = await pdfDoc.save();
 
   const page = await browser.newPage();
   const pageErrors = [];
+  const supabaseRequests = [];
   page.on("pageerror", error => pageErrors.push(error.message));
+  page.on("request", request => {
+    if (/supabase\.co|storage\.supabase\.co/i.test(request.url())) supabaseRequests.push(request.url());
+  });
   await page.goto(`http://127.0.0.1:${address.port}/top-genesis-pdf-test.html`);
+  await page.setViewportSize({ width: 390, height: 844 });
   await page.locator("#pdfFile").setInputFiles({
     name: "synthetic-top-genesis-fixture.pdf",
     mimeType: "application/pdf",
@@ -93,7 +159,7 @@ try {
   const status = await page.locator("#status").innerText();
   assert.match(status, /استخراج تمام شد/, `Parser did not complete: ${status}`);
   const pageInfo = await page.locator("#result").innerText();
-  assert.match(pageInfo, /تعداد صفحات: 3/);
+  assert.match(pageInfo, /تعداد صفحات: 12/);
   assert.match(pageInfo, /صفحات OCR: 2، 3/);
   assert.match(pageInfo, /161/);
   assert.match(pageInfo, /57/);
@@ -104,6 +170,10 @@ try {
   assert.match(pageInfo, /نیازمند بررسی مربی/,
     "A bilateral difference above the review threshold must be visible to the coach.");
   assert.match(pageInfo, /24.5/);
+  assert.match(pageInfo, /14/);
+  assert.match(pageInfo, /43/);
+  assert.match(pageInfo, /1623/);
+  assert.match(pageInfo, /69.87/);
   const direct = await page.evaluate(() => window.TopGenesisPdfParser.extractMetrics(
     "Body Measurements (cm) Calf Left Region 157.686 Calf Right Region 162.757 Hip Region 680.131"
   ));
@@ -281,6 +351,148 @@ try {
   assert.doesNotMatch(suspiciousAnalysis,/BMI گزارش/,"Invalid BMI must not appear in the summary cards.");
   const escaped = await page.evaluate(() => window.TopGenesisSimpleAnalysis({weight_kg:{value:"<img src=x>",status:"needs_coach_review"}}));
   assert.doesNotMatch(escaped,/<img src=x>/,"Extracted text must be HTML-escaped.");
+
+
+  // Repeated body-composition and raw-region values must be exposed as conflicts, never silently overwritten.
+  const conflictingMass = await page.evaluate(() => window.TopGenesisPdfParser.extractMetrics(
+    "14 kg of fat mass 16 kg of fat mass 43 kg of lean body mass"
+  ));
+  assert.equal(conflictingMass.metrics.fat_mass_kg.value, 14);
+  assert.equal(conflictingMass.metrics.fat_mass_kg.status, "conflict_review");
+  assert.deepEqual(conflictingMass.metrics.fat_mass_kg.alternatives, [14, 16]);
+  const conflictingRawRegion = await page.evaluate(() => window.TopGenesisPdfParser.extractMetrics(
+    "Body Measurements (cm) Calf Left Region 157.686 Calf Left Region 160.000 Calf Right Region 162.757"
+  ));
+  assert.equal(conflictingRawRegion.metrics.raw_body_measurements.calf_left_cm.status, "conflict_review");
+  assert.deepEqual(conflictingRawRegion.metrics.raw_body_measurements.calf_left_cm.alternatives, [157.686, 160]);
+  assert.equal(conflictingRawRegion.metrics.bilateral_measurement_review, undefined,
+    "A side-to-side comparison must be withheld when one source side has conflicting PDF values.");
+
+  // The report picker renders real source-PDF pages, then builds separate branded report pages.
+  const selectableScanPages = page.locator("#scanPageGrid input[data-scan-page]");
+  assert.equal(await selectableScanPages.count(), 12, "All twelve PDF pages should be available for coach selection.");
+  assert.equal(await page.locator("#scanPageGrid img").count(), 12, "Each PDF page should have a rendered thumbnail.");
+  await page.locator("#scanPageGrid input[data-scan-page='4']").check();
+  await page.locator("#scanPageGrid input[data-scan-page='5']").check();
+  await page.locator("#scanQualityReview [data-quality-page='4'] select[data-quality='lighting']").selectOption("balanced");
+  await page.locator("#scanQualityReview [data-quality-page='4'] select[data-quality='background']").selectOption("plain");
+  await page.locator("#scanQualityReview [data-quality-page='4'] select[data-quality='completeness']").selectOption("full");
+  await page.locator("#scanQualityReview [data-quality-page='4'] select[data-quality='clarity']").selectOption("clear");
+  // Changing selected scan pages must not erase quality checks already entered for another page.
+  await page.locator("#scanPageGrid input[data-scan-page='5']").uncheck();
+  assert.equal(
+    await page.locator("#scanQualityReview [data-quality-page='4'] select[data-quality='background']").inputValue(),
+    "plain",
+    "Quality values must survive when another scan page is deselected."
+  );
+  await page.locator("#scanPageGrid input[data-scan-page='5']").check();
+  assert.equal(
+    await page.locator("#scanQualityReview [data-quality-page='4'] select[data-quality='clarity']").inputValue(),
+    "clear",
+    "Quality values must be restored when a scan page is reselected."
+  );
+  await page.locator("#scanQualityReview [data-quality-page='5'] select[data-quality='lighting']").selectOption("uneven");
+  await page.locator("#scanQualityReview [data-quality-page='5'] select[data-quality='completeness']").selectOption("cropped");
+  await page.locator("#reportSubjectName").fill("شاگرد آزمایشی");
+  await page.locator("#trainingAdvice").fill("تمرین مقاومتی بر اساس سطح و هدف شاگرد تنظیم شود.");
+  await page.locator("#nutritionAdvice").fill("برنامه غذایی پس از بررسی هدف و عادات غذایی شاگرد تنظیم شود.");
+  await page.locator("#buildFinalReport").click();
+  await page.waitForFunction(() => document.querySelectorAll("#reportPreview .report-page").length >= 6);
+  let reportPagesCount = await page.locator("#reportPreview .report-page").count();
+  assert.equal(reportPagesCount, 6, "Expected cover, metrics summary, raw/missing details, two scan-image pages, and coach summary.");
+  let reportText = await page.locator("#reportPreview").innerText();
+  assert.match(reportText, /گزارش هوشمند آنالیز بدن/);
+  assert.match(reportText, /شاگرد آزمایشی/);
+  assert.match(reportText, /57 کیلوگرم/);
+  assert.match(reportText, /14 کیلوگرم/);
+  assert.match(reportText, /نور: متعادل/);
+  assert.match(reportText, /بدن کامل داخل کادر/);
+  assert.match(reportText, /پیشنهاد تمرینی/);
+  assert.match(reportText, /ترکیب وزن ثبت‌شده/);
+  assert.match(reportText, /تصویر صفحه اصلی PDF · صفحه 4/);
+  assert.match(reportText, /تصویر صفحه اصلی PDF · صفحه 5/);
+  assert.match(reportText, /برش خودکار انجام نمی‌شود/);
+  assert.equal(await page.locator("#reportPreview .report-composition").count(), 1,
+    "A composition chart should appear when fat mass plus lean mass reconciles to total weight.");
+  assert.match(reportText, /مجتبی/);
+  assert.match(reportText, /جمع‌بندی ساده داده‌ها/);
+  assert.match(reportText, /کنترل BMI: مقدار گزارش 22\.0 و محاسبه از قد و وزن 22\.0 است؛ همخوانی اولیه دیده می‌شود/);
+  assert.match(reportText, /کنترل درصد چربی: نسبت توده چربی به وزن 24\.6٪ و مقدار گزارش 24\.5٪ است؛ همخوانی اولیه دیده می‌شود/);
+  assert.match(reportText, /سوخت‌وساز پایه و مصرف انرژی روزانه دو شاخص جدا هستند/);
+  assert.match(reportText, /ساعد چپ.*ثبت نشده است/);
+  assert.match(reportText, /واحد خام نگهداری شده‌اند/);
+  assert.equal(await page.locator("#reportPreview .report-scan-frame img").count(), 2,
+    "Two selected original PDF pages must appear as report images.");
+  assert.equal(await page.locator("#reportPreview .report-watermark").count(), reportPagesCount,
+    "Unapproved report pages must visibly remain drafts.");
+
+  // Manual coach approval remains explicit and removes the draft watermark only after checking the control.
+  await page.locator("#coachApproval").check();
+  await page.locator("#buildFinalReport").click();
+  await page.waitForFunction(() => document.querySelectorAll("#reportPreview .report-watermark").length === 0,
+    null, { timeout: 30000 });
+  assert.equal(await page.locator("#coachApproval").isChecked(), true);
+  assert.equal(await page.locator("#reportPreview .report-watermark").count(), 0);
+  reportText = await page.locator("#reportPreview").innerText();
+  assert.match(reportText, /بررسی دستی مربی انجام شده است/);
+
+  const mobileReportLayout = await page.evaluate(() => {
+    const node = document.querySelector("#reportPreview .report-page");
+    const rect = node.getBoundingClientRect();
+    return {
+      viewport: window.innerWidth,
+      reportWidth: rect.width,
+      reportScrollWidth: node.scrollWidth,
+      reportClientWidth: node.clientWidth,
+      documentWidth: document.documentElement.scrollWidth
+    };
+  });
+  assert.ok(mobileReportLayout.reportWidth <= mobileReportLayout.viewport + 2,
+    "The report page must fit the phone viewport without horizontal expansion.");
+  assert.ok(mobileReportLayout.reportScrollWidth <= mobileReportLayout.reportClientWidth + 4,
+    "The report page content must not overflow horizontally on a phone.");
+
+  // Verify print/PDF layout and page breaks.
+  await page.evaluate(() => document.body.classList.add("print-report"));
+  const printPdfBytes = await page.pdf({ format: "A4", printBackground: true });
+  const printPdf = await PDFDocument.load(printPdfBytes);
+  assert.equal(printPdf.getPageCount(), reportPagesCount,
+    "Each branded report page should fit exactly one printed page without an extra spillover page.");
+  assert.ok(printPdfBytes.byteLength > 10000, "The printable report should not be an empty PDF.");
+  await page.evaluate(() => document.body.classList.remove("print-report"));
+
+  // Stub the mobile share sheet and verify the actual multi-page PNG files are generated.
+  await page.evaluate(() => {
+    Object.defineProperty(navigator, "canShare", { configurable: true, value: () => true });
+    Object.defineProperty(navigator, "share", {
+      configurable: true,
+      value: async payload => {
+        const readFile = file => new Promise((resolve,reject) => {
+          const reader = new FileReader();
+          reader.onload = () => resolve({ name:file.name, size:file.size, dataUrl:reader.result });
+          reader.onerror = reject;
+          reader.readAsDataURL(file);
+        });
+        window.__sharedReportPngData = await Promise.all(payload.files.map(readFile));
+      }
+    });
+  });
+  await page.locator("#shareReport").click();
+  await page.waitForFunction(() => Array.isArray(window.__sharedReportPngData) && window.__sharedReportPngData.length === 6,
+    null, { timeout: 120000 });
+  const sharedPngData = await page.evaluate(() => window.__sharedReportPngData);
+  const artifactDir = path.join(process.env.RUNNER_TEMP || os.tmpdir(), "top-genesis-report-artifacts");
+  fs.rmSync(artifactDir, { recursive:true, force:true });
+  fs.mkdirSync(artifactDir, { recursive:true });
+  for (const item of sharedPngData) {
+    assert.match(item.name, /\.png$/i);
+    assert.ok(item.size > 10000, "Each generated PNG should contain a full report page.");
+    const pngBytes = Buffer.from(String(item.dataUrl).split(",")[1], "base64");
+    assert.deepEqual([...pngBytes.subarray(0,8)], [137,80,78,71,13,10,26,10], "Generated file must be a valid PNG.");
+    fs.writeFileSync(path.join(artifactDir,item.name), pngBytes);
+  }
+  assert.equal(sharedPngData.length, reportPagesCount);
+  assert.deepEqual(supabaseRequests, [], "PDF parsing and PNG generation must not send files or results to Supabase.");
 
   assert.deepEqual(pageErrors, [], `Browser page errors: ${pageErrors.join("; ")}`);
 

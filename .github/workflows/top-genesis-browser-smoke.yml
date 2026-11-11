@@ -40,3 +40,10 @@ jobs:
         run: npx playwright install --with-deps chromium
       - name: Test PDF.js and OCR in Chromium
         run: node tests/top-genesis-browser-smoke.mjs
+      - name: Upload generated report PNG pages
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: top-genesis-report-png-smoke
+          path: ${{ runner.temp }}/top-genesis-report-artifacts/*.png
+          if-no-files-found: warn
