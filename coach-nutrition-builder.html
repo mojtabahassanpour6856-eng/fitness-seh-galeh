@@ -40,6 +40,15 @@ td input,td select{width:100%;min-width:0;border:1px solid #e5dcc8;border-radius
 .nutrition-template-loading{grid-column:1/-1;text-align:center;font-size:10px;color:#82765f;padding:10px}
 @media(min-width:600px){.nutrition-template-grid{grid-template-columns:repeat(5,minmax(0,1fr))}.nutrition-template-card:last-child:nth-child(odd){grid-column:auto}.nutrition-template-card{padding:7px}.nutrition-template-card-name{font-size:10px}}
 @media(max-width:390px){.nutrition-template-box{padding:8px}.nutrition-template-grid{gap:5px}.nutrition-template-card{padding:6px}.nutrition-template-card-name{font-size:10px}.nutrition-template-card button{font-size:9px}}
+
+.plan-meta-box{margin:12px 0;padding:13px;border:1px solid #d9c89f;border-radius:14px;background:#fffdf7}
+.plan-meta-title{font-weight:800;color:#80652d;margin-bottom:10px}
+.plan-meta-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.plan-meta-grid label{display:flex;flex-direction:column;gap:5px;font-size:13px;font-weight:700;color:#55482f}
+.plan-meta-grid input,.plan-meta-grid textarea{box-sizing:border-box;width:100%;min-width:0;padding:10px;border:1px solid #d8cfbb;border-radius:9px;background:#fff;color:#29251d;font:inherit}
+.plan-meta-grid textarea{resize:vertical;min-height:58px}
+.plan-notes-field{grid-column:1/-1}
+@media(max-width:420px){.plan-meta-grid{grid-template-columns:1fr}.plan-notes-field{grid-column:auto}}
 </style></head>
 <body>
 <header><h1>باشگاه فیتنس سه‌قلعه</h1><div class="sub">برنامه‌ساز غذایی · پیش‌نمایش تعاملی مربی</div></header>
@@ -57,6 +66,15 @@ td input,td select{width:100%;min-width:0;border:1px solid #e5dcc8;border-radius
   <div class="nutrition-template-loading">در حال دریافت الگوهای ذخیره‌شده…</div>
  </div>
  <div class="nutrition-template-help">برای ساخت هر الگو، برنامه کامل را در همین قالب آماده کن و «ذخیره در این کارت» را بزن. پس از ذخیره، کارت فقط دکمه «کپی در برنامه» را نشان می‌دهد. کپی‌کردن هیچ تغییری در پرونده شاگرد ایجاد نمی‌کند؛ ثبت برای شاگرد همچنان با دکمه ثبت برنامه انجام می‌شود.</div>
+</section>
+<section class="plan-meta-box" id="planMetaFields">
+ <div class="plan-meta-title">📝 مشخصات برنامه غذایی</div>
+ <div class="plan-meta-grid">
+  <label>عنوان برنامه<input id="planTitleInput" type="text" maxlength="120" placeholder="مثلاً برنامه افزایش وزن معمولی"></label>
+  <label>تاریخ شروع<input id="planStartInput" type="date"></label>
+  <label>تاریخ پایان<input id="planEndInput" type="date"></label>
+  <label class="plan-notes-field">یادداشت برنامه<textarea id="planNotesInput" rows="2" maxlength="2000" placeholder="توضیحات و نکات مربی برای شاگرد…"></textarea></label>
+ </div>
 </section>
 <div class="target-grid" id="autoTargets"><div class="target-caption"><strong>🎯 اهداف روزانه برنامه</strong><br><span id="targetSource">با انتخاب شاگرد، در صورت وجود اطلاعات کافی به‌صورت خودکار محاسبه می‌شوند؛ امکان ویرایش دستی وجود دارد.</span></div><label>کالری روزانه<input id="targetCaloriesInput" type="number" min="0" step="1" inputmode="numeric"></label><label>پروتئین هدف (گرم)<input id="targetProteinInput" type="number" min="0" step="1" inputmode="numeric"></label><label>کربوهیدرات هدف (گرم)<input id="targetCarbsInput" type="number" min="0" step="1" inputmode="numeric"></label><label>چربی هدف (گرم)<input id="targetFatInput" type="number" min="0" step="1" inputmode="numeric"></label></div>
 <div class="top-actions"><button class="save-all" id="saveAllBtn" onclick="saveAll()">💾 ثبت تمام برنامه غذایی در پرونده شاگرد</button><button class="save-all" style="background:#75633e" onclick="toggleStudentPreview()">👤 پیش‌نمایش شاگرد</button></div><div id="studentPreview" class="summary" style="display:none"></div>
@@ -521,6 +539,10 @@ async function loadBuilderContext(){
   document.getElementById('planTitle').value=ctx.plan?.title||'برنامه غذایی';
   document.getElementById('planStart').value=ctx.plan?.start_date||new Date().toISOString().slice(0,10);
   document.getElementById('planEnd').value=ctx.plan?.end_date||'';
+  document.getElementById('planTitleInput').value=ctx.plan?.title||'برنامه غذایی';
+  document.getElementById('planStartInput').value=ctx.plan?.start_date||new Date().toISOString().slice(0,10);
+  document.getElementById('planEndInput').value=ctx.plan?.end_date||'';
+  document.getElementById('planNotesInput').value=ctx.plan?.notes||'';
   const savedTargets={daily_calories:ctx.plan?.daily_calories,protein_target:ctx.plan?.protein_target,carbs_target:ctx.plan?.carbs_target,fat_target:ctx.plan?.fat_target};
   const hasSavedTargets=Object.values(savedTargets).some(v=>v!==null&&v!==undefined&&v!=='');
   if(changedTrainee||!targetManualDirty){const next={};['daily_calories','protein_target','carbs_target','fat_target'].forEach(k=>{const v=savedTargets[k];next[k]=(v!==null&&v!==undefined&&v!=='')?v:(calculated?calculated[k]:'')});syncTargetFields(next)}
@@ -596,7 +618,12 @@ async function saveAllToTrainee(){
   setConnectionStatus('ثبت انجام نشد؛ اطلاعات ناقص است و چیزی در پرونده شاگرد تغییر نکرد.',false);
   return;
  }
- const plan={title:document.getElementById('planTitle').value.trim()||'برنامه غذایی',start_date:document.getElementById('planStart').value||null,end_date:document.getElementById('planEnd').value||null,daily_calories:Number(document.getElementById('targetCaloriesInput').value)||null,protein_target:Number(document.getElementById('targetProteinInput').value)||null,carbs_target:Number(document.getElementById('targetCarbsInput').value)||null,fat_target:Number(document.getElementById('targetFatInput').value)||null,notes:builderExistingNotes}
+ const titleValue=document.getElementById('planTitleInput').value.trim()||'برنامه غذایی';
+ const startValue=document.getElementById('planStartInput').value||null;
+ const endValue=document.getElementById('planEndInput').value||null;
+ if(startValue&&endValue&&endValue<startValue){notify('تاریخ پایان نمی‌تواند قبل از تاریخ شروع باشد.');return}
+ const notesValue=document.getElementById('planNotesInput').value.trim();
+ const plan={title:titleValue,start_date:startValue,end_date:endValue,daily_calories:Number(document.getElementById('targetCaloriesInput').value)||null,protein_target:Number(document.getElementById('targetProteinInput').value)||null,carbs_target:Number(document.getElementById('targetCarbsInput').value)||null,fat_target:Number(document.getElementById('targetFatInput').value)||null,notes:notesValue}
  builderBusy=true;const btn=document.getElementById('saveAllBtn');btn.disabled=true;btn.textContent='در حال ثبت امن برنامه…';
  try{
   const result=await parentBridge().save({trainee_id:String(builderTrainee.id),plan,meals});
