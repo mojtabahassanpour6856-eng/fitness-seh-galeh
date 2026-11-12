@@ -13612,7 +13612,11 @@ window.sehResetTurnstile=function(){};
     if(weight.present) payload.current_weight = weight.value;
     if(height.present) payload.height = height.value;
 
-    const birthRaw = val('pbirth');
+    // The Jalali picker overrides input.value to expose Gregorian ISO for legacy callers.
+    // Read the actual visible Jalali text here before converting it to the database ISO date.
+    const birthRaw = typeof window.getJalaliVisibleValue === 'function'
+      ? window.getJalaliVisibleValue('pbirth')
+      : val('pbirth');
     let birthISO = '';
     if(birthRaw){
       const normalizedBirth = toAsciiDigits(birthRaw).replace(/[.-]/g,'/');
