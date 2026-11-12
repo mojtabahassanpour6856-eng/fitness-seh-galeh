@@ -690,18 +690,33 @@ Waist-Hip Ratio (WHO),0.889
   // The trainee progress component is independent of the analyzer iframe. Use a clean page
   // so PDF.js/OCR bootstrapping cannot block the role/history smoke test.
   console.log("[smoke] using isolated trainee progress page");
-  await traineeProgressPage.addScriptTag({ content:
-    "let authProfile = { role: 'trainee', trainee_id: 'trainee-fixture-1' }; " +
-    "let currentClient = { id: 'trainee-fixture-1' }; " +
-    "window.AUTH_SUPABASE = { from() { const orderCount = { value: 0 }; const chain = { " +
-    "select() { return this; }, eq() { return this; }, " +
-    "order() { orderCount.value += 1; return orderCount.value === 1 ? this : Promise.resolve({ data: [" +
-    "{ id:'a1', analysis_date:'2026-10-01', report_metrics:{ weight_kg:{value:82,unit:'kg',status:'needs_coach_review'}, body_fat_percent:{value:22,unit:'%',status:'needs_coach_review'} }, training_notes:'تمرین مقاومتی طبق برنامه', nutrition_notes:'پروتئین کافی' }," +
-    "{ id:'a2', analysis_date:'2026-11-01', report_metrics:{ weight_kg:{value:79,unit:'kg',status:'needs_coach_review'}, body_fat_percent:{value:19,unit:'%',status:'needs_coach_review'} }, training_notes:'افزایش تدریجی فشار تمرین', nutrition_notes:'تنظیم کالری روزانه' }" +
-    "], error:null }); } }; return chain; } }; " +
-    "const section=document.createElement('section'); section.id='traineeAnalysis'; section.className='section active'; " +
-    "section.innerHTML='<div id=traineeAnalysisArchive></div>'; document.body.appendChild(section);"
+  await traineeProgressPage.evaluate(() => {
+    window.authProfile = { role: "trainee", trainee_id: "trainee-fixture-1" };
+    window.currentClient = { id: "trainee-fixture-1" };
+    window.AUTH_SUPABASE = {
+      from() {
+        const orderCount = { value: 0 };
+        const chain = {
+          select() { return this; },
+          eq() { return this; },
+          order() {
+            orderCount.value += 1;
+            return orderCount.value === 1 ? this : Promise.resolve({ data: [
+              { id:"a1", analysis_date:"2026-10-01", report_metrics:{ weight_kg:{value:82,unit:"kg",status:"needs_coach_review"}, body_fat_percent:{value:22,unit:"%",status:"needs_coach_review"} }, training_notes:"تمرین مقاومتی طبق برنامه", nutrition_notes:"پروتئین کافی" },
+              { id:"a2", analysis_date:"2026-11-01", report_metrics:{ weight_kg:{value:79,unit:"kg",status:"needs_coach_review"}, body_fat_percent:{value:19,unit:"%",status:"needs_coach_review"} }, training_notes:"افزایش تدریجی فشار تمرین", nutrition_notes:"تنظیم کالری روزانه" }
+            ], error:null });
+          }
+        };
+        return chain;
+      }
+    };
+    const section=document.createElement("section");
+    section.id="traineeAnalysis";
+    section.className="section active";
+    section.innerHTML='<div id="traineeAnalysisArchive"></div>';
+    document.body.appendChild(section);
   });
+  console.log("[smoke] trainee fixture configured");
   await traineeProgressPage.addScriptTag({ path: path.join(root, "top-genesis-publication.js") });
   console.log('[smoke] publication script loaded');
   await traineeProgressPage.waitForSelector("#topGenesisPublishedProgress");
@@ -742,7 +757,7 @@ Waist-Hip Ratio (WHO),0.889
   // Switching roles inside the same SPA must move the report card, not strand it in coach view.
   console.log("[smoke] starting trainee-to-coach role switch");
   await traineeProgressPage.evaluate(() => {
-    authProfile.role = "coach";
+    window.authProfile.role = "coach";
     const progress = document.createElement("section");
     progress.id = "progress";
     progress.className = "section";
@@ -752,7 +767,7 @@ Waist-Hip Ratio (WHO),0.889
   await traineeProgressPage.waitForFunction(() =>
     document.querySelector("#topGenesisPublishedProgress")?.closest("#progress"));
   console.log("[smoke] report moved to coach progress");
-  await traineeProgressPage.evaluate(() => { authProfile.role = "trainee"; });
+  await traineeProgressPage.evaluate(() => { window.authProfile.role = "trainee"; });
   await traineeProgressPage.waitForFunction(() =>
     document.querySelector("#topGenesisPublishedProgress")?.closest("#traineeAnalysis"));
   console.log("[smoke] report returned to trainee analysis");
