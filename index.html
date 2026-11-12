@@ -634,7 +634,7 @@ body.locked{overflow:hidden!important}
 </div>
 <button onclick="saveProfile()">ذخیره پروفایل</button>
 <button type="button" id="sehDeleteTraineePhotoEdit" class="secondary" style="display:none;margin-top:8px" onclick="window.sehDeleteTraineePhoto()">🗑️ حذف عکس پروفایل</button>
-<button class="secondary" onclick="openClientMealPlan()">🍽️ برنامه غذایی این شاگرد</button>
+
 </div>
 
 
@@ -1380,8 +1380,24 @@ async function saveProfile(){
   await loadClients();
   if(currentClient&&String(currentClient.id)===String(traineeId)){
    currentClient=clients.find(x=>String(x.id)===String(traineeId))||currentClient;
-   if(document.getElementById("page"))document.getElementById("page").value=currentClient.age??"";
-   if(document.getElementById("pbirth"))document.getElementById("pbirth").value=window.isoToJalaliDate?.(currentClient.birth_date)||"";
+   // Immediately synchronize the visible profile with the freshly loaded record.
+   const profileFields=[
+    ["pn",currentClient.full_name??currentClient.name??""],
+    ["pweight",currentClient.current_weight??currentClient.weight??""],
+    ["pheight",currentClient.height??""],
+    ["page",currentClient.age??""],
+    ["pbirth",window.isoToJalaliDate?.(currentClient.birth_date)||""],
+    ["pgoal",currentClient.goal??""],
+    ["plevel",currentClient.training_level??currentClient.level??""],
+    ["ptype",currentClient.training_type??"gym"],
+    ["pequipment",currentClient.home_equipment??""]
+   ];
+   profileFields.forEach(([id,value])=>{const field=document.getElementById(id);if(field)field.value=value??"";});
+   if(typeof window.renderTraineeProfileHeader==="function"){
+    const headerRoot=document.getElementById("traineeDashboard")||document.getElementById("client");
+    if(headerRoot)window.renderTraineeProfileHeader(headerRoot);
+   }
+   if(typeof window.renderClients==="function")window.renderClients();
   }
   alert("پروفایل شاگرد ذخیره شد و پاسخ پایگاه داده تأیید شد.");
  }catch(e){console.error("saveProfile failed",e);alert("ذخیره پروفایل تأیید نشد.\\n"+(e.message||String(e)));}
