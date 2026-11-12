@@ -646,7 +646,7 @@ Waist-Hip Ratio (WHO),0.889
   // Verify the analyzer mounts independently of the legacy archive module,
   // appears for coaches, and is hidden for trainees.
   const integrationPage = await browser.newPage();
-  await integrationPage.goto(`http://127.0.0.1:\${address.port}/top-genesis-pdf-test.html`);
+  await integrationPage.goto(`http://127.0.0.1:${address.port}/top-genesis-pdf-test.html`);
   await integrationPage.evaluate(() => {
     const anchor = document.createElement("section");
     anchor.id = "bodyAnalysisEntryPanel";
