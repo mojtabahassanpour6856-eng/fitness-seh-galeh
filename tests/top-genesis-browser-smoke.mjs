@@ -649,7 +649,11 @@ Waist-Hip Ratio (WHO),0.889
   await integrationPage.waitForSelector("#topGenesisArchivePanel");
   assert.equal(await integrationPage.locator("#topGenesisPdfAnalyzerPanel").evaluate(el => el.style.display), "block");
   assert.match(await integrationPage.locator("#topGenesisPdfAnalyzerFrame").getAttribute("src"), /top-genesis-pdf-test\.html\?embedded=1/);
-  await integrationPage.evaluate(() => { window.authProfile = { role: "trainee" }; });
+  await integrationPage.evaluate(() => {
+    window.authProfile = { role: "trainee" };
+    // A real SPA role switch also updates the visible panel DOM.
+    document.body.appendChild(document.createElement("div"));
+  });
   await integrationPage.waitForFunction(() =>
     !document.querySelector("#topGenesisArchivePanel"), null, { timeout: 7000 });
   assert.equal(await integrationPage.locator("#topGenesisArchivePanel").count(), 0,
