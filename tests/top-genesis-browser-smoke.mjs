@@ -657,7 +657,7 @@ Waist-Hip Ratio (WHO),0.889
     "{ id:'a2', analysis_date:'2026-11-01', report_metrics:{ weight_kg:{value:79,unit:'kg',status:'needs_coach_review'}, body_fat_percent:{value:19,unit:'%',status:'needs_coach_review'} }, training_notes:'افزایش تدریجی فشار تمرین', nutrition_notes:'تنظیم کالری روزانه' }" +
     "], error:null }); } }; return chain; } }; " +
     "const section=document.createElement('section'); section.id='traineeAnalysis'; section.className='section active'; " +
-    "section.innerHTML='<div id=\\"traineeAnalysisArchive\\"></div>'; document.body.appendChild(section);"
+    "section.innerHTML='<div id=traineeAnalysisArchive></div>'; document.body.appendChild(section);"
   });
   await traineeProgressPage.addScriptTag({ path: path.join(root, "top-genesis-publication.js") });
   await traineeProgressPage.waitForSelector("#topGenesisPublishedProgress");
