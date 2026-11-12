@@ -690,6 +690,9 @@ Waist-Hip Ratio (WHO),0.889
   // The trainee progress component is independent of the analyzer iframe. Use a clean page
   // so PDF.js/OCR bootstrapping cannot block the role/history smoke test.
   console.log("[smoke] using isolated trainee progress page");
+  traineeProgressPage.setDefaultTimeout(15000);
+  await traineeProgressPage.goto("data:text/html,<html><head><title>trainee-fixture</title></head><body></body></html>");
+  console.log("[smoke] trainee fixture document ready");
   await traineeProgressPage.evaluate(() => {
     window.authProfile = { role: "trainee", trainee_id: "trainee-fixture-1" };
     window.currentClient = { id: "trainee-fixture-1" };
