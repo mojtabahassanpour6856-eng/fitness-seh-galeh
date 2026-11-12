@@ -107,6 +107,50 @@
       dots + labels + '</svg><div style="display:flex;justify-content:space-between;font-size:12px;color:#756b59">' +
       '<span>کمترین: ' + fa(min, 2) + '</span><span>بیشترین: ' + fa(max, 2) + '</span></div></article>';
   }
+  function persianMonthKey(date) {
+    const parts = new Intl.DateTimeFormat("en-US-u-ca-persian", {
+      year: "numeric", month: "numeric"
+    }).formatToParts(date);
+    return parts.find(part => part.type === "year")?.value + "/" +
+      parts.find(part => part.type === "month")?.value;
+  }
+  function currentPersianMonthRange(now = new Date()) {
+    const key = persianMonthKey(now);
+    const cursor = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 12);
+    while (persianMonthKey(cursor) === key) cursor.setDate(cursor.getDate() - 1);
+    cursor.setDate(cursor.getDate() + 1);
+    const from = cursor.toISOString().slice(0, 10);
+    while (persianMonthKey(cursor) === key) cursor.setDate(cursor.getDate() + 1);
+    return { from, to: cursor.toISOString().slice(0, 10) };
+  }
+  function rowDetails(row) {
+    const metrics = row.report_metrics || {};
+    const main = Object.keys(METRIC_LABELS).map(key => {
+      const metric = metrics[key];
+      if (!validMetric(metric)) return "";
+      return '<div style="border:1px solid #eadfc9;border-radius:9px;padding:8px;background:#fff">' +
+        '<small>' + esc(METRIC_LABELS[key][0]) + '</small><b style="display:block;color:#765b2e">' +
+        esc(metricValue(metric, key)) + '</b></div>';
+    }).join("");
+    const names = {
+      calf_left_cm:"ساق چپ",calf_right_cm:"ساق راست",thigh_left_cm:"ران چپ",thigh_right_cm:"ران راست",
+      upper_arm_left_cm:"بازوی چپ",upper_arm_right_cm:"بازوی راست",bicep_left_cm:"بازوی چپ",bicep_right_cm:"بازوی راست",
+      forearm_left_cm:"ساعد چپ",forearm_right_cm:"ساعد راست",chest_cm:"دور سینه",chest_region_cm:"ناحیه سینه",
+      hip_cm:"دور باسن",hip_region_cm:"ناحیه باسن",waist_abdominal_cm:"دور شکم",waist_lower_cm:"دور کمر پایین",
+      waist_narrowest_cm:"باریک‌ترین قسمت کمر",lower_waist_region_cm:"ناحیه کمر پایین",upper_waist_region_cm:"ناحیه کمر بالا"
+    };
+    const measures = Object.entries(metrics.body_measurements_cm || {}).map(([key, metric]) => {
+      if (!validMetric(metric)) return "";
+      return '<div style="border:1px solid #eadfc9;border-radius:8px;padding:7px;background:#fff"><small>' +
+        esc(names[key] || "اندازه ثبت‌شده") + '</small><b style="display:block;color:#765b2e">' +
+        esc(fa(metric.value, 2) + " " + (metric.unit === "cm" ? "سانتی‌متر" : metric.unit || "")) +
+        '</b></div>';
+    }).join("");
+    return '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(125px,1fr));gap:7px">' + main + '</div>' +
+      (measures ? '<h4>اندازه‌های بدنی</h4><div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(115px,1fr));gap:7px">' + measures + '</div>' : '') +
+      '<h4>توصیه تمرینی مربی</h4><p>' + esc(row.training_notes || "ثبت نشده") + '</p>' +
+      '<h4>توصیه تغذیه‌ای مربی</h4><p>' + esc(row.nutrition_notes || "ثبت نشده") + '</p>';
+  }
   function renderPublished(rows, traineeId) {
     const body = $("topGenesisPublishedBody");
     if (!body || currentTraineeId() !== traineeId) return;
@@ -123,41 +167,70 @@
         esc(metricValue(metric, key)) + '</b></div>';
     }).join("");
     const charts = CHART_KEYS.map(key => chartCard(rows, key)).filter(Boolean).join("");
-    const bodyNames = {
-      calf_left_cm: "ساق چپ", calf_right_cm: "ساق راست",
-      thigh_left_cm: "ران چپ", thigh_right_cm: "ران راست",
-      upper_arm_left_cm: "بازوی چپ", upper_arm_right_cm: "بازوی راست",
-      bicep_left_cm: "بازوی چپ", bicep_right_cm: "بازوی راست",
-      forearm_left_cm: "ساعد چپ", forearm_right_cm: "ساعد راست",
-      chest_cm: "دور سینه", chest_region_cm: "ناحیه سینه",
-      hip_cm: "دور باسن", hip_region_cm: "ناحیه باسن",
-      waist_abdominal_cm: "دور شکم", waist_lower_cm: "دور کمر پایین",
-      waist_narrowest_cm: "باریک‌ترین قسمت کمر",
-      lower_waist_region_cm: "ناحیه کمر پایین", upper_waist_region_cm: "ناحیه کمر بالا"
-    };
-    const bodyMeasurements = latest.report_metrics?.body_measurements_cm || {};
-    const bodyMeasurementCards = Object.entries(bodyMeasurements).map(([key, metric]) => {
+    const latestMeasurements = Object.entries(latest.report_metrics?.body_measurements_cm || {}).map(([key, metric]) => {
       if (!validMetric(metric)) return "";
-      const label = bodyNames[key] || "اندازه ثبت‌شده";
-      return '<div style="border:1px solid #eadfc9;border-radius:9px;padding:8px;background:#fff">' +
-        '<small>' + esc(label) + '</small><b style="display:block;color:#765b2e">' +
-        esc(fa(metric.value, 2) + " " + (metric.unit === "cm" ? "سانتی‌متر" : metric.unit || "")) +
-        '</b></div>';
+      const labels = {calf_left_cm:"ساق چپ",calf_right_cm:"ساق راست",thigh_left_cm:"ران چپ",thigh_right_cm:"ران راست",
+        upper_arm_left_cm:"بازوی چپ",upper_arm_right_cm:"بازوی راست",bicep_left_cm:"بازوی چپ",bicep_right_cm:"بازوی راست",
+        forearm_left_cm:"ساعد چپ",forearm_right_cm:"ساعد راست",chest_cm:"دور سینه",chest_region_cm:"ناحیه سینه",
+        hip_cm:"دور باسن",hip_region_cm:"ناحیه باسن",waist_abdominal_cm:"دور شکم",waist_lower_cm:"دور کمر پایین",
+        waist_narrowest_cm:"باریک‌ترین قسمت کمر",lower_waist_region_cm:"ناحیه کمر پایین",upper_waist_region_cm:"ناحیه کمر بالا"};
+      return '<div style="border:1px solid #eadfc9;border-radius:9px;padding:8px;background:#fff"><small>' +
+        esc(labels[key] || "اندازه ثبت‌شده") + '</small><b style="display:block;color:#765b2e">' +
+        esc(fa(metric.value, 2) + " " + (metric.unit === "cm" ? "سانتی‌متر" : metric.unit || "")) + '</b></div>';
     }).join("");
-    const archive = rows.slice().reverse().map(row => {
-      const count = Object.keys(METRIC_LABELS).filter(key => validMetric(row.report_metrics?.[key])).length;
-      return '<article style="border:1px solid #eee3d1;border-radius:10px;padding:10px;margin:8px 0;background:#fff">' +
-        '<b>' + esc(dateFa(row.analysis_date)) + '</b><div class="muted" style="font-size:12px;margin-top:4px">' +
-        fa(count, 0) + ' شاخص معتبر ثبت‌شده</div>' +
-        '<div style="font-size:13px;margin-top:6px">' + esc(row.training_notes || "") + '</div>' +
-        '<div style="font-size:13px;margin-top:4px">' + esc(row.nutrition_notes || "") + '</div></article>';
-    }).join("");
-    body.innerHTML = '<p>آخرین آنالیز ارسال‌شده: <b>' + esc(dateFa(latest.analysis_date)) + '</b></p>' +
+    body.innerHTML = '<section style="padding:10px;border:1px solid #eadfc9;border-radius:12px;background:#fff">' +
+      '<p>آخرین آنالیز ارسال‌شده: <b>' + esc(dateFa(latest.analysis_date)) + '</b></p>' +
       '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(135px,1fr));gap:8px">' + cards + '</div>' +
-      (bodyMeasurementCards ? '<h3 style="margin-top:18px">اندازه‌های بدنی</h3><div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:7px">' + bodyMeasurementCards + '</div>' : '') +
-      '<h3 style="margin-top:18px">روند تغییرات آنالیزها</h3>' +
+      (latestMeasurements ? '<h3>اندازه‌های بدنی آخرین آنالیز</h3><div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:7px">' + latestMeasurements + '</div>' : '') +
+      '</section><h3 style="margin-top:18px">روند تغییرات همه آنالیزها</h3>' +
       (charts || '<p class="muted">با ارسال آنالیز بعدی، نمودار روند شاخص‌های قابل‌مقایسه در این قسمت فعال می‌شود.</p>') +
-      '<h3 style="margin-top:18px">تاریخچه و توصیه‌های مربی</h3>' + archive;
+      '<h3 style="margin-top:18px">تاریخچه آنالیزها</h3>' +
+      '<div id="topGenesisHistoryFilters" style="display:flex;flex-wrap:wrap;gap:7px;align-items:center;margin:10px 0">' +
+      '<label>نمایش <select id="topGenesisHistoryMode" style="padding:8px;border:1px solid #d8c69e;border-radius:8px"><option value="latest">آخرین آنالیز</option><option value="month">این ماه</option><option value="all">همه آنالیزها</option><option value="range">انتخاب بازه تاریخ</option></select></label>' +
+      '<label id="topGenesisDateFromWrap" hidden>از تاریخ <input id="topGenesisDateFrom" type="date" lang="fa-IR" style="padding:7px;border:1px solid #d8c69e;border-radius:8px"></label>' +
+      '<label id="topGenesisDateToWrap" hidden>تا تاریخ <input id="topGenesisDateTo" type="date" lang="fa-IR" style="padding:7px;border:1px solid #d8c69e;border-radius:8px"></label>' +
+      '<span id="topGenesisHistoryCount" class="muted" style="font-size:12px"></span></div>' +
+      '<div id="topGenesisHistoryList"></div>';
+    const mode = $("topGenesisHistoryMode");
+    const from = $("topGenesisDateFrom");
+    const to = $("topGenesisDateTo");
+    const renderHistory = () => {
+      const selected = mode.value;
+      $("topGenesisDateFromWrap").hidden = selected !== "range";
+      $("topGenesisDateToWrap").hidden = selected !== "range";
+      let filtered = rows.slice().reverse();
+      if (selected === "latest") filtered = filtered.slice(0, 1);
+      else if (selected === "month") {
+        const range = currentPersianMonthRange();
+        filtered = filtered.filter(row => row.analysis_date >= range.from && row.analysis_date < range.to);
+      } else if (selected === "range") {
+        if (from.value) filtered = filtered.filter(row => row.analysis_date >= from.value);
+        if (to.value) filtered = filtered.filter(row => row.analysis_date <= to.value);
+      }
+      $("topGenesisHistoryCount").textContent = fa(filtered.length, 0) + " گزارش";
+      $("topGenesisHistoryList").innerHTML = filtered.length ? filtered.map(row => {
+        const count = Object.keys(METRIC_LABELS).filter(key => validMetric(row.report_metrics?.[key])).length;
+        return '<article style="border:1px solid #eee3d1;border-radius:10px;padding:10px;margin:8px 0;background:#fff">' +
+          '<div style="display:flex;justify-content:space-between;gap:8px;align-items:center;flex-wrap:wrap"><b>' +
+          esc(dateFa(row.analysis_date)) + '</b><button type="button" data-history-details="' + esc(row.id) +
+          '" aria-expanded="false" style="border:1px solid #c5a45b;border-radius:8px;background:#fffaf0;padding:7px 11px;color:#765b2e">مشاهده جزئیات</button></div>' +
+          '<div class="muted" style="font-size:12px;margin-top:5px">' + fa(count, 0) + ' شاخص معتبر ثبت‌شده</div>' +
+          '<div id="topGenesisDetails-' + esc(row.id) + '" hidden style="margin-top:12px">' + rowDetails(row) + '</div></article>';
+      }).join("") : '<p class="muted">در این بازه گزارشی ثبت نشده است.</p>';
+    };
+    mode.addEventListener("change", renderHistory);
+    from.addEventListener("change", renderHistory);
+    to.addEventListener("change", renderHistory);
+    $("topGenesisHistoryList").addEventListener("click", event => {
+      const button = event.target.closest("[data-history-details]");
+      if (!button) return;
+      const panel = $("topGenesisDetails-" + button.dataset.historyDetails);
+      if (!panel) return;
+      panel.hidden = !panel.hidden;
+      button.setAttribute("aria-expanded", String(!panel.hidden));
+      button.textContent = panel.hidden ? "مشاهده جزئیات" : "بستن جزئیات";
+    });
+    renderHistory();
   }
   async function loadPublished(force) {
     const traineeId = currentTraineeId();

@@ -669,7 +669,30 @@ Waist-Hip Ratio (WHO),0.889
   });
   assert.match(await traineeProgressPage.locator("#topGenesisPublishedProgress").innerText(), /گزارش‌های تأییدشده آنالیز بدن/);
   assert.match(await traineeProgressPage.locator("#topGenesisPublishedBody").innerText(), /۷۹/);
-  assert.match(await traineeProgressPage.locator("#topGenesisPublishedBody").innerText(), /توصیه‌های مربی/);
+  assert.match(await traineeProgressPage.locator("#topGenesisPublishedBody").innerText(), /تاریخچه آنالیزها/);
+  // History filters and per-report detail panels must not alter the all-history trend.
+  const historyMode = traineeProgressPage.locator("#topGenesisHistoryMode");
+  assert.equal(await historyMode.inputValue(), "latest");
+  assert.equal(await traineeProgressPage.locator("#topGenesisHistoryList article").count(), 1);
+  await historyMode.selectOption("all");
+  assert.equal(await traineeProgressPage.locator("#topGenesisHistoryList article").count(), 2);
+  await traineeProgressPage.locator('[data-history-details="a1"]').click();
+  assert.equal(await traineeProgressPage.locator("#topGenesisDetails-a1").isVisible(), true);
+  assert.match(await traineeProgressPage.locator("#topGenesisDetails-a1").innerText(), /۸۲|82/);
+  assert.match(await traineeProgressPage.locator("#topGenesisDetails-a1").innerText(), /توصیه تمرینی مربی/);
+  assert.match(await traineeProgressPage.locator("#topGenesisDetails-a1").innerText(), /تمرین مقاومتی طبق برنامه/);
+  assert.match(await traineeProgressPage.locator("#topGenesisDetails-a1").innerText(), /پروتئین کافی/);
+  await historyMode.selectOption("month");
+  assert.equal(await traineeProgressPage.locator("#topGenesisHistoryList article").count(), 1,
+    "Persian current-month filter should include only the November fixture.");
+  await historyMode.selectOption("range");
+  await traineeProgressPage.locator("#topGenesisDateFrom").fill("2026-10-01");
+  await traineeProgressPage.locator("#topGenesisDateTo").fill("2026-10-01");
+  assert.equal(await traineeProgressPage.locator("#topGenesisHistoryList article").count(), 1,
+    "Date range should select the matching report date.");
+  assert.ok(await traineeProgressPage.locator("#topGenesisPublishedBody polyline").count() >= 2,
+    "Trend charts must continue to use the complete history, independent of the selected filter.");
+
   await traineeProgressPage.close();
 
   const publicationMigration = fs.readFileSync(path.join(root, "supabase/migrations/202611120001_top_genesis_publications.sql"), "utf8");
