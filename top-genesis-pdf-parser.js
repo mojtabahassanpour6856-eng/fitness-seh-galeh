@@ -139,22 +139,28 @@
 
     // Device-provided relative risk multipliers are retained as vendor estimates,
     // not converted into individual medical probabilities or diagnoses.
-    const vendorRiskPatterns = [
-      ["cancer", /([0-9]+(?:\.[0-9]+)?)\s*x\s*More likely to suffer from Cancer/i],
-      ["cardiovascular", /([0-9]+(?:\.[0-9]+)?)\s*x\s*More likely to suffer from Cardiovascular Disease/i],
-      ["respiratory", /([0-9]+(?:\.[0-9]+)?)\s*x\s*More likely to suffer from Respiratory Disease/i],
-      ["other_diseases", /([0-9]+(?:\.[0-9]+)?)\s*x\s*More likely to suffer from All Other Diseases/i]
+    const vendorRiskLabels = [
+      ["cancer", /More likely to suffer from Cancer/i],
+      ["cardiovascular", /More likely to suffer from Cardiovascular Disease/i],
+      ["respiratory", /More likely to suffer from Respiratory Disease/i],
+      ["other_diseases", /More likely to suffer from All Other Diseases/i]
     ];
+    const vendorRiskValues = numericCandidates(text, /([0-9]+(?:\.[0-9]+)?)\s*x/gi);
     const vendorRisk = {};
-    vendorRiskPatterns.forEach(([key, pattern]) => {
-      const values = numericCandidates(text, new RegExp(pattern.source, "gi"));
-      if (!values.length) return;
-      const unique = [...new Set(values)];
-      vendorRisk[key] = {
-        ...metric(values[0], "relative_multiplier", "Top Genesis Health Risks / OCR", unique.length > 1 ? "consistent_duplicate" : "needs_coach_review"),
-        ...(unique.length > 1 ? { alternatives: unique } : {})
-      };
-    });
+    if (vendorRiskLabels.every(([, label]) => label.test(text)) && vendorRiskValues.length >= 4) {
+      vendorRiskLabels.forEach(([key], index) => {
+        const values = vendorRiskValues.filter((_, valueIndex) => valueIndex % 4 === index);
+        if (!values.length) return;
+        const unique = [...new Set(values)];
+        vendorRisk[key] = {
+          ...metric(values[0], "relative_multiplier", "Top Genesis Health Risks / OCR", unique.length > 1 ? "conflict_review" : vendorRiskValues.length > 4 ? "consistent_duplicate" : "needs_coach_review"),
+          ...(unique.length > 1 ? { alternatives: unique } : {})
+        };
+      });
+      if (vendorRiskValues.length > 4 && vendorRiskLabels.some(([key]) => vendorRisk[key]?.status === "conflict_review")) {
+        flags.push("برآوردهای مقایسه‌ای خطر در صفحات تکراری PDF یکسان نیستند؛ برای بررسی مربی علامت‌گذاری شدند.");
+      }
+    }
     if (Object.keys(vendorRisk).length) out.vendor_relative_risk_estimates = vendorRisk;
 
     const fatLossGoal = numberAfter(text, /([0-9]+(?:\.[0-9]+)?)\s*kg\s*Kilograms of Fat/i);
