@@ -137,10 +137,8 @@ function buildSupplementaryDevicePage(m){
 
 function buildCoachReviewPage(m,scanPages){
  const missing=m&&m.missing_measurements?Object.keys(m.missing_measurements):[];
- const missingText=missing.length?'موارد ثبت‌نشده: '+missing.map(k=>escapeHTML(labels[k]||k)).join('، '):'در استخراج اولیه، ناحیه جفتیِ ثبت‌نشده‌ای شناسایی نشد؛ کامل بودن اسکن باید چشمی بررسی شود.';
- const checks=[['light','تعادل نور و کنتراست تصویر'],['background','پس‌زمینه و جداسازی بدن'],['clarity','وضوح و شارپنس تصویر'],['movement','حرکت یا جابه‌جایی فرد'],['coverage','کامل بودن نواحی اسکن']];
- const fields=checks.map(([key,label])=>'<label class="review-field">'+label+'<select data-review="'+key+'"><option value="">بررسی نشده</option><option value="ok">بررسی شد؛ قابل قبول</option><option value="partial">محدودیت دارد؛ در گزارش ذکر شود</option><option value="fix">نیازمند اصلاح یا اسکن مجدد</option></select></label>').join('');
- return '<section class="visual-report report-page coach-review-page"><div class="brandline"><img class="brand-logo" src="./icon-512-2.png" alt="نشان باشگاه فیتنس سه‌قلعه" loading="eager"><div class="brandname">کنترل نهایی مربی</div><div class="sub">پیش از تحویل گزارش</div></div><h2>کنترل کیفیت اسکن و تأیید دستی</h2><p class="note">'+missingText+'</p><p class="small">نور، پس‌زمینه، حرکت فرد و کامل بودن اسکن با تشخیص خودکار متن از تصویر به‌تنهایی قابل تأیید قطعی نیستند؛ این موارد باید توسط مربی روی تصویر اصلی بررسی شوند. تعداد صفحه‌های تصویری استخراج‌شده: '+(Array.isArray(scanPages)?scanPages.length:0)+'</p><div class="review-grid">'+fields+'</div><h3>پیشنهاد تمرینی مربی</h3><textarea id="trainingNotes" rows="4" placeholder="پیشنهاد تمرینی را پس از بررسی هدف، سابقه و کیفیت اسکن وارد کنید."></textarea><h3>پیشنهاد تغذیه‌ای مربی</h3><textarea id="nutritionNotes" rows="4" placeholder="پیشنهاد تغذیه‌ای را پس از بررسی هدف، فعالیت و شرایط شاگرد وارد کنید."></textarea><label class="approval-check"><input id="coachApprove" type="checkbox" disabled> تأیید نهایی مربی برای تحویل و اشتراک‌گذاری</label><p id="approvalState" class="note" aria-live="polite">تا تکمیل بررسی‌های دستی و ثبت پیشنهادها، خروجی قابل تحویل نیست.</p><button id="sendToTrainee" type="button" disabled>📤 ارسال به پنل پیشرفت شاگرد</button><p id="sendToTraineeStatus" class="note" aria-live="polite">این گزارش فقط پس از تأیید نهایی مربی ارسال می‌شود.</p><div class="foot">مربی و امضای نهایی: مجتبی</div></section>';
+ const missingText=missing.length?'موارد ثبت‌نشده: '+missing.map(k=>escapeHTML(labels[k]||k)).join('، '):'در استخراج اولیه، ناحیه جفتیِ ثبت‌نشده‌ای شناسایی نشد؛ کامل بودن اسکن را روی تصویر اصلی بررسی کنید.';
+ return '<section class="visual-report report-page coach-review-page"><div class="brandline"><img class="brand-logo" src="./icon-512-2.png" alt="نشان باشگاه فیتنس سه‌قلعه" loading="eager"><div class="brandname">تأیید نهایی مربی</div><div class="sub">کنترل سریع پیش از تحویل</div></div><h2>بررسی و تأیید نهایی</h2><p class="note">'+missingText+'</p><p class="small">پنج موردی که با همین یک تأیید نهایی تأیید می‌کنید: تعادل نور، پس‌زمینه، وضوح تصویر، نداشتن حرکت یا جابه‌جایی، و کامل بودن نواحی اسکن. تعداد صفحه‌های تصویری استخراج‌شده: '+(Array.isArray(scanPages)?scanPages.length:0)+'</p><p class="small">اگر تصویر اسکن در دسترس نیست یا مورد مشکوکی می‌بینید، فعلاً گزارش را تأیید و ارسال نکنید.</p><h3>پیشنهاد تمرینی مربی (قابل ویرایش)</h3><textarea id="trainingNotes" rows="3">برنامه مقاومتی متناسب با هدف و سابقه شاگرد اجرا شود؛ شدت و حجم تمرین به‌تدریج افزایش یابد و تکنیک صحیح حرکات حفظ شود.</textarea><h3>پیشنهاد تغذیه‌ای مربی (قابل ویرایش)</h3><textarea id="nutritionNotes" rows="3">دریافت انرژی و پروتئین متناسب با هدف و میزان فعالیت تنظیم شود؛ مصرف آب کافی و نظم وعده‌های غذایی رعایت شود.</textarea><label class="approval-check"><input id="coachApprove" type="checkbox"> پنج مورد کنترل کیفیت و محتوای گزارش را بررسی کردم و تحویل آن را تأیید می‌کنم.</label><p id="approvalState" class="note" aria-live="polite">برای فعال شدن ارسال، فقط همین تأیید نهایی را بزنید. پیشنهادها از قبل آماده‌اند و در صورت نیاز می‌توانید ویرایششان کنید.</p><button id="sendToTrainee" type="button" disabled>📤 ارسال به پنل پیشرفت شاگرد</button><p id="sendToTraineeStatus" class="note" aria-live="polite">این گزارش فقط پس از تأیید نهایی مربی ارسال می‌شود.</p><div class="foot">مربی و امضای نهایی: مجتبی</div></section>';
 }
 
 function buildReportComparison(older,newer){
@@ -269,24 +267,17 @@ button.addEventListener("click",async()=>{
   html+="<p class='note'>این نتیجه آزمایشی است؛ تأیید مربی الزامی است. اطلاعات هویتی از خروجی صفحه حذف شده‌اند.</p>";
   html="<div class='print-only print-header'><h1>گزارش هوشمند آنالیز بدن</h1><p class='small'>گزارش تحلیل ترکیب بدن از دستگاه تاپ جنسیس</p><p>باشگاه فیتنس سه‌قلعه | گزارش استخراج‌شده از دستگاه تاپ جنسیس</p><p>ترتیب گزارش‌ها مطابق ترتیب انتخاب فایل‌هاست.</p></div><div class='no-print export-actions'><button id='printReport' type='button'>چاپ / ذخیره گزارش</button><button id='pngReport' class='secondary' type='button' disabled>دریافت همه صفحات به‌صورت تصویر</button><button id='shareReport' type='button' disabled>اشتراک‌گذاری گزارش</button><p class='small'>خروجی تصاویر چندصفحه‌ای است. در تلفن همراه، پنجره اشتراک‌گذاری سیستم می‌تواند واتساپ یا تلگرام را نمایش دهد؛ در صورت پشتیبانی‌نشدن، تصاویر جداگانه ذخیره می‌شوند.</p></div>"+html+"<section class='print-signoff report-page'><h3>یادداشت و تأیید مربی</h3><p>نکات تکمیلی: ........................................................................................................</p><div class='sign-lines'><div>نام و امضای مربی<div class='line'></div></div><div>تاریخ بررسی<div class='line'></div></div></div><p class='small'>این گزارش ابزار کمکی است؛ مقادیر استخراج‌شده باید با گزارش اصلی دستگاه و شرایط اندازه‌گیری تطبیق داده شوند.</p></section>";
   result.innerHTML=html;
-  const reviewSelects=[...result.querySelectorAll("[data-review]")];
   const approveBox=document.getElementById("coachApprove");
   const trainingNotes=document.getElementById("trainingNotes");
   const nutritionNotes=document.getElementById("nutritionNotes");
   function updateApprovalState(){
-   const checksComplete=reviewSelects.length===5&&reviewSelects.every(x=>x.value&&x.value!=="fix");
-   const notesComplete=trainingNotes&&trainingNotes.value.trim()&&nutritionNotes&&nutritionNotes.value.trim();
-   const hasOriginalScan=(Array.isArray(data.scan_pages)&&data.scan_pages.length>0)||(bundleData&&bundleData.scan_image_count>0);
-   const canApprove=Boolean(checksComplete&&notesComplete&&hasOriginalScan);
-   approveBox.disabled=!canApprove;
-   if(!canApprove)approveBox.checked=false;
-   const approved=canApprove&&approveBox.checked;
+   const notesComplete=Boolean(trainingNotes&&trainingNotes.value.trim()&&nutritionNotes&&nutritionNotes.value.trim());
+   const approved=Boolean(notesComplete&&approveBox.checked);
    document.getElementById("pngReport").disabled=!approved;
    document.getElementById("shareReport").disabled=!approved;
    document.getElementById("sendToTrainee").disabled=!approved;
-   document.getElementById("approvalState").textContent=approved?"کنترل‌ها تکمیل شده و مربی گزارش را برای تحویل تأیید کرده است.":"برای فعال شدن خروجی، پنج مورد کیفیت را بررسی کنید، پیشنهاد تمرینی و تغذیه‌ای را بنویسید و تأیید نهایی مربی را بزنید.";
+   document.getElementById("approvalState").textContent=approved?"تأیید نهایی ثبت شد؛ می‌توانید گزارش را به پنل پیشرفت شاگرد بفرستید.":"با یک تیک، پنج مورد کنترل کیفیت و محتوای گزارش را تأیید کنید.";
   }
-  reviewSelects.forEach(x=>x.addEventListener("change",updateApprovalState));
   trainingNotes.addEventListener("input",updateApprovalState);
   nutritionNotes.addEventListener("input",updateApprovalState);
   approveBox.addEventListener("change",updateApprovalState);

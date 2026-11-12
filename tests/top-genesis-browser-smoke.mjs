@@ -477,16 +477,16 @@ Waist-Hip Ratio (WHO),0.889
   assert.equal(await coverLogo.count(), 1);
   await coverLogo.evaluate(img => img.decode());
   assert.ok(await coverLogo.evaluate(img => img.naturalWidth > 0));
-  assert.equal(await page.locator("[data-review]").count(), 5,
-    "The coach must review lighting, background, image clarity, movement and scan completeness.");
+  assert.equal(await page.locator("[data-review]").count(), 0,
+    "Quality review must be a single coach confirmation, not five separate form controls.");
+  assert.equal(await page.locator("#coachApprove").isDisabled(), false,
+    "The single final approval checkbox must be immediately available.");
+  assert.ok((await page.locator("#trainingNotes").inputValue()).trim().length > 0,
+    "A concise editable training recommendation should be prefilled.");
+  assert.ok((await page.locator("#nutritionNotes").inputValue()).trim().length > 0,
+    "A concise editable nutrition recommendation should be prefilled.");
   assert.equal(await page.locator("#pngReport").isDisabled(), true,
-    "Multi-page PNG export must remain locked until manual review and coach approval.");
-  await page.locator("[data-review]").evaluateAll(items => items.forEach(item => {
-    item.value = "ok";
-    item.dispatchEvent(new Event("change", { bubbles: true }));
-  }));
-  await page.locator("#trainingNotes").fill("برنامه تمرینی پس از بررسی سابقه و هدف شاگرد تنظیم شود.");
-  await page.locator("#nutritionNotes").fill("توصیه تغذیه‌ای پس از بررسی هدف و فعالیت شاگرد تکمیل شود.");
+    "Report outputs must remain locked until the coach's single approval.");
   await page.locator("#coachApprove").check();
   assert.equal(await page.locator("#pngReport").isDisabled(), false);
   assert.equal(await page.locator("#shareReport").isDisabled(), false);
