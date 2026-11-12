@@ -637,6 +637,13 @@ Waist-Hip Ratio (WHO),0.889
     window.authProfile = { role: "coach" };
   });
   await integrationPage.addScriptTag({ path: path.join(root, "top-genesis-pdf-app-embed.js") });
+  // Reassert coach globals immediately before the archive module mounts; this fixture
+  // models the real app's global role/session objects, without connecting to a database.
+  await integrationPage.evaluate(() => {
+    window.authProfile = { role: "coach" };
+    window.currentClient = { id: "trainee-fixture-1" };
+    window.AUTH_SUPABASE = { auth: {}, storage: {}, from() { return { select() { return this; }, eq() { return this; }, order() { return Promise.resolve({ data: [], error: null }); } }; } };
+  });
   await integrationPage.addScriptTag({ path: path.join(root, "top-genesis-archive.js") });
   await integrationPage.waitForSelector("#topGenesisPdfAnalyzerPanel");
   await integrationPage.waitForSelector("#topGenesisArchivePanel");
