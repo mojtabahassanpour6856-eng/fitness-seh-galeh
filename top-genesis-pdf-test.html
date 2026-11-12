@@ -101,6 +101,22 @@ function buildScanPage(scanPages){
  return '<section class="visual-report report-page"><div class="brandline"><img class="brand-logo" src="./icon-512-2.png" alt="نشان باشگاه فیتنس سه‌قلعه" loading="eager"><div class="brandname">باشگاه فیتنس سه‌قلعه</div><div class="sub">تصاویر واقعی استخراج‌شده از PDF اصلی</div></div><h2>تصاویر اسکن بدن</h2><p class="small">این تصاویر مستقیماً از صفحه‌های PDF رندر شده‌اند؛ هیچ تصویر ساختگی یا جایگزین استفاده نشده است.</p>'+body+'</section>';
 }
 
+function buildSupplementaryDevicePage(m){
+ const metricValue=k=>m&&m[k]&&m[k].value!==null&&m[k].value!==undefined&&Number.isFinite(Number(m[k].value))?Number(m[k].value):null;
+ const geometry=[["waist_width_cm","عرض نمای بالای کمر","cm"],["waist_depth_cm","عمق نمای بالای کمر","cm"],["waist_area_cm2","مساحت نمای بالای کمر","cm²"]]
+  .filter(([k])=>metricValue(k)!==null);
+ const risk=m&&m.vendor_relative_risk_estimates||{};
+ const riskLabels={cancer:"سرطان",cardiovascular:"بیماری‌های قلبی‌عروقی",respiratory:"بیماری‌های تنفسی",other_diseases:"سایر بیماری‌ها"};
+ const riskRows=Object.entries(risk).filter(([,v])=>v&&Number.isFinite(Number(v.value))).map(([k,v])=>"<tr><td>"+escapeHTML(riskLabels[k]||k)+"</td><td>"+Number(v.value).toFixed(1)+" برابر</td></tr>").join("");
+ const goals=[["device_fat_loss_goal_kg","تنظیم اسلایدر هدف کاهش چربی","kg"],["device_waist_loss_goal_cm","تنظیم اسلایدر هدف کاهش دور کمر","cm"]].filter(([k])=>metricValue(k)!==null);
+ if(!geometry.length&&!riskRows&&!goals.length)return "";
+ let html="<section class='report-page'><h2>جزئیات تکمیلی دستگاه</h2>";
+ if(geometry.length)html+="<h3>هندسه اندازه‌گیری کمر</h3><div class='analysis-grid'>"+geometry.map(([k,label,unit])=>"<div class='analysis-card'><span>"+label+"</span><strong>"+metricValue(k).toLocaleString("en-US")+" "+unit+"</strong><span>مقدار خوانده‌شده از صفحه Waist Analysis</span></div>").join("")+"</div>";
+ if(riskRows)html+="<h3>برآوردهای مقایسه‌ای دستگاه</h3><table><thead><tr><th>عنوان</th><th>برآورد گزارش‌شده</th></tr></thead><tbody>"+riskRows+"</tbody></table><p class='note'>این ضرایب، برآوردهای مقایسه‌ای ارائه‌شده توسط نرم‌افزار دستگاه هستند؛ احتمال شخصی بیماری یا تشخیص پزشکی محسوب نمی‌شوند و نباید مبنای تصمیم درمانی قرار گیرند.</p>";
+ if(goals.length)html+="<h3>تنظیمات هدف ثبت‌شده در دستگاه</h3><table><thead><tr><th>تنظیم</th><th>مقدار</th></tr></thead><tbody>"+goals.map(([k,label,unit])=>"<tr><td>"+label+"</td><td>"+metricValue(k).toLocaleString("en-US")+" "+unit+"</td></tr>").join("")+"</tbody></table><p class='note'>این مقادیر موقعیت اسلایدر در PDF هستند؛ به‌تنهایی به معنی هدف تجویزشده توسط مربی نیستند.</p>";
+ html+="</section>";return html;
+}
+
 function buildCoachReviewPage(m,scanPages){
  const missing=m&&m.missing_measurements?Object.keys(m.missing_measurements):[];
  const missingText=missing.length?'موارد ثبت‌نشده: '+missing.map(k=>escapeHTML(labels[k]||k)).join('، '):'در استخراج اولیه، ناحیه جفتیِ ثبت‌نشده‌ای شناسایی نشد؛ کامل بودن اسکن باید چشمی بررسی شود.';
@@ -176,7 +192,7 @@ button.addEventListener("click",async()=>{
    const alternatives=item.alternatives&&item.alternatives.length>1?"<br><span class='small'>مقادیر مشاهده‌شده: "+item.alternatives.map(escapeHTML).join("، ")+"</span>":"";
    rows.push("<tr><td>"+escapeHTML(labels[key]||key)+"</td><td>"+escapeHTML(item.value)+" "+escapeHTML(units[item.unit]||item.unit||"")+alternatives+"</td><td class='"+(item.status==="invalid_range"||item.status==="conflict_review"?"bad":"review")+"'>"+escapeHTML(statusText[item.status]||item.status)+"</td></tr>");
   });
-  let html=buildCoverPage()+buildVisualReport(data.metrics,data.flags,data.scan_pages)+buildScanPage(data.scan_pages)+buildSimpleAnalysis(data.metrics)+buildCoachReviewPage(data.metrics,data.scan_pages)+(newerData?buildReportComparison(data.metrics,newerData.metrics):"")+(allReports.length>=3?buildMultiReportTrend(allReports):"")+"<section class='report-page'><h2>نتیجه استخراج گزارش اول</h2><p>تعداد صفحات: "+data.page_count+" | صفحات OCR: "+((data.ocr_pages||[]).join("، ")||"ندارد")+"</p><table><thead><tr><th>شاخص</th><th>مقدار</th><th>وضعیت</th></tr></thead><tbody>"+rows.join("")+"</tbody></table></section>";
+  let html=buildCoverPage()+buildVisualReport(data.metrics,data.flags,data.scan_pages)+buildScanPage(data.scan_pages)+buildSimpleAnalysis(data.metrics)+buildSupplementaryDevicePage(data.metrics)+buildCoachReviewPage(data.metrics,data.scan_pages)+(newerData?buildReportComparison(data.metrics,newerData.metrics):"")+(allReports.length>=3?buildMultiReportTrend(allReports):"")+"<section class='report-page'><h2>نتیجه استخراج گزارش اول</h2><p>تعداد صفحات: "+data.page_count+" | صفحات OCR: "+((data.ocr_pages||[]).join("، ")||"ندارد")+"</p><table><thead><tr><th>شاخص</th><th>مقدار</th><th>وضعیت</th></tr></thead><tbody>"+rows.join("")+"</tbody></table></section>";
   const standardMeasures=data.metrics&&data.metrics.body_measurements_cm;
   if(standardMeasures){
    const standardNames={bicep_left_lower_cm:"بازو چپ، بخش پایین",bicep_right_lower_cm:"بازو راست، بخش پایین",bicep_left_cm:"بازو چپ",bicep_right_cm:"بازو راست",calf_left_cm:"ساق چپ",calf_right_cm:"ساق راست",chest_cm:"سینه",forearm_left_cm:"ساعد چپ",forearm_right_cm:"ساعد راست",high_hip_cm:"باسن بالا",hip_cm:"باسن",neck_cm:"گردن",thigh_left_lower_cm:"ران چپ، بخش پایین",thigh_right_lower_cm:"ران راست، بخش پایین",mid_thigh_left_cm:"میانه ران چپ",mid_thigh_right_cm:"میانه ران راست",thigh_left_upper_cm:"ران چپ، بخش بالا",thigh_right_upper_cm:"ران راست، بخش بالا",waist_abdominal_cm:"کمر شکمی",waist_lower_cm:"کمر پایین",waist_narrowest_cm:"باریک‌ترین قسمت کمر"};
