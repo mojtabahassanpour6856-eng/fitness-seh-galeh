@@ -267,6 +267,41 @@ button.addEventListener("click",async()=>{
   html+="<p class='note'>این نتیجه آزمایشی است؛ تأیید مربی الزامی است. اطلاعات هویتی از خروجی صفحه حذف شده‌اند.</p>";
   html="<div class='print-only print-header'><h1>گزارش هوشمند آنالیز بدن</h1><p class='small'>گزارش تحلیل ترکیب بدن از دستگاه تاپ جنسیس</p><p>باشگاه فیتنس سه‌قلعه | گزارش استخراج‌شده از دستگاه تاپ جنسیس</p><p>ترتیب گزارش‌ها مطابق ترتیب انتخاب فایل‌هاست.</p></div><div class='no-print export-actions'><button id='printReport' type='button'>چاپ / ذخیره گزارش</button><button id='pngReport' class='secondary' type='button' disabled>دریافت همه صفحات به‌صورت تصویر</button><button id='shareReport' type='button' disabled>اشتراک‌گذاری گزارش</button><p class='small'>خروجی تصاویر چندصفحه‌ای است. در تلفن همراه، پنجره اشتراک‌گذاری سیستم می‌تواند واتساپ یا تلگرام را نمایش دهد؛ در صورت پشتیبانی‌نشدن، تصاویر جداگانه ذخیره می‌شوند.</p></div>"+html+"<section class='print-signoff report-page'><h3>یادداشت و تأیید مربی</h3><p>نکات تکمیلی: ........................................................................................................</p><div class='sign-lines'><div>نام و امضای مربی<div class='line'></div></div><div>تاریخ بررسی<div class='line'></div></div></div><p class='small'>این گزارش ابزار کمکی است؛ مقادیر استخراج‌شده باید با گزارش اصلی دستگاه و شرایط اندازه‌گیری تطبیق داده شوند.</p></section>";
   result.innerHTML=html;
+  function buildTraineeSafeReportHtml() {
+   const clone=result.cloneNode(true);
+   clone.querySelectorAll(".coach-review-page,.print-signoff,.export-actions,.no-print,.print-only,button,textarea,input,select").forEach(node=>node.remove());
+   clone.querySelectorAll(".cover-footer").forEach(node=>node.remove());
+   const privateHeadings=/^(تأیید نهایی مربی|بررسی و تأیید نهایی|نتیجه استخراج گزارش اول|موارد نیازمند بررسی بین فایل جدولی و بسته فشرده|هشدارها)$/;
+   clone.querySelectorAll("section").forEach(section=>{
+    const heading=section.querySelector("h1,h2,h3,h4");
+    if(heading&&privateHeadings.test(heading.textContent.trim()))section.remove();
+   });
+   clone.querySelectorAll("table").forEach(table=>{
+    const rows=[...table.querySelectorAll("tr")];
+    const header=rows[0];
+    if(!header)return;
+    const statusIndex=[...header.children].findIndex(cell=>cell.textContent.trim()==="وضعیت");
+    if(statusIndex>=0)rows.forEach(row=>row.children[statusIndex]?.remove());
+    rows.forEach(row=>{
+     if(/نیازمند تأیید مربی|اختلاف منبع؛ بررسی مربی|تعارض؛ بررسی شود/.test(row.textContent))row.remove();
+    });
+   });
+   clone.querySelectorAll(".note,.small,.sub,p,li,figcaption").forEach(node=>{
+    if(/نیازمند تأیید مربی|تأیید مربی همچنان لازم|همه مقادیر برای تأیید مربی|برای تحویل نهایی قابل تأیید نیست|مربی و مسئول بررسی نهایی/.test(node.textContent))node.remove();
+   });
+   clone.querySelectorAll("img").forEach(img=>{
+    const src=img.getAttribute("src")||"";
+    if(src.startsWith("./")||src.startsWith("../"))img.src=new URL(src,window.location.href).href;
+   });
+   const styles=[...document.querySelectorAll("style")].map(node=>node.textContent).join("\n");
+   const fontLinks='<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;500;600;700;800&display=swap" rel="stylesheet">';
+   const printStyles='@media print{body{max-width:none!important;margin:0!important;padding:0!important;background:#fff!important}main{border:0!important;box-shadow:none!important;padding:0!important}.report-page{break-inside:avoid;page-break-inside:avoid}img{max-width:100%;break-inside:avoid}}';
+   const html='<!doctype html><html lang="fa" dir="rtl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>گزارش کامل آنالیز بدن | فیتنس سه‌قلعه</title>'+fontLinks+'<style>'+styles+'\n'+printStyles+'</style></head><body><main><div id="result">'+clone.innerHTML+'</div></main></body></html>';
+   const bytes=new TextEncoder().encode(html).length;
+   if(bytes>9*1024*1024)throw new Error("حجم گزارش کامل بیش از حد مجاز است؛ تعداد تصاویر اسکن را بررسی کنید.");
+   if(!clone.querySelector("img"))throw new Error("تصاویر گزارش برای نسخه شاگرد پیدا نشدند.");
+   return html;
+  }
   const approveBox=document.getElementById("coachApprove");
   const trainingNotes=document.getElementById("trainingNotes");
   const nutritionNotes=document.getElementById("nutritionNotes");
@@ -289,8 +324,14 @@ button.addEventListener("click",async()=>{
    if(!approveBox.checked){sendStatus.textContent="ابتدا تأیید نهایی مربی را فعال کنید.";return;}
    sendRequestId=crypto.randomUUID();
    sendButton.disabled=true;
-   sendStatus.textContent="در حال ارسال امن گزارش به پنل پیشرفت شاگرد…";
-   window.parent.postMessage({type:"top-genesis-approved-report",requestId:sendRequestId,payload:{analysisDate:document.getElementById("analysisDate").value,metrics:data.metrics,trainingNotes:trainingNotes.value,nutritionNotes:nutritionNotes.value}},window.location.origin);
+   sendStatus.textContent="در حال آماده‌سازی گزارش کامل و ارسال امن به پنل شاگرد…";
+   try {
+    const reportHtml=buildTraineeSafeReportHtml();
+    window.parent.postMessage({type:"top-genesis-approved-report",requestId:sendRequestId,payload:{analysisDate:document.getElementById("analysisDate").value,metrics:data.metrics,trainingNotes:trainingNotes.value,nutritionNotes:nutritionNotes.value,reportHtml}},window.location.origin);
+   } catch(error) {
+    sendButton.disabled=false;
+    sendStatus.textContent=error?.message||"آماده‌سازی نسخه شاگرد انجام نشد.";
+   }
   });
   window.addEventListener("message",event=>{
    if(event.origin!==window.location.origin||event.source!==window.parent||event.data?.type!=="top-genesis-publish-result"||event.data.requestId!==sendRequestId)return;
