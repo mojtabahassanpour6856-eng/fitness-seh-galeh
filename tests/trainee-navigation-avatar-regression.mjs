@@ -13,7 +13,7 @@ const avatarEnd = appSource.indexOf(avatarEndMarker, avatarStart);
 assert.ok(avatarStart >= 0 && avatarEnd > avatarStart, "Production avatar renderer was not found.");
 const avatarSource = appSource.slice(avatarStart, avatarEnd + avatarEndMarker.length);
 
-const historyMatch = appSource.match(/<script id="SEH_TRAINEE_BACK_NAV_SAFE_V2_20261031">([\\s\\S]*?)<\\/script>/);
+const historyMatch = appSource.match(/<script id="SEH_TRAINEE_BACK_NAV_SAFE_V2_20261031">([\s\S]*?)<\/script>/);
 assert.ok(historyMatch, "Production trainee history controller was not found.");
 const historySource = historyMatch[1];
 
@@ -148,7 +148,7 @@ try {
 
   await navPage.goBack();
   await navPage.waitForURL(url => url.pathname === "/landing", { timeout: 5000 });
-  assert.match(navPage.url(), /\\/landing$/, "The second Back must leave the app normally.");
+  assert.match(navPage.url(), /\/landing$/, "The second Back must leave the app normally.");
   await navPage.close();
 
   console.log("PASS: production avatar renderer ignores stale image loads, handles failure/deletion, and production trainee history returns to dashboard once before normal browser Back.");
