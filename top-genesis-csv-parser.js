@@ -168,7 +168,8 @@
         const hasDirection = directionTokens.some(token => name.includes(token));
         const hasType = typeTokens.some(token => name.includes(token));
         const hasExcluded = (excludeTypeTokens || []).some(token => name.includes(token));
-        return hasDirection && hasType && !hasExcluded && !usedImageNames.has(item.name);
+        const bodyFallback = typeTokens.includes("body") && !hasExcluded;
+        return hasDirection && (hasType || bodyFallback) && !hasExcluded && !usedImageNames.has(item.name);
       });
       return candidates[0] || null;
     };
