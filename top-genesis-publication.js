@@ -353,6 +353,7 @@
     if (!frame || event.source !== frame.contentWindow || event.origin !== window.location.origin ||
         event.data?.type !== "top-genesis-approved-report") return;
     const requestId = String(event.data.requestId || "");
+    let uploadedReportPath = null;
     try {
       if (!currentCoach()) throw new Error("ارسال گزارش فقط از حساب مربی امکان‌پذیر است.");
       const traineeId = currentTraineeId();
@@ -363,20 +364,40 @@
       const metrics = safeMetrics(payload.metrics);
       const training = String(payload.trainingNotes || "").trim().slice(0, 4000);
       const nutrition = String(payload.nutritionNotes || "").trim().slice(0, 4000);
+      const reportHtml = String(payload.reportHtml || "");
       if (!training || !nutrition) throw new Error("پیشنهاد تمرینی و تغذیه‌ای مربی باید تکمیل شوند.");
+      if (!reportHtml.startsWith("<!doctype html>") || !reportHtml.includes('id="result"')) {
+        throw new Error("نسخه کامل و قابل‌نمایش گزارش شاگرد آماده نیست؛ دوباره تحلیل را اجرا کنید.");
+      }
+      const reportBytes = new TextEncoder().encode(reportHtml).length;
+      if (reportBytes <= 0 || reportBytes > 9 * 1024 * 1024) {
+        throw new Error("حجم گزارش کامل بیش از حد مجاز است؛ تعداد تصاویر اسکن را بررسی کنید.");
+      }
       const { data: userData, error: userError } = await window.AUTH_SUPABASE.auth.getUser();
       if (userError) throw userError;
       const coachId = userData?.user?.id;
       if (!coachId) throw new Error("نشست مربی معتبر نیست؛ دوباره وارد شوید.");
+      const reportPath = coachId + "/" + traineeId + "/published/" + crypto.randomUUID() + ".html";
+      const { error: uploadError } = await window.AUTH_SUPABASE.storage
+        .from("trainee-health-reports")
+        .upload(reportPath, new Blob([reportHtml], { type: "text/html;charset=utf-8" }), {
+          contentType: "text/html",
+          cacheControl: "3600",
+          upsert: false
+        });
+      if (uploadError) throw uploadError;
+      uploadedReportPath = reportPath;
       const { error } = await window.AUTH_SUPABASE.from(TABLE).insert({
         trainee_id: traineeId,
         coach_user_id: coachId,
         analysis_date: date,
         report_metrics: metrics,
         training_notes: training,
-        nutrition_notes: nutrition
+        nutrition_notes: nutrition,
+        report_storage_path: reportPath
       });
       if (error) throw error;
+      uploadedReportPath = null;
       reply(frame, requestId, true, "گزارش تأییدشده با موفقیت به پنل پیشرفت شاگرد ارسال شد.");
       lastLoadedTrainee = null;
       if ($("progress")?.classList.contains("active")) {
@@ -384,6 +405,9 @@
         loadPublished(true);
       }
     } catch (error) {
+      if (uploadedReportPath) {
+        try { await window.AUTH_SUPABASE.storage.from("trainee-health-reports").remove([uploadedReportPath]); } catch (_) {}
+      }
       reply(frame, requestId, false, error?.message || "ارسال گزارش انجام نشد.");
     }
   }
