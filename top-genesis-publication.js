@@ -47,10 +47,16 @@
     return fa(metric.value, 2) + (unit ? " " + unit : "");
   }
   function currentTraineeId() {
-    try { return typeof currentClient !== "undefined" ? (currentClient?.id || null) : null; } catch (_) { return null; }
+    try {
+      const trainee = window.currentClient || (typeof currentClient !== "undefined" ? currentClient : null);
+      return trainee?.id || null;
+    } catch (_) { return null; }
   }
   function currentCoach() {
-    try { return typeof authProfile !== "undefined" && authProfile?.role === "coach"; } catch (_) { return false; }
+    try {
+      const profile = window.authProfile || (typeof authProfile !== "undefined" ? authProfile : null);
+      return profile?.role === "coach";
+    } catch (_) { return false; }
   }
   function mountProgressCard() {
     const coachView = currentCoach();
