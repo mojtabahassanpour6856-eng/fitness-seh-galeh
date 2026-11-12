@@ -24,12 +24,12 @@
       host.className = "card";
       host.style.cssText = "margin-top:14px;border:1px solid #d8b65d;background:#fffdf7;padding:12px;overflow:hidden";
       host.innerHTML =
-        '<h3 style="margin:0 0 8px">🧠 تحلیل هوشمند گزارش PDF تاپ جنسیس</h3>' +
+        '<h3 style="margin:0 0 8px">🧠 تحلیل هوشمند گزارش تاپ جنسیس (PDF + ZIP)</h3>' +
         '<p class="muted" style="margin:0 0 10px">استخراج شاخص‌ها، OCR صفحات تصویری، نمودار ترکیب بدن، مقایسه دو گزارش، روند چندمرحله‌ای و گزارش قابل چاپ.</p>' +
-        '<p style="margin:0 0 10px;padding:9px 11px;border-radius:9px;background:#fff4d5;color:#624b20;font-size:12px">حالت آزمایشی: فایل فقط در مرورگر پردازش می‌شود؛ هیچ PDF، نام، ایمیل یا نتیجه‌ای به پرونده شاگرد یا پایگاه داده ارسال و ذخیره نمی‌شود. نتیجه‌ها نیازمند بررسی مربی‌اند.</p>';
+        '<p style="margin:0 0 10px;padding:9px 11px;border-radius:9px;background:#fff4d5;color:#624b20;font-size:12px">پیش‌نمایش مربی برای شاگرد انتخاب‌شده: فایل PDF و ZIP فقط در مرورگر پردازش می‌شوند. تا پایان بررسی و تأیید نهایی، هیچ فایل یا نتیجه‌ای در پرونده شاگرد یا پایگاه داده ذخیره نمی‌شود.</p>';
       const frame = document.createElement("iframe");
       frame.id = "topGenesisPdfAnalyzerFrame";
-      frame.title = "ابزار آزمایشی تحلیل گزارش PDF تاپ جنسیس";
+      frame.title = "پیش‌نمایش تحلیل PDF و ZIP تاپ جنسیس";
       frame.src = "./top-genesis-pdf-test.html?embedded=1";
       frame.loading = "lazy";
       frame.referrerPolicy = "strict-origin-when-cross-origin";
