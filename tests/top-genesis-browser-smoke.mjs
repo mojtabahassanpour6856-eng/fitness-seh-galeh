@@ -635,51 +635,45 @@ Waist-Hip Ratio (WHO),0.889
   assert.deepEqual(pageErrors, [], `Browser page errors: ${pageErrors.join("; ")}`);
 
   console.log('[smoke] report rendering assertions passed');
-  // Verify the real production app shell contains the integration anchor and loader.
+  // Verify the production shell keeps only the hidden mount point and loads
+  // the analyzer entry directly; the legacy archive must not be a dependency.
   const appShellSource = fs.readFileSync(path.join(root, "index.html"), "utf8");
-  assert.match(appShellSource, /id=["']bodyAnalysisEntryPanel["']/, "The production app must contain the body-analysis mount point.");
-  assert.match(appShellSource, /top-genesis-archive\.js/, "The production app must load the existing Top Genesis archive module.");
+  assert.match(appShellSource, /id=["']bodyAnalysisEntryPanel["']/, "The production app must preserve the analyzer mount point.");
+  assert.match(appShellSource, /top-genesis-pdf-app-embed\.js/, "The production app must load the analyzer entry directly.");
+  assert.doesNotMatch(appShellSource, /<script[^>]+src=["'][^"']*top-genesis-archive\.js/i,
+    "The production app must not load the legacy archive module.");
 
-  // Verify the coach-only app entry mounts in the existing analysis area,
-  // embeds the isolated analyzer, and stays hidden for trainee sessions.
+  // Verify the analyzer mounts independently of the legacy archive module,
+  // appears for coaches, and is hidden for trainees.
   const integrationPage = await browser.newPage();
   await integrationPage.goto(`http://127.0.0.1:${address.port}/top-genesis-pdf-test.html`);
   await integrationPage.evaluate(() => {
     const anchor = document.createElement("section");
     anchor.id = "bodyAnalysisEntryPanel";
+    anchor.style.display = "none";
+    anchor.setAttribute("aria-hidden", "true");
     document.body.appendChild(anchor);
     window.authProfile = { role: "coach" };
   });
   await integrationPage.addScriptTag({ path: path.join(root, "top-genesis-pdf-app-embed.js") });
-  // Reassert coach globals immediately before the archive module mounts; this fixture
-  // models the real app's global role/session objects, without connecting to a database.
-  await integrationPage.evaluate(() => {
-    window.authProfile = { role: "coach" };
-    window.currentClient = { id: "trainee-fixture-1" };
-    window.AUTH_SUPABASE = { auth: {}, storage: {}, from() { return { select() { return this; }, eq() { return this; }, order() { return Promise.resolve({ data: [], error: null }); } }; } };
-  });
-  await integrationPage.addScriptTag({ path: path.join(root, "top-genesis-archive.js") });
   await integrationPage.waitForSelector("#topGenesisPdfAnalyzerPanel");
-  await integrationPage.waitForSelector("#topGenesisArchivePanel");
-  assert.equal(await integrationPage.locator("#topGenesisPdfAnalyzerPanel").evaluate(el => el.style.display), "block");
-  assert.match(await integrationPage.locator("#topGenesisPdfAnalyzerFrame").getAttribute("src"), /top-genesis-pdf-test\.html\?embedded=1/);
-  await integrationPage.evaluate(() => {
-    window.authProfile = { role: "trainee" };
-    // A real SPA role switch also updates the visible panel DOM.
-    document.body.appendChild(document.createElement("div"));
-  });
-  await integrationPage.waitForFunction(() =>
-    !document.querySelector("#topGenesisArchivePanel"), null, { timeout: 7000 });
   assert.equal(await integrationPage.locator("#topGenesisArchivePanel").count(), 0,
-    "PDF upload/archive controls must not remain visible in a trainee session.");
+    "The standalone analyzer test must not load or require the legacy archive.");
+  assert.equal(await integrationPage.locator("#topGenesisPdfAnalyzerPanel").evaluate(el => el.style.display), "block");
+  assert.equal(await integrationPage.locator("#bodyAnalysisEntryPanel").evaluate(el => el.nextElementSibling?.id),
+    "topGenesisPdfAnalyzerPanel", "The analyzer card must mount beside the preserved hidden anchor.");
+  assert.match(await integrationPage.locator("#topGenesisPdfAnalyzerFrame").getAttribute("src"), /top-genesis-pdf-test\.html\?embedded=1/);
+  await integrationPage.evaluate(() => { window.authProfile = { role: "trainee" }; });
   await integrationPage.waitForFunction(() =>
-    document.querySelector("#topGenesisPdfAnalyzerPanel")?.style.display === "none",
-    null, { timeout: 7000 });
-  const archiveSource = fs.readFileSync(path.join(root, "top-genesis-archive.js"), "utf8");
+    document.querySelector("#topGenesisPdfAnalyzerPanel")?.style.display === "none", null, { timeout: 7000 });
+  await integrationPage.evaluate(() => { window.authProfile = { role: "coach" }; });
+  await integrationPage.waitForFunction(() =>
+    document.querySelector("#topGenesisPdfAnalyzerPanel")?.style.display === "block", null, { timeout: 7000 });
   const analyzerEmbedSource = fs.readFileSync(path.join(root, "top-genesis-pdf-app-embed.js"), "utf8");
-  assert.match(archiveSource, /top-genesis-pdf-app-embed\.js/, "The app's existing archive entry must load the new coach-only analyzer card.");
   assert.match(analyzerEmbedSource, /host\.style\.display\s*=\s*isCoach\(\)\s*\?\s*"block"\s*:\s*"none"/,
-    "The embedded analyzer/upload interface must be hidden for trainee sessions.");
+    "The embedded analyzer must be hidden for trainee sessions.");
+  assert.match(analyzerEmbedSource, /top-genesis-publication\.js/,
+    "The standalone analyzer entry must continue loading the report publication module.");
   await integrationPage.close();
 
   console.log('[smoke] coach role-switch assertions passed');
