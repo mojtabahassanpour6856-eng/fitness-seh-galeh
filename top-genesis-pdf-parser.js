@@ -176,7 +176,7 @@
     ];
     const standardMeasurements = {};
     standardMeasurementLabels.forEach(([key, label]) => {
-      const escaped = label.replace(/[.*+?^${}()|[\]\\]/g, "\\    const bodyMeasures = [");
+      const escaped = label.replace(/[()]/g, "\\      const escaped = label.replace(/[.*+?^${}()|[\]\\]/g, "\\    const bodyMeasures = [");");
       const pattern = new RegExp("(?:^|[^A-Za-z])" + escaped +
         "\\s*(?:\\|\\s*|[:=-]\\s*|\\s+)([0-9]+(?:\\.[0-9]+)?)\\s*(?:cm\\b)?", "gi");
       const values = numericCandidates(text, pattern);
