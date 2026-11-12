@@ -53,25 +53,31 @@
     try { return typeof authProfile !== "undefined" && authProfile?.role === "coach"; } catch (_) { return false; }
   }
   function mountProgressCard() {
-    const section = currentCoach() ? $("progress") : $("traineeAnalysis");
-    if (!section || $(CARD_ID)) return;
-    const card = document.createElement("div");
-    card.id = CARD_ID;
-    card.className = "card";
-    card.style.cssText = "margin-top:14px;border:1px solid #d8b65d;background:#fffdf8";
-    card.innerHTML = '<h2>📈 گزارش‌های تأییدشده آنالیز بدن</h2>' +
-      '<p class="muted">گزارش‌هایی که مربی بررسی و ارسال کرده است، همراه با روند تغییرات در این بخش نمایش داده می‌شود.</p>' +
-      '<div id="topGenesisPublishedBody" class="muted">در حال دریافت گزارش‌ها…</div>';
-    if (currentCoach()) {
+    const coachView = currentCoach();
+    const section = coachView ? $("progress") : $("traineeAnalysis");
+    if (!section) return;
+    let card = $(CARD_ID);
+    if (!card) {
+      card = document.createElement("div");
+      card.id = CARD_ID;
+      card.className = "card";
+      card.style.cssText = "margin-top:14px;border:1px solid #d8b65d;background:#fffdf8";
+      card.innerHTML = '<h2>📈 گزارش آنالیز بدن من</h2>' +
+        '<p class="muted">گزارش اصلی و تاریخچه آنالیزهایی که مربی بررسی و برای شما ارسال کرده است.</p>' +
+        '<div id="topGenesisPublishedBody" class="muted">در حال دریافت گزارش‌ها…</div>';
+    }
+    // The app is a single-page interface: after logout/login the same document
+    // can change roles. Always move the one card to the active role's panel.
+    if (coachView) {
       const history = $("progressHistory");
       const entry = $("progressEntryPanel");
-      if (history) history.insertAdjacentElement("afterend", card);
-      else if (entry) entry.insertAdjacentElement("afterend", card);
-      else section.appendChild(card);
+      const target = history || entry;
+      if (target) target.insertAdjacentElement("afterend", card);
+      else if (card.parentElement !== section) section.appendChild(card);
     } else {
       const archive = $("traineeAnalysisArchive");
       if (archive) archive.insertAdjacentElement("afterend", card);
-      else section.appendChild(card);
+      else if (card.parentElement !== section) section.appendChild(card);
     }
   }
   function chartCard(rows, key) {

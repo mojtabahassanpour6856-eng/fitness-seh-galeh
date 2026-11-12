@@ -637,11 +637,24 @@ Waist-Hip Ratio (WHO),0.889
     window.authProfile = { role: "coach" };
   });
   await integrationPage.addScriptTag({ path: path.join(root, "top-genesis-pdf-app-embed.js") });
+  // Reassert coach globals immediately before the archive module mounts; this fixture
+  // models the real app's global role/session objects, without connecting to a database.
+  await integrationPage.evaluate(() => {
+    window.authProfile = { role: "coach" };
+    window.currentClient = { id: "trainee-fixture-1" };
+    window.AUTH_SUPABASE = { auth: {}, storage: {}, from() { return { select() { return this; }, eq() { return this; }, order() { return Promise.resolve({ data: [], error: null }); } }; } };
+  });
+  await integrationPage.addScriptTag({ path: path.join(root, "top-genesis-archive.js") });
   await integrationPage.waitForSelector("#topGenesisPdfAnalyzerPanel");
+  await integrationPage.waitForSelector("#topGenesisArchivePanel");
   assert.equal(await integrationPage.locator("#topGenesisPdfAnalyzerPanel").evaluate(el => el.style.display), "block");
   assert.match(await integrationPage.locator("#topGenesisPdfAnalyzerFrame").getAttribute("src"), /top-genesis-pdf-test\.html\?embedded=1/);
   await integrationPage.evaluate(() => { window.authProfile = { role: "trainee" }; });
-  await integrationPage.waitForFunction(() => document.querySelector("#topGenesisPdfAnalyzerPanel")?.style.display === "none", null, { timeout: 3000 });
+  await integrationPage.waitForFunction(() =>
+    document.querySelector("#topGenesisPdfAnalyzerPanel")?.style.display === "none" &&
+    !document.querySelector("#topGenesisArchivePanel"), null, { timeout: 3000 });
+  assert.equal(await integrationPage.locator("#topGenesisArchivePanel").count(), 0,
+    "PDF upload/archive controls must not remain visible in a trainee session.");
   const archiveSource = fs.readFileSync(path.join(root, "top-genesis-archive.js"), "utf8");
   assert.match(archiveSource, /top-genesis-pdf-app-embed\.js/, "The app's existing archive entry must load the new coach-only analyzer card.");
   await integrationPage.close();
@@ -692,6 +705,21 @@ Waist-Hip Ratio (WHO),0.889
     "Date range should select the matching report date.");
   assert.ok(await traineeProgressPage.locator("#topGenesisPublishedBody polyline").count() >= 2,
     "Trend charts must continue to use the complete history, independent of the selected filter.");
+  // Switching roles inside the same SPA must move the report card, not strand it in coach view.
+  await traineeProgressPage.evaluate(() => {
+    authProfile.role = "coach";
+    const progress = document.createElement("section");
+    progress.id = "progress";
+    progress.className = "section";
+    progress.innerHTML = '<div id="progressHistory"></div>';
+    document.body.appendChild(progress);
+  });
+  await traineeProgressPage.waitForFunction(() =>
+    document.querySelector("#topGenesisPublishedProgress")?.closest("#progress"));
+  await traineeProgressPage.evaluate(() => { authProfile.role = "trainee"; });
+  await traineeProgressPage.waitForFunction(() =>
+    document.querySelector("#topGenesisPublishedProgress")?.closest("#traineeAnalysis"));
+
 
   await traineeProgressPage.close();
 
