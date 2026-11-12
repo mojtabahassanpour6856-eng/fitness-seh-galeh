@@ -189,22 +189,52 @@ Waist-Hip Ratio (WHO),0.889
     "Customer email must not be extracted or exposed by the CSV parser.");
   assert.equal(csvResult.review_required, true);
   await page.addScriptTag({ url: "https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js" });
-  const zipResult = await page.evaluate(async () => {
+  // Regression fixture mirrors the exact filename prefix and member names in the
+  // user's uploaded archive. Real body photos are deliberately not committed.
+  const zipResult = await page.evaluate(async csv => {
     const zip = new window.JSZip();
-    zip.file("Scan Data.csv", "Customer Gender,Male\nCustomer Age,37\nCustomer Height,185 cm\nCustomer Weight,83 kg\nFITNESS & HEALTH\nmeasurement name,value,units\nBody Fat %,19,%\n");
-    for (const name of ["sample_utc_body_Front.jpg","sample_utc_body_Back.jpg","sample_utc_body_Left.jpg","sample_utc_body_Right.jpg","sample_utc_silhouette_Left.jpg","sample_utc_silhouette_Front.jpg"]) {
-      zip.file(name, new Uint8Array([255,216,255,217]));
-    }
+    zip.file("جواد کربلایی 11-11-2026 01_49_10 pm utc.csv", csv);
+    const canvas = document.createElement("canvas");
+    canvas.width = 706; canvas.height = 1080;
+    const ctx = canvas.getContext("2d");
+    ctx.fillStyle = "#fff"; ctx.fillRect(0, 0, 706, 1080);
+    ctx.fillStyle = "#333"; ctx.font = "32px Arial"; ctx.fillText("ANONYMIZED TEST IMAGE", 30, 80);
+    const jpeg = await (await fetch(canvas.toDataURL("image/jpeg", .82))).blob();
+    const names = [
+      "جواد کربلایی 11-11-2026 01_49_10 pm utc_body_Front.jpg",
+      "جواد کربلایی 11-11-2026 01_49_10 pm utc_body_Back.jpg",
+      "جواد کربلایی 11-11-2026 01_49_10 pm utc_body_Left.jpg",
+      "جواد کربلایی 11-11-2026 01_49_10 pm utc_body_Right.jpg",
+      "جواد کربلایی 11-11-2026 01_49_10 pm utc_silhouette_Left.jpg",
+      "جواد کربلایی 11-11-2026 01_49_10 pm utc_silhouette_Front.jpg"
+    ];
+    for (const name of names) zip.file(name, jpeg);
     const blob = await zip.generateAsync({type:"blob"});
-    const file = new File([blob], "top-genesis-sample.zip", {type:"application/zip"});
+    const file = new File([blob], "top-genesis-real-name-pattern.zip", {type:"application/zip"});
     return window.TopGenesisCsvParser.extractBundle(file);
-  });
+  }, csvFixture);
   assert.equal(zipResult.profile.age, 37);
+  assert.equal(zipResult.profile.height_cm.value, 185);
+  assert.equal(zipResult.profile.weight_kg.value, 83);
   assert.equal(zipResult.metrics.body_fat_percent.value, 19);
+  assert.equal(zipResult.metrics.bmi.value, 24.2);
+  assert.equal(zipResult.body_measurements_cm["Calf Left"].value, 32.38,
+    "CSV calf values must remain authoritative when they differ from the PDF.");
+  assert.equal(zipResult.body_measurements_cm["Calf Right"].value, 32.826);
+  assert.equal(Object.keys(zipResult.body_measurements_cm).length, 21);
+  assert.equal(zipResult.areas_and_volumes["Body Volume"].value, 71562);
   assert.equal(zipResult.scan_image_count, 6,
-    "The ZIP reader must identify four directional body views and two silhouette views.");
+    "The exact real-world filename prefix must still identify all six scan views.");
   assert.deepEqual(Object.keys(zipResult.scan_images).sort(),
     ["body_back","body_front","body_left","body_right","silhouette_front","silhouette_left"].sort());
+  const realNameImageSizes = await page.evaluate(async scans => {
+    const entries = await Promise.all(Object.entries(scans).map(([key,item]) => new Promise((resolve,reject) => {
+      const img = new Image(); img.onload=()=>resolve([key,img.naturalWidth,img.naturalHeight]); img.onerror=reject; img.src=item.image_data_url;
+    })));
+    return Object.fromEntries(entries.map(([key,w,h])=>[key,[w,h]]));
+  }, zipResult.scan_images);
+  assert.ok(Object.values(realNameImageSizes).every(([w,h])=>w===706&&h===1080),
+    "All six extracted images must retain the source scan dimensions.");
 
 
   await page.locator("#pdfFile").setInputFiles({
