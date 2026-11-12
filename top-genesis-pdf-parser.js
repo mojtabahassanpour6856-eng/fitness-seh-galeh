@@ -519,7 +519,17 @@
         }
       }
     } finally {
-      if (ocrWorker) await ocrWorker.terminate();
+      if (ocrWorker) {
+        try {
+          await withTimeout(
+            ocrWorker.terminate(),
+            10000,
+            "بستن موتور OCR بیش از ۱۰ ثانیه طول کشید."
+          );
+        } catch (_) {
+          // A timed-out OCR worker must not keep the report UI blocked during cleanup.
+        }
+      }
     }
     const result = extractMetrics(pages.join(" "));
     result.page_count = pdf.numPages;
