@@ -24,7 +24,19 @@
   }
 
   function mount() {
-    if (mounted) return;
+    const isCoach = (() => {
+      try { return typeof authProfile !== "undefined" && authProfile?.role === "coach"; }
+      catch (_) { return false; }
+    })();
+    const existing = $("topGenesisArchivePanel");
+    // This archive contains upload/delete controls and is strictly coach-only.
+    // Remove it immediately if a single-page session changes to a trainee.
+    if (!isCoach) {
+      if (existing) existing.remove();
+      mounted = false;
+      return;
+    }
+    if (mounted && existing) return;
     const anchor = $("bodyAnalysisEntryPanel");
     if (!anchor) return;
     const host = document.createElement("section");
