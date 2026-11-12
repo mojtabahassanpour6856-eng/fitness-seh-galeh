@@ -163,7 +163,10 @@
     }
     if (Object.keys(vendorRisk).length) out.vendor_relative_risk_estimates = vendorRisk;
 
-    const fatLossGoal = numberAfter(text, /([0-9]+(?:\.[0-9]+)?)\s*kg\s*Kilograms of Fat/i);
+    let fatLossGoal = numberAfter(text, /([0-9]+(?:\.[0-9]+)?)\s*kg\s*Kilograms of Fat/i);
+    // On image-only pages OCR may read the slider value before the adjacent
+    // body-fat percentage and its caption rather than next to the unit.
+    if (fatLossGoal == null) fatLossGoal = numberAfter(text, /([0-9]+(?:\.[0-9]+)?)\s+[0-9]+(?:\.[0-9]+)?%\s*Average\s*Kilograms of Fat/i);
     if (fatLossGoal != null) out.device_fat_loss_goal_kg = metric(fatLossGoal, "kg", "Fat Loss Calculator / device slider", "device_setting_not_coach_prescription");
     const waistLossGoal = numberAfter(text, /([0-9]+(?:\.[0-9]+)?)\s*cm\s*(?:Normal\s*)?Change in Waist Circumference/i);
     if (waistLossGoal != null) out.device_waist_loss_goal_cm = metric(waistLossGoal, "cm", "CM-Loss Goal / device slider", "device_setting_not_coach_prescription");
