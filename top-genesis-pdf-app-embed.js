@@ -8,8 +8,7 @@
 
   function isCoach() {
     try {
-      return typeof authProfile !== "undefined" && authProfile?.role === "coach" &&
-        typeof currentClient !== "undefined" && Boolean(currentClient?.id);
+      return typeof authProfile !== "undefined" && authProfile?.role === "coach";
     } catch (_) {
       return false;
     }
