@@ -658,6 +658,9 @@ Waist-Hip Ratio (WHO),0.889
     !document.querySelector("#topGenesisArchivePanel"), null, { timeout: 7000 });
   assert.equal(await integrationPage.locator("#topGenesisArchivePanel").count(), 0,
     "PDF upload/archive controls must not remain visible in a trainee session.");
+  await integrationPage.waitForFunction(() =>
+    document.querySelector("#topGenesisPdfAnalyzerPanel")?.style.display === "none",
+    null, { timeout: 7000 });
   const archiveSource = fs.readFileSync(path.join(root, "top-genesis-archive.js"), "utf8");
   const analyzerEmbedSource = fs.readFileSync(path.join(root, "top-genesis-pdf-app-embed.js"), "utf8");
   assert.match(archiveSource, /top-genesis-pdf-app-embed\.js/, "The app's existing archive entry must load the new coach-only analyzer card.");
