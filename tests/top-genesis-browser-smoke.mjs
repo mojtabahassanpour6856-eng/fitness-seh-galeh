@@ -250,6 +250,13 @@ Waist-Hip Ratio (WHO),0.889
 
   const status = await page.locator("#status").innerText();
   assert.match(status, /استخراج تمام شد/, `Parser did not complete: ${status}`);
+  assert.equal(await page.locator("#analysisDate").count(), 1,
+    "The analysis date must be explicitly selectable for trainee progress history.");
+  assert.equal(await page.locator("#sendToTrainee").count(), 1,
+    "A separate coach send action must be present after the report is rendered.");
+  assert.equal(await page.locator("#sendToTrainee").isDisabled(), true,
+    "The report must not be sent before manual coach approval.");
+  assert.match(await page.locator("#sendToTrainee").innerText(), /ارسال به پنل پیشرفت شاگرد/);
   const pageInfo = await page.locator("#result").innerText();
   assert.match(pageInfo, /تعداد صفحات: 4/);
   assert.match(pageInfo, /صفحات OCR: 2، 3/);
