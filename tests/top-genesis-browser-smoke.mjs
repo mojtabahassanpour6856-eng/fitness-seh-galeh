@@ -258,8 +258,10 @@ Waist-Hip Ratio (WHO),0.889
     "The report must not be sent before manual coach approval.");
   assert.match(await page.locator("#sendToTrainee").innerText(), /ارسال به پنل پیشرفت شاگرد/);
   const pageInfo = await page.locator("#result").innerText();
+  assert.doesNotMatch(pageInfo, /FITNESS SEH GALEH|Top Genesis|BMI|BMR|OCR|PDF|ZIP|CSV|PNG/,
+    "The generated report shown to the coach must use Persian labels rather than English abbreviations.");
   assert.match(pageInfo, /تعداد صفحات: 4/);
-  assert.match(pageInfo, /صفحات OCR: 2، 3/);
+  assert.match(pageInfo, /صفحات تشخیص متن: 2، 3/);
   assert.match(pageInfo, /161/);
   assert.match(pageInfo, /57/);
   assert.match(pageInfo, /مقایسه دو سمت بدن/,
