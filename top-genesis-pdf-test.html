@@ -179,7 +179,7 @@ button.addEventListener("click",async()=>{
  if(!file){status.textContent="ابتدا فایل PDF اصلی را انتخاب کنید.";return;}
  const selectedFiles=[file,...(newerFile?[newerFile]:[]),...moreFiles];
  const zipFile=zipInput.files&&zipInput.files[0];
- if(zipFile&&(!/\\.zip$/i.test(zipFile.name)||zipFile.size>20*1024*1024)){status.textContent="فایل ZIP باید معتبر و حداکثر ۲۰ مگابایت باشد.";return;}
+ if(zipFile&&(!/\.zip$/i.test(zipFile.name)||zipFile.size>20*1024*1024)){status.textContent="فایل ZIP باید معتبر و حداکثر ۲۰ مگابایت باشد.";return;}
  const invalidFile=selectedFiles.find(f=>!(/\.pdf$/i.test(f.name)||f.type==="application/pdf"));
  if(invalidFile){status.textContent="فایل «"+invalidFile.name+"» از نوع PDF نیست.";return;}
  const oversizedFile=selectedFiles.find(f=>f.size>10*1024*1024);
