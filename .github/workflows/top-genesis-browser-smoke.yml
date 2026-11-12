@@ -12,6 +12,8 @@ on:
       - "tests/top-genesis-browser-smoke.mjs"
       - "tests/trainee-navigation-avatar-regression.mjs"
       - "top-genesis-pdf-app-embed.js"
+      - "top-genesis-publication.js"
+      - "supabase/migrations/202611120001_top_genesis_publications.sql"
       - ".github/workflows/top-genesis-browser-smoke.yml"
   pull_request:
     paths:
@@ -37,6 +39,8 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 20
+      - name: Check publication module syntax
+        run: node --check top-genesis-publication.js
       - name: Install browser test dependencies
         run: npm install --no-save playwright pdf-lib
       - name: Install Chromium

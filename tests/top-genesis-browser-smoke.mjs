@@ -250,6 +250,13 @@ Waist-Hip Ratio (WHO),0.889
 
   const status = await page.locator("#status").innerText();
   assert.match(status, /استخراج تمام شد/, `Parser did not complete: ${status}`);
+  assert.equal(await page.locator("#analysisDate").count(), 1,
+    "The analysis date must be explicitly selectable for trainee progress history.");
+  assert.equal(await page.locator("#sendToTrainee").count(), 1,
+    "A separate coach send action must be present after the report is rendered.");
+  assert.equal(await page.locator("#sendToTrainee").isDisabled(), true,
+    "The report must not be sent before manual coach approval.");
+  assert.match(await page.locator("#sendToTrainee").innerText(), /ارسال به پنل پیشرفت شاگرد/);
   const pageInfo = await page.locator("#result").innerText();
   assert.match(pageInfo, /تعداد صفحات: 4/);
   assert.match(pageInfo, /صفحات OCR: 2، 3/);
@@ -538,7 +545,7 @@ Waist-Hip Ratio (WHO),0.889
   }));
   assert.match(simpleAnalysis,/خلاصه ساده و تصویری/);
   assert.match(simpleAnalysis,/ترکیب وزن ثبت‌شده/,"Consistent fat and lean mass should render a composition chart.");
-  assert.match(simpleAnalysis,/کنترل BMI/,"Height, weight and BMI should be cross-checked.");
+  assert.match(simpleAnalysis,/کنترل شاخص توده بدنی/,"Height, weight and BMI should be cross-checked.");
   assert.match(simpleAnalysis,/درصد چربی محاسبه‌شده/,"Body-fat percentage should be cross-checked against fat mass.");
   assert.match(simpleAnalysis,/معادل کالری مصرفی روزانه نیست/,"RMR must not be presented as daily calorie expenditure.");
   const trend = await page.evaluate(() => window.TopGenesisReportComparison(
@@ -637,7 +644,39 @@ Waist-Hip Ratio (WHO),0.889
   assert.match(archiveSource, /top-genesis-pdf-app-embed\.js/, "The app's existing archive entry must load the new coach-only analyzer card.");
   await integrationPage.close();
 
-  console.log("PASS: Chromium loaded PDF.js/OCR, parsed anonymized CSV fixture, validated ZIP input, and preserved existing coach-only app checks.");
+  // Verify approved reports appear in the trainee's analysis/progress page.
+  const traineeProgressPage = await browser.newPage();
+  await traineeProgressPage.goto("http://127.0.0.1:" + address.port + "/top-genesis-pdf-test.html");
+  await traineeProgressPage.addScriptTag({ content:
+    "let authProfile = { role: 'trainee', trainee_id: 'trainee-fixture-1' }; " +
+    "let currentClient = { id: 'trainee-fixture-1' }; " +
+    "window.AUTH_SUPABASE = { from() { const orderCount = { value: 0 }; const chain = { " +
+    "select() { return this; }, eq() { return this; }, " +
+    "order() { orderCount.value += 1; return orderCount.value === 1 ? this : Promise.resolve({ data: [" +
+    "{ id:'a1', analysis_date:'2026-10-01', report_metrics:{ weight_kg:{value:82,unit:'kg',status:'needs_coach_review'}, body_fat_percent:{value:22,unit:'%',status:'needs_coach_review'} }, training_notes:'تمرین مقاومتی طبق برنامه', nutrition_notes:'پروتئین کافی' }," +
+    "{ id:'a2', analysis_date:'2026-11-01', report_metrics:{ weight_kg:{value:79,unit:'kg',status:'needs_coach_review'}, body_fat_percent:{value:19,unit:'%',status:'needs_coach_review'} }, training_notes:'افزایش تدریجی فشار تمرین', nutrition_notes:'تنظیم کالری روزانه' }" +
+    "], error:null }); } }; return chain; } }; " +
+    "const section=document.createElement('section'); section.id='traineeAnalysis'; section.className='section active'; " +
+    "section.innerHTML='<div id=traineeAnalysisArchive></div>'; document.body.appendChild(section);"
+  });
+  await traineeProgressPage.addScriptTag({ path: path.join(root, "top-genesis-publication.js") });
+  await traineeProgressPage.waitForSelector("#topGenesisPublishedProgress");
+  await traineeProgressPage.waitForFunction(() => {
+    const body = document.querySelector("#topGenesisPublishedBody");
+    return body && body.querySelectorAll("polyline").length >= 2;
+  });
+  assert.match(await traineeProgressPage.locator("#topGenesisPublishedProgress").innerText(), /گزارش‌های تأییدشده آنالیز بدن/);
+  assert.match(await traineeProgressPage.locator("#topGenesisPublishedBody").innerText(), /۷۹/);
+  assert.match(await traineeProgressPage.locator("#topGenesisPublishedBody").innerText(), /توصیه‌های مربی/);
+  await traineeProgressPage.close();
+
+  const publicationMigration = fs.readFileSync(path.join(root, "supabase/migrations/202611120001_top_genesis_publications.sql"), "utf8");
+  assert.match(publicationMigration, /private\.can_access_trainee/);
+  assert.match(publicationMigration, /for insert to authenticated/i);
+  assert.doesNotMatch(publicationMigration, /for update to authenticated/i);
+  assert.doesNotMatch(publicationMigration, /for delete to authenticated/i);
+
+  console.log("PASS: Chromium loaded PDF.js/OCR, parsed anonymized CSV/ZIP fixtures, and rendered approved multi-visit trends in the trainee progress panel.");
 } finally {
   await browser.close();
   await new Promise(resolve => server.close(resolve));
