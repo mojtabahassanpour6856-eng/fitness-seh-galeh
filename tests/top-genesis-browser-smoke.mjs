@@ -651,12 +651,14 @@ Waist-Hip Ratio (WHO),0.889
   assert.match(await integrationPage.locator("#topGenesisPdfAnalyzerFrame").getAttribute("src"), /top-genesis-pdf-test\.html\?embedded=1/);
   await integrationPage.evaluate(() => { window.authProfile = { role: "trainee" }; });
   await integrationPage.waitForFunction(() =>
-    document.querySelector("#topGenesisPdfAnalyzerPanel")?.style.display === "none" &&
     !document.querySelector("#topGenesisArchivePanel"), null, { timeout: 7000 });
   assert.equal(await integrationPage.locator("#topGenesisArchivePanel").count(), 0,
     "PDF upload/archive controls must not remain visible in a trainee session.");
   const archiveSource = fs.readFileSync(path.join(root, "top-genesis-archive.js"), "utf8");
+  const analyzerEmbedSource = fs.readFileSync(path.join(root, "top-genesis-pdf-app-embed.js"), "utf8");
   assert.match(archiveSource, /top-genesis-pdf-app-embed\.js/, "The app's existing archive entry must load the new coach-only analyzer card.");
+  assert.match(analyzerEmbedSource, /host\.style\.display\s*=\s*isCoach\(\)\s*\?\s*"block"\s*:\s*"none"/,
+    "The embedded analyzer/upload interface must be hidden for trainee sessions.");
   await integrationPage.close();
 
   // Verify approved reports appear in the trainee's analysis/progress page.
