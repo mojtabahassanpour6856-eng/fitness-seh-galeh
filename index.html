@@ -2679,6 +2679,9 @@ if($("prDate"))$("prDate").value=today();if($("anDate"))$("anDate").value=today(
     }
     return originalTraineePhotoCommit.apply(this,arguments);
   };
+  window.sehDeleteTraineePhoto=async function(){if(!currentClient||!currentClient.id||!currentClient.profile_image)return;if(!confirm('عکس پروفایل حذف شود؟'))return;const traineeId=String(currentClient.id);try{const rows=await window.sbWrite('/trainees?id=eq.'+encodeURIComponent(traineeId),'PATCH',{profile_image:null});if(!Array.isArray(rows)||!rows.some(row=>String(row.id)===traineeId&&row.profile_image==null))throw new Error('حذف عکس در پایگاه داده تأیید نشد.');currentClient.profile_image=null;if(Array.isArray(clients)){const row=clients.find(x=>String(x.id)===traineeId);if(row)row.profile_image=null;}const root=document.getElementById('traineeDashboard');if(root)renderTraineeProfileHeader(root);alert('عکس پروفایل حذف شد.');}catch(e){console.error('Trainee profile photo delete failed',e);alert('حذف عکس انجام نشد. '+(e.message||''));}};
+
+
   const originalTraineePhotoDelete = window.sehDeleteTraineePhoto;
   window.sehDeleteTraineePhoto = async function(){
     if(!sehOwnTraineeProfileId()){
@@ -2688,7 +2691,6 @@ if($("prDate"))$("prDate").value=today();if($("anDate"))$("anDate").value=today(
     return originalTraineePhotoDelete.apply(this,arguments);
   };
 
-  window.sehDeleteTraineePhoto=async function(){if(!currentClient||!currentClient.id||!currentClient.profile_image)return;if(!confirm('عکس پروفایل حذف شود؟'))return;const traineeId=String(currentClient.id);try{const rows=await window.sbWrite('/trainees?id=eq.'+encodeURIComponent(traineeId),'PATCH',{profile_image:null});if(!Array.isArray(rows)||!rows.some(row=>String(row.id)===traineeId&&row.profile_image==null))throw new Error('حذف عکس در پایگاه داده تأیید نشد.');currentClient.profile_image=null;if(Array.isArray(clients)){const row=clients.find(x=>String(x.id)===traineeId);if(row)row.profile_image=null;}const root=document.getElementById('traineeDashboard');if(root)renderTraineeProfileHeader(root);alert('عکس پروفایل حذف شد.');}catch(e){console.error('Trainee profile photo delete failed',e);alert('حذف عکس انجام نشد. '+(e.message||''));}};
 
 
   function normalizeTraineeProfileCards(root){
