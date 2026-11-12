@@ -200,30 +200,6 @@
       }
     }
 
-    const bodyMeasures = [");");
-      const pattern = new RegExp("(?:^|[^A-Za-z])" + escaped +
-        "\\s*(?:\\|\\s*|[:=-]\\s*|\\s+)([0-9]+(?:\\.[0-9]+)?)\\s*(?:cm\\b)?", "gi");
-      const values = numericCandidates(text, pattern);
-      if (!values.length) return;
-      const unique = [...new Set(values)];
-      const spread = Math.max(...unique) - Math.min(...unique);
-      standardMeasurements[key] = {
-        ...metric(values[0], "cm", "Body Measurements / Measurement Snapshots", spread > 0.02
-          ? "conflict_review" : unique.length > 1 ? "consistent_rounding" : "needs_coach_review"),
-        ...(unique.length > 1 ? { alternatives: unique } : {})
-      };
-      if (spread > 0.02) flags.push("برای اندازه " + label + " در صفحات PDF اختلاف معنادار دیده شد؛ مقدارها برای بررسی مربی حفظ شدند.");
-    });
-    if (Object.keys(standardMeasurements).length) {
-      out.body_measurements_cm = standardMeasurements;
-      const requiredKeys = standardMeasurementLabels.map(([key]) => key);
-      const missingKeys = requiredKeys.filter(key => !standardMeasurements[key]);
-      if (missingKeys.length) {
-        out.body_measurements_missing = missingKeys;
-        flags.push("برخی اندازه‌های استاندارد بدن در PDF پیدا نشدند؛ مقدار آن‌ها صفر یا حدس زده نشده است.");
-      }
-    }
-
     const bodyMeasures = [
       ["calf_left_cm", /Calf\s*Left\s*Region\s*[|:=-]?\s*([0-9]+(?:\.[0-9]+)?)/i],
       ["forearm_left_cm", /Forearm\s*Left\s*Region\s*[|:=-]?\s*([0-9]+(?:\.[0-9]+)?)/i],
