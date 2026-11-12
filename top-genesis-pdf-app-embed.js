@@ -8,7 +8,8 @@
 
   function isCoach() {
     try {
-      return typeof authProfile !== "undefined" && authProfile?.role === "coach";
+      const profile = window.authProfile || (typeof authProfile !== "undefined" ? authProfile : null);
+      return profile?.role === "coach";
     } catch (_) {
       return false;
     }
