@@ -37,13 +37,13 @@ pre{white-space:pre-wrap;overflow-wrap:anywhere;background:#f7f7f7;padding:12px;
 <h1>گزارش هوشمند آنالیز بدن</h1>
 <p class="note">گزارش‌ها در همین مرورگر تحلیل می‌شوند. تا زمان بررسی کامل، تأیید مربی و انتخاب گزینه ارسال، هیچ نتیجه‌ای به پرونده شاگرد منتقل نمی‌شود. برای پردازش فایل‌ها اتصال اینترنت لازم است.</p>
 <label for="analysisDate">تاریخ انجام آنالیز:</label><br><input id="analysisDate" type="date"><br>
-<label for="pdfFile">انتخاب گزارش PDF (حداکثر ۱۰ مگابایت):</label><br>
+<label for="pdfFile">انتخاب گزارش پی‌دی‌اف (حداکثر ۱۰ مگابایت):</label><br>
 <input id="pdfFile" type="file" accept="application/pdf,.pdf">
-<br><label for="pdfFile2">گزارش دوم (جدیدتر؛ اختیاری برای مقایسه):</label><br>
+<br><label for="pdfFile2">گزارش دوم (جدیدتر؛ برای مقایسه اختیاری):</label><br>
 <input id="pdfFile2" type="file" accept="application/pdf,.pdf">
 <br><label for="pdfFilesMore">گزارش‌های بعدی (برای سه نوبت یا بیشتر؛ به ترتیب قدیمی به جدید):</label><br>
 <input id="pdfFilesMore" type="file" accept="application/pdf,.pdf" multiple>
-<br><label for="topGenesisZip">بسته ZIP دستگاه (CSV و تصاویر اسکن؛ اختیاری، حداکثر ۲۰ مگابایت):</label><br>
+<br><label for="topGenesisZip">بسته فشرده دستگاه (فایل جدولی و تصاویر اسکن؛ اختیاری، حداکثر ۲۰ مگابایت):</label><br>
 <input id="topGenesisZip" type="file" accept=".zip,application/zip">
 <br><button id="run" type="button">شروع استخراج و تحلیل</button>
 <div id="status" role="status" aria-live="polite"></div>
@@ -108,7 +108,7 @@ function buildVisualReport(m,flags){
  if(fat!==null&&lean!==null&&sum>0&&weight!==null&&Math.abs(sum-weight)<=1.5){const fp=fat/sum*100,lp=100-fp;composition='<h3>ترکیب وزن</h3><div class="vbar"><span>توده چربی</span><div class="track"><div class="fill" style="width:'+fp.toFixed(1)+'%"></div></div><b>'+fat+' kg</b></div><div class="vbar"><span>بدون چربی</span><div class="track"><div class="fill lean" style="width:'+lp.toFixed(1)+'%"></div></div><b>'+lean+' kg</b></div>';}
  const positives=[];if(valid('weight_kg')!==null&&valid('height_cm')!==null)positives.push('قد و وزن از گزارش استخراج شده‌اند.');if(valid('resting_metabolic_rate_kcal')!==null)positives.push('سوخت‌وساز پایه به‌صورت مستقل ثبت شده است.');if(valid('daily_energy_expenditure_kcal')!==null)positives.push('مصرف انرژی روزانه با برچسب اختصاصی دستگاه استخراج شده است.');if(valid('body_fat_percent')!==null)positives.push('درصد چربی بدن در گزارش موجود است.');
  const concerns=[];if(flags&&flags.length)concerns.push(flags.slice(0,3).join(' '));if(m.raw_body_measurements)concerns.push('اندازه‌های Region تا تأیید واحد و روش دستگاه، فقط مقدار خام هستند.');if(m.missing_measurements)concerns.push('برخی اندازه‌ها ثبت نشده‌اند؛ مقدارشان صفر یا حدس زده نشده است.');
- return '<section id="visualReport" class="visual-report report-page"><div class="brandline"><img class="brand-logo" src="./icon-512-2.png" alt="نشان باشگاه فیتنس سه‌قلعه" loading="eager"><div class="brandname">FITNESS SEH GALEH · باشگاه فیتنس سه‌قلعه</div><div class="sub">گزارش قابل تحویل به شاگرد</div></div><div class="hero">گزارش هوشمند آنالیز بدن</div><div class="sub">نمای کلی وضعیت بدن · شاخص‌های استخراج‌شده از گزارش دستگاه دستگاه؛ نیازمند تأیید مربی</div><div class="vgrid">'+(cards||'<p>شاخص کافی برای نمایش پیدا نشد.</p>')+'</div>'+composition+'<div class="insights"><div class="insight good"><h3>نقاط مثبت اطلاعات ثبت‌شده</h3><p>'+(positives.join(' ')||'داده کافی برای مشخص‌کردن شاخص‌های مثبت استخراج نشده است.')+'</p></div><div class="insight watch"><h3>موارد نیازمند پیگیری</h3><p>'+(concerns.join(' ')||'هشدار مهمی در کنترل اولیه ثبت نشده؛ تأیید مربی همچنان لازم است.')+'</p></div></div><div class="foot">نقاط قوت و ضعف عضلانی از روی حدس تعیین نمی‌شوند. تحلیل موضعی فقط پس از تأیید اندازه‌های معتبر یا مشاهده تصویر اسکن انجام می‌شود. مربی: مجتبی</div></section>';
+ return '<section id="visualReport" class="visual-report report-page"><div class="brandline"><img class="brand-logo" src="./icon-512-2.png" alt="نشان باشگاه فیتنس سه‌قلعه" loading="eager"><div class="brandname">فیتنس سه‌قلعه · باشگاه فیتنس سه‌قلعه</div><div class="sub">گزارش قابل تحویل به شاگرد</div></div><div class="hero">گزارش هوشمند آنالیز بدن</div><div class="sub">نمای کلی وضعیت بدن · شاخص‌های استخراج‌شده از گزارش دستگاه دستگاه؛ نیازمند تأیید مربی</div><div class="vgrid">'+(cards||'<p>شاخص کافی برای نمایش پیدا نشد.</p>')+'</div>'+composition+'<div class="insights"><div class="insight good"><h3>نقاط مثبت اطلاعات ثبت‌شده</h3><p>'+(positives.join(' ')||'داده کافی برای مشخص‌کردن شاخص‌های مثبت استخراج نشده است.')+'</p></div><div class="insight watch"><h3>موارد نیازمند پیگیری</h3><p>'+(concerns.join(' ')||'هشدار مهمی در کنترل اولیه ثبت نشده؛ تأیید مربی همچنان لازم است.')+'</p></div></div><div class="foot">نقاط قوت و ضعف عضلانی از روی حدس تعیین نمی‌شوند. تحلیل موضعی فقط پس از تأیید اندازه‌های معتبر یا مشاهده تصویر اسکن انجام می‌شود. مربی: مجتبی</div></section>';
 }
 window.TopGenesisVisualReport=buildVisualReport;
 window.TopGenesisSimpleAnalysis=buildSimpleAnalysis;
@@ -194,7 +194,7 @@ button.addEventListener("click",async()=>{
  if(!file){status.textContent="ابتدا فایل PDF اصلی را انتخاب کنید.";return;}
  const selectedFiles=[file,...(newerFile?[newerFile]:[]),...moreFiles];
  const zipFile=zipInput.files&&zipInput.files[0];
- if(zipFile&&(!/\.zip$/i.test(zipFile.name)||zipFile.size>20*1024*1024)){status.textContent="فایل ZIP باید معتبر و حداکثر ۲۰ مگابایت باشد.";return;}
+ if(zipFile&&(!/\.zip$/i.test(zipFile.name)||zipFile.size>20*1024*1024)){status.textContent="بسته فشرده باید معتبر و حداکثر ۲۰ مگابایت باشد.";return;}
  const invalidFile=selectedFiles.find(f=>!(/\.pdf$/i.test(f.name)||f.type==="application/pdf"));
  if(invalidFile){status.textContent="فایل «"+invalidFile.name+"» از نوع PDF نیست.";return;}
  const oversizedFile=selectedFiles.find(f=>f.size>10*1024*1024);
@@ -241,7 +241,7 @@ button.addEventListener("click",async()=>{
    const alternatives=item.alternatives&&item.alternatives.length>1?"<br><span class='small'>مقادیر مشاهده‌شده: "+item.alternatives.map(escapeHTML).join("، ")+"</span>":"";
    rows.push("<tr><td>"+escapeHTML(labels[key]||key)+"</td><td>"+escapeHTML(item.value)+" "+escapeHTML(units[item.unit]||item.unit||"")+alternatives+"</td><td class='"+(item.status==="invalid_range"||item.status==="conflict_review"?"bad":"review")+"'>"+escapeHTML(statusText[item.status]||item.status)+"</td></tr>");
   });
-  let html=buildCoverPage()+buildVisualReport(data.metrics,data.flags,data.scan_pages)+buildScanPage(data.scan_pages)+buildSimpleAnalysis(data.metrics)+buildSupplementaryDevicePage(data.metrics)+buildCoachReviewPage(data.metrics,data.scan_pages)+(newerData?buildReportComparison(data.metrics,newerData.metrics):"")+(allReports.length>=3?buildMultiReportTrend(allReports):"")+"<section class='report-page'><h2>نتیجه استخراج گزارش اول</h2><p>تعداد صفحات: "+data.page_count+" | صفحات OCR: "+((data.ocr_pages||[]).join("، ")||"ندارد")+"</p><table><thead><tr><th>شاخص</th><th>مقدار</th><th>وضعیت</th></tr></thead><tbody>"+rows.join("")+"</tbody></table></section>";
+  let html=buildCoverPage()+buildVisualReport(data.metrics,data.flags,data.scan_pages)+buildScanPage(data.scan_pages)+buildSimpleAnalysis(data.metrics)+buildSupplementaryDevicePage(data.metrics)+buildCoachReviewPage(data.metrics,data.scan_pages)+(newerData?buildReportComparison(data.metrics,newerData.metrics):"")+(allReports.length>=3?buildMultiReportTrend(allReports):"")+"<section class='report-page'><h2>نتیجه استخراج گزارش اول</h2><p>تعداد صفحات: "+data.page_count+" | صفحات تشخیص متن: "+((data.ocr_pages||[]).join("، ")||"ندارد")+"</p><table><thead><tr><th>شاخص</th><th>مقدار</th><th>وضعیت</th></tr></thead><tbody>"+rows.join("")+"</tbody></table></section>";
   if(bundleData){
    const imageLabels={body_front:"نمای روبه‌رو",body_back:"نمای پشت",body_left:"نمای سمت چپ",body_right:"نمای سمت راست",silhouette_front:"نمای خطی روبه‌رو",silhouette_left:"نمای خطی پهلو"};
    const imageCards=Object.entries(bundleData.scan_images||{}).map(([key,item])=>"<figure class='scan-figure'><figcaption>"+escapeHTML(imageLabels[key]||item.label)+"</figcaption><img src='"+item.image_data_url+"' alt='"+escapeHTML(imageLabels[key]||item.label)+"' loading='eager'></figure>").join("");
@@ -250,7 +250,7 @@ button.addEventListener("click",async()=>{
    sectionTables.forEach(([title,items])=>{
     const entries=Object.entries(items||{}).filter(([,v])=>v&&typeof v==="object"&&"value" in v);
     if(!entries.length)return;
-    html+="<section class='report-page'><h2>"+escapeHTML(title)+" از CSV</h2><p class='small'>منبع عددی: فایل CSV دستگاه؛ همه مقادیر برای تأیید مربی هستند.</p><table><thead><tr><th>شاخص</th><th>مقدار</th><th>واحد</th><th>وضعیت</th></tr></thead><tbody>"+entries.map(([k,v])=>"<tr><td>"+escapeHTML(k)+"</td><td>"+escapeHTML(v.value)+(v.alternatives&&v.alternatives.length>1?"<br><small>CSV / PDF: "+v.alternatives.map(escapeHTML).join(" / ")+"</small>":"")+"</td><td>"+escapeHTML(v.unit||"—")+"</td><td class='"+(v.status==="conflict_review"?"bad":"review")+"'>"+(v.status==="conflict_review"?"اختلاف منبع؛ بررسی مربی":"نیازمند تأیید مربی")+"</td></tr>").join("")+"</tbody></table></section>";
+    html+="<section class='report-page'><h2>"+escapeHTML(title)+" از فایل جدولی</h2><p class='small'>منبع عددی: فایل CSV دستگاه؛ همه مقادیر برای تأیید مربی هستند.</p><table><thead><tr><th>شاخص</th><th>مقدار</th><th>واحد</th><th>وضعیت</th></tr></thead><tbody>"+entries.map(([k,v])=>"<tr><td>"+escapeHTML(k)+"</td><td>"+escapeHTML(v.value)+(v.alternatives&&v.alternatives.length>1?"<br><small>CSV / PDF: "+v.alternatives.map(escapeHTML).join(" / ")+"</small>":"")+"</td><td>"+escapeHTML(v.unit||"—")+"</td><td class='"+(v.status==="conflict_review"?"bad":"review")+"'>"+(v.status==="conflict_review"?"اختلاف منبع؛ بررسی مربی":"نیازمند تأیید مربی")+"</td></tr>").join("")+"</tbody></table></section>";
    });
    if(bundleData.flags&&bundleData.flags.length)html+="<section class='report-page'><h2>موارد نیازمند بررسی بین CSV و ZIP</h2><ul>"+bundleData.flags.map(x=>"<li>"+escapeHTML(x)+"</li>").join("")+"</ul></section>";
   }
