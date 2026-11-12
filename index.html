@@ -2572,10 +2572,29 @@ if($("prDate"))$("prDate").value=today();if($("anDate"))$("anDate").value=today(
     const editDeleteButton=document.getElementById('sehDeleteTraineePhotoEdit');
     if(editDeleteButton)editDeleteButton.style.display=(authProfile&&authProfile.role==='trainee'&&c.profile_image)?'inline-flex':'none';
     if(c.profile_image){
-      img.onload=()=>{img.style.display='block';fallbackNode.style.display='none';};
-      img.onerror=()=>{img.style.display='none';fallbackNode.style.display='block';};
-      if(img.getAttribute('src')!==c.profile_image)img.src=c.profile_image;
-    }else{img.style.display='none';fallbackNode.style.display='block';}
+      const source=String(c.profile_image);
+      if(img.dataset.profileSource!==source){
+        img.dataset.profileSource=source;
+        const preload=new Image();
+        preload.onload=()=>{
+          if(!img.isConnected||img.dataset.profileSource!==source)return;
+          img.onload=null;img.onerror=null;
+          if(img.getAttribute('src')!==source)img.src=source;
+          img.style.display='block';fallbackNode.style.display='none';
+        };
+        preload.onerror=()=>{
+          if(!img.isConnected||img.dataset.profileSource!==source)return;
+          img.style.display='none';fallbackNode.style.display='block';
+        };
+        preload.src=source;
+      }else if(img.complete&&img.naturalWidth>0){
+        img.style.display='block';fallbackNode.style.display='none';
+      }
+    }else{
+      img.dataset.profileSource='';
+      img.removeAttribute('src');
+      img.style.display='none';fallbackNode.style.display='block';
+    }
   }
   window.renderTraineeProfileHeader = renderTraineeProfileHeader;
 
@@ -14952,10 +14971,10 @@ window.sehResetTurnstile=function(){};
   initialized=true;
   try{
    var state=Object.assign({},history.state||{});
-   state.sehTraineeBackV2={route:current(),kind:'base'};
+   // The current document entry is the dashboard boundary. Keep it as the
+   // single base entry; card-to-card navigation replaces the route above it.
+   state.sehTraineeBackV2={route:'traineeDashboard',kind:'base'};
    history.replaceState(state,'');
-   // Do not add a hidden dashboard guard entry: it makes exiting require
-   // an extra Back press. The route entries themselves provide card navigation.
   }catch(e){initialized=false;console.warn('راه‌اندازی مسیر بازگشت شاگرد انجام نشد',e);}
   return initialized;
  }
@@ -14963,9 +14982,17 @@ window.sehResetTurnstile=function(){};
   if(role()!=='trainee'||restoring)return;
   init();
   var to=normalize(id),state=Object.assign({},history.state||{}),entry=state.sehTraineeBackV2;
+  if(to==='traineeDashboard'){
+   state.sehTraineeBackV2={route:'traineeDashboard',kind:'base'};
+   try{history.replaceState(state,'');}catch(e){console.warn('ثبت داشبورد در تاریخچه انجام نشد',e);}
+   return;
+  }
   if(entry&&normalize(entry.route)===to)return;
   state.sehTraineeBackV2={route:to,kind:'route'};
-  try{history[replace?'replaceState':'pushState'](state,'');}
+  // Keep exactly one in-app card entry above the dashboard. Navigating from
+  // one card to another replaces that entry instead of growing a stale stack.
+  var method=(replace||entry&&entry.kind==='route')?'replaceState':'pushState';
+  try{history[method](state,'');}
   catch(e){console.warn('ثبت مسیر بازگشت انجام نشد',e);}
  }
  function show(id){
@@ -15023,30 +15050,20 @@ window.sehResetTurnstile=function(){};
  window.addEventListener('popstate',function(e){
   if(role()!=='trainee')return;
   var entry=e.state&&e.state.sehTraineeBackV2;
-  var dashboard=current()==='traineeDashboard';
-  // A single Back from any trainee card must return directly to the dashboard.
-  // Replace the popped entry so a second Back can leave the app normally.
-  if(dashboard){
-   // If this dashboard was reached by backing out of a card, one extra
-   // stale in-app history entry may remain. Skip it automatically on the
-   // trainee's next Back press, so the same single press exits the app.
-   if(returnedFromCard){
-    returnedFromCard=false;
-    e.stopImmediatePropagation();
-    setTimeout(function(){try{history.back();}catch(err){}},0);
-   }
+  // A pop to the base entry is the single Back transition from a card to
+  // dashboard. The following Back is intentionally left to the browser/app.
+  if(entry&&entry.kind==='base'){
+   restoring=true;
+   try{show('traineeDashboard');}
+   finally{restoring=false;}
    return;
   }
-  // From any card, one Back returns to dashboard.
+  // Unknown/outside history entries must not be trapped in the app.
+  if(!entry)return;
   e.stopImmediatePropagation();
-  returnedFromCard=true;
   restoring=true;
-  try{
-   show('traineeDashboard');
-   var state=Object.assign({},e.state||{});
-   state.sehTraineeBackV2={route:'traineeDashboard',kind:'base'};
-   history.replaceState(state,'');
-  }finally{restoring=false;}
+  try{show('traineeDashboard');}
+  finally{restoring=false;}
  },true);
  // Authentication completes asynchronously after DOMContentLoaded. Initialize
  // only once the trainee profile is actually available; never reset an active stack.
