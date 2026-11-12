@@ -36,7 +36,11 @@ pre{white-space:pre-wrap;overflow-wrap:anywhere;background:#f7f7f7;padding:12px;
 <main>
 <h1>گزارش هوشمند آنالیز بدن</h1>
 <p class="note">گزارش‌ها در همین مرورگر تحلیل می‌شوند. تا زمان بررسی کامل، تأیید مربی و انتخاب گزینه ارسال، هیچ نتیجه‌ای به پرونده شاگرد منتقل نمی‌شود. برای پردازش فایل‌ها اتصال اینترنت لازم است.</p>
-<label for="analysisDate">تاریخ انجام آنالیز:</label><br><input id="analysisDate" type="date"><br>
+<label for="analysisDate">تاریخ انجام آنالیز (شمسی):</label><br>
+<div class="jalali-date-control" style="position:relative;display:inline-flex;align-items:center;gap:10px;margin:6px 0 12px">
+  <button id="analysisDateDisplay" type="button" class="secondary" aria-label="انتخاب تاریخ شمسی" style="min-width:190px;background:#fffdf7;color:#765b2e;border:1px solid #c5a35b">در حال بارگذاری تاریخ…</button>
+  <input id="analysisDate" type="date" aria-label="انتخاب تاریخ آنالیز" style="position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:pointer">
+</div><br>
 <label for="pdfFile">انتخاب گزارش پی‌دی‌اف (حداکثر ۱۰ مگابایت):</label><br>
 <input id="pdfFile" type="file" accept="application/pdf,.pdf">
 <br><label for="pdfFile2">گزارش دوم (جدیدتر؛ برای مقایسه اختیاری):</label><br>
@@ -57,7 +61,27 @@ pre{white-space:pre-wrap;overflow-wrap:anywhere;background:#f7f7f7;padding:12px;
 "use strict";
 const embeddedMode=new URLSearchParams(window.location.search).get("embedded")==="1";
 const analysisDateInput=document.getElementById("analysisDate");
-if(analysisDateInput&&!analysisDateInput.value)analysisDateInput.value=new Date().toISOString().slice(0,10);
+const analysisDateDisplay=document.getElementById("analysisDateDisplay");
+function renderJalaliAnalysisDate(){
+ if(!analysisDateInput||!analysisDateDisplay||!analysisDateInput.value)return;
+ const parts=analysisDateInput.value.split("-").map(Number);
+ const localDate=new Date(parts[0],parts[1]-1,parts[2],12,0,0);
+ const formatted=new Intl.DateTimeFormat("fa-IR-u-ca-persian",{year:"numeric",month:"2-digit",day:"2-digit"}).format(localDate);
+ analysisDateDisplay.textContent=formatted.replace(/-/g,"/");
+ analysisDateDisplay.setAttribute("aria-label","تاریخ انتخاب‌شده: "+formatted);
+}
+if(analysisDateInput){
+ if(!analysisDateInput.value){
+  const now=new Date();
+  analysisDateInput.value=[now.getFullYear(),String(now.getMonth()+1).padStart(2,"0"),String(now.getDate()).padStart(2,"0")].join("-");
+ }
+ renderJalaliAnalysisDate();
+ analysisDateInput.addEventListener("change",renderJalaliAnalysisDate);
+ analysisDateDisplay?.addEventListener("click",()=>{
+  try{if(typeof analysisDateInput.showPicker==="function")analysisDateInput.showPicker();else analysisDateInput.click();}
+  catch(_){analysisDateInput.click();}
+ });
+}
 if(embeddedMode)document.body.classList.add("embedded");
 function notifyParentHeight(){if(embeddedMode&&window.parent!==window)window.parent.postMessage({type:"top-genesis-pdf-height",height:document.documentElement.scrollHeight},"*");}
 window.addEventListener("load",notifyParentHeight);
