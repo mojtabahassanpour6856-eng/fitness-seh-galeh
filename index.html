@@ -1842,15 +1842,18 @@ function previewMealRecipe(){
  $("mealRecipeIngredients").innerHTML=html;
  $("mealFoodPreview").innerHTML="مقدار مواد را تغییر بده، هر ماده را حذف کن یا از بانک غذا ماده دیگری اضافه کن. پس از افزودن، مواد به‌صورت ردیف‌های جداگانه در وعده ثبت می‌شوند؛ بانک غذای اصلی شلوغ نمی‌شود.";
 }
+let nutritionLoadGeneration=0;
 async function loadNutritionForClient(){
  const requestedTraineeId=currentClient?.id;
  if(!requestedTraineeId)return;
+ const loadGeneration=++nutritionLoadGeneration;
  const sameTrainee=()=>!!currentClient&&String(currentClient.id)===String(requestedTraineeId);
+ const isCurrentLoad=()=>loadGeneration===nutritionLoadGeneration&&sameTrainee();
  let nutritionLoadStage="خواندن برنامه از جدول nutrition_plans";
  try{
   let r=await sbGet(`/nutrition_plans?trainee_id=eq.${encodeURIComponent(requestedTraineeId)}&is_active=eq.true&select=*&order=created_at.desc,id.desc&limit=1`);
   if(!r.length)r=await sbGet(`/nutrition_plans?trainee_id=eq.${encodeURIComponent(requestedTraineeId)}&select=*&order=created_at.desc,id.desc&limit=1`);
-  if(!sameTrainee())return; // Discard stale response; another trainee was selected.
+  if(!isCurrentLoad())return; // Discard stale response after trainee switch, newer load, or logout.
   const p=r[0]||null, requestedPlanId=p?.id||null;
   currentPlanId=requestedPlanId;
   if(!requestedPlanId){
@@ -1863,32 +1866,38 @@ async function loadNutritionForClient(){
   $("mealCalories").value=p.daily_calories||"";$("mealProtein").value=p.protein_target||"";$("mealCarbs").value=p.carbs_target||"";$("mealFat").value=p.fat_target||"";$("mealNotes").value=p.notes||"";$("mealActive").value=String(p.is_active!==false);
   nutritionLoadStage="خواندن وعده‌ها از جدول nutrition_meals";
   let meals=await sbGet(`/nutrition_meals?plan_id=eq.${encodeURIComponent(requestedPlanId)}&select=*&order=meal_order.asc`);
-  if(!sameTrainee()||String(currentPlanId)!==String(requestedPlanId))return;
+  if(!isCurrentLoad()||String(currentPlanId)!==String(requestedPlanId))return;
   // Coaches get a real sixth database meal, not merely a recipe-category label.
   if(authProfile?.role==="coach"&&!meals.some(m=>String(m.meal_name||"").replace(/\s/g,"").includes("قبلخواب"))){
    try{
     const standardNames=["صبحانه","میان‌وعده صبح","ناهار","میان‌وعده عصر","شام","قبل خواب"];
     const rowsToAdd=!meals.length?standardNames.map((meal_name,i)=>({plan_id:requestedPlanId,meal_name,meal_order:i+1})):[{plan_id:requestedPlanId,meal_name:"قبل خواب",meal_order:Math.max(0,...meals.map(m=>Number(m.meal_order)||0))+1}];
     await sbWrite("/nutrition_meals","POST",rowsToAdd);
-    if(!sameTrainee()||String(currentPlanId)!==String(requestedPlanId))return;
+    if(!isCurrentLoad()||String(currentPlanId)!==String(requestedPlanId))return;
     meals=await sbGet(`/nutrition_meals?plan_id=eq.${encodeURIComponent(requestedPlanId)}&select=*&order=meal_order.asc`);
    }catch(addMealError){console.warn("افزودن وعده‌های استاندارد انجام نشد؛ دکمه افزودن دستی نمایش داده می‌شود.",addMealError);}
   }
   nutritionLoadStage="خواندن غذاهای ثبت‌شده در وعده‌ها از جدول nutrition_meal_foods";
   const ids=meals.map(x=>x.id);let foodsBy={};
   if(ids.length){const mf=await sbGet(`/nutrition_meal_foods?meal_id=in.(${ids.map(encodeURIComponent).join(",")})&select=*&order=created_at.asc`);
-   if(!sameTrainee()||String(currentPlanId)!==String(requestedPlanId))return;
+   if(!isCurrentLoad()||String(currentPlanId)!==String(requestedPlanId))return;
    const foodIds=[...new Set(mf.map(x=>x.food_id).filter(Boolean))];
-   if(foodIds.length){nutritionLoadStage="خواندن مشخصات غذاها از جدول foods";const fd=await sbGet(`/foods?id=in.(${foodIds.map(encodeURIComponent).join(",")})&select=*`);if(!sameTrainee()||String(currentPlanId)!==String(requestedPlanId))return;fd.forEach(f=>foodsBy[f.id]=f);}
+   if(foodIds.length){nutritionLoadStage="خواندن مشخصات غذاها از جدول foods";const fd=await sbGet(`/foods?id=in.(${foodIds.map(encodeURIComponent).join(",")})&select=*`);if(!isCurrentLoad()||String(currentPlanId)!==String(requestedPlanId))return;fd.forEach(f=>foodsBy[f.id]=f);}
    meals.forEach(m=>m.foods=mf.filter(x=>String(x.meal_id)===String(m.id)).map(x=>({...x,food:foodsBy[x.food_id]})));
   }
-  if(!sameTrainee()||String(currentPlanId)!==String(requestedPlanId))return;
+  if(!isCurrentLoad()||String(currentPlanId)!==String(requestedPlanId))return;
   renderMealCoach(meals);
   // شاگرد و گزارش فقط وعده‌هایی را ببینند که دست‌کم یک غذای معتبر با مقدار مثبت دارند؛ فهرست مربی برای ویرایش خالی‌ها کامل می‌ماند.
   const visibleStudentMeals=meals.filter(m=>(m.foods||[]).some(x=>x.food_id&&x.food&&x.amount!==null&&x.amount!==undefined&&String(x.amount).trim()!==''&&Number(x.amount)>0));
   renderStudentMeals(visibleStudentMeals,p);renderMealReport(visibleStudentMeals,p);
   try{const frame=document.getElementById("sehNutritionBuilderFrame");if(frame?.contentWindow)frame.contentWindow.postMessage({type:"sehNutritionBuilderRefresh"},location.origin);}catch(refreshError){}
- }catch(e){console.error("Nutrition load failed at: "+nutritionLoadStage,e);if(sameTrainee())alert("دریافت برنامه غذایی از Supabase انجام نشد.\nمرحله خطا: "+nutritionLoadStage+"\n"+(e?.message||String(e)));}
+ }catch(e){
+  if(!isCurrentLoad())return; // Ignore responses from a previous trainee/session.
+  const diagnostic={stage:nutritionLoadStage,message:String(e?.message||e),code:e?.code||null,traineeId:String(requestedTraineeId),at:new Date().toISOString()};
+  window.__sehLastNutritionLoadError=diagnostic;
+  console.error("Nutrition load failed; non-blocking diagnostic:",diagnostic,e);
+  try{window.dispatchEvent(new CustomEvent("seh:nutrition-load-error",{detail:diagnostic}));}catch(eventError){}
+ }
 }
 async function sbApiHeaders(extra={}){
  const headers={"apikey":SUPABASE_KEY,"Content-Type":"application/json",...extra};
@@ -1901,7 +1910,7 @@ async function sbApiHeaders(extra={}){
  return headers;
 }
 async function sbGet(path){
- let authRetried=false,schemaRetried=false,networkRetried=false;
+ let authRetried=false,schemaRetried=false,networkRetried=false,transientRetried=false;
  while(true){
   let r;
   try{
@@ -1913,6 +1922,13 @@ async function sbGet(path){
   if(r.ok)return r.json();
   const raw=await r.text();
   let detail={};try{detail=JSON.parse(raw)||{};}catch(e){}
+  // Retry one short-lived PostgREST/API failure once; persistent failures remain visible in diagnostics.
+  if(!transientRetried&&[408,425,429,500,502,503,504].includes(r.status)){
+   transientRetried=true;
+   const retryDelay=r.status===429?1000:650;
+   await new Promise(resolve=>setTimeout(resolve,retryDelay));
+   continue;
+  }
   // A mobile app resumed after being backgrounded can hold an expired access
   // token. Refresh once and repeat the exact same read with the new session.
   if(r.status===401&&!authRetried&&window.AUTH_SUPABASE?.auth?.refreshSession){
@@ -2411,9 +2427,13 @@ async function __fitnessGetApiSession(){
     .finally(()=>{__fitnessApiSessionPromise=null;});
   return __fitnessApiSessionPromise;
 }
-AUTH_SUPABASE.auth.onAuthStateChange((_event,session)=>{
+AUTH_SUPABASE.auth.onAuthStateChange((event,session)=>{
   __fitnessApiSession=session||null;
   __fitnessApiSessionAt=Date.now();
+  if(event==='SIGNED_OUT'){
+    if(typeof nutritionLoadGeneration==='number')nutritionLoadGeneration++;
+    currentPlanId=null;
+  }
 });
 window.fetch=async function(input,init={}){
   const url=typeof input==="string"?input:input?.url;
@@ -2493,7 +2513,13 @@ if(profileError) throw profileError;
     loadFoods().catch(e=>console.error('Background food catalog load failed',e));
   }catch(e){console.error(e);showAuthError('بررسی پروفایل انجام نشد. '+(e.message||''));}
 }
-async function logoutApp(){await AUTH_SUPABASE.auth.signOut();location.reload();}
+async function logoutApp(){
+  // Invalidate every pending nutrition read before the auth session is cleared.
+  nutritionLoadGeneration++;
+  currentClient=null;currentPlanId=null;
+  await AUTH_SUPABASE.auth.signOut();
+  location.reload();
+}
 async function initAuth(){
   try{const {data}=await AUTH_SUPABASE.auth.getSession();if(data.session)await finishLogin(data.session.user);}
   catch(e){console.error(e);}
