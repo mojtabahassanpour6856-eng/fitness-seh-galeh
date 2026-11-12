@@ -58,12 +58,7 @@ create policy trainee_body_analysis_publications_trainee_select
   on public.trainee_body_analysis_publications
   for select to authenticated
   using (
-    exists (
-      select 1 from public.trainees t
-      where t.id = trainee_body_analysis_publications.trainee_id
-        and t.auth_user_id = (select auth.uid())
-        and t.approval_status = 'approved'
-    )
+    private.can_access_trainee(trainee_body_analysis_publications.trainee_id)
   );
 
 -- No trainee INSERT/UPDATE/DELETE policies are created. Published snapshots are immutable to trainees.
