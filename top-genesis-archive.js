@@ -198,7 +198,9 @@
   observer.observe(document.documentElement, { childList: true, subtree: true });
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", mount);
   else mount();
-  window.setInterval(() => { mount(); if (mounted) refresh(); }, 15000);
+  // Check role changes frequently, but keep archive data refresh on its original 15-second cadence.
+  window.setInterval(mount, 1200);
+  window.setInterval(() => { if (mounted) refresh(); }, 15000);
 })();
 /* Load the isolated coach-only Top Genesis PDF analyzer card without touching the manual analysis form. */
 (function () {
