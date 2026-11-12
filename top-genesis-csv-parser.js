@@ -160,7 +160,7 @@
       ["silhouette_front", ["front", "anterior", "fore"], ["silhouette", "line", "outline"], "نمای خطی روبه‌رو"],
       ["silhouette_left", ["left", "profile", "side"], ["silhouette", "line", "outline", "profile"], "نمای خطی پهلو"]
     ];
-    const imageEntries = entries.filter(item => /\\.(jpe?g|png)$/i.test(item.name));
+    const imageEntries = entries.filter(item => /\.(jpe?g|png)$/i.test(item.name));
     const usedImageNames = new Set();
     const findImage = (directionTokens, typeTokens, excludeTypeTokens) => {
       const candidates = imageEntries.filter(item => {
