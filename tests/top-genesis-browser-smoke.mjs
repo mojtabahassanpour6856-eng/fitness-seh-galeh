@@ -723,6 +723,20 @@ Waist-Hip Ratio (WHO),0.889
 
   await traineeProgressPage.close();
 
+  const publicationSource = fs.readFileSync(path.join(root, "top-genesis-publication.js"), "utf8");
+  const analyzerSource = fs.readFileSync(path.join(root, "top-genesis-pdf-test.html"), "utf8");
+  const fullReportMigration = fs.readFileSync(path.join(root, "supabase/migrations/202611120002_top_genesis_full_trainee_report.sql"), "utf8");
+  assert.match(analyzerSource, /buildTraineeSafeReportHtml/, "The trainee report must be derived from the exact analyzer output.");
+  assert.match(analyzerSource, /reportHtml/, "The complete report must be included in the approved publication payload.");
+  assert.match(analyzerSource, /image_data_url/, "Original scan images must remain in the generated report.");
+  assert.match(publicationSource, /report_storage_path/, "The publication must retain a private full-report storage path.");
+  assert.match(publicationSource, /storage[\s\S]*\.upload\(/, "The coach-approved report must be uploaded to private storage.");
+  assert.match(publicationSource, /\.download\(row\.report_storage_path\)/, "The trainee must load the private full report from storage.");
+  assert.match(fullReportMigration, /add column if not exists report_storage_path/i);
+  assert.match(fullReportMigration, /text\/html/);
+  assert.doesNotMatch(fullReportMigration, /drop table|delete from public\.trainee_body_analysis_publications/i,
+    "The full-report migration must not delete or rewrite existing trainee records.");
+
   const publicationMigration = fs.readFileSync(path.join(root, "supabase/migrations/202611120001_top_genesis_publications.sql"), "utf8");
   assert.match(publicationMigration, /private\.can_access_trainee/);
   assert.match(publicationMigration, /for insert to authenticated/i);
