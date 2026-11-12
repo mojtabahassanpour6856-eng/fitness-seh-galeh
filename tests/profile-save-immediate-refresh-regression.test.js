@@ -43,6 +43,7 @@ assert.ok(traineeBlock.includes("if(age.present)"), 'blank age must not overwrit
 assert.ok(traineeBlock.includes("if(weight.present)"), 'blank weight must not overwrite an existing saved weight');
 assert.ok(traineeBlock.includes("if(height.present)"), 'blank height must not overwrite an existing saved height');
 assert.ok(traineeBlock.includes("payload.birth_date = birthISO"), 'trainee birth date must be converted and persisted when provided');
+assert.ok(traineeBlock.includes("window.getJalaliVisibleValue('pbirth')"), 'trainee save must read visible Jalali text, not the picker compatibility ISO value');
 assert.ok(traineeBlock.includes("saved.birth_date"), 'trainee birth date must be verified from the database');
 assert.ok(traineeBlock.includes("numericFields = ['age','current_weight','height','weekly_sessions']"), 'numeric profile fields must be verified after read-back');
 assert.ok(traineeBlock.includes("currentClient = updated"), 'trainee in-memory profile must refresh from the saved database row');
