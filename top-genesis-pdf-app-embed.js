@@ -25,7 +25,7 @@
       host.style.cssText = "margin-top:14px;border:1px solid #d8b65d;background:#fffdf7;padding:12px;overflow:hidden";
       host.innerHTML =
         '<h3 style="margin:0 0 8px">🧠 تحلیل هوشمند گزارش تاپ جنسیس (پی‌دی‌اف و بسته فشرده)</h3>' +
-        '<p class="muted" style="margin:0 0 10px">استخراج شاخص‌ها، OCR صفحات تصویری، نمودار ترکیب بدن، مقایسه دو گزارش، روند چندمرحله‌ای و گزارش قابل چاپ.</p>' +
+        '<p class="muted" style="margin:0 0 10px">استخراج شاخص‌ها، تشخیص متن از صفحات تصویری، نمودار ترکیب بدن، مقایسه دو گزارش، روند چندمرحله‌ای و گزارش قابل چاپ.</p>' +
         '<p style="margin:0 0 10px;padding:9px 11px;border-radius:9px;background:#fff4d5;color:#624b20;font-size:12px">پیش‌نمایش مربی برای شاگرد انتخاب‌شده: فایل گزارش و بسته فشرده فقط در مرورگر پردازش می‌شوند. تا پایان بررسی و تأیید نهایی، هیچ فایل یا نتیجه‌ای در پرونده شاگرد یا پایگاه داده ذخیره نمی‌شود.</p>';
       const frame = document.createElement("iframe");
       frame.id = "topGenesisPdfAnalyzerFrame";
