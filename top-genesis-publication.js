@@ -118,6 +118,23 @@
         esc(metricValue(metric, key)) + '</b></div>';
     }).join("");
     const charts = CHART_KEYS.map(key => chartCard(rows, key)).filter(Boolean).join("");
+    const bodyNames = {
+      calf_left_cm: "ساق چپ", calf_right_cm: "ساق راست",
+      thigh_left_cm: "ران چپ", thigh_right_cm: "ران راست",
+      upper_arm_left_cm: "بازوی چپ", upper_arm_right_cm: "بازوی راست",
+      forearm_left_cm: "ساعد چپ", forearm_right_cm: "ساعد راست",
+      chest_region_cm: "ناحیه سینه", hip_region_cm: "ناحیه باسن",
+      lower_waist_region_cm: "ناحیه کمر پایین", upper_waist_region_cm: "ناحیه کمر بالا"
+    };
+    const bodyMeasurements = latest.report_metrics?.body_measurements_cm || {};
+    const bodyMeasurementCards = Object.entries(bodyMeasurements).map(([key, metric]) => {
+      if (!validMetric(metric)) return "";
+      const label = bodyNames[key] || "اندازه ثبت‌شده";
+      return '<div style="border:1px solid #eadfc9;border-radius:9px;padding:8px;background:#fff">' +
+        '<small>' + esc(label) + '</small><b style="display:block;color:#765b2e">' +
+        esc(fa(metric.value, 2) + " " + (metric.unit === "cm" ? "سانتی‌متر" : metric.unit || "")) +
+        '</b></div>';
+    }).join("");
     const archive = rows.slice().reverse().map(row => {
       const count = Object.keys(METRIC_LABELS).filter(key => validMetric(row.report_metrics?.[key])).length;
       return '<article style="border:1px solid #eee3d1;border-radius:10px;padding:10px;margin:8px 0;background:#fff">' +
@@ -128,6 +145,7 @@
     }).join("");
     body.innerHTML = '<p>آخرین آنالیز ارسال‌شده: <b>' + esc(dateFa(latest.analysis_date)) + '</b></p>' +
       '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(135px,1fr));gap:8px">' + cards + '</div>' +
+      (bodyMeasurementCards ? '<h3 style="margin-top:18px">اندازه‌های بدنی</h3><div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:7px">' + bodyMeasurementCards + '</div>' : '') +
       '<h3 style="margin-top:18px">روند تغییرات آنالیزها</h3>' +
       (charts || '<p class="muted">با ارسال آنالیز بعدی، نمودار روند شاخص‌های قابل‌مقایسه در این قسمت فعال می‌شود.</p>') +
       '<h3 style="margin-top:18px">تاریخچه و توصیه‌های مربی</h3>' + archive;
