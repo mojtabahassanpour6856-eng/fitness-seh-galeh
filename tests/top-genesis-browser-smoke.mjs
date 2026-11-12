@@ -671,7 +671,7 @@ Waist-Hip Ratio (WHO),0.889
   await traineeProgressPage.close();
 
   const publicationMigration = fs.readFileSync(path.join(root, "supabase/migrations/202611120001_top_genesis_publications.sql"), "utf8");
-  assert.match(publicationMigration, /private\\.can_access_trainee/);
+  assert.match(publicationMigration, /private\.can_access_trainee/);
   assert.match(publicationMigration, /for insert to authenticated/i);
   assert.doesNotMatch(publicationMigration, /for update to authenticated/i);
   assert.doesNotMatch(publicationMigration, /for delete to authenticated/i);
