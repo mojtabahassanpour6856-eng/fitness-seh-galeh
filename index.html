@@ -870,23 +870,7 @@ body.locked{overflow:hidden!important}
 <button onclick="saveProgress()">ثبت اندازه‌ها</button>
 </div>
 
-<div class="card" id="bodyAnalysisEntryPanel">
-<h2>📊 آنالیز بدن</h2>
-<div class="grid2">
-<div><label>تاریخ آنالیز</label><input id="anDate" type="date"></div>
-<div><label>وزن</label><input id="anWeight" type="number" step="0.1"></div>
-<div><label>درصد چربی</label><input id="anFat" type="number" step="0.1"></div>
-<div><label>توده عضلانی</label><input id="anMuscle" type="number" step="0.1"></div>
-<div><label>آب بدن</label><input id="anWater" type="number" step="0.1"></div>
-<div><label>چربی احشایی</label><input id="anVisceral" type="number" step="0.1"></div>
-<div><label>BMI</label><input id="anBmi" type="number" step="0.1"></div>
-<div><label>متابولیسم پایه</label><input id="anBmr" type="number"></div>
-</div>
-<label>فایل آنالیز (عکس یا PDF)</label>
-<input id="analysisFile" type="file" accept="image/*,.pdf">
-<button onclick="saveAnalysis()">ثبت آنالیز</button>
-<p class="muted">فایل برای ذخیره دائمی نیاز به Storage در Supabase دارد؛ فعلاً اطلاعات عددی این فرم ذخیره می‌شود.</p>
-</div>
+<div class="card" id="bodyAnalysisEntryPanel" style="display:none" aria-hidden="true"></div>
 
 <div class="card">
 <h2>💬 یادداشت مربی</h2>
@@ -15346,7 +15330,6 @@ window.sehNutritionBuilderBridge={
  }
 };
 </script>
-<script src="./top-genesis-archive.js" defer></script>
 <script src="./top-genesis-pdf-app-embed.js" defer></script>
 
 <script id="seh-auth-session-restore-watchdog-v1">
