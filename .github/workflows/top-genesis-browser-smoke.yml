@@ -21,6 +21,7 @@ on:
       - "top-genesis-pdf-app-embed.js"
       - "index.html"
       - "tests/top-genesis-browser-smoke.mjs"
+      - "tests/trainee-navigation-avatar-regression.mjs"
       - ".github/workflows/top-genesis-browser-smoke.yml"
   workflow_dispatch:
 
