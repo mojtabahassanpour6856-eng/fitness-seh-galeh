@@ -191,7 +191,7 @@ Waist-Hip Ratio (WHO),0.889
   await page.addScriptTag({ url: "https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js" });
   const zipResult = await page.evaluate(async () => {
     const zip = new window.JSZip();
-    zip.file("Scan Data.csv", "Customer Gender,Male\\nCustomer Age,37\\nCustomer Height,185 cm\\nCustomer Weight,83 kg\\nFITNESS & HEALTH\\nmeasurement name,value,units\\nBody Fat %,19,%\\n");
+    zip.file("Scan Data.csv", "Customer Gender,Male\nCustomer Age,37\nCustomer Height,185 cm\nCustomer Weight,83 kg\nFITNESS & HEALTH\nmeasurement name,value,units\nBody Fat %,19,%\n");
     for (const name of ["Body Front.jpg","Body Back.jpg","Body Left.jpg","Body Right.jpg","Silhouette Front.jpg","Silhouette Left.jpg"]) {
       zip.file(name, new Uint8Array([255,216,255,217]));
     }
