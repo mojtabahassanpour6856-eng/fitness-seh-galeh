@@ -48,9 +48,19 @@
     host.style.display = isCoach() ? "block" : "none";
   }
 
+  function loadPublicationModule() {
+    if (document.querySelector('script[data-top-genesis-publication-loader]')) return;
+    const script = document.createElement("script");
+    script.src = "./top-genesis-publication.js";
+    script.defer = true;
+    script.dataset.topGenesisPublicationLoader = "1";
+    document.head.appendChild(script);
+  }
+
   function start() {
     if (observerStarted) return;
     observerStarted = true;
+    loadPublicationModule();
     const observer = new MutationObserver(mount);
     observer.observe(document.documentElement, { childList: true, subtree: true });
     mount();
