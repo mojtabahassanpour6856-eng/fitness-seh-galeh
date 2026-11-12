@@ -255,6 +255,42 @@ try {
     "Height must also be found when reported separately.");
   assert.equal(separatelyLabeled.metrics.weight_kg.value, 68.5,
     "Weight must also be found when reported separately.");
+  // Anonymized regression fixture transcribed from the user's real 13-page Top Genesis PDF.
+  // It contains no name, email, or original PDF bytes; OCR-only values are represented as recognized text.
+  const javadRealReport = await page.evaluate(() => window.TopGenesisPdfParser.extractMetrics(
+    "Height & Weight 185 cm & 83 kg Body Fat 19.0% BMI 24.2 Waist-to-Hip Ratio 0.889 RMR 1878 calories/day Percentile 50% " +
+    "Bicep Left Lower 28.02 Bicep Right Lower 28.05 Bicep Left 31.67 Bicep Right 31.46 Calf Left 32.58 Calf Right 32.74 " +
+    "Chest 98.99 Forearm Left 27.98 Forearm Right 28.06 High Hip 94.26 Hip 97.95 Neck 40.27 " +
+    "Thigh Left Lower 40.72 Thigh Right Lower 40.90 Mid-Thigh Left 52.43 Mid-Thigh Right 52.31 " +
+    "Thigh Left Upper 60.01 Thigh Right Upper 58.85 Waist (Abdominal) 87.05 Waist (Lower) 91.35 Waist (Narrowest) 85.11 " +
+    "Bicep Left Lower | 28.025 cm Bicep Right Lower | 28.046 cm Bicep Left | 31.670 cm Bicep Right | 31.460 cm " +
+    "Calf Left | 32.583 cm Calf Right | 32.736 cm Chest | 98.990 cm Forearm Left | 27.983 cm Forearm Right | 28.056 cm " +
+    "High Hip | 94.258 cm Hip | 97.948 cm Neck | 40.273 cm Thigh Left Lower | 40.719 cm Thigh Right Lower | 40.905 cm " +
+    "Mid-Thigh Left | 52.426 cm Mid-Thigh Right | 52.314 cm Thigh Left Upper | 60.007 cm Thigh Right Upper | 58.848 cm " +
+    "Waist (Abdominal) | 87.050 cm Waist (Lower) | 91.346 cm Waist (Narrowest) | 85.111 cm " +
+    "16 kg of fat mass 67 kg of lean body mass Waist Circumference 91.35 cm " +
+    "Caloric Expenditure 2254 Calories/day"
+  ));
+  assert.equal(javadRealReport.metrics.height_cm.value, 185);
+  assert.equal(javadRealReport.metrics.weight_kg.value, 83);
+  assert.equal(javadRealReport.metrics.body_fat_percent.value, 19);
+  assert.equal(javadRealReport.metrics.bmi.value, 24.2);
+  assert.equal(javadRealReport.metrics.waist_hip_ratio.value, 0.889);
+  assert.equal(javadRealReport.metrics.fat_mass_kg.value, 16);
+  assert.equal(javadRealReport.metrics.lean_mass_kg.value, 67);
+  assert.equal(javadRealReport.metrics.resting_metabolic_rate_kcal.value, 1878);
+  assert.equal(javadRealReport.metrics.daily_energy_expenditure_kcal.value, 2254);
+  assert.equal(javadRealReport.metrics.waist_circumference_cm.value, 91.35);
+  assert.equal(javadRealReport.metrics.comparison_percentile.value, 50);
+  const javadMeasures = javadRealReport.metrics.body_measurements_cm;
+  assert.equal(Object.keys(javadMeasures).length, 21, "All 21 standard circumference measurements must be extracted.");
+  assert.equal(javadMeasures.bicep_left_lower_cm.value, 28.02);
+  assert.equal(javadMeasures.bicep_left_lower_cm.status, "consistent_rounding");
+  assert.equal(javadMeasures.thigh_left_upper_cm.value, 60.01);
+  assert.equal(javadMeasures.waist_narrowest_cm.value, 85.11);
+  assert.equal(javadMeasures.waist_lower_cm.value, 91.35);
+  assert.equal(javadMeasures.forearm_right_cm.value, 28.06);
+
   const noPii = await page.evaluate(() => window.TopGenesisPdfParser.extractMetrics(
     "Name: Example Person Email: sample@example.com Height & Weight 170 cm & 65 kg"
   ));
