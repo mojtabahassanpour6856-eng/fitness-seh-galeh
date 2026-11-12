@@ -7,6 +7,7 @@ on:
       - 'tests/coach-meal-recipes-static.test.js'
       - 'tests/workout-export-session-order-restline.test.js'
       - 'tests/profile-save-immediate-refresh-regression.test.js'
+      - 'tests/profile-save-immediate-refresh-regression.test.js'
       - '.github/workflows/validate-inline-js.yml'
   pull_request:
     branches: [main]
