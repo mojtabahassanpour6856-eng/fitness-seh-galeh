@@ -6,6 +6,8 @@ import { fileURLToPath } from "node:url";
 import { chromium } from "playwright";
 import { PDFDocument, StandardFonts, rgb } from "pdf-lib";
 
+const hardStop = setTimeout(() => { console.error('[smoke] hard stop after 8 minutes'); process.exit(124); }, 8 * 60 * 1000);
+hardStop.unref();
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const mime = { ".html": "text/html; charset=utf-8", ".js": "text/javascript; charset=utf-8", ".png": "image/png" };
 const server = http.createServer((req, res) => {
@@ -20,6 +22,7 @@ const server = http.createServer((req, res) => {
 
 await new Promise(resolve => server.listen(0, "127.0.0.1", resolve));
 const address = server.address();
+console.log('[smoke] launching Chromium');
 const browser = await chromium.launch({ headless: true });
 try {
   // Draw a synthetic report sentence into a raster image so Tesseract must
@@ -100,8 +103,11 @@ try {
   const pdfBytes = await pdfDoc.save();
 
   const page = await browser.newPage();
+  page.setDefaultTimeout(30000);
+  page.setDefaultNavigationTimeout(30000);
   const pageErrors = [];
   page.on("pageerror", error => pageErrors.push(error.message));
+  console.log('[smoke] opening analyzer fixture');
   await page.goto(`http://127.0.0.1:${address.port}/top-genesis-pdf-test.html`);
   await page.addScriptTag({ path: path.join(root, "top-genesis-csv-parser.js") });
   assert.equal(await page.locator("#topGenesisZip").count(), 1,
@@ -188,7 +194,9 @@ Waist-Hip Ratio (WHO),0.889
   assert.equal(JSON.stringify(csvResult).includes("private@example.com"), false,
     "Customer email must not be extracted or exposed by the CSV parser.");
   assert.equal(csvResult.review_required, true);
+  console.log('[smoke] loading JSZip CDN');
   await page.addScriptTag({ url: "https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js" });
+  console.log('[smoke] JSZip loaded');
   // Regression fixture mirrors the exact filename prefix and member names in the
   // user's uploaded archive. Real body photos are deliberately not committed.
   const zipResult = await page.evaluate(async csv => {
@@ -237,17 +245,21 @@ Waist-Hip Ratio (WHO),0.889
     "All six extracted images must retain the source scan dimensions.");
 
 
+  console.log('[smoke] preparing synthetic PDF');
   await page.locator("#pdfFile").setInputFiles({
     name: "synthetic-top-genesis-fixture.pdf",
     mimeType: "application/pdf",
     buffer: Buffer.from(pdfBytes)
   });
+  console.log('[smoke] starting PDF extraction');
   await page.locator("#run").click();
+  console.log('[smoke] waiting for extraction status');
   await page.waitForFunction(() => {
     const text = document.querySelector("#status")?.textContent || "";
     return text.includes("استخراج تمام شد") || text.startsWith("خطا:");
   }, null, { timeout: 180000 });
 
+  console.log('[smoke] extraction status reached');
   const status = await page.locator("#status").innerText();
   assert.match(status, /استخراج تمام شد/, `Parser did not complete: ${status}`);
   assert.equal(await page.locator("#analysisDate").count(), 1,
@@ -466,6 +478,7 @@ Waist-Hip Ratio (WHO),0.889
 
   assert.match(pageInfo, /123\.456/, "Targeted OCR did not recover the region value from the semi-text page.");
 
+  console.log('[smoke] OCR and report assertions passed');
   // The coach report must use original PDF page renders, not generated imagery.
   const scanImages = page.locator(".scan-figure img");
   assert.equal(await scanImages.count(), 1,
@@ -621,6 +634,7 @@ Waist-Hip Ratio (WHO),0.889
 
   assert.deepEqual(pageErrors, [], `Browser page errors: ${pageErrors.join("; ")}`);
 
+  console.log('[smoke] report rendering assertions passed');
   // Verify the real production app shell contains the integration anchor and loader.
   const appShellSource = fs.readFileSync(path.join(root, "index.html"), "utf8");
   assert.match(appShellSource, /id=["']bodyAnalysisEntryPanel["']/, "The production app must contain the body-analysis mount point.");
@@ -668,6 +682,7 @@ Waist-Hip Ratio (WHO),0.889
     "The embedded analyzer/upload interface must be hidden for trainee sessions.");
   await integrationPage.close();
 
+  console.log('[smoke] coach role-switch assertions passed');
   // Verify approved reports appear in the trainee's analysis/progress page.
   const traineeProgressPage = await browser.newPage();
   await traineeProgressPage.goto("http://127.0.0.1:" + address.port + "/top-genesis-pdf-test.html");
