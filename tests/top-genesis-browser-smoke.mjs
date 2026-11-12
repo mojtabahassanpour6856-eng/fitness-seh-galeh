@@ -273,6 +273,7 @@ try {
     "31.66 cm width 24.93 cm depth 600.67 cm? area " +
     "1.1x 1.1x More likely to suffer from Cancer More likely to suffer from Cardiovascular Disease " +
     "1.4x 1.2x More likely to suffer from Respiratory Disease More likely to suffer from All Other Diseases " +
+    "0.0 19% Average Kilograms of Fat Body Fat Rank " +
     "0.00 cm Normal Change in Waist Circumference Risk Level " +
     "For example, your waist circumference of 91.35 cm makes you 1.1 times more likely to suffer from cancer."
   ));
@@ -294,6 +295,7 @@ try {
   assert.equal(javadRealReport.metrics.vendor_relative_risk_estimates.respiratory.value, 1.4);
   assert.equal(javadRealReport.metrics.vendor_relative_risk_estimates.other_diseases.value, 1.2);
   assert.equal(javadRealReport.metrics.device_waist_loss_goal_cm.value, 0);
+  assert.equal(javadRealReport.metrics.device_fat_loss_goal_kg.value, 0);
   assert.equal(javadRealReport.metrics.comparison_percentile.value, 50);
   const javadMeasures = javadRealReport.metrics.body_measurements_cm;
   assert.equal(Object.keys(javadMeasures).length, 21, "All 21 standard circumference measurements must be extracted.");
