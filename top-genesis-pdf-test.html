@@ -34,8 +34,9 @@ pre{white-space:pre-wrap;overflow-wrap:anywhere;background:#f7f7f7;padding:12px;
 </head>
 <body>
 <main>
-<h1>آزمایش مستقل تحلیل گزارش تاپ جنسیس</h1>
-<p class="note">این صفحه فقط برای آزمایش مربی است. فایل در این صفحه بارگذاری یا ذخیره نمی‌شود و اطلاعات نام و ایمیل عمداً در خروجی نمایش داده نمی‌شوند. پردازش PDF در مرورگر انجام می‌شود؛ برای بارگذاری کتابخانه‌های PDF و OCR اتصال اینترنت لازم است.</p>
+<h1>گزارش هوشمند آنالیز بدن</h1>
+<p class="note">گزارش‌ها در همین مرورگر تحلیل می‌شوند. تا زمان بررسی کامل، تأیید مربی و انتخاب گزینه ارسال، هیچ نتیجه‌ای به پرونده شاگرد منتقل نمی‌شود. برای پردازش فایل‌ها اتصال اینترنت لازم است.</p>
+<label for="analysisDate">تاریخ انجام آنالیز:</label><br><input id="analysisDate" type="date"><br>
 <label for="pdfFile">انتخاب گزارش PDF (حداکثر ۱۰ مگابایت):</label><br>
 <input id="pdfFile" type="file" accept="application/pdf,.pdf">
 <br><label for="pdfFile2">گزارش دوم (جدیدتر؛ اختیاری برای مقایسه):</label><br>
@@ -47,7 +48,7 @@ pre{white-space:pre-wrap;overflow-wrap:anywhere;background:#f7f7f7;padding:12px;
 <br><button id="run" type="button">شروع استخراج و تحلیل</button>
 <div id="status" role="status" aria-live="polite"></div>
 <div id="result"></div>
-<p class="small">تمام مقادیر استخراج‌شده نیازمند تأیید مربی هستند و این آزمایش هیچ داده‌ای را به پرونده شاگرد متصل نمی‌کند.</p>
+<p class="small">پس از بررسی و تأیید مربی، با انتخاب «ارسال به پنل پیشرفت شاگرد» نتایج در پرونده همان شاگرد نمایش داده می‌شود.</p>
 </main>
 <script src="./top-genesis-pdf-parser.js"></script>
 <script src="./top-genesis-csv-parser.js"></script>
@@ -55,12 +56,14 @@ pre{white-space:pre-wrap;overflow-wrap:anywhere;background:#f7f7f7;padding:12px;
 (function(){
 "use strict";
 const embeddedMode=new URLSearchParams(window.location.search).get("embedded")==="1";
+const analysisDateInput=document.getElementById("analysisDate");
+if(analysisDateInput&&!analysisDateInput.value)analysisDateInput.value=new Date().toISOString().slice(0,10);
 if(embeddedMode)document.body.classList.add("embedded");
 function notifyParentHeight(){if(embeddedMode&&window.parent!==window)window.parent.postMessage({type:"top-genesis-pdf-height",height:document.documentElement.scrollHeight},"*");}
 window.addEventListener("load",notifyParentHeight);
 if(typeof ResizeObserver!=="undefined")new ResizeObserver(()=>requestAnimationFrame(notifyParentHeight)).observe(document.documentElement);
 const labels={
-height_cm:"قد",weight_kg:"وزن",body_fat_percent:"درصد چربی بدن",bmi:"BMI",
+height_cm:"قد",weight_kg:"وزن",body_fat_percent:"درصد چربی بدن",bmi:"شاخص توده بدنی (BMI)",
 waist_hip_ratio:"نسبت کمر به باسن",waist_hip_ratio_detailed:"نسبت کمر به باسن (جزئیات)",
 resting_metabolic_rate_kcal:"سوخت‌وساز پایه",daily_energy_expenditure_kcal:"مصرف انرژی روزانه",
 fat_mass_kg:"توده چربی",lean_mass_kg:"توده بدون چربی",waist_circumference_cm:"دور کمر",
@@ -68,14 +71,25 @@ comparison_percentile:"درصد مقایسه‌ای",body_fat_rank_marker:"رت�
 };
 const statusText={not_reported:"در این گزارش ثبت نشده",needs_coach_review:"نیازمند تأیید مربی",within_initial_range_needs_coach_review:"در محدوده کنترل اولیه؛ تأیید مربی همچنان لازم است",conflict_review:"تعارض؛ بررسی شود",invalid_range:"خارج از محدوده کنترل اولیه",consistent_rounding:"اختلاف جزئی؛ احتمالاً ناشی از گرد کردن",raw_difference_needs_unit_validation:"اختلاف عددی خام؛ واحد و معنای اندازه‌گیری تأیید نشده"};
 const units={"raw_reported_unit":"واحد خام گزارش" ,"cm":"سانتی‌متر","kg":"کیلوگرم","%":"درصد","kg/m²":"kg/m²","ratio":"نسبت","kcal/day":"کیلوکالری در روز"};
-function escapeHTML(v){return String(v==null?'':v).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+const englishMetricLabels={
+ "Body Fat %":"درصد چربی بدن","Body Density":"چگالی بدن","Waist-Hip Ratio":"نسبت کمر به باسن",
+ "Bicep Left Lower":"بخش پایینی بازوی چپ","Bicep Right Lower":"بخش پایینی بازوی راست",
+ "Bicep Left":"بازوی چپ","Bicep Right":"بازوی راست","Calf Left":"ساق چپ","Calf Right":"ساق راست",
+ "Chest":"سینه","Forearm Left":"ساعد چپ","Forearm Right":"ساعد راست","High Hip":"باسن بالا",
+ "Hip":"باسن","Neck":"گردن","Thigh Left Lower":"بخش پایینی ران چپ","Thigh Right Lower":"بخش پایینی ران راست",
+ "Mid-Thigh Left":"میانه ران چپ","Mid-Thigh Right":"میانه ران راست","Thigh Left Upper":"بخش بالایی ران چپ",
+ "Thigh Right Upper":"بخش بالایی ران راست","Waist (Abdominal)":"دور شکم","Waist (Lower)":"دور کمر پایین",
+ "Waist (Narrowest)":"باریک‌ترین قسمت کمر","Top Genesis CSV":"داده‌های جدولی دستگاه","kg/m²":"کیلوگرم بر متر مربع",
+ "kcal/day":"کیلوکالری در روز","BMI":"شاخص توده بدنی (BMI)","BMR":"سوخت‌وساز پایه"
+};
+function escapeHTML(v){const raw=String(v==null?'':v);const translated=englishMetricLabels[raw]||raw;return translated.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
 function buildSimpleAnalysis(m){
  const safe=k=>m[k]&&m[k].value!==null&&m[k].value!==undefined&&Number.isFinite(Number(m[k].value))&&!['invalid_range','conflict_review','not_reported'].includes(m[k].status)?Number(m[k].value):null;
  const w=safe('weight_kg'),h=safe('height_cm'),f=safe('fat_mass_kg'),l=safe('lean_mass_kg'),p=safe('body_fat_percent'),b=safe('bmi'),r=safe('resting_metabolic_rate_kcal');
- const cards=[];if(w!==null)cards.push(['وزن ثبت‌شده',w+' کیلوگرم','مقدار گزارش']);if(p!==null)cards.push(['درصد چربی',p+'٪','بدون طبقه‌بندی پزشکی']);if(b!==null)cards.push(['BMI گزارش',b,'تفسیر به سن و شرایط فرد وابسته است']);if(r!==null)cards.push(['سوخت‌وساز پایه',r+' kcal/day','معادل کالری مصرفی روزانه نیست']);
+ const cards=[];if(w!==null)cards.push(['وزن ثبت‌شده',w+' کیلوگرم','مقدار گزارش']);if(p!==null)cards.push(['درصد چربی',p+'٪','بدون طبقه‌بندی پزشکی']);if(b!==null)cards.push(['شاخص توده بدنی',b,'تفسیر به سن و شرایط فرد وابسته است']);if(r!==null)cards.push(['سوخت‌وساز پایه',r+' کیلوکالری در روز','معادل کالری مصرفی روزانه نیست']);
  let o='<section class="analysis-box report-page"><h2>خلاصه ساده و تصویری</h2><p class="small">این بخش فقط داده‌های گزارش و کنترل سازگاری را توضیح می‌دهد؛ تشخیص یا نسخه تمرین و تغذیه نیست.</p>';
  if(cards.length)o+='<div class="analysis-grid">'+cards.map(c=>'<div class="analysis-card"><span>'+escapeHTML(c[0])+'</span><strong>'+escapeHTML(c[1])+'</strong><span>'+escapeHTML(c[2])+'</span></div>').join('')+'</div>';
- if(w!==null&&h!==null&&b!==null){const x=w/Math.pow(h/100,2),d=Math.abs(x-b);o+='<p class="'+(d<=1?'analysis-good':'analysis-warn')+'">کنترل BMI: از قد و وزن '+x.toFixed(1)+' محاسبه می‌شود؛ گزارش '+b+'. '+(d<=1?'دو مقدار نزدیک‌اند.':'اختلاف نیازمند بازبینی است.')+'</p>';}
+ if(w!==null&&h!==null&&b!==null){const x=w/Math.pow(h/100,2),d=Math.abs(x-b);o+='<p class="'+(d<=1?'analysis-good':'analysis-warn')+'">کنترل شاخص توده بدنی: از قد و وزن '+x.toFixed(1)+' محاسبه می‌شود؛ گزارش '+b+'. '+(d<=1?'دو مقدار نزدیک‌اند.':'اختلاف نیازمند بازبینی است.')+'</p>';}
  if(w!==null&&f!==null&&l!==null){const sum=f+l,d=Math.abs(sum-w);if(d<=1.5){const fw=Math.max(0,Math.min(100,f/sum*100)),lw=100-fw;o+='<h3>ترکیب وزن ثبت‌شده</h3><div class="chart-row"><span>توده چربی</span><div class="bar-track"><div class="bar-fill" style="width:'+fw.toFixed(1)+'%"></div></div><b>'+f.toFixed(1)+' kg</b></div><div class="chart-row"><span>بدون چربی</span><div class="bar-track"><div class="bar-fill" style="width:'+lw.toFixed(1)+'%"></div></div><b>'+l.toFixed(1)+' kg</b></div><p class="analysis-good">جمع دو بخش '+sum.toFixed(1)+' کیلوگرم است و با وزن کل سازگاری اولیه دارد.</p>';}else{o+='<p class="analysis-warn">جمع توده چربی و بدون چربی با وزن کل سازگار نیست؛ نمودار نمایش داده نشد.</p>';}}
  if(w!==null&&f!==null&&p!==null&&w>0){const x=f/w*100,d=Math.abs(x-p);o+='<p class="'+(d<=1.5?'analysis-good':'analysis-warn')+'">درصد چربی محاسبه‌شده '+x.toFixed(1)+'٪؛ مقدار گزارش '+p+'٪. '+(d<=1.5?'سازگاری اولیه دیده می‌شود.':'اختلاف نیازمند بررسی است.')+'</p>';}
  if(!cards.length)o+='<p>شاخص کافی برای ساخت خلاصه پیدا نشد.</p>';
@@ -125,7 +139,7 @@ function buildCoachReviewPage(m,scanPages){
  const missingText=missing.length?'موارد ثبت‌نشده: '+missing.map(k=>escapeHTML(labels[k]||k)).join('، '):'در استخراج اولیه، ناحیه جفتیِ ثبت‌نشده‌ای شناسایی نشد؛ کامل بودن اسکن باید چشمی بررسی شود.';
  const checks=[['light','تعادل نور و کنتراست تصویر'],['background','پس‌زمینه و جداسازی بدن'],['clarity','وضوح و شارپنس تصویر'],['movement','حرکت یا جابه‌جایی فرد'],['coverage','کامل بودن نواحی اسکن']];
  const fields=checks.map(([key,label])=>'<label class="review-field">'+label+'<select data-review="'+key+'"><option value="">بررسی نشده</option><option value="ok">بررسی شد؛ قابل قبول</option><option value="partial">محدودیت دارد؛ در گزارش ذکر شود</option><option value="fix">نیازمند اصلاح یا اسکن مجدد</option></select></label>').join('');
- return '<section class="visual-report report-page coach-review-page"><div class="brandline"><img class="brand-logo" src="./icon-512-2.png" alt="نشان باشگاه فیتنس سه‌قلعه" loading="eager"><div class="brandname">کنترل نهایی مربی</div><div class="sub">پیش از تحویل گزارش</div></div><h2>کنترل کیفیت اسکن و تأیید دستی</h2><p class="note">'+missingText+'</p><p class="small">نور، پس‌زمینه، حرکت فرد و کامل بودن اسکن با OCR به‌تنهایی قابل تأیید قطعی نیستند؛ این موارد باید توسط مربی روی تصویر اصلی بررسی شوند. تعداد صفحه‌های تصویری استخراج‌شده: '+(Array.isArray(scanPages)?scanPages.length:0)+'</p><div class="review-grid">'+fields+'</div><h3>پیشنهاد تمرینی مربی</h3><textarea id="trainingNotes" rows="4" placeholder="پیشنهاد تمرینی را پس از بررسی هدف، سابقه و کیفیت اسکن وارد کنید."></textarea><h3>پیشنهاد تغذیه‌ای مربی</h3><textarea id="nutritionNotes" rows="4" placeholder="پیشنهاد تغذیه‌ای را پس از بررسی هدف، فعالیت و شرایط شاگرد وارد کنید."></textarea><label class="approval-check"><input id="coachApprove" type="checkbox" disabled> تأیید نهایی مربی برای تحویل و اشتراک‌گذاری</label><p id="approvalState" class="note" aria-live="polite">تا تکمیل بررسی‌های دستی و ثبت پیشنهادها، خروجی PNG قابل تحویل نیست.</p><div class="foot">مربی و امضای نهایی: مجتبی</div></section>';
+ return '<section class="visual-report report-page coach-review-page"><div class="brandline"><img class="brand-logo" src="./icon-512-2.png" alt="نشان باشگاه فیتنس سه‌قلعه" loading="eager"><div class="brandname">کنترل نهایی مربی</div><div class="sub">پیش از تحویل گزارش</div></div><h2>کنترل کیفیت اسکن و تأیید دستی</h2><p class="note">'+missingText+'</p><p class="small">نور، پس‌زمینه، حرکت فرد و کامل بودن اسکن با OCR به‌تنهایی قابل تأیید قطعی نیستند؛ این موارد باید توسط مربی روی تصویر اصلی بررسی شوند. تعداد صفحه‌های تصویری استخراج‌شده: '+(Array.isArray(scanPages)?scanPages.length:0)+'</p><div class="review-grid">'+fields+'</div><h3>پیشنهاد تمرینی مربی</h3><textarea id="trainingNotes" rows="4" placeholder="پیشنهاد تمرینی را پس از بررسی هدف، سابقه و کیفیت اسکن وارد کنید."></textarea><h3>پیشنهاد تغذیه‌ای مربی</h3><textarea id="nutritionNotes" rows="4" placeholder="پیشنهاد تغذیه‌ای را پس از بررسی هدف، فعالیت و شرایط شاگرد وارد کنید."></textarea><label class="approval-check"><input id="coachApprove" type="checkbox" disabled> تأیید نهایی مربی برای تحویل و اشتراک‌گذاری</label><p id="approvalState" class="note" aria-live="polite">تا تکمیل بررسی‌های دستی و ثبت پیشنهادها، خروجی قابل تحویل نیست.</p><button id="sendToTrainee" type="button" disabled>📤 ارسال به پنل پیشرفت شاگرد</button><p id="sendToTraineeStatus" class="note" aria-live="polite">این گزارش فقط پس از تأیید نهایی مربی ارسال می‌شود.</p><div class="foot">مربی و امضای نهایی: مجتبی</div></section>';
 }
 
 function buildReportComparison(older,newer){
@@ -268,12 +282,31 @@ button.addEventListener("click",async()=>{
    const approved=canApprove&&approveBox.checked;
    document.getElementById("pngReport").disabled=!approved;
    document.getElementById("shareReport").disabled=!approved;
+   document.getElementById("sendToTrainee").disabled=!approved;
    document.getElementById("approvalState").textContent=approved?"کنترل‌ها تکمیل شده و مربی گزارش را برای تحویل تأیید کرده است.":"برای فعال شدن خروجی، پنج مورد کیفیت را بررسی کنید، پیشنهاد تمرینی و تغذیه‌ای را بنویسید و تأیید نهایی مربی را بزنید.";
   }
   reviewSelects.forEach(x=>x.addEventListener("change",updateApprovalState));
   trainingNotes.addEventListener("input",updateApprovalState);
   nutritionNotes.addEventListener("input",updateApprovalState);
   approveBox.addEventListener("change",updateApprovalState);
+  const sendButton=document.getElementById("sendToTrainee");
+  const sendStatus=document.getElementById("sendToTraineeStatus");
+  let sendRequestId=null;
+  sendButton.addEventListener("click",()=>{
+   if(!embeddedMode||window.parent===window){sendStatus.textContent="ارسال فقط از داخل پنل مربی امکان‌پذیر است.";return;}
+   if(!approveBox.checked){sendStatus.textContent="ابتدا تأیید نهایی مربی را فعال کنید.";return;}
+   sendRequestId=crypto.randomUUID();
+   sendButton.disabled=true;
+   sendStatus.textContent="در حال ارسال امن گزارش به پنل پیشرفت شاگرد…";
+   window.parent.postMessage({type:"top-genesis-approved-report",requestId:sendRequestId,payload:{analysisDate:document.getElementById("analysisDate").value,metrics:data.metrics,trainingNotes:trainingNotes.value,nutritionNotes:nutritionNotes.value}},window.location.origin);
+  });
+  window.addEventListener("message",event=>{
+   if(event.origin!==window.location.origin||event.source!==window.parent||event.data?.type!=="top-genesis-publish-result"||event.data.requestId!==sendRequestId)return;
+   sendStatus.textContent=event.data.message|| (event.data.ok?"گزارش ارسال شد.":"ارسال گزارش انجام نشد.");
+   if(event.data.ok){sendButton.textContent="✅ گزارش به شاگرد ارسال شد";sendButton.disabled=true;}
+   else sendButton.disabled=!approveBox.checked;
+   notifyParentHeight();
+  });
   updateApprovalState();
   notifyParentHeight();
   document.getElementById("printReport").addEventListener("click",()=>{document.body.classList.add("print-report");window.print();});
