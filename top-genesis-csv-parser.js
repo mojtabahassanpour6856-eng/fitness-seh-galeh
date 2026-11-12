@@ -153,17 +153,31 @@
     const csvText = await csvEntry.async("string");
     const parsed = parseCsv(csvText);
     const imageRules = [
-      ["body_front", /body[_ -]?front\.jpe?g$/i, "نمای روبه‌رو"],
-      ["body_back", /body[_ -]?back\.jpe?g$/i, "نمای پشت"],
-      ["body_left", /body[_ -]?left\.jpe?g$/i, "نمای سمت چپ"],
-      ["body_right", /body[_ -]?right\.jpe?g$/i, "نمای سمت راست"],
-      ["silhouette_front", /silhouette[_ -]?front\.jpe?g$/i, "نمای خطی روبه‌رو"],
-      ["silhouette_left", /silhouette[_ -]?left\.jpe?g$/i, "نمای خطی پهلو"]
+      ["body_front", ["front", "anterior", "fore"], ["body", "scan", "view"], "نمای روبه‌رو"],
+      ["body_back", ["back", "posterior", "rear"], ["body", "scan", "view"], "نمای پشت"],
+      ["body_left", ["left"], ["body", "scan", "view"], "نمای سمت چپ"],
+      ["body_right", ["right"], ["body", "scan", "view"], "نمای سمت راست"],
+      ["silhouette_front", ["front", "anterior", "fore"], ["silhouette", "line", "outline"], "نمای خطی روبه‌رو"],
+      ["silhouette_left", ["left", "profile", "side"], ["silhouette", "line", "outline", "profile"], "نمای خطی پهلو"]
     ];
+    const imageEntries = entries.filter(item => /\\.(jpe?g|png)$/i.test(item.name));
+    const usedImageNames = new Set();
+    const findImage = (directionTokens, typeTokens, excludeTypeTokens) => {
+      const candidates = imageEntries.filter(item => {
+        const name = item.name.toLowerCase().replace(/[^a-z0-9]+/g, " ");
+        const hasDirection = directionTokens.some(token => name.includes(token));
+        const hasType = typeTokens.some(token => name.includes(token));
+        const hasExcluded = (excludeTypeTokens || []).some(token => name.includes(token));
+        return hasDirection && hasType && !hasExcluded && !usedImageNames.has(item.name);
+      });
+      return candidates[0] || null;
+    };
     const scans = {};
-    for (const [key, pattern, label] of imageRules) {
-      const entry = entries.find(item => pattern.test(item.name));
+    for (const [key, directionTokens, typeTokens, label] of imageRules) {
+      const isSilhouette = key.startsWith("silhouette");
+      const entry = findImage(directionTokens, typeTokens, isSilhouette ? ["body photo", "body image"] : ["silhouette", "outline", "wireframe"]);
       if (!entry) continue;
+      usedImageNames.add(entry.name);
       const blob = await entry.async("blob");
       if (!blob.size || blob.size > 8 * 1024 * 1024) {
         parsed.flags.push("تصویر " + label + " از محدوده حجم مجاز خارج بود و وارد گزارش نشد.");
