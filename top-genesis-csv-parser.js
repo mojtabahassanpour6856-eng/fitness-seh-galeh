@@ -47,7 +47,7 @@
 
   function numeric(value) {
     if (value == null || String(value).trim() === "") return null;
-    const n = Number(String(value).replace(/,/g, "").trim());
+    const n = Number.parseFloat(String(value).replace(/,/g, "").trim());
     return Number.isFinite(n) ? n : null;
   }
 
