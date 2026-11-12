@@ -115,7 +115,7 @@ window.TopGenesisSimpleAnalysis=buildSimpleAnalysis;
 
 function buildScanPage(scanPages){
  const pages=Array.isArray(scanPages)?scanPages:[];
- const body=pages.length?pages.map((p,i)=>'<figure class="scan-figure"><figcaption>تصویر اصلی اسکن · صفحه '+escapeHTML(p.page_number||i+1)+' از PDF</figcaption><img src="'+p.image_data_url+'" alt="تصویر واقعی اسکن بدن استخراج‌شده از گزارش دستگاه" loading="eager"></figure>').join(''):'<p class="note">تصویر قابل‌شناسایی از صفحه اسکن در PDF پیدا نشد. تا افزودن تصویر واقعی، گزارش برای تحویل نهایی قابل تأیید نیست.</p>';
+ const body=pages.length?pages.map((p,i)=>'<figure class="scan-figure"><figcaption>تصویر اصلی اسکن · صفحه '+escapeHTML(p.page_number||i+1)+' از گزارش</figcaption><img src="'+p.image_data_url+'" alt="تصویر واقعی اسکن بدن استخراج‌شده از گزارش دستگاه" loading="eager"></figure>').join(''):'<p class="note">تصویر قابل‌شناسایی از صفحه اسکن در گزارش پیدا نشد. تا افزودن تصویر واقعی، گزارش برای تحویل نهایی قابل تأیید نیست.</p>';
  return '<section class="visual-report report-page"><div class="brandline"><img class="brand-logo" src="./icon-512-2.png" alt="نشان باشگاه فیتنس سه‌قلعه" loading="eager"><div class="brandname">باشگاه فیتنس سه‌قلعه</div><div class="sub">تصاویر واقعی استخراج‌شده از گزارش دستگاه اصلی</div></div><h2>تصاویر اسکن بدن</h2><p class="small">این تصاویر مستقیماً از صفحه‌های PDF رندر شده‌اند؛ هیچ تصویر ساختگی یا جایگزین استفاده نشده است.</p>'+body+'</section>';
 }
 
@@ -131,7 +131,7 @@ function buildSupplementaryDevicePage(m){
  let html="<section class='report-page'><h2>جزئیات تکمیلی دستگاه</h2>";
  if(geometry.length)html+="<h3>هندسه اندازه‌گیری کمر</h3><div class='analysis-grid'>"+geometry.map(([k,label,unit])=>"<div class='analysis-card'><span>"+label+"</span><strong>"+metricValue(k).toLocaleString("en-US")+" "+unit+"</strong><span>مقدار خوانده‌شده از صفحه Waist Analysis</span></div>").join("")+"</div>";
  if(riskRows)html+="<h3>برآوردهای مقایسه‌ای دستگاه</h3><table><thead><tr><th>عنوان</th><th>برآورد گزارش‌شده</th></tr></thead><tbody>"+riskRows+"</tbody></table><p class='note'>این ضرایب، برآوردهای مقایسه‌ای ارائه‌شده توسط نرم‌افزار دستگاه هستند؛ احتمال شخصی بیماری یا تشخیص پزشکی محسوب نمی‌شوند و نباید مبنای تصمیم درمانی قرار گیرند.</p>";
- if(goals.length)html+="<h3>تنظیمات هدف ثبت‌شده در دستگاه</h3><table><thead><tr><th>تنظیم</th><th>مقدار</th></tr></thead><tbody>"+goals.map(([k,label,unit])=>"<tr><td>"+label+"</td><td>"+metricValue(k).toLocaleString("en-US")+" "+unit+"</td></tr>").join("")+"</tbody></table><p class='note'>این مقادیر موقعیت اسلایدر در PDF هستند؛ به‌تنهایی به معنی هدف تجویزشده توسط مربی نیستند.</p>";
+ if(goals.length)html+="<h3>تنظیمات هدف ثبت‌شده در دستگاه</h3><table><thead><tr><th>تنظیم</th><th>مقدار</th></tr></thead><tbody>"+goals.map(([k,label,unit])=>"<tr><td>"+label+"</td><td>"+metricValue(k).toLocaleString("en-US")+" "+unit+"</td></tr>").join("")+"</tbody></table><p class='note'>این مقادیر موقعیت اسلایدر در گزارش هستند؛ به‌تنهایی به معنی هدف تجویزشده توسط مربی نیستند.</p>";
  html+="</section>";return html;
 }
 
@@ -191,15 +191,15 @@ button.addEventListener("click",async()=>{
  const file=fileInput.files&&fileInput.files[0];
  const newerFile=fileInput2.files&&fileInput2.files[0];
  const moreFiles=Array.from(fileInputMore.files||[]);
- if(!file){status.textContent="ابتدا فایل PDF اصلی را انتخاب کنید.";return;}
+ if(!file){status.textContent="ابتدا گزارش اصلی را انتخاب کنید.";return;}
  const selectedFiles=[file,...(newerFile?[newerFile]:[]),...moreFiles];
  const zipFile=zipInput.files&&zipInput.files[0];
  if(zipFile&&(!/\.zip$/i.test(zipFile.name)||zipFile.size>20*1024*1024)){status.textContent="بسته فشرده باید معتبر و حداکثر ۲۰ مگابایت باشد.";return;}
  const invalidFile=selectedFiles.find(f=>!(/\.pdf$/i.test(f.name)||f.type==="application/pdf"));
- if(invalidFile){status.textContent="فایل «"+invalidFile.name+"» از نوع PDF نیست.";return;}
+ if(invalidFile){status.textContent="فایل «"+invalidFile.name+"» از نوع پی‌دی‌اف نیست.";return;}
  const oversizedFile=selectedFiles.find(f=>f.size>10*1024*1024);
  if(oversizedFile){status.textContent="حجم فایل «"+oversizedFile.name+"» بیشتر از ۱۰ مگابایت است. لطفاً فایل کوچک‌تری انتخاب کنید.";return;}
- button.disabled=true;result.innerHTML="";status.textContent="در حال خواندن صفحات PDF؛ در صورت نیاز OCR نیز اجرا می‌شود. لطفاً صفحه را نبندید.";
+ button.disabled=true;result.innerHTML="";status.textContent="در حال خواندن صفحات گزارش؛ در صورت نیاز OCR نیز اجرا می‌شود. لطفاً صفحه را نبندید.";
  try{
   const data=await window.TopGenesisPdfParser.extract(file);
   const newerData=newerFile?await window.TopGenesisPdfParser.extract(newerFile):null;
@@ -216,7 +216,7 @@ button.addEventListener("click",async()=>{
     if(pdfMetric&&Number.isFinite(Number(pdfMetric.value))&&Math.abs(Number(pdfMetric.value)-Number(csvMetric.value))>0.05){
      csvMetric.alternatives=[csvMetric.value,Number(pdfMetric.value)];
      csvMetric.status="conflict_review";
-     bundleData.flags.push("اختلاف بین CSV و PDF در "+csvKey+" مشاهده شد؛ مقدار CSV به‌عنوان مقدار اصلی نگه داشته شد و مقدار PDF نیز برای بررسی حفظ شد.");
+     bundleData.flags.push("اختلاف بین فایل جدولی و گزارش در "+csvKey+" مشاهده شد؛ مقدار CSV به‌عنوان مقدار اصلی نگه داشته شد و مقدار PDF نیز برای بررسی حفظ شد.");
     }
     data.metrics[pdfKey]=csvMetric;
    });
@@ -228,7 +228,7 @@ button.addEventListener("click",async()=>{
     if(pdfItem&&Math.abs(Number(pdfItem.value)-Number(item.value))>0.005){
      item.alternatives=[item.value,Number(pdfItem.value)];
      item.status="conflict_review";
-     bundleData.flags.push("اختلاف CSV و PDF در اندازه "+name+" وجود دارد؛ مقدار CSV مرجع اصلی است و مقدار PDF حفظ شده است.");
+     bundleData.flags.push("اختلاف فایل جدولی و گزارش در اندازه "+name+" وجود دارد؛ مقدار CSV مرجع اصلی است و مقدار PDF حفظ شده است.");
     }
     csvMeasures[key]=item;
    });
@@ -250,9 +250,9 @@ button.addEventListener("click",async()=>{
    sectionTables.forEach(([title,items])=>{
     const entries=Object.entries(items||{}).filter(([,v])=>v&&typeof v==="object"&&"value" in v);
     if(!entries.length)return;
-    html+="<section class='report-page'><h2>"+escapeHTML(title)+" از فایل جدولی</h2><p class='small'>منبع عددی: فایل CSV دستگاه؛ همه مقادیر برای تأیید مربی هستند.</p><table><thead><tr><th>شاخص</th><th>مقدار</th><th>واحد</th><th>وضعیت</th></tr></thead><tbody>"+entries.map(([k,v])=>"<tr><td>"+escapeHTML(k)+"</td><td>"+escapeHTML(v.value)+(v.alternatives&&v.alternatives.length>1?"<br><small>CSV / PDF: "+v.alternatives.map(escapeHTML).join(" / ")+"</small>":"")+"</td><td>"+escapeHTML(v.unit||"—")+"</td><td class='"+(v.status==="conflict_review"?"bad":"review")+"'>"+(v.status==="conflict_review"?"اختلاف منبع؛ بررسی مربی":"نیازمند تأیید مربی")+"</td></tr>").join("")+"</tbody></table></section>";
+    html+="<section class='report-page'><h2>"+escapeHTML(title)+" از فایل جدولی</h2><p class='small'>منبع عددی: فایل CSV دستگاه؛ همه مقادیر برای تأیید مربی هستند.</p><table><thead><tr><th>شاخص</th><th>مقدار</th><th>واحد</th><th>وضعیت</th></tr></thead><tbody>"+entries.map(([k,v])=>"<tr><td>"+escapeHTML(k)+"</td><td>"+escapeHTML(v.value)+(v.alternatives&&v.alternatives.length>1?"<br><small>فایل جدولی / گزارش: "+v.alternatives.map(escapeHTML).join(" / ")+"</small>":"")+"</td><td>"+escapeHTML(v.unit||"—")+"</td><td class='"+(v.status==="conflict_review"?"bad":"review")+"'>"+(v.status==="conflict_review"?"اختلاف منبع؛ بررسی مربی":"نیازمند تأیید مربی")+"</td></tr>").join("")+"</tbody></table></section>";
    });
-   if(bundleData.flags&&bundleData.flags.length)html+="<section class='report-page'><h2>موارد نیازمند بررسی بین CSV و ZIP</h2><ul>"+bundleData.flags.map(x=>"<li>"+escapeHTML(x)+"</li>").join("")+"</ul></section>";
+   if(bundleData.flags&&bundleData.flags.length)html+="<section class='report-page'><h2>موارد نیازمند بررسی بین فایل جدولی و بسته فشرده</h2><ul>"+bundleData.flags.map(x=>"<li>"+escapeHTML(x)+"</li>").join("")+"</ul></section>";
   }
   const standardMeasures=data.metrics&&data.metrics.body_measurements_cm;
   if(standardMeasures){
@@ -267,7 +267,7 @@ button.addEventListener("click",async()=>{
   if(missing){html+="<section class='report-page'><h2>اندازه‌های ثبت‌نشده</h2><p class='note'>این موارد صفر نیستند و از گزارش دیگری هم جایگزین نشده‌اند.</p><table><tr><th>ناحیه</th><th>وضعیت</th></tr>"+Object.entries(missing).map(([k,v])=>"<tr><td>"+escapeHTML(labels[k]||k)+"</td><td class='review'>در این گزارش ثبت نشده</td></tr>").join("")+"</table></section>";}
   if(data.flags&&data.flags.length)html+="<section class='report-page'><h2>هشدارها</h2><ul>"+data.flags.map(x=>"<li>"+escapeHTML(x)+"</li>").join("")+"</ul></section>";
   html+="<p class='note'>این نتیجه آزمایشی است؛ تأیید مربی الزامی است. اطلاعات هویتی از خروجی صفحه حذف شده‌اند.</p>";
-  html="<div class='print-only print-header'><h1>گزارش هوشمند آنالیز بدن</h1><p class='small'>گزارش تحلیل ترکیب بدن از دستگاه تاپ جنسیس</p><p>باشگاه فیتنس سه‌قلعه | گزارش استخراج‌شده از دستگاه تاپ جنسیس</p><p>ترتیب گزارش‌ها مطابق ترتیب انتخاب فایل‌هاست.</p></div><div class='no-print export-actions'><button id='printReport' type='button'>چاپ / ذخیره PDF</button><button id='pngReport' class='secondary' type='button' disabled>دریافت همه صفحات PNG</button><button id='shareReport' type='button' disabled>اشتراک‌گذاری گزارش</button><p class='small'>خروجی PNG چندصفحه‌ای است. در تلفن همراه، پنجره اشتراک‌گذاری سیستم می‌تواند واتساپ یا تلگرام را نمایش دهد؛ در صورت پشتیبانی‌نشدن، تصاویر جداگانه ذخیره می‌شوند.</p></div>"+html+"<section class='print-signoff report-page'><h3>یادداشت و تأیید مربی</h3><p>نکات تکمیلی: ........................................................................................................</p><div class='sign-lines'><div>نام و امضای مربی<div class='line'></div></div><div>تاریخ بررسی<div class='line'></div></div></div><p class='small'>این گزارش ابزار کمکی است؛ مقادیر استخراج‌شده باید با گزارش اصلی دستگاه و شرایط اندازه‌گیری تطبیق داده شوند.</p></section>";
+  html="<div class='print-only print-header'><h1>گزارش هوشمند آنالیز بدن</h1><p class='small'>گزارش تحلیل ترکیب بدن از دستگاه تاپ جنسیس</p><p>باشگاه فیتنس سه‌قلعه | گزارش استخراج‌شده از دستگاه تاپ جنسیس</p><p>ترتیب گزارش‌ها مطابق ترتیب انتخاب فایل‌هاست.</p></div><div class='no-print export-actions'><button id='printReport' type='button'>چاپ / ذخیره گزارش</button><button id='pngReport' class='secondary' type='button' disabled>دریافت همه صفحات به‌صورت تصویر</button><button id='shareReport' type='button' disabled>اشتراک‌گذاری گزارش</button><p class='small'>خروجی تصاویر چندصفحه‌ای است. در تلفن همراه، پنجره اشتراک‌گذاری سیستم می‌تواند واتساپ یا تلگرام را نمایش دهد؛ در صورت پشتیبانی‌نشدن، تصاویر جداگانه ذخیره می‌شوند.</p></div>"+html+"<section class='print-signoff report-page'><h3>یادداشت و تأیید مربی</h3><p>نکات تکمیلی: ........................................................................................................</p><div class='sign-lines'><div>نام و امضای مربی<div class='line'></div></div><div>تاریخ بررسی<div class='line'></div></div></div><p class='small'>این گزارش ابزار کمکی است؛ مقادیر استخراج‌شده باید با گزارش اصلی دستگاه و شرایط اندازه‌گیری تطبیق داده شوند.</p></section>";
   result.innerHTML=html;
   const reviewSelects=[...result.querySelectorAll("[data-review]")];
   const approveBox=document.getElementById("coachApprove");
@@ -313,7 +313,7 @@ button.addEventListener("click",async()=>{
   document.getElementById("printReport").addEventListener("click",()=>{document.body.classList.add("print-report");window.print();});
   async function ensureHtml2Canvas(){
  if(window.html2canvas)return;
- await new Promise((resolve,reject)=>{const sc=document.createElement("script");sc.src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js";sc.onload=resolve;sc.onerror=()=>reject(new Error("بارگذاری ابزار ساخت PNG ناموفق بود."));document.head.appendChild(sc);});
+ await new Promise((resolve,reject)=>{const sc=document.createElement("script");sc.src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js";sc.onload=resolve;sc.onerror=()=>reject(new Error("بارگذاری ابزار ساخت تصویر گزارش ناموفق بود."));document.head.appendChild(sc);});
 }
 async function renderReportPngFiles(){
  await ensureHtml2Canvas();
@@ -347,7 +347,7 @@ async function exportReport(mode,button){
    await navigator.share({files,title:"گزارش هوشمند آنالیز بدن",text:"گزارش آنالیز بدن · باشگاه فیتنس سه‌قلعه"});
   }else{
    downloadReportFiles(files);
-   if(mode==="share")alert("اشتراک‌گذاری مستقیم فایل در این مرورگر پشتیبانی نشد؛ صفحات PNG ذخیره شدند و می‌توانید آن‌ها را از گالری با واتساپ یا تلگرام ارسال کنید.");
+   if(mode==="share")alert("اشتراک‌گذاری مستقیم فایل در این مرورگر پشتیبانی نشد؛ تصاویر گزارش ذخیره شدند و می‌توانید آن‌ها را از گالری با واتساپ یا تلگرام ارسال کنید.");
   }
  }catch(e){if(e&&e.name!=="AbortError")alert(e.message||"خروجی گزارش انجام نشد.");}
  finally{button.textContent=old;updateApprovalState();}
