@@ -269,7 +269,12 @@ try {
     "Mid-Thigh Left | 52.426 cm Mid-Thigh Right | 52.314 cm Thigh Left Upper | 60.007 cm Thigh Right Upper | 58.848 cm " +
     "Waist (Abdominal) | 87.050 cm Waist (Lower) | 91.346 cm Waist (Narrowest) | 85.111 cm " +
     "16 kg of fat mass 67 kg of lean body mass Waist Circumference 91.35 cm " +
-    "Caloric Expenditure 2254 Calories/day"
+    "Caloric Expenditure 2254 Calories/day " +
+    "31.66 cm width 24.93 cm depth 600.67 cm? area " +
+    "1.1x 1.1x More likely to suffer from Cancer More likely to suffer from Cardiovascular Disease " +
+    "1.4x 1.2x More likely to suffer from Respiratory Disease More likely to suffer from All Other Diseases " +
+    "0.00 cm Normal Change in Waist Circumference Risk Level " +
+    "For example, your waist circumference of 91.35 cm makes you 1.1 times more likely to suffer from cancer."
   ));
   assert.equal(javadRealReport.metrics.height_cm.value, 185);
   assert.equal(javadRealReport.metrics.weight_kg.value, 83);
@@ -281,6 +286,14 @@ try {
   assert.equal(javadRealReport.metrics.resting_metabolic_rate_kcal.value, 1878);
   assert.equal(javadRealReport.metrics.daily_energy_expenditure_kcal.value, 2254);
   assert.equal(javadRealReport.metrics.waist_circumference_cm.value, 91.35);
+  assert.equal(javadRealReport.metrics.waist_width_cm.value, 31.66);
+  assert.equal(javadRealReport.metrics.waist_depth_cm.value, 24.93);
+  assert.equal(javadRealReport.metrics.waist_area_cm2.value, 600.67);
+  assert.equal(javadRealReport.metrics.vendor_relative_risk_estimates.cancer.value, 1.1);
+  assert.equal(javadRealReport.metrics.vendor_relative_risk_estimates.cardiovascular.value, 1.1);
+  assert.equal(javadRealReport.metrics.vendor_relative_risk_estimates.respiratory.value, 1.4);
+  assert.equal(javadRealReport.metrics.vendor_relative_risk_estimates.other_diseases.value, 1.2);
+  assert.equal(javadRealReport.metrics.device_waist_loss_goal_cm.value, 0);
   assert.equal(javadRealReport.metrics.comparison_percentile.value, 50);
   const javadMeasures = javadRealReport.metrics.body_measurements_cm;
   assert.equal(Object.keys(javadMeasures).length, 21, "All 21 standard circumference measurements must be extracted.");
