@@ -430,6 +430,9 @@ try {
   await page.emulateMedia({ media: "print" });
   const printLayout = await page.evaluate(() => ({
     font: getComputedStyle(document.querySelector(".report-cover")).fontFamily,
+    direction: getComputedStyle(document.querySelector(".report-page")).direction,
+    textDirection: getComputedStyle(document.querySelector(".report-page p")).direction,
+    bidiIsolation: getComputedStyle(document.querySelector(".report-page p")).unicodeBidi,
     pageBreaks: [...document.querySelectorAll(".report-page")].every(node => {
       const style = getComputedStyle(node);
       return style.breakAfter === "page" || style.pageBreakAfter === "always";
@@ -438,6 +441,9 @@ try {
   }));
   assert.match(printLayout.font, /Vazirmatn/,
     "Print layout must retain the Persian-capable report font.");
+  assert.equal(printLayout.direction, "rtl", "Every report page must preserve right-to-left layout.");
+  assert.equal(printLayout.textDirection, "rtl", "Persian paragraphs must preserve right-to-left text flow.");
+  assert.equal(printLayout.bidiIsolation, "plaintext", "Mixed Persian and Latin text must use bidi-aware paragraph isolation.");
   assert.equal(printLayout.pageBreaks, true,
     "Each report section must be separated cleanly when printed.");
   assert.equal(printLayout.noHorizontalOverflow, true,
