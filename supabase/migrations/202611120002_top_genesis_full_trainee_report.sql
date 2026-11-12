@@ -6,9 +6,9 @@ alter table public.trainee_body_analysis_publications
 -- The existing private bucket already has coach-upload and trainee/assigned-coach read policies.
 -- Extend its allow-list without changing its privacy or 10 MB size limit.
 update storage.buckets
-set allowed_mime_types = array(
-  select distinct mime_type
-  from unnest(coalesce(allowed_mime_types, array[]::text[]) || array['text/html']::text[]) as mime_type
-)
+set allowed_mime_types = case
+  when allowed_mime_types is null then array['text/html']::text[]
+  else array_append(allowed_mime_types, 'text/html')
+end
 where id = 'trainee-health-reports'
   and not ('text/html' = any(coalesce(allowed_mime_types, array[]::text[])));
