@@ -103,6 +103,88 @@ try {
   const pageErrors = [];
   page.on("pageerror", error => pageErrors.push(error.message));
   await page.goto(`http://127.0.0.1:${address.port}/top-genesis-pdf-test.html`);
+  await page.addScriptTag({ path: path.join(root, "top-genesis-csv-parser.js") });
+  const csvFixture = `sep=,
+Company Name,DefaultID
+Customer Name,نمونه ناشناس
+Customer Gender,Male
+Customer Age,37
+Customer Height,185 cm
+Customer Weight,83 kg
+Customer Email,private@example.com
+Capture Time,11/11/2026 5:49:10 AM
+Capture Method,Booth with turntable
+Sensor Type,kinect v2
+Model Type,Body
+FITNESS & HEALTH
+measurement name,value,units
+Body Fat %,19.0,%
+Body Density,1.159838,g/cm^3
+Body Mass Index (BMI),24.2
+CIRCUMFERENCES & LENGTHS
+measurement name,value,units
+Bicep Left Lower,28.025,cm
+Bicep Right Lower,28.046,cm
+Bicep Left,31.670,cm
+Bicep Right,31.460,cm
+Calf Left,32.380,cm
+Calf Right,32.826,cm
+Chest,98.990,cm
+Forearm Left,27.983,cm
+Forearm Right,28.056,cm
+High Hip,94.258,cm
+Hip,97.948,cm
+Neck,40.273,cm
+Thigh Left Lower,40.719,cm
+Thigh Right Lower,40.905,cm
+Mid-Thigh Left,52.426,cm
+Mid-Thigh Right,52.314,cm
+Thigh Left Upper,60.007,cm
+Thigh Right Upper,58.848,cm
+Waist (Abdominal),87.050,cm
+Waist (Lower),91.346,cm
+Waist (Narrowest),85.111,cm
+AREAS & VOLUMES
+measurement name,value,units
+Left Arm Surface Area,1444.9,cm^2
+Right Arm Surface Area,1453.3,cm^2
+Body Surface Area,17321.8,cm^2
+Head Surface Area,1599.1,cm^2
+Left Leg Surface Area,2314.5,cm^2
+Right Leg Surface Area,2329.4,cm^2
+Torso Surface Area,6758.6,cm^2
+Left Arm Volume,2653,cm^3
+Right Arm Volume,2752,cm^3
+Body Volume,71562,cm^3
+Head Volume,5441,cm^3
+Left Leg Volume,5972,cm^3
+Right Leg Volume,5993,cm^3
+Torso Volume,44568,cm^3
+SHAPE RATIOS
+measurement name,value,units
+Bust-Hip Ratio,1.011
+Bust-Waist Ratio,1.084
+Waist-Hip Ratio (WHO),0.889
+`;
+  const csvResult = await page.evaluate(text => window.TopGenesisCsvParser.parseCsv(text), csvFixture);
+  assert.equal(csvResult.profile.age, 37);
+  assert.equal(csvResult.profile.height_cm.value, 185);
+  assert.equal(csvResult.profile.weight_kg.value, 83);
+  assert.equal(csvResult.metrics.body_fat_percent.value, 19);
+  assert.equal(csvResult.metrics.bmi.value, 24.2);
+  assert.equal(csvResult.metrics.waist_hip_ratio.value, 0.889);
+  assert.equal(Object.keys(csvResult.body_measurements_cm).length, 21,
+    "The real CSV layout must yield all 21 circumference/length measurements.");
+  assert.equal(csvResult.body_measurements_cm["Calf Left"].value, 32.38,
+    "CSV decimal precision must be preserved; CSV is the source of truth for measurements.");
+  assert.equal(csvResult.body_measurements_cm["Calf Right"].value, 32.826);
+  assert.equal(csvResult.areas_and_volumes["Body Volume"].value, 71562);
+  assert.equal(csvResult.areas_and_volumes["Torso Surface Area"].value, 6758.6);
+  assert.equal(csvResult.shape_ratios["Waist-Hip Ratio (WHO)"].value, 0.889);
+  assert.equal(JSON.stringify(csvResult).includes("private@example.com"), false,
+    "Customer email must not be extracted or exposed by the CSV parser.");
+  assert.equal(csvResult.review_required, true);
+
   await page.locator("#pdfFile").setInputFiles({
     name: "synthetic-top-genesis-fixture.pdf",
     mimeType: "application/pdf",
