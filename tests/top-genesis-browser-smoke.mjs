@@ -687,8 +687,9 @@ Waist-Hip Ratio (WHO),0.889
   console.log('[smoke] opening trainee progress page');
   const traineeProgressPage = await browser.newPage();
   console.log('[smoke] trainee progress page created');
-  await traineeProgressPage.goto("http://127.0.0.1:" + address.port + "/top-genesis-pdf-test.html");
-  console.log("[smoke] trainee progress page loaded");
+  // The trainee progress component is independent of the analyzer iframe. Use a clean page
+  // so PDF.js/OCR bootstrapping cannot block the role/history smoke test.
+  console.log("[smoke] using isolated trainee progress page");
   await traineeProgressPage.addScriptTag({ content:
     "let authProfile = { role: 'trainee', trainee_id: 'trainee-fixture-1' }; " +
     "let currentClient = { id: 'trainee-fixture-1' }; " +
