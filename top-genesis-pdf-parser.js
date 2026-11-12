@@ -134,7 +134,7 @@
     if (waistWidth != null) out.waist_width_cm = metric(waistWidth, "cm", "Waist Analysis / OCR");
     const waistDepth = numberAfter(text, /([0-9]+(?:\.[0-9]+)?)\s*cm\s*depth/i);
     if (waistDepth != null) out.waist_depth_cm = metric(waistDepth, "cm", "Waist Analysis / OCR");
-    const waistArea = numberAfter(text, /([0-9]+(?:\.[0-9]+)?)\s*cm(?:²|2|\^2)?\s*area/i);
+    const waistArea = numberAfter(text, /([0-9]+(?:\.[0-9]+)?)\s*cm(?:²|2|\\^2|\\?)?\s*area/i);
     if (waistArea != null) out.waist_area_cm2 = metric(waistArea, "cm²", "Waist Analysis / OCR");
 
     // Device-provided relative risk multipliers are retained as vendor estimates,
