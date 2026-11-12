@@ -216,10 +216,12 @@
       $("topGenesisHistoryCount").textContent = fa(filtered.length, 0) + " گزارش";
       $("topGenesisHistoryList").innerHTML = filtered.length ? filtered.map(row => {
         const count = Object.keys(METRIC_LABELS).filter(key => validMetric(row.report_metrics?.[key])).length;
+        const action = row.report_storage_path
+          ? '<button type="button" data-history-report="' + esc(row.id) + '" style="border:1px solid #c5a45b;border-radius:8px;background:#fffaf0;padding:7px 11px;color:#765b2e">مشاهده گزارش کامل</button>'
+          : '<button type="button" data-history-details="' + esc(row.id) + '" aria-expanded="false" style="border:1px solid #c5a45b;border-radius:8px;background:#fffaf0;padding:7px 11px;color:#765b2e">مشاهده جزئیات</button>';
         return '<article style="border:1px solid #eee3d1;border-radius:10px;padding:10px;margin:8px 0;background:#fff">' +
           '<div style="display:flex;justify-content:space-between;gap:8px;align-items:center;flex-wrap:wrap"><b>' +
-          esc(dateFa(row.analysis_date)) + '</b><button type="button" data-history-details="' + esc(row.id) +
-          '" aria-expanded="false" style="border:1px solid #c5a45b;border-radius:8px;background:#fffaf0;padding:7px 11px;color:#765b2e">مشاهده جزئیات</button></div>' +
+          esc(dateFa(row.analysis_date)) + '</b>' + action + '</div>' +
           '<div class="muted" style="font-size:12px;margin-top:5px">' + fa(count, 0) + ' شاخص معتبر ثبت‌شده</div>' +
           '<div id="topGenesisDetails-' + esc(row.id) + '" hidden style="margin-top:12px">' + rowDetails(row) + '</div></article>';
       }).join("") : '<p class="muted">در این بازه گزارشی ثبت نشده است.</p>';
@@ -227,7 +229,13 @@
     mode.addEventListener("change", renderHistory);
     from.addEventListener("change", renderHistory);
     to.addEventListener("change", renderHistory);
-    $("topGenesisHistoryList").addEventListener("click", event => {
+    $("topGenesisHistoryList").addEventListener("click", async event => {
+      const reportButton = event.target.closest("[data-history-report]");
+      if (reportButton) {
+        const row = rows.find(item => item.id === reportButton.dataset.historyReport);
+        if (row?.report_storage_path) await openFullReport(row, reportButton);
+        return;
+      }
       const button = event.target.closest("[data-history-details]");
       if (!button) return;
       const panel = $("topGenesisDetails-" + button.dataset.historyDetails);
@@ -236,7 +244,50 @@
       button.setAttribute("aria-expanded", String(!panel.hidden));
       button.textContent = panel.hidden ? "مشاهده جزئیات" : "بستن جزئیات";
     });
+    const modal = document.createElement("div");
+    modal.id = "topGenesisFullReportModal";
+    modal.hidden = true;
+    modal.style.cssText = "position:fixed;inset:0;z-index:99999;background:#17130dcc;padding:12px;display:flex;align-items:center;justify-content:center";
+    modal.innerHTML = '<section role="dialog" aria-modal="true" aria-label="گزارش کامل آنالیز بدن" style="width:min(100%,1000px);height:min(96vh,900px);background:#fffdf7;border:1px solid #d8b65d;border-radius:14px;padding:10px;display:flex;flex-direction:column;gap:8px"><div style="display:flex;justify-content:space-between;gap:8px;align-items:center"><b>گزارش کامل آنالیز بدن</b><div style="display:flex;gap:6px"><button type="button" id="topGenesisPrintFullReport">چاپ / ذخیره PDF</button><button type="button" id="topGenesisCloseFullReport">بستن</button></div></div><iframe id="topGenesisFullReportFrame" title="گزارش کامل آنالیز بدن" sandbox="allow-same-origin allow-modals" style="width:100%;flex:1;border:1px solid #eadfc9;border-radius:9px;background:white"></iframe></section>';
+    document.body.appendChild(modal);
+    const closeModal = () => {
+      const frame = $("topGenesisFullReportFrame");
+      if (frame?.dataset.objectUrl) URL.revokeObjectURL(frame.dataset.objectUrl);
+      if (frame) { frame.removeAttribute("src"); delete frame.dataset.objectUrl; }
+      modal.hidden = true;
+      modal.style.display = "none";
+    };
+    $("topGenesisCloseFullReport").addEventListener("click", closeModal);
+    $("topGenesisPrintFullReport").addEventListener("click", () => {
+      try { $("topGenesisFullReportFrame").contentWindow.print(); } catch (_) {}
+    });
+    modal.addEventListener("click", event => { if (event.target === modal) closeModal(); });
     renderHistory();
+  }
+  async function openFullReport(row, button) {
+    const modal = $("topGenesisFullReportModal");
+    const frame = $("topGenesisFullReportFrame");
+    if (!modal || !frame || !row?.report_storage_path) return;
+    const oldText = button?.textContent;
+    if (button) { button.disabled = true; button.textContent = "در حال دریافت گزارش…"; }
+    try {
+      const { data, error } = await window.AUTH_SUPABASE.storage
+        .from("trainee-health-reports").download(row.report_storage_path);
+      if (error) throw error;
+      if (!data) throw new Error("فایل گزارش دریافت نشد.");
+      if (frame.dataset.objectUrl) URL.revokeObjectURL(frame.dataset.objectUrl);
+      const reportBlob = data.type === "text/html" ? data : new Blob([data], { type: "text/html;charset=utf-8" });
+      const objectUrl = URL.createObjectURL(reportBlob);
+      frame.dataset.objectUrl = objectUrl;
+      frame.src = objectUrl;
+      modal.hidden = false;
+      modal.style.display = "flex";
+    } catch (error) {
+      alert("نمایش گزارش کامل انجام نشد. اتصال یا دسترسی گزارش را بررسی کنید.");
+      console.warn("Top Genesis full report:", error);
+    } finally {
+      if (button) { button.disabled = false; button.textContent = oldText || "مشاهده گزارش کامل"; }
+    }
   }
   async function loadPublished(force) {
     const traineeId = currentTraineeId();
@@ -247,7 +298,7 @@
     if (body && !lastLoadedTrainee) body.textContent = "در حال دریافت گزارش‌ها…";
     try {
       const { data, error } = await window.AUTH_SUPABASE.from(TABLE)
-        .select("id,analysis_date,report_metrics,training_notes,nutrition_notes,published_at")
+        .select("id,analysis_date,report_metrics,training_notes,nutrition_notes,report_storage_path,published_at")
         .eq("trainee_id", traineeId)
         .order("analysis_date", { ascending: true })
         .order("created_at", { ascending: true });
