@@ -42,6 +42,8 @@ pre{white-space:pre-wrap;overflow-wrap:anywhere;background:#f7f7f7;padding:12px;
 <input id="pdfFile2" type="file" accept="application/pdf,.pdf">
 <br><label for="pdfFilesMore">گزارش‌های بعدی (برای سه نوبت یا بیشتر؛ به ترتیب قدیمی به جدید):</label><br>
 <input id="pdfFilesMore" type="file" accept="application/pdf,.pdf" multiple>
+<br><label for="topGenesisZip">بسته ZIP دستگاه (CSV و تصاویر اسکن؛ اختیاری، حداکثر ۲۰ مگابایت):</label><br>
+<input id="topGenesisZip" type="file" accept=".zip,application/zip">
 <br><button id="run" type="button">شروع استخراج و تحلیل</button>
 <div id="status" role="status" aria-live="polite"></div>
 <div id="result"></div>
@@ -169,13 +171,15 @@ function buildMultiReportTrend(reports){
 window.TopGenesisMultiReportTrend=buildMultiReportTrend;
 
 
-const fileInput=document.getElementById("pdfFile"),fileInput2=document.getElementById("pdfFile2"),fileInputMore=document.getElementById("pdfFilesMore"),button=document.getElementById("run"),status=document.getElementById("status"),result=document.getElementById("result");
+const fileInput=document.getElementById("pdfFile"),fileInput2=document.getElementById("pdfFile2"),fileInputMore=document.getElementById("pdfFilesMore"),zipInput=document.getElementById("topGenesisZip"),button=document.getElementById("run"),status=document.getElementById("status"),result=document.getElementById("result");
 button.addEventListener("click",async()=>{
  const file=fileInput.files&&fileInput.files[0];
  const newerFile=fileInput2.files&&fileInput2.files[0];
  const moreFiles=Array.from(fileInputMore.files||[]);
  if(!file){status.textContent="ابتدا فایل PDF اصلی را انتخاب کنید.";return;}
  const selectedFiles=[file,...(newerFile?[newerFile]:[]),...moreFiles];
+ const zipFile=zipInput.files&&zipInput.files[0];
+ if(zipFile&&(!/\\.zip$/i.test(zipFile.name)||zipFile.size>20*1024*1024)){status.textContent="فایل ZIP باید معتبر و حداکثر ۲۰ مگابایت باشد.";return;}
  const invalidFile=selectedFiles.find(f=>!(/\.pdf$/i.test(f.name)||f.type==="application/pdf"));
  if(invalidFile){status.textContent="فایل «"+invalidFile.name+"» از نوع PDF نیست.";return;}
  const oversizedFile=selectedFiles.find(f=>f.size>10*1024*1024);
@@ -187,6 +191,35 @@ button.addEventListener("click",async()=>{
   const moreData=[];
   for(const extraFile of moreFiles){moreData.push(await window.TopGenesisPdfParser.extract(extraFile));}
   const allReports=[data,...(newerData?[newerData]:[]),...moreData];
+  const bundleData=zipFile?await window.TopGenesisCsvParser.extractBundle(zipFile):null;
+  if(bundleData){
+   const metricMap={body_fat_percent:"body_fat_percent",bmi:"bmi",height_cm:"height_cm",weight_kg:"weight_kg",waist_hip_ratio:"waist_hip_ratio"};
+   Object.entries(metricMap).forEach(([csvKey,pdfKey])=>{
+    const csvMetric=bundleData.metrics[csvKey];
+    if(!csvMetric)return;
+    const pdfMetric=data.metrics[pdfKey];
+    if(pdfMetric&&Number.isFinite(Number(pdfMetric.value))&&Math.abs(Number(pdfMetric.value)-Number(csvMetric.value))>0.05){
+     csvMetric.alternatives=[csvMetric.value,Number(pdfMetric.value)];
+     csvMetric.status="conflict_review";
+     bundleData.flags.push("اختلاف بین CSV و PDF در "+csvKey+" مشاهده شد؛ مقدار CSV به‌عنوان مقدار اصلی نگه داشته شد و مقدار PDF نیز برای بررسی حفظ شد.");
+    }
+    data.metrics[pdfKey]=csvMetric;
+   });
+   const measureKeyMap={"Bicep Left Lower":"bicep_left_lower_cm","Bicep Right Lower":"bicep_right_lower_cm","Bicep Left":"bicep_left_cm","Bicep Right":"bicep_right_cm","Calf Left":"calf_left_cm","Calf Right":"calf_right_cm","Chest":"chest_cm","Forearm Left":"forearm_left_cm","Forearm Right":"forearm_right_cm","High Hip":"high_hip_cm","Hip":"hip_cm","Neck":"neck_cm","Thigh Left Lower":"thigh_left_lower_cm","Thigh Right Lower":"thigh_right_lower_cm","Mid-Thigh Left":"mid_thigh_left_cm","Mid-Thigh Right":"mid_thigh_right_cm","Thigh Left Upper":"thigh_left_upper_cm","Thigh Right Upper":"thigh_right_upper_cm","Waist (Abdominal)":"waist_abdominal_cm","Waist (Lower)":"waist_lower_cm","Waist (Narrowest)":"waist_narrowest_cm"};
+   const csvMeasures={};
+   Object.entries(bundleData.body_measurements_cm||{}).forEach(([name,item])=>{
+    const key=measureKeyMap[name]||name;
+    const pdfItem=data.metrics.body_measurements_cm&&data.metrics.body_measurements_cm[key];
+    if(pdfItem&&Math.abs(Number(pdfItem.value)-Number(item.value))>0.005){
+     item.alternatives=[item.value,Number(pdfItem.value)];
+     item.status="conflict_review";
+     bundleData.flags.push("اختلاف CSV و PDF در اندازه "+name+" وجود دارد؛ مقدار CSV مرجع اصلی است و مقدار PDF حفظ شده است.");
+    }
+    csvMeasures[key]=item;
+   });
+   data.metrics.body_measurements_cm=csvMeasures;
+   data.csv_source="Top Genesis CSV";
+  }
   const rows=[];
   Object.entries(data.metrics||{}).forEach(([key,item])=>{
    if(key==="raw_body_measurements"||!item||Array.isArray(item)||typeof item!=="object"||!("value" in item)||item.value===null||item.value===undefined)return;
@@ -194,6 +227,18 @@ button.addEventListener("click",async()=>{
    rows.push("<tr><td>"+escapeHTML(labels[key]||key)+"</td><td>"+escapeHTML(item.value)+" "+escapeHTML(units[item.unit]||item.unit||"")+alternatives+"</td><td class='"+(item.status==="invalid_range"||item.status==="conflict_review"?"bad":"review")+"'>"+escapeHTML(statusText[item.status]||item.status)+"</td></tr>");
   });
   let html=buildCoverPage()+buildVisualReport(data.metrics,data.flags,data.scan_pages)+buildScanPage(data.scan_pages)+buildSimpleAnalysis(data.metrics)+buildSupplementaryDevicePage(data.metrics)+buildCoachReviewPage(data.metrics,data.scan_pages)+(newerData?buildReportComparison(data.metrics,newerData.metrics):"")+(allReports.length>=3?buildMultiReportTrend(allReports):"")+"<section class='report-page'><h2>نتیجه استخراج گزارش اول</h2><p>تعداد صفحات: "+data.page_count+" | صفحات OCR: "+((data.ocr_pages||[]).join("، ")||"ندارد")+"</p><table><thead><tr><th>شاخص</th><th>مقدار</th><th>وضعیت</th></tr></thead><tbody>"+rows.join("")+"</tbody></table></section>";
+  if(bundleData){
+   const imageLabels={body_front:"نمای روبه‌رو",body_back:"نمای پشت",body_left:"نمای سمت چپ",body_right:"نمای سمت راست",silhouette_front:"نمای خطی روبه‌رو",silhouette_left:"نمای خطی پهلو"};
+   const imageCards=Object.entries(bundleData.scan_images||{}).map(([key,item])=>"<figure class='scan-figure'><figcaption>"+escapeHTML(imageLabels[key]||item.label)+"</figcaption><img src='"+item.image_data_url+"' alt='"+escapeHTML(imageLabels[key]||item.label)+"' loading='eager'></figure>").join("");
+   html+="<section class='report-page'><h2>صور اسکن اصلی دستگاه</h2><p class='note'>تصاویر از بسته ZIP اصلی دستگاه استخراج شده‌اند و بدون بازسازی یا تولید مصنوعی نمایش داده می‌شوند. تعداد تصاویر پیدا‌شده: "+bundleData.scan_image_count+" از ۶.</p><div class='review-grid'>"+imageCards+"</div></section>";
+   const sectionTables=[["اندازه‌های محیطی و طولی",bundleData.body_measurements_cm],["سطح و حجم اندام‌ها",bundleData.areas_and_volumes],["نسبت‌های شکلی",bundleData.shape_ratios],["شاخص‌های سلامت و ترکیب بدن",{"Body Fat %":bundleData.metrics.body_fat_percent,"BMI":bundleData.metrics.bmi,"Body Density":bundleData.metrics.body_density_g_cm3,"Waist-Hip Ratio":bundleData.metrics.waist_hip_ratio}]];
+   sectionTables.forEach(([title,items])=>{
+    const entries=Object.entries(items||{}).filter(([,v])=>v&&typeof v==="object"&&"value" in v);
+    if(!entries.length)return;
+    html+="<section class='report-page'><h2>"+escapeHTML(title)+" از CSV</h2><p class='small'>منبع عددی: فایل CSV دستگاه؛ همه مقادیر برای تأیید مربی هستند.</p><table><thead><tr><th>شاخص</th><th>مقدار</th><th>واحد</th><th>وضعیت</th></tr></thead><tbody>"+entries.map(([k,v])=>"<tr><td>"+escapeHTML(k)+"</td><td>"+escapeHTML(v.value)+(v.alternatives&&v.alternatives.length>1?"<br><small>CSV / PDF: "+v.alternatives.map(escapeHTML).join(" / ")+"</small>":"")+"</td><td>"+escapeHTML(v.unit||"—")+"</td><td class='"+(v.status==="conflict_review"?"bad":"review")+"'>"+(v.status==="conflict_review"?"اختلاف منبع؛ بررسی مربی":"نیازمند تأیید مربی")+"</td></tr>").join("")+"</tbody></table></section>";
+   });
+   if(bundleData.flags&&bundleData.flags.length)html+="<section class='report-page'><h2>موارد نیازمند بررسی بین CSV و ZIP</h2><ul>"+bundleData.flags.map(x=>"<li>"+escapeHTML(x)+"</li>").join("")+"</ul></section>";
+  }
   const standardMeasures=data.metrics&&data.metrics.body_measurements_cm;
   if(standardMeasures){
    const standardNames={bicep_left_lower_cm:"بازو چپ، بخش پایین",bicep_right_lower_cm:"بازو راست، بخش پایین",bicep_left_cm:"بازو چپ",bicep_right_cm:"بازو راست",calf_left_cm:"ساق چپ",calf_right_cm:"ساق راست",chest_cm:"سینه",forearm_left_cm:"ساعد چپ",forearm_right_cm:"ساعد راست",high_hip_cm:"باسن بالا",hip_cm:"باسن",neck_cm:"گردن",thigh_left_lower_cm:"ران چپ، بخش پایین",thigh_right_lower_cm:"ران راست، بخش پایین",mid_thigh_left_cm:"میانه ران چپ",mid_thigh_right_cm:"میانه ران راست",thigh_left_upper_cm:"ران چپ، بخش بالا",thigh_right_upper_cm:"ران راست، بخش بالا",waist_abdominal_cm:"کمر شکمی",waist_lower_cm:"کمر پایین",waist_narrowest_cm:"باریک‌ترین قسمت کمر"};
@@ -216,7 +261,7 @@ button.addEventListener("click",async()=>{
   function updateApprovalState(){
    const checksComplete=reviewSelects.length===5&&reviewSelects.every(x=>x.value&&x.value!=="fix");
    const notesComplete=trainingNotes&&trainingNotes.value.trim()&&nutritionNotes&&nutritionNotes.value.trim();
-   const hasOriginalScan=Array.isArray(data.scan_pages)&&data.scan_pages.length>0;
+   const hasOriginalScan=(Array.isArray(data.scan_pages)&&data.scan_pages.length>0)||(bundleData&&bundleData.scan_image_count>0);
    const canApprove=Boolean(checksComplete&&notesComplete&&hasOriginalScan);
    approveBox.disabled=!canApprove;
    if(!canApprove)approveBox.checked=false;
