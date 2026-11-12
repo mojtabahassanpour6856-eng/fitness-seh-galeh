@@ -669,7 +669,7 @@ Waist-Hip Ratio (WHO),0.889
   });
   assert.match(await traineeProgressPage.locator("#topGenesisPublishedProgress").innerText(), /گزارش‌های تأییدشده آنالیز بدن/);
   assert.match(await traineeProgressPage.locator("#topGenesisPublishedBody").innerText(), /۷۹/);
-  assert.match(await traineeProgressPage.locator("#topGenesisPublishedBody").innerText(), /توصیه‌های مربی/);
+  assert.match(await traineeProgressPage.locator("#topGenesisPublishedBody").innerText(), /تاریخچه آنالیزها/);
   // History filters and per-report detail panels must not alter the all-history trend.
   const historyMode = traineeProgressPage.locator("#topGenesisHistoryMode");
   assert.equal(await historyMode.inputValue(), "latest");
@@ -679,7 +679,9 @@ Waist-Hip Ratio (WHO),0.889
   await traineeProgressPage.locator('[data-history-details="a1"]').click();
   assert.equal(await traineeProgressPage.locator("#topGenesisDetails-a1").isVisible(), true);
   assert.match(await traineeProgressPage.locator("#topGenesisDetails-a1").innerText(), /۸۲|82/);
+  assert.match(await traineeProgressPage.locator("#topGenesisDetails-a1").innerText(), /توصیه تمرینی مربی/);
   assert.match(await traineeProgressPage.locator("#topGenesisDetails-a1").innerText(), /تمرین مقاومتی طبق برنامه/);
+  assert.match(await traineeProgressPage.locator("#topGenesisDetails-a1").innerText(), /پروتئین کافی/);
   await historyMode.selectOption("month");
   assert.equal(await traineeProgressPage.locator("#topGenesisHistoryList article").count(), 1,
     "Persian current-month filter should include only the November fixture.");
