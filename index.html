@@ -13445,6 +13445,12 @@ window.sehResetTurnstile=function(){};
     const ageRaw = $('page') ? String($('page').value || '').trim() : '';
     const age = ageRaw === '' ? null : Number(ageRaw);
     if(age !== null && (!Number.isInteger(age) || age < 1 || age > 120)){ alert('سن باید عددی بین ۱ تا ۱۲۰ باشد.'); return; }
+    const birthRaw = $('pbirth') ? String($('pbirth').value || '').trim() : '';
+    let birthISO = null;
+    if(birthRaw){
+      birthISO = typeof window.jalaliToISODate === 'function' ? window.jalaliToISODate(birthRaw) : null;
+      if(!birthISO){ alert('تاریخ تولد را به صورت شمسی معتبر وارد کنید؛ مانند ۱۳۷۵/۰۷/۱۸.'); return; }
+    }
     const payload = {
       full_name:name, age,
       current_weight:$('pweight') && $('pweight').value !== '' ? Number($('pweight').value) : null,
@@ -13454,6 +13460,7 @@ window.sehResetTurnstile=function(){};
       training_type:$('ptype')?.value || 'gym',
       home_equipment:String($('pequipment')?.value || '').trim() || null
     };
+    if(birthRaw) payload.birth_date = birthISO;
     try{
       if(typeof window.sbWrite !== 'function') throw new Error('اتصال امن ذخیره‌سازی آماده نیست.');
       const rows = await window.sbWrite('/trainees?id=eq.'+encodeURIComponent(c.id),'PATCH',payload);
@@ -13469,13 +13476,56 @@ window.sehResetTurnstile=function(){};
         const actual = saved[field] == null ? '' : String(saved[field]).trim();
         if(expected !== actual) throw new Error('ذخیره فیلد «'+field+'» تأیید نشد؛ دوباره تلاش کنید.');
       }
+      if(birthRaw && String(saved.birth_date || '').slice(0,10) !== birthISO){
+        throw new Error('ذخیره تاریخ تولد تأیید نشد؛ دوباره تلاش کنید.');
+      }
+
+      // This is the effective coach save handler; refresh the in-memory record
+      // and every visible field instead of only replacing currentClient.
       if(typeof window.loadClients === 'function') await window.loadClients();
       const fresh = Array.isArray(clients) ? clients.find(x=>String(x.id)===String(c.id)) : null;
-      if(fresh){ try{currentClient=fresh;}catch(e){} window.currentClient=fresh; }
-      alert('پروفایل شاگرد ذخیره شد.');
+      const updated = {
+        ...(fresh || c),
+        id:saved.id,
+        name:saved.full_name,
+        full_name:saved.full_name,
+        age:saved.age,
+        weight:saved.current_weight,
+        current_weight:saved.current_weight,
+        height:saved.height,
+        goal:saved.goal,
+        level:saved.training_level,
+        training_level:saved.training_level,
+        training_type:saved.training_type || 'gym',
+        home_equipment:saved.home_equipment || '',
+        birth_date:saved.birth_date
+      };
+      currentClient = updated;
+      window.currentClient = updated;
+      if(Array.isArray(clients)){
+        const index = clients.findIndex(row=>String(row.id)===String(c.id));
+        if(index >= 0) clients[index] = updated;
+      }
+      const visibleFields = [
+        ['pn',updated.name],
+        ['page',updated.age],
+        ['pbirth',window.isoToJalaliDate?.(updated.birth_date) || ''],
+        ['pweight',updated.current_weight ?? updated.weight],
+        ['pheight',updated.height],
+        ['pgoal',updated.goal],
+        ['plevel',updated.training_level || updated.level],
+        ['ptype',updated.training_type],
+        ['pequipment',updated.home_equipment]
+      ];
+      for(const [id,value] of visibleFields){
+        const input = $(id);
+        if(input) input.value = value == null ? '' : String(value);
+      }
+      if(typeof window.renderClients === 'function') window.renderClients();
+      if(typeof window.renderCoachSelectedTraineeHeader === 'function') window.renderCoachSelectedTraineeHeader();
+      alert('پروفایل شاگرد ذخیره شد و همه اطلاعات در همین صفحه به‌روزرسانی شدند.');
     }catch(e){ console.error(e); alert('ذخیره پروفایل انجام نشد.\\n'+(e?.message||String(e))); }
   }
-
   window.saveProfile = async function(){
     if(!isTrainee()) return saveCoachProfile();
     const c = (typeof currentClient !== 'undefined' && currentClient) || window.currentClient;
