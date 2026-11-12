@@ -114,7 +114,15 @@
     // TDEE is accepted only when the value is explicitly tied to a daily-expenditure
     // label. Never infer it as the last generic Calories/day number.
     let tdeeValues = numericCandidates(text, /(?:TDEE|Total\s*Daily\s*Energy\s*Expenditure|Daily\s*Energy\s*Expenditure|Caloric\s*Expenditure)\s*[:=-]?\s*([0-9]+(?:\.[0-9]+)?)\s*(?:kcal|calories?)\s*\/?\s*day/gi);
-    // OCR may return the two graphical Calories/day values in reading order: RMR, then total expenditure.
+    // In image-only activity pages, OCR separates the Caloric Expenditure heading
+    // from its value with explanatory copy. Anchor the value to that heading,
+    // rather than selecting the second generic Calories/day number in the whole PDF.
+    if (!tdeeValues.length) {
+      const anchoredTdee = [...text.matchAll(/Caloric\s*Expenditure[\s\S]{0,240}?([0-9]{3,4})\s*(?:kcal|calories?)\s*\/?\s*day/gi)];
+      if (anchoredTdee.length) tdeeValues = [Number(anchoredTdee[anchoredTdee.length - 1][1])];
+    }
+    // Older layouts may expose the two graphical values without preserving the
+    // heading-to-value text span. Keep the legacy order fallback only as a last resort.
     if (!tdeeValues.length && /Caloric\s*Expenditure/i.test(text)) {
       const dayValues = numericCandidates(text, /([0-9]{3,4})\s*(?:kcal|calories?)\s*\/?\s*day/gi);
       if (dayValues.length > 1) tdeeValues = [dayValues[1]];
