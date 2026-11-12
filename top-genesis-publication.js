@@ -47,10 +47,10 @@
     return fa(metric.value, 2) + (unit ? " " + unit : "");
   }
   function currentTraineeId() {
-    try { return window.currentClient?.id || null; } catch (_) { return null; }
+    try { return typeof currentClient !== "undefined" ? (currentClient?.id || null) : null; } catch (_) { return null; }
   }
   function currentCoach() {
-    try { return window.authProfile?.role === "coach"; } catch (_) { return false; }
+    try { return typeof authProfile !== "undefined" && authProfile?.role === "coach"; } catch (_) { return false; }
   }
   function mountProgressCard() {
     const section = $("progress");
