@@ -47,31 +47,55 @@
     return fa(metric.value, 2) + (unit ? " " + unit : "");
   }
   function currentTraineeId() {
-    try { return typeof currentClient !== "undefined" ? (currentClient?.id || null) : null; } catch (_) { return null; }
+    try {
+      const trainee = window.currentClient || (typeof currentClient !== "undefined" ? currentClient : null);
+      return trainee?.id || null;
+    } catch (_) { return null; }
   }
   function currentCoach() {
-    try { return typeof authProfile !== "undefined" && authProfile?.role === "coach"; } catch (_) { return false; }
+    try {
+      const profile = window.authProfile || (typeof authProfile !== "undefined" ? authProfile : null);
+      return profile?.role === "coach";
+    } catch (_) { return false; }
   }
   function mountProgressCard() {
-    const section = currentCoach() ? $("progress") : $("traineeAnalysis");
-    if (!section || $(CARD_ID)) return;
-    const card = document.createElement("div");
-    card.id = CARD_ID;
-    card.className = "card";
-    card.style.cssText = "margin-top:14px;border:1px solid #d8b65d;background:#fffdf8";
-    card.innerHTML = '<h2>📈 گزارش‌های تأییدشده آنالیز بدن</h2>' +
-      '<p class="muted">گزارش‌هایی که مربی بررسی و ارسال کرده است، همراه با روند تغییرات در این بخش نمایش داده می‌شود.</p>' +
-      '<div id="topGenesisPublishedBody" class="muted">در حال دریافت گزارش‌ها…</div>';
-    if (currentCoach()) {
+    const coachView = currentCoach();
+    const section = coachView ? $("progress") : $("traineeAnalysis");
+    if (!section) return;
+    let card = $(CARD_ID);
+    if (!card) {
+      card = document.createElement("div");
+      card.id = CARD_ID;
+      card.className = "card";
+      card.style.cssText = "margin-top:14px;border:1px solid #d8b65d;background:#fffdf8";
+      card.innerHTML = '<h2>📈 گزارش آنالیز بدن من</h2>' +
+        '<p class="muted">گزارش اصلی و تاریخچه آنالیزهایی که مربی بررسی و برای شما ارسال کرده است.</p>' +
+        '<div id="topGenesisPublishedBody" class="muted">در حال دریافت گزارش‌ها…</div>';
+    }
+    // The app is a single-page interface: after logout/login the same document
+    // can change roles. Always move the one card to the active role's panel.
+    if (coachView) {
       const history = $("progressHistory");
       const entry = $("progressEntryPanel");
-      if (history) history.insertAdjacentElement("afterend", card);
-      else if (entry) entry.insertAdjacentElement("afterend", card);
-      else section.appendChild(card);
+      const target = history || entry;
+      // Avoid moving an already correctly positioned card: doing so emits another
+      // childList mutation and can create an endless MutationObserver/tick loop.
+      if (target) {
+        if (card.parentElement !== target.parentElement || card.previousElementSibling !== target) {
+          target.insertAdjacentElement("afterend", card);
+        }
+      } else if (card.parentElement !== section) {
+        section.appendChild(card);
+      }
     } else {
       const archive = $("traineeAnalysisArchive");
-      if (archive) archive.insertAdjacentElement("afterend", card);
-      else section.appendChild(card);
+      if (archive) {
+        if (card.parentElement !== archive.parentElement || card.previousElementSibling !== archive) {
+          archive.insertAdjacentElement("afterend", card);
+        }
+      } else if (card.parentElement !== section) {
+        section.appendChild(card);
+      }
     }
   }
   function chartCard(rows, key) {
@@ -210,10 +234,12 @@
       $("topGenesisHistoryCount").textContent = fa(filtered.length, 0) + " گزارش";
       $("topGenesisHistoryList").innerHTML = filtered.length ? filtered.map(row => {
         const count = Object.keys(METRIC_LABELS).filter(key => validMetric(row.report_metrics?.[key])).length;
+        const action = row.report_storage_path
+          ? '<button type="button" data-history-report="' + esc(row.id) + '" style="border:1px solid #c5a45b;border-radius:8px;background:#fffaf0;padding:7px 11px;color:#765b2e">مشاهده گزارش کامل</button>'
+          : '<button type="button" data-history-details="' + esc(row.id) + '" aria-expanded="false" style="border:1px solid #c5a45b;border-radius:8px;background:#fffaf0;padding:7px 11px;color:#765b2e">مشاهده جزئیات</button>';
         return '<article style="border:1px solid #eee3d1;border-radius:10px;padding:10px;margin:8px 0;background:#fff">' +
           '<div style="display:flex;justify-content:space-between;gap:8px;align-items:center;flex-wrap:wrap"><b>' +
-          esc(dateFa(row.analysis_date)) + '</b><button type="button" data-history-details="' + esc(row.id) +
-          '" aria-expanded="false" style="border:1px solid #c5a45b;border-radius:8px;background:#fffaf0;padding:7px 11px;color:#765b2e">مشاهده جزئیات</button></div>' +
+          esc(dateFa(row.analysis_date)) + '</b>' + action + '</div>' +
           '<div class="muted" style="font-size:12px;margin-top:5px">' + fa(count, 0) + ' شاخص معتبر ثبت‌شده</div>' +
           '<div id="topGenesisDetails-' + esc(row.id) + '" hidden style="margin-top:12px">' + rowDetails(row) + '</div></article>';
       }).join("") : '<p class="muted">در این بازه گزارشی ثبت نشده است.</p>';
@@ -221,7 +247,13 @@
     mode.addEventListener("change", renderHistory);
     from.addEventListener("change", renderHistory);
     to.addEventListener("change", renderHistory);
-    $("topGenesisHistoryList").addEventListener("click", event => {
+    $("topGenesisHistoryList").addEventListener("click", async event => {
+      const reportButton = event.target.closest("[data-history-report]");
+      if (reportButton) {
+        const row = rows.find(item => item.id === reportButton.dataset.historyReport);
+        if (row?.report_storage_path) await openFullReport(row, reportButton);
+        return;
+      }
       const button = event.target.closest("[data-history-details]");
       if (!button) return;
       const panel = $("topGenesisDetails-" + button.dataset.historyDetails);
@@ -230,7 +262,56 @@
       button.setAttribute("aria-expanded", String(!panel.hidden));
       button.textContent = panel.hidden ? "مشاهده جزئیات" : "بستن جزئیات";
     });
+    const oldModal = $("topGenesisFullReportModal");
+    if (oldModal) {
+      const oldFrame = $("topGenesisFullReportFrame");
+      if (oldFrame?.dataset.objectUrl) URL.revokeObjectURL(oldFrame.dataset.objectUrl);
+      oldModal.remove();
+    }
+    const modal = document.createElement("div");
+    modal.id = "topGenesisFullReportModal";
+    modal.hidden = true;
+    modal.style.cssText = "display:none;position:fixed;inset:0;z-index:99999;background:#17130dcc;padding:12px;align-items:center;justify-content:center";
+    modal.innerHTML = '<section role="dialog" aria-modal="true" aria-label="گزارش کامل آنالیز بدن" style="width:min(100%,1000px);height:min(96vh,900px);background:#fffdf7;border:1px solid #d8b65d;border-radius:14px;padding:10px;display:flex;flex-direction:column;gap:8px"><div style="display:flex;justify-content:space-between;gap:8px;align-items:center"><b>گزارش کامل آنالیز بدن</b><div style="display:flex;gap:6px"><button type="button" id="topGenesisPrintFullReport">چاپ / ذخیره PDF</button><button type="button" id="topGenesisCloseFullReport">بستن</button></div></div><iframe id="topGenesisFullReportFrame" title="گزارش کامل آنالیز بدن" sandbox="allow-same-origin allow-modals" style="width:100%;flex:1;border:1px solid #eadfc9;border-radius:9px;background:white"></iframe></section>';
+    document.body.appendChild(modal);
+    const closeModal = () => {
+      const frame = $("topGenesisFullReportFrame");
+      if (frame?.dataset.objectUrl) URL.revokeObjectURL(frame.dataset.objectUrl);
+      if (frame) { frame.removeAttribute("src"); delete frame.dataset.objectUrl; }
+      modal.hidden = true;
+      modal.style.display = "none";
+    };
+    $("topGenesisCloseFullReport").addEventListener("click", closeModal);
+    $("topGenesisPrintFullReport").addEventListener("click", () => {
+      try { $("topGenesisFullReportFrame").contentWindow.print(); } catch (_) {}
+    });
+    modal.addEventListener("click", event => { if (event.target === modal) closeModal(); });
     renderHistory();
+  }
+  async function openFullReport(row, button) {
+    const modal = $("topGenesisFullReportModal");
+    const frame = $("topGenesisFullReportFrame");
+    if (!modal || !frame || !row?.report_storage_path) return;
+    const oldText = button?.textContent;
+    if (button) { button.disabled = true; button.textContent = "در حال دریافت گزارش…"; }
+    try {
+      const { data, error } = await window.AUTH_SUPABASE.storage
+        .from("trainee-health-reports").download(row.report_storage_path);
+      if (error) throw error;
+      if (!data) throw new Error("فایل گزارش دریافت نشد.");
+      if (frame.dataset.objectUrl) URL.revokeObjectURL(frame.dataset.objectUrl);
+      const reportBlob = data.type === "text/html" ? data : new Blob([data], { type: "text/html;charset=utf-8" });
+      const objectUrl = URL.createObjectURL(reportBlob);
+      frame.dataset.objectUrl = objectUrl;
+      frame.src = objectUrl;
+      modal.hidden = false;
+      modal.style.display = "flex";
+    } catch (error) {
+      alert("نمایش گزارش کامل انجام نشد. اتصال یا دسترسی گزارش را بررسی کنید.");
+      console.warn("Top Genesis full report:", error);
+    } finally {
+      if (button) { button.disabled = false; button.textContent = oldText || "مشاهده گزارش کامل"; }
+    }
   }
   async function loadPublished(force) {
     const traineeId = currentTraineeId();
@@ -241,7 +322,7 @@
     if (body && !lastLoadedTrainee) body.textContent = "در حال دریافت گزارش‌ها…";
     try {
       const { data, error } = await window.AUTH_SUPABASE.from(TABLE)
-        .select("id,analysis_date,report_metrics,training_notes,nutrition_notes,published_at")
+        .select("id,analysis_date,report_metrics,training_notes,nutrition_notes,report_storage_path,published_at")
         .eq("trainee_id", traineeId)
         .order("analysis_date", { ascending: true })
         .order("created_at", { ascending: true });
@@ -296,6 +377,7 @@
     if (!frame || event.source !== frame.contentWindow || event.origin !== window.location.origin ||
         event.data?.type !== "top-genesis-approved-report") return;
     const requestId = String(event.data.requestId || "");
+    let uploadedReportPath = null;
     try {
       if (!currentCoach()) throw new Error("ارسال گزارش فقط از حساب مربی امکان‌پذیر است.");
       const traineeId = currentTraineeId();
@@ -306,20 +388,40 @@
       const metrics = safeMetrics(payload.metrics);
       const training = String(payload.trainingNotes || "").trim().slice(0, 4000);
       const nutrition = String(payload.nutritionNotes || "").trim().slice(0, 4000);
+      const reportHtml = String(payload.reportHtml || "");
       if (!training || !nutrition) throw new Error("پیشنهاد تمرینی و تغذیه‌ای مربی باید تکمیل شوند.");
+      if (!reportHtml.startsWith("<!doctype html>") || !reportHtml.includes('id="result"')) {
+        throw new Error("نسخه کامل و قابل‌نمایش گزارش شاگرد آماده نیست؛ دوباره تحلیل را اجرا کنید.");
+      }
+      const reportBytes = new TextEncoder().encode(reportHtml).length;
+      if (reportBytes <= 0 || reportBytes > 9 * 1024 * 1024) {
+        throw new Error("حجم گزارش کامل بیش از حد مجاز است؛ تعداد تصاویر اسکن را بررسی کنید.");
+      }
       const { data: userData, error: userError } = await window.AUTH_SUPABASE.auth.getUser();
       if (userError) throw userError;
       const coachId = userData?.user?.id;
       if (!coachId) throw new Error("نشست مربی معتبر نیست؛ دوباره وارد شوید.");
+      const reportPath = coachId + "/" + traineeId + "/published/" + crypto.randomUUID() + ".html";
+      const { error: uploadError } = await window.AUTH_SUPABASE.storage
+        .from("trainee-health-reports")
+        .upload(reportPath, new Blob([reportHtml], { type: "text/html;charset=utf-8" }), {
+          contentType: "text/html",
+          cacheControl: "3600",
+          upsert: false
+        });
+      if (uploadError) throw uploadError;
+      uploadedReportPath = reportPath;
       const { error } = await window.AUTH_SUPABASE.from(TABLE).insert({
         trainee_id: traineeId,
         coach_user_id: coachId,
         analysis_date: date,
         report_metrics: metrics,
         training_notes: training,
-        nutrition_notes: nutrition
+        nutrition_notes: nutrition,
+        report_storage_path: reportPath
       });
       if (error) throw error;
+      uploadedReportPath = null;
       reply(frame, requestId, true, "گزارش تأییدشده با موفقیت به پنل پیشرفت شاگرد ارسال شد.");
       lastLoadedTrainee = null;
       if ($("progress")?.classList.contains("active")) {
@@ -327,6 +429,9 @@
         loadPublished(true);
       }
     } catch (error) {
+      if (uploadedReportPath) {
+        try { await window.AUTH_SUPABASE.storage.from("trainee-health-reports").remove([uploadedReportPath]); } catch (_) {}
+      }
       reply(frame, requestId, false, error?.message || "ارسال گزارش انجام نشد.");
     }
   }

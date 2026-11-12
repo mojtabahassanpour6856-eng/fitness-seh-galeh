@@ -6,6 +6,8 @@ import { fileURLToPath } from "node:url";
 import { chromium } from "playwright";
 import { PDFDocument, StandardFonts, rgb } from "pdf-lib";
 
+const hardStop = setTimeout(() => { console.error('[smoke] hard stop after 8 minutes'); process.exit(124); }, 8 * 60 * 1000);
+hardStop.unref();
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const mime = { ".html": "text/html; charset=utf-8", ".js": "text/javascript; charset=utf-8", ".png": "image/png" };
 const server = http.createServer((req, res) => {
@@ -20,6 +22,7 @@ const server = http.createServer((req, res) => {
 
 await new Promise(resolve => server.listen(0, "127.0.0.1", resolve));
 const address = server.address();
+console.log('[smoke] launching Chromium');
 const browser = await chromium.launch({ headless: true });
 try {
   // Draw a synthetic report sentence into a raster image so Tesseract must
@@ -100,8 +103,11 @@ try {
   const pdfBytes = await pdfDoc.save();
 
   const page = await browser.newPage();
+  page.setDefaultTimeout(30000);
+  page.setDefaultNavigationTimeout(30000);
   const pageErrors = [];
   page.on("pageerror", error => pageErrors.push(error.message));
+  console.log('[smoke] opening analyzer fixture');
   await page.goto(`http://127.0.0.1:${address.port}/top-genesis-pdf-test.html`);
   await page.addScriptTag({ path: path.join(root, "top-genesis-csv-parser.js") });
   assert.equal(await page.locator("#topGenesisZip").count(), 1,
@@ -188,7 +194,9 @@ Waist-Hip Ratio (WHO),0.889
   assert.equal(JSON.stringify(csvResult).includes("private@example.com"), false,
     "Customer email must not be extracted or exposed by the CSV parser.");
   assert.equal(csvResult.review_required, true);
+  console.log('[smoke] loading JSZip CDN');
   await page.addScriptTag({ url: "https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js" });
+  console.log('[smoke] JSZip loaded');
   // Regression fixture mirrors the exact filename prefix and member names in the
   // user's uploaded archive. Real body photos are deliberately not committed.
   const zipResult = await page.evaluate(async csv => {
@@ -237,17 +245,21 @@ Waist-Hip Ratio (WHO),0.889
     "All six extracted images must retain the source scan dimensions.");
 
 
+  console.log('[smoke] preparing synthetic PDF');
   await page.locator("#pdfFile").setInputFiles({
     name: "synthetic-top-genesis-fixture.pdf",
     mimeType: "application/pdf",
     buffer: Buffer.from(pdfBytes)
   });
+  console.log('[smoke] starting PDF extraction');
   await page.locator("#run").click();
+  console.log('[smoke] waiting for extraction status');
   await page.waitForFunction(() => {
     const text = document.querySelector("#status")?.textContent || "";
     return text.includes("استخراج تمام شد") || text.startsWith("خطا:");
   }, null, { timeout: 180000 });
 
+  console.log('[smoke] extraction status reached');
   const status = await page.locator("#status").innerText();
   assert.match(status, /استخراج تمام شد/, `Parser did not complete: ${status}`);
   assert.equal(await page.locator("#analysisDate").count(), 1,
@@ -466,6 +478,7 @@ Waist-Hip Ratio (WHO),0.889
 
   assert.match(pageInfo, /123\.456/, "Targeted OCR did not recover the region value from the semi-text page.");
 
+  console.log('[smoke] OCR and report assertions passed');
   // The coach report must use original PDF page renders, not generated imagery.
   const scanImages = page.locator(".scan-figure img");
   assert.equal(await scanImages.count(), 1,
@@ -621,6 +634,7 @@ Waist-Hip Ratio (WHO),0.889
 
   assert.deepEqual(pageErrors, [], `Browser page errors: ${pageErrors.join("; ")}`);
 
+  console.log('[smoke] report rendering assertions passed');
   // Verify the real production app shell contains the integration anchor and loader.
   const appShellSource = fs.readFileSync(path.join(root, "index.html"), "utf8");
   assert.match(appShellSource, /id=["']bodyAnalysisEntryPanel["']/, "The production app must contain the body-analysis mount point.");
@@ -637,37 +651,84 @@ Waist-Hip Ratio (WHO),0.889
     window.authProfile = { role: "coach" };
   });
   await integrationPage.addScriptTag({ path: path.join(root, "top-genesis-pdf-app-embed.js") });
+  // Reassert coach globals immediately before the archive module mounts; this fixture
+  // models the real app's global role/session objects, without connecting to a database.
+  await integrationPage.evaluate(() => {
+    window.authProfile = { role: "coach" };
+    window.currentClient = { id: "trainee-fixture-1" };
+    window.AUTH_SUPABASE = { auth: {}, storage: {}, from() { return { select() { return this; }, eq() { return this; }, order() { return Promise.resolve({ data: [], error: null }); } }; } };
+  });
+  await integrationPage.addScriptTag({ path: path.join(root, "top-genesis-archive.js") });
   await integrationPage.waitForSelector("#topGenesisPdfAnalyzerPanel");
+  await integrationPage.waitForSelector("#topGenesisArchivePanel");
   assert.equal(await integrationPage.locator("#topGenesisPdfAnalyzerPanel").evaluate(el => el.style.display), "block");
   assert.match(await integrationPage.locator("#topGenesisPdfAnalyzerFrame").getAttribute("src"), /top-genesis-pdf-test\.html\?embedded=1/);
-  await integrationPage.evaluate(() => { window.authProfile = { role: "trainee" }; });
-  await integrationPage.waitForFunction(() => document.querySelector("#topGenesisPdfAnalyzerPanel")?.style.display === "none", null, { timeout: 3000 });
+  await integrationPage.evaluate(() => {
+    window.authProfile = { role: "trainee" };
+    // A real SPA role switch also updates the visible panel DOM.
+    document.body.appendChild(document.createElement("div"));
+  });
+  await integrationPage.waitForFunction(() =>
+    !document.querySelector("#topGenesisArchivePanel"), null, { timeout: 7000 });
+  assert.equal(await integrationPage.locator("#topGenesisArchivePanel").count(), 0,
+    "PDF upload/archive controls must not remain visible in a trainee session.");
+  await integrationPage.waitForFunction(() =>
+    document.querySelector("#topGenesisPdfAnalyzerPanel")?.style.display === "none",
+    null, { timeout: 7000 });
   const archiveSource = fs.readFileSync(path.join(root, "top-genesis-archive.js"), "utf8");
+  const analyzerEmbedSource = fs.readFileSync(path.join(root, "top-genesis-pdf-app-embed.js"), "utf8");
   assert.match(archiveSource, /top-genesis-pdf-app-embed\.js/, "The app's existing archive entry must load the new coach-only analyzer card.");
+  assert.match(analyzerEmbedSource, /host\.style\.display\s*=\s*isCoach\(\)\s*\?\s*"block"\s*:\s*"none"/,
+    "The embedded analyzer/upload interface must be hidden for trainee sessions.");
   await integrationPage.close();
 
+  console.log('[smoke] coach role-switch assertions passed');
   // Verify approved reports appear in the trainee's analysis/progress page.
+  console.log('[smoke] opening trainee progress page');
   const traineeProgressPage = await browser.newPage();
-  await traineeProgressPage.goto("http://127.0.0.1:" + address.port + "/top-genesis-pdf-test.html");
-  await traineeProgressPage.addScriptTag({ content:
-    "let authProfile = { role: 'trainee', trainee_id: 'trainee-fixture-1' }; " +
-    "let currentClient = { id: 'trainee-fixture-1' }; " +
-    "window.AUTH_SUPABASE = { from() { const orderCount = { value: 0 }; const chain = { " +
-    "select() { return this; }, eq() { return this; }, " +
-    "order() { orderCount.value += 1; return orderCount.value === 1 ? this : Promise.resolve({ data: [" +
-    "{ id:'a1', analysis_date:'2026-10-01', report_metrics:{ weight_kg:{value:82,unit:'kg',status:'needs_coach_review'}, body_fat_percent:{value:22,unit:'%',status:'needs_coach_review'} }, training_notes:'تمرین مقاومتی طبق برنامه', nutrition_notes:'پروتئین کافی' }," +
-    "{ id:'a2', analysis_date:'2026-11-01', report_metrics:{ weight_kg:{value:79,unit:'kg',status:'needs_coach_review'}, body_fat_percent:{value:19,unit:'%',status:'needs_coach_review'} }, training_notes:'افزایش تدریجی فشار تمرین', nutrition_notes:'تنظیم کالری روزانه' }" +
-    "], error:null }); } }; return chain; } }; " +
-    "const section=document.createElement('section'); section.id='traineeAnalysis'; section.className='section active'; " +
-    "section.innerHTML='<div id=traineeAnalysisArchive></div>'; document.body.appendChild(section);"
+  console.log('[smoke] trainee progress page created');
+  // The trainee progress component is independent of the analyzer iframe. Use a clean page
+  // so PDF.js/OCR bootstrapping cannot block the role/history smoke test.
+  console.log("[smoke] using isolated trainee progress page");
+  traineeProgressPage.setDefaultTimeout(15000);
+  await traineeProgressPage.goto("data:text/html,<html><head><title>trainee-fixture</title></head><body></body></html>");
+  console.log("[smoke] trainee fixture document ready");
+  await traineeProgressPage.evaluate(() => {
+    window.authProfile = { role: "trainee", trainee_id: "trainee-fixture-1" };
+    window.currentClient = { id: "trainee-fixture-1" };
+    window.AUTH_SUPABASE = {
+      from() {
+        const orderCount = { value: 0 };
+        const chain = {
+          select() { return this; },
+          eq() { return this; },
+          order() {
+            orderCount.value += 1;
+            return orderCount.value === 1 ? this : Promise.resolve({ data: [
+              { id:"a1", analysis_date:"2026-10-01", report_metrics:{ weight_kg:{value:82,unit:"kg",status:"needs_coach_review"}, body_fat_percent:{value:22,unit:"%",status:"needs_coach_review"} }, training_notes:"تمرین مقاومتی طبق برنامه", nutrition_notes:"پروتئین کافی" },
+              { id:"a2", analysis_date:"2026-11-01", report_metrics:{ weight_kg:{value:79,unit:"kg",status:"needs_coach_review"}, body_fat_percent:{value:19,unit:"%",status:"needs_coach_review"} }, training_notes:"افزایش تدریجی فشار تمرین", nutrition_notes:"تنظیم کالری روزانه" }
+            ], error:null });
+          }
+        };
+        return chain;
+      }
+    };
+    const section=document.createElement("section");
+    section.id="traineeAnalysis";
+    section.className="section active";
+    section.innerHTML='<div id="traineeAnalysisArchive"></div>';
+    document.body.appendChild(section);
   });
+  console.log("[smoke] trainee fixture configured");
   await traineeProgressPage.addScriptTag({ path: path.join(root, "top-genesis-publication.js") });
+  console.log('[smoke] publication script loaded');
   await traineeProgressPage.waitForSelector("#topGenesisPublishedProgress");
+  console.log('[smoke] trainee report card mounted');
   await traineeProgressPage.waitForFunction(() => {
     const body = document.querySelector("#topGenesisPublishedBody");
     return body && body.querySelectorAll("polyline").length >= 2;
   });
-  assert.match(await traineeProgressPage.locator("#topGenesisPublishedProgress").innerText(), /گزارش‌های تأییدشده آنالیز بدن/);
+  assert.match(await traineeProgressPage.locator("#topGenesisPublishedProgress").innerText(), /گزارش آنالیز بدن من/);
   assert.match(await traineeProgressPage.locator("#topGenesisPublishedBody").innerText(), /۷۹/);
   assert.match(await traineeProgressPage.locator("#topGenesisPublishedBody").innerText(), /تاریخچه آنالیزها/);
   // History filters and per-report detail panels must not alter the all-history trend.
@@ -675,25 +736,62 @@ Waist-Hip Ratio (WHO),0.889
   assert.equal(await historyMode.inputValue(), "latest");
   assert.equal(await traineeProgressPage.locator("#topGenesisHistoryList article").count(), 1);
   await historyMode.selectOption("all");
+  console.log('[smoke] history all filter passed');
   assert.equal(await traineeProgressPage.locator("#topGenesisHistoryList article").count(), 2);
   await traineeProgressPage.locator('[data-history-details="a1"]').click();
+  console.log('[smoke] report detail opened');
   assert.equal(await traineeProgressPage.locator("#topGenesisDetails-a1").isVisible(), true);
   assert.match(await traineeProgressPage.locator("#topGenesisDetails-a1").innerText(), /۸۲|82/);
   assert.match(await traineeProgressPage.locator("#topGenesisDetails-a1").innerText(), /توصیه تمرینی مربی/);
   assert.match(await traineeProgressPage.locator("#topGenesisDetails-a1").innerText(), /تمرین مقاومتی طبق برنامه/);
   assert.match(await traineeProgressPage.locator("#topGenesisDetails-a1").innerText(), /پروتئین کافی/);
   await historyMode.selectOption("month");
+  console.log('[smoke] month filter passed');
   assert.equal(await traineeProgressPage.locator("#topGenesisHistoryList article").count(), 1,
     "Persian current-month filter should include only the November fixture.");
   await historyMode.selectOption("range");
+  console.log('[smoke] range filter selected');
   await traineeProgressPage.locator("#topGenesisDateFrom").fill("2026-10-01");
   await traineeProgressPage.locator("#topGenesisDateTo").fill("2026-10-01");
   assert.equal(await traineeProgressPage.locator("#topGenesisHistoryList article").count(), 1,
     "Date range should select the matching report date.");
   assert.ok(await traineeProgressPage.locator("#topGenesisPublishedBody polyline").count() >= 2,
     "Trend charts must continue to use the complete history, independent of the selected filter.");
+  // Switching roles inside the same SPA must move the report card, not strand it in coach view.
+  console.log("[smoke] starting trainee-to-coach role switch");
+  await traineeProgressPage.evaluate(() => {
+    window.authProfile.role = "coach";
+    const progress = document.createElement("section");
+    progress.id = "progress";
+    progress.className = "section";
+    progress.innerHTML = '<div id="progressHistory"></div>';
+    document.body.appendChild(progress);
+  });
+  await traineeProgressPage.waitForFunction(() =>
+    document.querySelector("#topGenesisPublishedProgress")?.closest("#progress"));
+  console.log("[smoke] report moved to coach progress");
+  await traineeProgressPage.evaluate(() => { window.authProfile.role = "trainee"; });
+  await traineeProgressPage.waitForFunction(() =>
+    document.querySelector("#topGenesisPublishedProgress")?.closest("#traineeAnalysis"));
+  console.log("[smoke] report returned to trainee analysis");
+
 
   await traineeProgressPage.close();
+  console.log('[smoke] trainee progress page closed');
+
+  const publicationSource = fs.readFileSync(path.join(root, "top-genesis-publication.js"), "utf8");
+  const analyzerSource = fs.readFileSync(path.join(root, "top-genesis-pdf-test.html"), "utf8");
+  const fullReportMigration = fs.readFileSync(path.join(root, "supabase/migrations/202611120002_top_genesis_full_trainee_report.sql"), "utf8");
+  assert.match(analyzerSource, /buildTraineeSafeReportHtml/, "The trainee report must be derived from the exact analyzer output.");
+  assert.match(analyzerSource, /reportHtml/, "The complete report must be included in the approved publication payload.");
+  assert.match(analyzerSource, /image_data_url/, "Original scan images must remain in the generated report.");
+  assert.match(publicationSource, /report_storage_path/, "The publication must retain a private full-report storage path.");
+  assert.match(publicationSource, /storage[\s\S]*\.upload\(/, "The coach-approved report must be uploaded to private storage.");
+  assert.match(publicationSource, /\.download\(row\.report_storage_path\)/, "The trainee must load the private full report from storage.");
+  assert.match(fullReportMigration, /add column if not exists report_storage_path/i);
+  assert.match(fullReportMigration, /text\/html/);
+  assert.doesNotMatch(fullReportMigration, /drop table|delete from public\.trainee_body_analysis_publications/i,
+    "The full-report migration must not delete or rewrite existing trainee records.");
 
   const publicationMigration = fs.readFileSync(path.join(root, "supabase/migrations/202611120001_top_genesis_publications.sql"), "utf8");
   assert.match(publicationMigration, /private\.can_access_trainee/);
@@ -703,6 +801,9 @@ Waist-Hip Ratio (WHO),0.889
 
   console.log("PASS: Chromium loaded PDF.js/OCR, parsed anonymized CSV/ZIP fixtures, and rendered approved multi-visit trends in the trainee progress panel.");
 } finally {
+  console.log('[smoke] closing browser');
   await browser.close();
+  console.log('[smoke] browser closed');
   await new Promise(resolve => server.close(resolve));
+  console.log('[smoke] server closed');
 }
