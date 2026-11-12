@@ -684,8 +684,11 @@ Waist-Hip Ratio (WHO),0.889
 
   console.log('[smoke] coach role-switch assertions passed');
   // Verify approved reports appear in the trainee's analysis/progress page.
+  console.log('[smoke] opening trainee progress page');
   const traineeProgressPage = await browser.newPage();
+  console.log('[smoke] trainee progress page created');
   await traineeProgressPage.goto("http://127.0.0.1:" + address.port + "/top-genesis-pdf-test.html");
+  console.log("[smoke] trainee progress page loaded");
   await traineeProgressPage.addScriptTag({ content:
     "let authProfile = { role: 'trainee', trainee_id: 'trainee-fixture-1' }; " +
     "let currentClient = { id: 'trainee-fixture-1' }; " +
@@ -699,7 +702,9 @@ Waist-Hip Ratio (WHO),0.889
     "section.innerHTML='<div id=traineeAnalysisArchive></div>'; document.body.appendChild(section);"
   });
   await traineeProgressPage.addScriptTag({ path: path.join(root, "top-genesis-publication.js") });
+  console.log('[smoke] publication script loaded');
   await traineeProgressPage.waitForSelector("#topGenesisPublishedProgress");
+  console.log('[smoke] trainee report card mounted');
   await traineeProgressPage.waitForFunction(() => {
     const body = document.querySelector("#topGenesisPublishedBody");
     return body && body.querySelectorAll("polyline").length >= 2;
@@ -712,17 +717,21 @@ Waist-Hip Ratio (WHO),0.889
   assert.equal(await historyMode.inputValue(), "latest");
   assert.equal(await traineeProgressPage.locator("#topGenesisHistoryList article").count(), 1);
   await historyMode.selectOption("all");
+  console.log('[smoke] history all filter passed');
   assert.equal(await traineeProgressPage.locator("#topGenesisHistoryList article").count(), 2);
   await traineeProgressPage.locator('[data-history-details="a1"]').click();
+  console.log('[smoke] report detail opened');
   assert.equal(await traineeProgressPage.locator("#topGenesisDetails-a1").isVisible(), true);
   assert.match(await traineeProgressPage.locator("#topGenesisDetails-a1").innerText(), /۸۲|82/);
   assert.match(await traineeProgressPage.locator("#topGenesisDetails-a1").innerText(), /توصیه تمرینی مربی/);
   assert.match(await traineeProgressPage.locator("#topGenesisDetails-a1").innerText(), /تمرین مقاومتی طبق برنامه/);
   assert.match(await traineeProgressPage.locator("#topGenesisDetails-a1").innerText(), /پروتئین کافی/);
   await historyMode.selectOption("month");
+  console.log('[smoke] month filter passed');
   assert.equal(await traineeProgressPage.locator("#topGenesisHistoryList article").count(), 1,
     "Persian current-month filter should include only the November fixture.");
   await historyMode.selectOption("range");
+  console.log('[smoke] range filter selected');
   await traineeProgressPage.locator("#topGenesisDateFrom").fill("2026-10-01");
   await traineeProgressPage.locator("#topGenesisDateTo").fill("2026-10-01");
   assert.equal(await traineeProgressPage.locator("#topGenesisHistoryList article").count(), 1,
@@ -730,6 +739,7 @@ Waist-Hip Ratio (WHO),0.889
   assert.ok(await traineeProgressPage.locator("#topGenesisPublishedBody polyline").count() >= 2,
     "Trend charts must continue to use the complete history, independent of the selected filter.");
   // Switching roles inside the same SPA must move the report card, not strand it in coach view.
+  console.log("[smoke] starting trainee-to-coach role switch");
   await traineeProgressPage.evaluate(() => {
     authProfile.role = "coach";
     const progress = document.createElement("section");
@@ -740,12 +750,15 @@ Waist-Hip Ratio (WHO),0.889
   });
   await traineeProgressPage.waitForFunction(() =>
     document.querySelector("#topGenesisPublishedProgress")?.closest("#progress"));
+  console.log("[smoke] report moved to coach progress");
   await traineeProgressPage.evaluate(() => { authProfile.role = "trainee"; });
   await traineeProgressPage.waitForFunction(() =>
     document.querySelector("#topGenesisPublishedProgress")?.closest("#traineeAnalysis"));
+  console.log("[smoke] report returned to trainee analysis");
 
 
   await traineeProgressPage.close();
+  console.log('[smoke] trainee progress page closed');
 
   const publicationSource = fs.readFileSync(path.join(root, "top-genesis-publication.js"), "utf8");
   const analyzerSource = fs.readFileSync(path.join(root, "top-genesis-pdf-test.html"), "utf8");
@@ -769,6 +782,9 @@ Waist-Hip Ratio (WHO),0.889
 
   console.log("PASS: Chromium loaded PDF.js/OCR, parsed anonymized CSV/ZIP fixtures, and rendered approved multi-visit trends in the trainee progress panel.");
 } finally {
+  console.log('[smoke] closing browser');
   await browser.close();
+  console.log('[smoke] browser closed');
   await new Promise(resolve => server.close(resolve));
+  console.log('[smoke] server closed');
 }
