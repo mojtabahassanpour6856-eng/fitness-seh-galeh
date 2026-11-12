@@ -545,7 +545,7 @@ Waist-Hip Ratio (WHO),0.889
   }));
   assert.match(simpleAnalysis,/خلاصه ساده و تصویری/);
   assert.match(simpleAnalysis,/ترکیب وزن ثبت‌شده/,"Consistent fat and lean mass should render a composition chart.");
-  assert.match(simpleAnalysis,/کنترل BMI/,"Height, weight and BMI should be cross-checked.");
+  assert.match(simpleAnalysis,/کنترل شاخص توده بدنی/,"Height, weight and BMI should be cross-checked.");
   assert.match(simpleAnalysis,/درصد چربی محاسبه‌شده/,"Body-fat percentage should be cross-checked against fat mass.");
   assert.match(simpleAnalysis,/معادل کالری مصرفی روزانه نیست/,"RMR must not be presented as daily calorie expenditure.");
   const trend = await page.evaluate(() => window.TopGenesisReportComparison(
