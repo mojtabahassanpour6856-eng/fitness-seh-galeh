@@ -46,6 +46,8 @@ assert.ok(traineeBlock.includes("payload.birth_date = birthISO"), 'trainee birth
 assert.ok(traineeBlock.includes("saved.birth_date"), 'trainee birth date must be verified from the database');
 assert.ok(traineeBlock.includes("numericFields = ['age','current_weight','height','weekly_sessions']"), 'numeric profile fields must be verified after read-back');
 assert.ok(traineeBlock.includes("currentClient = updated"), 'trainee in-memory profile must refresh from the saved database row');
+assert.ok(traineeBlock.includes("document.querySelectorAll('#traineeDashboard .seh-profile-birth, .seh-profile-wrap .seh-profile-birth')"), 'birth date caption beside the trainee avatar must be selected for immediate refresh');
+assert.ok(traineeBlock.includes("node.textContent = birthCaption ? '🎂 ' + birthCaption : '🎂 تاریخ تولد ثبت نشده'"), 'birth date beside avatar must update immediately without a page refresh');
 for (const id of ['pn','page','pbirth','pweight','pheight','pgender','traineeProfileGender']) {
   assert.ok(traineeBlock.includes("setField('" + id + "'"), 'trainee visible profile field is not synchronized: ' + id);
 }
