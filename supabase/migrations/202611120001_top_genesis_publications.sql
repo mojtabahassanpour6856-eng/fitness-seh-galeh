@@ -20,6 +20,9 @@ create index if not exists trainee_body_analysis_publications_trainee_date_idx
 
 alter table public.trainee_body_analysis_publications enable row level security;
 
+revoke all on table public.trainee_body_analysis_publications from anon, public;
+revoke update, delete, truncate, references, trigger
+  on table public.trainee_body_analysis_publications from authenticated;
 grant select, insert on public.trainee_body_analysis_publications to authenticated;
 
 drop policy if exists trainee_body_analysis_publications_coach_select
