@@ -104,6 +104,10 @@ try {
   page.on("pageerror", error => pageErrors.push(error.message));
   await page.goto(`http://127.0.0.1:${address.port}/top-genesis-pdf-test.html`);
   await page.addScriptTag({ path: path.join(root, "top-genesis-csv-parser.js") });
+  assert.equal(await page.locator("#topGenesisZip").count(), 1,
+    "The coach analysis page must expose an optional ZIP bundle input.");
+  assert.match(await page.locator("#topGenesisZip").getAttribute("accept"), /zip/i,
+    "The ZIP input must only advertise ZIP bundle files.");
   const csvFixture = `sep=,
 Company Name,DefaultID
 Customer Name,نمونه ناشناس
@@ -585,7 +589,7 @@ Waist-Hip Ratio (WHO),0.889
   assert.match(archiveSource, /top-genesis-pdf-app-embed\.js/, "The app's existing archive entry must load the new coach-only analyzer card.");
   await integrationPage.close();
 
-  console.log("PASS: Chromium loaded PDF.js, parsed selectable PDF text, ran OCR on image-only and semi-text measurement pages, and rendered extracted metrics.");
+  console.log("PASS: Chromium loaded PDF.js/OCR, parsed anonymized CSV fixture, validated ZIP input, and preserved existing coach-only app checks.");
 } finally {
   await browser.close();
   await new Promise(resolve => server.close(resolve));
