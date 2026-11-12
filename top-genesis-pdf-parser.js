@@ -130,6 +130,38 @@
     const waist = numberAfter(text, /(?:Your\s*waist\s*measures|Waist\s*Circumference)\s*([0-9]+(?:\.[0-9]+)?)\s*cm/i);
     if (waist != null) out.waist_circumference_cm = metric(waist, "cm", "Waist Analysis");
 
+    const waistWidth = numberAfter(text, /([0-9]+(?:\.[0-9]+)?)\s*cm\s*width/i);
+    if (waistWidth != null) out.waist_width_cm = metric(waistWidth, "cm", "Waist Analysis / OCR");
+    const waistDepth = numberAfter(text, /([0-9]+(?:\.[0-9]+)?)\s*cm\s*depth/i);
+    if (waistDepth != null) out.waist_depth_cm = metric(waistDepth, "cm", "Waist Analysis / OCR");
+    const waistArea = numberAfter(text, /([0-9]+(?:\.[0-9]+)?)\s*cm(?:²|2|\^2)?\s*area/i);
+    if (waistArea != null) out.waist_area_cm2 = metric(waistArea, "cm²", "Waist Analysis / OCR");
+
+    // Device-provided relative risk multipliers are retained as vendor estimates,
+    // not converted into individual medical probabilities or diagnoses.
+    const vendorRiskPatterns = [
+      ["cancer", /([0-9]+(?:\.[0-9]+)?)\s*x\s*More likely to suffer from Cancer/i],
+      ["cardiovascular", /([0-9]+(?:\.[0-9]+)?)\s*x\s*More likely to suffer from Cardiovascular Disease/i],
+      ["respiratory", /([0-9]+(?:\.[0-9]+)?)\s*x\s*More likely to suffer from Respiratory Disease/i],
+      ["other_diseases", /([0-9]+(?:\.[0-9]+)?)\s*x\s*More likely to suffer from All Other Diseases/i]
+    ];
+    const vendorRisk = {};
+    vendorRiskPatterns.forEach(([key, pattern]) => {
+      const values = numericCandidates(text, new RegExp(pattern.source, "gi"));
+      if (!values.length) return;
+      const unique = [...new Set(values)];
+      vendorRisk[key] = {
+        ...metric(values[0], "relative_multiplier", "Top Genesis Health Risks / OCR", unique.length > 1 ? "consistent_duplicate" : "needs_coach_review"),
+        ...(unique.length > 1 ? { alternatives: unique } : {})
+      };
+    });
+    if (Object.keys(vendorRisk).length) out.vendor_relative_risk_estimates = vendorRisk;
+
+    const fatLossGoal = numberAfter(text, /([0-9]+(?:\.[0-9]+)?)\s*kg\s*Kilograms of Fat/i);
+    if (fatLossGoal != null) out.device_fat_loss_goal_kg = metric(fatLossGoal, "kg", "Fat Loss Calculator / device slider", "device_setting_not_coach_prescription");
+    const waistLossGoal = numberAfter(text, /([0-9]+(?:\.[0-9]+)?)\s*cm\s*(?:Normal\s*)?Change in Waist Circumference/i);
+    if (waistLossGoal != null) out.device_waist_loss_goal_cm = metric(waistLossGoal, "cm", "CM-Loss Goal / device slider", "device_setting_not_coach_prescription");
+
     const percentile = numberAfter(text, /Percentile\s*([0-9]+(?:\.[0-9]+)?)\s*%/i);
     if (percentile != null) out.comparison_percentile = metric(percentile, "%", "Basic Info / Percentile");
 
