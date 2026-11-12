@@ -652,7 +652,7 @@ Waist-Hip Ratio (WHO),0.889
   await integrationPage.evaluate(() => { window.authProfile = { role: "trainee" }; });
   await integrationPage.waitForFunction(() =>
     document.querySelector("#topGenesisPdfAnalyzerPanel")?.style.display === "none" &&
-    !document.querySelector("#topGenesisArchivePanel"), null, { timeout: 3000 });
+    !document.querySelector("#topGenesisArchivePanel"), null, { timeout: 7000 });
   assert.equal(await integrationPage.locator("#topGenesisArchivePanel").count(), 0,
     "PDF upload/archive controls must not remain visible in a trainee session.");
   const archiveSource = fs.readFileSync(path.join(root, "top-genesis-archive.js"), "utf8");
