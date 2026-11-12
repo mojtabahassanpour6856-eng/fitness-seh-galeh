@@ -78,12 +78,24 @@
       const history = $("progressHistory");
       const entry = $("progressEntryPanel");
       const target = history || entry;
-      if (target) target.insertAdjacentElement("afterend", card);
-      else if (card.parentElement !== section) section.appendChild(card);
+      // Avoid moving an already correctly positioned card: doing so emits another
+      // childList mutation and can create an endless MutationObserver/tick loop.
+      if (target) {
+        if (card.parentElement !== target.parentElement || card.previousElementSibling !== target) {
+          target.insertAdjacentElement("afterend", card);
+        }
+      } else if (card.parentElement !== section) {
+        section.appendChild(card);
+      }
     } else {
       const archive = $("traineeAnalysisArchive");
-      if (archive) archive.insertAdjacentElement("afterend", card);
-      else if (card.parentElement !== section) section.appendChild(card);
+      if (archive) {
+        if (card.parentElement !== archive.parentElement || card.previousElementSibling !== archive) {
+          archive.insertAdjacentElement("afterend", card);
+        }
+      } else if (card.parentElement !== section) {
+        section.appendChild(card);
+      }
     }
   }
   function chartCard(rows, key) {
