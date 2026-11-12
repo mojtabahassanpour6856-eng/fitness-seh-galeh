@@ -148,6 +148,58 @@
       }
     }
 
+    // Standard circumference measurements (cm) are distinct from the device's
+    // ambiguous multi-point Region values. Read both the summary table and the
+    // Measurement Snapshots pages, retaining small rounding differences.
+    const standardMeasurementLabels = [
+      ["bicep_left_lower_cm", "Bicep Left Lower"],
+      ["bicep_right_lower_cm", "Bicep Right Lower"],
+      ["bicep_left_cm", "Bicep Left"],
+      ["bicep_right_cm", "Bicep Right"],
+      ["calf_left_cm", "Calf Left"],
+      ["calf_right_cm", "Calf Right"],
+      ["chest_cm", "Chest"],
+      ["forearm_left_cm", "Forearm Left"],
+      ["forearm_right_cm", "Forearm Right"],
+      ["high_hip_cm", "High Hip"],
+      ["hip_cm", "Hip"],
+      ["neck_cm", "Neck"],
+      ["thigh_left_lower_cm", "Thigh Left Lower"],
+      ["thigh_right_lower_cm", "Thigh Right Lower"],
+      ["mid_thigh_left_cm", "Mid-Thigh Left"],
+      ["mid_thigh_right_cm", "Mid-Thigh Right"],
+      ["thigh_left_upper_cm", "Thigh Left Upper"],
+      ["thigh_right_upper_cm", "Thigh Right Upper"],
+      ["waist_abdominal_cm", "Waist (Abdominal)"],
+      ["waist_lower_cm", "Waist (Lower)"],
+      ["waist_narrowest_cm", "Waist (Narrowest)"]
+    ];
+    const standardMeasurements = {};
+    standardMeasurementLabels.forEach(([key, label]) => {
+      const escaped = label.replace(/[.*+?^${}()|[\]\\]/g, "\\    const bodyMeasures = [");
+      const pattern = new RegExp("(?:^|[^A-Za-z])" + escaped +
+        "\\s*(?:\\|\\s*|[:=-]\\s*|\\s+)([0-9]+(?:\\.[0-9]+)?)\\s*(?:cm\\b)?", "gi");
+      const values = numericCandidates(text, pattern);
+      if (!values.length) return;
+      const unique = [...new Set(values)];
+      const spread = Math.max(...unique) - Math.min(...unique);
+      standardMeasurements[key] = {
+        ...metric(values[0], "cm", "Body Measurements / Measurement Snapshots", spread > 0.02
+          ? "conflict_review" : unique.length > 1 ? "consistent_rounding" : "needs_coach_review"),
+        ...(unique.length > 1 ? { alternatives: unique } : {})
+      };
+      if (spread > 0.02) flags.push("برای اندازه " + label + " در صفحات PDF اختلاف معنادار دیده شد؛ مقدارها برای بررسی مربی حفظ شدند.");
+    });
+    if (Object.keys(standardMeasurements).length) {
+      out.body_measurements_cm = standardMeasurements;
+      const requiredKeys = standardMeasurementLabels.map(([key]) => key);
+      const missingKeys = requiredKeys.filter(key => !standardMeasurements[key]);
+      if (missingKeys.length) {
+        out.body_measurements_missing = missingKeys;
+        flags.push("برخی اندازه‌های استاندارد بدن در PDF پیدا نشدند؛ مقدار آن‌ها صفر یا حدس زده نشده است.");
+      }
+    }
+
     const bodyMeasures = [
       ["calf_left_cm", /Calf\s*Left\s*Region\s*[|:=-]?\s*([0-9]+(?:\.[0-9]+)?)/i],
       ["forearm_left_cm", /Forearm\s*Left\s*Region\s*[|:=-]?\s*([0-9]+(?:\.[0-9]+)?)/i],
