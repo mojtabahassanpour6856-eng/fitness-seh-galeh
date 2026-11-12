@@ -269,7 +269,8 @@ try {
     "Mid-Thigh Left | 52.426 cm Mid-Thigh Right | 52.314 cm Thigh Left Upper | 60.007 cm Thigh Right Upper | 58.848 cm " +
     "Waist (Abdominal) | 87.050 cm Waist (Lower) | 91.346 cm Waist (Narrowest) | 85.111 cm " +
     "16 kg of fat mass 67 kg of lean body mass Waist Circumference 91.35 cm " +
-    "Caloric Expenditure 2254 Calories/day " +
+    "Resting Metabolic Rate This is how many calories you burn each day without doing any activity. 1878 Calories/day " +
+    "Caloric Expenditure This is the total calories you burn each day. 2254 Calories/day " +
     "31.66 cm width 24.93 cm depth 600.67 cm? area " +
     "1.1x 1.1x More likely to suffer from Cancer More likely to suffer from Cardiovascular Disease " +
     "1.4x 1.2x More likely to suffer from Respiratory Disease More likely to suffer from All Other Diseases " +
