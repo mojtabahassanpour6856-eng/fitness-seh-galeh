@@ -103,12 +103,30 @@
     const whrValues = numericCandidates(text, /Waist\s*[- ]?to\s*[- ]?Hip\s*Ratio\s*[:=-]?\s*([0-9]+(?:\.[0-9]+)?)/gi);
     setCandidateMetric(out, "waist_hip_ratio", whrValues, "ratio", "Basic Info / Fitness & Health Metrics", 0.01, flags, "نسبت کمر به باسن");
 
-    const rmrValues = numericCandidates(text, /(?:\bRMR\b|Resting\s*Metabolic\s*Rate)\s*[:=-]?\s*([0-9]+(?:\.[0-9]+)?)\s*(?:kcal|calories?)\s*\/?\s*day/gi);
+    let rmrValues = numericCandidates(text, /(?:\bRMR\b|Resting\s*Metabolic\s*Rate)\s*[:=-]?\s*([0-9]+(?:\.[0-9]+)?)\s*(?:kcal|calories?)\s*\/?\s*day/gi);
+    // OCR may separate the RMR heading from its graphical value with explanatory text.
+    if (!rmrValues.length && /Resting\s*Metabolic\s*Rate|\bRMR\b/i.test(text)) {
+      const dayValues = numericCandidates(text, /([0-9]{3,4})\s*(?:kcal|calories?)\s*\/?\s*day/gi);
+      if (dayValues.length) rmrValues = [dayValues[0]];
+    }
     setCandidateMetric(out, "resting_metabolic_rate_kcal", rmrValues, "kcal/day", "Activity & Caloric Expenditure / RMR", 25, flags, "سوخت‌وساز پایه");
 
     // TDEE is accepted only when the value is explicitly tied to a daily-expenditure
     // label. Never infer it as the last generic Calories/day number.
-    const tdeeValues = numericCandidates(text, /(?:TDEE|Total\s*Daily\s*Energy\s*Expenditure|Daily\s*Energy\s*Expenditure|Caloric\s*Expenditure)\s*[:=-]?\s*([0-9]+(?:\.[0-9]+)?)\s*(?:kcal|calories?)\s*\/?\s*day/gi);
+    let tdeeValues = numericCandidates(text, /(?:TDEE|Total\s*Daily\s*Energy\s*Expenditure|Daily\s*Energy\s*Expenditure|Caloric\s*Expenditure)\s*[:=-]?\s*([0-9]+(?:\.[0-9]+)?)\s*(?:kcal|calories?)\s*\/?\s*day/gi);
+    // In image-only activity pages, OCR separates the Caloric Expenditure heading
+    // from its value with explanatory copy. Anchor the value to that heading,
+    // rather than selecting the second generic Calories/day number in the whole PDF.
+    if (!tdeeValues.length) {
+      const anchoredTdee = [...text.matchAll(/Caloric\s*Expenditure[\s\S]{0,240}?([0-9]{3,4})\s*(?:kcal|calories?)\s*\/?\s*day/gi)];
+      if (anchoredTdee.length) tdeeValues = [Number(anchoredTdee[anchoredTdee.length - 1][1])];
+    }
+    // Older layouts may expose the two graphical values without preserving the
+    // heading-to-value text span. Keep the legacy order fallback only as a last resort.
+    if (!tdeeValues.length && /Caloric\s*Expenditure/i.test(text)) {
+      const dayValues = numericCandidates(text, /([0-9]{3,4})\s*(?:kcal|calories?)\s*\/?\s*day/gi);
+      if (dayValues.length > 1) tdeeValues = [dayValues[1]];
+    }
     setCandidateMetric(out, "daily_energy_expenditure_kcal", tdeeValues, "kcal/day", "Activity & Caloric Expenditure / explicit daily expenditure label", 50, flags, "مصرف انرژی روزانه");
 
     const fatMass = numberAfter(text, /([0-9]+(?:\.[0-9]+)?)\s*kg\s*of\s*fat\s*mass/i);
@@ -119,6 +137,47 @@
 
     const waist = numberAfter(text, /(?:Your\s*waist\s*measures|Waist\s*Circumference)\s*([0-9]+(?:\.[0-9]+)?)\s*cm/i);
     if (waist != null) out.waist_circumference_cm = metric(waist, "cm", "Waist Analysis");
+
+    const waistWidth = numberAfter(text, /([0-9]+(?:\.[0-9]+)?)\s*cm\s*width/i);
+    if (waistWidth != null) out.waist_width_cm = metric(waistWidth, "cm", "Waist Analysis / OCR");
+    const waistDepth = numberAfter(text, /([0-9]+(?:\.[0-9]+)?)\s*cm\s*depth/i);
+    if (waistDepth != null) out.waist_depth_cm = metric(waistDepth, "cm", "Waist Analysis / OCR");
+    const waistArea = numberAfter(text, /([0-9]+(?:\.[0-9]+)?)\s*cm.{0,3}\s*area/i);
+    if (waistArea != null) out.waist_area_cm2 = metric(waistArea, "cm²", "Waist Analysis / OCR");
+
+    // Device-provided relative risk multipliers are retained as vendor estimates,
+    // not converted into individual medical probabilities or diagnoses.
+    const vendorRiskLabels = [
+      ["cancer", /More likely to suffer from Cancer/i],
+      ["cardiovascular", /More likely to suffer from Cardiovascular Disease/i],
+      ["respiratory", /More likely to suffer from Respiratory Disease/i],
+      ["other_diseases", /More likely to suffer from All Other Diseases/i]
+    ];
+    const vendorRiskValues = numericCandidates(text, /([0-9]+(?:\.[0-9]+)?)\s*x/gi);
+    const vendorRisk = {};
+    if (vendorRiskLabels.every(([, label]) => label.test(text)) && vendorRiskValues.length >= 4) {
+      vendorRiskLabels.forEach(([key], index) => {
+        const values = vendorRiskValues.filter((_, valueIndex) => valueIndex % 4 === index);
+        if (!values.length) return;
+        const unique = [...new Set(values)];
+        vendorRisk[key] = {
+          ...metric(values[0], "relative_multiplier", "Top Genesis Health Risks / OCR", unique.length > 1 ? "conflict_review" : vendorRiskValues.length > 4 ? "consistent_duplicate" : "needs_coach_review"),
+          ...(unique.length > 1 ? { alternatives: unique } : {})
+        };
+      });
+      if (vendorRiskValues.length > 4 && vendorRiskLabels.some(([key]) => vendorRisk[key]?.status === "conflict_review")) {
+        flags.push("برآوردهای مقایسه‌ای خطر در صفحات تکراری PDF یکسان نیستند؛ برای بررسی مربی علامت‌گذاری شدند.");
+      }
+    }
+    if (Object.keys(vendorRisk).length) out.vendor_relative_risk_estimates = vendorRisk;
+
+    let fatLossGoal = numberAfter(text, /([0-9]+(?:\.[0-9]+)?)\s*kg\s*Kilograms of Fat/i);
+    // On image-only pages OCR may read the slider value before the adjacent
+    // body-fat percentage and its caption rather than next to the unit.
+    if (fatLossGoal == null) fatLossGoal = numberAfter(text, /([0-9]+(?:\.[0-9]+)?)\s+[0-9]+(?:\.[0-9]+)?%\s*Average\s*Kilograms of Fat/i);
+    if (fatLossGoal != null) out.device_fat_loss_goal_kg = metric(fatLossGoal, "kg", "Fat Loss Calculator / device slider", "device_setting_not_coach_prescription");
+    const waistLossGoal = numberAfter(text, /([0-9]+(?:\.[0-9]+)?)\s*cm\s*(?:Normal\s*)?Change in Waist Circumference/i);
+    if (waistLossGoal != null) out.device_waist_loss_goal_cm = metric(waistLossGoal, "cm", "CM-Loss Goal / device slider", "device_setting_not_coach_prescription");
 
     const percentile = numberAfter(text, /Percentile\s*([0-9]+(?:\.[0-9]+)?)\s*%/i);
     if (percentile != null) out.comparison_percentile = metric(percentile, "%", "Basic Info / Percentile");
@@ -138,35 +197,111 @@
       }
     }
 
+    // Standard circumference measurements (cm) are distinct from the device's
+    // ambiguous multi-point Region values. Read both the summary table and the
+    // Measurement Snapshots pages, retaining small rounding differences.
+    const standardMeasurementLabels = [
+      ["bicep_left_lower_cm", "Bicep Left Lower"],
+      ["bicep_right_lower_cm", "Bicep Right Lower"],
+      ["bicep_left_cm", "Bicep Left"],
+      ["bicep_right_cm", "Bicep Right"],
+      ["calf_left_cm", "Calf Left"],
+      ["calf_right_cm", "Calf Right"],
+      ["chest_cm", "Chest"],
+      ["forearm_left_cm", "Forearm Left"],
+      ["forearm_right_cm", "Forearm Right"],
+      ["high_hip_cm", "High Hip"],
+      ["hip_cm", "Hip"],
+      ["neck_cm", "Neck"],
+      ["thigh_left_lower_cm", "Thigh Left Lower"],
+      ["thigh_right_lower_cm", "Thigh Right Lower"],
+      ["mid_thigh_left_cm", "Mid-Thigh Left"],
+      ["mid_thigh_right_cm", "Mid-Thigh Right"],
+      ["thigh_left_upper_cm", "Thigh Left Upper"],
+      ["thigh_right_upper_cm", "Thigh Right Upper"],
+      ["waist_abdominal_cm", "Waist (Abdominal)"],
+      ["waist_lower_cm", "Waist (Lower)"],
+      ["waist_narrowest_cm", "Waist (Narrowest)"]
+    ];
+    const standardMeasurements = {};
+    standardMeasurementLabels.forEach(([key, label]) => {
+      const escaped = label.replace(/[()]/g, "\\$&");
+      const pattern = new RegExp("(?:^|[^A-Za-z])" + escaped +
+        "\\s*(?:\\|\\s*|[:=-]\\s*|\\s+)([0-9]+(?:\\.[0-9]+)?)\\s*(?:cm\\b)?", "gi");
+      const values = numericCandidates(text, pattern);
+      if (!values.length) return;
+      const unique = [...new Set(values)];
+      const spread = Math.max(...unique) - Math.min(...unique);
+      standardMeasurements[key] = {
+        ...metric(values[0], "cm", "Body Measurements / Measurement Snapshots", spread > 0.02
+          ? "conflict_review" : unique.length > 1 ? "consistent_rounding" : "needs_coach_review"),
+        ...(unique.length > 1 ? { alternatives: unique } : {})
+      };
+      if (spread > 0.02) flags.push("برای اندازه " + label + " در صفحات PDF اختلاف معنادار دیده شد؛ مقدارها برای بررسی مربی حفظ شدند.");
+    });
+    if (Object.keys(standardMeasurements).length) {
+      out.body_measurements_cm = standardMeasurements;
+      const requiredKeys = standardMeasurementLabels.map(([key]) => key);
+      const missingKeys = requiredKeys.filter(key => !standardMeasurements[key]);
+      if (missingKeys.length) {
+        out.body_measurements_missing = missingKeys;
+        flags.push("برخی اندازه‌های استاندارد بدن در PDF پیدا نشدند؛ مقدار آن‌ها صفر یا حدس زده نشده است.");
+      }
+    }
+
     const bodyMeasures = [
-      ["calf_left_cm", /Calf\s*Left\s*Region\s*[:=-]?\s*([0-9]+(?:\.[0-9]+)?)/i],
-      ["forearm_left_cm", /Forearm\s*Left\s*Region\s*[:=-]?\s*([0-9]+(?:\.[0-9]+)?)/i],
-      ["forearm_right_cm", /Forearm\s*Right\s*Region\s*[:=-]?\s*([0-9]+(?:\.[0-9]+)?)/i],
-      ["calf_right_cm", /Calf\s*Right\s*Region\s*[:=-]?\s*([0-9]+(?:\.[0-9]+)?)/i],
-      ["chest_region_cm", /Chest\s*Region\s*[:=-]?\s*([0-9]+(?:\.[0-9]+)?)/i],
-      ["hip_region_cm", /Hip\s*Region\s*[:=-]?\s*([0-9]+(?:\.[0-9]+)?)/i],
-      ["lower_waist_region_cm", /Lower\s*Waist\s*Region\s*[:=-]?\s*([0-9]+(?:\.[0-9]+)?)/i],
-      ["thigh_left_cm", /Thigh\s*Left\s*Region\s*[:=-]?\s*([0-9]+(?:\.[0-9]+)?)/i],
-      ["thigh_right_cm", /Thigh\s*Right\s*Region\s*[:=-]?\s*([0-9]+(?:\.[0-9]+)?)/i],
-      ["upper_arm_left_cm", /Upper\s*Arm\s*Left\s*Region\s*[:=-]?\s*([0-9]+(?:\.[0-9]+)?)/i],
-      ["upper_arm_right_cm", /Upper\s*Arm\s*Right\s*Region\s*[:=-]?\s*([0-9]+(?:\.[0-9]+)?)/i],
-      ["upper_waist_region_cm", /Upper\s*Waist\s*Region\s*[:=-]?\s*([0-9]+(?:\.[0-9]+)?)/i]
+      ["calf_left_cm", /Calf\s*Left\s*Region\s*[|:=-]?\s*([0-9]+(?:\.[0-9]+)?)/i],
+      ["forearm_left_cm", /Forearm\s*Left\s*Region\s*[|:=-]?\s*([0-9]+(?:\.[0-9]+)?)/i],
+      ["forearm_right_cm", /Forearm\s*Right\s*Region\s*[|:=-]?\s*([0-9]+(?:\.[0-9]+)?)/i],
+      ["calf_right_cm", /Calf\s*Right\s*Region\s*[|:=-]?\s*([0-9]+(?:\.[0-9]+)?)/i],
+      ["chest_region_cm", /Chest\s*Region\s*[|:=-]?\s*([0-9]+(?:\.[0-9]+)?)/i],
+      ["hip_region_cm", /Hip\s*Region\s*[|:=-]?\s*([0-9]+(?:\.[0-9]+)?)/i],
+      ["lower_waist_region_cm", /Lower\s*Waist\s*Region\s*[|:=-]?\s*([0-9]+(?:\.[0-9]+)?)/i],
+      ["thigh_left_cm", /Thigh\s*Left\s*Region\s*[|:=-]?\s*([0-9]+(?:\.[0-9]+)?)/i],
+      ["thigh_right_cm", /Thigh\s*Right\s*Region\s*[|:=-]?\s*([0-9]+(?:\.[0-9]+)?)/i],
+      ["upper_arm_left_cm", /Upper\s*Arm\s*Left\s*Region\s*[|:=-]?\s*([0-9]+(?:\.[0-9]+)?)/i],
+      ["upper_arm_right_cm", /Upper\s*Arm\s*Right\s*Region\s*[|:=-]?\s*([0-9]+(?:\.[0-9]+)?)/i],
+      ["upper_waist_region_cm", /Upper\s*Waist\s*Region\s*[|:=-]?\s*([0-9]+(?:\.[0-9]+)?)/i]
     ];
     const rawMeasures = {};
     bodyMeasures.forEach(([key, pattern]) => {
-      const value = numberAfter(text, pattern);
-      if (value == null) return;
+      // Prefer the final labeled value in the PDF. Some device pages list all
+      // region labels first and their values afterward, while the later
+      // Measurement Snapshots page pairs each label with its own value.
+      const globalPattern = new RegExp(pattern.source, pattern.flags + "g");
+      const values = numericCandidates(text, globalPattern);
+      if (!values.length) return;
+      // Keep every distinct value found across report pages. Never silently
+      // replace one page's value with another or average conflicting readings.
+      const uniqueValues = [...new Set(values)];
+      const spread = Math.max(...uniqueValues) - Math.min(...uniqueValues);
+      const hasConflict = spread > 0.01;
+      const status = hasConflict
+        ? "conflict_review"
+        : uniqueValues.length > 1 ? "consistent_rounding" : "needs_coach_review";
+      const value = values[0];
       rawMeasures[key] = {
-        ...metric(value, "raw_reported_unit", "3D Scan and Measurements", "needs_coach_review"),
+        ...metric(value, "raw_reported_unit", "3D Scan and Measurements", status),
         raw_value: value,
+        ...(uniqueValues.length > 1 ? { alternatives: uniqueValues } : {}),
         measurement_kind: "multi_point_or_region_reported_value",
         interpretation: "تفسیر دقیق عدد تا تأیید ساختار اسکن و تعریف خروجی دستگاه مشخص نیست؛ آن را محیط یک مقطع فرض نکنید."
       };
+      if (hasConflict) {
+        const regionLabels = {
+          calf_left_cm: "ساق چپ", calf_right_cm: "ساق راست",
+          forearm_left_cm: "ساعد چپ", forearm_right_cm: "ساعد راست",
+          thigh_left_cm: "ران چپ", thigh_right_cm: "ران راست",
+          upper_arm_left_cm: "بازوی چپ", upper_arm_right_cm: "بازوی راست",
+          chest_region_cm: "ناحیه سینه", hip_region_cm: "ناحیه باسن",
+          lower_waist_region_cm: "ناحیه کمر پایین", upper_waist_region_cm: "ناحیه کمر بالا"
+        };
+        flags.push("برای " + (regionLabels[key] || key) + " در صفحات مختلف PDF مقادیر متفاوت ثبت شده است؛ همه مقدارها بدون میانگین‌گیری حفظ شده‌اند و باید با صفحات اصلی تطبیق داده شوند.");
+      }
     });
-    // Compare left/right values only as a report-quality check. The device's
-    // "Region" values are not yet confirmed to be circumference in cm, so the
-    // threshold is expressed in raw reported units and must not be interpreted
-    // as a clinical or body-measurement diagnosis.
+    // Preserve left/right arithmetic only as an uninterpreted raw difference.
+    // Region unit/semantics are not validated, so never classify asymmetry or
+    // raise a >2-unit warning until the device definition is confirmed.
     const bilateralPairs = [
       ["calf_left_cm", "calf_right_cm", "ساق"],
       ["forearm_left_cm", "forearm_right_cm", "ساعد"],
@@ -175,8 +310,16 @@
     ];
     const bilateralComparisons = [];
     bilateralPairs.forEach(([leftKey, rightKey, label]) => {
-      const left = rawMeasures[leftKey]?.raw_value;
-      const right = rawMeasures[rightKey]?.raw_value;
+      const leftItem = rawMeasures[leftKey];
+      const rightItem = rawMeasures[rightKey];
+      if (!leftItem || !rightItem) return;
+      if (["conflict_review", "invalid_range"].includes(leftItem.status) ||
+          ["conflict_review", "invalid_range"].includes(rightItem.status)) {
+        flags.push("مقایسه دو سمت " + label + " انجام نشد؛ دست‌کم یکی از مقادیر در صفحات مختلف PDF ناسازگار است.");
+        return;
+      }
+      const left = leftItem.raw_value;
+      const right = rightItem.raw_value;
       if (left == null || right == null) return;
       const difference = Math.abs(left - right);
       const average = (Math.abs(left) + Math.abs(right)) / 2;
@@ -184,13 +327,10 @@
         region: label, left_value: left, right_value: right,
         absolute_difference: Number(difference.toFixed(3)),
         relative_difference_percent: average ? Number((difference / average * 100).toFixed(2)) : null,
-        status: difference > 2 ? "coach_review_asymmetry" : "within_initial_review_threshold",
-        interpretation: "مقایسه صرفاً برای کنترل کیفیت گزارش است؛ واحد و معنای دقیق مقادیر ناحیه‌ای هنوز باید با دستگاه تأیید شود."
+        status: "raw_difference_needs_unit_validation",
+        interpretation: "اختلاف عددی خام حفظ شده است؛ تا تأیید واحد و معنای Region، از آن عدم‌تقارن یا هشدار بدنی استنباط نمی‌شود."
       };
       bilateralComparisons.push(comparison);
-      if (difference > 2) {
-        flags.push("اختلاف گزارش‌شده بین " + label + " چپ و راست بیش از ۲ واحد است؛ احتمال خطای ثبت/حرکت/نور یا تفاوت واقعی وجود دارد و باید با اسکن و مشاهده مربی بررسی شود.");
-      }
     });
     if (bilateralComparisons.length) out.bilateral_measurement_review = bilateralComparisons;
 
@@ -265,6 +405,7 @@
     const pdf = await pdfjs.getDocument({ data: bytes }).promise;
     const pages = [];
     const ocrPages = [];
+    const scanPages = [];
     let ocrWorker = null;
     try {
       for (let pageNo = 1; pageNo <= pdf.numPages; pageNo++) {
@@ -277,8 +418,11 @@
         const normalizedPageText = normalize(pageText);
         const hasMeasurementContext = /Body\s*Measurements|3D\s*Scan|\bRegion\b/i.test(normalizedPageText);
         const hasRecognizableRegionMeasurement = /(?:Calf|Forearm|Thigh|Upper\s*Arm|Chest|Hip|Lower\s*Waist|Upper\s*Waist)\s*(?:Left|Right)?\s*Region\s*[:=-]?\s*[0-9]/i.test(normalizedPageText);
+        const hasCalorieLabels = /Resting\s*Metabolic\s*Rate|\bRMR\b|Caloric\s*Expenditure/i.test(normalizedPageText);
+        const hasCalorieValues = /[0-9]{3,4}\s*(?:kcal|calories?)\s*\/?\s*day/i.test(normalizedPageText);
         const needsTargetedOcr = normalizedPageText.length < 100 ||
-          (hasMeasurementContext && !hasRecognizableRegionMeasurement);
+          (hasMeasurementContext && !hasRecognizableRegionMeasurement) ||
+          (hasCalorieLabels && !hasCalorieValues);
         if (needsTargetedOcr) {
           if (!ocrWorker) {
             const Tesseract = await loadTesseract();
@@ -297,6 +441,25 @@
           canvas.height = 0;
         }
         pages.push(pageText);
+        // Preserve real scan pages from the source PDF. These are page renders,
+        // not generated silhouettes or substituted stock imagery.
+        const scanText = normalize(pageText);
+        const hasScanVisualCue = /Silhouette|3D\s*Scan|Front\s*View|Side\s*View|Upper\s*Body\s*Posture|Shoulder\s*Slope|Back\s*Posture/i.test(scanText);
+        if (hasScanVisualCue && scanPages.length < 4) {
+          const scanViewport = page.getViewport({ scale: 1.5 });
+          const scanCanvas = document.createElement("canvas");
+          scanCanvas.width = Math.ceil(scanViewport.width);
+          scanCanvas.height = Math.ceil(scanViewport.height);
+          const scanContext = scanCanvas.getContext("2d");
+          await page.render({ canvasContext: scanContext, viewport: scanViewport }).promise;
+          scanPages.push({
+            page_number: pageNo,
+            image_data_url: scanCanvas.toDataURL("image/png"),
+            source: "original_pdf_page"
+          });
+          scanCanvas.width = 0;
+          scanCanvas.height = 0;
+        }
       }
     } finally {
       if (ocrWorker) await ocrWorker.terminate();
@@ -304,6 +467,11 @@
     const result = extractMetrics(pages.join(" "));
     result.page_count = pdf.numPages;
     result.ocr_pages = ocrPages;
+    result.scan_pages = scanPages;
+    result.scan_page_numbers = scanPages.map(item => item.page_number);
+    if (!scanPages.length) {
+      result.flags.push("صفحه تصویری قابل‌شناسایی از اسکن در PDF پیدا نشد؛ گزارش بدون تصویر اسکن نباید برای تحویل نهایی تأیید شود.");
+    }
     result.engine = "pdfjs-" + PDFJS_VERSION + (ocrPages.length ? " + tesseract.js-5" : "");
     result.review_required = true;
     return result;
