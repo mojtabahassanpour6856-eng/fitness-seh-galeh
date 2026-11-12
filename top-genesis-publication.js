@@ -244,10 +244,16 @@
       button.setAttribute("aria-expanded", String(!panel.hidden));
       button.textContent = panel.hidden ? "مشاهده جزئیات" : "بستن جزئیات";
     });
+    const oldModal = $("topGenesisFullReportModal");
+    if (oldModal) {
+      const oldFrame = $("topGenesisFullReportFrame");
+      if (oldFrame?.dataset.objectUrl) URL.revokeObjectURL(oldFrame.dataset.objectUrl);
+      oldModal.remove();
+    }
     const modal = document.createElement("div");
     modal.id = "topGenesisFullReportModal";
     modal.hidden = true;
-    modal.style.cssText = "position:fixed;inset:0;z-index:99999;background:#17130dcc;padding:12px;display:flex;align-items:center;justify-content:center";
+    modal.style.cssText = "display:none;position:fixed;inset:0;z-index:99999;background:#17130dcc;padding:12px;align-items:center;justify-content:center";
     modal.innerHTML = '<section role="dialog" aria-modal="true" aria-label="گزارش کامل آنالیز بدن" style="width:min(100%,1000px);height:min(96vh,900px);background:#fffdf7;border:1px solid #d8b65d;border-radius:14px;padding:10px;display:flex;flex-direction:column;gap:8px"><div style="display:flex;justify-content:space-between;gap:8px;align-items:center"><b>گزارش کامل آنالیز بدن</b><div style="display:flex;gap:6px"><button type="button" id="topGenesisPrintFullReport">چاپ / ذخیره PDF</button><button type="button" id="topGenesisCloseFullReport">بستن</button></div></div><iframe id="topGenesisFullReportFrame" title="گزارش کامل آنالیز بدن" sandbox="allow-same-origin allow-modals" style="width:100%;flex:1;border:1px solid #eadfc9;border-radius:9px;background:white"></iframe></section>';
     document.body.appendChild(modal);
     const closeModal = () => {
