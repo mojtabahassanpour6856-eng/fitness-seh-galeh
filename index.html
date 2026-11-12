@@ -2656,6 +2656,38 @@ if($("prDate"))$("prDate").value=today();if($("anDate"))$("anDate").value=today(
   }
   window.sehSaveTraineePhoto=async function(input){const file=input&&input.files&&input.files[0];if(!file)return;if(!file.type||!file.type.startsWith('image/')){alert('لطفاً یک فایل تصویری انتخاب کنید.');input.value='';return;}if(file.size>8*1024*1024){alert('حجم عکس باید کمتر از ۸ مگابایت باشد.');input.value='';return;}if(!currentClient||!currentClient.id){alert('پرونده شاگرد پیدا نشد؛ دوباره وارد شوید.');input.value='';return;}try{sehCropBitmap=await sehDecodePhotoFile(file);sehCropScale=1;sehCropX=0;sehCropY=0;const modal=sehEnsurePhotoCropModal();modal.classList.add('show');modal.querySelector('#sehPhotoCropZoom').value='1';sehCropDraw();}catch(e){console.error('Trainee photo crop open failed',e);alert('باز کردن برش عکس انجام نشد. '+(e.message||''));}finally{if(input)input.value='';}};
   window.sehCommitTraineePhotoCrop=async function(){if(!sehCropBitmap||!currentClient||!currentClient.id)return;const button=document.getElementById('sehPhotoCropSave');if(button){button.disabled=true;button.textContent='در حال ذخیره…';}try{const canvas=document.createElement('canvas');canvas.width=320;canvas.height=320;const ctx=canvas.getContext('2d'),base=Math.max(320/sehCropBitmap.width,320/sehCropBitmap.height),scale=base*sehCropScale,dw=sehCropBitmap.width*scale,dh=sehCropBitmap.height*scale;ctx.save();ctx.beginPath();ctx.arc(160,160,160,0,Math.PI*2);ctx.clip();ctx.drawImage(sehCropBitmap,(320-dw)/2+sehCropX,(320-dh)/2+sehCropY,dw,dh);ctx.restore();const imageData=canvas.toDataURL('image/jpeg',.8),traineeId=String(currentClient.id);const rows=await window.sbWrite('/trainees?id=eq.'+encodeURIComponent(traineeId),'PATCH',{profile_image:imageData});if(!Array.isArray(rows)||!rows.some(row=>String(row.id)===traineeId&&row.profile_image===imageData))throw new Error('ذخیره عکس در پایگاه داده تأیید نشد.');currentClient.profile_image=imageData;if(Array.isArray(clients)){const row=clients.find(x=>String(x.id)===traineeId);if(row)row.profile_image=imageData;}sehClosePhotoCrop();const root=document.getElementById('traineeDashboard');if(root)renderTraineeProfileHeader(root);alert('عکس پروفایل ذخیره شد.');}catch(e){console.error('Trainee profile photo save failed',e);alert('ذخیره عکس انجام نشد. '+(e.message||''));}finally{if(button){button.disabled=false;button.textContent='ذخیره برش';}}};
+  // Self-service photo actions are bound to the authenticated trainee record only.
+  function sehOwnTraineeProfileId(){
+    const profile = (typeof authProfile !== 'undefined' && authProfile) || window.authProfile;
+    const id = profile && profile.role === 'trainee' ? profile.trainee_id : null;
+    return id && currentClient && String(currentClient.id) === String(id) ? String(id) : null;
+  }
+  const originalTraineePhotoSave = window.sehSaveTraineePhoto;
+  window.sehSaveTraineePhoto = async function(input){
+    if(!sehOwnTraineeProfileId()){
+      alert('عکس فقط برای پروفایل حساب شاگرد فعلی قابل ذخیره است.');
+      if(input) input.value='';
+      return;
+    }
+    return originalTraineePhotoSave.apply(this,arguments);
+  };
+  const originalTraineePhotoCommit = window.sehCommitTraineePhotoCrop;
+  window.sehCommitTraineePhotoCrop = async function(){
+    if(!sehOwnTraineeProfileId()){
+      alert('حساب شاگرد تغییر کرده است؛ برای امنیت، ذخیره عکس لغو شد.');
+      return;
+    }
+    return originalTraineePhotoCommit.apply(this,arguments);
+  };
+  const originalTraineePhotoDelete = window.sehDeleteTraineePhoto;
+  window.sehDeleteTraineePhoto = async function(){
+    if(!sehOwnTraineeProfileId()){
+      alert('عکس فقط برای پروفایل حساب شاگرد فعلی قابل حذف است.');
+      return;
+    }
+    return originalTraineePhotoDelete.apply(this,arguments);
+  };
+
   window.sehDeleteTraineePhoto=async function(){if(!currentClient||!currentClient.id||!currentClient.profile_image)return;if(!confirm('عکس پروفایل حذف شود؟'))return;const traineeId=String(currentClient.id);try{const rows=await window.sbWrite('/trainees?id=eq.'+encodeURIComponent(traineeId),'PATCH',{profile_image:null});if(!Array.isArray(rows)||!rows.some(row=>String(row.id)===traineeId&&row.profile_image==null))throw new Error('حذف عکس در پایگاه داده تأیید نشد.');currentClient.profile_image=null;if(Array.isArray(clients)){const row=clients.find(x=>String(x.id)===traineeId);if(row)row.profile_image=null;}const root=document.getElementById('traineeDashboard');if(root)renderTraineeProfileHeader(root);alert('عکس پروفایل حذف شد.');}catch(e){console.error('Trainee profile photo delete failed',e);alert('حذف عکس انجام نشد. '+(e.message||''));}};
 
 
@@ -13535,86 +13567,180 @@ window.sehResetTurnstile=function(){};
       alert('پروفایل به حساب شاگرد فعلی متصل نیست؛ برای امنیت، ذخیره انجام نشد.');
       return;
     }
-    const val = id => $(id) ? String($(id).value || '').trim() : '';
-    const numberOrNull = id => val(id) === '' ? null : (Number.isFinite(Number(val(id))) ? Number(val(id)) : null);
+
+    const val = id => {
+      const el = document.getElementById(id);
+      return el ? String(el.value ?? '').trim() : '';
+    };
+    const toAsciiDigits = value => String(value ?? '')
+      .replace(/[۰-۹]/g, d => '۰۱۲۳۴۵۶۷۸۹'.indexOf(d))
+      .replace(/[٠-٩]/g, d => '٠١٢٣٤٥٦٧٨٩'.indexOf(d))
+      .replace(/[٬,]/g, '')
+      .replace(/٫/g, '.');
+    const parsePositiveNumber = (id, label, integerOnly=false) => {
+      const raw = val(id);
+      if(!raw) return {present:false};
+      const normalized = toAsciiDigits(raw).replace(/\s/g, '');
+      if(!/^(?:\d+)(?:\.\d+)?$/.test(normalized)){
+        alert(label + ' را با عدد معتبر وارد کنید.');
+        return {error:true};
+      }
+      const number = Number(normalized);
+      if(!Number.isFinite(number) || number <= 0 || (integerOnly && !Number.isInteger(number))){
+        alert(label + ' را با عدد معتبر وارد کنید.');
+        return {error:true};
+      }
+      return {present:true,value:number};
+    };
+
     const name = val('pn');
     if(name.length < 2){ alert('نام و نام خانوادگی را وارد کنید.'); return; }
-    const age = numberOrNull('page');
-    if(age !== null && (!Number.isInteger(age) || age < 1 || age > 120)){ alert('سن باید عددی بین ۱ تا ۱۲۰ باشد.'); return; }
-    const limit = val('traineeProfileLimitations') || val('plimit') || '';
-    const history = val('traineeProfileHistory') || '';
-    const birthRaw = val('pbirth');
-    let birthISO = null;
-    if(birthRaw){
-      birthISO = typeof window.jalaliToISODate === 'function' ? window.jalaliToISODate(birthRaw) : null;
-      if(!birthISO){ alert('تاریخ تولد را به صورت شمسی معتبر وارد کنید.'); return; }
+    const payload = {full_name:name};
+
+    // Blank optional fields are omitted instead of being sent as null.
+    // This prevents a partially loaded mobile form from erasing saved data.
+    const age = parsePositiveNumber('page','سن',true);
+    const weight = parsePositiveNumber('pweight','وزن');
+    const height = parsePositiveNumber('pheight','قد');
+    if(age.error || weight.error || height.error) return;
+    if(age.present){
+      if(age.value > 120){ alert('سن باید بین ۱ تا ۱۲۰ سال باشد.'); return; }
+      payload.age = age.value;
     }
-    const payload = {
-      full_name:name,
-      age,
-      current_weight:numberOrNull('pweight'),
-      height:numberOrNull('pheight'),
-      goal:val('pgoal') || null,
-      training_level:val('plevel') || null,
-      training_type:val('ptype') || 'gym',
-      home_equipment:val('pequipment') || null,
-      gender:val('traineeProfileGender') || val('pgender') || null,
-      weekly_sessions:numberOrNull('traineeProfileSessions'),
-      training_days:val('traineeProfileDays') || null,
-      training_history:history || null,
-      limitations:limit || null,
-      injuries:limit || null
-    };
-    if(birthRaw) payload.birth_date = birthISO;
-    // Do not erase a previously saved training time when the field is blank/not hydrated.
-    // A non-empty time is saved and verified normally.
-    const trainingTimeValue = val('traineeProfileTime');
-    if(trainingTimeValue) payload.training_time = trainingTimeValue;
+    if(weight.present) payload.current_weight = weight.value;
+    if(height.present) payload.height = height.value;
+
+    const birthRaw = val('pbirth');
+    let birthISO = '';
+    if(birthRaw){
+      const normalizedBirth = toAsciiDigits(birthRaw).replace(/[.-]/g,'/');
+      birthISO = typeof window.jalaliToISODate === 'function' ? window.jalaliToISODate(normalizedBirth) : '';
+      if(!birthISO || !/^\d{4}-\d{2}-\d{2}$/.test(String(birthISO))){
+        alert('تاریخ تولد را به صورت شمسی معتبر وارد کنید؛ مانند ۱۳۷۵/۰۷/۱۸.');
+        return;
+      }
+      payload.birth_date = birthISO;
+    }
+
+    const textFields = [
+      ['pgoal','goal'],['plevel','training_level'],['ptype','training_type'],
+      ['pequipment','home_equipment'],['traineeProfileGender','gender'],
+      ['traineeProfileDays','training_days'],['traineeProfileHistory','training_history'],
+      ['traineeProfileLimitations','limitations']
+    ];
+    for(const [id,key] of textFields){
+      const value = val(id);
+      if(value) payload[key] = value;
+    }
+    const sessions = parsePositiveNumber('traineeProfileSessions','تعداد جلسات',true);
+    if(sessions.error) return;
+    if(sessions.present){
+      if(sessions.value > 7){ alert('تعداد جلسات هفتگی باید بین ۱ تا ۷ باشد.'); return; }
+      payload.weekly_sessions = sessions.value;
+    }
+    const trainingTime = val('traineeProfileTime');
+    if(trainingTime) payload.training_time = trainingTime;
+
+    // Keep the existing injury field in sync only when the trainee supplied a value.
+    if(Object.prototype.hasOwnProperty.call(payload,'limitations')) payload.injuries = payload.limitations;
+
     const btn = document.querySelector('#client button[onclick="saveProfile()"]');
     if(btn){ btn.disabled=true; btn.textContent='⏳ در حال ذخیره…'; }
     try{
-      if(typeof window.sbWrite !== 'function' || typeof window.sbGet !== 'function') throw new Error('اتصال امن ذخیره‌سازی آماده نیست؛ صفحه را تازه‌سازی کنید.');
+      if(typeof window.sbWrite !== 'function' || typeof window.sbGet !== 'function'){
+        throw new Error('اتصال امن ذخیره‌سازی آماده نیست؛ صفحه را تازه‌سازی کنید.');
+      }
       await window.sbWrite('/trainees?id=eq.'+encodeURIComponent(traineeId), 'PATCH', payload);
       const rows = await window.sbGet('/trainees?id=eq.'+encodeURIComponent(traineeId)+'&select=*&limit=1');
-      const saved = Array.isArray(rows) && rows[0];
-      if(!saved) throw new Error('ذخیره ارسال شد اما اطلاعات از پایگاه داده دوباره خوانده نشد.');
-      // Verify profile text/select fields here. PostgreSQL time values can be represented
-      // differently by PostgREST and browser inputs, so training_time is saved when provided
-      // but is intentionally excluded from this strict string-equality verification.
-      const fields = ['full_name','goal','training_level','training_type','home_equipment','gender','training_days','training_history','limitations','injuries'];
-      for(const field of fields){
-        const expected = payload[field] == null ? null : String(payload[field]).trim();
-        const actual = saved[field] == null ? null : String(saved[field]).trim();
-        if(expected !== actual) throw new Error('ذخیره فیلد «'+field+'» تأیید نشد؛ دوباره تلاش کنید.');
-      }
-      const updated = {
-        ...c, id:saved.id, name:saved.full_name, full_name:saved.full_name, age:saved.age,
-        weight:saved.current_weight, current_weight:saved.current_weight, height:saved.height,
-        goal:saved.goal, level:saved.training_level, training_level:saved.training_level,
-        training_type:saved.training_type||'gym', home_equipment:saved.home_equipment||'',
-        gender:saved.gender, birth_date:saved.birth_date, weekly_sessions:saved.weekly_sessions,
-        training_days:saved.training_days||'', training_time:saved.training_time||'',
-        training_history:saved.training_history||'', history:saved.training_history||'',
-        limitations:saved.limitations||'', injuries:saved.injuries||''
-      };
-      if(typeof window.loadClients === 'function'){
-        await window.loadClients();
-        if(Array.isArray(clients)){
-          const fresh = clients.find(x=>String(x.id)===String(traineeId));
-          if(fresh) Object.assign(updated, fresh);
+      const saved = Array.isArray(rows) && rows.find(row=>String(row.id)===String(traineeId));
+      if(!saved) throw new Error('ذخیره ارسال شد اما رکورد همین شاگرد از پایگاه داده دوباره خوانده نشد.');
+
+      const numericFields = ['age','current_weight','height','weekly_sessions'];
+      for(const field of numericFields){
+        if(!Object.prototype.hasOwnProperty.call(payload,field)) continue;
+        const expected = Number(payload[field]);
+        const actual = saved[field] == null ? NaN : Number(saved[field]);
+        if(!Number.isFinite(actual) || Math.abs(actual-expected) > 0.001){
+          throw new Error('ذخیره فیلد «'+field+'» در پایگاه داده تأیید نشد؛ دوباره تلاش کنید.');
         }
       }
-      try { currentClient = updated; } catch(e) {}
+      const verifyTextFields = ['full_name','goal','training_level','training_type','home_equipment','gender','training_days','training_history','limitations','injuries'];
+      for(const field of verifyTextFields){
+        if(!Object.prototype.hasOwnProperty.call(payload,field)) continue;
+        const expected = String(payload[field] ?? '').trim();
+        const actual = String(saved[field] ?? '').trim();
+        if(expected !== actual) throw new Error('ذخیره فیلد «'+field+'» در پایگاه داده تأیید نشد؛ دوباره تلاش کنید.');
+      }
+      if(birthISO && String(saved.birth_date || '').slice(0,10) !== birthISO){
+        throw new Error('ذخیره تاریخ تولد در پایگاه داده تأیید نشد؛ دوباره تلاش کنید.');
+      }
+
+      // A successful database read is authoritative. A later list refresh must not
+      // overwrite it with an older cached row.
+      if(typeof window.loadClients === 'function'){
+        try{ await window.loadClients(); }
+        catch(refreshError){ console.warn('refresh trainee list after self-profile save',refreshError); }
+      }
+      const fresh = Array.isArray(clients) ? clients.find(row=>String(row.id)===String(traineeId)) : null;
+      const updated = {
+        ...(fresh || c),
+        ...saved,
+        id:saved.id,
+        name:saved.full_name,
+        full_name:saved.full_name,
+        age:saved.age ?? (typeof calcAge==='function' ? calcAge(saved.birth_date) : c.age),
+        weight:saved.current_weight,
+        current_weight:saved.current_weight,
+        height:saved.height,
+        level:saved.training_level,
+        training_level:saved.training_level,
+        training_type:saved.training_type || 'gym',
+        home_equipment:saved.home_equipment || '',
+        birth_date:saved.birth_date
+      };
+      currentClient = updated;
       window.currentClient = updated;
-      normalizeProfile();
-      if(typeof window.loadDashboard === 'function') await window.loadDashboard();
+      if(Array.isArray(clients)){
+        const index = clients.findIndex(row=>String(row.id)===String(traineeId));
+        if(index >= 0) clients[index] = updated;
+        else clients.push(updated);
+      }
+
+      const setField = (id,value) => {
+        const field = document.getElementById(id);
+        if(field) field.value = value == null ? '' : String(value);
+      };
+      setField('pn',updated.full_name);
+      setField('page',updated.age);
+      setField('pbirth',window.isoToJalaliDate?.(updated.birth_date) || '');
+      setField('pweight',updated.current_weight);
+      setField('pheight',updated.height);
+      setField('pgender',updated.gender);
+      setField('pgoal',updated.goal);
+      setField('plevel',updated.training_level);
+      setField('ptype',updated.training_type);
+      setField('pequipment',updated.home_equipment);
+      setField('traineeProfileGender',updated.gender);
+      setField('traineeProfileSessions',updated.weekly_sessions);
+      setField('traineeProfileDays',updated.training_days);
+      setField('traineeProfileTime',String(updated.training_time || '').slice(0,5));
+      setField('traineeProfileHistory',updated.training_history);
+      setField('traineeProfileLimitations',updated.limitations || updated.injuries);
+
+      if(typeof window.loadDashboard === 'function'){
+        try{ await window.loadDashboard(); }
+        catch(dashboardError){ console.warn('refresh trainee dashboard after profile save',dashboardError); }
+      }
       const traineeHeader = document.getElementById('traineeDashboard');
-      if(traineeHeader && typeof window.renderTraineeProfileHeader === 'function') window.renderTraineeProfileHeader(traineeHeader);
-      alert('پروفایل شما با موفقیت ذخیره و از پایگاه داده بررسی شد.');
+      if(traineeHeader && typeof window.renderTraineeProfileHeader === 'function'){
+        window.renderTraineeProfileHeader(traineeHeader);
+      }
+      alert('اطلاعات شخصی شما ذخیره شد و فیلدهای واردشده از پایگاه داده تأیید شدند.');
     }catch(e){
       console.error('trainee profile save failed', e);
       alert('ذخیره پروفایل انجام نشد.\n'+(e && e.message ? e.message : String(e)));
     }finally{
+      if(typeof window.sehResetTurnstile === 'function') window.sehResetTurnstile(btn);
       if(btn){ btn.disabled=false; btn.textContent='💾 ذخیره اطلاعات شخصی من'; }
     }
   };
