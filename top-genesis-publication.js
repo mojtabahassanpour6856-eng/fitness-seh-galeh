@@ -53,7 +53,7 @@
     try { return typeof authProfile !== "undefined" && authProfile?.role === "coach"; } catch (_) { return false; }
   }
   function mountProgressCard() {
-    const section = $("progress");
+    const section = currentCoach() ? $("progress") : $("traineeAnalysis");
     if (!section || $(CARD_ID)) return;
     const card = document.createElement("div");
     card.id = CARD_ID;
@@ -62,11 +62,16 @@
     card.innerHTML = '<h2>📈 گزارش‌های تأییدشده آنالیز بدن</h2>' +
       '<p class="muted">گزارش‌هایی که مربی بررسی و ارسال کرده است، همراه با روند تغییرات در این بخش نمایش داده می‌شود.</p>' +
       '<div id="topGenesisPublishedBody" class="muted">در حال دریافت گزارش‌ها…</div>';
-    const history = $("progressHistory");
-    if (history) history.insertAdjacentElement("afterend", card);
-    else {
+    if (currentCoach()) {
+      const history = $("progressHistory");
       const entry = $("progressEntryPanel");
-      (entry || section).insertAdjacentElement("afterend", card);
+      if (history) history.insertAdjacentElement("afterend", card);
+      else if (entry) entry.insertAdjacentElement("afterend", card);
+      else section.appendChild(card);
+    } else {
+      const archive = $("traineeAnalysisArchive");
+      if (archive) archive.insertAdjacentElement("afterend", card);
+      else section.appendChild(card);
     }
   }
   function chartCard(rows, key) {
@@ -122,8 +127,12 @@
       calf_left_cm: "ساق چپ", calf_right_cm: "ساق راست",
       thigh_left_cm: "ران چپ", thigh_right_cm: "ران راست",
       upper_arm_left_cm: "بازوی چپ", upper_arm_right_cm: "بازوی راست",
+      bicep_left_cm: "بازوی چپ", bicep_right_cm: "بازوی راست",
       forearm_left_cm: "ساعد چپ", forearm_right_cm: "ساعد راست",
-      chest_region_cm: "ناحیه سینه", hip_region_cm: "ناحیه باسن",
+      chest_cm: "دور سینه", chest_region_cm: "ناحیه سینه",
+      hip_cm: "دور باسن", hip_region_cm: "ناحیه باسن",
+      waist_abdominal_cm: "دور شکم", waist_lower_cm: "دور کمر پایین",
+      waist_narrowest_cm: "باریک‌ترین قسمت کمر",
       lower_waist_region_cm: "ناحیه کمر پایین", upper_waist_region_cm: "ناحیه کمر بالا"
     };
     const bodyMeasurements = latest.report_metrics?.body_measurements_cm || {};
@@ -251,7 +260,8 @@
   window.addEventListener("message", handleApprovedReport);
   function tick() {
     mountProgressCard();
-    if ($("progress")?.classList.contains("active")) loadPublished(false);
+    const visibleSection = currentCoach() ? $("progress") : $("traineeAnalysis");
+    if (visibleSection?.classList.contains("active")) loadPublished(false);
   }
   if (document.readyState === "loading") {
     document.addEventListener("DOMContentLoaded", tick, { once: true });
