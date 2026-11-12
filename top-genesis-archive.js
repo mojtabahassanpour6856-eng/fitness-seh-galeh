@@ -15,18 +15,22 @@
 
   function currentCoachAndTrainee() {
     try {
-      if (typeof authProfile === "undefined" || authProfile?.role !== "coach") return null;
-      if (typeof currentClient === "undefined" || !currentClient?.id) return null;
+      const profile = window.authProfile || (typeof authProfile !== "undefined" ? authProfile : null);
+      const trainee = window.currentClient || (typeof currentClient !== "undefined" ? currentClient : null);
+      if (profile?.role !== "coach") return null;
+      if (!trainee?.id) return null;
       const sb = window.AUTH_SUPABASE;
       if (!sb?.auth || !sb?.storage) return null;
-      return { sb, trainee: currentClient };
+      return { sb, trainee };
     } catch (_) { return null; }
   }
 
   function mount() {
     const isCoach = (() => {
-      try { return typeof authProfile !== "undefined" && authProfile?.role === "coach"; }
-      catch (_) { return false; }
+      try {
+        const profile = window.authProfile || (typeof authProfile !== "undefined" ? authProfile : null);
+        return profile?.role === "coach";
+      } catch (_) { return false; }
     })();
     const existing = $("topGenesisArchivePanel");
     // This archive contains upload/delete controls and is strictly coach-only.
