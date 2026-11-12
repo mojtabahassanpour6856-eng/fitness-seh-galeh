@@ -188,6 +188,24 @@ Waist-Hip Ratio (WHO),0.889
   assert.equal(JSON.stringify(csvResult).includes("private@example.com"), false,
     "Customer email must not be extracted or exposed by the CSV parser.");
   assert.equal(csvResult.review_required, true);
+  await page.addScriptTag({ url: "https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js" });
+  const zipResult = await page.evaluate(async () => {
+    const zip = new window.JSZip();
+    zip.file("Scan Data.csv", "Customer Gender,Male\\nCustomer Age,37\\nCustomer Height,185 cm\\nCustomer Weight,83 kg\\nFITNESS & HEALTH\\nmeasurement name,value,units\\nBody Fat %,19,%\\n");
+    for (const name of ["Body Front.jpg","Body Back.jpg","Body Left.jpg","Body Right.jpg","Silhouette Front.jpg","Silhouette Left.jpg"]) {
+      zip.file(name, new Uint8Array([255,216,255,217]));
+    }
+    const blob = await zip.generateAsync({type:"blob"});
+    const file = new File([blob], "top-genesis-sample.zip", {type:"application/zip"});
+    return window.TopGenesisCsvParser.extractBundle(file);
+  });
+  assert.equal(zipResult.profile.age, 37);
+  assert.equal(zipResult.metrics.body_fat_percent.value, 19);
+  assert.equal(zipResult.scan_image_count, 6,
+    "The ZIP reader must identify four directional body views and two silhouette views.");
+  assert.deepEqual(Object.keys(zipResult.scan_images).sort(),
+    ["body_back","body_front","body_left","body_right","silhouette_front","silhouette_left"].sort());
+
 
   await page.locator("#pdfFile").setInputFiles({
     name: "synthetic-top-genesis-fixture.pdf",
