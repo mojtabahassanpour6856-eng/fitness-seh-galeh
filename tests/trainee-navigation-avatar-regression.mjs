@@ -55,7 +55,12 @@ try {
       body: Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/l0sAAAAASUVORK5CYII=", "base64")
     });
   });
-  await avatarPage.setContent('<div id="traineeDashboard"></div><button id="sehDeleteTraineePhotoEdit"></button>');
+  await avatarPage.goto(`http://127.0.0.1:${address.port}/fixture`);
+  await avatarPage.evaluate(() => {
+    const button = document.createElement("button");
+    button.id = "sehDeleteTraineePhotoEdit";
+    document.body.appendChild(button);
+  });
   await avatarPage.evaluate(() => {
     window.authProfile = { role: "trainee", full_name: "Regression trainee" };
     window.currentClient = { full_name: "Regression trainee", profile_image: "" };
