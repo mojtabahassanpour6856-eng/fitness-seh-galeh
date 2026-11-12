@@ -10,6 +10,7 @@ on:
       - "top-genesis-archive.js"
       - "index.html"
       - "tests/top-genesis-browser-smoke.mjs"
+      - "tests/trainee-navigation-avatar-regression.mjs"
       - "top-genesis-pdf-app-embed.js"
       - ".github/workflows/top-genesis-browser-smoke.yml"
   pull_request:
@@ -41,3 +42,5 @@ jobs:
         run: npx playwright install --with-deps chromium
       - name: Test PDF.js and OCR in Chromium
         run: node tests/top-genesis-browser-smoke.mjs
+      - name: Test trainee avatar loading and Back navigation regressions
+        run: node tests/trainee-navigation-avatar-regression.mjs
