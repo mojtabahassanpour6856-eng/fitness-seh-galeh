@@ -6,6 +6,7 @@ on:
       - 'tests/coach-plan-status-static.test.js'
       - 'tests/coach-meal-recipes-static.test.js'
       - 'tests/workout-export-session-order-restline.test.js'
+      - 'tests/profile-save-immediate-refresh-regression.test.js'
       - '.github/workflows/validate-inline-js.yml'
   pull_request:
     branches: [main]
@@ -54,3 +55,5 @@ jobs:
         run: node tests/coach-meal-recipes-static.test.js
       - name: Test workout PNG session order and rest-time line
         run: node tests/workout-export-session-order-restline.test.js
+      - name: Test trainee profile immediate refresh and nutrition shortcut removal
+        run: node tests/profile-save-immediate-refresh-regression.test.js
