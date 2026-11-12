@@ -710,7 +710,7 @@ Waist-Hip Ratio (WHO),0.889
     const body = document.querySelector("#topGenesisPublishedBody");
     return body && body.querySelectorAll("polyline").length >= 2;
   });
-  assert.match(await traineeProgressPage.locator("#topGenesisPublishedProgress").innerText(), /گزارش‌های تأییدشده آنالیز بدن/);
+  assert.match(await traineeProgressPage.locator("#topGenesisPublishedProgress").innerText(), /گزارش آنالیز بدن من/);
   assert.match(await traineeProgressPage.locator("#topGenesisPublishedBody").innerText(), /۷۹/);
   assert.match(await traineeProgressPage.locator("#topGenesisPublishedBody").innerText(), /تاریخچه آنالیزها/);
   // History filters and per-report detail panels must not alter the all-history trend.
