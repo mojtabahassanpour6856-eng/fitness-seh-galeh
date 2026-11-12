@@ -13737,6 +13737,16 @@ window.sehResetTurnstile=function(){};
       if(traineeHeader && typeof window.renderTraineeProfileHeader === 'function'){
         window.renderTraineeProfileHeader(traineeHeader);
       }
+      // The avatar's birth-date caption is a separate DOM node. Update it
+      // explicitly from the database-confirmed value so it never waits for
+      // a page/dashboard rebuild to show the new date.
+      const birthCaption = updated.birth_date && window.isoToJalaliDate
+        ? window.isoToJalaliDate(updated.birth_date)
+        : '';
+      document.querySelectorAll('#traineeDashboard .seh-profile-birth, .seh-profile-wrap .seh-profile-birth')
+        .forEach(node => {
+          node.textContent = birthCaption ? '🎂 ' + birthCaption : '🎂 تاریخ تولد ثبت نشده';
+        });
       alert('اطلاعات شخصی شما ذخیره شد و فیلدهای واردشده از پایگاه داده تأیید شدند.');
     }catch(e){
       console.error('trainee profile save failed', e);
