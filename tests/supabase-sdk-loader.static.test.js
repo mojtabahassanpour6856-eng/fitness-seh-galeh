@@ -31,6 +31,7 @@ const scriptStart = html.lastIndexOf('<script>', marker);
 const scriptEnd = html.indexOf('</script>', marker);
 assert.ok(scriptStart !== -1 && scriptEnd > marker, 'load-state helper must be inside a complete inline script');
 const loader = html.slice(scriptStart + '<script>'.length, scriptEnd);
+assert.ok(!loader.includes('document.write('), 'no parser-time CDN fallback should remain');
 assert.ok(!loader.includes('document.write('), 'load-state helper must not use parser-time document.write fallback');
 
 function harness(){
