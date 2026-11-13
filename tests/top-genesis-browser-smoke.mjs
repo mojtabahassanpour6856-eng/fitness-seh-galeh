@@ -638,6 +638,7 @@ Waist-Hip Ratio (WHO),0.889
   // Verify the production shell keeps only the hidden mount point and loads
   // the analyzer entry directly; the legacy archive must not be a dependency.
   const appShellSource = fs.readFileSync(path.join(root, "index.html"), "utf8");
+  const publicationSource = fs.readFileSync(path.join(root, "top-genesis-publication.js"), "utf8");
   assert.match(appShellSource, /id=["']bodyAnalysisEntryPanel["']/, "The production app must preserve the analyzer mount point.");
   assert.match(appShellSource, /top-genesis-pdf-app-embed\.js/, "The production app must load the analyzer entry directly.");
   assert.doesNotMatch(appShellSource, /async function loadTraineeAnalysis\s*\(/, "The obsolete trainee analysis renderer must be removed.");
@@ -781,7 +782,7 @@ Waist-Hip Ratio (WHO),0.889
   await traineeProgressPage.close();
   console.log('[smoke] trainee progress page closed');
 
-  const publicationSource = fs.readFileSync(path.join(root, "top-genesis-publication.js"), "utf8");
+
   const analyzerSource = fs.readFileSync(path.join(root, "top-genesis-pdf-test.html"), "utf8");
   const fullReportMigration = fs.readFileSync(path.join(root, "supabase/migrations/202611120002_top_genesis_full_trainee_report.sql"), "utf8");
   assert.match(analyzerSource, /buildTraineeSafeReportHtml/, "The trainee report must be derived from the exact analyzer output.");
