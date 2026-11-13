@@ -19,6 +19,7 @@ on:
       - 'tests/workout-export-session-order-restline.test.js'
       - 'tests/profile-save-immediate-refresh-regression.test.js'
       - 'tests/trainee-nutrition-load-resilience.test.js'
+      - 'tests/trainee-dashboard-mobile-layout-regression.test.js'
       - '.github/workflows/validate-inline-js.yml'
   workflow_dispatch:
 jobs:
