@@ -8672,7 +8672,7 @@ const oldWorkoutRenderer=window.renderWorkoutList;
     const list=Array.isArray(rows)?rows:[];
     const isProgressEntry=x=>{const note=String(x.notes||'').trim();return note.includes('MANUAL_PROGRESS_ENTRY')||note==='ثبت پیشرفت دوره‌ای';};
     const manualRows=list.filter(isProgressEntry);
-    const coachRows=list.filter(x=>!String(x.notes||'').includes('MANUAL_PROGRESS_ENTRY'));
+    const coachRows=list.filter(x=>!isProgressEntry(x));
     const view=$('coachAnalysisViewBody');
     if(view){
       const latestAnalysis=coachRows.slice().sort((a,b)=>String(b.analysis_date||'').localeCompare(String(a.analysis_date||'')))[0];
