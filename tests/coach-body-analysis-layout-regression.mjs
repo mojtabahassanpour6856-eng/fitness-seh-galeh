@@ -85,8 +85,10 @@ assert.doesNotMatch(embed, /insertAdjacentElement\("afterend", host\)/,
   "The PDF/ZIP analyzer must not render as a separate adjacent card.");
 assert.match(publication, /const target = \$\("bodyAnalysisEntryPanel"\)/,
   "Published analysis reports must be placed inside the unified Body Analysis card.");
-assert.match(html, /analysisSec=\$\('bodyAnalysisEntryPanel'\)/,
-  "The coach analysis receipt must be anchored to the Body Analysis card.");
+assert.match(html, /analysisSec=\$\('bodyAnalysis'\)/,
+  "The coach analysis receipt must be anchored to the main Body Analysis section, not the nested entry panel.");
+assert.match(html, /function ensureProgressCards\(\)[\s\S]*?const analysisSec=\$\('bodyAnalysis'\)[\s\S]*?if\(analysisSec\)analysisSec\.appendChild\(viewer\)/,
+  "The coach analysis receipt viewer must be mounted directly in the main Body Analysis section.");
 assert.match(html, /progressSec=\$\('progress'\)/,
   "Trend and history cards must be anchored to the Progress section.");
 assert.match(html, /id="progressEntryPanel"/,
