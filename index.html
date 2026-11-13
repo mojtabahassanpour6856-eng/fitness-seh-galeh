@@ -3511,7 +3511,7 @@ window.loadDashboard = loadDashboard;
       hip?'دور باسن: '+hip+' سانتی‌متر':null,
       abdomen?'دور شکم: '+abdomen+' سانتی‌متر':null,
       thigh?'دور ران: '+thigh+' سانتی‌متر':null].filter(Boolean).join('\n');
-    if(!window.confirm('اطلاعات پیشرفت شاگرد را بازبینی کنید:\n\n'+summary+'\n\nآیا اطلاعات درست است و ثبت شود؟'))return;
+    if(!window.confirm('اطلاعات پیشرفت خود را بازبینی کنید:\n\n'+summary+'\n\nآیا اطلاعات درست است و ثبت شود؟'))return;
     try{
       const encodedId=encodeURIComponent(traineeId),encodedDate=encodeURIComponent(d),encodedWeight=encodeURIComponent(w);
       const [existingWeights,existingManual]=await Promise.all([
@@ -3525,9 +3525,8 @@ window.loadDashboard = loadDashboard;
       if(!existingManual?.length)await sbWrite('/body_analyses','POST',{trainee_id:traineeId,analysis_date:d,weight:w,
         abdomen:abdomen,waist:waist,chest:chest,hip:hip,thigh:thigh,
         notes:'MANUAL_PROGRESS_ENTRY: ثبت دستی و تأییدشده توسط شاگرد'});
-      if(typeof loadClients==='function')await loadClients();
       if(typeof loadProgressHistory==='function')await loadProgressHistory();
-      alert('پیشرفت شاگرد با موفقیت ثبت شد و در نمودار و تاریخچه کارت پیشرفت نمایش داده می‌شود.');
+      alert('پیشرفت شما ثبت شد و برای مربی قابل مشاهده است.');
     }catch(e){alert('ثبت پیشرفت انجام نشد.\n'+(e?.message||String(e)));}
   };
   async function loadWaterGoal(){
