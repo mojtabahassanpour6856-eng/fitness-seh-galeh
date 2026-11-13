@@ -14151,16 +14151,21 @@ window.sehResetTurnstile=function(){};
   document.querySelectorAll('.nav button').forEach(function(b){b.classList.remove('active');});
   var nav=document.getElementById('navDash');
   if(nav){nav.classList.add('active');nav.hidden=false;nav.style.removeProperty('display');}
-  dash.scrollIntoView({behavior:'smooth',block:'start'});
+  // Avoid smooth-scroll/forced reflow during mobile Back restoration.
+  if(window.scrollY>0)window.scrollTo({top:0,behavior:'auto'});
   return true;
  }
  window.sehReturnToDashboard=function(){
   if(role()!=='trainee'){console.warn('بازگشت به داشبورد فقط برای نقش شاگرد است.');return;}
-  try{if(typeof window.dashOpen==='function')window.dashOpen('traineeDashboard');}catch(e){console.warn('مسیر عادی داشبورد ناموفق بود:',e);}
-  try{if(typeof window.loadDashboard==='function')window.loadDashboard();}catch(e){console.warn('بازسازی داشبورد ناموفق بود:',e);}
-  [0,80,250,600,1000].forEach(function(ms){setTimeout(revealDashboard,ms);});
+  // dashOpen is the single navigation path; the legacy popstate handler was
+  // removed so browser Back is handled only by the trainee history controller.
+  try{if(typeof window.dashOpen==='function')window.dashOpen('traineeDashboard');}
+  catch(e){console.warn('مسیر عادی داشبورد ناموفق بود:',e);}
+  try{if(typeof window.loadDashboard==='function')window.loadDashboard();}
+  catch(e){console.warn('بازسازی داشبورد ناموفق بود:',e);}
+  if(typeof requestAnimationFrame==='function')requestAnimationFrame(revealDashboard);
+  else setTimeout(revealDashboard,0);
  };
- window.addEventListener('popstate',function(){if(role()==='trainee'&&document.getElementById('activitySection')?.classList.contains('active'))window.sehReturnToDashboard();});
 })();
 </script>
 
