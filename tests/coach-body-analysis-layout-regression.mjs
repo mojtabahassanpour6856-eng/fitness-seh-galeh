@@ -37,8 +37,11 @@ assert.match(html, /id="progress" class="section"/,
   "The manual Progress section must remain intact.");
 
 
-const routeMatch = html.match(/<script id="COACH_BODY_ANALYSIS_DIRECT_ROUTE_V1">([\\s\\S]*?)<\\/script>/);
-assert.ok(routeMatch, "The direct coach route script must be present at the end of the document.");
+const routeOpen = '<script id="COACH_BODY_ANALYSIS_DIRECT_ROUTE_V1">';
+const routeStart = html.indexOf(routeOpen);
+const routeEnd = html.indexOf("</script>", routeStart);
+assert.ok(routeStart >= 0 && routeEnd > routeStart, "The direct coach route script must be present at the end of the document.");
+const routeSource = html.slice(routeStart + routeOpen.length, routeEnd);
 function makeNode() {
   const classes = new Set();
   const attributes = {};
@@ -76,7 +79,7 @@ function runRouteForRole(role) {
       : selector === ".nav button" ? [navAnalysis, navOther] : []
   };
   const window = { authProfile: { role } };
-  vm.runInNewContext(routeMatch[1], { window, document });
+  vm.runInNewContext(routeSource, { window, document });
   window.openCoachBodyAnalysis();
   return { bodyAnalysis, progress, dashboard, navAnalysis, navOther, panel };
 }
