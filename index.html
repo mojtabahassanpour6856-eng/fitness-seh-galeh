@@ -2731,6 +2731,14 @@ if($("prDate"))$("prDate").value=today();if($("anDate"))$("anDate").value=today(
 
 
 
+  function removeLegacyTraineeAnalysisCard(root){
+    const grid=root&&root.querySelector('.v4-dashboard');
+    if(!grid)return;
+    grid.querySelectorAll('.v4-card').forEach(card=>{
+      const action=String(card.getAttribute('onclick')||'');
+      if(/dashOpen\\(\\s*['\"]analysis['\"]\\s*\\)/.test(action)||/آنالیز بدن/.test(card.textContent||''))card.remove();
+    });
+  }
   function normalizeTraineeProfileCards(root){
     const grid=root&&root.querySelector('.v4-dashboard');
     if(!grid)return;
@@ -2752,6 +2760,7 @@ if($("prDate"))$("prDate").value=today();if($("anDate"))$("anDate").value=today(
       if(!grid||planCards.length<2) existing.remove();
       else {
         renderTraineeProfileHeader(existing);
+        removeLegacyTraineeAnalysisCard(existing);
         normalizeTraineeProfileCards(existing);
         moveActivityPanelToStudentDashboard();
         addTraineeWorkoutExportPanel();
@@ -2764,7 +2773,6 @@ if($("prDate"))$("prDate").value=today();if($("anDate"))$("anDate").value=today(
         <div class="v4-card" onclick="dashOpen('workout')"><b>🏋️</b>برنامه تمرینی<span id="dashWorkout" class="v4-small">—</span></div>
         <div class="v4-card" onclick="dashOpen('meal')"><b>🍎</b>برنامه غذایی<span id="dashMeal" class="v4-small">—</span></div>
         <div class="v4-card" onclick="dashOpen('progress')"><b>📈</b>پیشرفت<span id="dashProgress" class="v4-small">—</span></div>
-        <div class="v4-card" onclick="dashOpen('analysis')"><b>📊</b>آنالیز بدن<span id="dashAnalysis" class="v4-small">—</span></div>
         <div class="v4-card" onclick="dashOpen('water')"><b>💧</b>آب امروز<span id="dashWater" class="v4-small">—</span></div>
         <div class="v4-card" onclick="dashOpen('activity')"><b>🔥</b>فعالیت امروز<span id="dashActivity" class="v4-small">—</span></div>
         <div class="v4-card" onclick="dashOpen('goals')"><b>🎯</b>هدف من<span id="dashGoal" class="v4-small">ثبت و پیگیری هدف‌های شخصی</span></div>
@@ -2774,6 +2782,7 @@ if($("prDate"))$("prDate").value=today();if($("anDate"))$("anDate").value=today(
       </div>`;
     const page=document.querySelector('.page');const nav=document.querySelector('.nav');page.insertBefore(sec,nav.nextSibling);
     renderTraineeProfileHeader(sec);
+    removeLegacyTraineeAnalysisCard(sec);
     normalizeTraineeProfileCards(sec);
     moveActivityPanelToStudentDashboard();
     addTraineeWorkoutExportPanel();
@@ -4688,6 +4697,11 @@ window.toggleExerciseFavorite=async function(id,value){try{await sbWrite(`/train
   let workoutPlanOwnerId=null;
   const byId=id=>document.getElementById(id);
   const same=(a,b)=>String(a??'')===String(b??'');
+  function activeTraineeId(){
+    const profile=window.authProfile||(typeof authProfile!=='undefined'?authProfile:null);
+    if(profile?.role==='trainee')return profile.trainee_id||profile.id||null;
+    return typeof currentClient!=='undefined'?currentClient?.id||null:null;
+  }
   const currentTraineeId=()=>currentClient&&currentClient.id!=null?String(currentClient.id):null;
   const stillCurrent=(traineeId,planId)=>same(currentTraineeId(),traineeId)&&same(currentWorkoutPlanId,planId)&&same(workoutPlanOwnerId,traineeId);
   function setWorkoutMessage(message){const box=byId('workoutList');if(box)box.innerHTML=`<p class="muted">${message}</p>`;}
@@ -8667,7 +8681,7 @@ const oldWorkoutRenderer=window.renderWorkoutList;
     return {chart:$('progressTrendBody'),history:$('progressHistoryBody')};
   }
   function render(rows, traineeId, seq){
-    if(seq!==requestSeq || !currentClient || !same(currentClient.id,traineeId))return;
+    if(seq!==requestSeq || !same(activeTraineeId(),traineeId))return;
     const boxes=ensureProgressCards();if(!boxes)return;
     const list=Array.isArray(rows)?rows:[];
     const isProgressEntry=x=>{const note=String(x.notes||'').trim();return note.includes('MANUAL_PROGRESS_ENTRY')||note==='ثبت پیشرفت دوره‌ای';};
@@ -8706,8 +8720,7 @@ const oldWorkoutRenderer=window.renderWorkoutList;
     boxes.history.innerHTML='<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;min-width:560px"><thead><tr><th>تاریخ</th><th>وزن</th><th>چربی ٪</th><th>عضله</th><th>شکم</th><th>کمر</th><th>سینه</th><th>باسن</th><th>ران</th></tr></thead><tbody>'+historyRows.map(x=>'<tr><td>'+esc(dateFa(x.analysis_date))+'</td><td>'+esc(x.weight??'—')+'</td><td>'+esc(x.body_fat??'—')+'</td><td>'+esc(x.muscle_mass??'—')+'</td><td>'+esc(x.abdomen??'—')+'</td><td>'+esc(x.waist??'—')+'</td><td>'+esc(x.chest??'—')+'</td><td>'+esc(x.hip??'—')+'</td><td>'+esc(x.thigh??'—')+'</td></tr>').join('')+'</tbody></table></div>';
   }
   async function loadProgressData(){
-    const trainee=typeof currentClient!=='undefined'?currentClient:null;
-    const traineeId=trainee?.id;
+    const traineeId=activeTraineeId();
     const seq=++requestSeq;
     const boxes=ensureProgressCards();if(!boxes)return;
     if(!traineeId){boxes.chart.textContent='ابتدا شاگرد را انتخاب کنید.';boxes.history.textContent='ابتدا شاگرد را انتخاب کنید.';return;}
@@ -8758,7 +8771,7 @@ const oldWorkoutRenderer=window.renderWorkoutList;
   if(typeof oldShow==='function'&&!window.__progressShowWrapped){
     window.showSection=function(id,btn){
       const result=oldShow.apply(this,arguments);
-      if(id==='progress'&&typeof currentClient!=='undefined'&&currentClient)loadProgressData();
+      if(id==='progress'&&activeTraineeId())loadProgressData();
       return result;
     };
     window.__progressShowWrapped=true;
