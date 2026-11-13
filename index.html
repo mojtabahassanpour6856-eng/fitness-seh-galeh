@@ -2355,32 +2355,7 @@ async function addWorkoutExercise(){if(!currentClient){alert('اول شاگرد 
 async function deleteWorkoutExercise(id){if(!confirm('این حرکت از برنامه حذف شود؟'))return;try{await sbWrite(`/trainee_workout_exercises?id=eq.${encodeURIComponent(id)}`,'DELETE',{});await loadWorkoutForClient();}catch(e){alert('حذف حرکت انجام نشد.\n'+e.message);}}
 
 async function saveProgress(){
- if(typeof authProfile==='undefined'||authProfile?.role!=="trainee"){
-  alert("ثبت دستی پیشرفت فقط از حساب خود شاگرد امکان‌پذیر است.");return;
- }
- if(!currentClient){alert("ابتدا حساب شاگرد را بررسی کنید.");return;}
- const traineeId=currentClient.id;
- const date=$("prDate").value||today();
- const weight=Number($("prWeight").value);
- if(!date){alert("تاریخ ثبت را انتخاب کنید.");return;}
- if(!Number.isFinite(weight)||weight<=0){alert("وزن را به کیلوگرم وارد کنید.");return;}
- const body={trainee_id:traineeId,log_date:date,weight};
- const measurements={
-  trainee_id:traineeId,analysis_date:date,weight,
-  waist:Number($("waist").value)||null,
-  chest:Number($("chest").value)||null,
-  hip:Number($("hip").value)||null,
-  abdomen:Number($("glute").value)||null,
-  thigh:Number($("thigh").value)||null,
-  notes:"MANUAL_PROGRESS_ENTRY: ثبت دستی و تأییدشده توسط شاگرد"
- };
- try{
-  if(!currentClient||String(currentClient.id)!==String(traineeId))throw new Error("حساب شاگرد هنگام ثبت تغییر کرده است؛ دوباره تلاش کنید.");
-  await sbWrite("/weight_logs","POST",body);
-  if(!currentClient||String(currentClient.id)!==String(traineeId))throw new Error("حساب شاگرد هنگام ثبت تغییر کرده است؛ ادامه ثبت متوقف شد.");
-  await sbWrite("/body_analyses","POST",measurements);
-  alert("وزن و اندازه‌های پیشرفت شما ثبت شد و برای مربی قابل مشاهده است.");
- }catch(e){alert("ثبت پیشرفت انجام نشد.\\n"+e.message);}
+ return window.saveProgress();
 }
 async function saveAnalysis(){
  if(typeof authProfile==="undefined"||authProfile?.role!=="coach"){alert("ثبت آنالیز دستگاه فقط توسط مربی انجام می‌شود.");return;}
@@ -3500,35 +3475,31 @@ window.loadDashboard = loadDashboard;
 
   window.saveProgress=async function(){
     if(typeof authProfile==='undefined'||authProfile?.role!=='trainee')return alert('ثبت دستی پیشرفت فقط از حساب خود شاگرد امکان‌پذیر است.');
-    if(!currentClient)return alert('ابتدا شاگرد موردنظر را انتخاب کنید.');
+    if(!currentClient)return alert('ابتدا وارد حساب شاگرد خود شوید.');
     const traineeId=currentClient.id;
     const d=$id('prDate').value||today(),w=+$id('prWeight').value||null;
     const waist=+$id('waist').value||null,chest=+$id('chest').value||null,
       hip=+$id('hip').value||null,abdomen=+$id('glute').value||null,thigh=+$id('thigh').value||null;
+    if(!d)return alert('تاریخ ثبت را انتخاب کنید.');
     if(!w||w<=0)return alert('وزن معتبر شاگرد را به کیلوگرم وارد کنید.');
     const summary=['تاریخ: '+d,'وزن: '+w+' کیلوگرم',
       waist?'دور کمر: '+waist+' سانتی‌متر':null,
       chest?'دور سینه: '+chest+' سانتی‌متر':null,
       hip?'دور باسن: '+hip+' سانتی‌متر':null,
       abdomen?'دور شکم: '+abdomen+' سانتی‌متر':null,
-      thigh?'دور ران: '+thigh+' سانتی‌متر':null].filter(Boolean).join('\n');
-    if(!window.confirm('اطلاعات پیشرفت خود را بازبینی کنید:\n\n'+summary+'\n\nآیا اطلاعات درست است و ثبت شود؟'))return;
+      thigh?'دور ران: '+thigh+' سانتی‌متر':null].filter(Boolean).join('\\n');
+    if(!window.confirm('اطلاعات پیشرفت خود را بازبینی کنید:\\n\\n'+summary+'\\n\\nآیا اطلاعات درست است و ثبت شود؟'))return;
     try{
-      const encodedId=encodeURIComponent(traineeId),encodedDate=encodeURIComponent(d),encodedWeight=encodeURIComponent(w);
-      const [existingWeights,existingManual]=await Promise.all([
-        sbGet('/weight_logs?trainee_id=eq.'+encodedId+'&log_date=eq.'+encodedDate+'&weight=eq.'+encodedWeight+'&select=log_date,weight&limit=1'),
-        sbGet('/body_analyses?trainee_id=eq.'+encodedId+'&analysis_date=eq.'+encodedDate+'&weight=eq.'+encodedWeight+'&notes=like.*MANUAL_PROGRESS_ENTRY*&select=analysis_date,weight,notes&limit=1')
-      ]);
-      if(!currentClient||String(currentClient.id)!==String(traineeId))throw new Error('شاگرد هنگام ثبت تغییر کرده است؛ ثبت متوقف شد.');
-      if(existingWeights?.length&&existingManual?.length)return alert('این وزن و تاریخ قبلاً برای این شاگرد ثبت شده است؛ از ثبت تکراری جلوگیری شد.');
-      if(!existingWeights?.length)await sbWrite('/weight_logs','POST',{trainee_id:traineeId,log_date:d,weight:w});
-      if(!currentClient||String(currentClient.id)!==String(traineeId))throw new Error('شاگرد هنگام ثبت تغییر کرده است؛ ادامه ثبت متوقف شد.');
-      if(!existingManual?.length)await sbWrite('/body_analyses','POST',{trainee_id:traineeId,analysis_date:d,weight:w,
-        abdomen:abdomen,waist:waist,chest:chest,hip:hip,thigh:thigh,
-        notes:'MANUAL_PROGRESS_ENTRY: ثبت دستی و تأییدشده توسط شاگرد'});
+      if(!currentClient||String(currentClient.id)!==String(traineeId))throw new Error('حساب شاگرد هنگام ثبت تغییر کرده است؛ دوباره تلاش کنید.');
+      const result=await sbWrite('/rpc/record_trainee_progress','POST',{
+        p_trainee_id:traineeId,p_log_date:d,p_weight:w,
+        p_waist:waist,p_chest:chest,p_hip:hip,p_abdomen:abdomen,p_thigh:thigh
+      });
+      if(!currentClient||String(currentClient.id)!==String(traineeId))throw new Error('حساب شاگرد هنگام ثبت تغییر کرده است؛ صفحه را تازه‌سازی کنید.');
       if(typeof loadProgressHistory==='function')await loadProgressHistory();
-      alert('پیشرفت شما ثبت شد و برای مربی قابل مشاهده است.');
-    }catch(e){alert('ثبت پیشرفت انجام نشد.\n'+(e?.message||String(e)));}
+      const outcome=Array.isArray(result)?result[0]:result;
+      alert(outcome?.duplicate?'این پیشرفت قبلاً ثبت شده بود؛ ثبت تکراری انجام نشد.':'پیشرفت شما به‌صورت کامل ثبت شد و برای مربی قابل مشاهده است.');
+    }catch(e){alert('ثبت پیشرفت انجام نشد.\\n'+(e?.message||String(e)));}
   };
   async function loadWaterGoal(){
     if(!currentClient)return;const traineeId=currentClient.id;
