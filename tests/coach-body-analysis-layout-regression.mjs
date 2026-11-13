@@ -47,8 +47,8 @@ assert.match(progressMigration, /security invoker/i,
   "The atomic progress RPC must preserve caller privileges and RLS.");
 assert.match(progressMigration, /private\\.is_coach\\(\\)/,
   "The database RPC must reject coach accounts.");
-assert.match(progressMigration, /private\\.can_access_trainee\\(p_trainee_id\\)/,
-  "The database RPC must enforce trainee ownership/access.");
+assert.match(progressMigration, /auth_user_id = auth\\.uid\\(\\)[\\s\\S]*?approval_status = 'active'/,
+  "The database RPC must enforce exact ownership by the active trainee account.");
 assert.match(progressMigration, /pg_advisory_xact_lock/,
   "Concurrent duplicate submissions must be serialized within the transaction.");
 assert.match(progressMigration, /insert into public\\.weight_logs[\\s\\S]*?insert into public\\.body_analyses/,
