@@ -2355,15 +2355,18 @@ async function addWorkoutExercise(){if(!currentClient){alert('اول شاگرد 
 async function deleteWorkoutExercise(id){if(!confirm('این حرکت از برنامه حذف شود؟'))return;try{await sbWrite(`/trainee_workout_exercises?id=eq.${encodeURIComponent(id)}`,'DELETE',{});await loadWorkoutForClient();}catch(e){alert('حذف حرکت انجام نشد.\n'+e.message);}}
 
 async function saveProgress(){
- if(!currentClient){alert("اول شاگرد را انتخاب کنید.");return;}
+ if(typeof authProfile==='undefined'||authProfile?.role!=="trainee"){
+  alert("ثبت دستی پیشرفت فقط از حساب خود شاگرد امکان‌پذیر است.");return;
+ }
+ if(!currentClient){alert("ابتدا حساب شاگرد را بررسی کنید.");return;}
  const traineeId=currentClient.id;
  const date=$("prDate").value||today();
  const weight=Number($("prWeight").value);
  if(!date){alert("تاریخ ثبت را انتخاب کنید.");return;}
  if(!Number.isFinite(weight)||weight<=0){alert("وزن را به کیلوگرم وارد کنید.");return;}
- const body={trainee_id:traineeId,log_date:date,weight:weight};
+ const body={trainee_id:traineeId,log_date:date,weight};
  const measurements={
-  trainee_id:traineeId,analysis_date:date,weight:weight,
+  trainee_id:traineeId,analysis_date:date,weight,
   waist:Number($("waist").value)||null,
   chest:Number($("chest").value)||null,
   hip:Number($("hip").value)||null,
@@ -2372,11 +2375,9 @@ async function saveProgress(){
   notes:"MANUAL_PROGRESS_ENTRY: ثبت دستی و تأییدشده توسط شاگرد"
  };
  try{
-  if(authProfile?.role!=="trainee"){
-   alert("ثبت دستی پیشرفت فقط از حساب خود شاگرد امکان‌پذیر است.");return;
-  }
+  if(!currentClient||String(currentClient.id)!==String(traineeId))throw new Error("حساب شاگرد هنگام ثبت تغییر کرده است؛ دوباره تلاش کنید.");
   await sbWrite("/weight_logs","POST",body);
-  if(!currentClient||String(currentClient.id)!==String(traineeId))throw new Error("شاگرد هنگام ثبت تغییر کرده است؛ لطفاً دوباره تلاش کنید.");
+  if(!currentClient||String(currentClient.id)!==String(traineeId))throw new Error("حساب شاگرد هنگام ثبت تغییر کرده است؛ ادامه ثبت متوقف شد.");
   await sbWrite("/body_analyses","POST",measurements);
   alert("وزن و اندازه‌های پیشرفت شما ثبت شد و برای مربی قابل مشاهده است.");
  }catch(e){alert("ثبت پیشرفت انجام نشد.\\n"+e.message);}
