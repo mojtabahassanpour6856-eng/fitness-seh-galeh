@@ -62,7 +62,7 @@
       card.id = CARD_ID;
       card.className = "card";
       card.style.cssText = "margin-top:14px;border:1px solid #d8b65d;background:#fffdf8";
-      card.innerHTML = '<h2>📈 گزارش آنالیز بدن من</h2>' +
+      card.innerHTML = '<h2>📈 گزارش‌های تأییدشده آنالیز بدن</h2>' +
         '<p class="muted">گزارش اصلی و تاریخچه آنالیزهایی که مربی بررسی و برای شما ارسال کرده است.</p>' +
         '<div id="topGenesisPublishedBody" class="muted">در حال دریافت گزارش‌ها…</div>';
     }
