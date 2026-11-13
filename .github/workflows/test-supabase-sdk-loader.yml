@@ -5,6 +5,10 @@ on:
     branches: [main]
     paths:
       - 'index.html'
+      - 'vendor/supabase-2.119.0.js'
+      - 'vendor/supabase-2.119.0.js.sha256'
+      - 'vendor/SUPABASE-SDK-VERSION.txt'
+      - 'vendor/SUPABASE-SDK-LICENSE.txt'
       - 'tests/supabase-sdk-loader.static.test.js'
       - '.github/workflows/test-supabase-sdk-loader.yml'
   push:
