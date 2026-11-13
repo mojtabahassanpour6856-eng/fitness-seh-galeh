@@ -638,12 +638,17 @@ Waist-Hip Ratio (WHO),0.889
   // Verify the production shell keeps only the hidden mount point and loads
   // the analyzer entry directly; the legacy archive must not be a dependency.
   const appShellSource = fs.readFileSync(path.join(root, "index.html"), "utf8");
+  const publicationSource = fs.readFileSync(path.join(root, "top-genesis-publication.js"), "utf8");
   assert.match(appShellSource, /id=["']bodyAnalysisEntryPanel["']/, "The production app must preserve the analyzer mount point.");
   assert.match(appShellSource, /top-genesis-pdf-app-embed\.js/, "The production app must load the analyzer entry directly.");
   assert.doesNotMatch(appShellSource, /async function loadTraineeAnalysis\s*\(/, "The obsolete trainee analysis renderer must be removed.");
   assert.doesNotMatch(appShellSource, /loadTraineeAnalysis\s*\(/, "The obsolete trainee analysis renderer must not be called.");
   assert.doesNotMatch(appShellSource, /id=["\x27]traineeAnalysisSheet|id=["\x27]traineeAnalysisChart/, "Legacy trainee analysis panels must not be recreated.");
   assert.match(appShellSource, /traineeAnalysisArchive[^>]*hidden|hidden[^>]*traineeAnalysisArchive/, "The published report card mount anchor must remain available.");
+  assert.match(publicationSource, /installTraineeAnalysisNavigationGuard/, "The trainee analysis route must be kept visible after legacy navigation callbacks.");
+  assert.match(publicationSource, /setTimeout\(reveal, 420\)/, "The trainee analysis route must survive delayed dashboard restoration callbacks.");
+  assert.match(publicationSource, /removeLegacyProgressAnalysisCards/, "Legacy body-analysis widgets must be removed from the progress panel.");
+  assert.match(publicationSource, /\["coachAnalysisView", "progressTrend", "progressHistory"\]/, "Only legacy body-analysis widgets may be removed; manual progress data remains untouched.");
   assert.doesNotMatch(appShellSource, /<script[^>]+src=["'][^"']*top-genesis-archive\.js/i,
     "The production app must not load the legacy archive module.");
 
@@ -711,16 +716,52 @@ Waist-Hip Ratio (WHO),0.889
         return chain;
       }
     };
+    const nav=document.createElement("div");
+    nav.className="nav";
+    nav.innerHTML='<button type="button" onclick="dashOpen(\'analysis\')">آنالیز بدن</button>';
+    document.body.appendChild(nav);
+    const dashboard=document.createElement("section");
+    dashboard.id="traineeDashboard";
+    dashboard.className="section active";
+    document.body.appendChild(dashboard);
     const section=document.createElement("section");
     section.id="traineeAnalysis";
-    section.className="section active";
+    section.className="section";
+    section.style.display="none";
     section.innerHTML='<div id="traineeAnalysisArchive"></div>';
     document.body.appendChild(section);
+    const progress=document.createElement("section");
+    progress.id="progress";
+    progress.className="section";
+    progress.innerHTML='<div id="manualProgressCard" class="card">پیشرفت دستی شاگرد</div><div id="coachAnalysisView" class="card"></div><div id="progressTrend" class="card"></div><div id="progressHistory" class="card"></div>';
+    document.body.appendChild(progress);
+    window.dashOpen=function(key) {
+      document.querySelectorAll(".section").forEach(item => item.classList.remove("active"));
+      if (key === "analysis") dashboard.classList.add("active");
+      if (key === "progress") progress.classList.add("active");
+    };
   });
   console.log("[smoke] trainee fixture configured");
   await traineeProgressPage.addScriptTag({ path: path.join(root, "top-genesis-publication.js") });
   console.log('[smoke] publication script loaded');
-  await traineeProgressPage.waitForSelector("#topGenesisPublishedProgress");
+  await traineeProgressPage.waitForSelector("#topGenesisPublishedProgress", { state: "attached" });
+  await traineeProgressPage.evaluate(() => window.dashOpen("analysis"));
+  await traineeProgressPage.waitForSelector("#topGenesisPublishedProgress", { state: "visible" });
+  await traineeProgressPage.waitForFunction(() =>
+    document.querySelector("#traineeAnalysis")?.classList.contains("active") &&
+    getComputedStyle(document.querySelector("#traineeAnalysis")).display !== "none");
+  assert.equal(await traineeProgressPage.locator("#progress #coachAnalysisView, #progress #progressTrend, #progress #progressHistory").count(), 0,
+    "Legacy analysis cards must be removed from progress while the manual progress section remains intact.");
+  assert.equal(await traineeProgressPage.locator("#progress #manualProgressCard").count(), 1,
+    "The trainee's manual progress card must remain untouched.");
+  await traineeProgressPage.evaluate(() => window.dashOpen("progress"));
+  await traineeProgressPage.waitForTimeout(500);
+  assert.equal(await traineeProgressPage.locator("#progress").evaluate(el => el.classList.contains("active")), true,
+    "A delayed analysis recovery must not override later navigation to manual progress.");
+  assert.equal(await traineeProgressPage.locator("#progress #manualProgressCard").count(), 1);
+  await traineeProgressPage.evaluate(() => window.dashOpen("analysis"));
+  await traineeProgressPage.waitForFunction(() => document.querySelector("#traineeAnalysis")?.classList.contains("active"));
+  console.log('[smoke] trainee analysis route, manual progress preservation and navigation passed');
   console.log('[smoke] trainee report card mounted');
   await traineeProgressPage.waitForFunction(() => {
     const body = document.querySelector("#topGenesisPublishedBody");
@@ -777,7 +818,7 @@ Waist-Hip Ratio (WHO),0.889
   await traineeProgressPage.close();
   console.log('[smoke] trainee progress page closed');
 
-  const publicationSource = fs.readFileSync(path.join(root, "top-genesis-publication.js"), "utf8");
+
   const analyzerSource = fs.readFileSync(path.join(root, "top-genesis-pdf-test.html"), "utf8");
   const fullReportMigration = fs.readFileSync(path.join(root, "supabase/migrations/202611120002_top_genesis_full_trainee_report.sql"), "utf8");
   assert.match(analyzerSource, /buildTraineeSafeReportHtml/, "The trainee report must be derived from the exact analyzer output.");
