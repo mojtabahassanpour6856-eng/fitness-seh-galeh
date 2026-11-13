@@ -34,8 +34,8 @@ assert.match(html, /notes:"MANUAL_PROGRESS_ENTRY: ثبت دستی توسط مر�
   "New coach-entered progress records must carry the explicit progress marker.");
 assert.match(html, /const manualRows=list\.filter\(isProgressEntry\)/,
   "Progress trend and history must include all explicitly classified manual progress records.");
-assert.match(html, /const coachRows=list\.filter\(x=>!String\(x\.notes\|\|''\)\.includes\('MANUAL_PROGRESS_ENTRY'\)\)/,
-  "Manual progress records must be excluded from the coach analysis receipt.");
+assert.match(html, /const coachRows=list\.filter\(x=>!isProgressEntry\(x\)\)/,
+  "All manual progress records, including legacy coach entries, must be excluded from the coach analysis receipt.");
 assert.match(html, /const weighted=manualRows\.filter/,
   "Progress trend must use progress records only.");
 assert.match(html, /const historyRows=manualRows\.slice\(\)/,
