@@ -625,6 +625,9 @@ Waist-Hip Ratio (WHO),0.889
   const appShellSource = fs.readFileSync(path.join(root, "index.html"), "utf8");
   assert.match(appShellSource, /id=["']bodyAnalysisEntryPanel["']/, "The production app must contain the body-analysis mount point.");
   assert.match(appShellSource, /top-genesis-archive\.js/, "The production app must load the existing Top Genesis archive module.");
+  assert.doesNotMatch(appShellSource, /async function loadTraineeAnalysis\s*\(/, "The obsolete trainee body-analysis renderer must be removed.");
+  assert.doesNotMatch(appShellSource, /loadTraineeAnalysis\s*\(/, "The obsolete trainee body-analysis renderer must not be called.");
+  assert.match(appShellSource, /traineeAnalysisArchive[^>]*hidden|hidden[^>]*traineeAnalysisArchive/, "The publication card must retain its mount anchor without restoring legacy panels.");
 
   // Verify the coach-only app entry mounts in the existing analysis area,
   // embeds the isolated analyzer, and stays hidden for trainee sessions.
