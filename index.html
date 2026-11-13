@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <!-- Low-risk startup optimization: warm up connections to services used on app startup. -->
 <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
-<link rel="preload" as="script" href="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2" crossorigin>
+<link rel="preload" as="script" href="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.119.0" crossorigin>
 <link rel="dns-prefetch" href="//cdn.jsdelivr.net">
 <link rel="preconnect" href="https://qfakyudgidsumeuoqoot.supabase.co" crossorigin>
 <link rel="dns-prefetch" href="//qfakyudgidsumeuoqoot.supabase.co">
@@ -2409,7 +2409,61 @@ async function loadActivityToday(){
 function esc(s){return String(s).replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[m]));}
 
 </script>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2" onerror="this.onerror=null;this.src='https://unpkg.com/@supabase/supabase-js@2'"></script>
+<script>
+/* SEH_SUPABASE_SDK_LOADER: pinned SDK with bounded primary/fallback attempts. */
+(function(){
+  'use strict';
+  var fallback='https://unpkg.com/@supabase/supabase-js@2.119.0';
+  var timer=null;
+  function showFailure(){
+    window.__sehSupabaseSdkLoadFailed=true;
+    var box=document.getElementById('authError');
+    if(box){
+      box.style.display='block';
+      box.textContent='کتابخانه اتصال پس از دو تلاش بارگذاری نشد. اتصال اینترنت یا دسترسی به CDN را بررسی کنید و دوباره صفحه را بارگذاری کنید.';
+    }
+  }
+  function armTimeout(){
+    if(timer)clearTimeout(timer);
+    timer=setTimeout(function(){
+      var tag=document.getElementById('seh-supabase-sdk');
+      if(!tag)return;
+      if(tag.dataset.fallbackTried!=='1'){
+        tag.dataset.fallbackTried='1';
+        tag.src=fallback;
+        armTimeout();
+      }else showFailure();
+    },10000);
+  }
+  window.__sehSupabaseSdkLoaded=function(){
+    if(timer)clearTimeout(timer);
+    if(window.supabase&&typeof window.supabase.createClient==='function'){
+      window.__sehSupabaseSdkReady=true;
+      window.__sehSupabaseSdkLoadFailed=false;
+      return;
+    }
+    var tag=document.getElementById('seh-supabase-sdk');
+    if(tag&&tag.dataset.fallbackTried!=='1'){
+      tag.dataset.fallbackTried='1';
+      tag.src=fallback;
+      armTimeout();
+    }else showFailure();
+  };
+  window.__sehSupabaseSdkFailed=function(){
+    var tag=document.getElementById('seh-supabase-sdk');
+    if(tag&&tag.dataset.fallbackTried!=='1'){
+      tag.dataset.fallbackTried='1';
+      tag.src=fallback;
+      armTimeout();
+    }else{
+      if(timer)clearTimeout(timer);
+      showFailure();
+    }
+  };
+  armTimeout();
+})();
+</script>
+<script id="seh-supabase-sdk" src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.119.0" onload="window.__sehSupabaseSdkLoaded()" onerror="window.__sehSupabaseSdkFailed()"></script>
 <script>
 window.AUTH_SUPABASE=window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY,{auth:{autoRefreshToken:true,persistSession:true,detectSessionInUrl:true,storage:window.localStorage}});
 /* SEH_FIX_ORIGINAL_FETCH_SCOPE_20261016: expose the original browser fetch across classic-script scopes */
