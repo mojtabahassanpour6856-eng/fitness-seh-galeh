@@ -2433,7 +2433,7 @@ function esc(s){return String(s).replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",
     if(fallbackTried){showFailure();return;}
     fallbackTried=true;
     window.__sehSupabaseSdkFallbackTried=true;
-    document.write('<script id="seh-supabase-sdk-fallback" src="'+fallback+'" onload="window.__sehSupabaseSdkLoaded()" onerror="window.__sehSupabaseSdkFailed()"><\\/script>');
+    document.write('<script id="seh-supabase-sdk-fallback" src="'+fallback+'" onload="window.__sehSupabaseSdkLoaded()" onerror="window.__sehSupabaseSdkFailed()"><\/script>');
   }
   window.__sehSupabaseSdkLoaded=function(){
     if(window.supabase&&typeof window.supabase.createClient==='function'){
