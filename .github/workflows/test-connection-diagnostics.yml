@@ -1,0 +1,31 @@
+name: Connection diagnostics safety test
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'experiments/connection-diagnostics.html'
+      - 'tests/connection-diagnostics.static.test.js'
+      - '.github/workflows/test-connection-diagnostics.yml'
+  push:
+    branches:
+      - audit/network-reliability-diagnostics-20261113
+    paths:
+      - 'experiments/connection-diagnostics.html'
+      - 'tests/connection-diagnostics.static.test.js'
+      - '.github/workflows/test-connection-diagnostics.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  diagnostics-safety:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Validate diagnostics page safety and required probes
+        run: node tests/connection-diagnostics.static.test.js
