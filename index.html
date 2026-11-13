@@ -3419,6 +3419,40 @@ window.loadDashboard = loadDashboard;
 
 
 
+
+<script id="SEH_PROGRESS_SECTION_SCROLL_TO_TOP_V1">
+(function(){
+  'use strict';
+  if(window.__sehProgressSectionScrollToTopV1)return;
+  window.__sehProgressSectionScrollToTopV1=true;
+  function revealProgressAtTop(){
+    var section=document.getElementById('progress');
+    if(!section||!section.classList.contains('active'))return;
+    requestAnimationFrame(function(){
+      requestAnimationFrame(function(){
+        if(!section.classList.contains('active'))return;
+        var top=section.getBoundingClientRect().top+window.scrollY;
+        window.scrollTo({top:Math.max(0,top-12),behavior:'auto'});
+      });
+    });
+  }
+  var oldShow=window.showSection;
+  if(typeof oldShow==='function'){
+    window.showSection=function(id,btn){
+      var result=oldShow.apply(this,arguments);
+      if(String(id)==='progress')revealProgressAtTop();
+      return result;
+    };
+  }
+  document.addEventListener('click',function(event){
+    var button=event.target&&event.target.closest?event.target.closest('.nav button'):null;
+    if(!button)return;
+    setTimeout(revealProgressAtTop,0);
+    setTimeout(revealProgressAtTop,180);
+  },true);
+})();
+<\/script>
+
 </body></html>`;
     const w=window.open('','_blank');if(w){w.document.write(html);w.document.close();}
   };
