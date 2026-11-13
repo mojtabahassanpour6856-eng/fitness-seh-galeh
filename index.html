@@ -2467,6 +2467,59 @@ function esc(s){return String(s).replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",
 <script>
 window.AUTH_SUPABASE=window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY,{auth:{autoRefreshToken:true,persistSession:true,detectSessionInUrl:true,storage:window.localStorage}});
 /* SEH_FIX_ORIGINAL_FETCH_SCOPE_20261016: expose the original browser fetch across classic-script scopes */
+/* SEH_HTML2CANVAS_LOADER: bounded, sequential CDN fallback for image exports. */
+window.__sehLoadHtml2Canvas=function(targetWindow,targetDocument){
+  if(targetWindow&&typeof targetWindow.html2canvas==='function')return Promise.resolve();
+  if(targetWindow&&targetWindow.__sehHtml2CanvasPromise)return targetWindow.__sehHtml2CanvasPromise;
+  var promise=new Promise(function(resolve,reject){
+    var sources=[
+      'https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js',
+      'https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js'
+    ];
+    var index=0,finished=false,timer=null;
+    function finish(error){
+      if(finished)return;
+      finished=true;
+      if(timer)clearTimeout(timer);
+      if(targetWindow)targetWindow.__sehHtml2CanvasPromise=null;
+      if(error)reject(error);else resolve();
+    }
+    function attempt(){
+      if(index>=sources.length){
+        finish(new Error('ابزار ساخت عکس از دو منبع بارگذاری نشد. اتصال اینترنت را بررسی کنید؛ امکان چاپ یا ذخیره PDF همچنان در دسترس است.'));
+        return;
+      }
+      var script=targetDocument.createElement('script');
+      var source=sources[index++];
+      var attemptDone=false;
+      function clearAttempt(){
+        if(attemptDone)return;
+        attemptDone=true;
+        if(timer)clearTimeout(timer);
+        script.onload=null;
+        script.onerror=null;
+      }
+      function retry(){
+        clearAttempt();
+        if(script.parentNode)script.parentNode.removeChild(script);
+        attempt();
+      }
+      script.src=source;
+      script.onload=function(){
+        clearAttempt();
+        if(targetWindow&&typeof targetWindow.html2canvas==='function')finish();
+        else retry();
+      };
+      script.onerror=retry;
+      timer=setTimeout(retry,10000);
+      targetDocument.head.appendChild(script);
+    }
+    attempt();
+  });
+  if(targetWindow)targetWindow.__sehHtml2CanvasPromise=promise;
+  return promise;
+};
+
 const AUTH_SUPABASE=window.AUTH_SUPABASE;const ORIGINAL_FETCH=(typeof window.__SEH_ORIGINAL_FETCH==="function"?window.__SEH_ORIGINAL_FETCH:window.fetch.bind(window));window.__SEH_ORIGINAL_FETCH=ORIGINAL_FETCH;
 
 /* Cache the auth session briefly: previously every single REST request waited
@@ -6389,19 +6442,7 @@ body.workout-output .empty-cell{display:none!important}
           const doc=popup.document;
           if(!popup.html2canvas){
             button.textContent='در حال بارگذاری ابزار تصویر…';
-            await new Promise((resolve,reject)=>{
-              const script=doc.createElement('script');
-              script.src='https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js';
-              script.onload=resolve;
-              script.onerror=()=>{
-                const fallback=doc.createElement('script');
-                fallback.src='https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js';
-                fallback.onload=resolve;
-                fallback.onerror=()=>reject(new Error('ابزار ساخت عکس از دو منبع بارگذاری نشد. اتصال اینترنت را بررسی کنید؛ گزینه چاپ/ذخیره PDF همچنان در همین برگه موجود است.'));
-                doc.head.appendChild(fallback);
-              };
-              doc.head.appendChild(script);
-            });
+            await window.__sehLoadHtml2Canvas(popup,doc);
           }
           actions=doc.querySelector('.actions');
           if(actions){actionsDisplay=actions.style.display;actions.style.display='none';}
@@ -11046,9 +11087,7 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
    (async()=>{
      let stage=null,url=null;
      try{
-       if(!window.html2canvas){
-         await new Promise((resolve,reject)=>{const script=document.createElement('script');script.src='https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js';script.onload=resolve;script.onerror=()=>reject(new Error('ابزار ساخت عکس بارگذاری نشد؛ اینترنت را بررسی کنید.'));document.head.appendChild(script);});
-       }
+       if(!window.html2canvas)await window.__sehLoadHtml2Canvas(window,document);
        stage=document.createElement('div');stage.dir='rtl';stage.style.cssText='position:fixed;left:-10000px;top:0;width:min(780px,95vw);background:#fff;z-index:-1;pointer-events:none';
        clone.style.cssText+=';display:block;width:100%;max-width:780px;margin:0;background:#fffdf7';
        stage.appendChild(clone);document.body.appendChild(stage);
@@ -11160,7 +11199,7 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
   if(status)status.textContent='در حال آماده‌سازی عکس؛ صفحه فعلی باز می‌ماند…';
   let stage=null,url=null;
   try{
-   if(!window.html2canvas)await new Promise((resolve,reject)=>{const s=document.createElement('script');s.src='https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js';s.onload=resolve;s.onerror=()=>reject(new Error('ابزار ساخت عکس بارگذاری نشد؛ اینترنت را بررسی کنید.'));document.head.appendChild(s);});
+   if(!window.html2canvas)await window.__sehLoadHtml2Canvas(window,document);
    const clone=card.cloneNode(true);clone.id='smppExportCanvas';clone.querySelector('.smpp-actions')?.remove();
    stage=document.createElement('div');stage.dir='rtl';stage.style.cssText='position:fixed;left:-10000px;top:0;width:780px;background:#fff;z-index:-1;pointer-events:none';
    clone.style.cssText+=';display:block;width:100%;max-width:780px;margin:0;background:#fffdf7';
@@ -11601,7 +11640,7 @@ body.workout-output.workout-compact{
   if(status)status.textContent='در حال آماده‌سازی عکس…';
   let stage=null,url=null;
   try{
-   if(!window.html2canvas)await new Promise((resolve,reject)=>{const script=document.createElement('script');script.src='https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js';script.onload=resolve;script.onerror=()=>reject(new Error('ابزار ساخت عکس بارگذاری نشد؛ اینترنت را بررسی کنید.'));document.head.appendChild(script);});
+   if(!window.html2canvas)await window.__sehLoadHtml2Canvas(window,document);
    const clone=card.cloneNode(true);clone.querySelector('.smpp-actions')?.remove();
    stage=document.createElement('div');stage.dir='rtl';stage.style.cssText='position:fixed;left:-10000px;top:0;width:780px;background:#fff;z-index:-1;pointer-events:none';
    clone.style.cssText+=';display:block;width:100%;max-width:780px;margin:0;background:#fffdf7';
