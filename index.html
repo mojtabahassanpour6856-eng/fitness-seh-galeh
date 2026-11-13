@@ -8661,6 +8661,32 @@ const oldWorkoutRenderer=window.renderWorkoutList;
     return Number.isNaN(d.getTime())?esc(v):d.toLocaleDateString('fa-IR');
   }
   function ensureProgressCards(){
+    const activeProfile=window.authProfile||(typeof authProfile!=='undefined'?authProfile:null);
+    if(activeProfile?.role==='coach'){
+      const progressSec=$('progress');
+      if(!progressSec)return null;
+      let history=$('progressHistory');
+      if(!history){history=document.createElement('div');history.id='progressHistory';history.className='card';}
+      let chart=$('progressTrend');
+      if(!chart){chart=document.createElement('div');chart.id='progressTrend';chart.className='card';}
+      history.innerHTML='<h2>📝 گزارش ثبت‌شده توسط شاگرد</h2><div id="progressHistoryBody" class="muted">بخش نمایش گزارش شاگرد در مرحله بعد تکمیل می‌شود.</div>';
+      chart.innerHTML='<h2>📈 نمودار روند پیشرفت</h2><div id="progressTrendBody" class="muted">بخش نمودار روند پیشرفت در مرحله بعد تکمیل می‌شود.</div>';
+      // Coach view is intentionally a read-only, empty shell in this first safe step.
+      // Keep legacy markup in the DOM, but hide it without deleting or changing trainee UI/data.
+      Array.from(progressSec.children).forEach(node=>{
+        if(node!==history&&node!==chart){
+          node.style.setProperty('display','none','important');
+          node.setAttribute('aria-hidden','true');
+        }
+      });
+      history.style.removeProperty('display');
+      chart.style.removeProperty('display');
+      history.removeAttribute('aria-hidden');
+      chart.removeAttribute('aria-hidden');
+      progressSec.insertBefore(history,progressSec.firstChild);
+      progressSec.insertBefore(chart,history.nextSibling);
+      return null;
+    }
     const analysisSec=$('bodyAnalysisEntryPanel');
     const progressSec=$('progress');
     if(!progressSec)return;
