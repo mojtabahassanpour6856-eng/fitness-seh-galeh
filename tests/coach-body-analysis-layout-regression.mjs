@@ -90,7 +90,20 @@ function runRouteForRole(role) {
       ? [bodyAnalysis, progress, dashboard]
       : selector === ".nav button" ? [navAnalysis, navOther] : []
   };
-  const window = { authProfile: { role } };
+  const window = {
+    authProfile: { role },
+    showSection(id, btn) {
+      const activeSection = nodes[id];
+      document.querySelectorAll(".section").forEach(item => {
+        const active = item === activeSection;
+        item.classList.toggle("active", active);
+        item.hidden = !active;
+        item.setAttribute("aria-hidden", active ? "false" : "true");
+      });
+      document.querySelectorAll(".nav button").forEach(button => button.classList.remove("active"));
+      if (btn) btn.classList.add("active");
+    }
+  };
   vm.runInNewContext(routeSource, { window, document });
   window.openCoachBodyAnalysis();
   return { bodyAnalysis, progress, dashboard, navAnalysis, navOther, panel };
