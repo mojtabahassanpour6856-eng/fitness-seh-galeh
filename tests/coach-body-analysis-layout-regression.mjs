@@ -25,17 +25,21 @@ assert.match(html, /window\.openCoachBodyAnalysis=function\(\)[\s\S]*?profile\.r
 assert.match(html, /function ensureProgressCards\\(\\)[\\s\\S]*?if\\(analysisSec\\)analysisSec\\.appendChild\\(viewer\\)[\\s\\S]*?progressSec\\.appendChild\\(chart\\)[\\s\\S]*?progressSec\\.appendChild\\(history\\)/,
   "Coach analysis receipt stays in Body Analysis while trend and history are placed in Progress.");
 assert.match(html, /id="progressTrend"[^>]*>[\\s\\S]*?id="progressTrendBody"/,
-  "The progress trend card must exist in the initial HTML, not depend on dynamic creation.");
+  "The progress trend card must exist in the initial HTML.");
 assert.match(html, /id="progressHistory"[^>]*>[\\s\\S]*?id="progressHistoryBody"/,
-  "The progress history card must exist in the initial HTML, not depend on dynamic creation.");
-assert.match(html, /const manualRows=list\.filter\(x=>String\(x\.notes\|\|''\)\.includes\('MANUAL_PROGRESS_ENTRY'\)\)/,
-  "Trainee-entered manual records must be identified by their explicit marker.");
-assert.match(html, /const coachRows=list\.filter\(x=>!String\(x\.notes\|\|''\)\.includes\('MANUAL_PROGRESS_ENTRY'\)\)/,
-  "Manual trainee records must be excluded from the coach analysis receipt.");
-assert.match(html, /const weighted=manualRows\.filter/,
-  "Progress trend must use trainee-entered manual records only.");
-assert.match(html, /const historyRows=manualRows\.slice\(\)/,
-  "Progress history must use trainee-entered manual records only.");
+  "The progress history card must exist in the initial HTML.");
+assert.match(html, /const isProgressEntry=x=>[\\s\\S]*?note==='ثبت پیشرفت دوره‌ای'/,
+  "Both trainee and legacy coach manual progress records must be classified as progress.");
+assert.match(html, /notes:"MANUAL_PROGRESS_ENTRY: ثبت دستی توسط مربی"/,
+  "New coach-entered progress records must carry the explicit progress marker.");
+assert.match(html, /const manualRows=list\\.filter\\(isProgressEntry\\)/,
+  "Progress trend and history must include all explicitly classified manual progress records.");
+assert.match(html, /const coachRows=list\\.filter\\(x=>!String\\(x\\.notes\\|\\|''\\)\\.includes\\('MANUAL_PROGRESS_ENTRY'\\)\\)/,
+  "Manual progress records must be excluded from the coach analysis receipt.");
+assert.match(html, /const weighted=manualRows\\.filter/,
+  "Progress trend must use progress records only.");
+assert.match(html, /const historyRows=manualRows\\.slice\\(\\)/,
+  "Progress history must use progress records only.");
 assert.match(embed, /const anchor = document\.getElementById\("bodyAnalysisEntryPanel"\)/);
 assert.match(embed, /anchor\.appendChild\(host\)/,
   "The PDF/ZIP analyzer must be nested inside the unified Body Analysis card.");
