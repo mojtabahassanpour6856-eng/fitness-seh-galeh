@@ -36,3 +36,5 @@ jobs:
           npx playwright install --with-deps chromium
       - name: Test production startup with real local SDK and simulated 404
         run: node tests/supabase-sdk-loader.browser.mjs
+
+# Keep this workflow self-triggering for subsequent branch updates.
