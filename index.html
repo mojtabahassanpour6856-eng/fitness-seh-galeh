@@ -8661,7 +8661,7 @@ const oldWorkoutRenderer=window.renderWorkoutList;
     return Number.isNaN(d.getTime())?esc(v):d.toLocaleDateString('fa-IR');
   }
   function ensureProgressCards(){
-    const analysisSec=$('bodyAnalysisEntryPanel');
+    const analysisSec=$('bodyAnalysis');
     const progressSec=$('progress');
     if(!progressSec)return;
     // Only the authenticated trainee may see the manual progress-entry form.
@@ -8679,6 +8679,7 @@ const oldWorkoutRenderer=window.renderWorkoutList;
       chart.innerHTML='<h2>📈 نمودار روند پیشرفت</h2><div id="progressTrendBody" class="muted">ابتدا شاگرد را انتخاب کنید.</div>';
     }
     function placeProgressCard(card){
+      card.hidden=false;card.removeAttribute('hidden');card.style.setProperty('display','block','important');card.style.setProperty('visibility','visible','important');
       const noteCard=$('coachNote')?.closest('.card');
       if(noteCard&&noteCard.parentElement===progressSec){
         // Keep progress cards above the coach-only note, not after it.
@@ -15513,12 +15514,15 @@ window.sehNutritionBuilderBridge={
   }
   function refresh(){
     if(!progressIsActive())return;
-    var id=selectedTrainee();
-    if(!id)return;
     ['progressTrend','progressHistory'].forEach(function(cardId){
       var card=document.getElementById(cardId);
-      if(card){card.hidden=false;card.style.display='block';}
+      if(card){card.hidden=false;card.removeAttribute('hidden');card.style.setProperty('display','block','important');card.style.setProperty('visibility','visible','important');}
     });
+    var id=selectedTrainee();
+    if(!id){
+      ['progressTrendBody','progressHistoryBody'].forEach(function(bodyId){var body=document.getElementById(bodyId);if(body)body.textContent='ابتدا شاگرد را انتخاب کنید.';});
+      return;
+    }
     var entry=document.getElementById('progressEntryPanel');
     var profile=window.authProfile||(typeof authProfile!=='undefined'?authProfile:null);
     if(entry){
