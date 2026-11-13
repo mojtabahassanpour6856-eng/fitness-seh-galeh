@@ -640,6 +640,51 @@ Waist-Hip Ratio (WHO),0.889
   const appShellSource = fs.readFileSync(path.join(root, "index.html"), "utf8");
   const publicationSource = fs.readFileSync(path.join(root, "top-genesis-publication.js"), "utf8");
   assert.match(appShellSource, /id=["']bodyAnalysisEntryPanel["']/, "The production app must preserve the analyzer mount point.");
+  assert.match(appShellSource, /id="navAnalysisImport"[^>]*>🧬 آنالیز بدن/, "The coach navigation must present one Body Analysis destination, not a separate Import Analysis destination.");
+  assert.match(appShellSource, /coachAnalysis=section==='analysis'&&profile\?\.role==='coach'/, "The coach analysis route must be role-aware.");
+  assert.match(appShellSource, /showSection\('analysisImport',\$id\('navAnalysisImport'\)\|\|btn\|\|null\)/, "Coach analysis navigation must open the analyzer section rather than the trainee analysis shell.");
+
+  // Exercise the exact production dashOpen function for both roles. A coach
+  // must land in analysisImport; a trainee must retain traineeAnalysis.
+  const dashOpenStart = appShellSource.indexOf("  window.dashOpen=function(section){");
+  const dashOpenEnd = appShellSource.indexOf("\\n\\n  function buildCoachControls", dashOpenStart);
+  assert.ok(dashOpenStart >= 0 && dashOpenEnd > dashOpenStart, "The production dashboard route function must be extractable for a role smoke test.");
+  const dashOpenSource = appShellSource.slice(dashOpenStart, dashOpenEnd);
+  const coachRoutePage = await browser.newPage();
+  await coachRoutePage.setContent('<div class="nav"><button id="navAnalysisImport">آنالیز بدن</button></div><section id="analysisImport" class="section"></section><section id="traineeAnalysis" class="section"></section>');
+  await coachRoutePage.evaluate((source) => {
+    window.authProfile = { role: "coach" };
+    const show = (id, button) => {
+      document.querySelectorAll(".section").forEach(node => node.classList.remove("active"));
+      document.getElementById(id).classList.add("active");
+      document.querySelectorAll(".nav button").forEach(node => node.classList.remove("active"));
+      if (button) button.classList.add("active");
+    };
+    const factory = new Function("qsAll", "$id", "showSection", "buildTraineeAnalysisSection", "addProfileBasicFields", "loadProfileBasic", "currentClient", "loadWorkoutForClient", "loadNutritionForClient", "loadWaterToday", "loadWaterGoal", "loadWeeklyWaterLogs", "loadProgressHistory", source + "; return window.dashOpen;");
+    window.__testedDashOpen = factory(
+      selector => Array.from(document.querySelectorAll(selector)),
+      id => document.getElementById(id),
+      show,
+      () => {},
+      () => {},
+      () => {},
+      null,
+      () => {},
+      () => {},
+      () => {},
+      () => {},
+      () => {},
+      () => {}
+    );
+  }, dashOpenSource);
+  await coachRoutePage.evaluate(() => window.__testedDashOpen("analysis"));
+  assert.equal(await coachRoutePage.locator("#analysisImport").evaluate(node => node.classList.contains("active")), true,
+    "Coach clicking Body Analysis must open the analyzer/import section.");
+  assert.equal(await coachRoutePage.locator("#traineeAnalysis").evaluate(node => node.classList.contains("active")), false);
+  await coachRoutePage.evaluate(() => { window.authProfile = { role: "trainee" }; window.__testedDashOpen("analysis"); });
+  assert.equal(await coachRoutePage.locator("#traineeAnalysis").evaluate(node => node.classList.contains("active")), true,
+    "Trainee analysis navigation must remain unchanged.");
+  await coachRoutePage.close();
   assert.match(appShellSource, /top-genesis-pdf-app-embed\.js/, "The production app must load the analyzer entry directly.");
   assert.doesNotMatch(appShellSource, /async function loadTraineeAnalysis\s*\(/, "The obsolete trainee analysis renderer must be removed.");
   assert.doesNotMatch(appShellSource, /loadTraineeAnalysis\s*\(/, "The obsolete trainee analysis renderer must not be called.");
