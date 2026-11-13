@@ -465,7 +465,7 @@ body.locked{overflow:hidden!important}
   <button onclick="showSection('meal',this)">📋 برنامه غذایی</button>
   <button onclick="showSection('workout',this)">🏋️ برنامه تمرینی</button>
   <button onclick="showSection('progress',this)">📊 پیشرفت</button>
-  <button type="button" id="navAnalysisImport" onclick="showSection('analysisImport',this)">📄 وارد کردن آنالیز</button>
+  <button type="button" id="navBodyAnalysis" onclick="window.openCoachBodyAnalysis()">🧬 آنالیز بدن</button>
 </div>
 
 <!-- FOOD -->
@@ -880,8 +880,11 @@ body.locked{overflow:hidden!important}
 </section>
 
 <!-- COACH-ONLY ANALYSIS IMPORT: isolated from progress history -->
-<section id="analysisImport" class="section">
-<div class="card" id="bodyAnalysisEntryPanel" style="display:none" aria-hidden="true"></div>
+<section id="bodyAnalysis" class="section">
+<div class="card" id="bodyAnalysisEntryPanel" style="display:block" aria-hidden="false">
+<h2>🧬 آنالیز بدن شاگرد</h2>
+<p class="muted">ورود فایل PDF یا ZIP، پیش‌نمایش و بررسی آنالیز، ثبت گزارش و مشاهده آخرین نتایج و سوابق شاگرد انتخاب‌شده در همین بخش انجام می‌شود.</p>
+</div>
 </section>
 
 <div class="card" id="activityDailyPanel">
@@ -3340,7 +3343,7 @@ window.loadDashboard = loadDashboard;
 
   async function loadProgressHistory(){
     const traineeId=currentClient?.id;if(traineeId==null)return;
-    let el=$id('progressHistory');if(!el){el=document.createElement('div');el.id='progressHistory';el.className='card';el.innerHTML='<h2>📈 تاریخچه پیشرفت</h2><div id="progressHistoryBody"></div>';const sec=$id('progress');if(sec)sec.appendChild(el);}
+    let el=$id('progressHistory');if(!el){el=document.createElement('div');el.id='progressHistory';el.className='card';el.innerHTML='<h2>📋 تاریخچه آنالیز بدن</h2><div id="progressHistoryBody"></div>';const profile=window.authProfile||(typeof authProfile!=='undefined'?authProfile:null);const sec=profile?.role==='coach'?$id('bodyAnalysisEntryPanel'):$id('progress');if(sec)sec.appendChild(el);}
     try{
       const rows=await sbGet(`/body_analyses?trainee_id=eq.${encodeURIComponent(traineeId)}&select=analysis_date,weight,body_fat,muscle_mass,abdomen,waist,chest,hip,thigh&order=analysis_date.desc`);
       if(!currentClient||String(currentClient.id)!==String(traineeId))return;
@@ -3434,6 +3437,9 @@ window.loadDashboard = loadDashboard;
  if(read())setTimeout(poll,1200);
 })();
 <\/script>
+
+
+
 
 </body></html>`;
     const w=window.open('','_blank');if(w){w.document.write(html);w.document.close();}
@@ -8627,7 +8633,8 @@ const oldWorkoutRenderer=window.renderWorkoutList;
     return Number.isNaN(d.getTime())?esc(v):d.toLocaleDateString('fa-IR');
   }
   function ensureProgressCards(){
-    const sec=$('progress');if(!sec)return;
+    const profile=window.authProfile||(typeof authProfile!=='undefined'?authProfile:null);
+     const sec=profile?.role==='coach'?$('bodyAnalysisEntryPanel'):$('progress');if(!sec)return;
     let chart=$('progressTrend');
     let viewer=$('coachAnalysisView');
     if(!viewer){viewer=document.createElement('div');viewer.id='coachAnalysisView';viewer.className='card';viewer.innerHTML='<h2>🧾 آخرین برگه آنالیز مربی</h2><div id="coachAnalysisViewBody" class="muted">ابتدا شاگرد را انتخاب کنید.</div>';sec.appendChild(viewer);} if(chart)sec.insertBefore(viewer,chart);
@@ -15377,6 +15384,32 @@ window.sehNutritionBuilderBridge={
   else setTimeout(restoreSavedSession,900);
   window.addEventListener('pageshow',()=>setTimeout(restoreSavedSession,250));
   document.addEventListener('visibilitychange',()=>{if(!document.hidden)setTimeout(restoreSavedSession,250);});
+})();
+</script>
+<script id="COACH_BODY_ANALYSIS_DIRECT_ROUTE_V1">
+(function(){
+  window.openCoachBodyAnalysis=function(){
+    var profile=window.authProfile||(typeof authProfile!=="undefined"?authProfile:null);
+    if(!profile||profile.role!=="coach")return;
+    var section=document.getElementById("bodyAnalysis");
+    var panel=document.getElementById("bodyAnalysisEntryPanel");
+    if(!section||!panel)return;
+    document.querySelectorAll(".section").forEach(function(item){
+      var active=item===section;
+      item.classList.toggle("active",active);
+      item.hidden=!active;
+      item.setAttribute("aria-hidden",active?"false":"true");
+      item.style.setProperty("display",active?"block":"none","important");
+      item.style.setProperty("visibility",active?"visible":"hidden","important");
+    });
+    panel.hidden=false;
+    panel.style.setProperty("display","block","important");
+    panel.style.setProperty("visibility","visible","important");
+    document.querySelectorAll(".nav button").forEach(function(button){button.classList.remove("active");});
+    var nav=document.getElementById("navBodyAnalysis");
+    if(nav)nav.classList.add("active");
+    section.scrollIntoView({behavior:"smooth",block:"start"});
+  };
 })();
 </script>
 </body>

@@ -41,6 +41,8 @@ jobs:
           node-version: 20
       - name: Check publication module syntax
         run: node --check top-genesis-publication.js
+      - name: Check unified coach body-analysis layout and navigation
+        run: node tests/coach-body-analysis-layout-regression.mjs
       - name: Install browser test dependencies
         run: npm install --no-save playwright pdf-lib
       - name: Install Chromium

@@ -22,8 +22,8 @@
     if (!host) {
       host = document.createElement("section");
       host.id = PANEL_ID;
-      host.className = "card";
-      host.style.cssText = "margin-top:14px;border:1px solid #d8b65d;background:#fffdf7;padding:12px;overflow:hidden";
+      host.className = "top-genesis-pdf-analyzer";
+      host.style.cssText = "margin-top:12px;padding:4px 0;overflow:hidden";
       host.innerHTML =
         '<h3 style="margin:0 0 8px">🧠 تحلیل هوشمند گزارش تاپ جنسیس (پی‌دی‌اف و بسته فشرده)</h3>' +
         '<p class="muted" style="margin:0 0 10px">استخراج شاخص‌ها، تشخیص متن از صفحات تصویری، نمودار ترکیب بدن، مقایسه دو گزارش، روند چندمرحله‌ای و گزارش قابل چاپ.</p>' +
@@ -37,7 +37,7 @@
       frame.style.cssText = "display:block;width:100%;height:1100px;border:0;border-radius:10px;background:#f6f2e9";
       host.appendChild(frame);
       const archive = document.getElementById("topGenesisArchivePanel");
-      (archive || anchor).insertAdjacentElement("afterend", host);
+      anchor.appendChild(host);
 
       window.addEventListener("message", event => {
         if (event.origin !== window.location.origin || event.source !== frame.contentWindow) return;

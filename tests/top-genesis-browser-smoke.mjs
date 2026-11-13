@@ -644,7 +644,7 @@ Waist-Hip Ratio (WHO),0.889
   assert.doesNotMatch(appShellSource, /async function loadTraineeAnalysis\s*\(/, "The obsolete trainee analysis renderer must be removed.");
   assert.doesNotMatch(appShellSource, /loadTraineeAnalysis\s*\(/, "The obsolete trainee analysis renderer must not be called.");
   assert.doesNotMatch(appShellSource, /id=["\x27]traineeAnalysisSheet|id=["\x27]traineeAnalysisChart/, "Legacy trainee analysis panels must not be recreated.");
-  assert.match(appShellSource, /traineeAnalysisArchive[^>]*hidden|hidden[^>]*traineeAnalysisArchive/, "The published report card mount anchor must remain available.");
+  assert.match(appShellSource, /<section id="bodyAnalysis" class="section">[\s\S]*?id="bodyAnalysisEntryPanel"/, "The coach body-analysis mount point must live inside the unified Body Analysis section.");
   assert.match(publicationSource, /installTraineeAnalysisNavigationGuard/, "The trainee analysis route must be kept visible after legacy navigation callbacks.");
   assert.match(publicationSource, /setTimeout\(reveal, 420\)/, "The trainee analysis route must survive delayed dashboard restoration callbacks.");
   assert.match(publicationSource, /removeLegacyProgressAnalysisCards/, "Legacy body-analysis widgets must be removed from the progress panel.");
@@ -659,8 +659,8 @@ Waist-Hip Ratio (WHO),0.889
   await integrationPage.evaluate(() => {
     const anchor = document.createElement("section");
     anchor.id = "bodyAnalysisEntryPanel";
-    anchor.style.display = "none";
-    anchor.setAttribute("aria-hidden", "true");
+    anchor.style.display = "block";
+    anchor.setAttribute("aria-hidden", "false");
     document.body.appendChild(anchor);
     window.authProfile = { role: "coach" };
   });
@@ -669,8 +669,8 @@ Waist-Hip Ratio (WHO),0.889
   assert.equal(await integrationPage.locator("#topGenesisArchivePanel").count(), 0,
     "The standalone analyzer test must not load or require the legacy archive.");
   assert.equal(await integrationPage.locator("#topGenesisPdfAnalyzerPanel").evaluate(el => el.style.display), "block");
-  assert.equal(await integrationPage.locator("#bodyAnalysisEntryPanel").evaluate(el => el.nextElementSibling?.id),
-    "topGenesisPdfAnalyzerPanel", "The analyzer card must mount beside the preserved hidden anchor.");
+  assert.equal(await integrationPage.locator("#bodyAnalysisEntryPanel").evaluate(el => el.contains(document.querySelector("#topGenesisPdfAnalyzerPanel"))),
+    true, "The PDF/ZIP analyzer must mount inside the unified Body Analysis card.");
   assert.match(await integrationPage.locator("#topGenesisPdfAnalyzerFrame").getAttribute("src"), /top-genesis-pdf-test\.html\?embedded=1/);
   await integrationPage.evaluate(() => { window.authProfile = { role: "trainee" }; });
   await integrationPage.waitForFunction(() =>
@@ -803,12 +803,16 @@ Waist-Hip Ratio (WHO),0.889
     const progress = document.createElement("section");
     progress.id = "progress";
     progress.className = "section";
-    progress.innerHTML = '<div id="progressHistory"></div>';
-    document.body.appendChild(progress);
+    progress.innerHTML = '<div id="progressEntryPanel"></div>';
+    const bodyAnalysis = document.createElement("section");
+    bodyAnalysis.id = "bodyAnalysis";
+    bodyAnalysis.className = "section";
+    bodyAnalysis.innerHTML = '<div id="bodyAnalysisEntryPanel"></div>';
+    document.body.append(progress, bodyAnalysis);
   });
   await traineeProgressPage.waitForFunction(() =>
-    document.querySelector("#topGenesisPublishedProgress")?.closest("#progress"));
-  console.log("[smoke] report moved to coach progress");
+    document.querySelector("#topGenesisPublishedProgress")?.closest("#bodyAnalysisEntryPanel"));
+  console.log("[smoke] report moved inside coach Body Analysis card");
   await traineeProgressPage.evaluate(() => { window.authProfile.role = "trainee"; });
   await traineeProgressPage.waitForFunction(() =>
     document.querySelector("#topGenesisPublishedProgress")?.closest("#traineeAnalysis"));

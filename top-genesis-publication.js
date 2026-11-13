@@ -137,18 +137,8 @@
     // The app is a single-page interface: after logout/login the same document
     // can change roles. Always move the one card to the active role's panel.
     if (coachView) {
-      const history = $("progressHistory");
-      const entry = $("progressEntryPanel");
-      const target = history || entry;
-      // Avoid moving an already correctly positioned card: doing so emits another
-      // childList mutation and can create an endless MutationObserver/tick loop.
-      if (target) {
-        if (card.parentElement !== target.parentElement || card.previousElementSibling !== target) {
-          target.insertAdjacentElement("afterend", card);
-        }
-      } else if (card.parentElement !== section) {
-        section.appendChild(card);
-      }
+      const target = $("bodyAnalysisEntryPanel");
+      if (target && card.parentElement !== target) target.appendChild(card);
     } else {
       const archive = $("traineeAnalysisArchive");
       if (archive) {
