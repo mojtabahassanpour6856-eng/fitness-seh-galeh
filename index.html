@@ -7218,9 +7218,22 @@ else loadCoachExerciseListsWhenReady();
   }
   const progress=document.getElementById("progress");
   if(progress){
-   const cards=progress.querySelectorAll(":scope > .card");
-   if(cards[1])cards[1].style.display="none"; // body analysis entry is coach-only
-   if(cards[2])cards[2].style.display="none"; // private coach notes
+   // Do not use positional card indexes: the progress section now contains
+   // the shared trend chart and history before the coach-only note.
+   // Trainees can view their own progress and history, but cannot view coach notes.
+   const coachNote=document.getElementById("coachNote");
+   const coachNoteCard=coachNote&&coachNote.closest(".card");
+   if(coachNoteCard&&progress.contains(coachNoteCard))coachNoteCard.style.display="none";
+   const trend=document.getElementById("progressTrend");
+   const history=document.getElementById("progressHistory");
+   [trend,history].forEach(card=>{
+    if(card&&progress.contains(card)){
+     card.hidden=false;
+     card.removeAttribute("hidden");
+     card.style.setProperty("display","block","important");
+     card.style.removeProperty("visibility");
+    }
+   });
   }
   const food=document.getElementById("food");
   if(food){
