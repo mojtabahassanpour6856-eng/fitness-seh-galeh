@@ -2410,57 +2410,43 @@ function esc(s){return String(s).replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",
 
 </script>
 <script>
-/* SEH_SUPABASE_SDK_LOADER: pinned SDK with bounded primary/fallback attempts. */
+/* SEH_SUPABASE_SDK_LOADER: parser-blocking pinned SDK fallback.
+   The app's following inline script initializes Supabase immediately, so a
+   dynamic src swap would race that initialization. document.write inserts the
+   fallback at the parser's current position while the failed script's load
+   handler is running, keeping the following app script blocked until fallback
+   has either loaded or failed. A JS timer cannot reliably time out a
+   parser-blocking script because the parser is paused while it is loading. */
 (function(){
   'use strict';
   var fallback='https://unpkg.com/@supabase/supabase-js@2.119.0';
-  var timer=null;
+  var fallbackTried=false;
   function showFailure(){
     window.__sehSupabaseSdkLoadFailed=true;
     var box=document.getElementById('authError');
     if(box){
       box.style.display='block';
-      box.textContent='کتابخانه اتصال پس از دو تلاش بارگذاری نشد. اتصال اینترنت یا دسترسی به CDN را بررسی کنید و دوباره صفحه را بارگذاری کنید.';
+      box.textContent='کتابخانه اتصال از دو منبع بارگذاری نشد. اتصال اینترنت یا دسترسی به CDN را بررسی کنید و صفحه را دوباره بارگذاری کنید.';
     }
   }
-  function armTimeout(){
-    if(timer)clearTimeout(timer);
-    timer=setTimeout(function(){
-      var tag=document.getElementById('seh-supabase-sdk');
-      if(!tag)return;
-      if(tag.dataset.fallbackTried!=='1'){
-        tag.dataset.fallbackTried='1';
-        tag.src=fallback;
-        armTimeout();
-      }else showFailure();
-    },10000);
+  function insertFallback(){
+    if(fallbackTried){showFailure();return;}
+    fallbackTried=true;
+    window.__sehSupabaseSdkFallbackTried=true;
+    document.write('<script id="seh-supabase-sdk-fallback" src="'+fallback+'" onload="window.__sehSupabaseSdkLoaded()" onerror="window.__sehSupabaseSdkFailed()"><\\/script>');
   }
   window.__sehSupabaseSdkLoaded=function(){
-    if(timer)clearTimeout(timer);
     if(window.supabase&&typeof window.supabase.createClient==='function'){
       window.__sehSupabaseSdkReady=true;
       window.__sehSupabaseSdkLoadFailed=false;
-      return;
-    }
-    var tag=document.getElementById('seh-supabase-sdk');
-    if(tag&&tag.dataset.fallbackTried!=='1'){
-      tag.dataset.fallbackTried='1';
-      tag.src=fallback;
-      armTimeout();
-    }else showFailure();
-  };
-  window.__sehSupabaseSdkFailed=function(){
-    var tag=document.getElementById('seh-supabase-sdk');
-    if(tag&&tag.dataset.fallbackTried!=='1'){
-      tag.dataset.fallbackTried='1';
-      tag.src=fallback;
-      armTimeout();
+    }else if(!fallbackTried){
+      insertFallback();
     }else{
-      if(timer)clearTimeout(timer);
       showFailure();
     }
   };
-  armTimeout();
+  window.__sehSupabaseSdkFailed=showFailure;
+  window.__sehSupabaseSdkFallbackTried=false;
 })();
 </script>
 <script id="seh-supabase-sdk" src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.119.0" onload="window.__sehSupabaseSdkLoaded()" onerror="window.__sehSupabaseSdkFailed()"></script>
