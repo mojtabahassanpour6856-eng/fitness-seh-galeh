@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import vm from "node:vm";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const read = file => fs.readFileSync(path.join(root, file), "utf8");
@@ -34,5 +35,63 @@ assert.match(html, /id="progressEntryPanel"/,
   "The manual Progress entry card must remain intact.");
 assert.match(html, /id="progress" class="section"/,
   "The manual Progress section must remain intact.");
+
+
+const routeMatch = html.match(/<script id="COACH_BODY_ANALYSIS_DIRECT_ROUTE_V1">([\\s\\S]*?)<\\/script>/);
+assert.ok(routeMatch, "The direct coach route script must be present at the end of the document.");
+function makeNode() {
+  const classes = new Set();
+  const attributes = {};
+  return {
+    hidden: false,
+    style: { setProperty() {} },
+    classList: {
+      add: name => classes.add(name),
+      remove: name => classes.delete(name),
+      contains: name => classes.has(name),
+      toggle: (name, force) => {
+        const enabled = force === undefined ? !classes.has(name) : !!force;
+        if (enabled) classes.add(name); else classes.delete(name);
+        return enabled;
+      }
+    },
+    setAttribute: (name, value) => { attributes[name] = value; },
+    getAttribute: name => attributes[name],
+    scrollIntoView() {},
+    _classes: classes
+  };
+}
+function runRouteForRole(role) {
+  const bodyAnalysis = makeNode(), progress = makeNode(), dashboard = makeNode();
+  const navAnalysis = makeNode(), navOther = makeNode();
+  const panel = makeNode();
+  const nodes = {
+    bodyAnalysis, progress, dashboard, bodyAnalysisEntryPanel: panel,
+    navBodyAnalysis: navAnalysis
+  };
+  const document = {
+    getElementById: id => nodes[id] || null,
+    querySelectorAll: selector => selector === ".section"
+      ? [bodyAnalysis, progress, dashboard]
+      : selector === ".nav button" ? [navAnalysis, navOther] : []
+  };
+  const window = { authProfile: { role } };
+  vm.runInNewContext(routeMatch[1], { window, document });
+  window.openCoachBodyAnalysis();
+  return { bodyAnalysis, progress, dashboard, navAnalysis, navOther, panel };
+}
+const coachRoute = runRouteForRole("coach");
+assert.equal(coachRoute.bodyAnalysis._classes.has("active"), true,
+  "Coach click must activate the Body Analysis section.");
+assert.equal(coachRoute.bodyAnalysis.hidden, false);
+assert.equal(coachRoute.bodyAnalysis.getAttribute("aria-hidden"), "false");
+assert.equal(coachRoute.progress.hidden, true,
+  "Opening Body Analysis must hide the previous Progress section.");
+assert.equal(coachRoute.navAnalysis._classes.has("active"), true,
+  "The Body Analysis navigation button must be marked active.");
+assert.equal(coachRoute.panel.hidden, false);
+const traineeRoute = runRouteForRole("trainee");
+assert.equal(traineeRoute.bodyAnalysis._classes.has("active"), false,
+  "The coach-only direct route must not activate for trainee accounts.");
 
 console.log("[coach-body-analysis] unified card, coach route, PDF/ZIP mount, published reports, and manual Progress isolation passed.");
