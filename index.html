@@ -3362,7 +3362,8 @@ window.loadDashboard = loadDashboard;
       const manual=(rows||[]).filter(x=>String(x.notes||'').includes('MANUAL_PROGRESS_ENTRY')||isLegacy(x));
       const key=(d,w)=>String(d||'').slice(0,10)+'|'+String(Number(w));
       const known=new Set(manual.filter(x=>x.weight!==null&&x.weight!=='').map(x=>key(x.analysis_date,x.weight)));
-      const weightOnly=(weightRows||[]).filter(x=>!known.has(key(x.log_date,x.weight))).map(x=>({analysis_date:x.log_date,weight:x.weight,waist:null,chest:null,hip:null,abdomen:null,thigh:null,_weightOnly:true}));
+      const seenWeightKeys=new Set();
+      const weightOnly=(weightRows||[]).filter(x=>{const k=key(x.log_date,x.weight);if(known.has(k)||seenWeightKeys.has(k))return false;seenWeightKeys.add(k);return true;}).map(x=>({analysis_date:x.log_date,weight:x.weight,waist:null,chest:null,hip:null,abdomen:null,thigh:null,_weightOnly:true}));
       const historyRows=[...manual,...weightOnly].sort((a,b)=>String(b.analysis_date||'').localeCompare(String(a.analysis_date||'')));
       const value=v=>(v===null||v===undefined||v===''?'—':esc2(v));
       view.innerHTML='<h2>📊 پیشرفت ثبت‌شده توسط شاگرد</h2><p class="muted">این اطلاعات را شاگرد از حساب خودش ثبت کرده است؛ این بخش برای مربی فقط قابل مشاهده است.</p>'+
@@ -8748,7 +8749,8 @@ const oldWorkoutRenderer=window.renderWorkoutList;
       const isStudentManual=x=>String(x.notes||'').includes('MANUAL_PROGRESS_ENTRY')||String(x.notes||'').includes('ثبت پیشرفت دوره‌ای');
       const manualBody=analysisRows.filter(isStudentManual);
       const knownWeights=new Set(manualBody.filter(x=>x.weight!==null&&x.weight!=='').map(x=>String(x.analysis_date||'').slice(0,10)+'|'+String(Number(x.weight))));
-      const weightOnly=weightRows.filter(x=>!knownWeights.has(String(x.log_date||'').slice(0,10)+'|'+String(Number(x.weight)))).map(x=>({analysis_date:x.log_date,weight:x.weight,body_fat:null,muscle_mass:null,body_water:null,visceral_fat:null,abdomen:null,waist:null,chest:null,hip:null,thigh:null,notes:'',_weightOnly:true}));
+      const seenWeightKeys=new Set();
+      const weightOnly=weightRows.filter(x=>{const k=String(x.log_date||'').slice(0,10)+'|'+String(Number(x.weight));if(knownWeights.has(k)||seenWeightKeys.has(k))return false;seenWeightKeys.add(k);return true;}).map(x=>({analysis_date:x.log_date,weight:x.weight,body_fat:null,muscle_mass:null,body_water:null,visceral_fat:null,abdomen:null,waist:null,chest:null,hip:null,thigh:null,notes:'',_weightOnly:true}));
       render([...analysisRows,...weightOnly],traineeId,seq);
     }catch(e){
       if(seq!==requestSeq)return;
