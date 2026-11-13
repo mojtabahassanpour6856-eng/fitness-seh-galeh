@@ -1320,9 +1320,20 @@ function renderCoachSelectedTraineeHeader(){
     avatar.addEventListener("keydown",function(e){if(e.key==="Enter"||e.key===" "){e.preventDefault();openPhoto();}});
     avatar.insertBefore(img,fallback);
   }
+  const info=document.createElement("div");
+  info.className="coach-selected-trainee-info";
   const name=document.createElement("strong");
   name.textContent=currentClient.name||currentClient.full_name||"شاگرد بدون نام";
-  header.append(avatar,name);
+  const birthDate=window.isoToJalaliDate?window.isoToJalaliDate(currentClient.birth_date):"";
+  if(birthDate){
+    const birth=document.createElement("span");
+    birth.className="coach-selected-trainee-birth";
+    birth.textContent="🎂 "+birthDate;
+    info.append(name,birth);
+  }else{
+    info.append(name);
+  }
+  header.append(avatar,info);
 }
 function selectClient(id){
   currentClient=clients.find(x=>String(x.id)===String(id));if(!currentClient)return;
@@ -12761,7 +12772,9 @@ body.workout-output.workout-compact{
 .coach-selected-trainee-avatar{display:flex;position:relative;flex:0 0 62px;width:62px;height:62px;border-radius:50%;overflow:hidden;align-items:center;justify-content:center;background:#ead9ae;border:3px solid #c7a34b;font-size:29px}
 .coach-selected-trainee-avatar img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
 .coach-selected-trainee-header strong{font-size:16px;font-weight:800;overflow-wrap:anywhere}
-@media(max-width:420px){.coach-selected-trainee-header{padding:10px 12px;min-height:76px}.coach-selected-trainee-avatar{width:56px;height:56px;flex-basis:56px}}
+.coach-selected-trainee-info{display:flex;flex-direction:column;align-items:flex-start;gap:5px;min-width:0}
+.coach-selected-trainee-birth{display:inline-block;padding:4px 8px;border-radius:8px;background:#e8d6a9;color:#59451b;font-size:11px;line-height:1.6}
+@media(max-width:420px){.coach-selected-trainee-header{padding:10px 12px;min-height:76px}.coach-selected-trainee-avatar{width:56px;height:56px;flex-basis:56px}.coach-selected-trainee-header strong{font-size:14px}}
 </style>
 <style id="coach-trainee-name-grid">
 /* Scoped only to the trainee list; all other cards and components remain unchanged. */
