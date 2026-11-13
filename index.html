@@ -3439,32 +3439,7 @@ window.loadDashboard = loadDashboard;
 <\/script>
 
 
-<script id="COACH_BODY_ANALYSIS_DIRECT_ROUTE_V1">
-(function(){
-  window.openCoachBodyAnalysis=function(){
-    var profile=window.authProfile||(typeof authProfile!=="undefined"?authProfile:null);
-    if(!profile||profile.role!=="coach")return;
-    var section=document.getElementById("bodyAnalysis");
-    var panel=document.getElementById("bodyAnalysisEntryPanel");
-    if(!section||!panel)return;
-    document.querySelectorAll(".section").forEach(function(item){
-      var active=item===section;
-      item.classList.toggle("active",active);
-      item.hidden=!active;
-      item.setAttribute("aria-hidden",active?"false":"true");
-      item.style.setProperty("display",active?"block":"none","important");
-      item.style.setProperty("visibility",active?"visible":"hidden","important");
-    });
-    panel.hidden=false;
-    panel.style.setProperty("display","block","important");
-    panel.style.setProperty("visibility","visible","important");
-    document.querySelectorAll(".nav button").forEach(function(button){button.classList.remove("active");});
-    var nav=document.getElementById("navBodyAnalysis");
-    if(nav)nav.classList.add("active");
-    section.scrollIntoView({behavior:"smooth",block:"start"});
-  };
-})();
-</script>
+
 
 </body></html>`;
     const w=window.open('','_blank');if(w){w.document.write(html);w.document.close();}
@@ -15409,6 +15384,32 @@ window.sehNutritionBuilderBridge={
   else setTimeout(restoreSavedSession,900);
   window.addEventListener('pageshow',()=>setTimeout(restoreSavedSession,250));
   document.addEventListener('visibilitychange',()=>{if(!document.hidden)setTimeout(restoreSavedSession,250);});
+})();
+</script>
+<script id="COACH_BODY_ANALYSIS_DIRECT_ROUTE_V1">
+(function(){
+  window.openCoachBodyAnalysis=function(){
+    var profile=window.authProfile||(typeof authProfile!=="undefined"?authProfile:null);
+    if(!profile||profile.role!=="coach")return;
+    var section=document.getElementById("bodyAnalysis");
+    var panel=document.getElementById("bodyAnalysisEntryPanel");
+    if(!section||!panel)return;
+    document.querySelectorAll(".section").forEach(function(item){
+      var active=item===section;
+      item.classList.toggle("active",active);
+      item.hidden=!active;
+      item.setAttribute("aria-hidden",active?"false":"true");
+      item.style.setProperty("display",active?"block":"none","important");
+      item.style.setProperty("visibility",active?"visible":"hidden","important");
+    });
+    panel.hidden=false;
+    panel.style.setProperty("display","block","important");
+    panel.style.setProperty("visibility","visible","important");
+    document.querySelectorAll(".nav button").forEach(function(button){button.classList.remove("active");});
+    var nav=document.getElementById("navBodyAnalysis");
+    if(nav)nav.classList.add("active");
+    section.scrollIntoView({behavior:"smooth",block:"start"});
+  };
 })();
 </script>
 </body>
