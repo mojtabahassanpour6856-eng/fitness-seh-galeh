@@ -12,6 +12,8 @@ const publication = read("top-genesis-publication.js");
 
 assert.match(html, /id="navBodyAnalysis"[^>]*window\.openCoachBodyAnalysis\(\)/,
   "The coach navigation must open the unified Body Analysis section directly.");
+assert.doesNotMatch(html, /dashOpen\(['"]analysis['"]\)[\s\S]{0,120}آنالیز بدن|<span id="dashAnalysis"/,
+  "The obsolete dashboard Body Analysis shortcut must be removed.");
 assert.doesNotMatch(html, /navAnalysisImport|analysisImport/,
   "The standalone Import Analysis navigation/card must be removed.");
 const section = html.match(/<section id="bodyAnalysis" class="section">([\s\S]*?)<\/section>/);
