@@ -15391,28 +15391,15 @@ window.sehNutritionBuilderBridge={
   window.openCoachBodyAnalysis=function(){
     var profile=window.authProfile||(typeof authProfile!=="undefined"?authProfile:null);
     if(!profile||profile.role!=="coach")return;
-    // Cancel the trainee-profile recovery lock before opening another coach section.
-    // Otherwise delayed selection timers can force the profile back over body analysis.
-    if(typeof window.showSection==="function"){
-      try{window.showSection("bodyAnalysis",document.getElementById("navBodyAnalysis"));}catch(error){console.warn("مسیر مستقیم آنالیز بدن:",error);}
-    }
     var section=document.getElementById("bodyAnalysis");
     var panel=document.getElementById("bodyAnalysisEntryPanel");
     if(!section||!panel)return;
-    document.querySelectorAll(".section").forEach(function(item){
-      var active=item===section;
-      item.classList.toggle("active",active);
-      item.hidden=!active;
-      item.setAttribute("aria-hidden",active?"false":"true");
-      item.style.setProperty("display",active?"block":"none","important");
-      item.style.setProperty("visibility",active?"visible":"hidden","important");
-    });
+    // Use the app's shared navigation only. Do not set inline display/visibility
+    // on every section: those !important styles prevent later cards from opening.
+    if(typeof window.showSection==="function"){
+      try{window.showSection("bodyAnalysis",document.getElementById("navBodyAnalysis"));}catch(error){console.warn("مسیر مستقیم آنالیز بدن:",error);}
+    }
     panel.hidden=false;
-    panel.style.setProperty("display","block","important");
-    panel.style.setProperty("visibility","visible","important");
-    document.querySelectorAll(".nav button").forEach(function(button){button.classList.remove("active");});
-    var nav=document.getElementById("navBodyAnalysis");
-    if(nav)nav.classList.add("active");
     section.scrollIntoView({behavior:"smooth",block:"start"});
   };
 })();
