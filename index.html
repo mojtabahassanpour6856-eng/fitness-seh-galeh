@@ -2445,7 +2445,10 @@ function esc(s){return String(s).replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",
       showFailure();
     }
   };
-  window.__sehSupabaseSdkFailed=showFailure;
+  window.__sehSupabaseSdkFailed=function(){
+    if(!fallbackTried)insertFallback();
+    else showFailure();
+  };
   window.__sehSupabaseSdkFallbackTried=false;
 })();
 </script>
