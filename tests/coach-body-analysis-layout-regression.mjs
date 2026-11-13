@@ -32,11 +32,11 @@ assert.match(html, /id="progressHistory"[^>]*>[\s\S]*?id="progressHistoryBody"/,
   "The progress history card must exist in the initial HTML.");
 assert.match(html, /const isProgressEntry=x=>[\s\S]*?note==='ثبت پیشرفت دوره‌ای'/,
   "Both trainee and legacy coach manual progress records must be classified as progress.");
-assert.match(html, /notes:"MANUAL_PROGRESS_ENTRY: ثبت دستی و تأییدشده توسط شاگرد"/,
-  "New manual progress records must be marked as trainee-confirmed, never coach-entered.");
+const progressMigration = read("supabase/migrations/202611130001_atomic_trainee_progress_rpc.sql");
+assert.match(progressMigration, /MANUAL_PROGRESS_ENTRY: ثبت دستی و تأییدشده توسط شاگرد/,
+  "The atomic RPC must persist the explicit trainee-confirmed manual progress marker.");
 assert.match(html, /window\.saveProgress=async function\(\)[\s\S]*?authProfile\?\.role!=='trainee'[\s\S]*?ثبت دستی پیشرفت فقط از حساب خود شاگرد/,
   "The progress save action must reject every role except the trainee.");
-const progressMigration = read("supabase/migrations/202611130001_atomic_trainee_progress_rpc.sql");
 assert.match(html, /window\.saveProgress=async function\([\s\S]*?sbWrite\('\/rpc\/record_trainee_progress','POST'/,
   "The trainee progress UI must use one atomic server-side RPC, not two independent REST inserts.");
 assert.match(html, /async function saveProgress\(\)\{\s*return window\.saveProgress\(\);\s*\}/,
