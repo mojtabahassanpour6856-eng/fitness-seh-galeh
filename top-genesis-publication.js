@@ -80,9 +80,11 @@
     if (typeof original !== "function" || window.__topGenesisAnalysisNavigationGuard) return;
     window.__topGenesisAnalysisNavigationGuard = true;
     window.dashOpen = function(key) {
+      window.__topGenesisLastDashKey = key;
       const result = original.apply(this, arguments);
       if (key !== "analysis" || !currentTrainee()) return result;
       const reveal = () => {
+        if (window.__topGenesisLastDashKey !== "analysis") return;
         let section = $("traineeAnalysis");
         if (!section) {
           section = document.createElement("section");
