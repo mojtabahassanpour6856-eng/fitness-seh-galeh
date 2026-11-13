@@ -38,7 +38,7 @@ assert.match(html, /window\.saveProgress=async function\(\)[\s\S]*?authProfile\?
   "The progress save action must reject every role except the trainee.");
 assert.match(html, /id="progressEntryPanel" style="display:none"/,
   "The progress entry form must be hidden by default for the coach view.");
-assert.match(html, /const entryPanel=[$][(]'progressEntryPanel'[)][\\s\\S]*?const traineeCanEnter=activeProfile[?]\\.role==='trainee'[\\s\\S]*?entryPanel\\.style\\.display=traineeCanEnter\\?'block':'none'[\\s\\S]*?entryPanel\\.setAttribute\\('aria-hidden',String\\(!traineeCanEnter\\)\\)/,
+assert.match(html, /const entryPanel=[$][(]'progressEntryPanel'[)][\s\S]*?const traineeCanEnter=activeProfile[?]\.role==='trainee'[\s\S]*?entryPanel\.style\.display=traineeCanEnter\?'block':'none'[\s\S]*?entryPanel\.setAttribute\('aria-hidden',String\(!traineeCanEnter\)\)/,
   "Only the trainee role may reveal the progress entry form; the coach view remains hidden.");
 assert.match(html, /const manualRows=list\.filter\(isProgressEntry\)/,
   "Progress trend and history must include all explicitly classified manual progress records.");
