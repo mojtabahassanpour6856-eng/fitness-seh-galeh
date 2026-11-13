@@ -640,6 +640,10 @@ Waist-Hip Ratio (WHO),0.889
   const appShellSource = fs.readFileSync(path.join(root, "index.html"), "utf8");
   assert.match(appShellSource, /id=["']bodyAnalysisEntryPanel["']/, "The production app must preserve the analyzer mount point.");
   assert.match(appShellSource, /top-genesis-pdf-app-embed\.js/, "The production app must load the analyzer entry directly.");
+  assert.doesNotMatch(appShellSource, /async function loadTraineeAnalysis\s*\(/, "The obsolete trainee analysis renderer must be removed.");
+  assert.doesNotMatch(appShellSource, /loadTraineeAnalysis\s*\(/, "The obsolete trainee analysis renderer must not be called.");
+  assert.doesNotMatch(appShellSource, /id=["\x27]traineeAnalysisSheet|id=["\x27]traineeAnalysisChart/, "Legacy trainee analysis panels must not be recreated.");
+  assert.match(appShellSource, /traineeAnalysisArchive[^>]*hidden|hidden[^>]*traineeAnalysisArchive/, "The published report card mount anchor must remain available.");
   assert.doesNotMatch(appShellSource, /<script[^>]+src=["'][^"']*top-genesis-archive\.js/i,
     "The production app must not load the legacy archive module.");
 
