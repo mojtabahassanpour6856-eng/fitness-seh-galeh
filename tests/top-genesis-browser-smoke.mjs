@@ -644,7 +644,7 @@ Waist-Hip Ratio (WHO),0.889
   assert.doesNotMatch(appShellSource, /async function loadTraineeAnalysis\s*\(/, "The obsolete trainee analysis renderer must be removed.");
   assert.doesNotMatch(appShellSource, /loadTraineeAnalysis\s*\(/, "The obsolete trainee analysis renderer must not be called.");
   assert.doesNotMatch(appShellSource, /id=["\x27]traineeAnalysisSheet|id=["\x27]traineeAnalysisChart/, "Legacy trainee analysis panels must not be recreated.");
-  assert.match(appShellSource, /<section id="bodyAnalysis" class="section">[\\s\\S]*?id="bodyAnalysisEntryPanel"/, "The coach body-analysis mount point must live inside the unified Body Analysis section.");
+  assert.match(appShellSource, /<section id="bodyAnalysis" class="section">[\s\S]*?id="bodyAnalysisEntryPanel"/, "The coach body-analysis mount point must live inside the unified Body Analysis section.");
   assert.match(publicationSource, /installTraineeAnalysisNavigationGuard/, "The trainee analysis route must be kept visible after legacy navigation callbacks.");
   assert.match(publicationSource, /setTimeout\(reveal, 420\)/, "The trainee analysis route must survive delayed dashboard restoration callbacks.");
   assert.match(publicationSource, /removeLegacyProgressAnalysisCards/, "Legacy body-analysis widgets must be removed from the progress panel.");
