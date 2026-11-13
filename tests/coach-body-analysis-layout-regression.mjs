@@ -22,8 +22,12 @@ assert.match(section[1], /آنالیز بدن شاگرد/,
   "The unified card must have the Body Analysis heading.");
 assert.match(html, /window\.openCoachBodyAnalysis=function\(\)[\s\S]*?profile\.role!=="coach"[\s\S]*?window\.showSection\("bodyAnalysis"/,
   "The coach route must use the shared section navigation and be role-guarded.");
-assert.match(html, /function ensureProgressCards\(\)[\s\S]*?analysisSec\.appendChild\(viewer\)[\s\S]*?progressSec\.appendChild\(chart\)[\s\S]*?progressSec\.appendChild\(history\)/,
+assert.match(html, /function ensureProgressCards\\(\\)[\\s\\S]*?if\\(analysisSec\\)analysisSec\\.appendChild\\(viewer\\)[\\s\\S]*?progressSec\\.appendChild\\(chart\\)[\\s\\S]*?progressSec\\.appendChild\\(history\\)/,
   "Coach analysis receipt stays in Body Analysis while trend and history are placed in Progress.");
+assert.match(html, /id="progressTrend"[^>]*>[\\s\\S]*?id="progressTrendBody"/,
+  "The progress trend card must exist in the initial HTML, not depend on dynamic creation.");
+assert.match(html, /id="progressHistory"[^>]*>[\\s\\S]*?id="progressHistoryBody"/,
+  "The progress history card must exist in the initial HTML, not depend on dynamic creation.");
 assert.match(html, /const manualRows=list\.filter\(x=>String\(x\.notes\|\|''\)\.includes\('MANUAL_PROGRESS_ENTRY'\)\)/,
   "Trainee-entered manual records must be identified by their explicit marker.");
 assert.match(html, /const coachRows=list\.filter\(x=>!String\(x\.notes\|\|''\)\.includes\('MANUAL_PROGRESS_ENTRY'\)\)/,
