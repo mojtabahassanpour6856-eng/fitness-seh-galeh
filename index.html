@@ -8631,7 +8631,16 @@ const oldWorkoutRenderer=window.renderWorkoutList;
       chart=document.createElement('div');chart.id='progressTrend';chart.className='card';
       chart.innerHTML='<h2>📈 نمودار روند پیشرفت</h2><div id="progressTrendBody" class="muted">ابتدا شاگرد را انتخاب کنید.</div>';
     }
-    progressSec.appendChild(chart);
+    function placeProgressCard(card){
+      const noteCard=$('coachNote')?.closest('.card');
+      if(noteCard&&noteCard.parentElement===progressSec){
+        // Keep progress cards above the coach-only note, not after it.
+        progressSec.insertBefore(card,noteCard);
+      }else if(card.parentElement!==progressSec){
+        progressSec.appendChild(card);
+      }
+    }
+    placeProgressCard(chart);
     let history=$('progressHistory');
     if(!history){
       history=document.createElement('div');history.id='progressHistory';history.className='card';
@@ -8641,7 +8650,7 @@ const oldWorkoutRenderer=window.renderWorkoutList;
       if(heading)heading.textContent='📋 تاریخچه پیشرفت';
       if(!$('progressHistoryBody'))history.insertAdjacentHTML('beforeend','<div id="progressHistoryBody" class="muted"></div>');
     }
-    progressSec.appendChild(history);
+    placeProgressCard(history);
     return {chart:$('progressTrendBody'),history:$('progressHistoryBody')};
   }
   function render(rows, traineeId, seq, weightLogs){
