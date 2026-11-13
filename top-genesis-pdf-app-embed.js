@@ -15,8 +15,10 @@
   }
 
   function mount() {
-    const anchor = document.getElementById("bodyAnalysisEntryPanel");
-    if (!anchor) return;
+    const coachSection = document.getElementById("coach");
+    const traineeList = coachSection && coachSection.querySelector("#clientList");
+    const anchor = traineeList && traineeList.closest(".card");
+    if (!coachSection || !anchor) return;
     let host = document.getElementById(PANEL_ID);
     if (!host) {
       host = document.createElement("section");
@@ -35,8 +37,9 @@
       frame.referrerPolicy = "strict-origin-when-cross-origin";
       frame.style.cssText = "display:block;width:100%;height:1100px;border:0;border-radius:10px;background:#f6f2e9";
       host.appendChild(frame);
-      const archive = document.getElementById("topGenesisArchivePanel");
-      (archive || anchor).insertAdjacentElement("afterend", host);
+      // Mount only in the coach dashboard, immediately after the trainee selector.
+      // The original progress/body-analysis forms and all trainee views remain untouched.
+      anchor.insertAdjacentElement("afterend", host);
 
       window.addEventListener("message", event => {
         if (event.origin !== window.location.origin || event.source !== frame.contentWindow) return;
