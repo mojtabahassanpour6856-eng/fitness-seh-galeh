@@ -15,16 +15,32 @@
 
   function currentCoachAndTrainee() {
     try {
-      if (typeof authProfile === "undefined" || authProfile?.role !== "coach") return null;
-      if (typeof currentClient === "undefined" || !currentClient?.id) return null;
+      const profile = window.authProfile || (typeof authProfile !== "undefined" ? authProfile : null);
+      const trainee = window.currentClient || (typeof currentClient !== "undefined" ? currentClient : null);
+      if (profile?.role !== "coach") return null;
+      if (!trainee?.id) return null;
       const sb = window.AUTH_SUPABASE;
       if (!sb?.auth || !sb?.storage) return null;
-      return { sb, trainee: currentClient };
+      return { sb, trainee };
     } catch (_) { return null; }
   }
 
   function mount() {
-    if (mounted) return;
+    const isCoach = (() => {
+      try {
+        const profile = window.authProfile || (typeof authProfile !== "undefined" ? authProfile : null);
+        return profile?.role === "coach";
+      } catch (_) { return false; }
+    })();
+    const existing = $("topGenesisArchivePanel");
+    // This archive contains upload/delete controls and is strictly coach-only.
+    // Remove it immediately if a single-page session changes to a trainee.
+    if (!isCoach) {
+      if (existing) existing.remove();
+      mounted = false;
+      return;
+    }
+    if (mounted && existing) return;
     const anchor = $("bodyAnalysisEntryPanel");
     if (!anchor) return;
     const host = document.createElement("section");
@@ -186,7 +202,9 @@
   observer.observe(document.documentElement, { childList: true, subtree: true });
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", mount);
   else mount();
-  window.setInterval(() => { mount(); if (mounted) refresh(); }, 15000);
+  // Check role changes frequently, but keep archive data refresh on its original 15-second cadence.
+  window.setInterval(mount, 1200);
+  window.setInterval(() => { if (mounted) refresh(); }, 15000);
 })();
 /* Load the isolated coach-only Top Genesis PDF analyzer card without touching the manual analysis form. */
 (function () {

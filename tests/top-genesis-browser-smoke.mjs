@@ -6,6 +6,8 @@ import { fileURLToPath } from "node:url";
 import { chromium } from "playwright";
 import { PDFDocument, StandardFonts, rgb } from "pdf-lib";
 
+const hardStop = setTimeout(() => { console.error('[smoke] hard stop after 8 minutes'); process.exit(124); }, 8 * 60 * 1000);
+hardStop.unref();
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const mime = { ".html": "text/html; charset=utf-8", ".js": "text/javascript; charset=utf-8", ".png": "image/png" };
 const server = http.createServer((req, res) => {
@@ -20,6 +22,7 @@ const server = http.createServer((req, res) => {
 
 await new Promise(resolve => server.listen(0, "127.0.0.1", resolve));
 const address = server.address();
+console.log('[smoke] launching Chromium');
 const browser = await chromium.launch({ headless: true });
 try {
   // Draw a synthetic report sentence into a raster image so Tesseract must
@@ -100,8 +103,11 @@ try {
   const pdfBytes = await pdfDoc.save();
 
   const page = await browser.newPage();
+  page.setDefaultTimeout(30000);
+  page.setDefaultNavigationTimeout(30000);
   const pageErrors = [];
   page.on("pageerror", error => pageErrors.push(error.message));
+  console.log('[smoke] opening analyzer fixture');
   await page.goto(`http://127.0.0.1:${address.port}/top-genesis-pdf-test.html`);
   await page.addScriptTag({ path: path.join(root, "top-genesis-csv-parser.js") });
   assert.equal(await page.locator("#topGenesisZip").count(), 1,
@@ -188,7 +194,9 @@ Waist-Hip Ratio (WHO),0.889
   assert.equal(JSON.stringify(csvResult).includes("private@example.com"), false,
     "Customer email must not be extracted or exposed by the CSV parser.");
   assert.equal(csvResult.review_required, true);
+  console.log('[smoke] loading JSZip CDN');
   await page.addScriptTag({ url: "https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js" });
+  console.log('[smoke] JSZip loaded');
   // Regression fixture mirrors the exact filename prefix and member names in the
   // user's uploaded archive. Real body photos are deliberately not committed.
   const zipResult = await page.evaluate(async csv => {
@@ -237,22 +245,35 @@ Waist-Hip Ratio (WHO),0.889
     "All six extracted images must retain the source scan dimensions.");
 
 
+  console.log('[smoke] preparing synthetic PDF');
   await page.locator("#pdfFile").setInputFiles({
     name: "synthetic-top-genesis-fixture.pdf",
     mimeType: "application/pdf",
     buffer: Buffer.from(pdfBytes)
   });
+  console.log('[smoke] starting PDF extraction');
   await page.locator("#run").click();
+  console.log('[smoke] waiting for extraction status');
   await page.waitForFunction(() => {
     const text = document.querySelector("#status")?.textContent || "";
     return text.includes("استخراج تمام شد") || text.startsWith("خطا:");
   }, null, { timeout: 180000 });
 
+  console.log('[smoke] extraction status reached');
   const status = await page.locator("#status").innerText();
   assert.match(status, /استخراج تمام شد/, `Parser did not complete: ${status}`);
+  assert.equal(await page.locator("#analysisDate").count(), 1,
+    "The analysis date must be explicitly selectable for trainee progress history.");
+  assert.equal(await page.locator("#sendToTrainee").count(), 1,
+    "A separate coach send action must be present after the report is rendered.");
+  assert.equal(await page.locator("#sendToTrainee").isDisabled(), true,
+    "The report must not be sent before manual coach approval.");
+  assert.match(await page.locator("#sendToTrainee").innerText(), /ارسال به پنل پیشرفت شاگرد/);
   const pageInfo = await page.locator("#result").innerText();
+  assert.doesNotMatch(pageInfo, /FITNESS SEH GALEH|Top Genesis|BMI|BMR|OCR|PDF|ZIP|CSV|PNG/,
+    "The generated report shown to the coach must use Persian labels rather than English abbreviations.");
   assert.match(pageInfo, /تعداد صفحات: 4/);
-  assert.match(pageInfo, /صفحات OCR: 2، 3/);
+  assert.match(pageInfo, /صفحات تشخیص متن: 2، 3/);
   assert.match(pageInfo, /161/);
   assert.match(pageInfo, /57/);
   assert.match(pageInfo, /مقایسه دو سمت بدن/,
@@ -457,6 +478,7 @@ Waist-Hip Ratio (WHO),0.889
 
   assert.match(pageInfo, /123\.456/, "Targeted OCR did not recover the region value from the semi-text page.");
 
+  console.log('[smoke] OCR and report assertions passed');
   // The coach report must use original PDF page renders, not generated imagery.
   const scanImages = page.locator(".scan-figure img");
   assert.equal(await scanImages.count(), 1,
@@ -468,16 +490,16 @@ Waist-Hip Ratio (WHO),0.889
   assert.equal(await coverLogo.count(), 1);
   await coverLogo.evaluate(img => img.decode());
   assert.ok(await coverLogo.evaluate(img => img.naturalWidth > 0));
-  assert.equal(await page.locator("[data-review]").count(), 5,
-    "The coach must review lighting, background, image clarity, movement and scan completeness.");
+  assert.equal(await page.locator("[data-review]").count(), 0,
+    "Quality review must be a single coach confirmation, not five separate form controls.");
+  assert.equal(await page.locator("#coachApprove").isDisabled(), false,
+    "The single final approval checkbox must be immediately available.");
+  assert.ok((await page.locator("#trainingNotes").inputValue()).trim().length > 0,
+    "A concise editable training recommendation should be prefilled.");
+  assert.ok((await page.locator("#nutritionNotes").inputValue()).trim().length > 0,
+    "A concise editable nutrition recommendation should be prefilled.");
   assert.equal(await page.locator("#pngReport").isDisabled(), true,
-    "Multi-page PNG export must remain locked until manual review and coach approval.");
-  await page.locator("[data-review]").evaluateAll(items => items.forEach(item => {
-    item.value = "ok";
-    item.dispatchEvent(new Event("change", { bubbles: true }));
-  }));
-  await page.locator("#trainingNotes").fill("برنامه تمرینی پس از بررسی سابقه و هدف شاگرد تنظیم شود.");
-  await page.locator("#nutritionNotes").fill("توصیه تغذیه‌ای پس از بررسی هدف و فعالیت شاگرد تکمیل شود.");
+    "Report outputs must remain locked until the coach's single approval.");
   await page.locator("#coachApprove").check();
   assert.equal(await page.locator("#pngReport").isDisabled(), false);
   assert.equal(await page.locator("#shareReport").isDisabled(), false);
@@ -538,7 +560,7 @@ Waist-Hip Ratio (WHO),0.889
   }));
   assert.match(simpleAnalysis,/خلاصه ساده و تصویری/);
   assert.match(simpleAnalysis,/ترکیب وزن ثبت‌شده/,"Consistent fat and lean mass should render a composition chart.");
-  assert.match(simpleAnalysis,/کنترل BMI/,"Height, weight and BMI should be cross-checked.");
+  assert.match(simpleAnalysis,/کنترل شاخص توده بدنی/,"Height, weight and BMI should be cross-checked.");
   assert.match(simpleAnalysis,/درصد چربی محاسبه‌شده/,"Body-fat percentage should be cross-checked against fat mass.");
   assert.match(simpleAnalysis,/معادل کالری مصرفی روزانه نیست/,"RMR must not be presented as daily calorie expenditure.");
   const trend = await page.evaluate(() => window.TopGenesisReportComparison(
@@ -612,33 +634,219 @@ Waist-Hip Ratio (WHO),0.889
 
   assert.deepEqual(pageErrors, [], `Browser page errors: ${pageErrors.join("; ")}`);
 
-  // Verify the real production app shell contains the integration anchor and loader.
+  console.log('[smoke] report rendering assertions passed');
+  // Verify the production shell keeps only the hidden mount point and loads
+  // the analyzer entry directly; the legacy archive must not be a dependency.
   const appShellSource = fs.readFileSync(path.join(root, "index.html"), "utf8");
-  assert.match(appShellSource, /id=["']bodyAnalysisEntryPanel["']/, "The production app must contain the body-analysis mount point.");
-  assert.match(appShellSource, /top-genesis-archive\.js/, "The production app must load the existing Top Genesis archive module.");
+  const publicationSource = fs.readFileSync(path.join(root, "top-genesis-publication.js"), "utf8");
+  assert.match(appShellSource, /id=["']bodyAnalysisEntryPanel["']/, "The production app must preserve the analyzer mount point.");
+  assert.match(appShellSource, /top-genesis-pdf-app-embed\.js/, "The production app must load the analyzer entry directly.");
+  assert.doesNotMatch(appShellSource, /async function loadTraineeAnalysis\s*\(/, "The obsolete trainee analysis renderer must be removed.");
+  assert.doesNotMatch(appShellSource, /loadTraineeAnalysis\s*\(/, "The obsolete trainee analysis renderer must not be called.");
+  assert.doesNotMatch(appShellSource, /id=["\x27]traineeAnalysisSheet|id=["\x27]traineeAnalysisChart/, "Legacy trainee analysis panels must not be recreated.");
+  assert.match(appShellSource, /<section id="bodyAnalysis" class="section">[\s\S]*?id="bodyAnalysisEntryPanel"/, "The coach body-analysis mount point must live inside the unified Body Analysis section.");
+  assert.match(publicationSource, /installTraineeAnalysisNavigationGuard/, "The trainee analysis route must be kept visible after legacy navigation callbacks.");
+  assert.match(publicationSource, /setTimeout\(reveal, 420\)/, "The trainee analysis route must survive delayed dashboard restoration callbacks.");
+  assert.match(publicationSource, /removeLegacyProgressAnalysisCards/, "Legacy body-analysis widgets must be removed from the progress panel.");
+  assert.match(publicationSource, /\["coachAnalysisView", "progressTrend", "progressHistory"\]/, "Only legacy body-analysis widgets may be removed; manual progress data remains untouched.");
+  assert.doesNotMatch(appShellSource, /<script[^>]+src=["'][^"']*top-genesis-archive\.js/i,
+    "The production app must not load the legacy archive module.");
 
-  // Verify the coach-only app entry mounts in the existing analysis area,
-  // embeds the isolated analyzer, and stays hidden for trainee sessions.
+  // Verify the analyzer mounts independently of the legacy archive module,
+  // appears for coaches, and is hidden for trainees.
   const integrationPage = await browser.newPage();
   await integrationPage.goto(`http://127.0.0.1:${address.port}/top-genesis-pdf-test.html`);
   await integrationPage.evaluate(() => {
     const anchor = document.createElement("section");
     anchor.id = "bodyAnalysisEntryPanel";
+    anchor.style.display = "block";
+    anchor.setAttribute("aria-hidden", "false");
     document.body.appendChild(anchor);
     window.authProfile = { role: "coach" };
   });
   await integrationPage.addScriptTag({ path: path.join(root, "top-genesis-pdf-app-embed.js") });
   await integrationPage.waitForSelector("#topGenesisPdfAnalyzerPanel");
+  assert.equal(await integrationPage.locator("#topGenesisArchivePanel").count(), 0,
+    "The standalone analyzer test must not load or require the legacy archive.");
   assert.equal(await integrationPage.locator("#topGenesisPdfAnalyzerPanel").evaluate(el => el.style.display), "block");
+  assert.equal(await integrationPage.locator("#bodyAnalysisEntryPanel").evaluate(el => el.contains(document.querySelector("#topGenesisPdfAnalyzerPanel"))),
+    true, "The PDF/ZIP analyzer must mount inside the unified Body Analysis card.");
   assert.match(await integrationPage.locator("#topGenesisPdfAnalyzerFrame").getAttribute("src"), /top-genesis-pdf-test\.html\?embedded=1/);
   await integrationPage.evaluate(() => { window.authProfile = { role: "trainee" }; });
-  await integrationPage.waitForFunction(() => document.querySelector("#topGenesisPdfAnalyzerPanel")?.style.display === "none", null, { timeout: 3000 });
-  const archiveSource = fs.readFileSync(path.join(root, "top-genesis-archive.js"), "utf8");
-  assert.match(archiveSource, /top-genesis-pdf-app-embed\.js/, "The app's existing archive entry must load the new coach-only analyzer card.");
+  await integrationPage.waitForFunction(() =>
+    document.querySelector("#topGenesisPdfAnalyzerPanel")?.style.display === "none", null, { timeout: 7000 });
+  await integrationPage.evaluate(() => { window.authProfile = { role: "coach" }; });
+  await integrationPage.waitForFunction(() =>
+    document.querySelector("#topGenesisPdfAnalyzerPanel")?.style.display === "block", null, { timeout: 7000 });
+  const analyzerEmbedSource = fs.readFileSync(path.join(root, "top-genesis-pdf-app-embed.js"), "utf8");
+  assert.match(analyzerEmbedSource, /host\.style\.display\s*=\s*isCoach\(\)\s*\?\s*"block"\s*:\s*"none"/,
+    "The embedded analyzer must be hidden for trainee sessions.");
+  assert.match(analyzerEmbedSource, /top-genesis-publication\.js/,
+    "The standalone analyzer entry must continue loading the report publication module.");
   await integrationPage.close();
 
-  console.log("PASS: Chromium loaded PDF.js/OCR, parsed anonymized CSV fixture, validated ZIP input, and preserved existing coach-only app checks.");
+  console.log('[smoke] coach role-switch assertions passed');
+  // Verify approved reports appear in the trainee's analysis/progress page.
+  console.log('[smoke] opening trainee progress page');
+  const traineeProgressPage = await browser.newPage();
+  console.log('[smoke] trainee progress page created');
+  // The trainee progress component is independent of the analyzer iframe. Use a clean page
+  // so PDF.js/OCR bootstrapping cannot block the role/history smoke test.
+  console.log("[smoke] using isolated trainee progress page");
+  traineeProgressPage.setDefaultTimeout(15000);
+  await traineeProgressPage.goto("data:text/html,<html><head><title>trainee-fixture</title></head><body></body></html>");
+  console.log("[smoke] trainee fixture document ready");
+  await traineeProgressPage.evaluate(() => {
+    window.authProfile = { role: "trainee", trainee_id: "trainee-fixture-1" };
+    window.currentClient = { id: "trainee-fixture-1" };
+    window.AUTH_SUPABASE = {
+      from() {
+        const orderCount = { value: 0 };
+        const chain = {
+          select() { return this; },
+          eq() { return this; },
+          order() {
+            orderCount.value += 1;
+            return orderCount.value === 1 ? this : Promise.resolve({ data: [
+              { id:"a1", analysis_date:"2026-10-01", report_metrics:{ weight_kg:{value:82,unit:"kg",status:"needs_coach_review"}, body_fat_percent:{value:22,unit:"%",status:"needs_coach_review"} }, training_notes:"تمرین مقاومتی طبق برنامه", nutrition_notes:"پروتئین کافی" },
+              { id:"a2", analysis_date:"2026-11-01", report_metrics:{ weight_kg:{value:79,unit:"kg",status:"needs_coach_review"}, body_fat_percent:{value:19,unit:"%",status:"needs_coach_review"} }, training_notes:"افزایش تدریجی فشار تمرین", nutrition_notes:"تنظیم کالری روزانه" }
+            ], error:null });
+          }
+        };
+        return chain;
+      }
+    };
+    const nav=document.createElement("div");
+    nav.className="nav";
+    nav.innerHTML='<button type="button" onclick="dashOpen(\'analysis\')">آنالیز بدن</button>';
+    document.body.appendChild(nav);
+    const dashboard=document.createElement("section");
+    dashboard.id="traineeDashboard";
+    dashboard.className="section active";
+    document.body.appendChild(dashboard);
+    const section=document.createElement("section");
+    section.id="traineeAnalysis";
+    section.className="section";
+    section.style.display="none";
+    section.innerHTML='<div id="traineeAnalysisArchive"></div>';
+    document.body.appendChild(section);
+    const progress=document.createElement("section");
+    progress.id="progress";
+    progress.className="section";
+    progress.innerHTML='<div id="manualProgressCard" class="card">پیشرفت دستی شاگرد</div><div id="coachAnalysisView" class="card"></div><div id="progressTrend" class="card"></div><div id="progressHistory" class="card"></div>';
+    document.body.appendChild(progress);
+    window.dashOpen=function(key) {
+      document.querySelectorAll(".section").forEach(item => item.classList.remove("active"));
+      if (key === "analysis") dashboard.classList.add("active");
+      if (key === "progress") progress.classList.add("active");
+    };
+  });
+  console.log("[smoke] trainee fixture configured");
+  await traineeProgressPage.addScriptTag({ path: path.join(root, "top-genesis-publication.js") });
+  console.log('[smoke] publication script loaded');
+  await traineeProgressPage.waitForSelector("#topGenesisPublishedProgress", { state: "attached" });
+  await traineeProgressPage.evaluate(() => window.dashOpen("analysis"));
+  await traineeProgressPage.waitForSelector("#topGenesisPublishedProgress", { state: "visible" });
+  await traineeProgressPage.waitForFunction(() =>
+    document.querySelector("#traineeAnalysis")?.classList.contains("active") &&
+    getComputedStyle(document.querySelector("#traineeAnalysis")).display !== "none");
+  assert.equal(await traineeProgressPage.locator("#progress #coachAnalysisView, #progress #progressTrend, #progress #progressHistory").count(), 0,
+    "Legacy analysis cards must be removed from progress while the manual progress section remains intact.");
+  assert.equal(await traineeProgressPage.locator("#progress #manualProgressCard").count(), 1,
+    "The trainee's manual progress card must remain untouched.");
+  await traineeProgressPage.evaluate(() => window.dashOpen("progress"));
+  await traineeProgressPage.waitForTimeout(500);
+  assert.equal(await traineeProgressPage.locator("#progress").evaluate(el => el.classList.contains("active")), true,
+    "A delayed analysis recovery must not override later navigation to manual progress.");
+  assert.equal(await traineeProgressPage.locator("#progress #manualProgressCard").count(), 1);
+  await traineeProgressPage.evaluate(() => window.dashOpen("analysis"));
+  await traineeProgressPage.waitForFunction(() => document.querySelector("#traineeAnalysis")?.classList.contains("active"));
+  console.log('[smoke] trainee analysis route, manual progress preservation and navigation passed');
+  console.log('[smoke] trainee report card mounted');
+  await traineeProgressPage.waitForFunction(() => {
+    const body = document.querySelector("#topGenesisPublishedBody");
+    return body && body.querySelectorAll("polyline").length >= 2;
+  });
+  assert.match(await traineeProgressPage.locator("#topGenesisPublishedProgress").innerText(), /گزارش‌های تأییدشده آنالیز بدن/);
+  assert.match(await traineeProgressPage.locator("#topGenesisPublishedBody").innerText(), /۷۹/);
+  assert.match(await traineeProgressPage.locator("#topGenesisPublishedBody").innerText(), /تاریخچه آنالیزها/);
+  // History filters and per-report detail panels must not alter the all-history trend.
+  const historyMode = traineeProgressPage.locator("#topGenesisHistoryMode");
+  assert.equal(await historyMode.inputValue(), "latest");
+  assert.equal(await traineeProgressPage.locator("#topGenesisHistoryList article").count(), 1);
+  await historyMode.selectOption("all");
+  console.log('[smoke] history all filter passed');
+  assert.equal(await traineeProgressPage.locator("#topGenesisHistoryList article").count(), 2);
+  await traineeProgressPage.locator('[data-history-details="a1"]').click();
+  console.log('[smoke] report detail opened');
+  assert.equal(await traineeProgressPage.locator("#topGenesisDetails-a1").isVisible(), true);
+  assert.match(await traineeProgressPage.locator("#topGenesisDetails-a1").innerText(), /۸۲|82/);
+  assert.match(await traineeProgressPage.locator("#topGenesisDetails-a1").innerText(), /توصیه تمرینی مربی/);
+  assert.match(await traineeProgressPage.locator("#topGenesisDetails-a1").innerText(), /تمرین مقاومتی طبق برنامه/);
+  assert.match(await traineeProgressPage.locator("#topGenesisDetails-a1").innerText(), /پروتئین کافی/);
+  await historyMode.selectOption("month");
+  console.log('[smoke] month filter passed');
+  assert.equal(await traineeProgressPage.locator("#topGenesisHistoryList article").count(), 1,
+    "Persian current-month filter should include only the November fixture.");
+  await historyMode.selectOption("range");
+  console.log('[smoke] range filter selected');
+  await traineeProgressPage.locator("#topGenesisDateFrom").fill("2026-10-01");
+  await traineeProgressPage.locator("#topGenesisDateTo").fill("2026-10-01");
+  assert.equal(await traineeProgressPage.locator("#topGenesisHistoryList article").count(), 1,
+    "Date range should select the matching report date.");
+  assert.ok(await traineeProgressPage.locator("#topGenesisPublishedBody polyline").count() >= 2,
+    "Trend charts must continue to use the complete history, independent of the selected filter.");
+  // Switching roles inside the same SPA must move the report card, not strand it in coach view.
+  console.log("[smoke] starting trainee-to-coach role switch");
+  await traineeProgressPage.evaluate(() => {
+    window.authProfile.role = "coach";
+    const progress = document.createElement("section");
+    progress.id = "progress";
+    progress.className = "section";
+    progress.innerHTML = '<div id="progressEntryPanel"></div>';
+    const bodyAnalysis = document.createElement("section");
+    bodyAnalysis.id = "bodyAnalysis";
+    bodyAnalysis.className = "section";
+    bodyAnalysis.innerHTML = '<div id="bodyAnalysisEntryPanel"></div>';
+    document.body.append(progress, bodyAnalysis);
+  });
+  await traineeProgressPage.waitForFunction(() =>
+    document.querySelector("#topGenesisPublishedProgress")?.closest("#bodyAnalysisEntryPanel"));
+  console.log("[smoke] report moved inside coach Body Analysis card");
+  await traineeProgressPage.evaluate(() => { window.authProfile.role = "trainee"; });
+  await traineeProgressPage.waitForFunction(() =>
+    document.querySelector("#topGenesisPublishedProgress")?.closest("#traineeAnalysis"));
+  console.log("[smoke] report returned to trainee analysis");
+
+
+  await traineeProgressPage.close();
+  console.log('[smoke] trainee progress page closed');
+
+
+  const analyzerSource = fs.readFileSync(path.join(root, "top-genesis-pdf-test.html"), "utf8");
+  const fullReportMigration = fs.readFileSync(path.join(root, "supabase/migrations/202611120002_top_genesis_full_trainee_report.sql"), "utf8");
+  assert.match(analyzerSource, /buildTraineeSafeReportHtml/, "The trainee report must be derived from the exact analyzer output.");
+  assert.match(analyzerSource, /reportHtml/, "The complete report must be included in the approved publication payload.");
+  assert.match(analyzerSource, /image_data_url/, "Original scan images must remain in the generated report.");
+  assert.match(publicationSource, /report_storage_path/, "The publication must retain a private full-report storage path.");
+  assert.match(publicationSource, /storage[\s\S]*\.upload\(/, "The coach-approved report must be uploaded to private storage.");
+  assert.match(publicationSource, /\.download\(row\.report_storage_path\)/, "The trainee must load the private full report from storage.");
+  assert.match(fullReportMigration, /add column if not exists report_storage_path/i);
+  assert.match(fullReportMigration, /text\/html/);
+  assert.doesNotMatch(fullReportMigration, /drop table|delete from public\.trainee_body_analysis_publications/i,
+    "The full-report migration must not delete or rewrite existing trainee records.");
+
+  const publicationMigration = fs.readFileSync(path.join(root, "supabase/migrations/202611120001_top_genesis_publications.sql"), "utf8");
+  assert.match(publicationMigration, /private\.can_access_trainee/);
+  assert.match(publicationMigration, /for insert to authenticated/i);
+  assert.doesNotMatch(publicationMigration, /for update to authenticated/i);
+  assert.doesNotMatch(publicationMigration, /for delete to authenticated/i);
+
+  console.log("PASS: Chromium loaded PDF.js/OCR, parsed anonymized CSV/ZIP fixtures, and rendered approved multi-visit trends in the trainee progress panel.");
 } finally {
+  console.log('[smoke] closing browser');
   await browser.close();
+  console.log('[smoke] browser closed');
   await new Promise(resolve => server.close(resolve));
+  console.log('[smoke] server closed');
 }
