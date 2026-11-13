@@ -4,9 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <!-- Low-risk startup optimization: warm up connections to services used on app startup. -->
-<link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
-<link rel="preload" as="script" href="./vendor/supabase-2.119.0.js" crossorigin>
-<link rel="dns-prefetch" href="//cdn.jsdelivr.net">
+<link rel="preload" as="script" href="./vendor/supabase-2.119.0.js">
 <link rel="preconnect" href="https://qfakyudgidsumeuoqoot.supabase.co" crossorigin>
 <link rel="dns-prefetch" href="//qfakyudgidsumeuoqoot.supabase.co">
 <title>فیتنس سه‌قلعه</title>
@@ -2410,16 +2408,15 @@ function esc(s){return String(s).replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",
 
 </script>
 <script>
-/* SEH_SUPABASE_SDK_LOADER: parser-ordered fallback. */
+/* SEH_SUPABASE_SDK_LOADER: same-origin, self-hosted pinned SDK. */
 (function(){
   'use strict';
-  var fallback='https://unpkg.com/@supabase/supabase-js@2.119.0';
   function showFailure(){
     window.__sehSupabaseSdkLoadFailed=true;
     var box=document.getElementById('authError');
     if(box){
       box.style.display='block';
-      box.textContent='کتابخانه اتصال از دو منبع بارگذاری نشد. اتصال اینترنت یا دسترسی به منابع کتابخانه را بررسی کنید و دوباره صفحه را بارگذاری کنید.';
+      box.textContent='کتابخانه اتصال از فایل داخلی برنامه بارگذاری نشد. صفحه را دوباره بارگذاری کنید؛ اگر مشکل ادامه داشت، به مربی اطلاع دهید.';
     }
   }
   window.__sehSupabaseSdkLoaded=function(){
@@ -2428,19 +2425,9 @@ function esc(s){return String(s).replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",
       window.__sehSupabaseSdkLoadFailed=false;
     }else showFailure();
   };
-  window.__sehSupabaseSdkFallbackFailed=showFailure;
-  window.__sehSupabaseSdkFailed=function(){
-    /*
-     * The failed tag is a parser-blocking classic script. document.write inserts
-     * the fallback at the parser's current position; the app script below stays
-     * blocked until the fallback has loaded or failed. A timer cannot reliably
-     * bound a parser-blocking request because the parser is paused during it.
-     */
-    if(document.readyState==='loading'){
-      document.write('<script id="seh-supabase-sdk-fallback" src="'+fallback+'" onload="window.__sehSupabaseSdkLoaded()" onerror="window.__sehSupabaseSdkFallbackFailed()"><\/script>');
-    }else showFailure();
-  };
-})();</script>
+  window.__sehSupabaseSdkFailed=showFailure;
+})();
+</script>
 <script id="seh-supabase-sdk" src="./vendor/supabase-2.119.0.js" onload="window.__sehSupabaseSdkLoaded()" onerror="window.__sehSupabaseSdkFailed()"></script>
 <script>
 if(!window.supabase||typeof window.supabase.createClient!=='function'){
