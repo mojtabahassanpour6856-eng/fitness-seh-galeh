@@ -647,7 +647,7 @@ Waist-Hip Ratio (WHO),0.889
   // Exercise the exact production dashOpen function for both roles. A coach
   // must land in analysisImport; a trainee must retain traineeAnalysis.
   const dashOpenStart = appShellSource.indexOf("  window.dashOpen=function(section){");
-  const dashOpenEnd = appShellSource.indexOf("\\n\\n  function buildCoachControls", dashOpenStart);
+  const dashOpenEnd = appShellSource.indexOf("\n\n  function buildCoachControls", dashOpenStart);
   assert.ok(dashOpenStart >= 0 && dashOpenEnd > dashOpenStart, "The production dashboard route function must be extractable for a role smoke test.");
   const dashOpenSource = appShellSource.slice(dashOpenStart, dashOpenEnd);
   const coachRoutePage = await browser.newPage();
