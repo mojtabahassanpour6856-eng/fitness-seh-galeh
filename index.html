@@ -3353,14 +3353,22 @@ window.loadDashboard = loadDashboard;
     view.innerHTML='<h2>📊 پیشرفت ثبت‌شده توسط شاگرد</h2><p class="muted">این اطلاعات را شاگرد از حساب خودش ثبت کرده است؛ این بخش برای مربی فقط قابل مشاهده است.</p><div class="muted">در حال دریافت اطلاعات…</div>';
     if(traineeId==null){view.innerHTML+='<p class="muted">ابتدا یک شاگرد انتخاب کنید.</p>';return;}
     try{
-      const rows=await sbGet('/body_analyses?trainee_id=eq.'+encodeURIComponent(traineeId)+'&select=analysis_date,weight,waist,chest,hip,abdomen,thigh,notes&order=analysis_date.desc');
+      const [rows,weightRows]=await Promise.all([
+        sbGet('/body_analyses?trainee_id=eq.'+encodeURIComponent(traineeId)+'&select=analysis_date,weight,waist,chest,hip,abdomen,thigh,notes&order=analysis_date.desc'),
+        sbGet('/weight_logs?trainee_id=eq.'+encodeURIComponent(traineeId)+'&select=log_date,weight&order=log_date.desc')
+      ]);
       if(!currentClient||String(currentClient.id)!==String(traineeId))return;
-      const manual=(rows||[]).filter(x=>String(x.notes||'').includes('MANUAL_PROGRESS_ENTRY'));
+      const isLegacy=x=>String(x.notes||'').includes('ثبت پیشرفت دوره‌ای');
+      const manual=(rows||[]).filter(x=>String(x.notes||'').includes('MANUAL_PROGRESS_ENTRY')||isLegacy(x));
+      const key=(d,w)=>String(d||'').slice(0,10)+'|'+String(Number(w));
+      const known=new Set(manual.filter(x=>x.weight!==null&&x.weight!=='').map(x=>key(x.analysis_date,x.weight)));
+      const weightOnly=(weightRows||[]).filter(x=>!known.has(key(x.log_date,x.weight))).map(x=>({analysis_date:x.log_date,weight:x.weight,waist:null,chest:null,hip:null,abdomen:null,thigh:null,_weightOnly:true}));
+      const historyRows=[...manual,...weightOnly].sort((a,b)=>String(b.analysis_date||'').localeCompare(String(a.analysis_date||'')));
       const value=v=>(v===null||v===undefined||v===''?'—':esc2(v));
       view.innerHTML='<h2>📊 پیشرفت ثبت‌شده توسط شاگرد</h2><p class="muted">این اطلاعات را شاگرد از حساب خودش ثبت کرده است؛ این بخش برای مربی فقط قابل مشاهده است.</p>'+
-        (manual.length?'<div class="v4-table"><table><thead><tr><th>تاریخ</th><th>وزن</th><th>دور کمر</th><th>دور سینه</th><th>دور باسن</th><th>دور شکم</th><th>دور ران</th></tr></thead><tbody>'+
-        manual.map(x=>'<tr><td>'+value(x.analysis_date)+'</td><td>'+value(x.weight)+'</td><td>'+value(x.waist)+'</td><td>'+value(x.chest)+'</td><td>'+value(x.hip)+'</td><td>'+value(x.abdomen)+'</td><td>'+value(x.thigh)+'</td></tr>').join('')+
-        '</tbody></table></div>':'<p class="muted">شاگرد هنوز ثبت پیشرفت دستی ارسال نکرده است.</p>');
+        (historyRows.length?'<div class="v4-table"><table><thead><tr><th>تاریخ</th><th>نوع ثبت</th><th>وزن</th><th>دور کمر</th><th>دور سینه</th><th>دور باسن</th><th>دور شکم</th><th>دور ران</th></tr></thead><tbody>'+
+        historyRows.map(x=>'<tr><td>'+value(x.analysis_date)+'</td><td>'+(x._weightOnly?'فقط ثبت وزن':'ثبت پیشرفت')+'</td><td>'+value(x.weight)+'</td><td>'+value(x.waist)+'</td><td>'+value(x.chest)+'</td><td>'+value(x.hip)+'</td><td>'+value(x.abdomen)+'</td><td>'+value(x.thigh)+'</td></tr>').join('')+
+        '</tbody></table></div>':'<p class="muted">شاگرد هنوز ثبت پیشرفت یا وزن ارسال نکرده است.</p>');
     }catch(e){
       if(currentClient&&String(currentClient.id)===String(traineeId))view.innerHTML='<h2>📊 پیشرفت ثبت‌شده توسط شاگرد</h2><p class="muted">دریافت اطلاعات پیشرفت انجام نشد. لطفاً دوباره تلاش کنید.</p>';
       console.error('loadCoachManualProgress',e);
@@ -8689,8 +8697,9 @@ const oldWorkoutRenderer=window.renderWorkoutList;
     if(seq!==requestSeq || !currentClient || !same(currentClient.id,traineeId))return;
     const boxes=ensureProgressCards();if(!boxes)return;
     const list=Array.isArray(rows)?rows:[];
-    const manualRows=list.filter(x=>String(x.notes||'').includes('MANUAL_PROGRESS_ENTRY'));
-    const coachRows=list.filter(x=>!String(x.notes||'').includes('MANUAL_PROGRESS_ENTRY'));
+    const isManualRecord=x=>String(x.notes||'').includes('MANUAL_PROGRESS_ENTRY')||String(x.notes||'').includes('ثبت پیشرفت دوره‌ای')||x._weightOnly===true;
+    const manualRows=list.filter(isManualRecord);
+    const coachRows=list.filter(x=>!isManualRecord(x));
     const view=$('coachAnalysisViewBody');
     if(view){
       const latestAnalysis=coachRows.slice().sort((a,b)=>String(b.analysis_date||'').localeCompare(String(a.analysis_date||'')))[0];
@@ -8721,7 +8730,7 @@ const oldWorkoutRenderer=window.renderWorkoutList;
     const deltaText=delta===null?'برای محاسبه تغییر وزن، حداقل دو ثبت وزن لازم است.':('تغییر از اولین ثبت: <b>'+ (delta>0?'+':'')+esc(delta.toFixed(1))+' کیلوگرم</b>');
     boxes.chart.innerHTML='<div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-bottom:12px"><div class="receipt-item"><small>آخرین وزن</small><div style="font-weight:800;font-size:18px">'+(latest?esc(Number(latest.weight).toLocaleString('fa-IR')+' kg'):'—')+'</div></div><div class="receipt-item"><small>درصد چربی اخیر</small><div style="font-weight:800;font-size:18px">'+(manualRows.slice().reverse().find(x=>x.body_fat!==null&&x.body_fat!=='')?esc(manualRows.slice().reverse().find(x=>x.body_fat!==null&&x.body_fat!=='').body_fat)+'٪':'—')+'</div></div><div class="receipt-item"><small>تعداد ثبت‌ها</small><div style="font-weight:800;font-size:18px">'+esc(manualRows.length.toLocaleString('fa-IR'))+'</div></div></div><p style="margin:4px 0 10px;font-size:12px">'+deltaText+'</p>'+(bars?'<div style="display:flex;align-items:flex-end;gap:6px;overflow-x:auto;overflow-y:hidden;gap:8px;padding:12px 8px 12px;min-height:160px;border-bottom:2px solid #b9a36a">'+bars+'</div><p class="muted" style="font-size:11px">نمودار وزن بر اساس ثبت‌های آنالیز بدن است؛ برای مشاهده جزئیات، تاریخچه زیر را بررسی کنید.</p>':'<p class="muted">پس از ثبت وزن در برگه آنالیز توسط مربی، نمودار نمایش داده می‌شود.</p>');
     const historyRows=manualRows.slice().sort((a,b)=>String(b.analysis_date||'').localeCompare(String(a.analysis_date||'')));
-    boxes.history.innerHTML='<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;min-width:560px"><thead><tr><th>تاریخ</th><th>وزن</th><th>چربی ٪</th><th>عضله</th><th>شکم</th><th>کمر</th><th>سینه</th><th>باسن</th><th>ران</th></tr></thead><tbody>'+historyRows.map(x=>'<tr><td>'+esc(dateFa(x.analysis_date))+'</td><td>'+esc(x.weight??'—')+'</td><td>'+esc(x.body_fat??'—')+'</td><td>'+esc(x.muscle_mass??'—')+'</td><td>'+esc(x.abdomen??'—')+'</td><td>'+esc(x.waist??'—')+'</td><td>'+esc(x.chest??'—')+'</td><td>'+esc(x.hip??'—')+'</td><td>'+esc(x.thigh??'—')+'</td></tr>').join('')+'</tbody></table></div>';
+    boxes.history.innerHTML='<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;min-width:620px"><thead><tr><th>تاریخ</th><th>نوع ثبت</th><th>وزن</th><th>چربی ٪</th><th>عضله</th><th>شکم</th><th>کمر</th><th>سینه</th><th>باسن</th><th>ران</th></tr></thead><tbody>'+historyRows.map(x=>'<tr><td>'+esc(dateFa(x.analysis_date))+'</td><td>'+(x._weightOnly?'فقط ثبت وزن':'ثبت پیشرفت شاگرد')+'</td><td>'+esc(x.weight??'—')+'</td><td>'+esc(x.body_fat??'—')+'</td><td>'+esc(x.muscle_mass??'—')+'</td><td>'+esc(x.abdomen??'—')+'</td><td>'+esc(x.waist??'—')+'</td><td>'+esc(x.chest??'—')+'</td><td>'+esc(x.hip??'—')+'</td><td>'+esc(x.thigh??'—')+'</td></tr>').join('')+'</tbody></table></div>';
   }
   async function loadProgressData(){
     const trainee=typeof currentClient!=='undefined'?currentClient:null;
@@ -8732,8 +8741,15 @@ const oldWorkoutRenderer=window.renderWorkoutList;
     boxes.chart.textContent='در حال بارگذاری روند پیشرفت…';
     boxes.history.textContent='در حال دریافت تاریخچه…';
     try{
-      const rows=await sbGet('/body_analyses?trainee_id=eq.'+encodeURIComponent(traineeId)+'&select=analysis_date,weight,body_fat,muscle_mass,body_water,visceral_fat,abdomen,waist,chest,hip,thigh,notes&order=analysis_date.asc&limit=100');
-      render(rows,traineeId,seq);
+      const [analysisRows,weightRows]=await Promise.all([
+        sbGet('/body_analyses?trainee_id=eq.'+encodeURIComponent(traineeId)+'&select=analysis_date,weight,body_fat,muscle_mass,body_water,visceral_fat,abdomen,waist,chest,hip,thigh,notes&order=analysis_date.asc&limit=100'),
+        sbGet('/weight_logs?trainee_id=eq.'+encodeURIComponent(traineeId)+'&select=log_date,weight&order=log_date.asc&limit=200')
+      ]);
+      const isStudentManual=x=>String(x.notes||'').includes('MANUAL_PROGRESS_ENTRY')||String(x.notes||'').includes('ثبت پیشرفت دوره‌ای');
+      const manualBody=analysisRows.filter(isStudentManual);
+      const knownWeights=new Set(manualBody.filter(x=>x.weight!==null&&x.weight!=='').map(x=>String(x.analysis_date||'').slice(0,10)+'|'+String(Number(x.weight))));
+      const weightOnly=weightRows.filter(x=>!knownWeights.has(String(x.log_date||'').slice(0,10)+'|'+String(Number(x.weight)))).map(x=>({analysis_date:x.log_date,weight:x.weight,body_fat:null,muscle_mass:null,body_water:null,visceral_fat:null,abdomen:null,waist:null,chest:null,hip:null,thigh:null,notes:'',_weightOnly:true}));
+      render([...analysisRows,...weightOnly],traineeId,seq);
     }catch(e){
       if(seq!==requestSeq)return;
       boxes.chart.innerHTML='<p class="warning-text">بارگذاری نمودار پیشرفت ناموفق بود: '+esc(e?.message||String(e))+'</p>';
