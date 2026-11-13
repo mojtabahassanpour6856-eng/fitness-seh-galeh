@@ -733,11 +733,12 @@ Waist-Hip Ratio (WHO),0.889
     const progress=document.createElement("section");
     progress.id="progress";
     progress.className="section";
-    progress.innerHTML='<div id="coachAnalysisView" class="card"></div><div id="progressTrend" class="card"></div><div id="progressHistory" class="card"></div>';
+    progress.innerHTML='<div id="manualProgressCard" class="card">پیشرفت دستی شاگرد</div><div id="coachAnalysisView" class="card"></div><div id="progressTrend" class="card"></div><div id="progressHistory" class="card"></div>';
     document.body.appendChild(progress);
     window.dashOpen=function(key) {
       document.querySelectorAll(".section").forEach(item => item.classList.remove("active"));
       if (key === "analysis") dashboard.classList.add("active");
+      if (key === "progress") progress.classList.add("active");
     };
   });
   console.log("[smoke] trainee fixture configured");
@@ -751,7 +752,16 @@ Waist-Hip Ratio (WHO),0.889
     getComputedStyle(document.querySelector("#traineeAnalysis")).display !== "none");
   assert.equal(await traineeProgressPage.locator("#progress #coachAnalysisView, #progress #progressTrend, #progress #progressHistory").count(), 0,
     "Legacy analysis cards must be removed from progress while the manual progress section remains intact.");
-  console.log('[smoke] trainee analysis route and progress cleanup passed');
+  assert.equal(await traineeProgressPage.locator("#progress #manualProgressCard").count(), 1,
+    "The trainee's manual progress card must remain untouched.");
+  await traineeProgressPage.evaluate(() => window.dashOpen("progress"));
+  await traineeProgressPage.waitForTimeout(500);
+  assert.equal(await traineeProgressPage.locator("#progress").evaluate(el => el.classList.contains("active")), true,
+    "A delayed analysis recovery must not override later navigation to manual progress.");
+  assert.equal(await traineeProgressPage.locator("#progress #manualProgressCard").count(), 1);
+  await traineeProgressPage.evaluate(() => window.dashOpen("analysis"));
+  await traineeProgressPage.waitForFunction(() => document.querySelector("#traineeAnalysis")?.classList.contains("active"));
+  console.log('[smoke] trainee analysis route, manual progress preservation and navigation passed');
   console.log('[smoke] trainee report card mounted');
   await traineeProgressPage.waitForFunction(() => {
     const body = document.querySelector("#topGenesisPublishedBody");
