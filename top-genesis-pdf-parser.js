@@ -11,67 +11,21 @@
   const TESSERACT_URL = "https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js";
   let pdfJsPromise;
   let tesseractPromise;
-  const SCRIPT_LOAD_TIMEOUT_MS = 25000;
-  const OCR_WORKER_TIMEOUT_MS = 120000;
-  const OCR_RECOGNITION_TIMEOUT_MS = 90000;
-
-  function withTimeout(promise, timeoutMs, message) {
-    let timer;
-    return Promise.race([
-      promise,
-      new Promise((_, reject) => {
-        timer = setTimeout(() => reject(new Error(message)), timeoutMs);
-      })
-    ]).finally(() => clearTimeout(timer));
-  }
-
-  function loadScript(url, validate, timeoutMessage, loadMessage) {
-    return new Promise((resolve, reject) => {
-      const script = document.createElement("script");
-      let settled = false;
-      const finish = (error, value) => {
-        if (settled) return;
-        settled = true;
-        clearTimeout(timer);
-        script.onload = null;
-        script.onerror = null;
-        if (error) {
-          script.remove();
-          reject(error);
-        } else resolve(value);
-      };
-      const timer = setTimeout(() => finish(new Error(timeoutMessage)), SCRIPT_LOAD_TIMEOUT_MS);
-      script.src = url;
-      script.async = true;
-      script.onload = () => {
-        try {
-          const value = validate();
-          if (!value) return finish(new Error(loadMessage));
-          finish(null, value);
-        } catch (error) {
-          finish(error);
-        }
-      };
-      script.onerror = () => finish(new Error(loadMessage));
-      document.head.appendChild(script);
-    });
-  }
 
   function loadPdfJs() {
     if (global.pdfjsLib) return Promise.resolve(global.pdfjsLib);
     if (pdfJsPromise) return pdfJsPromise;
-    pdfJsPromise = loadScript(
-      PDFJS_URL,
-      () => {
-        if (!global.pdfjsLib) return null;
+    pdfJsPromise = new Promise((resolve, reject) => {
+      const script = document.createElement("script");
+      script.src = PDFJS_URL;
+      script.async = true;
+      script.onload = () => {
+        if (!global.pdfjsLib) return reject(new Error("کتابخانه PDF.js بارگذاری شد اما در دسترس نیست."));
         global.pdfjsLib.GlobalWorkerOptions.workerSrc = PDFJS_WORKER_URL;
-        return global.pdfjsLib;
-      },
-      "بارگذاری PDF.js بیش از ۲۵ ثانیه طول کشید؛ اتصال CDN را بررسی کنید.",
-      "کتابخانه PDF.js بارگذاری شد اما در دسترس نیست."
-    ).catch(error => {
-      pdfJsPromise = null;
-      throw error;
+        resolve(global.pdfjsLib);
+      };
+      script.onerror = () => reject(new Error("بارگذاری ابزار خواندن PDF ناموفق بود؛ اتصال اینترنت را بررسی کنید."));
+      document.head.appendChild(script);
     });
     return pdfJsPromise;
   }
@@ -79,14 +33,15 @@
   function loadTesseract() {
     if (global.Tesseract) return Promise.resolve(global.Tesseract);
     if (tesseractPromise) return tesseractPromise;
-    tesseractPromise = loadScript(
-      TESSERACT_URL,
-      () => global.Tesseract,
-      "بارگذاری ابزار OCR بیش از ۲۵ ثانیه طول کشید؛ اتصال CDN را بررسی کنید.",
-      "ابزار OCR بارگذاری نشد یا در دسترس نیست."
-    ).catch(error => {
-      tesseractPromise = null;
-      throw error;
+    tesseractPromise = new Promise((resolve, reject) => {
+      const script = document.createElement("script");
+      script.src = TESSERACT_URL;
+      script.async = true;
+      script.onload = () => global.Tesseract
+        ? resolve(global.Tesseract)
+        : reject(new Error("ابزار OCR بارگذاری شد اما در دسترس نیست."));
+      script.onerror = () => reject(new Error("بارگذاری ابزار OCR ناموفق بود."));
+      document.head.appendChild(script);
     });
     return tesseractPromise;
   }
@@ -447,11 +402,7 @@
     if (!file.size || file.size > 10 * 1024 * 1024) throw new Error("حجم فایل باید بین صفر تا ۱۰ مگابایت باشد.");
     const pdfjs = await loadPdfJs();
     const bytes = await file.arrayBuffer();
-    const pdf = await withTimeout(
-      pdfjs.getDocument({ data: bytes }).promise,
-      60000,
-      "باز کردن PDF بیش از ۶۰ ثانیه طول کشید."
-    );
+    const pdf = await pdfjs.getDocument({ data: bytes }).promise;
     const pages = [];
     const ocrPages = [];
     const scanPages = [];
@@ -475,11 +426,7 @@
         if (needsTargetedOcr) {
           if (!ocrWorker) {
             const Tesseract = await loadTesseract();
-            ocrWorker = await withTimeout(
-              Tesseract.createWorker("eng"),
-              OCR_WORKER_TIMEOUT_MS,
-              "راه‌اندازی موتور OCR بیش از ۱۲۰ ثانیه طول کشید؛ بارگیری فایل‌های زبان و موتور را بررسی کنید."
-            );
+            ocrWorker = await Tesseract.createWorker("eng");
           }
           const viewport = page.getViewport({ scale: 2.2 });
           const canvas = document.createElement("canvas");
@@ -487,11 +434,7 @@
           canvas.height = Math.ceil(viewport.height);
           const context = canvas.getContext("2d", { willReadFrequently: true });
           await page.render({ canvasContext: context, viewport }).promise;
-          const recognized = await withTimeout(
-            ocrWorker.recognize(canvas),
-            OCR_RECOGNITION_TIMEOUT_MS,
-            "تشخیص متن تصویر بیش از ۹۰ ثانیه طول کشید."
-          );
+          const recognized = await ocrWorker.recognize(canvas);
           pageText += " " + (recognized?.data?.text || "");
           ocrPages.push(pageNo);
           canvas.width = 0;
@@ -519,17 +462,7 @@
         }
       }
     } finally {
-      if (ocrWorker) {
-        try {
-          await withTimeout(
-            ocrWorker.terminate(),
-            10000,
-            "بستن موتور OCR بیش از ۱۰ ثانیه طول کشید."
-          );
-        } catch (_) {
-          // A timed-out OCR worker must not keep the report UI blocked during cleanup.
-        }
-      }
+      if (ocrWorker) await ocrWorker.terminate();
     }
     const result = extractMetrics(pages.join(" "));
     result.page_count = pdf.numPages;

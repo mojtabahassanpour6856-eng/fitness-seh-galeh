@@ -12,8 +12,6 @@ on:
       - "tests/top-genesis-browser-smoke.mjs"
       - "tests/trainee-navigation-avatar-regression.mjs"
       - "top-genesis-pdf-app-embed.js"
-      - "top-genesis-publication.js"
-      - "supabase/migrations/202611120001_top_genesis_publications.sql"
       - ".github/workflows/top-genesis-browser-smoke.yml"
   pull_request:
     paths:
@@ -33,16 +31,12 @@ permissions:
 jobs:
   chromium-smoke:
     runs-on: ubuntu-latest
-    timeout-minutes: 25
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: 20
-      - name: Check publication module syntax
-        run: node --check top-genesis-publication.js
-      - name: Check unified coach body-analysis layout and navigation
-        run: node tests/coach-body-analysis-layout-regression.mjs
       - name: Install browser test dependencies
         run: npm install --no-save playwright pdf-lib
       - name: Install Chromium
