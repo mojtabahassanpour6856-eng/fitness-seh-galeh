@@ -36,6 +36,19 @@ assert.match(html, /notes:"MANUAL_PROGRESS_ENTRY: ثبت دستی توسط مر�
   "New coach-entered progress records must carry the explicit progress marker.");
 assert.match(html, /const manualRows=list\.filter\(isProgressEntry\)/,
   "Progress trend and history must include all explicitly classified manual progress records.");
+assert.match(html, /note\.startsWith\('ثبت پیشرفت دوره‌ای:'\)/,
+  "Legacy coach progress notes with a suffix must still be classified as manual progress.");
+assert.match(html, /sbGet\('\/weight_logs\?trainee_id=eq\./,
+  "The progress trend must also load manual weigh-ins from weight_logs.");
+assert.match(html, /seenProgress\.has\(key\)/,
+  "Merging weight_logs with body_analyses must deduplicate matching date/weight records.");
+assert.match(html, /const uniqueProgress=new Map\(\);/,
+  "Duplicate manual rows already present in body_analyses must also be collapsed.");
+assert.match(html, /numericWeight\.toFixed\(2\)/,
+  "Deduplication must normalize numerically equivalent weight values.");
+assert.match(html, /render\(rows,traineeId,seq,weightLogs\)/,
+  "Both manual progress sources must be passed into the progress renderer.");
+
 assert.match(html, /const coachRows=list\.filter\(x=>!isProgressEntry\(x\)\)/,
   "All manual progress records, including legacy coach entries, must be excluded from the coach analysis receipt.");
 assert.match(html, /const weighted=manualRows\.filter/,

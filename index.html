@@ -8666,12 +8666,51 @@ const oldWorkoutRenderer=window.renderWorkoutList;
     progressSec.appendChild(history);
     return {chart:$('progressTrendBody'),history:$('progressHistoryBody')};
   }
-  function render(rows, traineeId, seq){
+  function render(rows, traineeId, seq, weightLogs){
     if(seq!==requestSeq || !currentClient || !same(currentClient.id,traineeId))return;
     const boxes=ensureProgressCards();if(!boxes)return;
     const list=Array.isArray(rows)?rows:[];
-    const isProgressEntry=x=>{const note=String(x.notes||'').trim();return note.includes('MANUAL_PROGRESS_ENTRY')||note==='ثبت پیشرفت دوره‌ای';};
+    const isProgressEntry=x=>{
+      const note=String(x.notes||'').replace(/[يى]/g,'ی').replace(/[ك]/g,'ک').trim();
+      return note.includes('MANUAL_PROGRESS_ENTRY') ||
+        note==='ثبت پیشرفت دوره‌ای' ||
+        note.startsWith('ثبت پیشرفت دوره‌ای:') ||
+        note.startsWith('ثبت دستی توسط مربی') ||
+        note.startsWith('ثبت دستی و تأییدشده توسط شاگرد');
+    };
     const manualRows=list.filter(isProgressEntry);
+    // Normalize keys and collapse duplicate legacy rows already in body_analyses.
+    const progressKey=x=>{
+      const rawDate=String(x.analysis_date||x.log_date||'').trim().split('T')[0].replace(/\\//g,'-');
+      const date=rawDate.replace(/[۰-۹]/g,d=>'۰۱۲۳۴۵۶۷۸۹'.indexOf(d)).replace(/[٠-٩]/g,d=>'٠١٢٣٤٥٦٧٨٩'.indexOf(d));
+      const rawWeight=String(x.weight??'').trim();
+      if(!rawWeight)return '';
+      const numericWeight=Number(rawWeight.replace(/[۰-۹]/g,d=>'۰۱۲۳۴۵۶۷۸۹'.indexOf(d)).replace(/[٠-٩]/g,d=>'٠١٢٣٤٥٦٧٨٩'.indexOf(d)));
+      return date && Number.isFinite(numericWeight) ? date+'|'+numericWeight.toFixed(2) : '';
+    };
+    const uniqueProgress=new Map();
+    manualRows.forEach(row=>{
+      const key=progressKey(row);
+      if(!key){uniqueProgress.set('row-'+uniqueProgress.size,row);return;}
+      const existing=uniqueProgress.get(key);
+      if(!existing){uniqueProgress.set(key,row);return;}
+      ['body_fat','muscle_mass','body_water','visceral_fat','abdomen','waist','chest','hip','thigh'].forEach(field=>{
+        if((existing[field]===null||existing[field]===undefined||existing[field]==='') && row[field]!==null && row[field]!==undefined && row[field]!=='') existing[field]=row[field];
+      });
+    });
+    const seenProgress=new Set([...uniqueProgress.keys()].filter(key=>!key.startsWith('row-')));
+    const dedupedManualRows=[...uniqueProgress.values()];
+    // Merge weight_logs without discarding richer body_analyses measurements.
+    (Array.isArray(weightLogs)?weightLogs:[]).forEach(x=>{
+      const date=String(x.log_date||'');
+      const weight=x.weight;
+      if(!date||weight===null||weight===undefined||weight==='')return;
+      const key=progressKey({log_date:date,weight});
+      if(!key||seenProgress.has(key))return;
+      seenProgress.add(key);
+      dedupedManualRows.push({analysis_date:date,weight,notes:'MANUAL_PROGRESS_ENTRY: وزن ثبت‌شده دستی',body_fat:null,muscle_mass:null,body_water:null,visceral_fat:null,abdomen:null,waist:null,chest:null,hip:null,thigh:null});
+    });
+    manualRows.splice(0,manualRows.length,...dedupedManualRows);
     const coachRows=list.filter(x=>!isProgressEntry(x));
     const view=$('coachAnalysisViewBody');
     if(view){
@@ -8701,7 +8740,7 @@ const oldWorkoutRenderer=window.renderWorkoutList;
       return '<div style="display:flex;flex-direction:column;align-items:center;justify-content:flex-end;min-width:48px;flex:0 0 48px;gap:6px"><b style="font-size:11px">'+esc(w)+'</b><div title="'+esc(dateFa(x.analysis_date))+'" style="height:'+h+'px;width:28px;background:linear-gradient(180deg,#f4c44e,#a87b12);border-radius:6px 6px 2px 2px"></div><span style="font-size:10px;white-space:nowrap;color:var(--muted,#9aa7b4)">'+esc(dateFa(x.analysis_date))+'</span></div>';
     }).join('');
     const deltaText=delta===null?'برای محاسبه تغییر وزن، حداقل دو ثبت وزن لازم است.':('تغییر از اولین ثبت: <b>'+ (delta>0?'+':'')+esc(delta.toFixed(1))+' کیلوگرم</b>');
-    boxes.chart.innerHTML='<div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-bottom:12px"><div class="receipt-item"><small>آخرین وزن</small><div style="font-weight:800;font-size:18px">'+(latest?esc(Number(latest.weight).toLocaleString('fa-IR')+' kg'):'—')+'</div></div><div class="receipt-item"><small>درصد چربی اخیر</small><div style="font-weight:800;font-size:18px">'+(manualRows.slice().reverse().find(x=>x.body_fat!==null&&x.body_fat!=='')?esc(manualRows.slice().reverse().find(x=>x.body_fat!==null&&x.body_fat!=='').body_fat)+'٪':'—')+'</div></div><div class="receipt-item"><small>تعداد ثبت‌ها</small><div style="font-weight:800;font-size:18px">'+esc(manualRows.length.toLocaleString('fa-IR'))+'</div></div></div><p style="margin:4px 0 10px;font-size:12px">'+deltaText+'</p>'+(bars?'<div style="display:flex;align-items:flex-end;gap:6px;overflow-x:auto;overflow-y:hidden;gap:8px;padding:12px 8px 12px;min-height:160px;border-bottom:2px solid #b9a36a">'+bars+'</div><p class="muted" style="font-size:11px">نمودار وزن بر اساس ثبت‌های آنالیز بدن است؛ برای مشاهده جزئیات، تاریخچه زیر را بررسی کنید.</p>':'<p class="muted">پس از ثبت وزن در برگه آنالیز توسط مربی، نمودار نمایش داده می‌شود.</p>');
+    boxes.chart.innerHTML='<div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-bottom:12px"><div class="receipt-item"><small>آخرین وزن</small><div style="font-weight:800;font-size:18px">'+(latest?esc(Number(latest.weight).toLocaleString('fa-IR')+' kg'):'—')+'</div></div><div class="receipt-item"><small>درصد چربی اخیر</small><div style="font-weight:800;font-size:18px">'+(manualRows.slice().reverse().find(x=>x.body_fat!==null&&x.body_fat!=='')?esc(manualRows.slice().reverse().find(x=>x.body_fat!==null&&x.body_fat!=='').body_fat)+'٪':'—')+'</div></div><div class="receipt-item"><small>تعداد ثبت‌ها</small><div style="font-weight:800;font-size:18px">'+esc(manualRows.length.toLocaleString('fa-IR'))+'</div></div></div><p style="margin:4px 0 10px;font-size:12px">'+deltaText+'</p>'+(bars?'<div style="display:flex;align-items:flex-end;gap:6px;overflow-x:auto;overflow-y:hidden;gap:8px;padding:12px 8px 12px;min-height:160px;border-bottom:2px solid #b9a36a">'+bars+'</div><p class="muted" style="font-size:11px">نمودار وزن بر اساس ثبت‌های دستی مربی و شاگرد است؛ آنالیز دستگاه جداگانه نمایش داده می‌شود.</p>':'<p class="muted">پس از ثبت وزن در برگه آنالیز توسط مربی، نمودار نمایش داده می‌شود.</p>');
     const historyRows=manualRows.slice().sort((a,b)=>String(b.analysis_date||'').localeCompare(String(a.analysis_date||'')));
     boxes.history.innerHTML='<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;min-width:560px"><thead><tr><th>تاریخ</th><th>وزن</th><th>چربی ٪</th><th>عضله</th><th>شکم</th><th>کمر</th><th>سینه</th><th>باسن</th><th>ران</th></tr></thead><tbody>'+historyRows.map(x=>'<tr><td>'+esc(dateFa(x.analysis_date))+'</td><td>'+esc(x.weight??'—')+'</td><td>'+esc(x.body_fat??'—')+'</td><td>'+esc(x.muscle_mass??'—')+'</td><td>'+esc(x.abdomen??'—')+'</td><td>'+esc(x.waist??'—')+'</td><td>'+esc(x.chest??'—')+'</td><td>'+esc(x.hip??'—')+'</td><td>'+esc(x.thigh??'—')+'</td></tr>').join('')+'</tbody></table></div>';
   }
@@ -8714,8 +8753,11 @@ const oldWorkoutRenderer=window.renderWorkoutList;
     boxes.chart.textContent='در حال بارگذاری روند پیشرفت…';
     boxes.history.textContent='در حال دریافت تاریخچه…';
     try{
-      const rows=await sbGet('/body_analyses?trainee_id=eq.'+encodeURIComponent(traineeId)+'&select=analysis_date,weight,body_fat,muscle_mass,body_water,visceral_fat,abdomen,waist,chest,hip,thigh,notes&order=analysis_date.asc&limit=100');
-      render(rows,traineeId,seq);
+      const [rows,weightLogs]=await Promise.all([
+        sbGet('/body_analyses?trainee_id=eq.'+encodeURIComponent(traineeId)+'&select=analysis_date,weight,body_fat,muscle_mass,body_water,visceral_fat,abdomen,waist,chest,hip,thigh,notes&order=analysis_date.asc&limit=200'),
+        sbGet('/weight_logs?trainee_id=eq.'+encodeURIComponent(traineeId)+'&select=log_date,weight&order=log_date.asc&limit=200').catch(e=>{console.warn('بارگذاری وزن‌های دستی از weight_logs انجام نشد:',e);return [];})
+      ]);
+      render(rows,traineeId,seq,weightLogs);
     }catch(e){
       if(seq!==requestSeq)return;
       boxes.chart.innerHTML='<p class="warning-text">بارگذاری نمودار پیشرفت ناموفق بود: '+esc(e?.message||String(e))+'</p>';
