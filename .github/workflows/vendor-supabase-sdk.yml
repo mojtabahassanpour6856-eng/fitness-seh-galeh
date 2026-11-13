@@ -1,0 +1,52 @@
+name: Vendor pinned Supabase browser SDK
+
+on:
+  push:
+    branches:
+      - fix/pinned-supabase-loader-20261113
+    paths:
+      - '.github/workflows/vendor-supabase-sdk.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  vendor-sdk:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out the reviewed feature branch
+        uses: actions/checkout@v4
+        with:
+          ref: fix/pinned-supabase-loader-20261113
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Download exact npm release and verify package metadata
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p vendor
+          npm pack @supabase/supabase-js@2.119.0 --ignore-scripts --silent
+          archive="$(ls -1 supabase-supabase-js-2.119.0.tgz)"
+          mkdir package-unpacked
+          tar -xzf "$archive" -C package-unpacked
+          test -s package-unpacked/package/dist/umd/supabase.js
+          node -e "const p=require('./package-unpacked/package/package.json'); if(p.version!=='2.119.0') process.exit(1); console.log('Verified @supabase/supabase-js '+p.version)"
+          cp package-unpacked/package/dist/umd/supabase.js vendor/supabase-2.119.0.js
+          if [ -f package-unpacked/package/LICENSE ]; then cp package-unpacked/package/LICENSE vendor/SUPABASE-SDK-LICENSE.txt; fi
+          sha256sum vendor/supabase-2.119.0.js > vendor/supabase-2.119.0.js.sha256
+          printf 'Package: @supabase/supabase-js\nVersion: 2.119.0\nSource: npm registry package tarball\n' > vendor/SUPABASE-SDK-VERSION.txt
+      - name: Commit vendored SDK to this feature branch
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add vendor/
+          if git diff --cached --quiet; then
+            echo "Vendored SDK is already up to date."
+            exit 0
+          fi
+          git commit -m "Vendor pinned Supabase browser SDK 2.119.0"
+          git push origin HEAD:fix/pinned-supabase-loader-20261113
