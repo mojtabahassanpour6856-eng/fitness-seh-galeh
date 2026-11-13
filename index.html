@@ -15438,5 +15438,67 @@ window.sehNutritionBuilderBridge={
   };
 })();
 </script>
+
+<script id="SEH_COACH_PROGRESS_REFRESH_AFTER_NAV_V1">
+(function(){
+  'use strict';
+  if(window.__sehCoachProgressRefreshAfterNavV1)return;
+  window.__sehCoachProgressRefreshAfterNavV1=true;
+  var timer=null;
+  function role(){
+    try{
+      var p=window.authProfile||(typeof authProfile!=='undefined'?authProfile:null);
+      return p&&p.role||null;
+    }catch(e){return null;}
+  }
+  function selectedTrainee(){
+    try{
+      var c=typeof currentClient!=='undefined'?currentClient:window.currentClient;
+      return c&&c.id!=null?String(c.id):'';
+    }catch(e){return '';}
+  }
+  function refresh(){
+    if(role()!=='coach'||!selectedTrainee())return;
+    if(typeof window.loadProgressChart!=='function')return;
+    try{
+      Promise.resolve(window.loadProgressChart()).catch(function(error){
+        console.error('Coach progress refresh failed:',error);
+      });
+    }catch(error){console.error('Coach progress refresh failed:',error);}
+  }
+  function schedule(){
+    if(role()!=='coach')return;
+    clearTimeout(timer);
+    timer=setTimeout(refresh,180);
+  }
+  var previousShow=window.showSection;
+  if(typeof previousShow==='function'&&!previousShow.__sehCoachProgressRefreshV1){
+    var wrappedShow=function(id,btn){
+      var result=previousShow.apply(this,arguments);
+      if(String(id)==='progress')schedule();
+      return result;
+    };
+    wrappedShow.__sehCoachProgressRefreshV1=true;
+    window.showSection=wrappedShow;
+  }
+  var previousSelect=window.selectClient;
+  if(typeof previousSelect==='function'&&!previousSelect.__sehCoachProgressRefreshV1){
+    var wrappedSelect=async function(){
+      var result=await previousSelect.apply(this,arguments);
+      schedule();
+      return result;
+    };
+    wrappedSelect.__sehCoachProgressRefreshV1=true;
+    window.selectClient=wrappedSelect;
+  }
+  document.addEventListener('click',function(event){
+    var button=event.target&&event.target.closest?event.target.closest('.nav button'):null;
+    if(!button)return;
+    var action=String(button.getAttribute('onclick')||'');
+    if(/showSection\s*\(\s*['"]progress['"]/.test(action))schedule();
+  },true);
+})();
+</script>
+
 </body>
 </html>
