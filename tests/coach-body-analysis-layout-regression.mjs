@@ -42,6 +42,10 @@ assert.match(html, /sbGet\('\/weight_logs\?trainee_id=eq\./,
   "The progress trend must also load manual weigh-ins from weight_logs.");
 assert.match(html, /seenProgress\.has\(key\)/,
   "Merging weight_logs with body_analyses must deduplicate matching date/weight records.");
+assert.match(html, /const uniqueProgress=new Map\\(\\)/,
+  "Duplicate manual rows already present in body_analyses must also be collapsed.");
+assert.match(html, /numericWeight\\.toFixed\\(2\\)/,
+  "Deduplication must normalize numerically equivalent weight values.");
 assert.match(html, /render\(rows,traineeId,seq,weightLogs\)/,
   "Both manual progress sources must be passed into the progress renderer.");
 
