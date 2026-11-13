@@ -465,7 +465,7 @@ body.locked{overflow:hidden!important}
   <button onclick="showSection('meal',this)">📋 برنامه غذایی</button>
   <button onclick="showSection('workout',this)">🏋️ برنامه تمرینی</button>
   <button onclick="showSection('progress',this)">📊 پیشرفت</button>
-  <button type="button" id="navAnalysisImport" onclick="showSection('analysisImport',this)">📄 وارد کردن آنالیز</button>
+  <button type="button" id="navAnalysisImport" onclick="showSection('analysisImport',this)">🧬 آنالیز بدن</button>
 </div>
 
 <!-- FOOD -->
@@ -2805,8 +2805,17 @@ if($("prDate"))$("prDate").value=today();if($("anDate"))$("anDate").value=today(
 
   window.dashOpen=function(section){
     const btn=qsAll('.nav button').find(b=>String(b.getAttribute('onclick')||'').includes("'"+section+"'"));
-    if(section==='analysis')buildTraineeAnalysisSection();
+    const profile=window.authProfile||(typeof authProfile!=='undefined'?authProfile:null);
+    const coachAnalysis=section==='analysis'&&profile?.role==='coach';
+    if(section==='analysis'&&!coachAnalysis)buildTraineeAnalysisSection();
     if(section==='client'){addProfileBasicFields();if(currentClient)loadProfileBasic();}
+    // The coach analyzer, PDF/ZIP import, and analysis preview live in the
+    // coach-only analysisImport section. Never route a coach to the empty
+    // traineeAnalysis shell (that caused the apparent return to dashboard).
+    if(coachAnalysis){
+      showSection('analysisImport',$id('navAnalysisImport')||btn||null);
+      return;
+    }
     showSection(section==='analysis'?'traineeAnalysis':section==='activity'?'activitySection':section,btn||null);
     if(section==='activity'){if(typeof loadActivityToday==='function')loadActivityToday();if(typeof previewActivityCalories==='function')previewActivityCalories();return;}
     if(section==='analysis'){return;}
