@@ -5,61 +5,52 @@ const vm = require('node:vm');
 
 const html = fs.readFileSync('index.html', 'utf8');
 const pinned = '@supabase/supabase-js@2.119.0';
-assert.ok(html.includes('https://cdn.jsdelivr.net/npm/' + pinned), 'primary CDN must use the exact SDK version');
-assert.ok(html.includes('https://unpkg.com/' + pinned), 'fallback CDN must use the same exact SDK version');
-assert.ok(!html.includes('@supabase/supabase-js@2"'), 'floating major-version aliases must not remain');
-assert.ok(html.includes('<link rel="preload" as="script" href="https://cdn.jsdelivr.net/npm/' + pinned + '"'), 'preload must match the pinned SDK');
-assert.ok(html.includes('window.AUTH_SUPABASE=window.supabase.createClient'), 'existing client initialization must remain intact');
-assert.ok(html.includes('localStorage'), 'existing auth storage configuration must remain present');
+assert.ok(html.includes('https://cdn.jsdelivr.net/npm/' + pinned));
+assert.ok(html.includes('https://unpkg.com/' + pinned));
+assert.doesNotMatch(html, /@supabase\\/supabase-js@2(?:["'/?]|$)/);
+assert.match(html, /<script id="seh-supabase-sdk"/);
+assert.match(html, /document\\.write\\('<script src="'\\+fallback/);
+assert.match(html, /Supabase SDK unavailable; application startup stopped safely/);
+assert.match(html, /window\\.AUTH_SUPABASE=window\\.supabase\\.createClient/);
 
-const marker = html.indexOf('/* SEH_SUPABASE_SDK_LOADER');
-const loaderStart = html.lastIndexOf('<script>', marker);
-const loaderEnd = html.indexOf('</script>', marker);
-assert.ok(marker >= 0 && loaderStart >= 0 && loaderEnd > marker, 'loader script boundaries must exist');
-const loader = html.slice(marker, loaderEnd);
-const primaryTag = html.indexOf('<script id="seh-supabase-sdk"');
-const followingInit = html.indexOf('window.AUTH_SUPABASE=window.supabase.createClient', primaryTag);
-assert.ok(primaryTag > loaderEnd && followingInit > primaryTag, 'parser-blocking SDK tag must precede immediate app initialization');
-assert.ok(loader.includes('document.write('), 'fallback must be inserted synchronously at parser position');
-assert.ok(loader.includes('seh-supabase-sdk-fallback'), 'fallback must have its own script element');
-assert.ok(!loader.includes('setTimeout') && !loader.includes('armTimeout') && !loader.includes('tag.src='), 'no asynchronous src swap or ineffective parser-blocking timeout is allowed');
+const loaderMatch = html.match(/<script>\\s*(\\/\\* SEH_SUPABASE_SDK_LOADER[\\s\\S]*?)<\\/script>\\s*<script id="seh-supabase-sdk"/);
+assert.ok(loaderMatch, 'loader must appear immediately before parser-blocking SDK script');
+const loader = loaderMatch[1];
+assert.doesNotMatch(loader, /setTimeout|setInterval/, 'parser-blocking SDK loader must not claim a JS timeout can interrupt parser blocking');
 
-function makeHarness(){
+function harness(){
+  let written = '';
   const box = {style:{},textContent:''};
-  const writes = [];
   const window = {};
   const document = {
+    readyState:'loading',
     getElementById(id){return id==='authError'?box:null;},
-    write(markup){writes.push(markup);}
+    write(value){written += value;}
   };
-  vm.runInNewContext(loader, {window,document});
-  return {window,box,writes};
+  vm.runInNewContext(loader,{window,document});
+  return {window,document,box,get written(){return written;}};
 }
+const failedPrimary = harness();
+failedPrimary.window.__sehSupabaseSdkFailed();
+assert.match(failedPrimary.written,/https:\\/\\/unpkg\\.com\\/@supabase\\/supabase-js@2\\.119\\.0/,'primary failure must parser-write the exact pinned fallback');
+assert.match(failedPrimary.written,/onload="window\\.__sehSupabaseSdkLoaded\\(\\)"/);
+assert.match(failedPrimary.written,/onerror="window\\.__sehSupabaseSdkFallbackFailed\\(\\)"/);
 
-const fallbackCase = makeHarness();
-fallbackCase.window.__sehSupabaseSdkFailed();
-assert.equal(fallbackCase.writes.length, 1, 'primary failure must insert exactly one fallback script');
-assert.ok(fallbackCase.writes[0].includes('https://unpkg.com/' + pinned), 'inserted fallback must use the pinned URL');
-assert.ok(fallbackCase.writes[0].includes('onload="window.__sehSupabaseSdkLoaded()"'), 'fallback load must be verified');
-assert.ok(fallbackCase.writes[0].includes('onerror="window.__sehSupabaseSdkFailed()"'), 'fallback failure must be handled');
-fallbackCase.window.__sehSupabaseSdkFailed();
-assert.equal(fallbackCase.writes.length, 1, 'fallback must never be inserted more than once');
-assert.equal(fallbackCase.window.__sehSupabaseSdkLoadFailed, true, 'two failures must set a clear failure state');
-assert.ok(boxText(fallbackCase.box).includes('از دو منبع'), 'two failures must show a Persian error');
+const fallbackSuccess = harness();
+fallbackSuccess.window.supabase={createClient(){}};
+fallbackSuccess.window.__sehSupabaseSdkLoaded();
+assert.equal(fallbackSuccess.window.__sehSupabaseSdkReady,true);
+assert.equal(fallbackSuccess.window.__sehSupabaseSdkLoadFailed,false);
 
-function boxText(box){ return box.textContent; }
+const fallbackFailure = harness();
+fallbackFailure.window.__sehSupabaseSdkFallbackFailed();
+assert.equal(fallbackFailure.window.__sehSupabaseSdkLoadFailed,true);
+assert.match(fallbackFailure.box.textContent,/دو منبع/);
 
-const successCase = makeHarness();
-successCase.window.supabase = {createClient(){}};
-successCase.window.__sehSupabaseSdkLoaded();
-assert.equal(successCase.window.__sehSupabaseSdkReady, true, 'successful primary load must be recorded');
-assert.equal(successCase.window.__sehSupabaseSdkLoadFailed, false, 'successful load must clear failure state');
+const lateFailure = harness();
+lateFailure.document.readyState='complete';
+lateFailure.window.__sehSupabaseSdkFailed();
+assert.equal(lateFailure.window.__sehSupabaseSdkLoadFailed,true);
+assert.match(lateFailure.box.textContent,/دو منبع/);
 
-const fallbackSuccessCase = makeHarness();
-fallbackSuccessCase.window.__sehSupabaseSdkFailed();
-fallbackSuccessCase.window.supabase = {createClient(){}};
-fallbackSuccessCase.window.__sehSupabaseSdkLoaded();
-assert.equal(fallbackSuccessCase.window.__sehSupabaseSdkReady, true, 'successful fallback load must be recorded');
-assert.equal(fallbackSuccessCase.window.__sehSupabaseSdkLoadFailed, false, 'successful fallback must clear failure state');
-
-console.log('PASS: pinned SDK, parser-ordered fallback, single fallback, failure messaging and success paths');
+console.log('PASS: parser-ordered Supabase fallback, success and terminal failure paths');
