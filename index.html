@@ -3517,8 +3517,8 @@ window.loadDashboard = loadDashboard;
       chest?'دور سینه: '+chest+' سانتی‌متر':null,
       hip?'دور باسن: '+hip+' سانتی‌متر':null,
       abdomen?'دور شکم: '+abdomen+' سانتی‌متر':null,
-      thigh?'دور ران: '+thigh+' سانتی‌متر':null].filter(Boolean).join('\\n');
-    if(!window.confirm('اطلاعات پیشرفت شاگرد را بازبینی کنید:\\n\\n'+summary+'\\n\\nآیا اطلاعات درست است و ثبت شود؟'))return;
+      thigh?'دور ران: '+thigh+' سانتی‌متر':null].filter(Boolean).join('\n');
+    if(!window.confirm('اطلاعات پیشرفت شاگرد را بازبینی کنید:\n\n'+summary+'\n\nآیا اطلاعات درست است و ثبت شود؟'))return;
     try{
       const encodedId=encodeURIComponent(traineeId),encodedDate=encodeURIComponent(d),encodedWeight=encodeURIComponent(w);
       const [existingWeights,existingManual]=await Promise.all([
@@ -3535,7 +3535,7 @@ window.loadDashboard = loadDashboard;
       if(typeof loadClients==='function')await loadClients();
       if(typeof loadProgressHistory==='function')await loadProgressHistory();
       alert('پیشرفت شاگرد با موفقیت ثبت شد و در نمودار و تاریخچه کارت پیشرفت نمایش داده می‌شود.');
-    }catch(e){alert('ثبت پیشرفت انجام نشد.\\n'+(e?.message||String(e)));}
+    }catch(e){alert('ثبت پیشرفت انجام نشد.\n'+(e?.message||String(e)));}
   };
   async function loadWaterGoal(){
     if(!currentClient)return;const traineeId=currentClient.id;
