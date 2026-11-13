@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <!-- Low-risk startup optimization: warm up connections to services used on app startup. -->
 <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
-<link rel="preload" as="script" href="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.119.0" crossorigin>
+<link rel="preload" as="script" href="./vendor/supabase-2.119.0.js" crossorigin>
 <link rel="dns-prefetch" href="//cdn.jsdelivr.net">
 <link rel="preconnect" href="https://qfakyudgidsumeuoqoot.supabase.co" crossorigin>
 <link rel="dns-prefetch" href="//qfakyudgidsumeuoqoot.supabase.co">
@@ -2441,7 +2441,7 @@ function esc(s){return String(s).replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",
     }else showFailure();
   };
 })();</script>
-<script id="seh-supabase-sdk" src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.119.0" onload="window.__sehSupabaseSdkLoaded()" onerror="window.__sehSupabaseSdkFailed()"></script>
+<script id="seh-supabase-sdk" src="./vendor/supabase-2.119.0.js" onload="window.__sehSupabaseSdkLoaded()" onerror="window.__sehSupabaseSdkFailed()"></script>
 <script>
 if(!window.supabase||typeof window.supabase.createClient!=='function'){
   window.__sehSupabaseSdkLoadFailed=true;
