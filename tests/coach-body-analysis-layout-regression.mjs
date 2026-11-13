@@ -19,7 +19,7 @@ assert.match(section[1], /id="bodyAnalysisEntryPanel"/,
   "The analysis entry host must live inside the Body Analysis section.");
 assert.match(section[1], /آنالیز بدن شاگرد/,
   "The unified card must have the Body Analysis heading.");
-assert.match(html, /window\.openCoachBodyAnalysis=function\(\)[\s\S]*?profile\.role!=="coach"[\s\S]*?section\.classList\.toggle\("active",active\)/,
+assert.match(html, /window\.openCoachBodyAnalysis=function\(\)[\s\S]*?profile\.role!=="coach"[\s\S]*?item\.classList\.toggle\("active",active\)/,
   "The coach route must activate the section directly and be role-guarded.");
 assert.match(embed, /const anchor = document\.getElementById\("bodyAnalysisEntryPanel"\)/);
 assert.match(embed, /anchor\.appendChild\(host\)/,
