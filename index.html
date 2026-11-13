@@ -465,6 +465,7 @@ body.locked{overflow:hidden!important}
   <button onclick="showSection('meal',this)">📋 برنامه غذایی</button>
   <button onclick="showSection('workout',this)">🏋️ برنامه تمرینی</button>
   <button onclick="showSection('progress',this)">📊 پیشرفت</button>
+  <button type="button" id="navAnalysisImport" onclick="showSection('analysisImport',this)">📄 وارد کردن آنالیز</button>
 </div>
 
 <!-- FOOD -->
@@ -871,13 +872,16 @@ body.locked{overflow:hidden!important}
 <button onclick="saveProgress()">بازبینی و تأیید ثبت پیشرفت</button>
 </div>
 
-<div class="card" id="bodyAnalysisEntryPanel" style="display:none" aria-hidden="true"></div>
-
 <div class="card">
 <h2>💬 یادداشت مربی</h2>
 <textarea id="coachNote" placeholder="این یادداشت فقط برای مربی است."></textarea>
 <button onclick="saveNote()">ذخیره یادداشت</button>
 </div>
+</section>
+
+<!-- COACH-ONLY ANALYSIS IMPORT: isolated from progress history -->
+<section id="analysisImport" class="section">
+<div class="card" id="bodyAnalysisEntryPanel" style="display:none" aria-hidden="true"></div>
 </section>
 
 <div class="card" id="activityDailyPanel">
