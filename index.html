@@ -2790,6 +2790,76 @@ if($("prDate"))$("prDate").value=today();if($("anDate"))$("anDate").value=today(
     const traineeId=currentClient?.id;if(!traineeId){sheet.textContent='حساب شاگرد به پرونده متصل نیست.';chart.textContent='نموداری برای نمایش وجود ندارد.';if(archive)archive.textContent='پرونده شاگرد پیدا نشد.';return;}
     sheet.textContent='در حال دریافت برگه آنالیز مربی…';chart.textContent='در حال دریافت اطلاعات نمودار…';
     try{
+      // Prefer coach-published Top Genesis snapshots in the existing three trainee panels.
+      // Keep the legacy body_analyses renderer below as a backward-compatible fallback.
+      if(window.AUTH_SUPABASE?.from){
+        const {data:publishedRows,error:publishedError}=await window.AUTH_SUPABASE
+          .from('trainee_body_analysis_publications')
+          .select('id,analysis_date,report_metrics,training_notes,nutrition_notes,report_storage_path,published_at,created_at')
+          .eq('trainee_id',traineeId)
+          .order('analysis_date',{ascending:true})
+          .order('created_at',{ascending:true});
+        if(publishedError)throw publishedError;
+        if(Array.isArray(publishedRows)&&publishedRows.length){
+          const list=publishedRows.slice().sort((a,b)=>String(a.analysis_date||'').localeCompare(String(b.analysis_date||''))||String(a.created_at||'').localeCompare(String(b.created_at||'')));
+          const latest=list[list.length-1];
+          const metrics=latest.report_metrics||{};
+          const labels={
+            height_cm:['قد',' سانتی‌متر'],weight_kg:['وزن',' کیلوگرم'],
+            body_fat_percent:['درصد چربی بدن','٪'],bmi:['BMI',''],
+            fat_mass_kg:['توده چربی',' کیلوگرم'],lean_mass_kg:['توده بدون چربی',' کیلوگرم'],
+            resting_metabolic_rate_kcal:['متابولیسم پایه',' کیلوکالری'],
+            daily_energy_expenditure_kcal:['انرژی روزانه',' کیلوکالری'],
+            body_water_percent:['آب بدن','٪'],visceral_fat_level:['چربی احشایی',''],
+            waist_hip_ratio:['نسبت کمر به باسن','']
+          };
+          const escP=v=>typeof esc==='function'?esc(v):String(v??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+          const dateP=v=>{if(!v)return '—';const d=new Date(String(v).slice(0,10)+'T12:00:00');return Number.isNaN(d.getTime())?escP(v):new Intl.DateTimeFormat('fa-IR-u-ca-persian',{year:'numeric',month:'2-digit',day:'2-digit'}).format(d);};
+          const validP=m=>m&&m.value!==null&&m.value!==undefined&&m.value!==''&&Number.isFinite(Number(m.value))&&!['invalid_range','conflict_review','not_reported'].includes(m.status);
+          const valueP=(m,u='')=>validP(m)?escP(Number(m.value).toLocaleString('fa-IR',{maximumFractionDigits:2}))+u:'—';
+          const measurementNames={
+            neck_cm:'دور گردن',chest_cm:'دور سینه',chest_region_cm:'ناحیه سینه',
+            bicep_left_cm:'بازوی چپ',bicep_right_cm:'بازوی راست',
+            bicep_left_lower_cm:'پایین بازوی چپ',bicep_right_lower_cm:'پایین بازوی راست',
+            forearm_left_cm:'ساعد چپ',forearm_right_cm:'ساعد راست',
+            high_hip_cm:'بالاترین قسمت باسن',hip_cm:'دور باسن',hip_region_cm:'ناحیه باسن',
+            waist_abdominal_cm:'دور شکم',waist_lower_cm:'دور کمر پایین',waist_narrowest_cm:'باریک‌ترین قسمت کمر',
+            lower_waist_region_cm:'ناحیه کمر پایین',upper_waist_region_cm:'ناحیه کمر بالا',
+            thigh_left_upper_cm:'بالای ران چپ',thigh_right_upper_cm:'بالای ران راست',
+            mid_thigh_left_cm:'وسط ران چپ',mid_thigh_right_cm:'وسط ران راست',
+            thigh_left_lower_cm:'پایین ران چپ',thigh_right_lower_cm:'پایین ران راست',
+            thigh_left_cm:'ران چپ',thigh_right_cm:'ران راست',calf_left_cm:'ساق چپ',calf_right_cm:'ساق راست'
+          };
+          const metricCards=Object.entries(labels).filter(([k])=>validP(metrics[k])).map(([k,l])=>'<div class="receipt-item"><small>'+l[0]+'</small><b>'+valueP(metrics[k],l[1])+'</b></div>').join('');
+          const measurements=Object.entries(metrics.body_measurements_cm||{}).filter(([,m])=>validP(m)).map(([k,m])=>'<div class="receipt-item"><small>'+escP(measurementNames[k]||'اندازه ثبت‌شده')+'</small><b>'+valueP(m,m.unit==='cm'?' سانتی‌متر':m.unit?' '+escP(m.unit):'')+'</b></div>').join('');
+          sheet.innerHTML='<p>تاریخ آنالیز: <b>'+dateP(latest.analysis_date)+'</b></p><div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px">'+(metricCards||'<p class="muted">شاخص عددی معتبری برای این آنالیز ثبت نشده است.</p>')+'</div>'+(measurements?'<h3>اندازه‌های بدنی</h3><div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px">'+measurements+'</div>':'');
+          const chartKeys=[['weight_kg','وزن',' کیلوگرم'],['body_fat_percent','درصد چربی','٪'],['lean_mass_kg','توده بدون چربی',' کیلوگرم'],['fat_mass_kg','توده چربی',' کیلوگرم'],['bmi','BMI','']];
+          const chartHtml=chartKeys.map(([key,label,unit])=>{
+            const points=list.filter(r=>validP(r.report_metrics?.[key]));
+            if(!points.length)return '';
+            const vals=points.map(r=>Number(r.report_metrics[key].value)),min=Math.min(...vals),max=Math.max(...vals),span=max-min||1;
+            return '<div style="margin:12px 0"><b>'+label+'</b><div style="display:flex;align-items:flex-end;gap:6px;height:100px;border-bottom:1px solid #aaa;padding:6px 2px">'+points.map(r=>{const v=Number(r.report_metrics[key].value);const h=22+(v-min)/span*58;return '<div title="'+dateP(r.analysis_date)+' · '+escP(v)+unit+'" style="flex:1;min-width:12px;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;height:100%"><span style="font-size:11px">'+escP(v.toLocaleString('fa-IR'))+unit+'</span><div style="width:75%;height:'+h+'px;background:var(--gold,#c8a34d);border-radius:4px 4px 0 0"></div></div>';}).join('')+'</div><div style="display:flex;justify-content:space-between;font-size:11px;color:var(--muted,#777)"><span>'+dateP(points[0].analysis_date)+'</span><span>'+dateP(points[points.length-1].analysis_date)+'</span></div></div>';
+          }).join('');
+          chart.innerHTML=chartHtml||'<p class="muted">پس از ثبت شاخص‌های قابل‌اندازه‌گیری، نمودار پیشرفت نمایش داده می‌شود.</p>';
+          const newest=list.slice().reverse();
+          archive.innerHTML='<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px">'+newest.map((r,i)=>{
+            const m=r.report_metrics||{},summary=Object.entries(labels).filter(([k])=>validP(m[k])).slice(0,4).map(([k,l])=>'<span style="display:inline-block;margin:3px 6px 3px 0;font-size:12px">'+l[0]+': '+valueP(m[k],l[1])+'</span>').join('');
+            return '<article style="border:1px solid var(--border,#ddd);border-radius:12px;padding:10px;min-width:0"><b>📅 '+dateP(r.analysis_date)+'</b><div style="margin-top:7px">'+summary+'</div>'+(r.report_storage_path?'<button type="button" data-published-report="'+escP(r.id)+'" style="margin-top:8px">مشاهده گزارش کامل</button>':'<p class="muted">فایل گزارش کامل برای این مورد موجود نیست.</p>')+'</article>';
+          }).join('')+'</div>';
+          archive.querySelectorAll('[data-published-report]').forEach(button=>button.addEventListener('click',async()=>{
+            const id=button.getAttribute('data-published-report'),row=list.find(x=>String(x.id)===id);
+            if(!row?.report_storage_path)return;
+            const old=button.textContent;button.disabled=true;button.textContent='در حال دریافت…';
+            try{
+              const {data,error}=await window.AUTH_SUPABASE.storage.from('trainee-health-reports').createSignedUrl(row.report_storage_path,300);
+              if(error)throw error;if(!data?.signedUrl)throw new Error('لینک امن گزارش ساخته نشد.');
+              window.open(data.signedUrl,'_blank','noopener');
+            }catch(e){alert('نمایش گزارش کامل انجام نشد: '+(e?.message||String(e)));}
+            finally{button.disabled=false;button.textContent=old;}
+          }));
+          return;
+        }
+      }
       const rows=await sbGet('/body_analyses?trainee_id=eq.'+encodeURIComponent(traineeId)+'&select=*&order=analysis_date.asc&limit=100');
       if(!Array.isArray(rows)||!rows.length){sheet.innerHTML='<p class="muted">هنوز آنالیزی از طرف مربی ثبت نشده است.</p>';chart.innerHTML='<p class="muted">پس از ثبت آنالیز توسط مربی، نمودار پیشرفت اینجا نمایش داده می‌شود.</p>';if(archive)archive.innerHTML='<p class="muted">هنوز برگه‌ای برای آرشیو وجود ندارد.</p>';return;}
       const latest=rows[rows.length-1];const raw=String(latest.notes||'');const marker='ANALYSIS_IMAGE_DATA:';const at=raw.indexOf(marker);const data=at>=0?raw.slice(at+marker.length).split(' | ')[0]:'';const hasImage=data.startsWith('data:image/');
