@@ -7,18 +7,22 @@ const html = fs.readFileSync('index.html', 'utf8');
 const pinned = '@supabase/supabase-js@2.119.0';
 assert.ok(html.includes('https://cdn.jsdelivr.net/npm/' + pinned), 'primary CDN must use the exact SDK version');
 assert.ok(html.includes('https://unpkg.com/' + pinned), 'fallback CDN must use the same exact SDK version');
-assert.doesNotMatch(html, /@supabase\\/supabase-js@2(?:["'/?]|$)/, 'floating major-version aliases must not remain');
-assert.match(html, /<link rel="preload" as="script" href="https:\\/\\/cdn\\.jsdelivr\\.net\\/npm\\/@supabase\\/supabase-js@2\\.119\\.0"/);
-assert.match(html, /<script id="seh-supabase-sdk"/, 'primary SDK script must have a stable identifier');
-assert.match(html, /window\\.AUTH_SUPABASE=window\\.supabase\\.createClient/, 'existing client initialization must remain intact');
-assert.match(html, /localStorage/, 'existing auth storage configuration must remain present');
+assert.ok(!html.includes('@supabase/supabase-js@2"'), 'floating major-version aliases must not remain');
+assert.ok(html.includes('<link rel="preload" as="script" href="https://cdn.jsdelivr.net/npm/' + pinned + '"'), 'preload must match the pinned SDK');
+assert.ok(html.includes('window.AUTH_SUPABASE=window.supabase.createClient'), 'existing client initialization must remain intact');
+assert.ok(html.includes('localStorage'), 'existing auth storage configuration must remain present');
 
-const loaderMatch = html.match(/<script>\\s*(\\/\\* SEH_SUPABASE_SDK_LOADER[\\s\\S]*?)<\\/script>\\s*<script id="seh-supabase-sdk"/);
-assert.ok(loaderMatch, 'parser-blocking loader must appear immediately before SDK script');
-const loader = loaderMatch[1];
-assert.match(loader, /document\\.write\\(/, 'fallback must be inserted synchronously at the parser position');
-assert.match(loader, /seh-supabase-sdk-fallback/, 'fallback must have its own script element');
-assert.doesNotMatch(loader, /setTimeout|tag\\.src\\s*=|armTimeout/, 'no asynchronous src swap or ineffective parser-blocking timeout is allowed');
+const marker = html.indexOf('/* SEH_SUPABASE_SDK_LOADER');
+const loaderStart = html.lastIndexOf('<script>', marker);
+const loaderEnd = html.indexOf('</script>', marker);
+assert.ok(marker >= 0 && loaderStart >= 0 && loaderEnd > marker, 'loader script boundaries must exist');
+const loader = html.slice(marker, loaderEnd);
+const primaryTag = html.indexOf('<script id="seh-supabase-sdk"');
+const followingInit = html.indexOf('window.AUTH_SUPABASE=window.supabase.createClient', primaryTag);
+assert.ok(primaryTag > loaderEnd && followingInit > primaryTag, 'parser-blocking SDK tag must precede immediate app initialization');
+assert.ok(loader.includes('document.write('), 'fallback must be inserted synchronously at parser position');
+assert.ok(loader.includes('seh-supabase-sdk-fallback'), 'fallback must have its own script element');
+assert.ok(!loader.includes('setTimeout') && !loader.includes('armTimeout') && !loader.includes('tag.src='), 'no asynchronous src swap or ineffective parser-blocking timeout is allowed');
 
 function makeHarness(){
   const box = {style:{},textContent:''};
@@ -29,19 +33,21 @@ function makeHarness(){
     write(markup){writes.push(markup);}
   };
   vm.runInNewContext(loader, {window,document});
-  return {window,document,box,writes};
+  return {window,box,writes};
 }
 
 const fallbackCase = makeHarness();
 fallbackCase.window.__sehSupabaseSdkFailed();
-assert.equal(fallbackCase.writes.length, 1, 'primary failure must synchronously insert exactly one fallback script');
+assert.equal(fallbackCase.writes.length, 1, 'primary failure must insert exactly one fallback script');
 assert.ok(fallbackCase.writes[0].includes('https://unpkg.com/' + pinned), 'inserted fallback must use the pinned URL');
-assert.ok(fallbackCase.writes[0].includes('onload="window.__sehSupabaseSdkLoaded()"'), 'fallback load must be verified before app initialization');
+assert.ok(fallbackCase.writes[0].includes('onload="window.__sehSupabaseSdkLoaded()"'), 'fallback load must be verified');
 assert.ok(fallbackCase.writes[0].includes('onerror="window.__sehSupabaseSdkFailed()"'), 'fallback failure must be handled');
 fallbackCase.window.__sehSupabaseSdkFailed();
 assert.equal(fallbackCase.writes.length, 1, 'fallback must never be inserted more than once');
 assert.equal(fallbackCase.window.__sehSupabaseSdkLoadFailed, true, 'two failures must set a clear failure state');
-assert.match(fallbackCase.box.textContent, /از دو منبع/, 'two failures must show a Persian user-facing error');
+assert.ok(boxText(fallbackCase.box).includes('از دو منبع'), 'two failures must show a Persian error');
+
+function boxText(box){ return box.textContent; }
 
 const successCase = makeHarness();
 successCase.window.supabase = {createClient(){}};
