@@ -32,8 +32,14 @@ assert.match(html, /id="progressHistory"[^>]*>[\s\S]*?id="progressHistoryBody"/,
   "The progress history card must exist in the initial HTML.");
 assert.match(html, /const isProgressEntry=x=>[\s\S]*?note==='ثبت پیشرفت دوره‌ای'/,
   "Both trainee and legacy coach manual progress records must be classified as progress.");
-assert.match(html, /notes:"MANUAL_PROGRESS_ENTRY: ثبت دستی توسط مربی"/,
-  "New coach-entered progress records must carry the explicit progress marker.");
+assert.match(html, /notes:"MANUAL_PROGRESS_ENTRY: ثبت دستی و تأییدشده توسط شاگرد"/,
+  "New manual progress records must be marked as trainee-confirmed, never coach-entered.");
+assert.match(html, /window\.saveProgress=async function\(\)[\s\S]*?authProfile\?\.role!=='trainee'[\s\S]*?ثبت دستی پیشرفت فقط از حساب خود شاگرد/,
+  "The progress save action must reject every role except the trainee.");
+assert.match(html, /id="progressEntryPanel" style="display:none"/,
+  "The progress entry form must be hidden by default for the coach view.");
+assert.match(html, /const progressEntry=document\.getElementById\("progressEntryPanel"\)[\s\S]*?if\(progressEntry\)\{progressEntry\.style\.removeProperty\("display"\)/,
+  "Only the trainee role may reveal the progress entry form.");
 assert.match(html, /const manualRows=list\.filter\(isProgressEntry\)/,
   "Progress trend and history must include all explicitly classified manual progress records.");
 assert.match(html, /note\.startsWith\('ثبت پیشرفت دوره‌ای:'\)/,
