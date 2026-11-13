@@ -72,8 +72,8 @@ body.seh-trainee-mode #authUserBar{display:none!important}
 .seh-profile-info{min-width:0;flex:1}
 .seh-profile-name{font-size:16px;font-weight:800;overflow-wrap:anywhere}
 .seh-profile-birth{display:inline-block;margin-top:8px;padding:5px 9px;border-radius:9px;background:#e8d6a9;color:#463817;font-size:11px}
-.seh-profile-exit{display:flex;align-items:center;justify-content:center;gap:7px;width:100%;margin:8px 0 0;padding:9px 12px;border:1px solid #b98f32;border-radius:11px;background:#fff8e7;color:#59451b;font-size:13px}
-.seh-profile-exit span{font-size:19px}
+/* Trainee logout is intentionally absent; coach account controls remain separate. */
+.seh-profile-exit{display:none!important}
 @media(max-width:420px){.seh-profile-summary{padding:11px;gap:11px}.seh-profile-avatar{width:68px;height:68px;flex-basis:68px}.seh-profile-name{font-size:14px}}
 .meal-tabs{display:grid;grid-template-columns:repeat(3,1fr);gap:7px;margin-bottom:12px}.meal-tabs button{margin:0;padding:10px;font-size:12px}.meal-tabs button.active{background:#ffbd16;color:#111}.meal-card{background:#101e2d;border:1px solid #2b4053;border-radius:14px;padding:12px;margin:10px 0}.meal-head{display:flex;justify-content:space-between;align-items:center;gap:8px}.meal-head h3{margin:0;font-size:15px}.meal-total{color:#b9c7d3;font-size:11px}.food-line{display:grid;grid-template-columns:1fr 82px 58px auto;gap:6px;align-items:center;border-top:1px solid #253746;padding:9px 0}.food-line:first-child{border-top:0}.food-name{font-size:12px}.food-meta{font-size:10px;color:#aeb9c4}.mini{margin:0;padding:7px 8px;font-size:11px}.meal-summary{display:grid;grid-template-columns:repeat(4,1fr);gap:7px}.meal-summary .stat{padding:10px}.student-meal{border:1px solid #2b4053;border-radius:14px;margin:9px 0;padding:12px;background:#101b28}.checkfood{display:flex;align-items:center;gap:8px;font-size:12px;padding:7px 0}.checkfood input{width:auto}.report-row{display:grid;grid-template-columns:1fr auto;gap:8px;padding:9px 0;border-bottom:1px solid #253746;font-size:12px}.modal-back{position:fixed;inset:0;background:rgba(0,0,0,.72);display:none;align-items:center;justify-content:center;padding:12px;z-index:50}.modal-back.show{display:flex}.modal{width:min(520px,100%);max-height:90vh;overflow:auto;background:#0d1722;border:1px solid #34495c;border-radius:16px;padding:15px}.modal h3{margin:0 0 12px}.close-row{display:flex;gap:8px}.close-row button{margin-top:0}.sub-result{background:#062f29;border:1px solid #079875;border-radius:12px;padding:10px;margin-top:10px}
 @media(max-width:600px){.meal-tabs{grid-template-columns:1fr 1fr 1fr}.food-line{grid-template-columns:1fr 70px 52px auto}.meal-summary{grid-template-columns:1fr 1fr}}
@@ -2563,7 +2563,21 @@ if($("prDate"))$("prDate").value=today();if($("anDate"))$("anDate").value=today(
   function addStyle(){
     if($id('v4style'))return;
     const st=document.createElement('style');st.id='v4style';st.textContent=`
-      .v4-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}.v4-card{background:#101e2d;border:1px solid #2b4053;border-radius:14px;padding:14px;cursor:pointer}.v4-card b{display:block;font-size:18px;margin-bottom:5px}.v4-filter{display:flex;gap:6px;overflow:auto;padding-bottom:4px}.v4-filter button{white-space:nowrap;margin:0;padding:9px 12px;font-size:12px}.v4-filter button.active{background:#ffbd16;color:#111}.v4-table{overflow:auto}.v4-table table{min-width:920px}.v4-ok{color:#67e8a5}.v4-warn{color:#ffd166}.v4-danger{color:#ff8585}.v4-dashboard{margin-top:10px}.v4-small{font-size:11px;color:#aeb9c4}
+      .v4-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}.v4-card{background:#101e2d;border:1px solid #2b4053;border-radius:14px;padding:14px;cursor:pointer}.v4-card b{display:block;font-size:18px;margin-bottom:5px}.v4-filter{display:flex;gap:6px;overflow:auto;padding-bottom:4px}.v4-filter button{white-space:nowrap;margin:0;padding:9px 12px;font-size:12px}.v4-filter button.active{background:#ffbd16;color:#111}.v4-table{overflow:auto}.v4-table table{min-width:920px}.v4-ok{color:#67e8a5}.v4-warn{color:#ffd166}.v4-danger{color:#ff8585}.v4-dashboard{margin-top:10px;grid-template-columns:repeat(3,minmax(0,1fr))}.v4-small{font-size:11px;color:#aeb9c4}
+      /* Keep trainee dashboard cards inside narrow mobile viewports. */
+      .v4-grid,.v4-card{min-width:0}
+      .v4-dashboard .v4-card{overflow-wrap:anywhere;word-break:normal}
+      .v4-dashboard .v4-small{display:block;line-height:1.7;overflow-wrap:anywhere}
+      @media(max-width:600px){
+        .v4-dashboard{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+        .v4-dashboard .v4-card{min-height:92px;padding:12px;display:flex;flex-direction:column;justify-content:flex-start}
+        .v4-dashboard .v4-card b{font-size:20px}
+        .v4-dashboard .v4-small{font-size:10px;line-height:1.6}
+        #traineeDashboard,.seh-profile-wrap{width:100%;max-width:100%;min-width:0}
+        .seh-profile-summary,.seh-profile-info{min-width:0}
+      }
+      @media(max-width:360px){.v4-dashboard{gap:6px}.v4-dashboard .v4-card{padding:10px}}
+
 .v4-trainee-identity{display:flex;align-items:center;gap:9px;min-width:150px}
 .v4-trainee-avatar{width:40px;height:40px;flex:0 0 40px;border-radius:50%;overflow:hidden;display:inline-flex;align-items:center;justify-content:center;background:#ead9ae;border:1.5px solid #c7a34b;color:#5d4920;font-size:21px}
 .v4-trainee-avatar img{width:100%;height:100%;display:block;object-fit:cover}
@@ -2606,8 +2620,10 @@ if($("prDate"))$("prDate").value=today();if($("anDate"))$("anDate").value=today(
       '<div class="seh-profile-avatar"><span class="seh-profile-fallback">'+fallback+'</span><img class="seh-profile-image" alt="عکس پروفایل"><button type="button" class="seh-profile-photo-add" aria-label="افزودن عکس پروفایل" onclick="event.stopPropagation();document.getElementById(\'sehTraineePhotoInput\').click()">+</button></div>'+
       '<div class="seh-profile-info"><div class="seh-profile-name"></div><div class="seh-profile-birth"></div></div></div>'+
       '<input id="sehTraineePhotoInput" type="file" accept="image/*" hidden onchange="window.sehSaveTraineePhoto(this)">'+
-      '<button type="button" class="seh-profile-exit" onclick="logoutApp()"><span>↪</span> خروج از حساب کاربری</button>'+
-      '';}
+      ''; }
+    // Older profile cards may still contain the former logout control.
+    const legacyExit=wrap.querySelector('.seh-profile-exit');
+    if(legacyExit)legacyExit.remove();
     wrap.querySelector('.seh-profile-name').textContent=name;
     const birthNode=wrap.querySelector('.seh-profile-birth');
     const birthText=window.isoToJalaliDate?window.isoToJalaliDate(c.birth_date):'';

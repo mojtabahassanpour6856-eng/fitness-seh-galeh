@@ -8,6 +8,7 @@ on:
       - 'tests/workout-export-session-order-restline.test.js'
       - 'tests/profile-save-immediate-refresh-regression.test.js'
       - 'tests/trainee-nutrition-load-resilience.test.js'
+      - 'tests/trainee-dashboard-mobile-layout-regression.test.js'
       - '.github/workflows/validate-inline-js.yml'
   pull_request:
     branches: [main]
@@ -18,6 +19,7 @@ on:
       - 'tests/workout-export-session-order-restline.test.js'
       - 'tests/profile-save-immediate-refresh-regression.test.js'
       - 'tests/trainee-nutrition-load-resilience.test.js'
+      - 'tests/trainee-dashboard-mobile-layout-regression.test.js'
       - '.github/workflows/validate-inline-js.yml'
   workflow_dispatch:
 jobs:
@@ -62,3 +64,5 @@ jobs:
         run: node tests/profile-save-immediate-refresh-regression.test.js
       - name: Test trainee nutrition loading resilience
         run: node tests/trainee-nutrition-load-resilience.test.js
+      - name: Test trainee dashboard mobile layout and logout removal
+        run: node tests/trainee-dashboard-mobile-layout-regression.test.js
