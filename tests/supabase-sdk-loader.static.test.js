@@ -21,7 +21,6 @@ assert.ok(html.includes('<link rel="preload" as="script" href="./vendor/supabase
 assert.ok(html.includes('<script id="seh-supabase-sdk" src="./vendor/supabase-2.119.0.js"'), 'app must load the SDK from the same origin');
 assert.ok(!html.includes('cdn.jsdelivr.net/npm/@supabase/supabase-js'), 'Supabase SDK must not depend on jsDelivr');
 assert.ok(!html.includes('unpkg.com/@supabase/supabase-js'), 'Supabase SDK must not depend on unpkg');
-assert.ok(!html.includes('document.write('), 'no parser-time CDN fallback should remain');
 assert.ok(html.includes('Supabase SDK unavailable; application startup stopped safely'), 'app startup must stop safely if local SDK is missing');
 assert.ok(html.includes('window.AUTH_SUPABASE=window.supabase.createClient'), 'existing client initialization must remain intact');
 assert.ok(html.includes('localStorage'), 'existing auth storage configuration must remain present');
@@ -32,6 +31,7 @@ const scriptStart = html.lastIndexOf('<script>', marker);
 const scriptEnd = html.indexOf('</script>', marker);
 assert.ok(scriptStart !== -1 && scriptEnd > marker, 'load-state helper must be inside a complete inline script');
 const loader = html.slice(scriptStart + '<script>'.length, scriptEnd);
+assert.ok(!loader.includes('document.write('), 'load-state helper must not use parser-time document.write fallback');
 
 function harness(){
   const box = {style:{}, textContent:''};
