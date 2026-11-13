@@ -2437,7 +2437,7 @@ function esc(s){return String(s).replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",
      * bound a parser-blocking request because the parser is paused during it.
      */
     if(document.readyState==='loading'){
-      document.write('<script src="'+fallback+'" onload="window.__sehSupabaseSdkLoaded()" onerror="window.__sehSupabaseSdkFallbackFailed()"><\\/script>');
+      document.write('<script id="seh-supabase-sdk-fallback" src="'+fallback+'" onload="window.__sehSupabaseSdkLoaded()" onerror="window.__sehSupabaseSdkFallbackFailed()"><\/script>');
     }else showFailure();
   };
 })();</script>
