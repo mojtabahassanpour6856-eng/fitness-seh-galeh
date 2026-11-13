@@ -20,8 +20,18 @@ assert.match(section[1], /id="bodyAnalysisEntryPanel"/,
   "The analysis entry host must live inside the Body Analysis section.");
 assert.match(section[1], /آنالیز بدن شاگرد/,
   "The unified card must have the Body Analysis heading.");
-assert.match(html, /window\.openCoachBodyAnalysis=function\(\)[\s\S]*?profile\.role!=="coach"[\s\S]*?item\.classList\.toggle\("active",active\)/,
-  "The coach route must activate the section directly and be role-guarded.");
+assert.match(html, /window\.openCoachBodyAnalysis=function\(\)[\s\S]*?profile\.role!=="coach"[\s\S]*?window\.showSection\("bodyAnalysis"/,
+  "The coach route must use the shared section navigation and be role-guarded.");
+assert.match(html, /function ensureProgressCards\(\)[\s\S]*?analysisSec\.appendChild\(viewer\)[\s\S]*?progressSec\.appendChild\(chart\)[\s\S]*?progressSec\.appendChild\(history\)/,
+  "Coach analysis receipt stays in Body Analysis while trend and history are placed in Progress.");
+assert.match(html, /const manualRows=list\.filter\(x=>String\(x\.notes\|\|''\)\.includes\('MANUAL_PROGRESS_ENTRY'\)\)/,
+  "Trainee-entered manual records must be identified by their explicit marker.");
+assert.match(html, /const coachRows=list\.filter\(x=>!String\(x\.notes\|\|''\)\.includes\('MANUAL_PROGRESS_ENTRY'\)\)/,
+  "Manual trainee records must be excluded from the coach analysis receipt.");
+assert.match(html, /const weighted=manualRows\.filter/,
+  "Progress trend must use trainee-entered manual records only.");
+assert.match(html, /const historyRows=manualRows\.slice\(\)/,
+  "Progress history must use trainee-entered manual records only.");
 assert.match(embed, /const anchor = document\.getElementById\("bodyAnalysisEntryPanel"\)/);
 assert.match(embed, /anchor\.appendChild\(host\)/,
   "The PDF/ZIP analyzer must be nested inside the unified Body Analysis card.");
@@ -29,8 +39,10 @@ assert.doesNotMatch(embed, /insertAdjacentElement\("afterend", host\)/,
   "The PDF/ZIP analyzer must not render as a separate adjacent card.");
 assert.match(publication, /const target = \$\("bodyAnalysisEntryPanel"\)/,
   "Published analysis reports must be placed inside the unified Body Analysis card.");
-assert.match(html, /profile\?\.role==='coach'\?\$\('bodyAnalysisEntryPanel'\):\$\('progress'\)/,
-  "Coach analysis trend/history cards must be created in Body Analysis, not Progress.");
+assert.match(html, /analysisSec=\$\('bodyAnalysisEntryPanel'\)/,
+  "The coach analysis receipt must be anchored to the Body Analysis card.");
+assert.match(html, /progressSec=\$\('progress'\)/,
+  "Trend and history cards must be anchored to the Progress section.");
 assert.match(html, /id="progressEntryPanel"/,
   "The manual Progress entry card must remain intact.");
 assert.match(html, /id="progress" class="section"/,
