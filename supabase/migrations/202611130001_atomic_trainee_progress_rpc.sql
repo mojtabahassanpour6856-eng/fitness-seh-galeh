@@ -28,8 +28,15 @@ begin
   if private.is_coach() then
     raise exception 'Only the trainee can submit manual progress' using errcode = '42501';
   end if;
-  if not private.can_access_trainee(p_trainee_id) then
-    raise exception 'You cannot access this trainee record' using errcode = '42501';
+  -- Do not rely on the broader coach-or-trainee access helper here:
+  -- only the active trainee account that owns this exact row may submit it.
+  if not exists (
+    select 1 from public.trainees
+    where id = p_trainee_id
+      and auth_user_id = auth.uid()
+      and approval_status = 'active'
+  ) then
+    raise exception 'Only the active owner trainee can submit progress' using errcode = '42501';
   end if;
 
   -- Serialize concurrent retries for the same trainee/date/weight tuple.
