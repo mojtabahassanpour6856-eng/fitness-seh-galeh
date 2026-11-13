@@ -130,4 +130,15 @@ const traineeRoute = runRouteForRole("trainee");
 assert.equal(traineeRoute.bodyAnalysis._classes.has("active"), false,
   "The coach-only direct route must not activate for trainee accounts.");
 
+assert.match(html, /function activeTraineeId\\(\\)[\\s\\S]*?profile\\.trainee_id\\|\\|profile\\.id[\\s\\S]*?return typeof currentClient/,
+  "The progress loader must resolve the selected coach trainee or the signed-in trainee account.");
+assert.match(html, /if\\(seq!==requestSeq \\|\\| !same\\(activeTraineeId\\(\\),traineeId\\)\\)return/,
+  "Progress rendering must accept the authenticated trainee without requiring a coach-selected currentClient.");
+assert.match(html, /if\\(id==='progress'&&activeTraineeId\\(\\)\\)loadProgressData\\(\\)/,
+  "Opening Progress must load records for both coach and trainee roles.");
+assert.doesNotMatch(html, /onclick="dashOpen\\('analysis'\\)"/,
+  "The obsolete empty trainee dashboard analysis card must be removed.");
+assert.match(html, /function removeLegacyTraineeAnalysisCard\\(root\\)/,
+  "Existing trainee dashboards must also remove the obsolete analysis card.");
+
 console.log("[coach-body-analysis] unified card, coach route, PDF/ZIP mount, published reports, and manual Progress isolation passed.");
