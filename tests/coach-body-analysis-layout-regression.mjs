@@ -24,7 +24,7 @@ assert.match(section[1], /آنالیز بدن شاگرد/,
   "The unified card must have the Body Analysis heading.");
 assert.match(html, /window\.openCoachBodyAnalysis=function\(\)[\s\S]*?profile\.role!=="coach"[\s\S]*?window\.showSection\("bodyAnalysis"/,
   "The coach route must use the shared section navigation and be role-guarded.");
-assert.match(html, /function ensureProgressCards\\(\\)[\\s\\S]*?if\\(analysisSec\\)analysisSec\\.appendChild\\(viewer\\)[\\s\\S]*?function placeProgressCard\\(card\\)[\\s\\S]*?progressSec\\.insertBefore\\(card,noteCard\\)[\\s\\S]*?placeProgressCard\\(chart\\)[\\s\\S]*?placeProgressCard\\(history\\)/,
+assert.match(html, /function ensureProgressCards\(\)[\s\S]*?if\(analysisSec\)analysisSec\.appendChild\(viewer\)[\s\S]*?function placeProgressCard\(card\)[\s\S]*?progressSec\.insertBefore\(card,noteCard\)[\s\S]*?placeProgressCard\(chart\)[\s\S]*?placeProgressCard\(history\)/,
   "Coach analysis receipt stays in Body Analysis, while trend and history are kept above the coach-only note in Progress.");
 assert.match(html, /id="progressTrend"[^>]*>[\s\S]*?id="progressTrendBody"/,
   "The progress trend card must exist in the initial HTML.");
