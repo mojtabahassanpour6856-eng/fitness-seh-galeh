@@ -1,13 +1,23 @@
 'use strict';
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
+const crypto = require('node:crypto');
 const vm = require('node:vm');
 
 const html = fs.readFileSync('index.html', 'utf8');
 const pinned = '@supabase/supabase-js@2.119.0';
-assert.ok(html.includes('https://cdn.jsdelivr.net/npm/' + pinned), 'primary CDN must use the exact pinned SDK');
+const localBundlePath = './vendor/supabase-2.119.0.js';
+const localBundle = fs.readFileSync(localBundlePath);
+const versionInfo = fs.readFileSync('./vendor/SUPABASE-SDK-VERSION.txt', 'utf8');
+const checksumInfo = fs.readFileSync('./vendor/supabase-2.119.0.js.sha256', 'utf8');
+const actualSha256 = crypto.createHash('sha256').update(localBundle).digest('hex');
+assert.ok(versionInfo.includes('Version: 2.119.0'), 'vendored SDK version metadata must be exact');
+assert.ok(checksumInfo.startsWith(actualSha256 + '  vendor/supabase-2.119.0.js'), 'vendored SDK checksum must match the actual bundle');
+assert.ok(localBundle.length > 100000, 'vendored browser bundle must not be an empty placeholder');
+assert.ok(html.includes('href="' + localBundlePath + '"'), 'preload must use the same-origin vendored SDK');
+assert.ok(html.includes('src="' + localBundlePath + '"'), 'primary SDK must be loaded from the same origin');
+assert.ok(!html.includes('https://cdn.jsdelivr.net/npm/' + pinned), 'primary SDK must not depend on a third-party CDN');
 assert.ok(html.includes('https://unpkg.com/' + pinned), 'fallback CDN must use the same exact pinned SDK');
-assert.ok(!html.includes('@supabase/supabase-js@2"'), 'floating major-version SDK alias must not remain');
 assert.ok(html.includes('<script id="seh-supabase-sdk"'), 'primary SDK script must have a stable identifier');
 assert.ok(html.includes('Supabase SDK unavailable; application startup stopped safely'), 'app startup must stop safely if both SDK sources fail');
 assert.ok(html.includes('window.AUTH_SUPABASE=window.supabase.createClient'), 'existing client initialization must remain intact');
@@ -37,7 +47,7 @@ function harness(){
 
 const failedPrimary = harness();
 failedPrimary.window.__sehSupabaseSdkFailed();
-assert.ok(failedPrimary.written.includes('src="https://unpkg.com/' + pinned + '"'), 'primary failure must insert the exact pinned fallback script');
+assert.ok(failedPrimary.written.includes('src="https://unpkg.com/' + pinned + '"'), 'local primary failure must insert the exact pinned fallback script');
 assert.ok(failedPrimary.written.includes('onload="window.__sehSupabaseSdkLoaded()"'), 'fallback must report successful load');
 assert.ok(failedPrimary.written.includes('onerror="window.__sehSupabaseSdkFallbackFailed()"'), 'fallback must report terminal failure');
 
@@ -58,4 +68,4 @@ lateFailure.window.__sehSupabaseSdkFailed();
 assert.equal(lateFailure.window.__sehSupabaseSdkLoadFailed, true);
 assert.ok(lateFailure.box.textContent.includes('دو منبع'));
 
-console.log('PASS: pinned Supabase SDK, parser-ordered fallback and safe terminal failure');
+console.log('PASS: same-origin pinned Supabase SDK, checksum, parser-ordered fallback and safe terminal failure');
