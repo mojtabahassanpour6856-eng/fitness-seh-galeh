@@ -58,6 +58,66 @@
       return profile?.role === "coach";
     } catch (_) { return false; }
   }
+  function currentTrainee() {
+    try {
+      const profile = window.authProfile || (typeof authProfile !== "undefined" ? authProfile : null);
+      return profile?.role === "trainee";
+    } catch (_) { return false; }
+  }
+  // The old progress widgets read the legacy body_analyses table. They are
+  // not the trainee's manual progress card and must not remain beside the
+  // new approved-report experience.
+  function removeLegacyProgressAnalysisCards() {
+    const progress = $("progress");
+    if (!progress) return;
+    ["coachAnalysisView", "progressTrend", "progressHistory"].forEach(id => {
+      const node = $(id);
+      if (node && progress.contains(node)) node.remove();
+    });
+  }
+  function installTraineeAnalysisNavigationGuard() {
+    const original = window.dashOpen;
+    if (typeof original !== "function" || window.__topGenesisAnalysisNavigationGuard) return;
+    window.__topGenesisAnalysisNavigationGuard = true;
+    window.dashOpen = function(key) {
+      const result = original.apply(this, arguments);
+      if (key !== "analysis" || !currentTrainee()) return result;
+      const reveal = () => {
+        let section = $("traineeAnalysis");
+        if (!section) {
+          section = document.createElement("section");
+          section.id = "traineeAnalysis";
+          section.className = "section";
+          section.innerHTML = '<div id="traineeAnalysisArchive" hidden aria-hidden="true"></div>';
+          document.body.appendChild(section);
+        }
+        document.querySelectorAll(".section").forEach(item => {
+          const active = item === section;
+          item.classList.toggle("active", active);
+          if (active) {
+            item.hidden = false;
+            item.removeAttribute("hidden");
+            item.removeAttribute("aria-hidden");
+            item.classList.remove("hide");
+            item.style.setProperty("display", "block", "important");
+            item.style.setProperty("visibility", "visible", "important");
+          } else {
+            item.style.setProperty("display", "none", "important");
+            item.style.setProperty("visibility", "hidden", "important");
+            item.setAttribute("aria-hidden", "true");
+          }
+        });
+        document.querySelectorAll(".nav button").forEach(button => button.classList.remove("active"));
+        const nav = document.querySelector('.nav button[onclick*="analysis"]');
+        if (nav) nav.classList.add("active");
+      };
+      reveal();
+      if (typeof requestAnimationFrame === "function") requestAnimationFrame(reveal);
+      setTimeout(reveal, 90);
+      setTimeout(reveal, 420);
+      return result;
+    };
+  }
   function mountProgressCard() {
     const coachView = currentCoach();
     const section = coachView ? $("progress") : $("traineeAnalysis");
@@ -447,6 +507,8 @@
   }
   window.addEventListener("message", handleApprovedReport);
   function tick() {
+    removeLegacyProgressAnalysisCards();
+    installTraineeAnalysisNavigationGuard();
     mountProgressCard();
     const visibleSection = currentCoach() ? $("progress") : $("traineeAnalysis");
     if (visibleSection?.classList.contains("active")) loadPublished(false);
