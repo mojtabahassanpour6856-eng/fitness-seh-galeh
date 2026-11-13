@@ -2798,7 +2798,9 @@ if($("prDate"))$("prDate").value=today();if($("anDate"))$("anDate").value=today(
   function buildTraineeAnalysisSection(){
     let sec=$id('traineeAnalysis');if(sec)return sec;
     sec=document.createElement('section');sec.id='traineeAnalysis';sec.className='section';
-    sec.innerHTML='<div class="card"><h2>📊 آخرین آنالیز بدن من</h2><p class="muted">این بخش فقط برگه‌ها و اندازه‌هایی را نشان می‌دهد که مربی ثبت کرده است.</p><div id="traineeAnalysisSheet" class="muted">در حال دریافت آنالیز…</div></div><div class="card"><h2>📈 نمودار پیشرفت بر اساس آنالیزها</h2><div id="traineeAnalysisChart" class="muted">در حال آماده‌سازی نمودار…</div></div><div class="card"><h2>🗂️ آرشیو آنالیزهای گذشته</h2><p class="muted">تمام برگه‌های ثبت‌شده، از جدیدترین تا قدیمی‌ترین.</p><div id="traineeAnalysisArchive" class="muted">در حال دریافت آرشیو…</div></div>';
+    // Keep only the mount anchor for the coach-published report card. The legacy
+    // latest-analysis, chart and archive UI is intentionally removed to prevent duplicates.
+    sec.innerHTML='<div id="traineeAnalysisArchive" hidden aria-hidden="true"></div>';
     document.body.appendChild(sec);return sec;
   }
   async function loadTraineeAnalysis(){
