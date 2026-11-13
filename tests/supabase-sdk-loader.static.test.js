@@ -7,16 +7,21 @@ const html = fs.readFileSync('index.html', 'utf8');
 const pinned = '@supabase/supabase-js@2.119.0';
 assert.ok(html.includes('https://cdn.jsdelivr.net/npm/' + pinned));
 assert.ok(html.includes('https://unpkg.com/' + pinned));
-assert.doesNotMatch(html, /@supabase\\/supabase-js@2(?:["'/?]|$)/);
-assert.match(html, /<script id="seh-supabase-sdk"/);
-assert.match(html, /document\\.write\\('<script src="'\\+fallback/);
-assert.match(html, /Supabase SDK unavailable; application startup stopped safely/);
-assert.match(html, /window\\.AUTH_SUPABASE=window\\.supabase\\.createClient/);
+assert.ok(!html.includes('@supabase/supabase-js@2"'), 'floating major-version alias must not remain');
+assert.ok(html.includes('<script id="seh-supabase-sdk"'));
+assert.ok(html.includes("document.write('<script src=\"'+fallback"));
+assert.ok(html.includes('Supabase SDK unavailable; application startup stopped safely'));
+assert.ok(html.includes('window.AUTH_SUPABASE=window.supabase.createClient'));
 
-const loaderMatch = html.match(/<script>\\s*(\\/\\* SEH_SUPABASE_SDK_LOADER[\\s\\S]*?)<\\/script>\\s*<script id="seh-supabase-sdk"/);
-assert.ok(loaderMatch, 'loader must appear immediately before parser-blocking SDK script');
-const loader = loaderMatch[1];
-assert.doesNotMatch(loader, /setTimeout|setInterval/, 'parser-blocking SDK loader must not claim a JS timeout can interrupt parser blocking');
+const marker = '/* SEH_SUPABASE_SDK_LOADER:';
+const start = html.indexOf(marker);
+const end = html.indexOf('<\\/script>', start);
+assert.ok(start >= 0 && end > start, 'loader must appear immediately before SDK script');
+const loaderStart = html.lastIndexOf('<script>', start);
+const loader = html.slice(start, end);
+assert.ok(loaderStart >= 0);
+assert.ok(!loader.includes('setTimeout') && !loader.includes('setInterval'),
+  'parser-blocking SDK loader must not claim a JS timer can interrupt parser blocking');
 
 function harness(){
   let written = '';
@@ -32,9 +37,9 @@ function harness(){
 }
 const failedPrimary = harness();
 failedPrimary.window.__sehSupabaseSdkFailed();
-assert.match(failedPrimary.written,/https:\\/\\/unpkg\\.com\\/@supabase\\/supabase-js@2\\.119\\.0/,'primary failure must parser-write the exact pinned fallback');
-assert.match(failedPrimary.written,/onload="window\\.__sehSupabaseSdkLoaded\\(\\)"/);
-assert.match(failedPrimary.written,/onerror="window\\.__sehSupabaseSdkFallbackFailed\\(\\)"/);
+assert.ok(failedPrimary.written.includes('https://unpkg.com/@supabase/supabase-js@2.119.0'));
+assert.ok(failedPrimary.written.includes('onload="window.__sehSupabaseSdkLoaded()"'));
+assert.ok(failedPrimary.written.includes('onerror="window.__sehSupabaseSdkFallbackFailed()"'));
 
 const fallbackSuccess = harness();
 fallbackSuccess.window.supabase={createClient(){}};
@@ -45,12 +50,12 @@ assert.equal(fallbackSuccess.window.__sehSupabaseSdkLoadFailed,false);
 const fallbackFailure = harness();
 fallbackFailure.window.__sehSupabaseSdkFallbackFailed();
 assert.equal(fallbackFailure.window.__sehSupabaseSdkLoadFailed,true);
-assert.match(fallbackFailure.box.textContent,/دو منبع/);
+assert.ok(fallbackFailure.box.textContent.includes('دو منبع'));
 
 const lateFailure = harness();
 lateFailure.document.readyState='complete';
 lateFailure.window.__sehSupabaseSdkFailed();
 assert.equal(lateFailure.window.__sehSupabaseSdkLoadFailed,true);
-assert.match(lateFailure.box.textContent,/دو منبع/);
+assert.ok(lateFailure.box.textContent.includes('دو منبع'));
 
 console.log('PASS: parser-ordered Supabase fallback, success and terminal failure paths');
