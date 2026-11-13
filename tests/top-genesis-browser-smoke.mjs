@@ -644,6 +644,10 @@ Waist-Hip Ratio (WHO),0.889
   assert.doesNotMatch(appShellSource, /loadTraineeAnalysis\s*\(/, "The obsolete trainee analysis renderer must not be called.");
   assert.doesNotMatch(appShellSource, /id=["\x27]traineeAnalysisSheet|id=["\x27]traineeAnalysisChart/, "Legacy trainee analysis panels must not be recreated.");
   assert.match(appShellSource, /traineeAnalysisArchive[^>]*hidden|hidden[^>]*traineeAnalysisArchive/, "The published report card mount anchor must remain available.");
+  assert.match(publicationSource, /installTraineeAnalysisNavigationGuard/, "The trainee analysis route must be kept visible after legacy navigation callbacks.");
+  assert.match(publicationSource, /setTimeout\(reveal, 420\)/, "The trainee analysis route must survive delayed dashboard restoration callbacks.");
+  assert.match(publicationSource, /removeLegacyProgressAnalysisCards/, "Legacy body-analysis widgets must be removed from the progress panel.");
+  assert.match(publicationSource, /\["coachAnalysisView", "progressTrend", "progressHistory"\]/, "Only legacy body-analysis widgets may be removed; manual progress data remains untouched.");
   assert.doesNotMatch(appShellSource, /<script[^>]+src=["'][^"']*top-genesis-archive\.js/i,
     "The production app must not load the legacy archive module.");
 
