@@ -8683,7 +8683,9 @@ const oldWorkoutRenderer=window.renderWorkoutList;
     const progressKey=x=>{
       const rawDate=String(x.analysis_date||x.log_date||'').trim().split('T')[0].replace(/\\//g,'-');
       const date=rawDate.replace(/[۰-۹]/g,d=>'۰۱۲۳۴۵۶۷۸۹'.indexOf(d)).replace(/[٠-٩]/g,d=>'٠١٢٣٤٥٦٧٨٩'.indexOf(d));
-      const numericWeight=Number(String(x.weight??'').replace(/[۰-۹]/g,d=>'۰۱۲۳۴۵۶۷۸۹'.indexOf(d)).replace(/[٠-٩]/g,d=>'٠١٢٣٤٥٦٧٨٩'.indexOf(d)));
+      const rawWeight=String(x.weight??'').trim();
+      if(!rawWeight)return '';
+      const numericWeight=Number(rawWeight.replace(/[۰-۹]/g,d=>'۰۱۲۳۴۵۶۷۸۹'.indexOf(d)).replace(/[٠-٩]/g,d=>'٠١٢٣٤٥٦٧٨٩'.indexOf(d)));
       return date && Number.isFinite(numericWeight) ? date+'|'+numericWeight.toFixed(2) : '';
     };
     const uniqueProgress=new Map();
