@@ -803,12 +803,16 @@ Waist-Hip Ratio (WHO),0.889
     const progress = document.createElement("section");
     progress.id = "progress";
     progress.className = "section";
-    progress.innerHTML = '<div id="progressHistory"></div>';
-    document.body.appendChild(progress);
+    progress.innerHTML = '<div id="progressEntryPanel"></div>';
+    const bodyAnalysis = document.createElement("section");
+    bodyAnalysis.id = "bodyAnalysis";
+    bodyAnalysis.className = "section";
+    bodyAnalysis.innerHTML = '<div id="bodyAnalysisEntryPanel"></div>';
+    document.body.append(progress, bodyAnalysis);
   });
   await traineeProgressPage.waitForFunction(() =>
-    document.querySelector("#topGenesisPublishedProgress")?.closest("#progress"));
-  console.log("[smoke] report moved to coach progress");
+    document.querySelector("#topGenesisPublishedProgress")?.closest("#bodyAnalysisEntryPanel"));
+  console.log("[smoke] report moved inside coach Body Analysis card");
   await traineeProgressPage.evaluate(() => { window.authProfile.role = "trainee"; });
   await traineeProgressPage.waitForFunction(() =>
     document.querySelector("#topGenesisPublishedProgress")?.closest("#traineeAnalysis"));
