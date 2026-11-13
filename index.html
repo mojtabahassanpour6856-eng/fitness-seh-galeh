@@ -2410,50 +2410,45 @@ function esc(s){return String(s).replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",
 
 </script>
 <script>
-/* SEH_SUPABASE_SDK_LOADER: parser-blocking pinned SDK fallback.
-   The app's following inline script initializes Supabase immediately, so a
-   dynamic src swap would race that initialization. document.write inserts the
-   fallback at the parser's current position while the failed script's load
-   handler is running, keeping the following app script blocked until fallback
-   has either loaded or failed. A JS timer cannot reliably time out a
-   parser-blocking script because the parser is paused while it is loading. */
+/* SEH_SUPABASE_SDK_LOADER: parser-ordered fallback. */
 (function(){
   'use strict';
   var fallback='https://unpkg.com/@supabase/supabase-js@2.119.0';
-  var fallbackTried=false;
   function showFailure(){
     window.__sehSupabaseSdkLoadFailed=true;
     var box=document.getElementById('authError');
     if(box){
       box.style.display='block';
-      box.textContent='کتابخانه اتصال از دو منبع بارگذاری نشد. اتصال اینترنت یا دسترسی به CDN را بررسی کنید و صفحه را دوباره بارگذاری کنید.';
+      box.textContent='کتابخانه اتصال از دو منبع بارگذاری نشد. اتصال اینترنت یا دسترسی به منابع کتابخانه را بررسی کنید و دوباره صفحه را بارگذاری کنید.';
     }
-  }
-  function insertFallback(){
-    if(fallbackTried){showFailure();return;}
-    fallbackTried=true;
-    window.__sehSupabaseSdkFallbackTried=true;
-    document.write('<script id="seh-supabase-sdk-fallback" src="'+fallback+'" onload="window.__sehSupabaseSdkLoaded()" onerror="window.__sehSupabaseSdkFailed()"><\/script>');
   }
   window.__sehSupabaseSdkLoaded=function(){
     if(window.supabase&&typeof window.supabase.createClient==='function'){
       window.__sehSupabaseSdkReady=true;
       window.__sehSupabaseSdkLoadFailed=false;
-    }else if(!fallbackTried){
-      insertFallback();
-    }else{
-      showFailure();
-    }
+    }else showFailure();
   };
+  window.__sehSupabaseSdkFallbackFailed=showFailure;
   window.__sehSupabaseSdkFailed=function(){
-    if(!fallbackTried)insertFallback();
-    else showFailure();
+    /*
+     * The failed tag is a parser-blocking classic script. document.write inserts
+     * the fallback at the parser's current position; the app script below stays
+     * blocked until the fallback has loaded or failed. A timer cannot reliably
+     * bound a parser-blocking request because the parser is paused during it.
+     */
+    if(document.readyState==='loading'){
+      document.write('<script src="'+fallback+'" onload="window.__sehSupabaseSdkLoaded()" onerror="window.__sehSupabaseSdkFallbackFailed()"><\\/script>');
+    }else showFailure();
   };
-  window.__sehSupabaseSdkFallbackTried=false;
-})();
-</script>
+})();</script>
 <script id="seh-supabase-sdk" src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.119.0" onload="window.__sehSupabaseSdkLoaded()" onerror="window.__sehSupabaseSdkFailed()"></script>
 <script>
+if(!window.supabase||typeof window.supabase.createClient!=='function'){
+  window.__sehSupabaseSdkLoadFailed=true;
+  var sdkErrorBox=document.getElementById('authError');
+  if(sdkErrorBox){sdkErrorBox.style.display='block';sdkErrorBox.textContent='کتابخانه اتصال آماده نشد. اتصال اینترنت را بررسی و صفحه را دوباره بارگذاری کنید.';}
+  throw new Error('Supabase SDK unavailable; application startup stopped safely.');
+}
 window.AUTH_SUPABASE=window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY,{auth:{autoRefreshToken:true,persistSession:true,detectSessionInUrl:true,storage:window.localStorage}});
 /* SEH_FIX_ORIGINAL_FETCH_SCOPE_20261016: expose the original browser fetch across classic-script scopes */
 const AUTH_SUPABASE=window.AUTH_SUPABASE;const ORIGINAL_FETCH=(typeof window.__SEH_ORIGINAL_FETCH==="function"?window.__SEH_ORIGINAL_FETCH:window.fetch.bind(window));window.__SEH_ORIGINAL_FETCH=ORIGINAL_FETCH;
