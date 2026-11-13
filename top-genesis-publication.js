@@ -193,11 +193,22 @@
     const charts = CHART_KEYS.map(key => chartCard(rows, key)).filter(Boolean).join("");
     const latestMeasurements = Object.entries(latest.report_metrics?.body_measurements_cm || {}).map(([key, metric]) => {
       if (!validMetric(metric)) return "";
-      const labels = {calf_left_cm:"ساق چپ",calf_right_cm:"ساق راست",thigh_left_cm:"ران چپ",thigh_right_cm:"ران راست",
-        upper_arm_left_cm:"بازوی چپ",upper_arm_right_cm:"بازوی راست",bicep_left_cm:"بازوی چپ",bicep_right_cm:"بازوی راست",
-        forearm_left_cm:"ساعد چپ",forearm_right_cm:"ساعد راست",chest_cm:"دور سینه",chest_region_cm:"ناحیه سینه",
-        hip_cm:"دور باسن",hip_region_cm:"ناحیه باسن",waist_abdominal_cm:"دور شکم",waist_lower_cm:"دور کمر پایین",
-        waist_narrowest_cm:"باریک‌ترین قسمت کمر",lower_waist_region_cm:"ناحیه کمر پایین",upper_waist_region_cm:"ناحیه کمر بالا"};
+      const labels = {
+        neck_cm:"دور گردن",
+        chest_cm:"دور سینه",chest_region_cm:"ناحیه سینه",
+        bicep_left_cm:"بازوی چپ",bicep_right_cm:"بازوی راست",
+        bicep_left_lower_cm:"پایین بازوی چپ",bicep_right_lower_cm:"پایین بازوی راست",
+        upper_arm_left_cm:"بازوی چپ",upper_arm_right_cm:"بازوی راست",
+        forearm_left_cm:"ساعد چپ",forearm_right_cm:"ساعد راست",
+        high_hip_cm:"بالاترین قسمت باسن",hip_cm:"دور باسن",hip_region_cm:"ناحیه باسن",
+        waist_abdominal_cm:"دور شکم",waist_lower_cm:"دور کمر پایین",
+        waist_narrowest_cm:"باریک‌ترین قسمت کمر",lower_waist_region_cm:"ناحیه کمر پایین",upper_waist_region_cm:"ناحیه کمر بالا",
+        thigh_left_upper_cm:"بالای ران چپ",thigh_right_upper_cm:"بالای ران راست",
+        mid_thigh_left_cm:"وسط ران چپ",mid_thigh_right_cm:"وسط ران راست",
+        thigh_left_lower_cm:"پایین ران چپ",thigh_right_lower_cm:"پایین ران راست",
+        thigh_left_cm:"ران چپ",thigh_right_cm:"ران راست",
+        calf_left_cm:"ساق چپ",calf_right_cm:"ساق راست"
+      };
       return '<div style="border:1px solid #eadfc9;border-radius:9px;padding:8px;background:#fff"><small>' +
         esc(labels[key] || "اندازه ثبت‌شده") + '</small><b style="display:block;color:#765b2e">' +
         esc(fa(metric.value, 2) + " " + (metric.unit === "cm" ? "سانتی‌متر" : metric.unit || "")) + '</b></div>';
