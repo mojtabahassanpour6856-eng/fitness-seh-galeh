@@ -36,6 +36,23 @@ assert.match(html, /notes:"MANUAL_PROGRESS_ENTRY: ثبت دستی و تأیید�
   "New manual progress records must be marked as trainee-confirmed, never coach-entered.");
 assert.match(html, /window\.saveProgress=async function\(\)[\s\S]*?authProfile\?\.role!=='trainee'[\s\S]*?ثبت دستی پیشرفت فقط از حساب خود شاگرد/,
   "The progress save action must reject every role except the trainee.");
+const progressMigration = read("supabase/migrations/202611130001_atomic_trainee_progress_rpc.sql");
+assert.match(html, /window\\.saveProgress=async function\\([\\s\\S]*?sbWrite\\('\\/rpc\\/record_trainee_progress','POST'/,
+  "The trainee progress UI must use one atomic server-side RPC, not two independent REST inserts.");
+assert.match(html, /async function saveProgress\\(\\)\\{\\s*return window\\.saveProgress\\(\\);\\s*\\}/,
+  "The legacy global saveProgress entry point must delegate to the single guarded implementation.");
+assert.doesNotMatch(html, /existingWeights|existingManual/,
+  "The browser must not use a racy check-then-insert sequence for progress.");
+assert.match(progressMigration, /security invoker/i,
+  "The atomic progress RPC must preserve caller privileges and RLS.");
+assert.match(progressMigration, /private\\.is_coach\\(\\)/,
+  "The database RPC must reject coach accounts.");
+assert.match(progressMigration, /private\\.can_access_trainee\\(p_trainee_id\\)/,
+  "The database RPC must enforce trainee ownership/access.");
+assert.match(progressMigration, /pg_advisory_xact_lock/,
+  "Concurrent duplicate submissions must be serialized within the transaction.");
+assert.match(progressMigration, /insert into public\\.weight_logs[\\s\\S]*?insert into public\\.body_analyses/,
+  "Both progress tables must be written in the same database transaction.");
 assert.match(html, /id="progressEntryPanel" style="display:none"/,
   "The progress entry form must be hidden by default for the coach view.");
 assert.match(html, /const entryPanel=[$][(]'progressEntryPanel'[)][\s\S]*?const traineeCanEnter=activeProfile[?]\.role==='trainee'[\s\S]*?entryPanel\.style\.display=traineeCanEnter\?'block':'none'[\s\S]*?entryPanel\.setAttribute\('aria-hidden',String\(!traineeCanEnter\)\)/,
