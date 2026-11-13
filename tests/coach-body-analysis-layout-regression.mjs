@@ -12,7 +12,7 @@ const publication = read("top-genesis-publication.js");
 
 assert.match(html, /id="navBodyAnalysis"[^>]*window\.openCoachBodyAnalysis\(\)/,
   "The coach navigation must open the unified Body Analysis section directly.");
-assert.doesNotMatch(html, /navAnalysisImport|analysisImport/,
+assert.doesNotMatch(html, /dashOpen\([\'"]analysis[\'"]\)[\s\S]{0,120}آنالیز بدن|<span id="dashAnalysis"/,\n  "The obsolete dashboard Body Analysis shortcut must be removed.");\nassert.match(html, /id="navBodyAnalysis"[^>]*window\.openCoachBodyAnalysis\(\)/,\n  "The dedicated coach navigation entry to Body Analysis must remain available.");\nassert.doesNotMatch(html, /navAnalysisImport|analysisImport/,
   "The standalone Import Analysis navigation/card must be removed.");
 const section = html.match(/<section id="bodyAnalysis" class="section">([\s\S]*?)<\/section>/);
 assert.ok(section, "A dedicated Body Analysis section must exist.");
