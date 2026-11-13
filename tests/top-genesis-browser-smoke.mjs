@@ -716,16 +716,41 @@ Waist-Hip Ratio (WHO),0.889
         return chain;
       }
     };
+    const nav=document.createElement("div");
+    nav.className="nav";
+    nav.innerHTML='<button type="button" onclick="dashOpen(\'analysis\')">آنالیز بدن</button>';
+    document.body.appendChild(nav);
+    const dashboard=document.createElement("section");
+    dashboard.id="traineeDashboard";
+    dashboard.className="section active";
+    document.body.appendChild(dashboard);
     const section=document.createElement("section");
     section.id="traineeAnalysis";
-    section.className="section active";
+    section.className="section";
+    section.style.display="none";
     section.innerHTML='<div id="traineeAnalysisArchive"></div>';
     document.body.appendChild(section);
+    const progress=document.createElement("section");
+    progress.id="progress";
+    progress.className="section";
+    progress.innerHTML='<div id="coachAnalysisView" class="card"></div><div id="progressTrend" class="card"></div><div id="progressHistory" class="card"></div>';
+    document.body.appendChild(progress);
+    window.dashOpen=function(key) {
+      document.querySelectorAll(".section").forEach(item => item.classList.remove("active"));
+      if (key === "analysis") dashboard.classList.add("active");
+    };
   });
   console.log("[smoke] trainee fixture configured");
   await traineeProgressPage.addScriptTag({ path: path.join(root, "top-genesis-publication.js") });
   console.log('[smoke] publication script loaded');
   await traineeProgressPage.waitForSelector("#topGenesisPublishedProgress");
+  await traineeProgressPage.evaluate(() => window.dashOpen("analysis"));
+  await traineeProgressPage.waitForFunction(() =>
+    document.querySelector("#traineeAnalysis")?.classList.contains("active") &&
+    getComputedStyle(document.querySelector("#traineeAnalysis")).display !== "none");
+  assert.equal(await traineeProgressPage.locator("#progress #coachAnalysisView, #progress #progressTrend, #progress #progressHistory").count(), 0,
+    "Legacy analysis cards must be removed from progress while the manual progress section remains intact.");
+  console.log('[smoke] trainee analysis route and progress cleanup passed');
   console.log('[smoke] trainee report card mounted');
   await traineeProgressPage.waitForFunction(() => {
     const body = document.querySelector("#topGenesisPublishedBody");
