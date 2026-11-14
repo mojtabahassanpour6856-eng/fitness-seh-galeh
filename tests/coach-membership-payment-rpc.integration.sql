@@ -58,7 +58,7 @@ begin
   end if;
 
   -- Drop the injected failure and retry with the SAME operation ID.
-  drop trigger test_fail_coach_membership_payment on public.trainee_payments;
+  execute 'drop trigger test_fail_coach_membership_payment on public.trainee_payments';
 
   v_paid := public.create_coach_membership_with_payment(
     '30000000-0000-0000-0000-000000000001',
