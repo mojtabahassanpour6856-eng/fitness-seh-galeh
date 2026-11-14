@@ -1,0 +1,20 @@
+name: Auth finishLogin single-flight regression
+on:
+  pull_request:
+    branches: [main]
+    paths: ['index.html','tests/auth-finish-login-singleflight.test.mjs','.github/workflows/test-auth-finish-login-singleflight.yml']
+  push:
+    branches: [fix/pinned-supabase-loader-20261113]
+    paths: ['index.html','tests/auth-finish-login-singleflight.test.mjs','.github/workflows/test-auth-finish-login-singleflight.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  auth-singleflight:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: node tests/auth-finish-login-singleflight.test.mjs
