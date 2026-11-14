@@ -7,15 +7,18 @@ assert.ok(match,'coach first-load guard must exist');
 let calls=0,shouldFail=true,nextTimer=1;
 const timers=new Map(),listeners={};
 const warnings=[];
+const listBody={textContent:'',innerHTML:''};
 const window={
-  loadClients:async()=>{calls++;if(shouldFail)throw new Error('temporary network failure');return ['trainee'];},
+  // Model the real app: loadClients catches the request error, renders an error row,
+  // and resolves instead of rejecting. The outer guard must still detect failure.
+  loadClients:async()=>{calls++;if(shouldFail){listBody.textContent='دریافت شاگردان ناموفق بود';listBody.innerHTML=listBody.textContent;return;}listBody.textContent='شاگرد';listBody.innerHTML='شاگرد';return ['trainee'];},
   finishLogin:async()=> 'authenticated',
   addEventListener:(name,fn)=>{listeners[name]=fn;}
 };
 const document={
   readyState:'loading',
   addEventListener(){},
-  getElementById(id){return id==='authUserText'?{textContent:'Coach | مربی'}:null;}
+  getElementById(id){if(id==='authUserText')return {textContent:'Coach | مربی'};if(id==='clientTableBody')return listBody;return null;}
 };
 const setTimeoutFake=(fn,delay)=>{const id=nextTimer++;timers.set(id,{fn,delay});return id;};
 const clearTimeoutFake=id=>timers.delete(id);
