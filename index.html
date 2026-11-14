@@ -14606,7 +14606,15 @@ window.sehResetTurnstile=function(){};
     window.loadClients=function(){
       if(clientsLoadInFlight)return clientsLoadInFlight;
       clientsLoadInFlight=Promise.resolve().then(()=>originalLoadClients.apply(this,arguments))
-        .then(result=>{window.__sehCoachListLoadAttempted=true;retryAttempt=0;return result;})
+        .then(result=>{
+          // The final loadClients implementation catches its own network errors and resolves.
+          // Detect its visible failure state so a swallowed error cannot disable retries.
+          const listBody=document.getElementById("clientTableBody");
+          const legacyList=document.getElementById("clientList");
+          const visibleFailure=[listBody,legacyList].filter(Boolean).some(node=>/دریافت شاگردان ناموفق بود|خطا در دریافت شاگردان از پایگاه داده|بارگذاری شاگردان ناموفق بود/i.test(String(node.textContent||node.innerHTML||"")));
+          if(visibleFailure)throw new Error("بارگذاری فهرست شاگردان در رابط کاربری ناموفق گزارش شد.");
+          window.__sehCoachListLoadAttempted=true;retryAttempt=0;return result;
+        })
         .finally(()=>{clientsLoadInFlight=null;});
       return clientsLoadInFlight;
     };
