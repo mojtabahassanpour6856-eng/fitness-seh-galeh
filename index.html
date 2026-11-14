@@ -15561,4 +15561,27 @@ window.sehNutritionBuilderBridge={
   window.__sehFinishLoginGuardInstalled=true;
 })();
 </script>
+<script id="seh-app-shell-service-worker-registration-v1">
+(function(){
+  'use strict';
+  if(!('serviceWorker' in navigator))return;
+  var register=function(){
+    if(window.__sehAppShellServiceWorkerRegistration)return window.__sehAppShellServiceWorkerRegistration;
+    window.__sehAppShellServiceWorkerRegistration=navigator.serviceWorker
+      .register('./sw.js',{scope:'./'})
+      .catch(function(error){
+        console.warn('App shell offline cache registration was unavailable:',error);
+        window.__sehAppShellServiceWorkerRegistration=null;
+        return null;
+      });
+    return window.__sehAppShellServiceWorkerRegistration;
+  };
+  if(document.readyState==='loading'){
+    document.addEventListener('DOMContentLoaded',register,{once:true});
+  }else{
+    register();
+  }
+  window.addEventListener('online',function(){register();});
+})();
+</script>
 </body></html>

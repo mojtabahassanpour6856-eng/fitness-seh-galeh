@@ -1,0 +1,33 @@
+name: Offline app shell cache regression
+
+on:
+  workflow_dispatch:
+  pull_request:
+    branches: ["main"]
+    paths:
+      - "index.html"
+      - "sw.js"
+      - "tests/service-worker-shell-cache.test.mjs"
+      - "tests/service-worker-shell-cache.browser.mjs"
+      - ".github/workflows/test-service-worker-shell-cache.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  service-worker-shell-cache:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Test safe offline shell caching and API bypass
+        run: node tests/service-worker-shell-cache.test.mjs
+      - name: Install Chromium browser test dependencies
+        run: |
+          npm install --no-save playwright
+          npx playwright install --with-deps chromium
+      - name: Test real offline app shell and embedded pages in Chromium
+        run: node tests/service-worker-shell-cache.browser.mjs
