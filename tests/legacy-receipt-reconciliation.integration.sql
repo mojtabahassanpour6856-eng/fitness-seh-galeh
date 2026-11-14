@@ -15,7 +15,11 @@ values
   ('40000000-0000-0000-0000-000000000009',
    '30000000-0000-0000-0000-000000000002', null,
    '20000000-0000-0000-0000-000000000001',
-   'synthetic/other-coach-legacy-receipt.jpg', 70000, '2026-11-10', 'pending');
+   'synthetic/other-coach-legacy-receipt.jpg', 70000, '2026-11-10', 'pending'),
+  ('40000000-0000-0000-0000-000000000010',
+   '30000000-0000-0000-0000-000000000001', null,
+   '20000000-0000-0000-0000-000000000001',
+   'synthetic/legacy-receipt-wrong-membership.jpg', 65000, '2026-11-10', 'pending');
 
 set role authenticated;
 select set_config('request.jwt.claim.sub','10000000-0000-0000-0000-000000000001',false);
@@ -142,7 +146,7 @@ begin
   -- A membership from another trainee cannot be selected.
   begin
     perform public.reconcile_legacy_trainee_receipt_membership(
-      '40000000-0000-0000-0000-000000000008',
+      '40000000-0000-0000-0000-000000000010',
       3,
       '62000000-0000-0000-0000-000000000006',
       'تلاش برای انتخاب عضویت شاگرد دیگر',
