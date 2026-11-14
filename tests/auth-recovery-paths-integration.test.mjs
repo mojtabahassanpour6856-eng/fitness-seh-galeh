@@ -66,7 +66,10 @@ const context={
   clearTimeout:timer=>{const i=timers.indexOf(timer);if(i>=0)timers.splice(i,1);}
 };
 
-vm.runInNewContext(script('seh-auth-session-singleflight-v1'),context);
+const coordinatorStart=html.indexOf('/* SEH_AUTH_SESSION_SINGLEFLIGHT_V1_START */');
+const coordinatorEnd=html.indexOf('/* SEH_AUTH_SESSION_SINGLEFLIGHT_V1_END */',coordinatorStart);
+assert.ok(coordinatorStart>=0&&coordinatorEnd>coordinatorStart,'shared session coordinator must exist');
+vm.runInNewContext(html.slice(coordinatorStart,coordinatorEnd+'/* SEH_AUTH_SESSION_SINGLEFLIGHT_V1_END */'.length),context);
 vm.runInNewContext(script('seh-coach-dashboard-session-recovery-20261016'),context);
 vm.runInNewContext(script('seh-auth-session-restore-watchdog-v1'),context);
 vm.runInNewContext(script('seh-auth-finish-login-singleflight-v1'),context);
