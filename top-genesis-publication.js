@@ -573,11 +573,32 @@
         loadPublished(true);
       }
     } catch (error) {
+      let cleanupFailure = null;
       if (uploadedReportPath) {
-        try { await window.AUTH_SUPABASE.storage.from("trainee-health-reports").remove([uploadedReportPath]); } catch (_) {}
+        try {
+          const { error: cleanupError } = await window.AUTH_SUPABASE.storage
+            .from("trainee-health-reports")
+            .remove([uploadedReportPath]);
+          if (cleanupError) cleanupFailure = cleanupError;
+        } catch (cleanupError) {
+          cleanupFailure = cleanupError;
+        }
+        if (cleanupFailure) {
+          console.error("Top Genesis temporary report cleanup failed:", {
+            path: uploadedReportPath,
+            name: String(cleanupFailure?.name || "Error"),
+            message: String(cleanupFailure?.message || "Unknown cleanup error"),
+            status: cleanupFailure?.status ?? null,
+            code: cleanupFailure?.code ?? null
+          });
+        }
       }
       const errorName = String(error?.name || "Error");
-      const errorMessage = String(error?.message || "خطای نامشخص");
+      const baseErrorMessage = String(error?.message || "خطای نامشخص");
+      const cleanupWarning = cleanupFailure
+        ? "؛ پاکسازی فایل موقت نیز ناموفق بود و نیاز به بررسی فضای ذخیره‌سازی دارد"
+        : "";
+      const errorMessage = baseErrorMessage + cleanupWarning;
       const errorStatus = Number.isFinite(Number(error?.status)) ? `، وضعیت HTTP ${Number(error.status)}` : "";
       const errorCode = error?.code ? `، کد ${String(error.code).slice(0, 40)}` : "";
       const offline = navigator.onLine === false ? "؛ اتصال اینترنت مرورگر قطع است" : "";
