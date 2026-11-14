@@ -83,3 +83,47 @@ Use a unique local key on operation ID, a lease/lock to prevent two tabs sending
 - No changes to the production Supabase project or migrations.
 - No broad caching of API responses.
 - No automatic replay of payments, membership changes, body-analysis imports, or Storage uploads.
+
+
+## Supabase read-only verification — 2026-11-14
+
+The connected projects were identified by name before inspection:
+- Production: `fitness seghale` (`qfakyudgidsumeuoqoot`, `eu-west-1`).
+- Test: `fitness-seh-galeh-test` (`udptdznbvewkublvzmtm`, `eu-west-1`).
+
+No database writes, migration applications, settings changes, or Storage uploads were performed.
+
+### Migration deployment status
+
+The production migration history includes:
+- `20261022201809 save_trainee_workout_plan_atomic`
+- `20261022201811 experimental_workout_rpc_compat`
+- `20261103142009 save_coach_nutrition_builder_atomic`
+- `20261113110113 atomic_trainee_progress_rpc`
+
+Therefore these migrations are recorded as applied in the production database migration history (unlike merely existing as repository files). This still does not prove that every current frontend path calls the RPC; the audited main bundle's manual progress handlers still used separate REST writes.
+
+The test project's migration history also includes its isolated progress RPC setup. Its database contains sandbox-specific permissive anonymous policies for fake workout rows. These are test-only fixtures and must never be copied to production.
+
+### Production security advisor findings
+
+The production security advisor returned:
+- Four SECURITY DEFINER functions executable by `authenticated`: `experimental_save_trainee_workout`, `experimental_workout_snapshot`, `save_coach_nutrition_builder_plan`, and `save_trainee_workout_plan_atomic`.
+- One informational RLS-enabled/no-policy finding for `public.exercises_duplicate_archive_20261023`.
+- Leaked-password protection is disabled in Supabase Auth.
+
+The SECURITY DEFINER warning is not by itself proof of an authorization bypass: the inspected function bodies include authentication/role/trainee-access checks and fixed search paths. However, the functions are exposed RPC entry points and require an explicit intended-caller/grant review. In particular, experimental RPCs should not remain callable by authenticated users unless the app intentionally uses them. The nutrition RPC must remain coach-only at the server boundary. Do not resolve these warnings by blindly changing SECURITY DEFINER to INVOKER; that can break legitimate transactional behavior or access checks.
+
+The test project's advisor additionally reported one anonymous-executable SECURITY DEFINER nutrition RPC and four RLS-enabled tables with no policies in its sandbox schema. This differs from production and reinforces that test fixtures must be isolated. Production advisor did not report anonymous execution of the nutrition RPC.
+
+### Storage verification limitation
+
+The test project's `storage.buckets` query returned no bucket rows, so it is not a valid mirror for validating the production upload policy design. Production Storage bucket/object policies and upload paths remain a separate outstanding read-only inspection. No assumption is made that the test project's bucket configuration matches production.
+
+### Next review gates
+
+1. Inspect production Storage buckets and `storage.objects` policies, including path ownership rules for trainee health reports and payment receipts.
+2. Inspect production table grants, unique constraints, foreign keys, and relevant function EXECUTE grants to distinguish intentional RPC exposure from stale/experimental access.
+3. Review the exact frontend call sites for each deployed RPC and reconcile app code versus migration history.
+4. Review Auth settings for leaked-password protection and document a safe proposed change; do not change it as part of this audit.
+5. Only after these checks, finalize the idempotency ledger contract and test plan. No production fix is authorized by this audit.
