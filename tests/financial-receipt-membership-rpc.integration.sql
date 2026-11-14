@@ -60,6 +60,39 @@ begin
     raise exception 'a different membership history row was modified';
   end if;
 
+  -- The schema permits at most one payment row for a given receipt.
+  begin
+    insert into public.trainee_payments
+      (trainee_id,membership_id,receipt_id,amount,payment_date,description)
+    values
+      ('30000000-0000-0000-0000-000000000001',1,
+       '40000000-0000-0000-0000-000000000001',125000,'2026-11-13','duplicate');
+    raise exception 'expected one-payment-per-receipt unique index to reject duplicate';
+  exception when sqlstate '23505' then null;
+  end;
+
+  -- Composite foreign keys must prevent cross-trainee membership associations.
+  begin
+    insert into public.trainee_payments
+      (trainee_id,membership_id,amount,payment_date,description)
+    values
+      ('30000000-0000-0000-0000-000000000002',1,1000,'2026-11-14','wrong trainee');
+    raise exception 'expected cross-trainee payment membership reference to fail';
+  exception when sqlstate '23503' then null;
+  end;
+
+  begin
+    insert into public.trainee_payment_receipts
+      (id,trainee_id,membership_id,submitted_by,receipt_path,amount,payment_date)
+    values
+      ('40000000-0000-0000-0000-000000000009',
+       '30000000-0000-0000-0000-000000000001',3,
+       '20000000-0000-0000-0000-000000000001',
+       'synthetic/cross-trainee-membership.jpg',1000,'2026-11-14');
+    raise exception 'expected cross-trainee receipt membership reference to fail';
+  exception when sqlstate '23503' then null;
+  end;
+
   -- Reusing the same operation ID for a different receipt is rejected.
   begin
     perform public.review_trainee_payment_receipt(
