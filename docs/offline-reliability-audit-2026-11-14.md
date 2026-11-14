@@ -217,3 +217,33 @@ The current main branch includes tests for:
 
 These tests support the existing safe shell-cache boundary and basic transient-session/list recovery. They do not prove outbox safety: there is still no tested account-switch quarantine, cross-tab write lease, operation-status reconciliation, or timeout-after-commit replay behavior. Those remain mandatory before any queued write is enabled.
 
+
+
+## Follow-up review: deployed policy semantics and regression coverage
+
+The production policy definitions were re-read directly from `pg_policies` and the relevant helper functions. This confirms the following intended boundaries at the database layer:
+
+- `private.can_access_trainee` is a relationship check: active trainee owner OR assigned coach.
+- `private.is_coach` derives role from the authenticated user's profile row.
+- `weight_logs` insert is limited to non-coach authenticated users with access to that trainee. The inspected policy set contains no direct UPDATE/DELETE policy for this table.
+- `body_analyses` distinguishes manual-progress rows through its marker convention: trainee insert is allowed only for marked manual records; coach insert only for non-manual records; coach update/delete excludes manual-progress records.
+- `record_trainee_progress` requires the active trainee's own auth UID and rejects coach sessions. This remains the preferred server boundary for the trainee-submitted progress workflow, once the identity/correction contract is fixed.
+- Membership and payment tables are coach-write-only; trainee owners can read records associated with themselves.
+- Receipt insert requires the authenticated submitter UID, a trainee relationship, pending status, and unset review metadata. The policy does not explicitly reject a coach role, so an assigned coach can apparently create a pending receipt row for their own assigned trainee. Whether that is a product bug or an intentional admin flow remains unresolved; no RLS change is proposed.
+
+The two membership table variants (`trainee_membership` and `trainee_memberships`) and two card representations (`trainee_membership_cards` and `trainee_membership.card_number`) must be mapped to actual runtime handlers before schema cleanup or uniqueness constraints. The receipt/payment/membership tables inspected do not expose a client operation UUID field, so these workflows are not safe for blind automatic retry.
+
+### Current frontend regression tests inspected
+
+The checked-in tests verify:
+- auth session lifecycle signals share a single restore attempt;
+- dashboard recovery and auth watchdog overlap without duplicate `finishLogin` or trainee-list loads;
+- the auth single-flight wrapper blocks a different user from racing an in-progress login;
+- bounded trainee-list retries restart on the browser `online` event;
+- the service worker serves only the static shell/assets and explicitly bypasses Supabase API, unknown dynamic paths, and POST writes.
+
+These are useful existing protections. However, the tests do not exercise an actual sign-out/account-switch sequence with a pending mutation, nor do they test queued operation quarantine, cross-tab leases, or server-side operation-status reconciliation. Thus they are not sufficient evidence to enable offline writes.
+
+### Source inspection limitation
+
+The current financial handlers appear embedded in the very large monolithic `index.html` bundle (approximately 1.3 MB). The GitHub file reader returns no ranged content for this oversized file, and repository code search did not return matching excerpts for the financial table identifiers. The live database policy/schema review is therefore complete for the tables above, but the exact frontend receipt/payment/membership call sites remain unverified. Do not infer which of the legacy table variants is active from schema presence alone. The next safe step is to obtain a supported source snapshot or split/read-only extraction of the relevant handlers before making any code change.
