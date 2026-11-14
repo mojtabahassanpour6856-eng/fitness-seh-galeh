@@ -189,7 +189,7 @@ begin
   exception when sqlstate '22023' then null;
   end;
 end;
-$;
+$$;
 
 reset role;
 drop trigger test_fail_coach_membership_payment on public.trainee_payments;
