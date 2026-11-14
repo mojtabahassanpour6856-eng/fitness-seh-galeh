@@ -101,3 +101,13 @@ test("legacy publication rows without a storage path never expose a full-report 
   assert.ok(publication.includes("if (!modal || !frame || !row?.report_storage_path) return"),
     "The report viewer must reject legacy rows that have no storage object.");
 });
+
+
+test("health report storage reads are scoped to the exact assigned trainee folders", () => {
+  const migration = read("supabase/migrations/202611140001_tighten_trainee_health_report_storage_reads.sql");
+  assert.match(migration, /drop policy if exists trainee_health_reports_read_own_or_assigned_coach/);
+  assert.match(migration, /t\.id::text = \(storage\.foldername\(name\)\)\[2\]/);
+  assert.match(migration, /t\.coach_user_id = auth\.uid\(\)/);
+  assert.match(migration, /storage\.foldername\(name\)\)\[1\] in/);
+  assert.match(migration, /t\.auth_user_id = auth\.uid\(\)/);
+});
