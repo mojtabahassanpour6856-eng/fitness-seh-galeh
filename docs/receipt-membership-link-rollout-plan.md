@@ -10,9 +10,10 @@ Every membership payment settles exactly one specific membership history row. A 
 
 Draft migration: `supabase/drafts/20261114000100_receipt_membership_link.sql`.
 
-- Add nullable `membership_id` to `trainee_payment_receipts` and `trainee_payments`.
+- Add nullable `membership_id` to `trainee_payment_receipts` and `trainee_payments`, plus nullable `receipt_id` to `trainee_payments`.
 - Add a composite candidate key on `trainee_memberships(trainee_id,id)`.
-- Add composite foreign keys from each financial row's `(trainee_id,membership_id)` to the matching membership row.
+- Add composite foreign keys from each receipt/payment's `(trainee_id,membership_id)` to the matching membership row, and from each payment's `(trainee_id,receipt_id)` to the originating receipt.
+- Add a partial unique index on `trainee_payments.receipt_id` so a receipt can create at most one payment row.
 - Leave old rows NULL; do not infer a link from date, amount, current status, or row order.
 - Use deferred NO ACTION for membership deletion while financial history references it. This blocks standalone deletion at transaction commit while allowing the existing trainee-level cascades to remove the complete related record set together.
 - Add lookup indexes only; no RLS, grants, Auth, Storage, or existing data changes.
@@ -24,7 +25,7 @@ The migration is deliberately not applied. Before production use, test it agains
 1. Trainee receipt submission must load only memberships the authenticated trainee is permitted to see and require an explicit membership selection.
 2. The submitted `membership_id` must be validated server-side against the authenticated trainee; never trust a client-supplied trainee ID or membership ID alone.
 3. Coach review must display the linked membership's dates, status, amount, and card details (where present). An unlinked legacy receipt must display a clear manual-reconciliation state and must not have an approval action that guesses a target.
-4. The approval RPC must lock the receipt, validate the membership belongs to the receipt trainee, create one payment carrying the same `membership_id`, update only that membership row, and mark the receipt approved in one transaction.
+4. The approval RPC must lock the receipt, validate the membership belongs to the receipt trainee, create one payment carrying the same `membership_id` and `receipt_id`, update only that membership row, and mark the receipt approved in one transaction. A unique index must prevent a second payment for the same receipt even if an unexpected retry path is introduced.
 5. The operation ledger must bind retries to actor, operation UUID, receipt, decision, membership association, and all material request fields. A replay with a changed payload must fail.
 6. Rejection must not create a payment or change membership status.
 7. Storage receipt uploads remain online-only until a separate staged-upload/reconciliation design exists.
