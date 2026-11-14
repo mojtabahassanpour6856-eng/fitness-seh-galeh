@@ -13,8 +13,8 @@ begin
     '51000000-0000-0000-0000-000000000001','2026-11-14');
   v_retry := public.create_membership_atomic(
     '31000000-0000-0000-0000-000000000001','2026-11-14','2026-12-14',
-    'Synthetic monthly membership',200000,'paid','Synthetic trainee',
-    '51000000-0000-0000-0000-000000000001');
+    'عضویت باشگاه',200000,'paid','Synthetic trainee',
+    '51000000-0000-0000-0000-000000000001','2026-11-14');
   if v_first is distinct from v_retry then raise exception 'same operation retry returned different result'; end if;
   select count(*) into v_count from public.trainee_memberships
    where trainee_id='31000000-0000-0000-0000-000000000001';
