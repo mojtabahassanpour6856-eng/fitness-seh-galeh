@@ -345,3 +345,32 @@ These are the minimum contracts to implement and test in a sandbox before touchi
 - Existing trainee role restrictions remain intact: trainees submit receipts and their own progress; coaches review receipts and remain read-only for trainee-entered progress.
 
 No RPC, schema, RLS, Storage, Auth setting, production row or application runtime code was changed in this follow-up. This section is an implementation contract and test plan only.
+
+
+## Follow-up: test-project readiness for financial idempotency work — 2026-11-14
+
+### Read-only schema inventory
+
+The connected test project `fitness-seh-galeh-test` (`udptdznbvewkublvzmtm`) was re-identified by project metadata as ACTIVE_HEALTHY in `eu-west-1`, running PostgreSQL 17.11.0.003. Its migration history includes the isolated workout, nutrition, and trainee-progress test migrations.
+
+A verbose schema inventory and catalog query found these 12 tables in `public`: `trainees`, `profiles`, `exercises`, `trainee_workout_plans`, `trainee_workout_exercises`, `foods`, `nutrition_plans`, `nutrition_meals`, `nutrition_meal_foods`, `nutrition_food_substitutes`, `weight_logs`, and `body_analyses`. All 12 have RLS enabled. The inventory does **not** contain the production financial workflow tables `trainee_memberships`, `trainee_membership_cards`, `trainee_payments`, or `trainee_payment_receipts`; it also does not contain `body_analysis_reports`. The existing test project therefore cannot validate the membership/payment and receipt-approval transaction contracts as-is. It is currently a workout/nutrition/progress sandbox, not a complete production-schema clone.
+
+The test project has no production data; the inspected table row estimates were zero. This is consistent with the branch/test fixture purpose and does not establish behavior against production history or real user records.
+
+### Test-only exposure findings
+
+The test project's security advisor was re-run read-only. It reports:
+- One `SECURITY DEFINER` RPC, `public.save_coach_nutrition_builder_plan(jsonb)`, executable by `anon`.
+- Four `SECURITY DEFINER` RPCs executable by `authenticated`, including the experimental workout endpoints and nutrition/workout save endpoints.
+- Four RLS-enabled tables in sandbox schema `workout_batch_test` without policies.
+- The public schema also contains explicitly named anonymous test policies for fake workout rows/exercise reads.
+
+These are test-environment findings and must not be copied into production. They make the current test project unsuitable as an unattended place to exercise real user-shaped payloads or to treat advisor cleanliness as a release gate. Do not change/revoke these fixtures as part of this audit; first identify the tests that depend on them and isolate them from any future financial acceptance suite.
+
+### Implication for the next implementation step
+
+Do not write or apply a financial RPC migration to this test project yet. The safe next gate is to prepare a **separate isolated financial test schema/project fixture** containing only the minimum table structures, constraints, helper functions and authorization model needed to test membership creation, payment creation, receipt transitions, and operation-ledger behavior. It must use synthetic identities and data only, no production export or personal information.
+
+Before any DDL is applied, review the exact schema and authorization design. Prefer keeping the operation ledger in a non-exposed schema, with narrowly scoped function access and explicit actor/coach/trainee checks. Supabase's current changelog states that new public-schema tables are no longer automatically exposed through the Data API (enforced across projects from 2026-10-30); any future API-facing table must be deliberately exposed and granted, while an internal ledger should not be exposed merely for convenience. The current database-functions guidance recommends SECURITY INVOKER by default; any SECURITY DEFINER endpoint needs a documented necessity, fixed search_path, explicit `auth.uid()` checks, restricted EXECUTE grants, and advisor review.
+
+No schema, migration, data, RLS policy, grant, Auth setting, Storage object, or application runtime code was changed during this follow-up. Only this audit document on the isolated Git branch is being extended.
