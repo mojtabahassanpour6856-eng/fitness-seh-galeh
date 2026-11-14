@@ -14,11 +14,11 @@ begin
   -- Same actor + operation ID + payload returns the stored result.
   v_first := public.review_receipt_idempotent(
     '40000000-0000-0000-0000-000000000001','approved',
-    '50000000-0000-0000-0000-000000000001'
+    '50000000-0000-0000-0000-000000000001','2026-11-14'
   );
   v_retry := public.review_receipt_idempotent(
     '40000000-0000-0000-0000-000000000001','approved',
-    '50000000-0000-0000-0000-000000000001'
+    '50000000-0000-0000-0000-000000000001','2026-11-14'
   );
   if v_first is distinct from v_retry then
     raise exception 'same operation retry did not return the stored result';
@@ -42,7 +42,7 @@ begin
   begin
     perform public.review_receipt_idempotent(
       '40000000-0000-0000-0000-000000000002',null,
-      '50000000-0000-0000-0000-000000000009'
+      '50000000-0000-0000-0000-000000000009','2026-11-14'
     );
     raise exception 'expected NULL decision to be rejected';
   exception when sqlstate '22023' then null;
@@ -52,7 +52,7 @@ begin
   begin
     perform public.review_receipt_idempotent(
       '40000000-0000-0000-0000-000000000001','rejected',
-      '50000000-0000-0000-0000-000000000001'
+      '50000000-0000-0000-0000-000000000001','2026-11-14'
     );
     raise exception 'expected changed-payload operation ID reuse to fail';
   exception when sqlstate '22023' then null;
@@ -62,7 +62,7 @@ begin
   begin
     perform public.review_receipt_idempotent(
       '40000000-0000-0000-0000-000000000001','approved',
-      '50000000-0000-0000-0000-000000000002'
+      '50000000-0000-0000-0000-000000000002','2026-11-14'
     );
     raise exception 'expected terminal receipt re-approval to fail';
   exception when sqlstate '55000' then null;
@@ -71,13 +71,31 @@ begin
   -- Rejection is terminal and never creates a payment.
   perform public.review_receipt_idempotent(
     '40000000-0000-0000-0000-000000000002','rejected',
-    '50000000-0000-0000-0000-000000000003'
+    '50000000-0000-0000-0000-000000000003','2026-11-14'
   );
   select count(*) into v_count from public.trainee_payments
    where trainee_id='30000000-0000-0000-0000-000000000001' and amount=95000;
   if v_count <> 0 then raise exception 'rejected receipt unexpectedly created a payment'; end if;
 end;
 $$;
+
+-- A receipt without its own payment date must use the browser-local fallback
+-- supplied by the caller, not the database server's current_date.
+insert into public.trainee_payment_receipts(id,trainee_id,submitted_by,receipt_path,amount,payment_date) values
+ ('40000000-0000-0000-0000-000000000006','30000000-0000-0000-0000-000000000001','20000000-0000-0000-0000-000000000001','synthetic/receipt-null-date.jpg',66000,null);
+select public.review_receipt_idempotent(
+ '40000000-0000-0000-0000-000000000006','approved',
+ '50000000-0000-0000-0000-000000000010','2026-11-14');
+do $
+begin
+ if not exists(select 1 from public.trainee_payments
+   where trainee_id='30000000-0000-0000-0000-000000000001'
+     and amount=66000 and payment_date='2026-11-14'
+     and description='تأیید فیش واریزی') then
+   raise exception 'NULL receipt date did not use caller-supplied browser-local fallback';
+ end if;
+end;
+$;
 
 -- Cross-coach access must fail, and the failed operation must roll back its ledger claim.
 select set_config('request.jwt.claim.sub','10000000-0000-0000-0000-000000000002',false);
@@ -86,7 +104,7 @@ begin
   begin
     perform public.review_receipt_idempotent(
       '40000000-0000-0000-0000-000000000001','approved',
-      '50000000-0000-0000-0000-000000000004'
+      '50000000-0000-0000-0000-000000000004','2026-11-14'
     );
     raise exception 'expected cross-coach receipt access to fail';
   exception when sqlstate '42501' then null;
@@ -101,7 +119,7 @@ begin
   begin
     perform public.review_receipt_idempotent(
       '40000000-0000-0000-0000-000000000001','approved',
-      '50000000-0000-0000-0000-000000000005'
+      '50000000-0000-0000-0000-000000000005','2026-11-14'
     );
     raise exception 'expected trainee role to be rejected';
   exception when sqlstate '42501' then null;
@@ -135,7 +153,7 @@ begin
   begin
     perform public.review_receipt_idempotent(
       '40000000-0000-0000-0000-000000000004','approved',
-      '50000000-0000-0000-0000-000000000006'
+      '50000000-0000-0000-0000-000000000006','2026-11-14'
     );
     raise exception 'expected injected payment failure';
   exception when sqlstate '23514' then null;
