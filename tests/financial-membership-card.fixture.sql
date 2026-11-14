@@ -158,6 +158,13 @@ begin
       on conflict do nothing
       returning card_number into v_card;
       if v_card is not null then exit; end if;
+      -- A legacy/direct writer may have registered this trainee's card while
+      -- the RPC was allocating. Re-read after the unique-conflict wait and
+      -- reuse the canonical registry value instead of spinning to exhaustion.
+      select card_number into v_card
+      from public.trainee_membership_cards
+      where trainee_id=p_trainee_id;
+      if v_card is not null then exit; end if;
     end loop;
     if v_card is null then
       raise exception 'Could not allocate a unique membership card'
