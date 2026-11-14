@@ -3,7 +3,7 @@ import fs from 'node:fs';
 import vm from 'node:vm';
 
 const html=fs.readFileSync('index.html','utf8');
-const match=html.match(/<script id="seh-coach-dashboard-session-recovery-20261016">([\\s\\S]*?)<\\/script>/);
+const match=html.match(/<script id="seh-coach-dashboard-session-recovery-20261016">([\s\S]*?)<\/script>/);
 assert.ok(match,'the real coach dashboard recovery block must exist in index.html');
 
 const timers=[];
