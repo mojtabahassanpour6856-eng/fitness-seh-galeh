@@ -1,6 +1,7 @@
-name: Vendor pinned Supabase browser SDK
+name: Build pinned Supabase browser SDK artifact
 
 on:
+  workflow_dispatch:
   push:
     branches:
       - fix/pinned-supabase-loader-20261113
@@ -8,7 +9,7 @@ on:
       - '.github/workflows/vendor-supabase-sdk.yml'
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
   vendor-sdk:
@@ -18,6 +19,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           ref: fix/pinned-supabase-loader-20261113
+          persist-credentials: false
       - name: Set up Node
         uses: actions/setup-node@v4
         with:
@@ -36,17 +38,11 @@ jobs:
           cp package-unpacked/package/dist/umd/supabase.js vendor/supabase-2.119.0.js
           if [ -f package-unpacked/package/LICENSE ]; then cp package-unpacked/package/LICENSE vendor/SUPABASE-SDK-LICENSE.txt; fi
           sha256sum vendor/supabase-2.119.0.js > vendor/supabase-2.119.0.js.sha256
-          printf 'Package: @supabase/supabase-js\nVersion: 2.119.0\nSource: npm registry package tarball\n' > vendor/SUPABASE-SDK-VERSION.txt
-      - name: Commit vendored SDK to this feature branch
-        shell: bash
-        run: |
-          set -euo pipefail
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add vendor/
-          if git diff --cached --quiet; then
-            echo "Vendored SDK is already up to date."
-            exit 0
-          fi
-          git commit -m "Vendor pinned Supabase browser SDK 2.119.0"
-          git push origin HEAD:fix/pinned-supabase-loader-20261113
+          printf 'Package: @supabase/supabase-js\\nVersion: 2.119.0\\nSource: npm registry package tarball\\n' > vendor/SUPABASE-SDK-VERSION.txt
+      - name: Publish SDK files as a build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: supabase-js-2.119.0-vendor
+          path: vendor/
+          if-no-files-found: error
+          retention-days: 7
