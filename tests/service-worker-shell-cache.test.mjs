@@ -171,4 +171,26 @@ assert.match(await degradedNavigation.text(), /network:\/fitness-seh-galeh\/inde
 
 // A failed update must not remove the currently active shell cache.
 const originalFetch = globalThis.fetch;
+// Simulate a newer worker whose required index cannot be fetched.
+// Its failed install must not mutate or delete the currently active v2 cache.
+offline = true;
+const updateListeners = {};
+let updateSkipWaitingCalls = 0;
+const updateSelf = {
+  ...self,
+  addEventListener(name, fn) { updateListeners[name] = fn; },
+  async skipWaiting() { updateSkipWaitingCalls++; }
+};
+vm.runInNewContext(swSource.replace("seh-shell-v2", "seh-shell-v3"), {
+  self: updateSelf, clients, caches, fetch: mockFetch, URL, Promise, Response,
+  setTimeout, clearTimeout, console
+});
+let failedUpdateInstall;
+updateListeners.install({ waitUntil(promise) { failedUpdateInstall = promise; } });
+await assert.rejects(failedUpdateInstall, /Required app shell index\.html could not be cached/);
+assert.ok(stores.has('seh-shell-v2'), 'failed update preserves the previously active shell cache');
+assert.ok(!stores.has('seh-shell-v3'), 'failed update removes its incomplete cache');
+assert.equal(updateSkipWaitingCalls, 0, 'failed update never calls skipWaiting');
+offline = false;
+
 console.log('PASS: static app shell is cached; offline navigation, 5xx fallback and assets recover; Supabase/API and writes bypass the cache; push handlers remain registered.');
