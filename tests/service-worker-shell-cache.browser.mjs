@@ -45,7 +45,7 @@ try {
   await page.waitForFunction(() => !!navigator.serviceWorker.controller, null, { timeout: 15000 });
 
   const initialCache = await page.evaluate(async () => {
-    const cache = await caches.open("seh-shell-v1");
+    const cache = await caches.open("seh-shell-v2");
     const keys = await cache.keys();
     return keys.map(request => new URL(request.url).pathname);
   });
@@ -78,7 +78,7 @@ try {
     "the cached Top Genesis page must load its own offline document");
 
   const shellStillIntact = await genesisPage.evaluate(async () => {
-    const cache = await caches.open("seh-shell-v1");
+    const cache = await caches.open("seh-shell-v2");
     const response = await cache.match(new URL("index.html", location.href).href);
     return response ? await response.text() : "";
   });
