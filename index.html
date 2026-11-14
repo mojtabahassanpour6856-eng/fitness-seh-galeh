@@ -14601,7 +14601,7 @@ window.sehResetTurnstile=function(){};
     if(!auth || !auth.auth || typeof window.loadClients!=='function')return;
     running=true;attempts++;
     try{
-      var result=await auth.auth.getSession();
+      var result=await window.__sehGetSessionSingleFlight();
       var session=result&&result.data&&result.data.session;
       if(result&&result.error)throw result.error;
       if(!session||!session.user)return;
