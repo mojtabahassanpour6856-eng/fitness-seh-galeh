@@ -145,3 +145,41 @@ The Storage catalog grants broad table-level privileges to `anon` and `authentic
 
 - The repository code search did not return reliable upload call-site matches, so exact upload methods, object naming conventions, overwrite flags, and metadata-write ordering remain unverified.
 - Constraint inspection confirmed foreign keys and basic NOT NULL/CHECK constraints on the principal trainee/progress/plan tables, but did not establish an idempotency uniqueness constraint for each operational write path.
+
+
+## Exact Top Genesis PDF upload/delete path — verified from current main
+
+The standalone `top-genesis-archive.js` module is the confirmed production upload path for Top Genesis PDFs. It uses:
+- private bucket `trainee-health-reports`;
+- object path `<coach-auth-uid>/<trainee-id>/<random-uuid>-<safe-filename>`;
+- `upload(..., { contentType: "application/pdf", upsert: false })`;
+- then a separate INSERT into `public.body_analysis_reports`.
+
+The object naming convention matches the current Storage INSERT policy and the table's `body_analysis_reports_file_path_check`. The bucket's 10 MiB limit matches the client limit and table constraint. The client-generated random UUID plus `upsert:false` avoids same-path overwrite collisions. Thus the earlier conditional concern about missing Storage UPDATE permission does not apply to this confirmed archive upload path.
+
+However, the two-step file+metadata workflow is not atomic:
+1. If upload succeeds and metadata INSERT fails, the client attempts a compensating Storage remove. If that cleanup request also fails (offline, timeout, session expiry), an orphan private object can remain without a database row.
+2. Delete currently removes the Storage object first, then deletes the metadata row. If the second step fails, the row remains while its file is gone.
+3. An ambiguous timeout after either request can leave the client uncertain whether the operation committed. The current flow has no durable operation ID or reconciliation record.
+
+This is a real reliability concern for future offline support, but not a reason to replay these operations automatically. Keep Top Genesis uploads/deletes online-only until a staged upload/reconciliation workflow exists. A future design should persist a pending upload record/status, reconcile object existence and metadata, and make deletion a retryable state machine rather than blind replay.
+
+## Confirmed production table and RPC details
+
+- `body_analysis_reports` has coach-only SELECT/INSERT/UPDATE/DELETE policies. Insert and delete require both the authenticated coach ID and current assignment to the trainee. Its constraints enforce the storage path prefix, PDF MIME type, 10 MiB maximum, JSON object metrics, unique storage path, and trainee/coach foreign keys.
+- The current report archive upload is therefore aligned with the production RLS and Storage folder checks, based on the exact module and live catalog policies.
+- The workout save RPC and experimental workout RPCs are SECURITY DEFINER with fixed search paths and explicit authenticated-user/coach/trainee access checks. The two experimental functions are present in production migration history and have EXECUTE granted to authenticated users. This is not an observed authorization bypass, but their production exposure should be intentional and documented; do not revoke until frontend call sites and release dependencies are verified.
+- The nutrition builder has a SECURITY DEFINER JSON-payload implementation that checks coach role and trainee assignment, plus a SECURITY INVOKER compatibility overload. Both are granted to authenticated users; the invoker wrapper delegates to the guarded implementation.
+- `record_trainee_progress` is SECURITY INVOKER and explicitly rejects coach accounts, requiring the active trainee owner. It atomically inserts missing halves of the two-table progress record, but its identity is the tuple trainee/date/exact weight (with advisory lock hash rounded to two decimals), not a client operation ID. It cannot distinguish a legitimate correction to the same date/weight from a retry. Its advisory lock also cannot serialize legacy direct REST inserts that do not acquire the same lock.
+
+## Constraint/index gap relevant to duplicate protection
+
+Read-only index inspection found only primary-key uniqueness for `weight_logs` and `body_analyses`; no unique constraint/index was found on the business identity of a manual progress event. The progress RPC's advisory lock protects concurrent callers of that RPC, but does not provide database-enforced uniqueness against legacy direct REST writes or other code paths. Do not add a unique key on trainee/date/weight without first defining correction semantics and auditing historical duplicates; that could reject legitimate repeat entries or fail migration on existing data.
+
+The same inspection found primary-key-only uniqueness on `nutrition_plans` and `trainee_workout_plans` for the inspected tables. These plan histories intentionally allow multiple rows per trainee, so do not add a simplistic trainee-only unique constraint.
+
+## Current recommendation
+
+- Keep Storage upload and delete operations out of a generic offline queue.
+- For manual progress, replace the legacy two-write client path with a purpose-built RPC only after reconciling the RPC's duplicate/correction semantics and verifying every caller. Preserve the strict rule that only the trainee submits; coach views remain read-only.
+- For all future queued writes, use a separate server idempotency ledger keyed by authenticated user + operation type + client-generated operation UUID, with a canonical payload hash and status/result lookup. A duplicate operation UUID with a different payload must be rejected, not silently treated as the original.
