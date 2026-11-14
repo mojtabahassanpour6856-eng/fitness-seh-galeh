@@ -54,3 +54,19 @@ test("iframe handshake is retryable and every context request receives the curre
   assert.match(embed, /type: "top-genesis-context"[\s\S]*?traineeId: boundTraineeId[\s\S]*?contextNonce/,
     "The retry response must carry the same bound trainee ID and nonce as the active iframe.");
 });
+
+
+test("published report viewer is cleared when account or trainee context changes", () => {
+  const publication = read("top-genesis-publication.js");
+  assert.match(publication, /function closeFullReportViewer\(\)/,
+    "The full report modal must have a single cleanup path.");
+  assert.match(publication, /URL\.revokeObjectURL\(frame\.dataset\.objectUrl\)/,
+    "Switching context must revoke the previous report Blob URL.");
+  assert.match(publication, /const contextKey = role \+ ":" \+ traineeId/);
+  assert.match(publication, /if \(contextKey !== lastContextKey\)[\s\S]*?closeFullReportViewer\(\)/,
+    "Role or selected trainee changes must immediately clear the previous report viewer.");
+  assert.match(publication, /requestedEpoch !== contextEpoch \|\| requestedTraineeId !== currentTraineeId\(\)/,
+    "A report download completing after a context switch must not be displayed.");
+  assert.match(publication, /requestEpoch !== contextEpoch \|\| currentTraineeId\(\) !== traineeId/,
+    "A stale history query must not render data into a newly selected trainee's panel.");
+});
