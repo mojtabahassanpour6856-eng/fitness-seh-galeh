@@ -3,7 +3,7 @@
  */
 'use strict';
 
-const SHELL_CACHE_NAME = 'seh-shell-v1';
+const SHELL_CACHE_NAME = 'seh-shell-v2';
 const SHELL_ASSETS = [
   'index.html',
   'manifest.json',
@@ -39,17 +39,34 @@ async function cacheShellAsset(cache, relativePath) {
     const response = await fetch(url, { cache: 'reload' });
     if (response && response.ok && response.type !== 'opaque') {
       await cache.put(url, response.clone());
+      return true;
     }
   } catch (_) {
-    // A missing optional asset must not prevent the app shell from installing.
+    // Optional assets may be fetched when first needed.
   }
+  return false;
 }
 
 self.addEventListener('install', function (event) {
   event.waitUntil((async function () {
+    // Build a new cache beside the active one. Never mutate the active version
+    // during installation: an interrupted update must leave the old shell intact.
     const cache = await caches.open(SHELL_CACHE_NAME);
-    await Promise.allSettled(SHELL_ASSETS.map(path => cacheShellAsset(cache, path)));
-    await self.skipWaiting();
+    try {
+      const indexCached = await cacheShellAsset(cache, 'index.html');
+      if (!indexCached) {
+        throw new Error('Required app shell index.html could not be cached');
+      }
+
+      await Promise.allSettled(
+        SHELL_ASSETS.filter(path => path !== 'index.html')
+          .map(path => cacheShellAsset(cache, path))
+      );
+      await self.skipWaiting();
+    } catch (error) {
+      await caches.delete(SHELL_CACHE_NAME);
+      throw error;
+    }
   })());
 });
 
@@ -153,7 +170,6 @@ self.addEventListener('notificationclick', function (event) {
     let targetUrl = new URL(notificationData.url || './', self.registration.scope);
     const traineeId = notificationData.trainee_id;
 
-    // Carry the trainee ID into the app so the coach chat can open the right conversation.
     if (traineeId && /^[0-9a-f-]{36}$/i.test(String(traineeId))) {
       targetUrl.searchParams.set('openChatTrainee', String(traineeId));
     }
@@ -165,8 +181,6 @@ self.addEventListener('notificationclick', function (event) {
     for (const client of clientList) {
       if (new URL(client.url).origin !== self.location.origin || !('focus' in client)) continue;
 
-      // If the app is already open, ask that page to open the exact trainee chat.
-      // Keep the URL-based route as a fallback for older pages without the listener.
       if (traineeId && /^[0-9a-f-]{36}$/i.test(String(traineeId)) && 'postMessage' in client) {
         try {
           client.postMessage({ type: 'OPEN_CHAT_TRAINEE', trainee_id: String(traineeId) });
