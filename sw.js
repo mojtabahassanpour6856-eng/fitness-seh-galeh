@@ -23,7 +23,7 @@ const SHELL_ASSET_PATHS = new Set(SHELL_ASSETS);
 const APP_SCOPE = new URL(self.registration.scope);
 const APP_ROOT_PATH = APP_SCOPE.pathname;
 const INDEX_URL = new URL('index.html', APP_SCOPE).href;
-const NAVIGATION_FALLBACK_DELAY_MS = 2500;
+const NAVIGATION_FALLBACK_DELAY_MS = 800;
 
 function isInAppScope(url) {
   return url.origin === APP_SCOPE.origin && url.pathname.startsWith(APP_ROOT_PATH);

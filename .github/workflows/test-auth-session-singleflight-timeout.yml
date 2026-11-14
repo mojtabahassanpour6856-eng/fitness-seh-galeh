@@ -1,0 +1,17 @@
+name: Auth session single-flight timeout regression
+on:
+  pull_request:
+    branches: [main]
+    paths: ['index.html','tests/auth-session-singleflight-timeout.test.mjs','.github/workflows/test-auth-session-singleflight-timeout.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  session-singleflight-timeout:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: node tests/auth-session-singleflight-timeout.test.mjs

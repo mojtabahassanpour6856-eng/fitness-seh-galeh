@@ -1904,7 +1904,7 @@ async function sbApiHeaders(extra={}){
  const headers={"apikey":SUPABASE_KEY,"Content-Type":"application/json",...extra};
  try{
    const client=window.AUTH_SUPABASE;
-   const result=client?.auth?.getSession?await client.auth.getSession():null;
+   const result=client?.auth?.getSession?await window.__sehGetSessionSingleFlight():null;
    const token=result?.data?.session?.access_token;
    headers.Authorization="Bearer "+(token||SUPABASE_KEY);
  }catch(e){headers.Authorization="Bearer "+SUPABASE_KEY;}
@@ -2437,6 +2437,56 @@ if(!window.supabase||typeof window.supabase.createClient!=='function'){
   throw new Error('Supabase SDK unavailable; application startup stopped safely.');
 }
 window.AUTH_SUPABASE=window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY,{auth:{autoRefreshToken:true,persistSession:true,detectSessionInUrl:true,storage:window.localStorage}});
+/* SEH_AUTH_SESSION_SINGLEFLIGHT_V1_START */
+(function(){
+  'use strict';
+  if(window.__sehGetSessionSingleFlight)return;
+  var active=null, cachedResult=null, cachedAt=0, authListenerInstalled=false;
+  var TIMEOUT_MS=12000, CACHE_MS=1200;
+  window.__sehGetSessionSingleFlight=function(){
+    var auth=window.AUTH_SUPABASE;
+    if(!auth||!auth.auth||typeof auth.auth.getSession!=='function'){
+      return Promise.reject(new Error('Supabase session service is unavailable.'));
+    }
+    if(active)return active;
+    if(cachedResult&&Date.now()-cachedAt<CACHE_MS)return Promise.resolve(cachedResult);
+    if(!authListenerInstalled&&typeof auth.auth.onAuthStateChange==='function'){
+      authListenerInstalled=true;
+      try{
+        auth.auth.onAuthStateChange(function(event){
+          if(event==='SIGNED_IN'||event==='SIGNED_OUT'||event==='TOKEN_REFRESHED'){
+            cachedResult=null;cachedAt=0;
+          }
+        });
+      }catch(error){authListenerInstalled=false;}
+    }
+    var request;
+    try{request=Promise.resolve(auth.auth.getSession());}
+    catch(error){return Promise.reject(error);}
+    var timer=null;
+    var timeout=new Promise(function(resolve,reject){
+      timer=setTimeout(function(){
+        var message='ارتباط با سرویس ورود زمان‌بر شد. نشست ذخیره‌شده پاک نشده است؛ اتصال اینترنت را بررسی کنید و چند لحظه بعد دوباره تلاش کنید.';
+        if(typeof window.showAuthError==='function'){
+          try{window.showAuthError(message);}catch(error){}
+        }
+        reject(new Error('بررسی نشست بیش از ۱۲ ثانیه طول کشید؛ اتصال اینترنت را بررسی کنید.'));
+      },TIMEOUT_MS);
+    });
+    var tracked=Promise.race([request,timeout]).then(function(result){
+      if(result&&!result.error&&result.data&&result.data.session&&result.data.session.user){
+        cachedResult=result;cachedAt=Date.now();
+      }
+      return result;
+    }).finally(function(){
+      if(timer!==null)clearTimeout(timer);
+      if(active===tracked)active=null;
+    });
+    active=tracked;
+    return tracked;
+  };
+})();
+/* SEH_AUTH_SESSION_SINGLEFLIGHT_V1_END */
 /* SEH_FIX_ORIGINAL_FETCH_SCOPE_20261016: expose the original browser fetch across classic-script scopes */
 const AUTH_SUPABASE=window.AUTH_SUPABASE;const ORIGINAL_FETCH=(typeof window.__SEH_ORIGINAL_FETCH==="function"?window.__SEH_ORIGINAL_FETCH:window.fetch.bind(window));window.__SEH_ORIGINAL_FETCH=ORIGINAL_FETCH;
 
@@ -2447,7 +2497,7 @@ async function __fitnessGetApiSession(){
   const now=Date.now();
   if(__fitnessApiSession && __fitnessApiSessionAt && now-__fitnessApiSessionAt<12000) return __fitnessApiSession;
   if(__fitnessApiSessionPromise) return __fitnessApiSessionPromise;
-  __fitnessApiSessionPromise=AUTH_SUPABASE.auth.getSession().then(({data})=>{
+  __fitnessApiSessionPromise=window.__sehGetSessionSingleFlight().then(({data})=>{
     __fitnessApiSession=data?.session||null;
     __fitnessApiSessionAt=Date.now();
     return __fitnessApiSession;
@@ -2567,7 +2617,7 @@ async function logoutApp(){
   location.reload();
 }
 async function initAuth(){
-  try{const {data}=await AUTH_SUPABASE.auth.getSession();if(data.session)await finishLogin(data.session.user);}
+  try{const {data}=await window.__sehGetSessionSingleFlight();if(data.session)await finishLogin(data.session.user);}
   catch(e){console.error(e);}
 }
 
@@ -3434,6 +3484,7 @@ window.loadDashboard = loadDashboard;
 
 
 <!-- SEH_COACH_APPROVAL_PASSWORDLESS_LOGIN_V1 -->
+
 <script>
 (function(){
  'use strict';
@@ -3634,7 +3685,8 @@ function buildMembershipCard(){const sec=$id('client');if(!sec||$id('membershipC
 window.copyMembershipCard=function(){const v=$id('cardNumber')?.value||'';if(!v)return alert('شماره کارت ثبت نشده است.');if(!navigator.clipboard?.writeText){alert(v);return;}navigator.clipboard.writeText(v).then(()=>alert('شماره کارت کپی شد.')).catch(()=>alert(v));};const prevSelectClient=window.selectClient;window.selectClient=async function(id){await prevSelectClient(id);if(currentClient){if($id('trainingDaysEdit'))$id('trainingDaysEdit').value=currentClient.training_days||'';if($id('trainingTimeEdit'))$id('trainingTimeEdit').value=currentClient.training_time||'';await loadGoal();await loadMembershipCard();await loadWaterGoal();await loadWeeklyWaterLogs();}};
 
   buildAuthTabs();addRegistrationFields();buildGoalBox();addLibraryGoalField();addWaterGoal();addStyle();buildDashboard();buildMembershipCard();addNavDashboard();buildWorkoutControls();addScheduleUI();addPrintButtons();fixLibraryUse();
-  AUTH_SUPABASE.auth.getSession().then(({data})=>{if(data?.session)window.finishLogin(data.session.user);}).catch(e=>console.error(e));
+  
+window.__sehGetSessionSingleFlight().then(({data})=>{if(data?.session)window.finishLogin(data.session.user);}).catch(e=>console.error(e));
 })();
 
 </script>
@@ -4086,7 +4138,7 @@ const plans=workoutResult.data||[], nutrition=nutritionResult.data||[];
   // استفاده از درخواست احراز هویت‌شدهٔ خود اپ؛ کلید عمومی به‌تنهایی ممکن است با سیاست‌های RLS رد شود.
   const authClient=window.AUTH_SUPABASE;
   if(!authClient||!authClient.auth)throw new Error('اتصال ورود مربی آماده نیست؛ صفحه را تازه‌سازی و دوباره وارد حساب مربی شوید.');
-  const sessionResult=await authClient.auth.getSession();
+  const sessionResult=await window.__sehGetSessionSingleFlight();
   if(sessionResult.error)throw sessionResult.error;
   const coachId=sessionResult.data&&sessionResult.data.session&&sessionResult.data.session.user&&sessionResult.data.session.user.id;
   if(!coachId)throw new Error('نشست مربی پیدا نشد؛ یک‌بار خارج شوید و دوباره وارد شوید.');
@@ -4122,7 +4174,7 @@ window.deleteLibraryExercise=async function(id,name){
  try{
   const client=window.AUTH_SUPABASE;
   if(!client||!client.auth)throw new Error('اتصال امن مربی آماده نیست؛ صفحه را تازه‌سازی کنید و دوباره وارد شوید.');
-  const sessionResult=await client.auth.getSession();
+  const sessionResult=await window.__sehGetSessionSingleFlight();
   if(sessionResult.error)throw sessionResult.error;
   const session=sessionResult.data&&sessionResult.data.session;
   const coachId=session&&session.user&&session.user.id;
@@ -4221,7 +4273,7 @@ window.toggleExerciseFavorite=async function(id,value){try{await sbWrite(`/train
     if(typeof AUTH_SUPABASE==='undefined' || !AUTH_SUPABASE){
       throw new Error('اتصال Supabase در این نسخه بارگذاری نشده است.');
     }
-    const {data,error}=await AUTH_SUPABASE.auth.getSession();
+    const {data,error}=await window.__sehGetSessionSingleFlight();
     if(error) throw error;
     const session=data&&data.session;
     if(!session||!session.user) throw new Error('نشست مربی پیدا نشد. یک‌بار از حساب مربی خارج و دوباره وارد شوید.');
@@ -4431,7 +4483,7 @@ window.toggleExerciseFavorite=async function(id,value){try{await sbWrite(`/train
   }
 
   async function authenticatedSession(){
-    const {data,error}=await auth.auth.getSession();
+    const {data,error}=await window.__sehGetSessionSingleFlight();
     if(error) throw error;
     if(!data || !data.session || !data.session.access_token || !data.session.user){
       throw new Error('نشست ورود مربی پیدا نشد. یک‌بار از حساب خارج شوید و دوباره وارد شوید.');
@@ -5269,7 +5321,7 @@ window.toggleExerciseFavorite=async function(id,value){try{await sbWrite(`/train
   };
   window.showTraineeDiagnostic=async function(){
     try{
-      const result=await window.AUTH_SUPABASE.auth.getSession();
+      const result=await window.__sehGetSessionSingleFlight();
       const session=result?.data?.session;
       if(!session?.user?.id)throw new Error('نشست ورود پیدا نشد؛ یک‌بار خارج و دوباره وارد شوید.');
       const profile=await window.AUTH_SUPABASE.from('profiles').select('id,role').eq('id',session.user.id).maybeSingle();
@@ -5469,7 +5521,7 @@ window.toggleExerciseFavorite=async function(id,value){try{await sbWrite(`/train
     const list=el('clientList');
     if(list)list.innerHTML='<div class="muted" style="padding:12px">در حال دریافت شاگردان از دیتابیس…</div>';
     try{
-      const sessionResult=await window.AUTH_SUPABASE.auth.getSession();
+      const sessionResult=await window.__sehGetSessionSingleFlight();
       const session=sessionResult?.data?.session;
       if(!session?.user?.id)throw new Error('نشست ورود معتبر نیست؛ خارج شوید و دوباره وارد شوید.');
       // finishLogin already verifies and loads the signed-in user's profile.
@@ -8217,7 +8269,7 @@ const oldWorkoutRenderer=window.renderWorkoutList;
   try{
    const authClient=window.AUTH_SUPABASE;
    if(!authClient||!authClient.auth)throw new Error('اتصال ورود مربی آماده نیست؛ صفحه را تازه‌سازی و دوباره وارد حساب مربی شوید.');
-   const sessionResult=await authClient.auth.getSession();
+   const sessionResult=await window.__sehGetSessionSingleFlight();
    if(sessionResult.error)throw sessionResult.error;
    const session=sessionResult.data&&sessionResult.data.session;
    const coachId=session&&session.user&&session.user.id;
@@ -8400,7 +8452,7 @@ const oldWorkoutRenderer=window.renderWorkoutList;
       alert('اتصال پایگاه داده آماده نیست. از حساب مربی خارج شوید، دوباره وارد شوید و صفحه را تازه کنید.');return;
     }
     try{
-      var sr=await client.auth.getSession();
+      var sr=await window.__sehGetSessionSingleFlight();
       if(sr.error)throw sr.error;
       var session=sr.data&&sr.data.session;
       var coachId=session&&session.user&&session.user.id;
@@ -11899,12 +11951,12 @@ body.workout-output.workout-compact{
   if(!auth)throw new Error('سامانه ورود آماده نیست؛ صفحه را تازه‌سازی کنید.');
   // Read the persisted Supabase session first to avoid racing app startup.
   // Chat database policies still validate the access token on every request.
-  let result=await auth.getSession();
+  let result=await window.__sehGetSessionSingleFlight();
   if(result.error)throw result.error;
   let session=result.data?.session||null;
   if(!session){
     await new Promise(resolve=>setTimeout(resolve,700));
-    result=await auth.getSession();
+    result=await window.__sehGetSessionSingleFlight();
     if(result.error)throw result.error;
     session=result.data?.session||null;
   }
@@ -14496,6 +14548,8 @@ window.sehResetTurnstile=function(){};
 </script>
 
 <!-- SEH_FINAL_FETCH_AND_SESSION_RECOVERY_20261016 -->
+
+
 <script id="SEH_FINAL_FETCH_AND_SESSION_RECOVERY_20261016">
 (function(){
   'use strict';
@@ -14517,7 +14571,7 @@ window.sehResetTurnstile=function(){};
     var screen=document.getElementById('authScreen');
     if(document.body && !document.body.classList.contains('locked') && screen && screen.style.display==='none')return;
     try{
-      var result=await auth.auth.getSession();
+      var result=await window.__sehGetSessionSingleFlight();
       if(result && result.error)throw result.error;
       var session=result && result.data && result.data.session;
       if(session && session.user && typeof window.finishLogin==='function'){
@@ -14554,7 +14608,7 @@ window.sehResetTurnstile=function(){};
     if(!auth || !auth.auth || typeof window.loadClients!=='function')return;
     running=true;attempts++;
     try{
-      var result=await auth.auth.getSession();
+      var result=await window.__sehGetSessionSingleFlight();
       var session=result&&result.data&&result.data.session;
       if(result&&result.error)throw result.error;
       if(!session||!session.user)return;
@@ -15491,7 +15545,7 @@ window.sehNutritionBuilderBridge={
     running=true;
     try{
       for(let attempt=0;attempt<3;attempt++){
-        const result=await auth.auth.getSession();
+        const result=await window.__sehGetSessionSingleFlight();
         if(result.error)throw result.error;
         const session=result.data?.session;
         if(session?.user){await window.finishLogin(session.user);return;}

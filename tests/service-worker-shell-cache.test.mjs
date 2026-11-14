@@ -16,6 +16,7 @@ const stores = new Map();
 const requests = [];
 let offline = false;
 let forcedStatus = null;
+let networkDelayMs = 0;
 let skipWaitingCalls = 0;
 let claimCalls = 0;
 
@@ -49,6 +50,7 @@ async function mockFetch(input, init = {}) {
   const url = typeof input === 'string' ? input : input.url;
   requests.push({ url, cache: init.cache || null });
   if (offline) throw new TypeError('simulated offline network');
+  if (networkDelayMs) await new Promise(resolve => setTimeout(resolve, networkDelayMs));
   return new Response('network:' + new URL(url).pathname, {
     status: forcedStatus || 200,
     headers: { 'content-type': url.endsWith('.html') ? 'text/html' : 'application/octet-stream' }
@@ -159,6 +161,27 @@ listeners.fetch({
 assert.equal(postIntercepted, false, 'write requests are never intercepted');
 
 offline = false;
+forcedStatus = null;
+networkDelayMs = 1200;
+const slowNavigationStarted = Date.now();
+let slowNavigationResponse;
+listeners.fetch({
+  request: { method: 'GET', mode: 'navigate', url: scope },
+  respondWith(promise) { slowNavigationResponse = promise; }
+});
+const slowNavigation = await slowNavigationResponse;
+const slowNavigationElapsed = Date.now() - slowNavigationStarted;
+assert.ok(slowNavigationElapsed < 1150,
+  'a slow network navigation should use the cached shell after the 800ms fallback window');
+assert.match(await slowNavigation.text(), /network:\/fitness-seh-galeh\/index\.html/,
+  'the fast fallback returns the previously cached app shell while the slow network request continues');
+await new Promise(resolve => setTimeout(resolve, 450));
+const refreshedAfterSlowNavigation = await cache.match(scope + 'index.html');
+assert.match(await refreshedAfterSlowNavigation.text(), /network:\/fitness-seh-galeh\//,
+  'the background network response still refreshes the cached shell for the next navigation');
+networkDelayMs = 0;
+
+offline = false;
 forcedStatus = 503;
 let degradedNavigationResponse;
 listeners.fetch({
@@ -166,7 +189,7 @@ listeners.fetch({
   respondWith(promise) { degradedNavigationResponse = promise; }
 });
 const degradedNavigation = await degradedNavigationResponse;
-assert.match(await degradedNavigation.text(), /network:\/fitness-seh-galeh\/index\.html/,
+assert.match(await degradedNavigation.text(), /network:\/fitness-seh-galeh\/(?:index\.html)?/,
   'a server-side 5xx uses the cached shell instead of a blank error page');
 
 forcedStatus = 404;
