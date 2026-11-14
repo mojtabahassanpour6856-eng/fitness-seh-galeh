@@ -1,0 +1,26 @@
+name: Startup performance budget
+on:
+  push:
+    paths:
+      - 'index.html'
+      - 'tests/startup-performance-budget.test.mjs'
+      - '.github/workflows/startup-performance-budget.yml'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'index.html'
+      - 'tests/startup-performance-budget.test.mjs'
+      - '.github/workflows/startup-performance-budget.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  startup-budget:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Measure and enforce startup payload guardrails
+        run: node tests/startup-performance-budget.test.mjs
