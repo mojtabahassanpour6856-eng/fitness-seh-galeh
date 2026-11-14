@@ -46,9 +46,10 @@ There are two `saveSubscription` definitions/wrappers in the large page. The act
 2. Show a required membership selector in the trainee receipt form. Include enough details to distinguish overlapping/history rows (dates, amount, card number, status).
 3. Submit the selected `membership_id` with receipt metadata only after the database migration is deployed.
 4. Show the exact linked membership beside every receipt in coach review; display legacy NULL links as **نیازمند تطبیق دستی** and do not offer automatic approval.
-5. Replace the three direct writes in `reviewPaymentReceipt` with one authenticated RPC call. The RPC must lock and authorize the receipt, validate the linked membership belongs to that trainee, create one payment with the same membership ID, update only that membership, and mark the receipt reviewed atomically.
-6. Refresh the trainee membership and coach history views after the RPC succeeds.
-7. Preserve rejection behavior as terminal with no payment row and no membership status change.
+5. Update the active `saveSubscription` path as well as receipt review: retain the returned membership row ID from the insert, attach it to any coach-recorded payment, and replace the fragile sessionStorage retry marker with an operation UUID tied to that membership. Do not create a payment row without its membership ID after the migration is enabled.
+6. Replace the three direct writes in `reviewPaymentReceipt` with one authenticated RPC call. The RPC must lock and authorize the receipt, validate the linked membership belongs to that trainee, create one payment with the same membership ID, update only that membership, and mark the receipt reviewed atomically.
+7. Refresh the trainee membership and coach history views after the RPC succeeds.
+8. Preserve rejection behavior as terminal with no payment row and no membership status change.
 
 ## Rollout guardrails
 
