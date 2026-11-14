@@ -126,6 +126,7 @@ test('successful finishLogin stores only a minimal safe-shell marker',async()=>{
 
 test('auth sign-in and sign-out transitions invalidate the previous shell marker',async()=>{
   const h=createHarness({online:true,marker:true,session:true});
+  delete h.window.__sehGetSessionSingleFlight;
   let authListener;
   h.window.AUTH_SUPABASE.auth.onAuthStateChange=callback=>{authListener=callback;return {data:{subscription:{unsubscribe(){}}}};};
   const start=html.indexOf('/* SEH_AUTH_SESSION_SINGLEFLIGHT_V1_START */');
