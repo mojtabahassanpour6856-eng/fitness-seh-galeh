@@ -14,7 +14,7 @@ Draft migration: `supabase/drafts/20261114000100_receipt_membership_link.sql`.
 - Add a composite candidate key on `trainee_memberships(trainee_id,id)`.
 - Add composite foreign keys from each financial row's `(trainee_id,membership_id)` to the matching membership row.
 - Leave old rows NULL; do not infer a link from date, amount, current status, or row order.
-- Use RESTRICT for membership deletion while financial history references it.
+- Use deferred NO ACTION for membership deletion while financial history references it. This blocks standalone deletion at transaction commit while allowing the existing trainee-level cascades to remove the complete related record set together.
 - Add lookup indexes only; no RLS, grants, Auth, Storage, or existing data changes.
 
 The migration is deliberately not applied. Before production use, test it against a schema-faithful disposable PostgreSQL clone and verify cascade/delete behavior and lock duration.
