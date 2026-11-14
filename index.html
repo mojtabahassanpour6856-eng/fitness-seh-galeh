@@ -7941,19 +7941,34 @@ const oldWorkoutRenderer=window.renderWorkoutList;
   if(window.SEH_RECEIPT_MEMBERSHIP_LINK_ENABLED!==true)return alert("تأیید فیش تا اجرای مهاجرت دیتابیس و فعال‌سازی مسیر اتمیک جدید موقتاً غیرفعال است؛ هیچ تغییری در پرداخت یا عضویت انجام نشد.");
   if(!["approved","rejected"].includes(decision))return alert("تصمیم بررسی معتبر نیست.");
   const traineeId=String(currentClient.id),storageKey="seh-receipt-review-op:"+String(id)+":"+decision;
-  let operationId=sessionStorage.getItem(storageKey);
-  if(!operationId){operationId=crypto.randomUUID();sessionStorage.setItem(storageKey,operationId);}
   try{
+   let operationId=localStorage.getItem(storageKey);
+   if(!operationId){operationId=crypto.randomUUID();localStorage.setItem(storageKey,operationId);}
    const rows=await sbGet("/trainee_payment_receipts?id=eq."+encodeURIComponent(id)+"&trainee_id=eq."+encodeURIComponent(traineeId)+"&select=id,membership_id,review_status&limit=1");
-   const x=rows?.[0];if(!x||x.review_status!=="pending")throw new Error("فیش پیدا نشد یا قبلاً بررسی شده است.");
+   const x=rows?.[0];
+   if(!x)throw new Error("فیش پیدا نشد.");
    if(x.membership_id==null)throw new Error("این فیش عضویت مشخصی ندارد؛ ابتدا باید تطبیق دستی انجام شود.");
-   const {data,error}=await AUTH_SUPABASE.rpc("review_trainee_payment_receipt",{p_receipt_id:id,p_decision:decision,p_operation_id:operationId,p_fallback_payment_date:dayNow()});
+   const {data,error}=await AUTH_SUPABASE.rpc("review_trainee_payment_receipt",{
+    p_receipt_id:id,p_decision:decision,p_operation_id:operationId,p_fallback_payment_date:dayNow()
+   });
    if(error)throw error;
-   if(!data?.success)throw new Error("پاسخ قطعی از ثبت اتمیک دریافت نشد.");
-   sessionStorage.removeItem(storageKey);
+   if(!data?.success||data.decision!==decision||String(data.membership_id)!==String(x.membership_id))throw new Error("پاسخ قطعی از ثبت اتمیک دریافت نشد؛ شناسه عملیات حفظ شده است.");
+   const finalRows=await sbGet("/trainee_payment_receipts?id=eq."+encodeURIComponent(id)+"&trainee_id=eq."+encodeURIComponent(traineeId)+"&select=id,membership_id,review_status&limit=1");
+   const finalReceipt=finalRows?.[0];
+   if(!finalReceipt||finalReceipt.review_status!==decision||String(finalReceipt.membership_id)!==String(x.membership_id))throw new Error("وضعیت نهایی فیش در پرونده تأیید نشد؛ همان عملیات را دوباره ارسال کنید.");
+   const linkedPayments=await sbGet("/trainee_payments?receipt_id=eq."+encodeURIComponent(id)+"&select=id,membership_id&limit=2");
+   if(decision==="approved"){
+    if(linkedPayments.length!==1||String(linkedPayments[0].membership_id)!==String(x.membership_id)||data.payment_created!==true)throw new Error("پرداخت نهایی به همان عضویت متصل تأیید نشد؛ شناسه عملیات حفظ شده است.");
+   }else if(linkedPayments.length!==0||data.payment_created===true){
+    throw new Error("فیش رد شد اما وضعیت پرداخت نیازمند بررسی دستی است؛ شناسه عملیات حفظ شده است.");
+   }
+   if(currentClient&&String(currentClient.id)===traineeId){
+    await loadCoachReceipts();
+    if(typeof loadMembershipHistory==="function")await loadMembershipHistory();
+   }
+   localStorage.removeItem(storageKey);
    alert(decision==="approved"?"فیش تأیید شد؛ فقط همان عضویت مرتبط تسویه شد.":"فیش رد شد؛ هیچ پرداخت یا تغییری در عضویت ثبت نشد.");
-   await loadCoachReceipts();if(typeof loadMembershipHistory==="function")await loadMembershipHistory();
-  }catch(e){alert("بررسی فیش انجام نشد. در صورت قطع اینترنت همان عملیات با شناسه ثابت قابل تکرار است. "+(e.message||String(e)));}
+  }catch(e){alert("بررسی فیش انجام نشد. در صورت قطع اینترنت همان عملیات با شناسه ثابت قابل تکرار است. "+(e?.message||String(e)));}
  }
 
  function applyFeatureUI(){
