@@ -470,3 +470,25 @@ The existing test project is missing the four financial tables and contains perm
 - no production export, real names, phone numbers, receipt files, or copied personal data.
 
 No SQL/DDL, migration, grant, policy, function, data, Storage, Auth, or application runtime change was made in this follow-up. Only this design-gate section was added to the audit document on the isolated Git branch.
+
+
+## Prototype milestone: isolated receipt-review idempotency fixture — 2026-11-14
+
+A separate branch, `prototype/receipt-idempotency-fixture-20261114`, was created from the audit branch. It contains a disposable PostgreSQL 17 fixture and CI workflow, not a production migration:
+
+- `tests/financial-receipt-idempotency.fixture.sql`: synthetic coach/trainee identities, receipt/payment tables, private operation ledger, and a narrowly scoped `review_receipt_idempotent` RPC.
+- `tests/financial-receipt-idempotency.integration.sql`: assertions for same-operation replay, same-ID/different-payload rejection, terminal receipt protection under a different operation ID, rejection without payment, cross-coach denial, trainee-role denial, atomic rollback after an injected payment failure, and denial of direct ledger reads.
+- `.github/workflows/test-financial-receipt-idempotency.yml`: disposable PostgreSQL 17 CI service; no Supabase credentials or production data.
+
+The fixture intentionally uses only synthetic identities and does not connect to either Supabase project. It is a prototype of the receipt review boundary, not an implementation for the live app.
+
+### Important scope limitations (not yet passed release gates)
+
+1. The fixture has not yet been confirmed green by a completed GitHub Actions run. A pending commit status is not a passing test.
+2. It tests sequential retry and transaction rollback, but does not yet exercise two truly concurrent database sessions. A two-session race test remains mandatory before claiming concurrency safety.
+3. The production payment table currently has no receipt foreign key/idempotency key. The fixture does not add a new production column or unique constraint; it tests terminal-state + row-lock protection in the RPC transaction. Production implementation must preserve existing payment schema or separately justify and migrate any linkage.
+4. Membership activation remains deliberately outside this first prototype. Production currently updates all memberships for a trainee during receipt approval, which is too broad without a settled rule for selecting the intended membership. Do not carry that behavior into a new RPC until the business rule is decided and represented in schema/tests.
+5. This fixture does not yet cover membership creation/card allocation, upload staging, outbox replay, sign-out quarantine, or account switching.
+6. The fixture is a minimal transaction/authorization model, not a byte-for-byte copy of production RLS policies, table definitions, or grants. Before porting, compare every relevant production column, check, FK, policy and caller path.
+
+No production or test Supabase project was modified. No application runtime code, existing client handler, live payment, membership, receipt, Auth, Storage, RLS, grant or migration was changed. The fixture exists only in the separate Git branch above.
