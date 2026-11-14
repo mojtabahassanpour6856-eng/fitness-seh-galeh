@@ -11951,12 +11951,12 @@ body.workout-output.workout-compact{
   if(!auth)throw new Error('سامانه ورود آماده نیست؛ صفحه را تازه‌سازی کنید.');
   // Read the persisted Supabase session first to avoid racing app startup.
   // Chat database policies still validate the access token on every request.
-  let result=await auth.getSession();
+  let result=await window.__sehGetSessionSingleFlight();
   if(result.error)throw result.error;
   let session=result.data?.session||null;
   if(!session){
     await new Promise(resolve=>setTimeout(resolve,700));
-    result=await auth.getSession();
+    result=await window.__sehGetSessionSingleFlight();
     if(result.error)throw result.error;
     session=result.data?.session||null;
   }
