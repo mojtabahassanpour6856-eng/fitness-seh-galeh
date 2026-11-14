@@ -109,8 +109,9 @@ begin
       raise exception 'Receipt has no membership link; manual reconciliation required'
         using errcode='23514';
     end if;
-    if v_receipt.amount is null or v_receipt.amount <= 0 then
-      raise exception 'Receipt amount must be greater than zero'
+    if v_receipt.amount is null or v_receipt.amount <= 0
+       or v_receipt.amount::text in ('NaN', 'Infinity', '-Infinity') then
+      raise exception 'Receipt amount must be a finite positive number'
         using errcode='23514';
     end if;
 
