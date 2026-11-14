@@ -32,10 +32,20 @@ begin
       and description='تأیید فیش واریزی') then
     raise exception 'receipt approval payment fields differ from live browser handler';
   end if;
-  if (select count(*) from public.trainee_memberships
+  if not exists(select 1 from public.trainee_memberships
+      where id=1 and trainee_id='30000000-0000-0000-0000-000000000001'
+        and status='active' and payment_status='paid') then
+    raise exception 'receipt approval did not activate its linked membership';
+  end if;
+  if not exists(select 1 from public.trainee_memberships
+      where id=2 and trainee_id='30000000-0000-0000-0000-000000000001'
+        and payment_status='unpaid') then
+    raise exception 'receipt approval incorrectly changed another membership history row';
+  end if;
+  if not exists(select 1 from public.trainee_payments
       where trainee_id='30000000-0000-0000-0000-000000000001'
-        and status='active' and payment_status='paid') <> 2 then
-    raise exception 'receipt approval must reproduce current UI behavior across all membership history rows';
+        and membership_id=1 and amount=125000) then
+    raise exception 'payment was not linked to the same membership as the receipt';
   end if;
 
   -- A NULL decision must not fall through to the rejection branch.
@@ -81,8 +91,8 @@ $$;
 
 -- A receipt without its own payment date must use the browser-local fallback
 -- supplied by the caller, not the database server's current_date.
-insert into public.trainee_payment_receipts(id,trainee_id,submitted_by,receipt_path,amount,payment_date) values
- ('40000000-0000-0000-0000-000000000006','30000000-0000-0000-0000-000000000001','20000000-0000-0000-0000-000000000001','synthetic/receipt-null-date.jpg',66000,null);
+insert into public.trainee_payment_receipts(id,trainee_id,membership_id,submitted_by,receipt_path,amount,payment_date) values
+ ('40000000-0000-0000-0000-000000000006','30000000-0000-0000-0000-000000000001',2,'20000000-0000-0000-0000-000000000001','synthetic/receipt-null-date.jpg',66000,null);
 select public.review_receipt_idempotent(
  '40000000-0000-0000-0000-000000000006','approved',
  '50000000-0000-0000-0000-000000000010','2026-11-14');
@@ -144,7 +154,7 @@ before insert on public.trainee_payments
 for each row execute function public.fixture_fail_selected_payment();
 
 insert into public.trainee_payment_receipts(id,trainee_id,submitted_by,receipt_path,amount,payment_date) values
- ('40000000-0000-0000-0000-000000000004','30000000-0000-0000-0000-000000000001','20000000-0000-0000-0000-000000000001','synthetic/receipt-failure.jpg',55555,'2026-11-14');
+ ('40000000-0000-0000-0000-000000000004','30000000-0000-0000-0000-000000000001',1,'20000000-0000-0000-0000-000000000001','synthetic/receipt-failure.jpg',55555,'2026-11-14');
 
 set role authenticated;
 select set_config('request.jwt.claim.sub','10000000-0000-0000-0000-000000000001',false);
@@ -197,7 +207,7 @@ select 'PASS: retry idempotency, changed-payload rejection, terminal receipt pro
 -- after the RPC returns; the second must wait, then observe the terminal state.
 create extension if not exists dblink;
 insert into public.trainee_payment_receipts(id,trainee_id,submitted_by,receipt_path,amount,payment_date) values
- ('40000000-0000-0000-0000-000000000005','30000000-0000-0000-0000-000000000001','20000000-0000-0000-0000-000000000001','synthetic/receipt-race.jpg',45000,'2026-11-14');
+ ('40000000-0000-0000-0000-000000000005','30000000-0000-0000-0000-000000000001',1,'20000000-0000-0000-0000-000000000001','synthetic/receipt-race.jpg',45000,'2026-11-14');
 
 select dblink_connect('receipt_race_a','dbname='||current_database()||' user=postgres');
 select dblink_connect('receipt_race_b','dbname='||current_database()||' user=postgres');
@@ -213,7 +223,7 @@ begin
   if dblink_send_query('receipt_race_a',
     $query$select public.review_receipt_idempotent(
       '40000000-0000-0000-0000-000000000005','approved',
-      '50000000-0000-0000-0000-000000000007'
+      '50000000-0000-0000-0000-000000000007','2026-11-14'
     )::text$query$) <> 1 then
     raise exception 'could not start first concurrent approval';
   end if;
@@ -224,7 +234,7 @@ begin
   if dblink_send_query('receipt_race_b',
     $query$select public.review_receipt_idempotent(
       '40000000-0000-0000-0000-000000000005','approved',
-      '50000000-0000-0000-0000-000000000008'
+      '50000000-0000-0000-0000-000000000008','2026-11-14'
     )::text$query$) <> 1 then
     raise exception 'could not start second concurrent approval';
   end if;
@@ -257,7 +267,7 @@ do $$
 declare v_count integer; v_status text;
 begin
   select count(*) into v_count from public.trainee_payments
-   where trainee_id='30000000-0000-0000-0000-000000000001' and amount=45000;
+   where trainee_id='30000000-0000-0000-0000-000000000001' and membership_id=1 and amount=45000;
   if v_count <> 1 then raise exception 'concurrent approval created % payments, expected exactly one',v_count; end if;
   select review_status into v_status from public.trainee_payment_receipts
    where id='40000000-0000-0000-0000-000000000005';
