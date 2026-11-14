@@ -111,3 +111,13 @@ test("health report storage reads are scoped to the exact assigned trainee folde
   assert.match(migration, /storage\.foldername\(name\)\)\[1\] in/);
   assert.match(migration, /t\.auth_user_id = auth\.uid\(\)/);
 });
+
+
+test("publication failures report the exact stage and browser network diagnostics", () => {
+  const publisher = read("top-genesis-publication.js");
+  assert.match(publisher, /publicationStage = "بارگذاری فایل گزارش در فضای ذخیره‌سازی"/);
+  assert.match(publisher, /publicationStage = "ثبت اطلاعات گزارش در پایگاه داده"/);
+  assert.match(publisher, /errorName = String\(error\?\.name \|\| "Error"\)/);
+  assert.match(publisher, /browserOnline: navigator\.onLine/);
+  assert.match(publisher, /Top Genesis publication failed:/);
+});
