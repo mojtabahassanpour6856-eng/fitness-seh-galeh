@@ -39,7 +39,7 @@
   <p class="muted">این صفحه مستقل از نسخه اصلی است و به Supabase یا داده‌های واقعی متصل نیست.</p>
 </main>
 <script type="module">
-  import { createOfflineContinuity } from './offline-continuity.js';
+  import { createOfflineContinuity } from './offline-continuity.mjs';
 
   const stateEl = document.querySelector('#state');
   const messageEl = document.querySelector('#message');
@@ -73,7 +73,6 @@
   document.querySelector('#clear').onclick = () => { controller.clear(); online = false; verified = false; render(); };
   window.addEventListener('offline', () => { online = false; verified = false; render(); });
   window.addEventListener('online', () => { online = true; verified = false; render(); });
-  if (online) { verified = true; controller.rememberSafeView('home'); }
   render();
 </script>
 </body>
