@@ -189,20 +189,24 @@ async function installHarness(page, backend) {
       await context.close();
     }
 
-    // 3. Two overlapping submissions from the same page must converge on one stable
-    // operation and one database row, even when both handlers begin before either ends.
+    // 3. Two tabs in one browser context share localStorage but have independent
+    // JS realms. Their simultaneous submissions must converge on one operation UUID
+    // and one row, including the unique-index conflict/re-read path.
     {
       const backend = makeBackend();
       const context = await browser.newContext();
-      const page = await context.newPage();
-      await installHarness(page, backend);
-      await page.evaluate(async () => Promise.all([
-        window.submitPaymentReceipt(),
-        window.submitPaymentReceipt()
-      ]));
-      assert.equal(backend.receipts.length, 1, 'overlapping submissions must yield exactly one receipt');
-      assert.equal(new Set(backend.receipts.map(r => r.submission_operation_id)).size, 1);
-      results.push('PASS overlapping submit requests converge to one receipt');
+      const pageA = await context.newPage();
+      const pageB = await context.newPage();
+      await installHarness(pageA, backend);
+      await installHarness(pageB, backend);
+      await Promise.all([
+        pageA.evaluate(() => window.submitPaymentReceipt()),
+        pageB.evaluate(() => window.submitPaymentReceipt())
+      ]);
+      assert.equal(backend.receipts.length, 1, 'cross-tab overlapping submissions must yield exactly one receipt');
+      assert.equal(new Set(backend.receipts.map(r => r.submission_operation_id)).size, 1,
+        'cross-tab submissions must reuse the same operation UUID');
+      results.push('PASS cross-tab overlapping submissions converge to one receipt');
       await context.close();
     }
 
