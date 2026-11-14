@@ -15591,13 +15591,13 @@ window.sehNutritionBuilderBridge={
   async function restoreSavedSession(){
     const offlineShell=!!(document.body&&document.body.classList.contains('seh-offline-shell'));
     if(running||!document.body||(!document.body.classList.contains('locked')&&!offlineShell))return;
-    if(navigator.onLine===false){showOfflineShell();return;}
+    if(typeof navigator!=='undefined'&&navigator.onLine===false){showOfflineShell();return;}
     const auth=window.AUTH_SUPABASE;
     if(!auth?.auth||typeof window.finishLogin!=='function')return;
     running=true;
     try{
       for(let attempt=0;attempt<3;attempt++){
-        if(navigator.onLine===false){showOfflineShell();return;}
+        if(typeof navigator!=='undefined'&&navigator.onLine===false){showOfflineShell();return;}
         const result=await window.__sehGetSessionSingleFlight();
         if(result.error)throw result.error;
         const session=result.data?.session;
