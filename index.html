@@ -7859,8 +7859,7 @@ const oldWorkoutRenderer=window.renderWorkoutList;
      const {data:signed,error:signedError}=await AUTH_SUPABASE.storage.from("payment-receipts").createSignedUrl(path,60);
      if(signedError||!signed?.signedUrl)throw uploadError;
     }
-    const receiptPayload={...operationPayload,trainee_id:traineeId,submitted_by:user.id,submission_operation_id:operationId,membership_id:Number(membershipId),receipt_path:path,amount,payment_date:date,note,review_status:"pending"};
-    delete receiptPayload.fileDigest;delete receiptPayload.fileName;delete receiptPayload.fileSize;delete receiptPayload.fileType;delete receiptPayload.fileLastModified;
+    const receiptPayload={trainee_id:traineeId,submitted_by:user.id,submission_operation_id:operationId,membership_id:Number(membershipId),receipt_path:path,amount,payment_date:date,note,review_status:"pending"};
     const {error:insertError}=await AUTH_SUPABASE.from("trainee_payment_receipts").insert(receiptPayload);
     if(insertError){
      // Never delete the uploaded object on an ambiguous network error: the INSERT may
