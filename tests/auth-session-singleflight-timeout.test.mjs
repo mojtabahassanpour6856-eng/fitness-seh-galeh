@@ -10,8 +10,9 @@ const timers=new Map();
 let nextTimer=1;
 const setTimeoutFake=(fn,delay)=>{const id=nextTimer++;timers.set(id,{fn,delay});return id;};
 const clearTimeoutFake=id=>timers.delete(id);
-let calls=0,releaseHung;
+let calls=0,releaseHung,shownNotice='';
 const window={
+  showAuthError:message=>{shownNotice=message;},
   AUTH_SUPABASE:{auth:{getSession(){
     calls++;
     return new Promise(resolve=>{releaseHung=resolve;});
@@ -27,6 +28,7 @@ assert.equal(timeout[1].delay,12000,'session restoration has a 12-second upper w
 timers.delete(timeout[0]);
 timeout[1].fn();
 await assert.rejects(stalled,/۱۲ ثانیه/,'a stalled request must reject with a retryable timeout');
+assert.match(shownNotice,/نشست ذخیره‌شده پاک نشده است/,'the user is told the saved session was not cleared and a retry is possible');
 assert.equal(timers.size,0,'the timeout is cleaned up');
 
 window.AUTH_SUPABASE.auth.getSession=async()=>{
