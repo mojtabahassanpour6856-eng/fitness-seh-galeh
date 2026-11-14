@@ -31,6 +31,14 @@ create table public.trainee_memberships (
   payment_status text not null default 'unpaid'
     check (payment_status in ('paid','unpaid','pending'))
 );
+alter table public.trainee_memberships
+  add column start_date date,
+  add column end_date date,
+  add column amount numeric,
+  add column description text,
+  add column card_number text,
+  add column card_holder text;
+
 create table public.trainee_payment_receipts (
   id uuid primary key,
   trainee_id uuid not null references public.trainees(id) on delete cascade,
@@ -225,6 +233,10 @@ insert into public.trainee_memberships(id,trainee_id,status,payment_status) valu
  (1,'30000000-0000-0000-0000-000000000001','pending','unpaid'),
  (2,'30000000-0000-0000-0000-000000000001','active','unpaid'),
  (3,'30000000-0000-0000-0000-000000000002','pending','unpaid');
+
+-- Keep identity sequences aligned after deterministic fixture IDs.
+select setval(pg_get_serial_sequence('public.trainee_memberships','id'),
+              (select max(id) from public.trainee_memberships), true);
 
 insert into public.trainee_payment_receipts(id,trainee_id,membership_id,submitted_by,receipt_path,amount,payment_date) values
  ('40000000-0000-0000-0000-000000000001','30000000-0000-0000-0000-000000000001',1,'20000000-0000-0000-0000-000000000001','synthetic/receipt-1.jpg',125000,'2026-11-13'),
