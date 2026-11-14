@@ -78,7 +78,8 @@ $$;
 create or replace function public.review_receipt_idempotent(
   p_receipt_id uuid,
   p_decision text,
-  p_operation_id uuid
+  p_operation_id uuid,
+  p_fallback_payment_date date
 )
 returns jsonb
 language plpgsql
@@ -99,14 +100,15 @@ begin
   if not coalesce(private.is_coach(), false) then
     raise exception 'Coach role required' using errcode='42501';
   end if;
-  if p_receipt_id is null or p_operation_id is null or p_decision is null
+  if p_receipt_id is null or p_operation_id is null or p_fallback_payment_date is null or p_decision is null
      or p_decision not in ('approved','rejected') then
     raise exception 'Invalid receipt review request' using errcode='22023';
   end if;
 
   v_hash := encode(digest(jsonb_build_object(
     'receipt_id',p_receipt_id,
-    'decision',p_decision
+    'decision',p_decision,
+    'fallback_payment_date',p_fallback_payment_date
   )::text,'sha256'),'hex');
 
   insert into private.operation_ledger
@@ -161,7 +163,7 @@ begin
   if p_decision='approved' then
     insert into public.trainee_payments(trainee_id,amount,payment_date,description)
     values(v_receipt.trainee_id,v_receipt.amount,
-           coalesce(v_receipt.payment_date,current_date),'تأیید فیش واریزی');
+           coalesce(v_receipt.payment_date,p_fallback_payment_date),'تأیید فیش واریزی');
     update public.trainee_memberships
        set status='active',payment_status='paid'
      where trainee_id=v_receipt.trainee_id;
@@ -192,7 +194,7 @@ $function$;
 
 revoke all on schema private from public,anon,authenticated;
 revoke all on all tables in schema private from public,anon,authenticated;
-revoke all on function public.review_receipt_idempotent(uuid,text,uuid) from public,anon;
+revoke all on function public.review_receipt_idempotent(uuid,text,uuid,date) from public,anon;
 grant usage on schema public to authenticated;
 grant execute on function public.review_receipt_idempotent(uuid,text,uuid) to authenticated;
 
