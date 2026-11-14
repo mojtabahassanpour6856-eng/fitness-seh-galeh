@@ -30,7 +30,7 @@ async function fakeFetch(input, init = {}) {
     if (duplicateUpload) return new Response(JSON.stringify({ statusCode: '409', error: 'Duplicate', message: 'The resource already exists' }), {
       status: 409, headers: { 'content-type': 'application/json' }
     });
-    return new Response(JSON.stringify({ Key: 'payment-receipts/test-object' }),
+    return new Response(JSON.stringify({ Key: 'payment-receipts/test-object' }), {
       status: 200, headers: { 'content-type': 'application/json' }
     });
   }
