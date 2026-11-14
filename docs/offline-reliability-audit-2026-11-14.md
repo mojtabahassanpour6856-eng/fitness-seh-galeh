@@ -559,3 +559,12 @@ CI run `43568950600` completed successfully on PostgreSQL 17.12. It verifies:
 This is a synthetic test fixture, not a production migration. It is not a complete copy of production RLS, grants, table triggers, sequence ownership, and actual browser handler payloads. The RPC signature and payment condition are prototype decisions requiring parity review against the live `saveSubscription` handler before any production migration. In particular, do not infer that the live handler's exact payment status/date/description semantics have already been preserved.
 
 No production or test Supabase project was changed. No app runtime, live membership, payment, card registry, Auth, Storage, RLS, grant, or migration was modified.
+
+
+### Membership fixture hardening: canonical-card recovery confirmed green
+
+The allocation loop was hardened for a race with a legacy/direct registry writer: after a unique-conflict insert returns no row, it re-reads the trainee's canonical card registry before trying another random candidate. This prevents repeatedly attempting new card numbers when the conflict was actually the unique `trainee_id` constraint.
+
+A deterministic test now pre-seeds a canonical registry card for a synthetic trainee and verifies that a new membership reuses that exact card rather than generating a replacement. The updated full integration workflow passed on PostgreSQL 17.12: [run 43569048588](https://github.com/mojtabahassanpour6856-eng/fitness-seh-galeh/actions/runs/43569048588).
+
+This improves the prototype under mixed-write conditions, but it does not make mixed legacy REST writes idempotent. A production cutover still needs a planned client transition and a later server-side restriction of direct financial writes, after every app caller has moved and rollback has been rehearsed.
