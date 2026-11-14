@@ -37,8 +37,9 @@ begin
 end
 $migration$;
 
--- RESTRICT prevents deleting a membership that has financial history.
--- Deleting a trainee remains governed by the existing trainee_id cascades.
+-- Deferred NO ACTION prevents deleting a membership that still has financial history,
+-- while allowing the existing trainee_id cascades to remove the trainee's entire
+-- membership/receipt/payment set in one transaction.
 do $migration$
 begin
   if not exists (
@@ -50,7 +51,8 @@ begin
       add constraint trainee_payment_receipts_trainee_membership_fk
       foreign key (trainee_id, membership_id)
       references public.trainee_memberships (trainee_id, id)
-      on delete restrict
+      on delete no action
+      deferrable initially deferred
       not valid;
   end if;
 
@@ -63,7 +65,8 @@ begin
       add constraint trainee_payments_trainee_membership_fk
       foreign key (trainee_id, membership_id)
       references public.trainee_memberships (trainee_id, id)
-      on delete restrict
+      on delete no action
+      deferrable initially deferred
       not valid;
   end if;
 end
