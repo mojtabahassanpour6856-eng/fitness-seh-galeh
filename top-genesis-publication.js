@@ -22,6 +22,18 @@
   let loading = false;
   let lastContextKey = null;
   let contextEpoch = 0;
+  // Deduplicate repeated iframe messages in this coach page session. The
+  // analyzer may retry a postMessage after a delayed response; the same
+  // request ID must never upload or insert a second publication.
+  const publicationRequests = new Map();
+  function rememberPublicationResult(key, result) {
+    const entry = publicationRequests.get(key);
+    if (entry) entry.result = result;
+    while (publicationRequests.size > 100) {
+      const oldest = publicationRequests.keys().next().value;
+      publicationRequests.delete(oldest);
+    }
+  }
 
   const $ = (id) => document.getElementById(id);
   const esc = (value) => String(value ?? "").replace(/[&<>"']/g, (c) => ({
@@ -471,7 +483,22 @@
     const frame = $("topGenesisPdfAnalyzerFrame");
     if (!frame || event.source !== frame.contentWindow || event.origin !== window.location.origin ||
         event.data?.type !== "top-genesis-approved-report") return;
-    const requestId = String(event.data.requestId || "");
+    const requestId = String(event.data.requestId || "").slice(0, 120);
+    if (!requestId) {
+      reply(frame, requestId, false, "شناسه درخواست ارسال گزارش معتبر نیست؛ دوباره تلاش کنید.");
+      return;
+    }
+    const requestKey = String(currentTraineeId() || "") + ":" + requestId;
+    const previousRequest = publicationRequests.get(requestKey);
+    if (previousRequest) {
+      if (previousRequest.result) {
+        reply(frame, requestId, previousRequest.result.ok, previousRequest.result.message);
+      } else {
+        reply(frame, requestId, false, "این درخواست قبلاً دریافت شده و هنوز در حال پردازش است؛ لطفاً چند لحظه صبر کنید.");
+      }
+      return;
+    }
+    publicationRequests.set(requestKey, { result: null });
     let uploadedReportPath = null;
     let publicationStage = "اعتبارسنجی گزارش";
     try {
@@ -537,7 +564,9 @@
       });
       if (error) throw error;
       uploadedReportPath = null;
-      reply(frame, requestId, true, "گزارش تأییدشده با موفقیت به پنل پیشرفت شاگرد ارسال شد.");
+      const successMessage = "گزارش تأییدشده با موفقیت به پنل پیشرفت شاگرد ارسال شد.";
+      rememberPublicationResult(requestKey, { ok: true, message: successMessage });
+      reply(frame, requestId, true, successMessage);
       lastLoadedTrainee = null;
       if ($("progress")?.classList.contains("active")) {
         mountProgressCard();
@@ -557,8 +586,9 @@
         status: error?.status ?? null, code: error?.code ?? null,
         browserOnline: navigator.onLine
       });
-      reply(frame, requestId, false,
-        `مرحله ناموفق: ${publicationStage}. ${errorMessage} (${errorName}${errorStatus}${errorCode})${offline}`);
+      const failureMessage = `مرحله ناموفق: ${publicationStage}. ${errorMessage} (${errorName}${errorStatus}${errorCode})${offline}`;
+      rememberPublicationResult(requestKey, { ok: false, message: failureMessage });
+      reply(frame, requestId, false, failureMessage);
     }
   }
   window.addEventListener("message", handleApprovedReport);
