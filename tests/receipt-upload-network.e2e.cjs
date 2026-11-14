@@ -121,7 +121,7 @@ async function installHarness(page, backend) {
   await page.goto('http://127.0.0.1:4179/');
   await page.addScriptTag({ content: handler });
   await page.locator('#receiptFile').setInputFiles({
-    name: 'bank-receipt.png', mimeType: 'image/png', buffer: Buffer.from('synthetic receipt bytes')
+    name: 'bank-receipt.png', mimeType: 'image/png', lastModified: 1700000000000, buffer: Buffer.from('synthetic receipt bytes')
   });
 }
 
