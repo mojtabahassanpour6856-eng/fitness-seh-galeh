@@ -663,9 +663,28 @@ Waist-Hip Ratio (WHO),0.889
     anchor.setAttribute("aria-hidden", "false");
     document.body.appendChild(anchor);
     window.authProfile = { role: "coach" };
+    window.currentClient = { id: "trainee-fatemeh-fixture" };
   });
   await integrationPage.addScriptTag({ path: path.join(root, "top-genesis-pdf-app-embed.js") });
   await integrationPage.waitForSelector("#topGenesisPdfAnalyzerPanel");
+  await integrationPage.waitForFunction(() => {
+    const frame = document.querySelector("#topGenesisPdfAnalyzerFrame");
+    return frame?.contentWindow?.coachContext?.traineeId === "trainee-fatemeh-fixture";
+  }, null, { timeout: 10000 });
+  const firstFrame = await integrationPage.locator("#topGenesisPdfAnalyzerFrame").evaluate(el => el);
+  const firstNonce = await integrationPage.locator("#topGenesisPdfAnalyzerFrame").getAttribute("data-context-nonce");
+  await integrationPage.evaluate(() => { window.currentClient = { id: "trainee-javad-fixture" }; });
+  await integrationPage.waitForFunction(() => {
+    const frame = document.querySelector("#topGenesisPdfAnalyzerFrame");
+    return frame?.dataset.boundTraineeId === "trainee-javad-fixture" &&
+      frame.contentWindow?.coachContext?.traineeId === "trainee-javad-fixture";
+  }, null, { timeout: 10000 });
+  const switchedFrame = await integrationPage.locator("#topGenesisPdfAnalyzerFrame").evaluate(el => el);
+  const switchedNonce = await integrationPage.locator("#topGenesisPdfAnalyzerFrame").getAttribute("data-context-nonce");
+  assert.notEqual(switchedFrame, firstFrame, "Changing trainees must replace the iframe, not reuse its prior in-memory state.");
+  assert.notEqual(switchedNonce, firstNonce, "Each trainee preview must receive a fresh context nonce.");
+  assert.equal(await integrationPage.locator("#topGenesisPdfAnalyzerFrame").evaluate(el => el.contentWindow.coachContext.traineeId),
+    "trainee-javad-fixture", "The new preview must be bound to the newly selected trainee.");
   assert.equal(await integrationPage.locator("#topGenesisArchivePanel").count(), 0,
     "The standalone analyzer test must not load or require the legacy archive.");
   assert.equal(await integrationPage.locator("#topGenesisPdfAnalyzerPanel").evaluate(el => el.style.display), "block");
@@ -679,8 +698,10 @@ Waist-Hip Ratio (WHO),0.889
   await integrationPage.waitForFunction(() =>
     document.querySelector("#topGenesisPdfAnalyzerPanel")?.style.display === "block", null, { timeout: 7000 });
   const analyzerEmbedSource = fs.readFileSync(path.join(root, "top-genesis-pdf-app-embed.js"), "utf8");
-  assert.match(analyzerEmbedSource, /host\.style\.display\s*=\s*isCoach\(\)\s*\?\s*"block"\s*:\s*"none"/,
-    "The embedded analyzer must be hidden for trainee sessions.");
+  assert.match(analyzerEmbedSource, /if \(!context\)\s*\{/,
+    "The embedded analyzer must be hidden and unmounted when no coach trainee is selected.");
+  assert.match(analyzerEmbedSource, /boundTraineeId !== context\.traineeId/,
+    "The embedded analyzer must reset when the selected trainee changes.");
   assert.match(analyzerEmbedSource, /top-genesis-publication\.js/,
     "The standalone analyzer entry must continue loading the report publication module.");
   await integrationPage.close();
