@@ -121,7 +121,17 @@ async function installHarness(page, backend) {
   await page.goto('http://127.0.0.1:4179/');
   await page.addScriptTag({ content: handler });
   await page.locator('#receiptFile').setInputFiles({
-    name: 'bank-receipt.png', mimeType: 'image/png', lastModified: 1700000000000, buffer: Buffer.from('synthetic receipt bytes')
+    name: 'bank-receipt.png', mimeType: 'image/png', buffer: Buffer.from('synthetic receipt bytes')
+  });
+  // Build a File with an explicitly stable lastModified value; Chromium otherwise
+  // assigns a fresh timestamp to each synthetic file on page recreation.
+  await page.evaluate(() => {
+    const input = document.getElementById('receiptFile');
+    const transfer = new DataTransfer();
+    transfer.items.add(new File(['synthetic receipt bytes'], 'bank-receipt.png', {
+      type: 'image/png', lastModified: 1700000000000
+    }));
+    input.files = transfer.files;
   });
 }
 
