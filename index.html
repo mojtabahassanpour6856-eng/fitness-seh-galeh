@@ -2497,7 +2497,7 @@ async function __fitnessGetApiSession(){
   const now=Date.now();
   if(__fitnessApiSession && __fitnessApiSessionAt && now-__fitnessApiSessionAt<12000) return __fitnessApiSession;
   if(__fitnessApiSessionPromise) return __fitnessApiSessionPromise;
-  __fitnessApiSessionPromise=AUTH_SUPABASE.auth.getSession().then(({data})=>{
+  __fitnessApiSessionPromise=window.__sehGetSessionSingleFlight().then(({data})=>{
     __fitnessApiSession=data?.session||null;
     __fitnessApiSessionAt=Date.now();
     return __fitnessApiSession;
@@ -2617,7 +2617,7 @@ async function logoutApp(){
   location.reload();
 }
 async function initAuth(){
-  try{const {data}=await AUTH_SUPABASE.auth.getSession();if(data.session)await finishLogin(data.session.user);}
+  try{const {data}=await window.__sehGetSessionSingleFlight();if(data.session)await finishLogin(data.session.user);}
   catch(e){console.error(e);}
 }
 
@@ -4273,7 +4273,7 @@ window.toggleExerciseFavorite=async function(id,value){try{await sbWrite(`/train
     if(typeof AUTH_SUPABASE==='undefined' || !AUTH_SUPABASE){
       throw new Error('اتصال Supabase در این نسخه بارگذاری نشده است.');
     }
-    const {data,error}=await AUTH_SUPABASE.auth.getSession();
+    const {data,error}=await window.__sehGetSessionSingleFlight();
     if(error) throw error;
     const session=data&&data.session;
     if(!session||!session.user) throw new Error('نشست مربی پیدا نشد. یک‌بار از حساب مربی خارج و دوباره وارد شوید.');
@@ -4483,7 +4483,7 @@ window.toggleExerciseFavorite=async function(id,value){try{await sbWrite(`/train
   }
 
   async function authenticatedSession(){
-    const {data,error}=await auth.auth.getSession();
+    const {data,error}=await window.__sehGetSessionSingleFlight();
     if(error) throw error;
     if(!data || !data.session || !data.session.access_token || !data.session.user){
       throw new Error('نشست ورود مربی پیدا نشد. یک‌بار از حساب خارج شوید و دوباره وارد شوید.');
@@ -5321,7 +5321,7 @@ window.toggleExerciseFavorite=async function(id,value){try{await sbWrite(`/train
   };
   window.showTraineeDiagnostic=async function(){
     try{
-      const result=await window.AUTH_SUPABASE.auth.getSession();
+      const result=await window.__sehGetSessionSingleFlight();
       const session=result?.data?.session;
       if(!session?.user?.id)throw new Error('نشست ورود پیدا نشد؛ یک‌بار خارج و دوباره وارد شوید.');
       const profile=await window.AUTH_SUPABASE.from('profiles').select('id,role').eq('id',session.user.id).maybeSingle();
@@ -5521,7 +5521,7 @@ window.toggleExerciseFavorite=async function(id,value){try{await sbWrite(`/train
     const list=el('clientList');
     if(list)list.innerHTML='<div class="muted" style="padding:12px">در حال دریافت شاگردان از دیتابیس…</div>';
     try{
-      const sessionResult=await window.AUTH_SUPABASE.auth.getSession();
+      const sessionResult=await window.__sehGetSessionSingleFlight();
       const session=sessionResult?.data?.session;
       if(!session?.user?.id)throw new Error('نشست ورود معتبر نیست؛ خارج شوید و دوباره وارد شوید.');
       // finishLogin already verifies and loads the signed-in user's profile.
