@@ -7862,7 +7862,7 @@ const oldWorkoutRenderer=window.renderWorkoutList;
   try{
    const [rows,members,trainees]=await Promise.all([
     sbGet("/trainee_payment_receipts?trainee_id=eq."+encodeURIComponent(traineeId)+"&select=*&order=created_at.desc"),
-    sbGet("/trainee_memberships?trainee_id=eq."+encodeURIComponent(traineeId)+"&select=id,start_date,end_date,amount,payment_status,status,created_at&order=created_at.desc"),
+    sbGet("/trainee_memberships?trainee_id=eq."+encodeURIComponent(traineeId)+"&select=id,start_date,end_date,amount,payment_status,status,card_number,created_at&order=created_at.desc"),
     sbGet("/trainees?id=eq."+encodeURIComponent(traineeId)+"&select=club_registration_date&limit=1")
    ]);
    if(!currentClient||String(currentClient.id)!==traineeId)return;
@@ -7874,7 +7874,15 @@ const oldWorkoutRenderer=window.renderWorkoutList;
     const linkedMembership=x.membership_id==null?null:(members||[]).find(row=>String(row.id)===String(x.membership_id));
     const membershipLabel=linkedMembership?((fmtDate(linkedMembership.start_date)||"بدون شروع")+" تا "+(fmtDate(linkedMembership.end_date)||"بدون پایان")+" · "+(linkedMembership.amount==null?"مبلغ نامشخص":Number(linkedMembership.amount).toLocaleString("fa-IR")+" تومان")):"فاقد اتصال معتبر به عضویت؛ نیازمند تطبیق دستی";
     const canReview=window.SEH_RECEIPT_MEMBERSHIP_LINK_ENABLED===true&&!!linkedMembership;
-    return '<div class="receipt-item"><b>'+safe(Number(x.amount||0).toLocaleString("fa-IR"))+' تومان</b> · تاریخ واریز: '+safe(fmtDate(x.payment_date)||"—")+'<br><b>وضعیت فیش:</b> '+safe(status[x.review_status]||x.review_status||"—")+'<br><b>عضویت مرتبط:</b> '+safe(membershipLabel)+'<br>'+safe(x.note||"")+(url?'<p><a target="_blank" rel="noopener" href="'+safe(url)+'">🔎 مشاهده فیش ارسالی</a></p>':'<p class="muted">فایل فیش در دسترس نیست.</p>')+(x.review_status==="pending"?(canReview?'<div class="actions"><button type="button" onclick="reviewPaymentReceipt(\''+safe(x.id)+'\',\'approved\')">✅ تأیید همین عضویت و ثبت پرداخت</button><button type="button" class="secondary" onclick="reviewPaymentReceipt(\''+safe(x.id)+'\',\'rejected\')">رد فیش</button></div>':'<p class="muted">تأیید غیرفعال است؛ اتصال عضویت یا مهاجرت امن هنوز کامل نیست.</p>'):"")+'</div>';
+    const canReconcile=window.SEH_RECEIPT_MEMBERSHIP_LINK_ENABLED===true&&x.review_status==="pending"&&!linkedMembership;
+    const reconcileOptions=(members||[]).map(row=>{
+     const label=(fmtDate(row.start_date)||"بدون شروع")+" تا "+(fmtDate(row.end_date)||"بدون پایان")+" · "+(row.amount==null?"مبلغ نامشخص":Number(row.amount).toLocaleString("fa-IR")+" تومان")+(row.card_number?" · کارت "+row.card_number:"");
+     return '<option value="'+safe(row.id)+'">'+safe(label)+'</option>';
+    }).join("");
+    const reconcileControl=canReconcile
+     ? '<div class="receipt-item" style="margin-top:10px;border:1px dashed #c8a34d;padding:10px"><b>🧾 تطبیق دستی فیش قدیمی</b><p class="muted">عضویت صحیح را با بررسی اصل فیش انتخاب کنید. این کار فقط اتصال را ثبت می‌کند و هیچ پرداخت یا تأییدی ایجاد نمی‌کند.</p><label>عضویت صحیح</label><select id="receiptReconcileMembership_'+safe(x.id)+'"><option value="">انتخاب عضویت</option>'+reconcileOptions+'</select><label>دلیل تطبیق (الزامی)</label><textarea id="receiptReconcileReason_'+safe(x.id)+'" maxlength="1000" rows="2" placeholder="مثلاً بررسی اصل فیش و تطبیق با تاریخ و مبلغ عضویت"></textarea><label style="display:flex;gap:8px;align-items:flex-start;margin:8px 0"><input id="receiptReconcileConfirm_'+safe(x.id)+'" type="checkbox" style="width:auto;margin-top:4px"><span>تأیید می‌کنم این واریز قبلاً در سوابق پرداخت ثبت نشده است.</span></label><button type="button" onclick="reconcileLegacyReceipt(\\''+safe(x.id)+'\\')">ثبت تطبیق دستی</button></div>'
+     : '<p class="muted">این فیش عضویت مشخصی ندارد؛ پس از فعال‌شدن مسیر امن، فقط با تطبیق دستی قابل بررسی است.</p>';
+    return '<div class="receipt-item"><b>'+safe(Number(x.amount||0).toLocaleString("fa-IR"))+' تومان</b> · تاریخ واریز: '+safe(fmtDate(x.payment_date)||"—")+'<br><b>وضعیت فیش:</b> '+safe(status[x.review_status]||x.review_status||"—")+'<br><b>عضویت مرتبط:</b> '+safe(membershipLabel)+'<br>'+safe(x.note||"")+(url?'<p><a target="_blank" rel="noopener" href="'+safe(url)+'">🔎 مشاهده فیش ارسالی</a></p>':'<p class="muted">فایل فیش در دسترس نیست.</p>')+(x.review_status==="pending"?(canReview?'<div class="actions"><button type="button" onclick="reviewPaymentReceipt(\\''+safe(x.id)+'\\',\\'approved\\')">✅ تأیید همین عضویت و ثبت پرداخت</button><button type="button" class="secondary" onclick="reviewPaymentReceipt(\\''+safe(x.id)+'\\',\\'rejected\\')">رد فیش</button></div>':reconcileControl):"")+'</div>';
    }));
    html+='<h3>📑 سوابق فیش‌های ارسالی</h3>'+(items.length?items.join(""):'<p class="muted">برای این شاگرد فیشی ثبت نشده است.</p>');
    const liveBox=document.getElementById("coachReceiptReview");
@@ -7883,6 +7891,46 @@ const oldWorkoutRenderer=window.renderWorkoutList;
   }catch(e){console.error("loadCoachReceipts failed",e);const liveList=document.getElementById("coachReceiptReview")?.querySelector("#coachReceiptList");if(liveList)liveList.textContent="خطا در دریافت اطلاعات عضویت و فیش: "+(e.message||String(e));}
  }
  window.loadCoachReceipts=loadCoachReceipts;
+ window.reconcileLegacyReceipt=async function(id){
+  if(isTrainee()||!currentClient?.id)return alert("فقط مربی می‌تواند فیش قدیمی را تطبیق دهد.");
+  if(window.SEH_RECEIPT_MEMBERSHIP_LINK_ENABLED!==true)return alert("تطبیق دستی تا اجرای مهاجرت و RPC امن فعال نشده است.");
+  const traineeId=String(currentClient.id);
+  const membershipId=String(document.getElementById("receiptReconcileMembership_"+id)?.value||"");
+  const reason=String(document.getElementById("receiptReconcileReason_"+id)?.value||"").trim();
+  const confirmed=document.getElementById("receiptReconcileConfirm_"+id)?.checked===true;
+  if(!membershipId)return alert("ابتدا عضویت صحیح را انتخاب کنید.");
+  if(reason.length<8)return alert("دلیل تطبیق باید حداقل ۸ نویسه باشد.");
+  if(!confirmed)return alert("برای ادامه، تأیید کنید که این واریز قبلاً در سوابق پرداخت ثبت نشده است.");
+  const storageKey="seh-receipt-reconcile-op:"+String(id);
+  const comparable={receipt_id:String(id),membership_id:membershipId,reason,confirmed_not_already_recorded:true};
+  try{
+   let pending=null;
+   try{pending=JSON.parse(localStorage.getItem(storageKey)||"null");}catch(_){throw new Error("اطلاعات تلاش قبلی قابل بازیابی نیست؛ برای جلوگیری از تطبیق تکراری، ابتدا با مربی پیگیری کنید.");}
+   let operationId;
+   if(pending){
+    if(!pending.operationId||JSON.stringify(pending.payload)!==JSON.stringify(comparable))throw new Error("یک تطبیق قبلی هنوز نتیجه قطعی نگرفته است؛ همان عضویت و همان دلیل قبلی را دوباره ارسال کنید.");
+    operationId=pending.operationId;
+   }else{
+    operationId=crypto.randomUUID();
+    localStorage.setItem(storageKey,JSON.stringify({operationId,payload:comparable}));
+   }
+   const {data,error}=await AUTH_SUPABASE.rpc("reconcile_legacy_trainee_receipt_membership",{
+    p_receipt_id:id,
+    p_membership_id:membershipId,
+    p_operation_id:operationId,
+    p_reason:reason,
+    p_confirm_not_already_recorded:confirmed
+   });
+   if(error)throw error;
+   if(!data?.success||String(data.membership_id)!==membershipId||data.review_status!=="pending"||data.payment_created===true)throw new Error("پاسخ قطعی تطبیق دریافت نشد؛ شناسه عملیات حفظ شده و می‌توانید با همان اطلاعات دوباره تلاش کنید.");
+   if(currentClient&&String(currentClient.id)===traineeId){
+    await loadCoachReceipts();
+    if(typeof loadMembershipHistory==="function")await loadMembershipHistory();
+   }
+   localStorage.removeItem(storageKey);
+   alert("تطبیق دستی ثبت شد. فیش همچنان در انتظار بررسی است و هیچ پرداختی ایجاد نشده است.");
+  }catch(e){alert("تطبیق دستی انجام نشد. در صورت قطع اینترنت همان عملیات با شناسه ثابت قابل تکرار است. "+(e?.message||String(e)));}
+ };
  window.reviewPaymentReceipt=async function(id,decision){
   if(isTrainee()||!currentClient?.id)return alert("فقط مربی می‌تواند فیش را بررسی کند.");
   if(window.SEH_RECEIPT_MEMBERSHIP_LINK_ENABLED!==true)return alert("تأیید فیش تا اجرای مهاجرت دیتابیس و فعال‌سازی مسیر اتمیک جدید موقتاً غیرفعال است؛ هیچ تغییری در پرداخت یا عضویت انجام نشد.");
