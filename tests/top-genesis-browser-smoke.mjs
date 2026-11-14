@@ -734,8 +734,8 @@ Waist-Hip Ratio (WHO),0.889
   });
   await integrationPage.addScriptTag({ path: path.join(root, "top-genesis-publication.js") });
   await integrationPage.waitForTimeout(100);
-  const analyzerFrame = integrationPage.frames().find(frame =>
-    frame.url().includes("top-genesis-pdf-test.html?embedded=1"));
+  const analyzerFrame = integrationPage.frames().filter(frame =>
+    frame.url().includes("top-genesis-pdf-test.html?embedded=1")).at(-1);
   assert.ok(analyzerFrame, "The embedded analyzer frame must be available for the publication test.");
   await analyzerFrame.evaluate(() => {
     const root = document.documentElement;
