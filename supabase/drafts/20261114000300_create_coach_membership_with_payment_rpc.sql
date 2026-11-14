@@ -51,6 +51,7 @@ begin
   if p_trainee_id is null or p_operation_id is null
      or p_start_date is null or p_amount is null
      or p_amount < 0
+     or p_amount::text in ('NaN', 'Infinity', '-Infinity')
      or p_payment_status is null
      or p_payment_status not in ('paid', 'unpaid', 'pending')
      or (p_end_date is not null and p_end_date < p_start_date)
