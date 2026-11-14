@@ -206,7 +206,7 @@ select 'PASS: retry idempotency, changed-payload rejection, terminal receipt pro
 -- using different operation IDs. The first transaction keeps its row lock open
 -- after the RPC returns; the second must wait, then observe the terminal state.
 create extension if not exists dblink;
-insert into public.trainee_payment_receipts(id,trainee_id,submitted_by,receipt_path,amount,payment_date) values
+insert into public.trainee_payment_receipts(id,trainee_id,membership_id,submitted_by,receipt_path,amount,payment_date) values
  ('40000000-0000-0000-0000-000000000005','30000000-0000-0000-0000-000000000001',1,'20000000-0000-0000-0000-000000000001','synthetic/receipt-race.jpg',45000,'2026-11-14');
 
 select dblink_connect('receipt_race_a','dbname='||current_database()||' user=postgres');
