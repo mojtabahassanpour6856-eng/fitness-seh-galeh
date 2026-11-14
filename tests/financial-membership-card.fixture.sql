@@ -207,7 +207,7 @@ revoke all on all tables in schema private from public,anon,authenticated;
 revoke all on function public.create_membership_atomic(uuid,date,date,text,numeric,text,text,uuid,date)
   from public,anon;
 grant usage on schema public to authenticated;
-grant execute on function public.create_membership_atomic(uuid,date,date,text,numeric,text,text,uuid)
+grant execute on function public.create_membership_atomic(uuid,date,date,text,numeric,text,text,uuid,date)
   to authenticated;
 
 insert into public.profiles(id,role) values
