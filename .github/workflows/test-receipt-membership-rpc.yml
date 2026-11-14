@@ -9,6 +9,7 @@ on:
       - 'supabase/drafts/20261114000200_enforce_new_membership_links.sql'
       - 'tests/financial-receipt-idempotency.fixture.sql'
       - 'tests/financial-receipt-membership-rpc.integration.sql'
+      - 'tests/receipt-review-concurrency.sh'
       - '.github/workflows/test-receipt-membership-rpc.yml'
   pull_request:
     branches: [main]
@@ -17,6 +18,7 @@ on:
       - 'supabase/drafts/20261114000110_review_trainee_payment_receipt_rpc.sql'
       - 'tests/financial-receipt-idempotency.fixture.sql'
       - 'tests/financial-receipt-membership-rpc.integration.sql'
+      - 'tests/receipt-review-concurrency.sh'
       - '.github/workflows/test-receipt-membership-rpc.yml'
   workflow_dispatch:
 
@@ -49,3 +51,7 @@ jobs:
       - uses: actions/checkout@v4
       - name: Run isolated receipt membership RPC tests
         run: psql -v ON_ERROR_STOP=1 -f tests/financial-receipt-membership-rpc.integration.sql
+      - name: Run concurrent approval and idempotency regression
+        env:
+          PGDATABASE: receipt_concurrency_test
+        run: bash tests/receipt-review-concurrency.sh
