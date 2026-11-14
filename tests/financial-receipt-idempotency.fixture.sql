@@ -3,8 +3,18 @@
 \set ON_ERROR_STOP on
 create extension if not exists pgcrypto;
 
-create role anon nologin;
-create role authenticated nologin;
+do $roles$
+begin
+  create role anon nologin;
+exception when duplicate_object then null;
+end
+$roles$;
+do $roles$
+begin
+  create role authenticated nologin;
+exception when duplicate_object then null;
+end
+$roles$;
 
 create schema auth;
 create schema private;
