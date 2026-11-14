@@ -7792,6 +7792,8 @@ const oldWorkoutRenderer=window.renderWorkoutList;
   finally{const b=$("submitPaymentReceiptBtn");if(b){b.disabled=false;b.textContent="📨 ارسال فیش برای مربی";}}
  };
 
+ // Feature stays OFF until the matching database migrations and RPC are deployed.
+ window.SEH_RECEIPT_MEMBERSHIP_LINK_ENABLED=window.SEH_RECEIPT_MEMBERSHIP_LINK_ENABLED===true;
  async function loadCoachReceipts(){
   if(isTrainee()||!currentClient?.id)return;
   const traineeId=String(currentClient.id);
@@ -7828,7 +7830,10 @@ const oldWorkoutRenderer=window.renderWorkoutList;
    let html='<div class="receipt-item"><b>تاریخ ثبت‌نام:</b> '+safe(fmtDate(p.club_registration_date)||"ثبت نشده")+'<br><b>شروع عضویت:</b> '+safe(fmtDate(m.start_date)||"ثبت نشده")+'<br><b>پایان عضویت:</b> '+safe(fmtDate(m.end_date)||"ثبت نشده")+'<br><b>مبلغ عضویت:</b> '+safe(m.amount==null?"—":Number(m.amount).toLocaleString("fa-IR")+" تومان")+'<br><b>وضعیت پرداخت:</b> '+safe(m.payment_status==="paid"?"پرداخت‌شده":m.payment_status==="pending"?"در انتظار پرداخت":m.payment_status==="unpaid"?"پرداخت‌نشده":m.status||"—")+'</div>';
    const items=await Promise.all((rows||[]).map(async x=>{
     let url="";try{const z=await AUTH_SUPABASE.storage.from("payment-receipts").createSignedUrl(x.receipt_path,3600);url=z.data?.signedUrl||"";}catch(e){}
-    return '<div class="receipt-item"><b>'+safe(Number(x.amount||0).toLocaleString("fa-IR"))+' تومان</b> · تاریخ واریز: '+safe(fmtDate(x.payment_date)||"—")+'<br><b>وضعیت فیش:</b> '+safe(status[x.review_status]||x.review_status||"—")+'<br>'+safe(x.note||"")+(url?'<p><a target="_blank" rel="noopener" href="'+safe(url)+'">🔎 مشاهده فیش ارسالی</a></p>':'<p class="muted">فایل فیش در دسترس نیست.</p>')+(x.review_status==="pending"?'<div class="actions"><button type="button" onclick="reviewPaymentReceipt(\''+safe(x.id)+'\',\'approved\')">✅ تأیید فیش و ثبت پرداخت</button><button type="button" class="secondary" onclick="reviewPaymentReceipt(\''+safe(x.id)+'\',\'rejected\')">رد فیش</button></div>':"")+'</div>';
+    const linkedMembership=x.membership_id==null?null:(members||[]).find(row=>String(row.id)===String(x.membership_id));
+    const membershipLabel=linkedMembership?((fmtDate(linkedMembership.start_date)||"بدون شروع")+" تا "+(fmtDate(linkedMembership.end_date)||"بدون پایان")+" · "+(linkedMembership.amount==null?"مبلغ نامشخص":Number(linkedMembership.amount).toLocaleString("fa-IR")+" تومان")):"فاقد اتصال معتبر به عضویت؛ نیازمند تطبیق دستی";
+    const canReview=window.SEH_RECEIPT_MEMBERSHIP_LINK_ENABLED===true&&!!linkedMembership;
+    return '<div class="receipt-item"><b>'+safe(Number(x.amount||0).toLocaleString("fa-IR"))+' تومان</b> · تاریخ واریز: '+safe(fmtDate(x.payment_date)||"—")+'<br><b>وضعیت فیش:</b> '+safe(status[x.review_status]||x.review_status||"—")+'<br><b>عضویت مرتبط:</b> '+safe(membershipLabel)+'<br>'+safe(x.note||"")+(url?'<p><a target="_blank" rel="noopener" href="'+safe(url)+'">🔎 مشاهده فیش ارسالی</a></p>':'<p class="muted">فایل فیش در دسترس نیست.</p>')+(x.review_status==="pending"?(canReview?'<div class="actions"><button type="button" onclick="reviewPaymentReceipt(\''+safe(x.id)+'\',\'approved\')">✅ تأیید همین عضویت و ثبت پرداخت</button><button type="button" class="secondary" onclick="reviewPaymentReceipt(\''+safe(x.id)+'\',\'rejected\')">رد فیش</button></div>':'<p class="muted">تأیید غیرفعال است؛ اتصال عضویت یا مهاجرت امن هنوز کامل نیست.</p>'):"")+'</div>';
    }));
    html+='<h3>📑 سوابق فیش‌های ارسالی</h3>'+(items.length?items.join(""):'<p class="muted">برای این شاگرد فیشی ثبت نشده است.</p>');
    const liveBox=document.getElementById("coachReceiptReview");
