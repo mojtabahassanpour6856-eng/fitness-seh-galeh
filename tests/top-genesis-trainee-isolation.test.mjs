@@ -98,6 +98,6 @@ test("legacy publication rows without a storage path never expose a full-report 
   const publication = read("top-genesis-publication.js");
   assert.match(publication, /const action = row\\.report_storage_path[\\s\\S]*?data-history-details/,
     "Rows without a stored full report must offer only safe metric details.");
-  assert.match(publication, /if \(!modal \\|\\| !frame \\|\\| !row\\?\\.report_storage_path\\) return/,
+  assert.ok(publication.includes("if (!modal || !frame || !row?.report_storage_path) return"),
     "The report viewer must reject legacy rows that have no storage object.");
 });
