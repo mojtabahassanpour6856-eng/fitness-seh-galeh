@@ -9,7 +9,7 @@ function setup(original, visible=false){
  const document={body:{classList:{contains:()=>!visible}},getElementById:id=>elements[id]||null};
  const warnings=[];
  const window={finishLogin:original};
- vm.runInNewContext(match[1],{window,document,Promise,String,console:{warn:(...x)=>warnings.push(x)}});
+ vm.runInNewContext(match[1],{window,document,Promise,String,console:{warn:(...x)=>warnings.push(x),error:(...x)=>warnings.push(x)}});
  return {window,warnings};
 }
 let calls=0,release;
