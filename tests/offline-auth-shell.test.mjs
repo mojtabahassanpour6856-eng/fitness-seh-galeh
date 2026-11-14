@@ -49,6 +49,7 @@ function createHarness({online=false,marker=true,session=true,sessionError=null}
   const window={
     localStorage:storage,
     AUTH_SUPABASE:{auth:{getSession:async()=>{sessionReads++;if(sessionError)throw sessionError;return {data:{session:user?{user}:null},error:null};}}},
+    __sehGetSessionSingleFlight:async()=>{sessionReads++;if(sessionError)throw sessionError;return {data:{session:user?{user}:null},error:null};},
     addEventListener:(name,fn)=>{(listeners[name]??=[]).push(fn);},
     finishLogin:async()=>{
       finishCalls++;
