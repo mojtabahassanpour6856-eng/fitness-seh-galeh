@@ -27,8 +27,8 @@ async function fakeFetch(input, init = {}) {
   calls.push({ method, path: url.pathname, search: url.search, headers: init.headers, body: init.body });
   if (url.pathname.startsWith('/storage/v1/object/payment-receipts/')) {
     assert.equal(method, 'POST');
-    if (duplicateUpload) return new Response(JSON.stringify({ statusCode: '409', error: 'Duplicate', message: 'The resource already exists' }), {
-      status: 409, headers: { 'content-type': 'application/json' }
+    if (duplicateUpload) return new Response(JSON.stringify({ statusCode: '400', error: 'Asset Already Exists', message: 'The resource already exists' }), {
+      status: 400, headers: { 'content-type': 'application/json' }
     });
     return new Response(JSON.stringify({ Key: 'payment-receipts/test-object' }), {
       status: 200, headers: { 'content-type': 'application/json' }
@@ -105,7 +105,7 @@ async function fakeFetch(input, init = {}) {
     rows[0].receipt_path, new Blob(['synthetic receipt'], { type: 'image/png' }), { upsert: false }
   );
   assert.ok(duplicate.error, 'existing deterministic object must surface as an upload error');
-  assert.equal(duplicate.error.statusCode, '409');
+  assert.equal(duplicate.error.statusCode, '400');
   duplicateUpload = false;
 
   missingSignedObject = true;
