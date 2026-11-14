@@ -113,12 +113,12 @@ self.addEventListener('fetch', function (event) {
   try { url = new URL(request.url); } catch (_) { return; }
   if (!isInAppScope(url)) return;
 
-  if (request.mode === 'navigate') {
+  const relativePath = relativeAppPath(url);
+  if (request.mode === 'navigate' && (relativePath === '' || relativePath === 'index.html')) {
     event.respondWith(serveNavigation(request));
     return;
   }
 
-  const relativePath = relativeAppPath(url);
   if (SHELL_ASSET_PATHS.has(relativePath)) {
     event.respondWith(serveStaticAsset(request, relativePath));
   }
