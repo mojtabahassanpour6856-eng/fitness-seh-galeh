@@ -7870,7 +7870,7 @@ const oldWorkoutRenderer=window.renderWorkoutList;
      existing=await findExisting();
     }
    }
-   if(!existing||existing.review_status!=="pending")throw new Error("ثبت فیش در پایگاه داده هنوز قابل تأیید نیست؛ شناسه عملیات حفظ شد و می‌توانید با همان اطلاعات دوباره تلاش کنید.");
+   if(!existing||!["pending","approved","rejected"].includes(existing.review_status))throw new Error("ثبت فیش در پایگاه داده هنوز قابل تأیید نیست؛ شناسه عملیات حفظ شد و می‌توانید با همان اطلاعات دوباره تلاش کنید.");
    localStorage.removeItem(operationStorageKey);
    $("receiptFile").value="";$("receiptAmount").value="";$("receiptNote").value="";
    alert("فیش با موفقیت ثبت شد؛ در صورت قطع اینترنت، ارسال مجدد همین عملیات باعث ثبت فیش تکراری نمی‌شود.");
