@@ -31,6 +31,14 @@ create table public.trainee_memberships (
   payment_status text not null default 'unpaid'
     check (payment_status in ('paid','unpaid','pending'))
 );
+alter table public.trainee_memberships
+  add column start_date date,
+  add column end_date date,
+  add column amount numeric,
+  add column description text,
+  add column card_number text,
+  add column card_holder text;
+
 create table public.trainee_payment_receipts (
   id uuid primary key,
   trainee_id uuid not null references public.trainees(id) on delete cascade,
