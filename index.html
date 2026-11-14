@@ -3663,6 +3663,10 @@ window.copyMembershipCard=function(){const v=$id('cardNumber')?.value||'';if(!v)
     var timer=null;
     var timeout=new Promise(function(resolve,reject){
       timer=setTimeout(function(){
+        var message='ارتباط با سرویس ورود زمان‌بر شد. نشست ذخیره‌شده پاک نشده است؛ اتصال اینترنت را بررسی کنید و چند لحظه بعد دوباره تلاش کنید.';
+        if(typeof window.showAuthError==='function'){
+          try{window.showAuthError(message);}catch(error){}
+        }
         reject(new Error('بررسی نشست بیش از ۱۲ ثانیه طول کشید؛ اتصال اینترنت را بررسی کنید.'));
       },TIMEOUT_MS);
     });
