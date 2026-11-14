@@ -16,6 +16,7 @@ on:
     paths:
       - 'supabase/drafts/20261114000100_receipt_membership_link.sql'
       - 'supabase/drafts/20261114000110_review_trainee_payment_receipt_rpc.sql'
+      - 'supabase/drafts/20261114000200_enforce_new_membership_links.sql'
       - 'tests/financial-receipt-idempotency.fixture.sql'
       - 'tests/financial-receipt-membership-rpc.integration.sql'
       - 'tests/receipt-review-concurrency.sh'
