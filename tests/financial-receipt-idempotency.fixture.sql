@@ -196,7 +196,7 @@ revoke all on schema private from public,anon,authenticated;
 revoke all on all tables in schema private from public,anon,authenticated;
 revoke all on function public.review_receipt_idempotent(uuid,text,uuid,date) from public,anon;
 grant usage on schema public to authenticated;
-grant execute on function public.review_receipt_idempotent(uuid,text,uuid) to authenticated;
+grant execute on function public.review_receipt_idempotent(uuid,text,uuid,date) to authenticated;
 
 insert into public.profiles(id,role) values
  ('10000000-0000-0000-0000-000000000001','coach'),
