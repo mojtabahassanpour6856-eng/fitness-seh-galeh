@@ -4046,7 +4046,7 @@ const plans=workoutResult.data||[], nutrition=nutritionResult.data||[];
     if(paid==='پرداخت شده'&&amount<=0)return alert('برای ثبت شهریه پرداخت‌شده، مبلغ را وارد کنید.');
     const traineeId=String(currentClient.id),useAtomicMembership=window.SEH_RECEIPT_MEMBERSHIP_LINK_ENABLED===true;
     const atomicStorageKey='seh-coach-membership-create:'+traineeId;
-    if(!useAtomicMembership&&localStorage.getItem(atomicStorageKey))return alert('یک ثبت اتمیک قبلی هنوز نتیجه قطعی نگرفته است؛ برای جلوگیری از ثبت تکراری، ابتدا همان عملیات را با مربی پیگیری کنید.');
+    if(!useAtomicMembership){try{if(localStorage.getItem(atomicStorageKey))return alert('یک ثبت اتمیک قبلی هنوز نتیجه قطعی نگرفته است؛ برای جلوگیری از ثبت تکراری، ابتدا همان عملیات را با مربی پیگیری کنید.');}catch(_){/* Legacy path must remain unaffected when browser storage is unavailable. */}}
     let atomicStorageKeyToClear=null;
     try{
       await window.ensureMembershipCardNumber(traineeId);
