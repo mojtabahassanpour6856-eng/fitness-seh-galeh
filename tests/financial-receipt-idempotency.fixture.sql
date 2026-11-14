@@ -1,0 +1,203 @@
+-- Disposable PostgreSQL 17 fixture for receipt-review idempotency.
+-- This is NOT a production migration. It creates only synthetic tables/data in CI.
+\set ON_ERROR_STOP on
+
+create role anon nologin;
+create role authenticated nologin;
+
+create schema auth;
+create schema private;
+
+create or replace function auth.uid()
+returns uuid
+language sql stable
+as $$
+  select nullif(current_setting('request.jwt.claim.sub', true), '')::uuid
+$$;
+
+create table public.profiles (
+  id uuid primary key,
+  role text not null check (role in ('coach','trainee'))
+);
+create table public.trainees (
+  id uuid primary key,
+  coach_user_id uuid not null references public.profiles(id)
+);
+create table public.trainee_memberships (
+  id uuid primary key,
+  trainee_id uuid not null references public.trainees(id),
+  status text not null default 'inactive',
+  payment_status text not null default 'unpaid'
+);
+create table public.trainee_payment_receipts (
+  id uuid primary key,
+  trainee_id uuid not null references public.trainees(id),
+  submitted_by uuid not null,
+  amount numeric(12,2) not null check (amount > 0),
+  review_status text not null default 'pending'
+    check (review_status in ('pending','approved','rejected')),
+  reviewed_by uuid,
+  reviewed_at timestamptz
+);
+create table public.trainee_payments (
+  id bigint generated always as identity primary key,
+  trainee_id uuid not null references public.trainees(id),
+  amount numeric(12,2) not null check (amount > 0),
+  receipt_id uuid not null unique references public.trainee_payment_receipts(id),
+  created_by uuid not null
+);
+
+create table private.operation_ledger (
+  actor_uid uuid not null,
+  operation_kind text not null,
+  operation_id uuid not null,
+  request_hash text not null,
+  result jsonb,
+  created_at timestamptz not null default now(),
+  completed_at timestamptz,
+  primary key (actor_uid, operation_kind, operation_id)
+);
+
+create or replace function private.is_coach()
+returns boolean
+language sql stable security definer
+set search_path = pg_catalog, public
+as $$
+  select exists (
+    select 1 from public.profiles p
+    where p.id = auth.uid() and p.role = 'coach'
+  )
+$$;
+
+create or replace function public.review_receipt_idempotent(
+  p_receipt_id uuid,
+  p_decision text,
+  p_operation_id uuid
+)
+returns jsonb
+language plpgsql
+security definer
+set search_path = pg_catalog, public, private, pg_temp
+as $function$
+declare
+  v_actor uuid := auth.uid();
+  v_hash text;
+  v_rows integer;
+  v_existing_hash text;
+  v_result jsonb;
+  v_receipt public.trainee_payment_receipts%rowtype;
+begin
+  if v_actor is null then
+    raise exception 'Authentication required' using errcode='28000';
+  end if;
+  if not coalesce(private.is_coach(), false) then
+    raise exception 'Coach role required' using errcode='42501';
+  end if;
+  if p_receipt_id is null or p_operation_id is null
+     or p_decision not in ('approve','reject') then
+    raise exception 'Invalid receipt review request' using errcode='22023';
+  end if;
+
+  v_hash := md5(jsonb_build_object(
+    'receipt_id',p_receipt_id,
+    'decision',p_decision
+  )::text);
+
+  insert into private.operation_ledger
+    (actor_uid,operation_kind,operation_id,request_hash)
+  values
+    (v_actor,'receipt_review',p_operation_id,v_hash)
+  on conflict do nothing;
+  get diagnostics v_rows = row_count;
+
+  if v_rows = 0 then
+    select request_hash,result
+      into v_existing_hash,v_result
+    from private.operation_ledger
+    where actor_uid=v_actor
+      and operation_kind='receipt_review'
+      and operation_id=p_operation_id
+    for update;
+
+    if v_existing_hash is distinct from v_hash then
+      raise exception 'Operation ID was already used with a different payload'
+        using errcode='22023';
+    end if;
+    if v_result is not null then
+      return v_result;
+    end if;
+    raise exception 'Operation is not in a replayable terminal state'
+      using errcode='55000';
+  end if;
+
+  select * into v_receipt
+  from public.trainee_payment_receipts
+  where id=p_receipt_id
+  for update;
+
+  if not found then
+    raise exception 'Receipt not found' using errcode='P0002';
+  end if;
+
+  if not exists (
+    select 1 from public.trainees t
+    where t.id=v_receipt.trainee_id and t.coach_user_id=v_actor
+  ) then
+    raise exception 'Coach cannot review this trainee receipt'
+      using errcode='42501';
+  end if;
+
+  if v_receipt.review_status <> 'pending' then
+    raise exception 'Receipt is already in a terminal state'
+      using errcode='55000';
+  end if;
+
+  if p_decision='approve' then
+    insert into public.trainee_payments(trainee_id,amount,receipt_id,created_by)
+    values(v_receipt.trainee_id,v_receipt.amount,v_receipt.id,v_actor);
+    update public.trainee_payment_receipts
+       set review_status='approved',reviewed_by=v_actor,reviewed_at=now()
+     where id=v_receipt.id;
+  else
+    update public.trainee_payment_receipts
+       set review_status='rejected',reviewed_by=v_actor,reviewed_at=now()
+     where id=v_receipt.id;
+  end if;
+
+  v_result := jsonb_build_object(
+    'success',true,
+    'receipt_id',v_receipt.id,
+    'decision',p_decision,
+    'payment_created',(p_decision='approve')
+  );
+  update private.operation_ledger
+     set result=v_result,completed_at=now()
+   where actor_uid=v_actor
+     and operation_kind='receipt_review'
+     and operation_id=p_operation_id;
+
+  return v_result;
+end;
+$function$;
+
+revoke all on schema private from public,anon,authenticated;
+revoke all on all tables in schema private from public,anon,authenticated;
+revoke all on function public.review_receipt_idempotent(uuid,text,uuid) from public,anon;
+grant usage on schema public to authenticated;
+grant execute on function public.review_receipt_idempotent(uuid,text,uuid) to authenticated;
+
+insert into public.profiles(id,role) values
+ ('10000000-0000-0000-0000-000000000001','coach'),
+ ('10000000-0000-0000-0000-000000000002','coach'),
+ ('20000000-0000-0000-0000-000000000001','trainee');
+insert into public.trainees(id,coach_user_id) values
+ ('30000000-0000-0000-0000-000000000001','10000000-0000-0000-0000-000000000001'),
+ ('30000000-0000-0000-0000-000000000002','10000000-0000-0000-0000-000000000002');
+insert into public.trainee_payment_receipts(id,trainee_id,submitted_by,amount) values
+ ('40000000-0000-0000-0000-000000000001','30000000-0000-0000-0000-000000000001','20000000-0000-0000-0000-000000000001',125000),
+ ('40000000-0000-0000-0000-000000000002','30000000-0000-0000-0000-000000000001','20000000-0000-0000-0000-000000000001',95000),
+ ('40000000-0000-0000-0000-000000000003','30000000-0000-0000-0000-000000000002','20000000-0000-0000-0000-000000000001',75000);
+
+grant select,insert,update,delete on public.profiles,public.trainees,
+ public.trainee_memberships,public.trainee_payment_receipts,public.trainee_payments
+to authenticated;
