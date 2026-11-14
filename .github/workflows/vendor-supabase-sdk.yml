@@ -38,7 +38,7 @@ jobs:
           cp package-unpacked/package/dist/umd/supabase.js vendor/supabase-2.119.0.js
           if [ -f package-unpacked/package/LICENSE ]; then cp package-unpacked/package/LICENSE vendor/SUPABASE-SDK-LICENSE.txt; fi
           sha256sum vendor/supabase-2.119.0.js > vendor/supabase-2.119.0.js.sha256
-          printf 'Package: @supabase/supabase-js\\nVersion: 2.119.0\\nSource: npm registry package tarball\\n' > vendor/SUPABASE-SDK-VERSION.txt
+          printf 'Package: @supabase/supabase-js\nVersion: 2.119.0\nSource: npm registry package tarball\n' > vendor/SUPABASE-SDK-VERSION.txt
       - name: Publish SDK files as a build artifact
         uses: actions/upload-artifact@v4
         with:
