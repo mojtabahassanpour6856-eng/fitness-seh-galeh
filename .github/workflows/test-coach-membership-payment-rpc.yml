@@ -3,7 +3,7 @@ name: Coach membership payment RPC draft tests
 on:
   push:
     branches:
-      - prototype/coach-membership-payment-rpc-20261114
+      - prototype/receipt-membership-client-draft-20261114
     paths:
       - 'supabase/drafts/20261114000100_receipt_membership_link.sql'
       - 'supabase/drafts/20261114000300_create_coach_membership_with_payment_rpc.sql'
