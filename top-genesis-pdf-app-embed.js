@@ -93,9 +93,22 @@
     window.setInterval(mount, 500);
   }
 
+  function sendContextToActiveFrame() {
+    if (!activeFrame || !boundTraineeId || !contextNonce) return;
+    activeFrame.contentWindow?.postMessage({
+      type: "top-genesis-context",
+      traineeId: boundTraineeId,
+      contextNonce
+    }, window.location.origin);
+  }
+
   window.addEventListener("message", event => {
     if (event.origin !== window.location.origin || !activeFrame ||
         event.source !== activeFrame.contentWindow) return;
+    if (event.data?.type === "top-genesis-context-request") {
+      sendContextToActiveFrame();
+      return;
+    }
     if (event.data?.type !== "top-genesis-pdf-height") return;
     const height = Number(event.data.height);
     if (Number.isFinite(height)) activeFrame.style.height =
