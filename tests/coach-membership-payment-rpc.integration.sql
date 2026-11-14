@@ -11,7 +11,8 @@ returns trigger
 language plpgsql
 as $$
 begin
-  if new.description = 'شهریه پرداخت‌شده توسط مربی' then
+  if current_setting('test.fail_payment', true) = 'on'
+     and new.description = 'شهریه پرداخت‌شده توسط مربی' then
     raise exception 'synthetic payment insert failure';
   end if;
   return new;
@@ -35,6 +36,7 @@ declare
   v_payment_id bigint;
   v_count integer;
 begin
+  perform set_config('test.fail_payment','on',true);
   -- Payment insertion fails after the membership insert; the entire RPC must roll back.
   begin
     perform public.create_coach_membership_with_payment(
@@ -58,7 +60,7 @@ begin
   end if;
 
   -- Drop the injected failure and retry with the SAME operation ID.
-  execute 'drop trigger test_fail_coach_membership_payment on public.trainee_payments';
+  perform set_config('test.fail_payment','off',true);
 
   v_paid := public.create_coach_membership_with_payment(
     '30000000-0000-0000-0000-000000000001',
@@ -179,6 +181,7 @@ end;
 $$;
 
 reset role;
+drop trigger test_fail_coach_membership_payment on public.trainee_payments;
 
 -- Failed operation must not leave a durable idempotency record.
 do $$
