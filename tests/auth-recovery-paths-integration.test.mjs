@@ -91,6 +91,6 @@ assert.equal(bodyClasses.has('locked'),false,'successful login unlocks the app s
 assert.equal(profileReads,1,'only the dashboard recovery performs coach profile verification');
 assert.equal(loadCalls,1,'the coach trainee list is loaded once after authentication');
 assert.equal(traineeRows.length,1,'the trainee list becomes populated');
-assert.equal(windowListeners.pageshow.length,1,'dashboard pageshow listener remains installed');
+assert.equal(windowListeners.pageshow.length,2,'both dashboard recovery and auth watchdog install their pageshow listeners');
 
 console.log('PASS: dashboard recovery and auth watchdog overlap safely; finishLogin single-flight prevents duplicate login pipeline and trainee list loads once.');
