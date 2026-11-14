@@ -152,7 +152,7 @@ begin
     raise exception 'non-finite receipt amount changed review status';
   end if;
 end;
-$;
+$$;
 
 -- Legacy receipt with no trusted membership link must remain pending.
 insert into public.trainee_payment_receipts
