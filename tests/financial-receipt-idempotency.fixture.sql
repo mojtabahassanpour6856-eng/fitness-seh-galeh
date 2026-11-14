@@ -234,6 +234,10 @@ insert into public.trainee_memberships(id,trainee_id,status,payment_status) valu
  (2,'30000000-0000-0000-0000-000000000001','active','unpaid'),
  (3,'30000000-0000-0000-0000-000000000002','pending','unpaid');
 
+-- Keep identity sequences aligned after deterministic fixture IDs.
+select setval(pg_get_serial_sequence('public.trainee_memberships','id'),
+              (select max(id) from public.trainee_memberships), true);
+
 insert into public.trainee_payment_receipts(id,trainee_id,membership_id,submitted_by,receipt_path,amount,payment_date) values
  ('40000000-0000-0000-0000-000000000001','30000000-0000-0000-0000-000000000001',1,'20000000-0000-0000-0000-000000000001','synthetic/receipt-1.jpg',125000,'2026-11-13'),
  ('40000000-0000-0000-0000-000000000002','30000000-0000-0000-0000-000000000001',2,'20000000-0000-0000-0000-000000000001','synthetic/receipt-2.jpg',95000,'2026-11-12'),
