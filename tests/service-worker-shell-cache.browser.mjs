@@ -13,8 +13,12 @@ const mime = {
   ".svg": "image/svg+xml",
   ".png": "image/png"
 };
+let forceEntry404 = false;
 const server = http.createServer((req, res) => {
   const pathname = decodeURIComponent(new URL(req.url, "http://127.0.0.1").pathname);
+  if (forceEntry404 && (pathname === "/" || pathname === "/index.html")) {
+    res.writeHead(404); res.end("Simulated entry-route 404"); return;
+  }
   let file = path.resolve(root, "." + pathname);
   if (!file.startsWith(root + path.sep) && file !== root) {
     res.writeHead(403); res.end("Forbidden"); return;
@@ -45,7 +49,7 @@ try {
   await page.waitForFunction(() => !!navigator.serviceWorker.controller, null, { timeout: 15000 });
 
   const initialCache = await page.evaluate(async () => {
-    const cache = await caches.open("seh-shell-v1");
+    const cache = await caches.open("seh-shell-v2");
     const keys = await cache.keys();
     return keys.map(request => new URL(request.url).pathname);
   });
@@ -57,6 +61,12 @@ try {
     "Chromium must precache the embedded nutrition page");
   assert.ok(initialCache.every(path => path.startsWith("/")),
     "the cache must contain only same-origin paths");
+
+  forceEntry404 = true;
+  await page.goto(base + "/", { waitUntil: "domcontentloaded", timeout: 15000 });
+  assert.equal(await page.locator("#authScreen").count(), 1,
+    "a server-side 404 on the app entry route must fall back to the cached shell");
+  forceEntry404 = false;
 
   await context.setOffline(true);
   await page.goto(base + "/", { waitUntil: "domcontentloaded", timeout: 15000 });
@@ -78,7 +88,7 @@ try {
     "the cached Top Genesis page must load its own offline document");
 
   const shellStillIntact = await genesisPage.evaluate(async () => {
-    const cache = await caches.open("seh-shell-v1");
+    const cache = await caches.open("seh-shell-v2");
     const response = await cache.match(new URL("index.html", location.href).href);
     return response ? await response.text() : "";
   });
