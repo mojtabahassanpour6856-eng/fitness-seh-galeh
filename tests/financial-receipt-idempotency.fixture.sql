@@ -108,8 +108,28 @@ begin
     raise exception 'Invalid receipt review request' using errcode='22023';
   end if;
 
+  -- Lock and authorize the receipt before computing the request hash.
+  -- membership_id is part of the immutable business identity of this review.
+  select * into v_receipt
+  from public.trainee_payment_receipts
+  where id=p_receipt_id
+  for update;
+
+  if not found then
+    raise exception 'Receipt not found' using errcode='P0002';
+  end if;
+
+  if not exists (
+    select 1 from public.trainees t
+    where t.id=v_receipt.trainee_id and t.coach_user_id=v_actor
+  ) then
+    raise exception 'Coach cannot review this trainee receipt'
+      using errcode='42501';
+  end if;
+
   v_hash := encode(digest(jsonb_build_object(
     'receipt_id',p_receipt_id,
+    'membership_id',v_receipt.membership_id,
     'decision',p_decision,
     'fallback_payment_date',p_fallback_payment_date
   )::text,'sha256'),'hex');
@@ -139,23 +159,6 @@ begin
     end if;
     raise exception 'Operation is not in a replayable terminal state'
       using errcode='55000';
-  end if;
-
-  select * into v_receipt
-  from public.trainee_payment_receipts
-  where id=p_receipt_id
-  for update;
-
-  if not found then
-    raise exception 'Receipt not found' using errcode='P0002';
-  end if;
-
-  if not exists (
-    select 1 from public.trainees t
-    where t.id=v_receipt.trainee_id and t.coach_user_id=v_actor
-  ) then
-    raise exception 'Coach cannot review this trainee receipt'
-      using errcode='42501';
   end if;
 
   if v_receipt.review_status <> 'pending' then
