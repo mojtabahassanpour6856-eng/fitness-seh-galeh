@@ -48,10 +48,10 @@ jobs:
           test "$expected_hash" = "$tracked_hash"
           test "$package_hash" = "$expected_hash"
           echo "PASS: npm package UMD bundle exactly matches committed vendor asset and recorded SHA-256 ($package_hash)"
-          if [ -f package-unpacked/package/LICENSE ]; then
-            cmp -s package-unpacked/package/LICENSE vendor/SUPABASE-SDK-LICENSE.txt
-            echo "PASS: committed license matches the pinned npm package"
-          fi
+          test -s package-unpacked/package/LICENSE
+          test -s vendor/SUPABASE-SDK-LICENSE.txt
+          cmp -s package-unpacked/package/LICENSE vendor/SUPABASE-SDK-LICENSE.txt
+          echo "PASS: committed license matches the pinned npm package"
           cp "$package_bundle" vendor/supabase-2.119.0.js
           sha256sum vendor/supabase-2.119.0.js > vendor/supabase-2.119.0.js.sha256
           printf 'Package: @supabase/supabase-js\nVersion: 2.119.0\nSource: npm registry package tarball\n' > vendor/SUPABASE-SDK-VERSION.txt
