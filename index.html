@@ -14598,13 +14598,15 @@ window.sehResetTurnstile=function(){};
   if(window.__sehCoachFirstLoadGuardInstalled)return;
   window.__sehCoachFirstLoadGuardInstalled=true;
   let clientsLoadInFlight=null;
+  let retryTimer=null;
+  let retryAttempt=0;
+  const retryDelays=[1500,4000,9000,18000];
   const originalLoadClients=window.loadClients;
   if(typeof originalLoadClients==="function"){
     window.loadClients=function(){
       if(clientsLoadInFlight)return clientsLoadInFlight;
       clientsLoadInFlight=Promise.resolve().then(()=>originalLoadClients.apply(this,arguments))
-        .then(result=>{window.__sehCoachListLoadAttempted=true;return result;})
-        
+        .then(result=>{window.__sehCoachListLoadAttempted=true;retryAttempt=0;return result;})
         .finally(()=>{clientsLoadInFlight=null;});
       return clientsLoadInFlight;
     };
@@ -14617,22 +14619,57 @@ window.sehResetTurnstile=function(){};
     if(!isCoach()||window.__sehCoachListLoadAttempted||typeof window.loadClients!=="function")return;
     await window.loadClients();
   }
+  function showRetryNotice(){
+    if(typeof window.showAuthError==="function"){
+      window.showAuthError("اتصال برقرار نشد و فهرست شاگردان کامل بارگذاری نشد؛ برنامه دوباره برای دریافت اطلاعات تلاش می‌کند.");
+    }
+  }
+  function scheduleRetry(){
+    if(retryTimer!==null||window.__sehCoachListLoadAttempted||!isCoach())return;
+    if(retryAttempt>=retryDelays.length)return;
+    const delay=retryDelays[retryAttempt++];
+    retryTimer=setTimeout(async()=>{
+      retryTimer=null;
+      try{await ensureCoachList();}
+      catch(error){
+        console.warn("بارگذاری فهرست شاگردان ناموفق بود؛ تلاش مجدد زمان‌بندی شد.",error);
+        showRetryNotice();
+        scheduleRetry();
+      }
+    },delay);
+  }
+  async function tryInitialLoad(){
+    try{await ensureCoachList();}
+    catch(error){
+      console.warn("بارگذاری اولیه فهرست شاگردان ناموفق بود؛ نشست حفظ می‌شود و تلاش مجدد انجام خواهد شد.",error);
+      showRetryNotice();
+      scheduleRetry();
+    }
+  }
   const previousFinish=window.finishLogin;
   if(typeof previousFinish==="function"){
     window.finishLogin=async function(){
       const result=await previousFinish.apply(this,arguments);
-      if(isCoach()&&!window.__sehCoachListLoadAttempted)await ensureCoachList();
+      if(isCoach()&&!window.__sehCoachListLoadAttempted)void tryInitialLoad();
       return result;
     };
   }
+  function retryOnRecovery(){
+    if(!isCoach()||window.__sehCoachListLoadAttempted)return;
+    if(retryTimer!==null){clearTimeout(retryTimer);retryTimer=null;}
+    retryAttempt=0;
+    void tryInitialLoad();
+  }
+  window.addEventListener("online",retryOnRecovery);
+  window.addEventListener("pageshow",retryOnRecovery);
   function waitForSessionAndLoad(){
     let tries=0;
-    const timer=setInterval(async()=>{
+    const timer=setInterval(()=>{
       tries++;
       if(window.__sehCoachListLoadAttempted){clearInterval(timer);return;}
       if(isCoach()){
         clearInterval(timer);
-        try{await ensureCoachList();}catch(e){console.warn("بارگذاری اولیه فهرست مربی انجام نشد؛ امکان تلاش دوباره وجود دارد.",e);}
+        void tryInitialLoad();
         return;
       }
       if(tries>=40)clearInterval(timer);
