@@ -54,6 +54,16 @@ assert.equal(sessionReadMatches.length,5,
   'only the coordinator implementation and four post-setSession verification reads may call auth.getSession directly');
 const coordinatorCall=sessionReadMatches.findIndex(match=>match.index>=start&&match.index<end);
 assert.notEqual(coordinatorCall,-1,'the coordinator must own the shared direct session read');
+
+const chatStart=html.indexOf('<script id="FITNESS_COACH_CHAT_V1">');
+const chatEnd=html.indexOf('</script>',chatStart);
+assert.ok(chatStart>=0&&chatEnd>chatStart,'coach/trainee chat module must exist');
+const chatSource=html.slice(chatStart,chatEnd);
+assert.match(chatSource,/__sehGetSessionSingleFlight/,
+  'chat session recovery must use the shared session coordinator');
+assert.doesNotMatch(chatSource,/auth\\.getSession\\s*\\(/,
+  'chat must not bypass session deduplication');
+
 const apiHeadersStart=html.indexOf('async function sbApiHeaders');
 const apiHeadersEnd=html.indexOf('async function sbGet',apiHeadersStart);
 assert.ok(apiHeadersStart>=0&&apiHeadersEnd>apiHeadersStart,'shared REST API header helper must exist');
