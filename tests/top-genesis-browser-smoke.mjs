@@ -738,19 +738,18 @@ Waist-Hip Ratio (WHO),0.889
     frame.url().includes("top-genesis-pdf-test.html?embedded=1"));
   assert.ok(analyzerFrame, "The embedded analyzer frame must be available for the publication test.");
   await analyzerFrame.evaluate(() => {
-    window.parent.postMessage({
-      type: "top-genesis-approved-report",
-      requestId: "storage-failure-fixture",
-      payload: {
-        traineeId: "trainee-javad-fixture",
-        contextNonce: document.documentElement.dataset.topGenesisContextNonce,
-        analysisDate: "2026-11-14",
-        metrics: { weight_kg: { value: 78, unit: "kg", status: "needs_coach_review" } },
-        trainingNotes: "برنامه تمرینی آزمایشی",
-        nutritionNotes: "برنامه تغذیه آزمایشی",
-        reportHtml: '<!doctype html><html><body><div id="result">fixture</div></body></html>'
-      }
-    }, window.location.origin);
+    const training = document.querySelector("#trainingNotes");
+    const nutrition = document.querySelector("#nutritionNotes");
+    const approval = document.querySelector("#coachApproval");
+    const sendButton = document.querySelector("#sendToTrainee");
+    training.value = "برنامه تمرینی آزمایشی";
+    training.dispatchEvent(new Event("input", { bubbles: true }));
+    nutrition.value = "برنامه تغذیه آزمایشی";
+    nutrition.dispatchEvent(new Event("input", { bubbles: true }));
+    approval.checked = true;
+    approval.dispatchEvent(new Event("change", { bubbles: true }));
+    if (sendButton.disabled) throw new Error("The real send button must be enabled after coach approval.");
+    sendButton.click();
   });
   await integrationPage.waitForFunction(() => {
     const frame = document.querySelector("#topGenesisPdfAnalyzerFrame");
