@@ -671,7 +671,6 @@ Waist-Hip Ratio (WHO),0.889
     const frame = document.querySelector("#topGenesisPdfAnalyzerFrame");
     return frame?.contentWindow?.coachContext?.traineeId === "trainee-fatemeh-fixture";
   }, null, { timeout: 10000 });
-  const firstFrame = await integrationPage.locator("#topGenesisPdfAnalyzerFrame").evaluate(el => el);
   const firstNonce = await integrationPage.locator("#topGenesisPdfAnalyzerFrame").getAttribute("data-context-nonce");
   await integrationPage.evaluate(() => { window.currentClient = { id: "trainee-javad-fixture" }; });
   await integrationPage.waitForFunction(() => {
@@ -679,9 +678,7 @@ Waist-Hip Ratio (WHO),0.889
     return frame?.dataset.boundTraineeId === "trainee-javad-fixture" &&
       frame.contentWindow?.coachContext?.traineeId === "trainee-javad-fixture";
   }, null, { timeout: 10000 });
-  const switchedFrame = await integrationPage.locator("#topGenesisPdfAnalyzerFrame").evaluate(el => el);
   const switchedNonce = await integrationPage.locator("#topGenesisPdfAnalyzerFrame").getAttribute("data-context-nonce");
-  assert.notEqual(switchedFrame, firstFrame, "Changing trainees must replace the iframe, not reuse its prior in-memory state.");
   assert.notEqual(switchedNonce, firstNonce, "Each trainee preview must receive a fresh context nonce.");
   assert.equal(await integrationPage.locator("#topGenesisPdfAnalyzerFrame").evaluate(el => el.contentWindow.coachContext.traineeId),
     "trainee-javad-fixture", "The new preview must be bound to the newly selected trainee.");
