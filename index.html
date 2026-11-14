@@ -7826,7 +7826,15 @@ const oldWorkoutRenderer=window.renderWorkoutList;
    const user=session?.user;if(!user)throw new Error("نشست حساب شاگرد معتبر نیست.");
    operationStorageKey="seh-receipt-submit-op:"+String(user.id)+":"+traineeId;
    const name=file.name.replace(/[^a-zA-Z0-9._-]/g,"_").slice(-80)||"receipt";
-   const operationPayload={traineeId,submittedBy:String(user.id),membershipId:String(membershipId),amount,paymentDate:date,note,fileDigest,fileName:file.name,fileSize:file.size,fileType:file.type,fileLastModified:file.lastModified};
+   // Bind the operation UUID deterministically to the authenticated actor, target
+   // membership, payment fields, and file digest. Two tabs/devices submitting the
+   // same exact receipt therefore converge on the same database idempotency key.
+   const operationPayload={traineeId,submittedBy:String(user.id),membershipId:String(membershipId),amount,paymentDate:date,note,fileDigest,fileName:file.name,fileSize:file.size,fileType:file.type};
+   const operationDigest=await crypto.subtle.digest("SHA-256",new TextEncoder().encode(JSON.stringify(operationPayload)));
+   const operationBytes=Array.from(new Uint8Array(operationDigest).slice(0,16));
+   operationBytes[6]=(operationBytes[6]&0x0f)|0x50;
+   operationBytes[8]=(operationBytes[8]&0x3f)|0x80;
+   const deterministicOperationId=operationBytes.map(x=>x.toString(16).padStart(2,"0")).join("").replace(/^(.{8})(.{4})(.{4})(.{4})(.{12})$/,"$1-$2-$3-$4-$5");
    let pending=null;
    try{pending=JSON.parse(localStorage.getItem(operationStorageKey)||"null");}catch(_){throw new Error("اطلاعات ارسال قبلی قابل بازیابی نیست؛ برای جلوگیری از ثبت تکراری، ابتدا با مربی پیگیری کنید.");}
    let operationId;
@@ -7834,7 +7842,7 @@ const oldWorkoutRenderer=window.renderWorkoutList;
     if(!pending.operationId||JSON.stringify(pending.payload)!==JSON.stringify(operationPayload))throw new Error("یک ارسال قبلی هنوز نتیجه قطعی نگرفته است. برای ادامه، همان فایل و همان اطلاعات را انتخاب کنید؛ ارسال جدید تا تعیین تکلیف قبلی مسدود است.");
     operationId=pending.operationId;
    }else{
-    operationId=crypto.randomUUID();
+    operationId=deterministicOperationId;
     localStorage.setItem(operationStorageKey,JSON.stringify({operationId,payload:operationPayload}));
    }
    const path=user.id+"/"+traineeId+"/receipt_"+operationId+"_"+name;
