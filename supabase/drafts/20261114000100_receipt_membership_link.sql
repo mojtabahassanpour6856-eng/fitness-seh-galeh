@@ -20,6 +20,11 @@ alter table public.trainee_payment_receipts
 alter table public.trainee_payments
   add column if not exists membership_id bigint;
 
+-- Tie the payment to the exact receipt that created it. A partial unique index
+-- below enforces at most one payment row per receipt while allowing legacy rows.
+alter table public.trainee_payments
+  add column if not exists receipt_id uuid;
+
 -- A composite candidate key lets the database enforce that the selected
 -- membership belongs to the same trainee as the receipt/payment.
 do $migration$
@@ -32,6 +37,21 @@ begin
   ) then
     alter table public.trainee_memberships
       add constraint trainee_memberships_trainee_id_id_key
+      unique (trainee_id, id);
+  end if;
+end
+$migration$;
+
+-- A second composite candidate key enforces same-trainee receipt references.
+do $migration$
+begin
+  if not exists (
+    select 1 from pg_constraint
+     where conrelid = 'public.trainee_payment_receipts'::regclass
+       and conname = 'trainee_payment_receipts_trainee_id_id_key'
+  ) then
+    alter table public.trainee_payment_receipts
+      add constraint trainee_payment_receipts_trainee_id_id_key
       unique (trainee_id, id);
   end if;
 end
@@ -59,6 +79,20 @@ begin
   if not exists (
     select 1 from pg_constraint
      where conrelid = 'public.trainee_payments'::regclass
+       and conname = 'trainee_payments_trainee_receipt_fk'
+  ) then
+    alter table public.trainee_payments
+      add constraint trainee_payments_trainee_receipt_fk
+      foreign key (trainee_id, receipt_id)
+      references public.trainee_payment_receipts (trainee_id, id)
+      on delete no action
+      deferrable initially deferred
+      not valid;
+  end if;
+
+  if not exists (
+    select 1 from pg_constraint
+     where conrelid = 'public.trainee_payments'::regclass
        and conname = 'trainee_payments_trainee_membership_fk'
   ) then
     alter table public.trainee_payments
@@ -78,6 +112,12 @@ alter table public.trainee_payment_receipts
 
 alter table public.trainee_payments
   validate constraint trainee_payments_trainee_membership_fk;
+alter table public.trainee_payments
+  validate constraint trainee_payments_trainee_receipt_fk;
+
+create unique index if not exists trainee_payments_one_per_receipt_uidx
+  on public.trainee_payments (receipt_id)
+  where receipt_id is not null;
 
 create index if not exists trainee_payment_receipts_membership_lookup_idx
   on public.trainee_payment_receipts (trainee_id, membership_id);
@@ -89,5 +129,7 @@ comment on column public.trainee_payment_receipts.membership_id is
   'Specific membership settled by this receipt; NULL legacy rows require manual reconciliation.';
 comment on column public.trainee_payments.membership_id is
   'Specific membership settled by this payment; must match trainee_id.';
+comment on column public.trainee_payments.receipt_id is
+  'Receipt that generated this payment; unique when non-NULL to prevent duplicate settlement.';
 
 commit;
