@@ -3,7 +3,7 @@
  */
 'use strict';
 
-const SHELL_CACHE_NAME = 'seh-shell-v2';
+const SHELL_CACHE_NAME = 'seh-shell-v3';
 const SHELL_ASSETS = [
   'index.html',
   'manifest.json',

@@ -401,6 +401,15 @@ body.locked{overflow:hidden!important}
 .seh-touch-choice-select{display:block;box-sizing:border-box;width:100%;min-width:0;max-width:100%;height:34px;margin:3px 0 5px;padding:4px 24px 4px 8px;border:1px solid #b99543;border-radius:8px;background:#fffaf0;color:#463515;font-size:14px;font-weight:700;line-height:1.2}
 .seh-touch-choice-hidden-source{display:none!important}
 </style>
+
+<style id="seh-offline-safe-shell-css-v1">
+body.seh-offline-shell .page{display:block!important}
+body.seh-offline-shell .page>:not(.hero):not(#sehOfflineShellNotice){display:none!important}
+body.seh-offline-shell .page>.hero{display:block!important}
+#sehOfflineShellNotice{display:none;margin:12px 0;padding:16px;border:1px solid #c7a34b;border-radius:14px;background:#fff7e5;color:#3c3018;line-height:1.9}
+body.seh-offline-shell #sehOfflineShellNotice{display:block!important}
+#sehOfflineShellNotice strong{display:block;margin-bottom:5px}
+</style>
 </head>
 <body class="locked">
 <div id="authScreen">
@@ -2454,6 +2463,9 @@ window.AUTH_SUPABASE=window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY,{aut
       authListenerInstalled=true;
       try{
         auth.auth.onAuthStateChange(function(event){
+          if(event==='SIGNED_IN'||event==='SIGNED_OUT'){
+            try{window.localStorage.removeItem('seh.offline-safe-shell.v1');}catch(storageError){}
+          }
           if(event==='SIGNED_IN'||event==='SIGNED_OUT'||event==='TOKEN_REFRESHED'){
             cachedResult=null;cachedAt=0;
           }
@@ -15537,27 +15549,76 @@ window.sehNutritionBuilderBridge={
 <script id="seh-auth-session-restore-watchdog-v1">
 (function(){
   if(window.__sehAuthRestoreWatchdog)return;window.__sehAuthRestoreWatchdog=true;
+  const SAFE_SHELL_KEY='seh.offline-safe-shell.v1';
   let running=false;
+  function hasSafeShellMarker(){
+    try{const value=JSON.parse(window.localStorage.getItem(SAFE_SHELL_KEY)||'null');return !!(value&&value.version===1&&value.view==='home');}
+    catch(error){return false;}
+  }
+  function ensureOfflineNotice(){
+    let notice=document.getElementById('sehOfflineShellNotice');
+    if(notice)return notice;
+    const page=document.querySelector('.page');
+    const hero=page&&page.querySelector('.hero');
+    if(!page||!hero)return null;
+    notice=document.createElement('div');notice.id='sehOfflineShellNotice';notice.setAttribute('role','status');
+    notice.innerHTML='<strong>حالت آفلاین مربی من</strong><span>اتصال اینترنت در دسترس نیست. محیط برنامه باز نگه داشته شده، اما اطلاعات خصوصی و امکانات وابسته به سرور تا تأیید دوباره هویت نمایش داده نمی‌شوند.</span>';
+    hero.insertAdjacentElement('afterend',notice);
+    return notice;
+  }
+  function showOfflineShell(){
+    if(!hasSafeShellMarker()||!document.body)return false;
+    if(!document.body.classList.contains('seh-offline-shell')){
+      document.body.classList.add('seh-offline-shell');
+      document.body.classList.remove('locked');
+      const screen=document.getElementById('authScreen');if(screen)screen.style.display='none';
+      const bar=document.getElementById('authUserBar');if(bar)bar.style.display='none';
+    }
+    ensureOfflineNotice();
+    return true;
+  }
+  function clearOfflineShellAfterVerifiedLogin(){
+    const screen=document.getElementById('authScreen');
+    const bar=document.getElementById('authUserBar');
+    const verifiedUi=!!(screen&&screen.style.display==='none'&&bar&&bar.style.display!=='none');
+    if(!verifiedUi)return false;
+    document.body.classList.remove('seh-offline-shell');
+    const notice=document.getElementById('sehOfflineShellNotice');if(notice)notice.remove();
+    return true;
+  }
   async function restoreSavedSession(){
-    if(running||!document.body||!document.body.classList.contains('locked'))return;
+    const offlineShell=!!(document.body&&document.body.classList.contains('seh-offline-shell'));
+    if(running||!document.body||(!document.body.classList.contains('locked')&&!offlineShell))return;
+    if(typeof navigator!=='undefined'&&navigator.onLine===false){showOfflineShell();return;}
     const auth=window.AUTH_SUPABASE;
     if(!auth?.auth||typeof window.finishLogin!=='function')return;
     running=true;
     try{
       for(let attempt=0;attempt<3;attempt++){
+        if(typeof navigator!=='undefined'&&navigator.onLine===false){showOfflineShell();return;}
         const result=await window.__sehGetSessionSingleFlight();
         if(result.error)throw result.error;
         const session=result.data?.session;
-        if(session?.user){await window.finishLogin(session.user);return;}
+        if(session?.user){
+          await window.finishLogin(session.user);
+          if(!clearOfflineShellAfterVerifiedLogin()&&hasSafeShellMarker())showOfflineShell();
+          return;
+        }
         if(attempt<2)await new Promise(resolve=>setTimeout(resolve,700*(attempt+1)));
       }
-    }catch(error){console.warn('Saved sign-in session restoration deferred:',error);}
+      showOfflineShell();
+    }catch(error){
+      console.warn('Saved sign-in session restoration deferred:',error);
+      showOfflineShell();
+    }
     finally{running=false;}
   }
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>setTimeout(restoreSavedSession,900),{once:true});
   else setTimeout(restoreSavedSession,900);
   window.addEventListener('pageshow',()=>setTimeout(restoreSavedSession,250));
   document.addEventListener('visibilitychange',()=>{if(!document.hidden)setTimeout(restoreSavedSession,250);});
+  window.addEventListener('online',()=>setTimeout(restoreSavedSession,250));
+  window.addEventListener('offline',()=>{if(document.body&&document.body.classList.contains('locked'))showOfflineShell();});
 })();
 </script>
 <script id="COACH_BODY_ANALYSIS_DIRECT_ROUTE_V1">
@@ -15594,7 +15655,13 @@ window.sehNutritionBuilderBridge={
       return Promise.reject(new Error('تکمیل ورود حساب دیگری هنوز در حال انجام است؛ چند لحظه بعد دوباره تلاش کنید.'));
     }
     var context=this,args=arguments;
-    var base=Promise.resolve().then(function(){return original.apply(context,args);});
+    var base=Promise.resolve().then(function(){return original.apply(context,args);}).then(function(result){
+      var screen=document.getElementById('authScreen');
+      var bar=document.getElementById('authUserBar');
+      var authenticated=!!(document.body&&!document.body.classList.contains('locked')&&screen&&screen.style.display==='none'&&bar&&bar.style.display!=='none');
+      if(authenticated){try{window.localStorage.setItem('seh.offline-safe-shell.v1',JSON.stringify({version:1,view:'home'}));}catch(storageError){}}
+      return result;
+    });
     /* A late optional dashboard/widget wrapper must not turn an already-visible
        authenticated app into a failed login. Core auth/profile failures remain visible. */
     var guarded=base.catch(function(error){
