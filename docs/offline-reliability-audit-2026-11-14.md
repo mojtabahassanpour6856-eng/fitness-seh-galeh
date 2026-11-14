@@ -183,3 +183,37 @@ The same inspection found primary-key-only uniqueness on `nutrition_plans` and `
 - Keep Storage upload and delete operations out of a generic offline queue.
 - For manual progress, replace the legacy two-write client path with a purpose-built RPC only after reconciling the RPC's duplicate/correction semantics and verifying every caller. Preserve the strict rule that only the trainee submits; coach views remain read-only.
 - For all future queued writes, use a separate server idempotency ledger keyed by authenticated user + operation type + client-generated operation UUID, with a canonical payload hash and status/result lookup. A duplicate operation UUID with a different payload must be rejected, not silently treated as the original.
+
+
+## Additional production RLS review — progress, membership, payments, receipts
+
+Read-only inspection of `pg_policies`, function definitions, and table columns in production confirmed:
+
+- `private.can_access_trainee(id)` returns true only for the active trainee account that owns the row, or the coach whose `coach_user_id` is assigned to that trainee. It is SECURITY DEFINER with a fixed `pg_catalog, public, pg_temp` search path.
+- `private.is_coach()` checks the authenticated user's `profiles.role = 'coach'`.
+- `weight_logs` INSERT is authenticated-only and requires `NOT private.is_coach()` plus `can_access_trainee(trainee_id)`; SELECT allows the assigned coach or active trainee owner. There is no UPDATE or DELETE policy in the inspected policy set.
+- `body_analyses` INSERT allows coach writes only when the manual-progress marker is absent, and non-coach writes only when the marker is present; both require trainee access. UPDATE and DELETE are coach-only and explicitly exclude rows carrying the manual-progress marker. This enforces the coach-read-only boundary for manual progress at the row-policy layer, subject to the existing marker convention.
+- The deployed `record_trainee_progress` RPC is stricter than the general access helper: it rejects coaches and requires the exact active trainee owner. Keep that contract if/when the frontend is migrated to the RPC.
+- Membership tables `trainee_membership` and `trainee_memberships`, membership cards, and `trainee_payments` are coach-write-only under the inspected INSERT/UPDATE/DELETE policies; SELECT is available to the assigned coach or active trainee owner. The duplicate singular/plural membership table names are a legacy/schema ambiguity that must be mapped to actual frontend call sites before consolidating anything.
+- `trainee_payment_receipts` INSERT requires `submitted_by = auth.uid()`, a valid trainee access relationship, pending status, and empty review fields. SELECT is limited to the assigned coach or the submitting user; review/update/delete are coach-only.
+
+### Receipt policy question to resolve before any redesign
+
+The receipt INSERT policy does not explicitly include `NOT private.is_coach()`. Because `can_access_trainee` also returns true for the assigned coach, a coach account appears able to insert a pending receipt row for an assigned trainee, provided `submitted_by` is the coach's own UID. This may be intentional for a coach-side administrative workflow, or it may be broader than intended. No exploit or data access beyond the assigned trainee relationship was demonstrated. Confirm the intended product behavior and inspect the actual receipt submission UI before proposing a policy change. Do not alter production RLS based on this observation alone.
+
+### Current schema implications
+
+- `trainee_payment_receipts` has a generated UUID primary key, mandatory trainee/submitting-user/path, default pending status, and optional amount/date/note; no operation UUID/idempotency field was found in its inspected columns.
+- `trainee_payments` and both membership tables use their own primary keys and have no inspected client-operation identity field. This supports the earlier conclusion that blind replay can create duplicates unless the server provides operation-level idempotency.
+- Membership card numbers are stored in `trainee_membership_cards` and `trainee_membership`; frontend read/check/insert behavior still needs exact call-site mapping. Do not add a uniqueness constraint until duplicate historical values and intended cross-table uniqueness scope are audited.
+
+## Auth lifecycle and service-worker regression evidence
+
+The current main branch includes tests for:
+- deduplicating concurrent `pageshow` and `visibilitychange` session-restore attempts;
+- bounded coach trainee-list retries and restarting recovery on `online`;
+- preserving the cached app shell during offline navigation and server 5xx responses;
+- explicitly bypassing Supabase API requests, unknown dynamic paths, and all POST requests in the service worker.
+
+These tests support the existing safe shell-cache boundary and basic transient-session/list recovery. They do not prove outbox safety: there is still no tested account-switch quarantine, cross-tab write lease, operation-status reconciliation, or timeout-after-commit replay behavior. Those remain mandatory before any queued write is enabled.
+
