@@ -66,6 +66,8 @@ function makeBackend() {
         if (!existing) this.receipts.push({ id: 'receipt-' + (this.receipts.length + 1), ...payload });
         if (this.failInsertResponseOnce) {
           this.failInsertResponseOnce = false;
+          // The INSERT has committed; now simulate loss of the immediate verification query.
+          this.failSelectResponseOnce = true;
           return { error: { message: 'Network response lost after database commit' } };
         }
         return { error: existing ? { message: 'Duplicate operation key' } : null };
@@ -169,7 +171,6 @@ async function installHarness(page, backend) {
     {
       const backend = makeBackend();
       backend.failInsertResponseOnce = true;
-      backend.failSelectResponseOnce = true;
       const context = await browser.newContext();
       let page = await context.newPage();
       await installHarness(page, backend);
