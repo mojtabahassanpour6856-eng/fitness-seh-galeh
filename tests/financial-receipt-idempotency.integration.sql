@@ -13,11 +13,11 @@ declare
 begin
   -- Same actor + operation ID + payload returns the stored result.
   v_first := public.review_receipt_idempotent(
-    '40000000-0000-0000-0000-000000000001','approve',
+    '40000000-0000-0000-0000-000000000001','approved',
     '50000000-0000-0000-0000-000000000001'
   );
   v_retry := public.review_receipt_idempotent(
-    '40000000-0000-0000-0000-000000000001','approve',
+    '40000000-0000-0000-0000-000000000001','approved',
     '50000000-0000-0000-0000-000000000001'
   );
   if v_first is distinct from v_retry then
@@ -51,7 +51,7 @@ begin
   -- Reusing the operation ID for a different decision/payload is rejected.
   begin
     perform public.review_receipt_idempotent(
-      '40000000-0000-0000-0000-000000000001','reject',
+      '40000000-0000-0000-0000-000000000001','rejected',
       '50000000-0000-0000-0000-000000000001'
     );
     raise exception 'expected changed-payload operation ID reuse to fail';
@@ -61,7 +61,7 @@ begin
   -- A distinct operation ID cannot approve an already terminal receipt.
   begin
     perform public.review_receipt_idempotent(
-      '40000000-0000-0000-0000-000000000001','approve',
+      '40000000-0000-0000-0000-000000000001','approved',
       '50000000-0000-0000-0000-000000000002'
     );
     raise exception 'expected terminal receipt re-approval to fail';
@@ -70,7 +70,7 @@ begin
 
   -- Rejection is terminal and never creates a payment.
   perform public.review_receipt_idempotent(
-    '40000000-0000-0000-0000-000000000002','reject',
+    '40000000-0000-0000-0000-000000000002','rejected',
     '50000000-0000-0000-0000-000000000003'
   );
   select count(*) into v_count from public.trainee_payments
@@ -85,7 +85,7 @@ do $$
 begin
   begin
     perform public.review_receipt_idempotent(
-      '40000000-0000-0000-0000-000000000001','approve',
+      '40000000-0000-0000-0000-000000000001','approved',
       '50000000-0000-0000-0000-000000000004'
     );
     raise exception 'expected cross-coach receipt access to fail';
@@ -100,7 +100,7 @@ do $$
 begin
   begin
     perform public.review_receipt_idempotent(
-      '40000000-0000-0000-0000-000000000001','approve',
+      '40000000-0000-0000-0000-000000000001','approved',
       '50000000-0000-0000-0000-000000000005'
     );
     raise exception 'expected trainee role to be rejected';
@@ -134,7 +134,7 @@ do $$
 begin
   begin
     perform public.review_receipt_idempotent(
-      '40000000-0000-0000-0000-000000000004','approve',
+      '40000000-0000-0000-0000-000000000004','approved',
       '50000000-0000-0000-0000-000000000006'
     );
     raise exception 'expected injected payment failure';
@@ -194,7 +194,7 @@ declare v_result text; v_second_error text;
 begin
   if dblink_send_query('receipt_race_a',
     $query$select public.review_receipt_idempotent(
-      '40000000-0000-0000-0000-000000000005','approve',
+      '40000000-0000-0000-0000-000000000005','approved',
       '50000000-0000-0000-0000-000000000007'
     )::text$query$) <> 1 then
     raise exception 'could not start first concurrent approval';
@@ -205,7 +205,7 @@ begin
 
   if dblink_send_query('receipt_race_b',
     $query$select public.review_receipt_idempotent(
-      '40000000-0000-0000-0000-000000000005','approve',
+      '40000000-0000-0000-0000-000000000005','approved',
       '50000000-0000-0000-0000-000000000008'
     )::text$query$) <> 1 then
     raise exception 'could not start second concurrent approval';
