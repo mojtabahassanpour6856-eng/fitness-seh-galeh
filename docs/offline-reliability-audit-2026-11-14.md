@@ -276,3 +276,72 @@ The standard file/range reader returned empty content for the 1.3 MB monolithic 
 2. Scope and quarantine the existing pending-payment recovery marker by project/environment, auth UID, trainee ID and operation ID; on account switch, never replay it under a different identity. Because current marker has no operation UUID and the payment API has no server-side deduplication, do not automatically replay an ambiguous payment.
 3. Confirm HTML event bindings and the exact active override in browser tests before removing the earlier legacy function.
 4. Only after the above are deployed and tested should a generic outbox be considered. Keep receipts, membership, payments, deletion, and Storage uploads excluded from automatic offline replay until their dedicated idempotency contracts exist.
+
+
+## Follow-up: account-switch verification and transaction contract (design only)
+
+### Account-switch path verified
+
+The current source contains two user-visible sign-out paths:
+- the main `logoutApp()` called by the top account bar and trainee profile exit;
+- the dynamically installed `sehSwitchAccountBtn` handler for saved-account switching.
+
+Both call Supabase `auth.signOut()` and reload the page. Neither currently checks, clears, or quarantines the membership pending-payment marker. The pending marker is a single `sessionStorage` key and does not include the current auth UID or Supabase project reference. This confirms the account-boundary gap. Do not solve it by blindly deleting the marker on sign-out: that could erase the only recovery clue for a payment that may already have committed. The safe future behavior is to quarantine it under the identity/environment that created it and require status reconciliation before any retry.
+
+The trainee-auth flow also calls `signOut()` in several validation-failure paths (duplicate phone match, no trainee match, inactive approval, account already linked elsewhere, or failed account linking). Those paths are not necessarily initiated by a human account switch, but they reinforce why recovery state must be bound to identity and environment rather than relying on one logout button.
+
+### HTML binding and active handler verification
+
+- The membership form's button uses the global `saveSubscription()` name.
+- The bundle first defines an older function declaration, then later assigns the safer implementation to `window.saveSubscription` in the subscription safety patch. Browser-level regression tests must confirm the final global assignment is active when the form is used. The older implementation is not the desired implementation and should not be revived during refactoring.
+- The trainee receipt button calls `submitPaymentReceipt()`, which resolves to the later `window.submitPaymentReceipt` implementation.
+- Coach receipt action buttons call `reviewPaymentReceipt(id, decision)`, resolving to the later global handler inspected above.
+
+### Proposed server transaction contracts — not implemented
+
+These are the minimum contracts to implement and test in a sandbox before touching production:
+
+1. **Operation ledger**
+   - Store a client-generated UUID for every business operation, with a unique constraint on (authenticated actor UID, operation kind, operation UUID); include environment/project identity in the client envelope and validate server-side deployment context.
+   - Persist a canonical request hash and terminal result. Reusing the same operation UUID with a different request hash must be rejected, not treated as a retry.
+   - A retry with the same UUID and same hash returns the previously committed result. The ledger row and business writes must commit in the same database transaction.
+   - Never accept actor UID, role, coach ID, or trainee ownership as trusted client claims. Derive actor from `auth.uid()`, derive role from the trusted profile, and verify the assigned coach/trainee relationship inside the RPC.
+   - Avoid persisting access or refresh tokens. Never replay a queued operation after account/environment mismatch.
+
+2. **Membership creation + optional payment**
+   - Replace the two-step client write with one coach-authorized RPC that records the membership and, when appropriate, its initial payment atomically.
+   - The RPC should preserve the current product semantics for paid/unpaid membership and card number, but must not generate a payment for unpaid memberships or a zero amount.
+   - Define whether a retry updates an existing membership or returns the prior result; the operation ledger makes retries of one submission idempotent without imposing an incorrect unique-per-trainee membership constraint.
+   - Card-number allocation must be serialized and backed by an appropriate uniqueness rule after a read-only audit of historical duplicates and the intended uniqueness scope. Do not add a constraint until that audit is complete.
+
+3. **Receipt approval/rejection**
+   - Use one coach-authorized RPC with a row lock on the target receipt and a conditional transition from pending to approved/rejected.
+   - Approval must atomically create exactly one payment, update the relevant membership status according to the defined business rule, and mark the receipt approved. Rejection must atomically mark it rejected without a payment.
+   - Repeated calls with the same operation UUID return the prior result. A different operation attempting to act on an already terminal receipt returns a stable conflict/previous-state result and cannot create another payment.
+   - Scope the membership update precisely. The current client code updates every `trainee_memberships` row for the trainee; the desired rule (latest active membership versus a specifically referenced membership) must be settled before implementation.
+
+4. **Receipt file upload**
+   - Keep Storage upload separate from the database transaction. Use a generated upload operation UUID in the object path and a staged database record with states such as `upload_pending`, `file_uploaded`, `submitted`, `cleanup_required`, and `quarantined`.
+   - Reconcile ambiguous upload/metadata outcomes by querying the staged record and checking object existence before retry or cleanup. Do not blindly upload a second object or delete a file based only on a lost HTTP response.
+   - Keep the existing private bucket, size/MIME constraints, ownership checks and `upsert:false` behavior unless a separately reviewed change requires otherwise.
+
+5. **Account-switch and offline queue boundary**
+   - Bind every queued operation to project/environment, actor UID, role, trainee ID, operation kind, UUID, payload hash and schema version.
+   - On sign-out or account switch, stop dispatch immediately and quarantine pending/unknown operations. Do not delete them and do not replay under the next account.
+   - On restoration, verify current project, auth UID, role and trainee relationship, then query server operation status before retrying any operation whose outcome is unknown.
+   - Keep payments, membership, receipts, Storage uploads, deletes and other non-idempotent multi-step workflows out of generic automatic replay until their dedicated RPC/status and staged-upload contracts have passed failure-injection tests.
+
+### Required sandbox acceptance tests before production consideration
+
+- Same operation UUID + same payload submitted twice creates one business result and returns the same result.
+- Same operation UUID + different payload is rejected.
+- Server commits, response is deliberately dropped, then client retries: no duplicate payment/membership.
+- Two coach tabs approve the same pending receipt simultaneously: exactly one payment and one terminal receipt transition.
+- Receipt membership update fails: the whole approval transaction rolls back; receipt remains pending and no payment persists.
+- Sign out while an operation is queued or sending: dispatch stops and the operation is quarantined under the old UID.
+- Sign in as a different user in the same tab: old operation is not visible for replay and cannot be sent.
+- Restore the original account: operation status is reconciled before retry.
+- Receipt Storage upload succeeds but metadata submission is interrupted: reconciliation finds the uploaded object/staged record without creating duplicate files or losing the receipt.
+- Existing trainee role restrictions remain intact: trainees submit receipts and their own progress; coaches review receipts and remain read-only for trainee-entered progress.
+
+No RPC, schema, RLS, Storage, Auth setting, production row or application runtime code was changed in this follow-up. This section is an implementation contract and test plan only.
