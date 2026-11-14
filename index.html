@@ -14496,6 +14496,53 @@ window.sehResetTurnstile=function(){};
 </script>
 
 <!-- SEH_FINAL_FETCH_AND_SESSION_RECOVERY_20261016 -->
+<script id="seh-auth-session-singleflight-v1">
+(function(){
+  'use strict';
+  if(window.__sehGetSessionSingleFlight)return;
+  var active=null, cachedResult=null, cachedAt=0, authListenerInstalled=false;
+  var TIMEOUT_MS=12000, CACHE_MS=1200;
+  window.__sehGetSessionSingleFlight=function(){
+    var auth=window.AUTH_SUPABASE;
+    if(!auth||!auth.auth||typeof auth.auth.getSession!=='function'){
+      return Promise.reject(new Error('Supabase session service is unavailable.'));
+    }
+    if(active)return active;
+    if(cachedResult&&Date.now()-cachedAt<CACHE_MS)return Promise.resolve(cachedResult);
+    if(!authListenerInstalled&&typeof auth.auth.onAuthStateChange==='function'){
+      authListenerInstalled=true;
+      try{
+        auth.auth.onAuthStateChange(function(event){
+          if(event==='SIGNED_IN'||event==='SIGNED_OUT'||event==='TOKEN_REFRESHED'){
+            cachedResult=null;cachedAt=0;
+          }
+        });
+      }catch(error){authListenerInstalled=false;}
+    }
+    var request;
+    try{request=Promise.resolve(auth.auth.getSession());}
+    catch(error){return Promise.reject(error);}
+    var timer=null;
+    var timeout=new Promise(function(resolve,reject){
+      timer=setTimeout(function(){
+        reject(new Error('بررسی نشست بیش از ۱۲ ثانیه طول کشید؛ اتصال اینترنت را بررسی کنید.'));
+      },TIMEOUT_MS);
+    });
+    var tracked=Promise.race([request,timeout]).then(function(result){
+      if(result&&!result.error&&result.data&&result.data.session&&result.data.session.user){
+        cachedResult=result;cachedAt=Date.now();
+      }
+      return result;
+    }).finally(function(){
+      if(timer!==null)clearTimeout(timer);
+      if(active===tracked)active=null;
+    });
+    active=tracked;
+    return tracked;
+  };
+})();
+</script>
+
 <script id="SEH_FINAL_FETCH_AND_SESSION_RECOVERY_20261016">
 (function(){
   'use strict';
@@ -14517,7 +14564,7 @@ window.sehResetTurnstile=function(){};
     var screen=document.getElementById('authScreen');
     if(document.body && !document.body.classList.contains('locked') && screen && screen.style.display==='none')return;
     try{
-      var result=await auth.auth.getSession();
+      var result=await window.__sehGetSessionSingleFlight();
       if(result && result.error)throw result.error;
       var session=result && result.data && result.data.session;
       if(session && session.user && typeof window.finishLogin==='function'){
@@ -15491,7 +15538,7 @@ window.sehNutritionBuilderBridge={
     running=true;
     try{
       for(let attempt=0;attempt<3;attempt++){
-        const result=await auth.auth.getSession();
+        const result=await window.__sehGetSessionSingleFlight();
         if(result.error)throw result.error;
         const session=result.data?.session;
         if(session?.user){await window.finishLogin(session.user);return;}
