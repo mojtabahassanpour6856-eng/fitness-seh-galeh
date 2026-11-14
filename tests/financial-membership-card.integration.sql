@@ -188,6 +188,10 @@ begin
 end;
 $race$;
 
+-- A pre-existing canonical registry assignment is reused, never regenerated.
+insert into public.trainee_membership_cards(trainee_id,card_number)
+values('31000000-0000-0000-0000-000000000003','4321');
+
 -- Distinct trainees must never receive the same card number.
 set role authenticated;
 select set_config('request.jwt.claim.sub','11000000-0000-0000-0000-000000000001',false);
@@ -204,8 +208,11 @@ select public.create_membership_atomic(
  '53000000-0000-0000-0000-000000000002');
 reset role;
 do $race$
-declare v_count integer;
+declare v_count integer; v_card text;
 begin
+ select card_number into v_card from public.trainee_membership_cards
+  where trainee_id='31000000-0000-0000-0000-000000000003';
+ if v_card<>'4321' then raise exception 'existing canonical registry card was not preserved'; end if;
  select count(*) into v_count from (
   select card_number from public.trainee_membership_cards
   group by card_number having count(*)>1
