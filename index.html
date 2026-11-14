@@ -2437,6 +2437,56 @@ if(!window.supabase||typeof window.supabase.createClient!=='function'){
   throw new Error('Supabase SDK unavailable; application startup stopped safely.');
 }
 window.AUTH_SUPABASE=window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY,{auth:{autoRefreshToken:true,persistSession:true,detectSessionInUrl:true,storage:window.localStorage}});
+/* SEH_AUTH_SESSION_SINGLEFLIGHT_V1_START */
+(function(){
+  'use strict';
+  if(window.__sehGetSessionSingleFlight)return;
+  var active=null, cachedResult=null, cachedAt=0, authListenerInstalled=false;
+  var TIMEOUT_MS=12000, CACHE_MS=1200;
+  window.__sehGetSessionSingleFlight=function(){
+    var auth=window.AUTH_SUPABASE;
+    if(!auth||!auth.auth||typeof auth.auth.getSession!=='function'){
+      return Promise.reject(new Error('Supabase session service is unavailable.'));
+    }
+    if(active)return active;
+    if(cachedResult&&Date.now()-cachedAt<CACHE_MS)return Promise.resolve(cachedResult);
+    if(!authListenerInstalled&&typeof auth.auth.onAuthStateChange==='function'){
+      authListenerInstalled=true;
+      try{
+        auth.auth.onAuthStateChange(function(event){
+          if(event==='SIGNED_IN'||event==='SIGNED_OUT'||event==='TOKEN_REFRESHED'){
+            cachedResult=null;cachedAt=0;
+          }
+        });
+      }catch(error){authListenerInstalled=false;}
+    }
+    var request;
+    try{request=Promise.resolve(auth.auth.getSession());}
+    catch(error){return Promise.reject(error);}
+    var timer=null;
+    var timeout=new Promise(function(resolve,reject){
+      timer=setTimeout(function(){
+        var message='ارتباط با سرویس ورود زمان‌بر شد. نشست ذخیره‌شده پاک نشده است؛ اتصال اینترنت را بررسی کنید و چند لحظه بعد دوباره تلاش کنید.';
+        if(typeof window.showAuthError==='function'){
+          try{window.showAuthError(message);}catch(error){}
+        }
+        reject(new Error('بررسی نشست بیش از ۱۲ ثانیه طول کشید؛ اتصال اینترنت را بررسی کنید.'));
+      },TIMEOUT_MS);
+    });
+    var tracked=Promise.race([request,timeout]).then(function(result){
+      if(result&&!result.error&&result.data&&result.data.session&&result.data.session.user){
+        cachedResult=result;cachedAt=Date.now();
+      }
+      return result;
+    }).finally(function(){
+      if(timer!==null)clearTimeout(timer);
+      if(active===tracked)active=null;
+    });
+    active=tracked;
+    return tracked;
+  };
+})();
+/* SEH_AUTH_SESSION_SINGLEFLIGHT_V1_END */
 /* SEH_FIX_ORIGINAL_FETCH_SCOPE_20261016: expose the original browser fetch across classic-script scopes */
 const AUTH_SUPABASE=window.AUTH_SUPABASE;const ORIGINAL_FETCH=(typeof window.__SEH_ORIGINAL_FETCH==="function"?window.__SEH_ORIGINAL_FETCH:window.fetch.bind(window));window.__SEH_ORIGINAL_FETCH=ORIGINAL_FETCH;
 
@@ -3434,56 +3484,7 @@ window.loadDashboard = loadDashboard;
 
 
 <!-- SEH_COACH_APPROVAL_PASSWORDLESS_LOGIN_V1 -->
-<script id="seh-auth-session-singleflight-v1">
-(function(){
-  'use strict';
-  if(window.__sehGetSessionSingleFlight)return;
-  var active=null, cachedResult=null, cachedAt=0, authListenerInstalled=false;
-  var TIMEOUT_MS=12000, CACHE_MS=1200;
-  window.__sehGetSessionSingleFlight=function(){
-    var auth=window.AUTH_SUPABASE;
-    if(!auth||!auth.auth||typeof auth.auth.getSession!=='function'){
-      return Promise.reject(new Error('Supabase session service is unavailable.'));
-    }
-    if(active)return active;
-    if(cachedResult&&Date.now()-cachedAt<CACHE_MS)return Promise.resolve(cachedResult);
-    if(!authListenerInstalled&&typeof auth.auth.onAuthStateChange==='function'){
-      authListenerInstalled=true;
-      try{
-        auth.auth.onAuthStateChange(function(event){
-          if(event==='SIGNED_IN'||event==='SIGNED_OUT'||event==='TOKEN_REFRESHED'){
-            cachedResult=null;cachedAt=0;
-          }
-        });
-      }catch(error){authListenerInstalled=false;}
-    }
-    var request;
-    try{request=Promise.resolve(auth.auth.getSession());}
-    catch(error){return Promise.reject(error);}
-    var timer=null;
-    var timeout=new Promise(function(resolve,reject){
-      timer=setTimeout(function(){
-        var message='ارتباط با سرویس ورود زمان‌بر شد. نشست ذخیره‌شده پاک نشده است؛ اتصال اینترنت را بررسی کنید و چند لحظه بعد دوباره تلاش کنید.';
-        if(typeof window.showAuthError==='function'){
-          try{window.showAuthError(message);}catch(error){}
-        }
-        reject(new Error('بررسی نشست بیش از ۱۲ ثانیه طول کشید؛ اتصال اینترنت را بررسی کنید.'));
-      },TIMEOUT_MS);
-    });
-    var tracked=Promise.race([request,timeout]).then(function(result){
-      if(result&&!result.error&&result.data&&result.data.session&&result.data.session.user){
-        cachedResult=result;cachedAt=Date.now();
-      }
-      return result;
-    }).finally(function(){
-      if(timer!==null)clearTimeout(timer);
-      if(active===tracked)active=null;
-    });
-    active=tracked;
-    return tracked;
-  };
-})();
-</script>
+
 <script>
 (function(){
  'use strict';
