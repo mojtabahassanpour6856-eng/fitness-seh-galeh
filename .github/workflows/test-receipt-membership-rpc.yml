@@ -1,0 +1,50 @@
+name: Receipt membership RPC draft tests
+on:
+  push:
+    branches:
+      - prototype/receipt-membership-schema-draft-20261114
+    paths:
+      - 'supabase/drafts/20261114000100_receipt_membership_link.sql'
+      - 'supabase/drafts/20261114000110_review_trainee_payment_receipt_rpc.sql'
+      - 'tests/financial-receipt-idempotency.fixture.sql'
+      - 'tests/financial-receipt-membership-rpc.integration.sql'
+      - '.github/workflows/test-receipt-membership-rpc.yml'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'supabase/drafts/20261114000100_receipt_membership_link.sql'
+      - 'supabase/drafts/20261114000110_review_trainee_payment_receipt_rpc.sql'
+      - 'tests/financial-receipt-idempotency.fixture.sql'
+      - 'tests/financial-receipt-membership-rpc.integration.sql'
+      - '.github/workflows/test-receipt-membership-rpc.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  receipt-membership-rpc:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: receipt_membership_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d receipt_membership_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+    env:
+      PGPASSWORD: postgres
+      PGHOST: localhost
+      PGPORT: 5432
+      PGUSER: postgres
+      PGDATABASE: receipt_membership_test
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run isolated receipt membership RPC tests
+        run: psql -v ON_ERROR_STOP=1 -f tests/financial-receipt-membership-rpc.integration.sql
