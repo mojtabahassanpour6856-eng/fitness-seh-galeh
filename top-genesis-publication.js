@@ -445,6 +445,20 @@
       const traineeId = currentTraineeId();
       if (!traineeId) throw new Error("ابتدا شاگرد موردنظر را انتخاب کنید.");
       const payload = event.data.payload || {};
+      const payloadTraineeId = String(payload.traineeId || "");
+      const payloadContextNonce = String(payload.contextNonce || "");
+      if (!payloadTraineeId || payloadTraineeId !== traineeId ||
+          payloadTraineeId !== String(frame.dataset.boundTraineeId || "") ||
+          !payloadContextNonce || payloadContextNonce !== String(frame.dataset.contextNonce || "")) {
+        throw new Error("شاگرد انتخاب‌شده هنگام تحلیل تغییر کرده است؛ برای جلوگیری از ارسال گزارش فرد اشتباه، دوباره فایل همان شاگرد را تحلیل کنید.");
+      }
+      const assertSameTraineeContext = () => {
+        if (currentTraineeId() !== traineeId ||
+            String(frame.dataset.boundTraineeId || "") !== traineeId ||
+            String(frame.dataset.contextNonce || "") !== payloadContextNonce) {
+          throw new Error("شاگرد انتخاب‌شده تغییر کرده است؛ ارسال گزارش متوقف شد.");
+        }
+      };
       const date = String(payload.analysisDate || "");
       if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) throw new Error("تاریخ آنالیز معتبر نیست.");
       const metrics = safeMetrics(payload.metrics);
@@ -463,6 +477,7 @@
       if (userError) throw userError;
       const coachId = userData?.user?.id;
       if (!coachId) throw new Error("نشست مربی معتبر نیست؛ دوباره وارد شوید.");
+      assertSameTraineeContext();
       const reportPath = coachId + "/" + traineeId + "/published/" + crypto.randomUUID() + ".html";
       const { error: uploadError } = await window.AUTH_SUPABASE.storage
         .from("trainee-health-reports")
@@ -473,6 +488,7 @@
         });
       if (uploadError) throw uploadError;
       uploadedReportPath = reportPath;
+      assertSameTraineeContext();
       const { error } = await window.AUTH_SUPABASE.from(TABLE).insert({
         trainee_id: traineeId,
         coach_user_id: coachId,
