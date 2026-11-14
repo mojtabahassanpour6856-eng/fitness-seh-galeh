@@ -640,13 +640,24 @@ async function saveAllToTrainee(){
  const selectedId=window.parent.currentClient&&window.parent.currentClient.id!=null?String(window.parent.currentClient.id):'';
  if(!builderTrainee||selectedId!==String(builderTrainee.id)){await loadBuilderContext();notify('شاگرد انتخاب‌شده به‌روزرسانی شد؛ قبل از ثبت، اطلاعات را بررسی کن.');return}
 
+ if(!Array.isArray(state)||state.length!==8){
+  notify('ثبت متوقف شد: ساختار برنامه باید دقیقاً شامل ۸ وعده باشد. الگو را دوباره بارگذاری و بررسی کن.');
+  setConnectionStatus('ثبت انجام نشد؛ تعداد وعده‌ها معتبر نیست و پرونده شاگرد تغییر نکرد.',false);
+  return;
+ }
  const meals=[];
- for(let i=0;i<state.length;i++){
+ for(let i=0;i<8;i++){
   const m=state[i];
-  for(const [displayIndex,n] of [...m.active].sort((a,b)=>a-b).entries()){
-   const o=m.options[n]||{rows:[],target:0};
-   if(o.rows.some(r=>!Number.isFinite(Number(r.amount))||Number(r.amount)<=0)){notify('مقدار غذاها را بررسی کن.');return}
-   meals.push({meal_index:i,option_no:displayIndex+1,target:Number(o.target)||0,foods:o.rows.map(r=>({food_id:Number(r.foodId),amount:Number(r.amount),unit:String(r.unit||'گرم'),grams_per_unit:r.gramsPerUnit||null,recipe_name:r.recipeName||null}))});
+  const active=Array.isArray(m.active)?m.active.map(Number):[];
+  if(active.length===0||active.length>4||new Set(active).size!==active.length||active.some(n=>!Number.isInteger(n)||n<1||n>4)||!active.includes(1)){
+   notify('ثبت متوقف شد: شماره گزینه‌های وعده «'+(m.name||('شماره '+(i+1)))+'» معتبر نیست. الگو را دوباره بارگذاری کن.');
+   setConnectionStatus('ثبت انجام نشد؛ شماره گزینه‌ها باید یکتا و بین ۱ تا ۴ باشند. پرونده شاگرد تغییر نکرد.',false);
+   return;
+  }
+  for(const n of [...active].sort((a,b)=>a-b)){
+   const o=m.options&&m.options[n]?m.options[n]:{rows:[],target:0};
+   if(!Array.isArray(o.rows)||o.rows.some(r=>!Number.isFinite(Number(r.amount))||Number(r.amount)<=0)){notify('مقدار غذاها را بررسی کن.');return}
+   meals.push({meal_index:i,option_no:n,target:Number(o.target)||0,foods:o.rows.map(r=>({food_id:Number(r.foodId),amount:Number(r.amount),unit:String(r.unit||'گرم'),grams_per_unit:r.gramsPerUnit||null,recipe_name:r.recipeName||null}))});
   }
  }
  if(meals.length>32){notify('تعداد گزینه‌های برنامه بیشتر از حد مجاز است.');return}
