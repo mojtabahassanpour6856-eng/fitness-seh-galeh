@@ -177,8 +177,19 @@ begin
     raise exception 'expected paid zero-amount validation failure';
   exception when sqlstate '22023' then null;
   end;
+
+  -- PostgreSQL numeric supports NaN/Infinity; financial RPCs must reject them.
+  begin
+    perform public.create_coach_membership_with_payment(
+      '30000000-0000-0000-0000-000000000001',
+      '61000000-0000-0000-0000-000000000005',
+      '2026-11-20', '2026-12-20', 'NaN'::numeric, 'paid', '2026-11-14'
+    );
+    raise exception 'expected non-finite amount validation failure';
+  exception when sqlstate '22023' then null;
+  end;
 end;
-$$;
+$;
 
 reset role;
 drop trigger test_fail_coach_membership_payment on public.trainee_payments;
