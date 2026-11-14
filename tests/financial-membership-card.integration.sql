@@ -72,8 +72,56 @@ begin
 end;
 $test$;
 
+-- If the registry is absent but membership history has a card, preserve that exact number.
+insert into public.trainee_memberships(trainee_id,card_number,status,payment_status)
+values('31000000-0000-0000-0000-000000000002','4321','pending','unpaid');
+
+set role authenticated;
+select set_config('request.jwt.claim.sub','11000000-0000-0000-0000-000000000001',false);
+select public.create_membership_atomic(
+  '31000000-0000-0000-0000-000000000002','2026-11-14','2026-12-14',
+  'History card reuse',0,'paid','Synthetic trainee',
+  '51000000-0000-0000-0000-000000000011','2026-11-14');
+reset role;
+do $test$
+declare v_registry text; v_count integer;
+begin
+  select card_number into v_registry from public.trainee_membership_cards
+   where trainee_id='31000000-0000-0000-0000-000000000002';
+  if v_registry is distinct from '4321' then
+    raise exception 'legacy history card was not adopted into the canonical registry';
+  end if;
+  select count(*) into v_count from public.trainee_memberships
+   where trainee_id='31000000-0000-0000-0000-000000000002' and card_number='4321';
+  if v_count<>2 then raise exception 'legacy history card was not preserved on new membership'; end if;
+end;
+$test$;
+
+-- A mismatch between history and registry must fail closed, not silently switch numbers.
+insert into public.trainee_memberships(trainee_id,card_number,status,payment_status)
+select '31000000-0000-0000-0000-000000000001',
+       case when card_number='9999' then '9998' else '9999' end,
+       'active','paid'
+from public.trainee_membership_cards
+where trainee_id='31000000-0000-0000-0000-000000000001';
+set role authenticated;
+do $test$
+begin
+  begin
+    perform public.create_membership_atomic(
+      '31000000-0000-0000-0000-000000000001','2027-02-01','2027-03-01',
+      'Conflicting history card',10000,'paid','Synthetic trainee',
+      '51000000-0000-0000-0000-000000000012','2027-02-01');
+    raise exception 'expected card history/registry conflict to fail';
+  exception when sqlstate '23514' then null;
+  end;
+end;
+$test$;
+reset role;
+
 -- The live UI marks a zero-amount membership as paid/active but creates no payment row.
 set role authenticated;
+select set_config('request.jwt.claim.sub','11000000-0000-0000-0000-000000000001',false);
 select set_config('request.jwt.claim.sub','11000000-0000-0000-0000-000000000001',false);
 select public.create_membership_atomic(
   '31000000-0000-0000-0000-000000000002','2026-11-14','2026-12-14',
