@@ -15,15 +15,18 @@ const shellAssets = new Set([
   'top-genesis-publication.js', 'top-genesis-archive.js'
 ]);
 const shellChanged = changed.some(path => shellAssets.has(path));
+const serviceWorkerChanged = changed.includes('sw.js');
 if (shellChanged) {
-  assert.ok(changed.includes('sw.js'),
+  assert.ok(serviceWorkerChanged,
     'A cached shell asset changed without updating sw.js; the service worker would keep serving the old cache version.');
+}
+if (shellChanged || serviceWorkerChanged) {
   const previous = execFileSync('git', ['show', base + ':sw.js'], { encoding: 'utf8' });
   const current = fs.readFileSync('sw.js', 'utf8');
   const readCacheName = source => (source.match(/const SHELL_CACHE_NAME = '([^']+)'/) || [])[1];
   assert.ok(readCacheName(previous), 'Base service worker cache version must be readable');
   assert.ok(readCacheName(current), 'Current service worker cache version must be readable');
   assert.notEqual(readCacheName(current), readCacheName(previous),
-    'Cached shell assets changed but SHELL_CACHE_NAME was not bumped; cached clients may keep stale files.');
+    'Service worker logic or cached shell assets changed but SHELL_CACHE_NAME was not bumped; an interrupted install could damage the active cache or clients could keep stale files.');
 }
 console.log('PASS: cached shell asset changes require a new service-worker cache version.');
