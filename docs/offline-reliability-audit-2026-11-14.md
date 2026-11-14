@@ -127,3 +127,21 @@ The test project's `storage.buckets` query returned no bucket rows, so it is not
 3. Review the exact frontend call sites for each deployed RPC and reconcile app code versus migration history.
 4. Review Auth settings for leaked-password protection and document a safe proposed change; do not change it as part of this audit.
 5. Only after these checks, finalize the idempotency ledger contract and test plan. No production fix is authorized by this audit.
+
+
+### Production Storage policy review
+
+Read-only catalog inspection confirmed two private buckets:
+- `payment-receipts`: 5 MiB limit; JPEG, PNG, WebP, PDF.
+- `trainee-health-reports`: 10 MiB limit; PDF, JPEG, PNG, WebP, HTML.
+
+The `storage.objects` RLS policies require authenticated users and scope upload/read/delete paths through the authenticated user's ID and the trainee's assigned coach/owner relationship. The buckets are not public. Read policies allow the active trainee owner or assigned coach to read the corresponding trainee's objects; upload policies separately distinguish trainee-owned receipt uploads from coach/trainee health-report uploads.
+
+Important operational detail: the inspected policies include INSERT and SELECT policies for these buckets but no UPDATE policy. Supabase Storage upsert/replacement requires INSERT + SELECT + UPDATE. Therefore, if any frontend upload uses `upsert: true` or attempts to overwrite an existing object path, it is expected to fail under the current policy set. This is a conditional finding; actual upload call sites and overwrite behavior still need to be mapped before proposing any policy change. Do not add a broad UPDATE policy without matching the existing folder/trainee ownership checks.
+
+The Storage catalog grants broad table-level privileges to `anon` and `authenticated` on internal Storage tables, but row-level policies remain the effective object-access gate. The buckets themselves are private, and no public object policy was found. This is not a recommendation to change Supabase-managed Storage grants directly.
+
+### Remaining caveats
+
+- The repository code search did not return reliable upload call-site matches, so exact upload methods, object naming conventions, overwrite flags, and metadata-write ordering remain unverified.
+- Constraint inspection confirmed foreign keys and basic NOT NULL/CHECK constraints on the principal trainee/progress/plan tables, but did not establish an idempotency uniqueness constraint for each operational write path.
