@@ -728,6 +728,9 @@ Waist-Hip Ratio (WHO),0.889
           return {
             async upload(path) {
               window.__publicationUploadCount += 1;
+              if (window.__publicationScenario === "network-failure") {
+                throw new TypeError("Failed to fetch");
+              }
               if (window.__publicationScenario === "success" ||
                   window.__publicationScenario === "insert-failure" ||
                   window.__publicationScenario === "cleanup-failure") {
@@ -813,6 +816,38 @@ Waist-Hip Ratio (WHO),0.889
   assert.equal(await integrationPage.evaluate(() => window.__publicationInsertCount), 0,
     "A Storage upload failure must not insert a trainee publication row.");
   console.log("[smoke] simulated Storage failure returned exact stage and prevented database insert");
+
+  // A browser-level fetch failure after a successful preflight must be
+  // diagnosed as a network/CORS-path failure, without attempting a DB insert.
+  await integrationPage.evaluate(() => {
+    window.__publicationScenario = "network-failure";
+    window.__publicationInsertCount = 0;
+    window.__publicationUploadCount = 0;
+  });
+  await analyzerFrame.evaluate(() => {
+    const requestId = "storage-network-failure-fixture";
+    window.__publicationReply = null;
+    window.addEventListener("message", event => {
+      if (event.origin === window.location.origin && event.source === window.parent &&
+          event.data?.type === "top-genesis-publish-result" && event.data.requestId === requestId) {
+        window.__publicationReply = event.data;
+      }
+    });
+    window.parent.postMessage({
+      type: "top-genesis-approved-report", requestId, payload: window.__publicationPayload
+    }, window.location.origin);
+  });
+  await integrationPage.waitForFunction(() =>
+    document.querySelector("#topGenesisPdfAnalyzerFrame")?.contentWindow?.__publicationReply?.requestId === "storage-network-failure-fixture",
+    null, { timeout: 10000 });
+  const networkFailureReply = await analyzerFrame.evaluate(() => window.__publicationReply);
+  assert.equal(networkFailureReply.ok, false);
+  assert.match(networkFailureReply.message, /مرحله ناموفق: بارگذاری فایل گزارش در فضای ذخیره‌سازی/);
+  assert.match(networkFailureReply.message, /احتمال اختلال شبکه یا محدودیت CORS/);
+  assert.match(networkFailureReply.message, /Failed to fetch/);
+  assert.equal(await integrationPage.evaluate(() => window.__publicationInsertCount), 0,
+    "A browser fetch failure must never create a publication database row.");
+  console.log("[smoke] browser fetch failure identifies network/CORS stage and prevents database insert");
 
   // A successful publication retried with the same request ID must replay
   // the first result without uploading or inserting a second time.
