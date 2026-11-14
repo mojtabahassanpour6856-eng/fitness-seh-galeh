@@ -473,6 +473,7 @@
         event.data?.type !== "top-genesis-approved-report") return;
     const requestId = String(event.data.requestId || "");
     let uploadedReportPath = null;
+    let publicationStage = "اعتبارسنجی گزارش";
     try {
       if (!currentCoach()) throw new Error("ارسال گزارش فقط از حساب مربی امکان‌پذیر است.");
       const traineeId = currentTraineeId();
@@ -506,12 +507,14 @@
       if (reportBytes <= 0 || reportBytes > 9 * 1024 * 1024) {
         throw new Error("حجم گزارش کامل بیش از حد مجاز است؛ تعداد تصاویر اسکن را بررسی کنید.");
       }
+      publicationStage = "بررسی نشست مربی";
       const { data: userData, error: userError } = await window.AUTH_SUPABASE.auth.getUser();
       if (userError) throw userError;
       const coachId = userData?.user?.id;
       if (!coachId) throw new Error("نشست مربی معتبر نیست؛ دوباره وارد شوید.");
       assertSameTraineeContext();
       const reportPath = coachId + "/" + traineeId + "/published/" + crypto.randomUUID() + ".html";
+      publicationStage = "بارگذاری فایل گزارش در فضای ذخیره‌سازی";
       const { error: uploadError } = await window.AUTH_SUPABASE.storage
         .from("trainee-health-reports")
         .upload(reportPath, new Blob([reportHtml], { type: "text/html;charset=utf-8" }), {
@@ -522,6 +525,7 @@
       if (uploadError) throw uploadError;
       uploadedReportPath = reportPath;
       assertSameTraineeContext();
+      publicationStage = "ثبت اطلاعات گزارش در پایگاه داده";
       const { error } = await window.AUTH_SUPABASE.from(TABLE).insert({
         trainee_id: traineeId,
         coach_user_id: coachId,
@@ -543,7 +547,18 @@
       if (uploadedReportPath) {
         try { await window.AUTH_SUPABASE.storage.from("trainee-health-reports").remove([uploadedReportPath]); } catch (_) {}
       }
-      reply(frame, requestId, false, error?.message || "ارسال گزارش انجام نشد.");
+      const errorName = String(error?.name || "Error");
+      const errorMessage = String(error?.message || "خطای نامشخص");
+      const errorStatus = Number.isFinite(Number(error?.status)) ? `، وضعیت HTTP ${Number(error.status)}` : "";
+      const errorCode = error?.code ? `، کد ${String(error.code).slice(0, 40)}` : "";
+      const offline = navigator.onLine === false ? "؛ اتصال اینترنت مرورگر قطع است" : "";
+      console.error("Top Genesis publication failed:", {
+        stage: publicationStage, name: errorName, message: errorMessage,
+        status: error?.status ?? null, code: error?.code ?? null,
+        browserOnline: navigator.onLine
+      });
+      reply(frame, requestId, false,
+        `مرحله ناموفق: ${publicationStage}. ${errorMessage} (${errorName}${errorStatus}${errorCode})${offline}`);
     }
   }
   window.addEventListener("message", handleApprovedReport);
