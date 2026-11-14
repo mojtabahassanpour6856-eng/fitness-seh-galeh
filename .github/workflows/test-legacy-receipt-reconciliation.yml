@@ -1,0 +1,53 @@
+name: Legacy receipt reconciliation draft tests
+
+on:
+  push:
+    branches:
+      - prototype/legacy-receipt-reconciliation-20261114
+    paths:
+      - 'supabase/drafts/20261114000100_receipt_membership_link.sql'
+      - 'supabase/drafts/20261114000400_reconcile_legacy_receipt_membership_rpc.sql'
+      - 'tests/financial-receipt-idempotency.fixture.sql'
+      - 'tests/legacy-receipt-reconciliation.integration.sql'
+      - '.github/workflows/test-legacy-receipt-reconciliation.yml'
+  pull_request:
+    branches:
+      - prototype/receipt-membership-client-draft-20261114
+    paths:
+      - 'supabase/drafts/20261114000100_receipt_membership_link.sql'
+      - 'supabase/drafts/20261114000400_reconcile_legacy_receipt_membership_rpc.sql'
+      - 'tests/financial-receipt-idempotency.fixture.sql'
+      - 'tests/legacy-receipt-reconciliation.integration.sql'
+      - '.github/workflows/test-legacy-receipt-reconciliation.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  legacy-receipt-reconciliation:
+    if: github.event_name != 'pull_request' || github.head_ref == 'prototype/legacy-receipt-reconciliation-20261114'
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: legacy_receipt_reconciliation_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d legacy_receipt_reconciliation_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+    env:
+      PGPASSWORD: postgres
+      PGHOST: localhost
+      PGPORT: 5432
+      PGUSER: postgres
+      PGDATABASE: legacy_receipt_reconciliation_test
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run isolated legacy receipt reconciliation tests
+        run: psql -v ON_ERROR_STOP=1 -f tests/legacy-receipt-reconciliation.integration.sql

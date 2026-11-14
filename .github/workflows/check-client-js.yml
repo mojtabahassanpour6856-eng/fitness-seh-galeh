@@ -1,0 +1,66 @@
+name: Check inline client JavaScript
+
+on:
+  push:
+    branches:
+      - prototype/receipt-membership-client-draft-20261114
+    paths:
+      - 'index.html'
+      - '.github/workflows/check-client-js.yml'
+  pull_request:
+    types: [opened, synchronize, reopened]
+    paths:
+      - 'index.html'
+      - '.github/workflows/check-client-js.yml'
+  workflow_dispatch:
+
+jobs:
+  syntax:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Extract inline scripts and check JavaScript syntax
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from html.parser import HTMLParser
+          from pathlib import Path
+
+          class Scripts(HTMLParser):
+              def __init__(self):
+                  super().__init__()
+                  self.items = []
+                  self.current = None
+              def handle_starttag(self, tag, attrs):
+                  if tag.lower() == "script":
+                      attrs = dict(attrs)
+                      self.current = [] if not attrs.get("src") else None
+              def handle_data(self, data):
+                  if self.current is not None:
+                      self.current.append(data)
+              def handle_endtag(self, tag):
+                  if tag.lower() == "script" and self.current is not None:
+                      self.items.append("".join(self.current))
+                      self.current = None
+
+          parser = Scripts()
+          parser.feed(Path("index.html").read_text(encoding="utf-8"))
+          out = Path("/tmp/inline-js")
+          out.mkdir(exist_ok=True)
+          count = 0
+          for script in parser.items:
+              if not script.strip():
+                  continue
+              count += 1
+              (out / f"script-{count}.js").write_text(script, encoding="utf-8")
+          if not count:
+              raise SystemExit("No inline scripts found; refusing an empty syntax check.")
+          print(f"Extracted {count} inline scripts.")
+          PY
+          for file in /tmp/inline-js/*.js; do
+            echo "Checking $file"
+            node --check "$file"
+          done
