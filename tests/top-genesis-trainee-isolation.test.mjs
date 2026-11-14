@@ -121,3 +121,17 @@ test("publication failures report the exact stage and browser network diagnostic
   assert.match(publisher, /browserOnline: navigator\.onLine/);
   assert.match(publisher, /Top Genesis publication failed:/);
 });
+
+test("duplicate Top Genesis publication request IDs cannot create duplicate uploads or rows", () => {
+  const publisher = read("top-genesis-publication.js");
+  assert.match(publisher, /const publicationRequests = new Map\(\)/,
+    "The publisher must retain request state for the current coach page session.");
+  assert.match(publisher, /const requestKey = String\(currentTraineeId\(\) \|\| ""\) \+ ":" \+ requestId/);
+  assert.match(publisher, /const previousRequest = publicationRequests\.get\(requestKey\)/,
+    "A repeated message with the same trainee and request ID must be detected before upload.");
+  assert.match(publisher, /if \(previousRequest\.result\)[\s\S]*?reply\(frame, requestId, previousRequest\.result\.ok/);
+  assert.match(publisher, /publicationRequests\.set\(requestKey, \{ result: null \}\)/,
+    "The request must be marked in-flight before any asynchronous operation.");
+  assert.match(publisher, /rememberPublicationResult\(requestKey, \{ ok: true, message: successMessage \}\)/,
+    "Successful outcomes must be cached so retries replay the same result.");
+});
