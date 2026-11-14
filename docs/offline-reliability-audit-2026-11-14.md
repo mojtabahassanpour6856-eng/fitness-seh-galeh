@@ -503,3 +503,19 @@ The corrected two-session test uses independent PostgreSQL connections, the same
 The GitHub Actions run for commit `3ca40d80b6f7dd4b5c3f8d16878a6265965c86a7` completed the SQL test step successfully on PostgreSQL 17.12. This now verifies the prototype's row-lock race behavior in a real two-session database test, in addition to retry, payload mismatch, authorization, private-ledger ACL, and rollback tests. Earlier intermediate commits in this branch had expected test failures while the harness was being corrected; the latest run is the relevant result.
 
 Still not covered: production schema/RLS parity, membership activation rule, membership/card allocation, receipt upload staging, offline outbox/account switching, and app-client migration. This is a green isolated prototype test, not approval to deploy its SQL to Supabase.
+
+
+### Production membership-history aggregate confirms activation ambiguity
+
+A further aggregate-only production query returned no trainee IDs or personal fields:
+- 11 membership rows belong to 8 trainees.
+- 3 trainees have multiple membership rows; all 3 also have multiple rows whose current status is `active`.
+- Every inspected membership row currently has `status='active'` and `payment_status='paid'`.
+- Receipt review rows: 1 approved, 5 pending.
+- All 12 current payment rows have positive amounts.
+
+This confirms that updating every membership row for a trainee during receipt approval is not a safe default: multiple active historical rows exist for some trainees, and the current data does not reveal which row a new receipt is intended to settle. The prototype therefore continues to update only the receipt and create the corresponding payment; membership activation is intentionally excluded until the UI/business model identifies a specific membership or the schema provides an unambiguous relationship. No personal identifiers or individual financial amounts were retrieved in this aggregate check.
+
+### Prototype hardening
+
+The receipt fixture now uses SHA-256 (via PostgreSQL `pgcrypto`) for canonical JSONB request fingerprints instead of MD5, and explicitly rejects a NULL decision so it cannot fall through to the rejection branch. CI for these latest hardening edits is still running at the time of this note; do not treat these newest edits as green until their run completes.
