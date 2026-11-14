@@ -26,6 +26,7 @@ permissions:
 
 jobs:
   coach-membership-payment-rpc:
+    if: github.event_name != 'pull_request' || github.head_ref == 'prototype/coach-membership-payment-rpc-20261114'
     runs-on: ubuntu-latest
     services:
       postgres:
