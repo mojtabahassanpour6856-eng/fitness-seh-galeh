@@ -4,12 +4,12 @@ import fs from 'node:fs';
 const html = fs.readFileSync('index.html', 'utf8');
 const byteLength = value => Buffer.byteLength(value, 'utf8');
 const htmlBytes = byteLength(html);
-const scripts = [...html.matchAll(/<script\\b([^>]*)>([\\s\\S]*?)<\\/script\\s*>/gi)];
+const scripts = [...html.matchAll(/<script\b([^>]*)>([\s\S]*?)<\/script\s*>/gi)];
 const inlineScripts = scripts
-  .filter(([, attributes, body]) => !/\\bsrc\\s*=/.test(attributes) && body.trim())
+  .filter(([, attributes, body]) => !/\bsrc\s*=/.test(attributes) && body.trim())
   .map(([, attributes, body], index) => ({
     index,
-    id: (attributes.match(/\\bid=["']([^"']+)["']/i) || [])[1] || null,
+    id: (attributes.match(/\bid=["']([^"']+)["']/i) || [])[1] || null,
     bytes: byteLength(body)
   }));
 const inlineBytes = inlineScripts.reduce((sum, script) => sum + script.bytes, 0);
