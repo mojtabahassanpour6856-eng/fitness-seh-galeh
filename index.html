@@ -14604,7 +14604,7 @@ window.sehResetTurnstile=function(){};
       if(clientsLoadInFlight)return clientsLoadInFlight;
       clientsLoadInFlight=Promise.resolve().then(()=>originalLoadClients.apply(this,arguments))
         .then(result=>{window.__sehCoachListLoadAttempted=true;return result;})
-        .catch(error=>{window.__sehCoachListLoadAttempted=true;throw error;})
+        
         .finally(()=>{clientsLoadInFlight=null;});
       return clientsLoadInFlight;
     };
