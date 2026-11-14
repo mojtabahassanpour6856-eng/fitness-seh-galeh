@@ -665,8 +665,20 @@ Waist-Hip Ratio (WHO),0.889
     window.authProfile = { role: "coach" };
     window.currentClient = { id: "trainee-fatemeh-fixture" };
   });
+  await integrationPage.evaluate(() => {
+    window.__publicationModuleLoaded = false;
+    const watch = new MutationObserver(() => {
+      const script = document.querySelector('script[data-top-genesis-publication-loader]');
+      if (script) {
+        script.addEventListener("load", () => { window.__publicationModuleLoaded = true; }, { once: true });
+        watch.disconnect();
+      }
+    });
+    watch.observe(document.head, { childList: true, subtree: true });
+  });
   await integrationPage.addScriptTag({ path: path.join(root, "top-genesis-pdf-app-embed.js") });
   await integrationPage.waitForSelector("#topGenesisPdfAnalyzerPanel");
+  await integrationPage.waitForFunction(() => window.__publicationModuleLoaded === true, null, { timeout: 10000 });
   await integrationPage.waitForFunction(() => {
     const frame = document.querySelector("#topGenesisPdfAnalyzerFrame");
     return frame?.contentDocument?.documentElement?.dataset.topGenesisTraineeId === "trainee-fatemeh-fixture";
@@ -744,8 +756,9 @@ Waist-Hip Ratio (WHO),0.889
       }
     };
   });
-  await integrationPage.addScriptTag({ path: path.join(root, "top-genesis-publication.js") });
-  await integrationPage.waitForTimeout(100);
+  // The embed module loads the publication handler itself; do not inject a
+  // second copy, or the same approved message would be processed twice.
+  await integrationPage.waitForTimeout(50);
   const analyzerFrame = integrationPage.frames().filter(frame =>
     frame.url().includes("top-genesis-pdf-test.html?embedded=1")).at(-1);
   assert.ok(analyzerFrame, "The embedded analyzer frame must be available for the publication test.");
