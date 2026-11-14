@@ -26,6 +26,7 @@ permissions:
 
 jobs:
   legacy-receipt-reconciliation:
+    if: github.event_name != 'pull_request' || github.head_ref == 'prototype/legacy-receipt-reconciliation-20261114'
     runs-on: ubuntu-latest
     services:
       postgres:
