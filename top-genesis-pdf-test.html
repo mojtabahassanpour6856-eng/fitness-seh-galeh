@@ -83,6 +83,9 @@ window.addEventListener("message",event=>{
  coachContextReady=true;
  if(typeof updateApprovalState==="function")updateApprovalState();
 });
+if(embeddedMode&&window.parent!==window){
+ window.parent.postMessage({type:"top-genesis-context-request"} ,window.location.origin);
+}
 const analysisDateInput=document.getElementById("analysisDate");
 const analysisDateDisplay=document.getElementById("analysisDateDisplay");
 const jalaliPicker=document.getElementById("analysisJalaliPicker");
