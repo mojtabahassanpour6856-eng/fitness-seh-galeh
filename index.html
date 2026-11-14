@@ -7923,6 +7923,8 @@ const oldWorkoutRenderer=window.renderWorkoutList;
    });
    if(error)throw error;
    if(!data?.success||String(data.membership_id)!==membershipId||data.review_status!=="pending"||data.payment_created===true)throw new Error("پاسخ قطعی تطبیق دریافت نشد؛ شناسه عملیات حفظ شده و می‌توانید با همان اطلاعات دوباره تلاش کنید.");
+   const verified=await sbGet("/trainee_payment_receipts?id=eq."+encodeURIComponent(id)+"&trainee_id=eq."+encodeURIComponent(traineeId)+"&select=id,membership_id,review_status&limit=1");
+   if(!verified?.[0]||String(verified[0].membership_id)!==membershipId||verified[0].review_status!=="pending")throw new Error("اتصال نهایی در پرونده تأیید نشد؛ شناسه عملیات حفظ شده است.");
    if(currentClient&&String(currentClient.id)===traineeId){
     await loadCoachReceipts();
     if(typeof loadMembershipHistory==="function")await loadMembershipHistory();
