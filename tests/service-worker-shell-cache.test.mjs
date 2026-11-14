@@ -15,6 +15,7 @@ const listeners = {};
 const stores = new Map();
 const requests = [];
 let offline = false;
+let forcedStatus = null;
 let skipWaitingCalls = 0;
 let claimCalls = 0;
 
@@ -49,7 +50,7 @@ async function mockFetch(input, init = {}) {
   requests.push({ url, cache: init.cache || null });
   if (offline) throw new TypeError('simulated offline network');
   return new Response('network:' + new URL(url).pathname, {
-    status: 200,
+    status: forcedStatus || 200,
     headers: { 'content-type': url.endsWith('.html') ? 'text/html' : 'application/octet-stream' }
   });
 }
@@ -136,4 +137,15 @@ listeners.fetch({
 });
 assert.equal(postIntercepted, false, 'write requests are never intercepted');
 
-console.log('PASS: static app shell is cached; offline navigation and assets recover; Supabase/API and writes bypass the cache; push handlers remain registered.');
+offline = false;
+forcedStatus = 503;
+let degradedNavigationResponse;
+listeners.fetch({
+  request: { method: 'GET', mode: 'navigate', url: scope },
+  respondWith(promise) { degradedNavigationResponse = promise; }
+});
+const degradedNavigation = await degradedNavigationResponse;
+assert.match(await degradedNavigation.text(), /network:\/fitness-seh-galeh\/index\.html/,
+  'a server-side 5xx uses the cached shell instead of a blank error page');
+
+console.log('PASS: static app shell is cached; offline navigation, 5xx fallback and assets recover; Supabase/API and writes bypass the cache; push handlers remain registered.');
