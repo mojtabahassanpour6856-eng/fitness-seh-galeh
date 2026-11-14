@@ -94,6 +94,7 @@ declare
   v_result jsonb;
   v_rows integer;
   v_card text;
+  v_history_card text;
   v_candidate text;
   v_membership_id bigint;
   v_payment_id bigint;
@@ -151,6 +152,36 @@ begin
   select card_number into v_card
   from public.trainee_membership_cards
   where trainee_id=p_trainee_id;
+
+  select card_number into v_history_card
+  from public.trainee_memberships
+  where trainee_id=p_trainee_id and card_number is not null
+  order by created_at desc nulls last,id desc
+  limit 1;
+
+  if v_card is not null and v_history_card is not null
+     and v_card is distinct from v_history_card then
+    raise exception 'Membership card history conflicts with canonical registry; manual reconciliation required'
+      using errcode='23514';
+  end if;
+
+  -- Preserve a legacy card stored on membership history if the canonical
+  -- registry is absent. Never silently replace a conflicting historical number.
+  if v_card is null and v_history_card is not null then
+    insert into public.trainee_membership_cards(trainee_id,card_number)
+    values(p_trainee_id,v_history_card)
+    on conflict do nothing
+    returning card_number into v_card;
+    if v_card is null then
+      select card_number into v_card
+      from public.trainee_membership_cards
+      where trainee_id=p_trainee_id;
+      if v_card is null or v_card is distinct from v_history_card then
+        raise exception 'Historical membership card number is already assigned elsewhere; manual reconciliation required'
+          using errcode='23514';
+      end if;
+    end if;
+  end if;
 
   if v_card is null then
     for v_attempt in 1..500 loop
