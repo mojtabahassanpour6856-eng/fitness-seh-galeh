@@ -4044,6 +4044,7 @@ const plans=workoutResult.data||[], nutrition=nutritionResult.data||[];
     if(endRaw&&!end)return alert('تاریخ پایان عضویت معتبر نیست؛ نمونه ۱۴۰۵/۰۸/۱۸.');
     if(end&&end<start)return alert('تاریخ پایان عضویت نباید قبل از تاریخ شروع باشد.');
     if(paid==='پرداخت شده'&&amount<=0)return alert('برای ثبت شهریه پرداخت‌شده، مبلغ را وارد کنید.');
+    if(window.SEH_RECEIPT_MEMBERSHIP_LINK_ENABLED===true&&paid==='پرداخت شده'&&amount>0)return alert('ثبت مستقیم عضویتِ پرداخت‌شده تا آماده‌شدن RPC اتمیک مخصوص این مسیر موقتاً متوقف است؛ هیچ عضویت یا پرداختی ثبت نشد.');
     const traineeId=currentClient.id;
     try{
       await window.ensureMembershipCardNumber(traineeId);
