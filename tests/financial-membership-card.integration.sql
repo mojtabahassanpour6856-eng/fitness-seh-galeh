@@ -9,8 +9,8 @@ declare v_first jsonb; v_retry jsonb; v_card text; v_count integer;
 begin
   v_first := public.create_membership_atomic(
     '31000000-0000-0000-0000-000000000001','2026-11-14','2026-12-14',
-    'Synthetic monthly membership',200000,'paid','Synthetic trainee',
-    '51000000-0000-0000-0000-000000000001');
+    'عضویت باشگاه',200000,'paid','Synthetic trainee',
+    '51000000-0000-0000-0000-000000000001','2026-11-14');
   v_retry := public.create_membership_atomic(
     '31000000-0000-0000-0000-000000000001','2026-11-14','2026-12-14',
     'Synthetic monthly membership',200000,'paid','Synthetic trainee',
@@ -22,6 +22,11 @@ begin
   select count(*) into v_count from public.trainee_payments
    where trainee_id='31000000-0000-0000-0000-000000000001';
   if v_count<>1 then raise exception 'retry created % payments, expected one',v_count; end if;
+  if not exists(select 1 from public.trainee_payments
+    where trainee_id='31000000-0000-0000-0000-000000000001'
+      and payment_date='2026-11-14' and description='پرداخت عضویت') then
+    raise exception 'payment date/description do not match the live coach handler contract';
+  end if;
   select card_number into v_card from public.trainee_membership_cards
    where trainee_id='31000000-0000-0000-0000-000000000001';
   if v_card is distinct from v_first->>'card_number' then raise exception 'registry and result card mismatch'; end if;
@@ -38,6 +43,12 @@ begin
   select count(*) into v_count from public.trainee_payments
    where trainee_id='31000000-0000-0000-0000-000000000001';
   if v_count<>1 then raise exception 'unpaid membership unexpectedly created payment'; end if;
+  if not exists(select 1 from public.trainee_memberships
+    where trainee_id='31000000-0000-0000-0000-000000000001'
+      and description='Synthetic next membership'
+      and status='pending' and payment_status='unpaid') then
+    raise exception 'unpaid membership must remain pending, matching the live coach handler';
+  end if;
 
   -- Same operation ID with changed payload is rejected.
   begin
@@ -58,6 +69,29 @@ begin
     raise exception 'expected invalid date range to fail';
   exception when sqlstate '22023' then null;
   end;
+end;
+$test$;
+
+-- The live UI marks a zero-amount membership as paid/active but creates no payment row.
+set role authenticated;
+select set_config('request.jwt.claim.sub','11000000-0000-0000-0000-000000000001',false);
+select public.create_membership_atomic(
+  '31000000-0000-0000-0000-000000000002','2026-11-14','2026-12-14',
+  'عضویت باشگاه',0,'paid','Synthetic trainee',
+  '51000000-0000-0000-0000-000000000010','2026-11-14');
+reset role;
+do $test$
+declare v_count integer;
+begin
+  if not exists(select 1 from public.trainee_memberships
+    where trainee_id='31000000-0000-0000-0000-000000000002'
+      and status='active' and payment_status='paid' and amount=0) then
+    raise exception 'zero-amount paid membership must remain active/paid';
+  end if;
+  select count(*) into v_count from public.trainee_payments
+   where trainee_id='31000000-0000-0000-0000-000000000002';
+  if v_count<>0 then raise exception 'zero-amount paid membership must not create a payment';
+  end if;
 end;
 $test$;
 
