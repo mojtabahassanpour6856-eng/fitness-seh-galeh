@@ -34,7 +34,7 @@ const window={
 };
 window.addEventListener=(name,fn)=>{(windowListeners[name]??=[]).push(fn);};
 const context={window,document,console:{warn(){}},setTimeout:(fn,delay)=>{timers.push({fn,delay});return timers.length;},clearTimeout:()=>{},Promise};
-const coordinator=html.match(/<script id="seh-auth-session-singleflight-v1">([\\s\\S]*?)<\\/script>/);
+const coordinator=html.match(/<script id="seh-auth-session-singleflight-v1">([\s\S]*?)<\/script>/);
 assert.ok(coordinator,'shared session coordinator must exist');
 vm.runInNewContext(coordinator[1],context);
 vm.runInNewContext(match[1],context);
