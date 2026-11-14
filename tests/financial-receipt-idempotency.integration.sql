@@ -89,6 +89,32 @@ begin
 end;
 $$;
 
+-- The membership association is part of the operation's immutable payload.
+-- If it changes after approval, replaying the old operation ID must be rejected.
+insert into public.trainee_payment_receipts(id,trainee_id,membership_id,submitted_by,receipt_path,amount,payment_date) values
+ ('40000000-0000-0000-0000-000000000007','30000000-0000-0000-0000-000000000001',1,'20000000-0000-0000-0000-000000000001','synthetic/receipt-membership-hash.jpg',33333,'2026-11-14');
+select public.review_receipt_idempotent(
+ '40000000-0000-0000-0000-000000000007','approved',
+ '50000000-0000-0000-0000-000000000011','2026-11-14');
+update public.trainee_payment_receipts
+   set membership_id=2
+ where id='40000000-0000-0000-0000-000000000007';
+do $membership_hash$
+begin
+  begin
+    perform public.review_receipt_idempotent(
+      '40000000-0000-0000-0000-000000000007','approved',
+      '50000000-0000-0000-0000-000000000011','2026-11-14'
+    );
+    raise exception 'expected membership association change to invalidate operation replay';
+  exception when sqlstate '22023' then null;
+  end;
+end;
+$membership_hash$;
+update public.trainee_payment_receipts
+   set membership_id=1
+ where id='40000000-0000-0000-0000-000000000007';
+
 -- A receipt without its own payment date must use the browser-local fallback
 -- supplied by the caller, not the database server's current_date.
 insert into public.trainee_payment_receipts(id,trainee_id,membership_id,submitted_by,receipt_path,amount,payment_date) values
