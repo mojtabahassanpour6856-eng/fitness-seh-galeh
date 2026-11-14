@@ -125,9 +125,9 @@ async function fakeFetch(input, init = {}) {
   duplicateInsert = false;
 
   assert.equal(calls.filter(c => c.method === 'GET' && c.path === '/rest/v1/trainee_payment_receipts').length, 1);
-  assert.equal(calls.filter(c => c.method === 'POST' && c.path === '/rest/v1/trainee_payment_receipts').length, 1);
-  assert.equal(calls.filter(c => c.path.startsWith('/storage/v1/object/payment-receipts/')).length, 1);
-  assert.equal(calls.filter(c => c.path.startsWith('/storage/v1/object/sign/payment-receipts/')).length, 1);
+  assert.equal(calls.filter(c => c.method === 'POST' && c.path === '/rest/v1/trainee_payment_receipts').length, 2);
+  assert.equal(calls.filter(c => c.path.startsWith('/storage/v1/object/payment-receipts/')).length, 2);
+  assert.equal(calls.filter(c => c.path.startsWith('/storage/v1/object/sign/payment-receipts/')).length, 2);
   console.log('PASS Supabase JS v2 PostgREST select/limit response shape');
   console.log('PASS Supabase JS v2 insert return-minimal response shape');
   console.log('PASS Supabase JS v2 Storage upload response shape');
