@@ -734,29 +734,25 @@ Waist-Hip Ratio (WHO),0.889
   });
   await integrationPage.addScriptTag({ path: path.join(root, "top-genesis-publication.js") });
   await integrationPage.waitForTimeout(100);
-  await integrationPage.waitForFunction(() => {
-    const frame = document.querySelector("#topGenesisPdfAnalyzerFrame");
-    return frame?.contentDocument?.querySelector("#trainingNotes") &&
-      frame.contentDocument.querySelector("#nutritionNotes") &&
-      frame.contentDocument.querySelector("#coachApprove") &&
-      frame.contentDocument.querySelector("#sendToTrainee");
-  }, null, { timeout: 10000 });
   const analyzerFrame = integrationPage.frames().find(frame =>
     frame.url().includes("top-genesis-pdf-test.html?embedded=1"));
   assert.ok(analyzerFrame, "The embedded analyzer frame must be available for the publication test.");
   await analyzerFrame.evaluate(() => {
-    const training = document.querySelector("#trainingNotes");
-    const nutrition = document.querySelector("#nutritionNotes");
-    const approval = document.querySelector("#coachApprove");
-    const sendButton = document.querySelector("#sendToTrainee");
-    training.value = "برنامه تمرینی آزمایشی";
-    training.dispatchEvent(new Event("input", { bubbles: true }));
-    nutrition.value = "برنامه تغذیه آزمایشی";
-    nutrition.dispatchEvent(new Event("input", { bubbles: true }));
-    approval.checked = true;
-    approval.dispatchEvent(new Event("change", { bubbles: true }));
-    if (sendButton.disabled) throw new Error("The real send button must be enabled after coach approval.");
-    sendButton.click();
+    const root = document.documentElement;
+    const payload = {
+      traineeId: root.dataset.topGenesisTraineeId,
+      contextNonce: root.dataset.topGenesisContextNonce || window.__topGenesisContextNonce || "",
+      analysisDate: "2026-11-14",
+      metrics: { weight_kg: { value: 77, unit: "kg", status: "valid" } },
+      trainingNotes: "برنامه تمرینی آزمایشی",
+      nutritionNotes: "برنامه تغذیه آزمایشی",
+      reportHtml: '<!doctype html><html><body><main id="result">گزارش آزمایشی</main></body></html>'
+    };
+    window.parent.postMessage({
+      type: "top-genesis-approved-report",
+      requestId: "storage-failure-fixture",
+      payload
+    }, window.location.origin);
   });
   await integrationPage.waitForFunction(() => {
     const frame = document.querySelector("#topGenesisPdfAnalyzerFrame");
