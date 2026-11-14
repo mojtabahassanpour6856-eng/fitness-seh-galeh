@@ -169,7 +169,7 @@ select dblink_exec('receipt_race_b','set request.jwt.claim.sub = ''10000000-0000
 select dblink_exec('receipt_race_a','begin');
 
 do $$
-declare v_result text;
+declare v_result text; v_second_error text;
 begin
   if dblink_send_query('receipt_race_a',
     $query$select public.review_receipt_idempotent(
@@ -178,6 +178,8 @@ begin
     )::text$query$) <> 1 then
     raise exception 'could not start first concurrent approval';
   end if;
+  perform * from dblink_get_result('receipt_race_a') as t(result text);
+  -- Drain the async connection's final empty result before issuing COMMIT.
   perform * from dblink_get_result('receipt_race_a') as t(result text);
 
   if dblink_send_query('receipt_race_b',
@@ -195,9 +197,14 @@ begin
   begin
     perform * from dblink_get_result('receipt_race_b') as t(result text);
     raise exception 'second concurrent approval unexpectedly succeeded';
-  exception when sqlstate '55000' then
-    null;
+  exception when others then
+    get stacked diagnostics v_second_error = message_text;
+    if position('Receipt is already in a terminal state' in v_second_error) = 0 then
+      raise exception 'second concurrent approval failed for an unexpected reason: %',v_second_error;
+    end if;
   end;
+  -- Clear the second connection's completed async result before disconnecting.
+  perform * from dblink_get_result('receipt_race_b') as t(result text);
 end;
 $$;
 
