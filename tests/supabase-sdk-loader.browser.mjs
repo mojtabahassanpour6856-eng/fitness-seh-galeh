@@ -30,8 +30,26 @@ async function testEngine(name, browserType, base) {
     good.on("response", response => {
       if (response.url().includes("/vendor/supabase-2.119.0.js")) sdkResponses.push(response.status());
     });
+    // Hold the local SDK request open to prove the parser-blocking script
+    // prevents application/client initialization until the SDK has arrived.
+    let releaseSdk;
+    const sdkGate = new Promise(resolve => { releaseSdk = resolve; });
+    const sdkRequest = good.waitForRequest(request =>
+      request.url().includes("/vendor/supabase-2.119.0.js")
+    );
+    await good.route("**/vendor/supabase-2.119.0.js", route =>
+      sdkGate.then(() => route.continue())
+    );
     await good.route("https://**/*", route => route.abort());
-    await good.goto(base + "/index.html", { waitUntil: "domcontentloaded" });
+    await good.goto(base + "/index.html", { waitUntil: "commit" });
+    await sdkRequest;
+    const beforeSdk = await good.evaluate(() => ({
+      clientCreated: !!window.AUTH_SUPABASE,
+      ready: window.__sehSupabaseSdkReady === true
+    }));
+    assert.equal(beforeSdk.clientCreated, false, name + ": app must not initialize before SDK response");
+    assert.equal(beforeSdk.ready, false, name + ": SDK must remain unready while response is held");
+    releaseSdk();
     await good.waitForFunction(() =>
       window.__sehSupabaseSdkReady === true &&
       window.AUTH_SUPABASE &&
