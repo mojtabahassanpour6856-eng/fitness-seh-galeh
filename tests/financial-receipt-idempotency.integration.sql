@@ -192,6 +192,9 @@ begin
 
   -- Give session B time to reach and wait on the receipt row lock.
   perform pg_sleep(0.3);
+  if dblink_is_busy('receipt_race_b') <> 1 then
+    raise exception 'second session did not remain blocked on the receipt row lock';
+  end if;
   perform dblink_exec('receipt_race_a','commit');
 
   begin
