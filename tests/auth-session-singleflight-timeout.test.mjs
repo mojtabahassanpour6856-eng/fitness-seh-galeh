@@ -48,4 +48,19 @@ assert.equal(cached,resultA,'a very short successful-session cache prevents stag
 assert.equal(calls,2,'the cached startup result avoids an extra request');
 
 if(releaseHung)releaseHung({data:{session:null},error:null});
+
+const sessionReadMatches=[...html.matchAll(/\\.auth\\.getSession\\s*\\(/g)];
+assert.equal(sessionReadMatches.length,5,
+  'only the coordinator implementation and four post-setSession verification reads may call auth.getSession directly');
+const coordinatorCall=sessionReadMatches.findIndex(match=>match.index>=start&&match.index<end);
+assert.notEqual(coordinatorCall,-1,'the coordinator must own the shared direct session read');
+const apiHeadersStart=html.indexOf('async function sbApiHeaders');
+const apiHeadersEnd=html.indexOf('async function sbGet',apiHeadersStart);
+assert.ok(apiHeadersStart>=0&&apiHeadersEnd>apiHeadersStart,'shared REST API header helper must exist');
+const apiHeaders=html.slice(apiHeadersStart,apiHeadersEnd);
+assert.match(apiHeaders,/__sehGetSessionSingleFlight/,
+  'REST API authorization headers must use the shared session coordinator');
+assert.doesNotMatch(apiHeaders,/\\.auth\\.getSession\\s*\\(/,
+  'REST API header construction must not bypass session deduplication');
+
 console.log('PASS: session coordinator deduplicates concurrent and staggered startup reads, times out stalled waits, and permits retry without clearing auth storage.');
