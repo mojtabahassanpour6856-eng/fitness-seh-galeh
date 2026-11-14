@@ -6,8 +6,7 @@ const html=fs.readFileSync('index.html','utf8');
 const SAFE_KEY='seh.offline-safe-shell.v1';
 
 function scriptById(id){
-  const escaped=id.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
-  const match=html.match(new RegExp('<script[^>]*id="'+escaped+'"[^>]*>([\\s\\S]*?)<\\/script>'));
+  const match=html.match(new RegExp('<script[^>]*id="'+id+'"[^>]*>([\\s\\S]*?)<\\/script>'));
   assert.ok(match,'production script must exist: '+id);
   return match[1];
 }
