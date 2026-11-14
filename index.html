@@ -1904,7 +1904,7 @@ async function sbApiHeaders(extra={}){
  const headers={"apikey":SUPABASE_KEY,"Content-Type":"application/json",...extra};
  try{
    const client=window.AUTH_SUPABASE;
-   const result=client?.auth?.getSession?await client.auth.getSession():null;
+   const result=client?.auth?.getSession?await window.__sehGetSessionSingleFlight():null;
    const token=result?.data?.session?.access_token;
    headers.Authorization="Bearer "+(token||SUPABASE_KEY);
  }catch(e){headers.Authorization="Bearer "+SUPABASE_KEY;}
@@ -4138,7 +4138,7 @@ const plans=workoutResult.data||[], nutrition=nutritionResult.data||[];
   // استفاده از درخواست احراز هویت‌شدهٔ خود اپ؛ کلید عمومی به‌تنهایی ممکن است با سیاست‌های RLS رد شود.
   const authClient=window.AUTH_SUPABASE;
   if(!authClient||!authClient.auth)throw new Error('اتصال ورود مربی آماده نیست؛ صفحه را تازه‌سازی و دوباره وارد حساب مربی شوید.');
-  const sessionResult=await authClient.auth.getSession();
+  const sessionResult=await window.__sehGetSessionSingleFlight();
   if(sessionResult.error)throw sessionResult.error;
   const coachId=sessionResult.data&&sessionResult.data.session&&sessionResult.data.session.user&&sessionResult.data.session.user.id;
   if(!coachId)throw new Error('نشست مربی پیدا نشد؛ یک‌بار خارج شوید و دوباره وارد شوید.');
@@ -4174,7 +4174,7 @@ window.deleteLibraryExercise=async function(id,name){
  try{
   const client=window.AUTH_SUPABASE;
   if(!client||!client.auth)throw new Error('اتصال امن مربی آماده نیست؛ صفحه را تازه‌سازی کنید و دوباره وارد شوید.');
-  const sessionResult=await client.auth.getSession();
+  const sessionResult=await window.__sehGetSessionSingleFlight();
   if(sessionResult.error)throw sessionResult.error;
   const session=sessionResult.data&&sessionResult.data.session;
   const coachId=session&&session.user&&session.user.id;
@@ -8269,7 +8269,7 @@ const oldWorkoutRenderer=window.renderWorkoutList;
   try{
    const authClient=window.AUTH_SUPABASE;
    if(!authClient||!authClient.auth)throw new Error('اتصال ورود مربی آماده نیست؛ صفحه را تازه‌سازی و دوباره وارد حساب مربی شوید.');
-   const sessionResult=await authClient.auth.getSession();
+   const sessionResult=await window.__sehGetSessionSingleFlight();
    if(sessionResult.error)throw sessionResult.error;
    const session=sessionResult.data&&sessionResult.data.session;
    const coachId=session&&session.user&&session.user.id;
@@ -8452,7 +8452,7 @@ const oldWorkoutRenderer=window.renderWorkoutList;
       alert('اتصال پایگاه داده آماده نیست. از حساب مربی خارج شوید، دوباره وارد شوید و صفحه را تازه کنید.');return;
     }
     try{
-      var sr=await client.auth.getSession();
+      var sr=await window.__sehGetSessionSingleFlight();
       if(sr.error)throw sr.error;
       var session=sr.data&&sr.data.session;
       var coachId=session&&session.user&&session.user.id;
