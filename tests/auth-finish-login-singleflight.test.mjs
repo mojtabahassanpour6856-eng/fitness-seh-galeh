@@ -33,5 +33,5 @@ await assert.rejects(failing.window.finishLogin({id:'retry'}),/retry me/);
 await assert.rejects(failing.window.finishLogin({id:'retry'}),/retry me/);
 
 assert.match(html,/function showAuthError\(msg\)\s*\{[\s\S]*?sehStartupStatus/,'post-login errors must be surfaced inside the authenticated dashboard, not hidden on the login screen');
-assert.match(html,/ورود انجام شده، اما بارگذاری یکی از بخش‌های تکمیلی کامل نشد/,'optional post-login wrapper failures must be visible and must not discard the session');
+assert.match(html,/ورود انجام شده، اما بارگذاری یکی از بخش‌ها کامل نشد/,'optional post-login wrapper failures must be visible and must not discard the session');
 console.log('PASS: single-flight, cross-account race protection, post-login optional failure isolation, core failure visibility, retry release.');
