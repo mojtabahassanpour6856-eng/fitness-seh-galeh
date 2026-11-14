@@ -669,18 +669,18 @@ Waist-Hip Ratio (WHO),0.889
   await integrationPage.waitForSelector("#topGenesisPdfAnalyzerPanel");
   await integrationPage.waitForFunction(() => {
     const frame = document.querySelector("#topGenesisPdfAnalyzerFrame");
-    return frame?.contentWindow?.coachContext?.traineeId === "trainee-fatemeh-fixture";
+    return frame?.contentDocument?.documentElement?.dataset.topGenesisTraineeId === "trainee-fatemeh-fixture";
   }, null, { timeout: 10000 });
   const firstNonce = await integrationPage.locator("#topGenesisPdfAnalyzerFrame").getAttribute("data-context-nonce");
   await integrationPage.evaluate(() => { window.currentClient = { id: "trainee-javad-fixture" }; });
   await integrationPage.waitForFunction(() => {
     const frame = document.querySelector("#topGenesisPdfAnalyzerFrame");
     return frame?.dataset.boundTraineeId === "trainee-javad-fixture" &&
-      frame.contentWindow?.coachContext?.traineeId === "trainee-javad-fixture";
+      frame.contentDocument?.documentElement?.dataset.topGenesisTraineeId === "trainee-javad-fixture";
   }, null, { timeout: 10000 });
   const switchedNonce = await integrationPage.locator("#topGenesisPdfAnalyzerFrame").getAttribute("data-context-nonce");
   assert.notEqual(switchedNonce, firstNonce, "Each trainee preview must receive a fresh context nonce.");
-  assert.equal(await integrationPage.locator("#topGenesisPdfAnalyzerFrame").evaluate(el => el.contentWindow.coachContext.traineeId),
+  assert.equal(await integrationPage.locator("#topGenesisPdfAnalyzerFrame").evaluate(el => el.contentDocument.documentElement.dataset.topGenesisTraineeId),
     "trainee-javad-fixture", "The new preview must be bound to the newly selected trainee.");
   assert.equal(await integrationPage.locator("#topGenesisArchivePanel").count(), 0,
     "The standalone analyzer test must not load or require the legacy archive.");
