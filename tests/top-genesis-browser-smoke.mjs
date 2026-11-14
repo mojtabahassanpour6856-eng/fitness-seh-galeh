@@ -740,7 +740,7 @@ Waist-Hip Ratio (WHO),0.889
   await analyzerFrame.evaluate(() => {
     const training = document.querySelector("#trainingNotes");
     const nutrition = document.querySelector("#nutritionNotes");
-    const approval = document.querySelector("#coachApproval");
+    const approval = document.querySelector("#coachApprove");
     const sendButton = document.querySelector("#sendToTrainee");
     training.value = "برنامه تمرینی آزمایشی";
     training.dispatchEvent(new Event("input", { bubbles: true }));
