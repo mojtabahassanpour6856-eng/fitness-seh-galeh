@@ -160,7 +160,7 @@ $$;
 
 reset role;
 
-do $$
+do $audit$
 declare
   v_count integer;
 begin
@@ -200,6 +200,6 @@ begin
     raise exception 'authenticated can directly read the private audit table';
   end if;
 end;
-$$;
+$audit$;
 
 select 'PASS: audited manual receipt mapping, same-trainee validation, explicit confirmation, idempotent retry, no payment/status mutation, cross-coach denial, and private-table permissions.' as result;
