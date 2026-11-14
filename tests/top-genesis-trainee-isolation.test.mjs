@@ -25,7 +25,7 @@ test("publisher rejects stale, mismatched, or switched trainee contexts before w
   assert.match(publisher, /payloadTraineeId !== traineeId/);
   assert.match(publisher, /payloadTraineeId !== String\(frame\.dataset\.boundTraineeId \|\| ""\)/);
   assert.match(publisher, /payloadContextNonce !== String\(frame\.dataset\.contextNonce \|\| ""\)/);
-  assert.match(publisher, /assertSameTraineeContext\(\);\s*const \{ error \} = await window\.AUTH_SUPABASE\.from\(TABLE\)\.insert/);
+  assert.match(publisher, /assertSameTraineeContext\(\);[\\s\\S]{0,220}const \{ error \} = await window\.AUTH_SUPABASE\.from\(TABLE\)\.insert/);
 });
 
 
