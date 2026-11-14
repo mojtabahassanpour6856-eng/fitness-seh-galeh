@@ -374,3 +374,32 @@ Do not write or apply a financial RPC migration to this test project yet. The sa
 Before any DDL is applied, review the exact schema and authorization design. Prefer keeping the operation ledger in a non-exposed schema, with narrowly scoped function access and explicit actor/coach/trainee checks. Supabase's current changelog states that new public-schema tables are no longer automatically exposed through the Data API (enforced across projects from 2026-10-30); any future API-facing table must be deliberately exposed and granted, while an internal ledger should not be exposed merely for convenience. The current database-functions guidance recommends SECURITY INVOKER by default; any SECURITY DEFINER endpoint needs a documented necessity, fixed search_path, explicit `auth.uid()` checks, restricted EXECUTE grants, and advisor review.
 
 No schema, migration, data, RLS policy, grant, Auth setting, Storage object, or application runtime code was changed during this follow-up. Only this audit document on the isolated Git branch is being extended.
+
+
+## Follow-up: production financial schema and card-number history — 2026-11-14
+
+### Exact production schema inventory
+
+A second read-only catalog pass captured the current production columns, constraints and indexes for `trainee_memberships`, `trainee_membership_cards`, `trainee_payments`, `trainee_payment_receipts`, `trainees`, and `profiles`.
+
+Key facts relevant to implementation:
+- `trainee_memberships` has a primary key, a non-unique index on `trainee_id`, and a foreign key to `trainees`. It intentionally permits membership history for one trainee. Its `payment_status` CHECK permits `paid`, `unpaid`, and `pending`. Its copied `card_number` column has no unique constraint.
+- `trainee_membership_cards` is a separate registry with UNIQUE constraints on both `card_number` and `trainee_id`. It also validates a four-digit number in the 1001–9999 range. This is an important correction to the earlier statement that no database card-number uniqueness was established: uniqueness **does exist in the registry table**, but not on the denormalized `trainee_memberships.card_number` copy. The client currently treats registry insertion failure as non-fatal, so a membership may still be saved even if registry allocation fails.
+- `trainee_payments` has only its primary key plus a trainee foreign key and non-unique trainee index. There is no operation/payment idempotency key or unique business constraint in the inspected schema.
+- `trainee_payment_receipts` has UUID primary key, a CHECK restricting `review_status` to `pending`, `approved`, or `rejected`, a trainee foreign key and a non-unique trainee index. It has no operation ID, no payment reference, and no uniqueness constraint tying one approved receipt to one payment.
+- `profiles.role` is a text column defaulting to `trainee`; authorization must continue to read the trusted database profile, not a client-provided role.
+- `trainees` contains both `auth_user_id` and `coach_user_id`; RPCs must validate the current authenticated actor against the appropriate active trainee/assigned coach relationship, not trust these identifiers from payload fields.
+
+### Aggregate-only history check for card numbers
+
+No card numbers or trainee identifiers were returned. Aggregate counts show:
+- `trainee_memberships`: 11 rows, 11 non-null card-number values, 8 distinct values.
+- `trainee_membership_cards`: 8 rows, 8 distinct card-number values.
+- The 3 repeated card-number values in membership history are all repeats for the **same trainee**; no card-number value is shared across different trainees in the inspected data.
+- `trainee_payments` has 12 rows and `trainee_payment_receipts` has 6 rows at the time of this read-only check.
+
+This means repeated membership card numbers are currently consistent with a trainee retaining the same card number across multiple membership-history rows. A UNIQUE constraint on `trainee_memberships.card_number` would therefore be incorrect and must not be added. The registry's UNIQUE(card_number) and UNIQUE(trainee_id) constraints are the correct current allocation guard. Future membership RPC logic should treat the registry as the canonical allocation record, serialize concurrent allocation, and keep the copied membership value consistent; it must not reject legitimate membership history.
+
+The aggregate check is only a point-in-time count. It does not prove every membership row is correctly synchronized with the registry, so a future cleanup must first compare membership-to-registry consistency without exposing personal data.
+
+No production records, schema, constraints, grants, policies, functions, settings, or application runtime code were changed. This section records read-only findings only.
