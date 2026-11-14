@@ -7681,7 +7681,7 @@ const oldWorkoutRenderer=window.renderWorkoutList;
    '</div>'+
    '<div class="receipt-item" style="margin:10px 0;border:1px solid #c8a34d;border-radius:12px;padding:12px"><b>🏦 اطلاعات کارت بانکی باشگاه</b><div style="margin-top:8px">نام صاحب کارت: <b>مجتبی حسن پور</b></div><div style="margin-top:6px;display:flex;align-items:center;gap:8px;flex-wrap:wrap"><span>شماره کارت:</span><b dir="ltr" style="font-size:17px;letter-spacing:1px">6037 7015 1854 8596</b><button type="button" class="secondary" onclick="copyClubBankCard()">📋 کپی شماره کارت</button></div></div>'+
    '<div id="traineeMembershipStatus" class="muted">در حال دریافت اطلاعات عضویت…</div>'+
-   '<div id="traineeReceiptUpload" class="receipt-item"><h3>📤 ارسال فیش واریزی</h3><p class="muted">فیش فقط برای مربی و حساب خودتان قابل مشاهده است. فرمت JPG، PNG، WEBP یا PDF تا ۵ مگابایت.</p><label>مبلغ پرداختی (تومان)</label><input id="receiptAmount" type="number" min="1" placeholder="مبلغ واریزی"><label>تاریخ واریز (شمسی)</label><input id="receiptDate" type="text" inputmode="numeric" placeholder="۱۴۰۵/۰۷/۱۸" autocomplete="off"><label>تصویر یا PDF فیش</label><input id="receiptFile" type="file" accept="image/jpeg,image/png,image/webp,application/pdf"><label>توضیح (اختیاری)</label><input id="receiptNote" placeholder="مثلاً شهریه مهر"><button id="submitPaymentReceiptBtn" type="button" onclick="submitPaymentReceipt()">📨 ارسال فیش برای مربی</button></div>'+
+   '<div id="traineeReceiptUpload" class="receipt-item"><h3>📤 ارسال فیش واریزی</h3><p class="muted">فیش فقط برای مربی و حساب خودتان قابل مشاهده است. فرمت JPG، PNG، WEBP یا PDF تا ۵ مگابایت.</p><div id="receiptMembershipPickerWrap" style="display:none"><label for="receiptMembershipId">این فیش مربوط به کدام عضویت است؟</label><select id="receiptMembershipId"><option value="">انتخاب عضویت</option></select><small class="muted">هر فیش فقط همان عضویت انتخاب‌شده را تسویه می‌کند.</small></div><label>مبلغ پرداختی (تومان)</label><input id="receiptAmount" type="number" min="1" placeholder="مبلغ واریزی"><label>تاریخ واریز (شمسی)</label><input id="receiptDate" type="text" inputmode="numeric" placeholder="۱۴۰۵/۰۷/۱۸" autocomplete="off"><label>تصویر یا PDF فیش</label><input id="receiptFile" type="file" accept="image/jpeg,image/png,image/webp,application/pdf"><label>توضیح (اختیاری)</label><input id="receiptNote" placeholder="مثلاً شهریه مهر"><button id="submitPaymentReceiptBtn" type="button" onclick="submitPaymentReceipt()">📨 ارسال فیش برای مربی</button></div>'+
    '<div id="traineeReceiptHistory"></div>';
   loadTraineeMembership();
  }
@@ -7701,6 +7701,8 @@ const oldWorkoutRenderer=window.renderWorkoutList;
    ]);
    if(!currentClient||String(currentClient.id)!==String(id))return;
    const m=members[0],profile=profileRows[0]||{},payment=paymentRows[0]||{};
+   const pickerWrap=$("receiptMembershipPickerWrap"),picker=$("receiptMembershipId");
+   if(pickerWrap&&picker&&window.SEH_RECEIPT_MEMBERSHIP_LINK_ENABLED===true){pickerWrap.style.display="block";picker.innerHTML='<option value="">انتخاب عضویت موردنظر</option>'+(members||[]).map(row=>'<option value="'+safe(row.id)+'">'+safe((fmtDate(row.start_date)||"بدون تاریخ شروع")+" تا "+(fmtDate(row.end_date)||"بدون تاریخ پایان")+" · "+(row.amount==null?"مبلغ نامشخص":Number(row.amount).toLocaleString("fa-IR")+" تومان"))+'</option>').join("");}
    const memberName=String(profile.full_name||currentClient.full_name||currentClient.name||"شاگرد باشگاه");
    const gender=String(profile.gender||currentClient.gender||"").trim();
    const title=gender==="زن"||gender.toLowerCase()==="female"?"خانم":gender==="مرد"||gender.toLowerCase()==="male"?"آقا":"عضو باشگاه";
@@ -7764,6 +7766,8 @@ const oldWorkoutRenderer=window.renderWorkoutList;
  window.submitPaymentReceipt=async function(){
   if(!isTrainee()||!currentClient?.id)return alert("حساب شاگرد هنوز بارگذاری نشده است؛ یک بار صفحه را تازه‌سازی کنید و دوباره تلاش کنید.");
   const file=$("receiptFile")?.files?.[0],amount=Number($("receiptAmount")?.value||0),rawDate=$("receiptDate")?.value||"",date=isoDate(rawDate);
+  const membershipId=String($("receiptMembershipId")?.value||"");
+  if(window.SEH_RECEIPT_MEMBERSHIP_LINK_ENABLED===true&&!membershipId)return alert("ابتدا عضویتی را که این فیش بابت آن پرداخت شده انتخاب کنید.");
   const submitBtn=$("submitPaymentReceiptBtn");if(submitBtn){submitBtn.disabled=true;submitBtn.textContent="⏳ در حال ارسال فیش…";}
   if(!file)return alert("لطفاً تصویر یا PDF فیش را انتخاب کنید.");
   if(file.size>5*1024*1024)return alert("حجم فایل باید کمتر از ۵ مگابایت باشد.");
@@ -7777,7 +7781,9 @@ const oldWorkoutRenderer=window.renderWorkoutList;
    path=user.id+"/"+traineeId+"/"+Date.now()+"_"+name;
    const {error:uploadError}=await AUTH_SUPABASE.storage.from("payment-receipts").upload(path,uploadFile,{upsert:false,contentType:uploadFile.type});
    if(uploadError)throw uploadError;
-   const {error:insertError}=await AUTH_SUPABASE.from("trainee_payment_receipts").insert({trainee_id:traineeId,submitted_by:user.id,receipt_path:path,amount,payment_date:date,note:($("receiptNote")?.value||"").trim()||null,review_status:"pending"});
+   const receiptPayload={trainee_id:traineeId,submitted_by:user.id,receipt_path:path,amount,payment_date:date,note:($("receiptNote")?.value||"").trim()||null,review_status:"pending"};
+   if(window.SEH_RECEIPT_MEMBERSHIP_LINK_ENABLED===true)receiptPayload.membership_id=Number(membershipId);
+   const {error:insertError}=await AUTH_SUPABASE.from("trainee_payment_receipts").insert(receiptPayload);
    if(insertError){await AUTH_SUPABASE.storage.from("payment-receipts").remove([path]);throw insertError;}
    $("receiptFile").value="";$("receiptAmount").value="";$("receiptNote").value="";
    alert("فیش با موفقیت برای بررسی مربی ارسال شد؛ وضعیت شهریه پس از تأیید مربی تغییر می‌کند.");
@@ -7813,7 +7819,7 @@ const oldWorkoutRenderer=window.renderWorkoutList;
   try{
    const [rows,members,trainees]=await Promise.all([
     sbGet("/trainee_payment_receipts?trainee_id=eq."+encodeURIComponent(traineeId)+"&select=*&order=created_at.desc"),
-    sbGet("/trainee_memberships?trainee_id=eq."+encodeURIComponent(traineeId)+"&select=start_date,end_date,amount,payment_status,status,created_at&order=created_at.desc&limit=1"),
+    sbGet("/trainee_memberships?trainee_id=eq."+encodeURIComponent(traineeId)+"&select=id,start_date,end_date,amount,payment_status,status,created_at&order=created_at.desc"),
     sbGet("/trainees?id=eq."+encodeURIComponent(traineeId)+"&select=club_registration_date&limit=1")
    ]);
    if(!currentClient||String(currentClient.id)!==traineeId)return;
@@ -7833,23 +7839,23 @@ const oldWorkoutRenderer=window.renderWorkoutList;
  window.loadCoachReceipts=loadCoachReceipts;
  window.reviewPaymentReceipt=async function(id,decision){
   if(isTrainee()||!currentClient?.id)return alert("فقط مربی می‌تواند فیش را بررسی کند.");
-  const traineeId=currentClient.id;
+  if(window.SEH_RECEIPT_MEMBERSHIP_LINK_ENABLED!==true)return alert("تأیید فیش تا اجرای مهاجرت دیتابیس و فعال‌سازی مسیر اتمیک جدید موقتاً غیرفعال است؛ هیچ تغییری در پرداخت یا عضویت انجام نشد.");
+  if(!["approved","rejected"].includes(decision))return alert("تصمیم بررسی معتبر نیست.");
+  const traineeId=String(currentClient.id),storageKey="seh-receipt-review-op:"+String(id)+":"+decision;
+  let operationId=sessionStorage.getItem(storageKey);
+  if(!operationId){operationId=crypto.randomUUID();sessionStorage.setItem(storageKey,operationId);}
   try{
-   const rows=await sbGet("/trainee_payment_receipts?id=eq."+encodeURIComponent(id)+"&trainee_id=eq."+encodeURIComponent(traineeId)+"&select=*&limit=1");
-   const x=rows[0];if(!x||x.review_status!=="pending")throw new Error("فیش پیدا نشد یا قبلاً بررسی شده است.");
-   const {data:{user}}=await AUTH_SUPABASE.auth.getUser();
-   if(decision==="approved"){
-    const {error:payErr}=await AUTH_SUPABASE.from("trainee_payments").insert({trainee_id:traineeId,amount:x.amount,payment_date:x.payment_date||dayNow(),description:"تأیید فیش واریزی"});
-    if(payErr)throw payErr;
-    const {error:memErr}=await AUTH_SUPABASE.from("trainee_memberships").update({status:"active",payment_status:"paid"}).eq("trainee_id",traineeId);
-    if(memErr)console.warn("membership status update",memErr);
-   }
-   const {error}=await AUTH_SUPABASE.from("trainee_payment_receipts").update({review_status:decision,reviewed_by:user?.id||null,reviewed_at:new Date().toISOString()}).eq("id",id).eq("trainee_id",traineeId);
+   const rows=await sbGet("/trainee_payment_receipts?id=eq."+encodeURIComponent(id)+"&trainee_id=eq."+encodeURIComponent(traineeId)+"&select=id,membership_id,review_status&limit=1");
+   const x=rows?.[0];if(!x||x.review_status!=="pending")throw new Error("فیش پیدا نشد یا قبلاً بررسی شده است.");
+   if(x.membership_id==null)throw new Error("این فیش عضویت مشخصی ندارد؛ ابتدا باید تطبیق دستی انجام شود.");
+   const {data,error}=await AUTH_SUPABASE.rpc("review_trainee_payment_receipt",{p_receipt_id:id,p_decision:decision,p_operation_id:operationId,p_fallback_payment_date:dayNow()});
    if(error)throw error;
-   alert(decision==="approved"?"فیش تأیید و پرداخت ثبت شد.":"فیش رد شد؛ شاگرد می‌تواند فیش صحیح ارسال کند.");
+   if(!data?.success)throw new Error("پاسخ قطعی از ثبت اتمیک دریافت نشد.");
+   sessionStorage.removeItem(storageKey);
+   alert(decision==="approved"?"فیش تأیید شد؛ فقط همان عضویت مرتبط تسویه شد.":"فیش رد شد؛ هیچ پرداخت یا تغییری در عضویت ثبت نشد.");
    await loadCoachReceipts();if(typeof loadMembershipHistory==="function")await loadMembershipHistory();
-  }catch(e){alert("بررسی فیش انجام نشد. "+(e.message||String(e)));}
- };
+  }catch(e){alert("بررسی فیش انجام نشد. در صورت قطع اینترنت همان عملیات با شناسه ثابت قابل تکرار است. "+(e.message||String(e)));}
+ }
 
  function applyFeatureUI(){
   addRegistrationFields();ensureCoachRegistrationDateField();
