@@ -20,9 +20,13 @@ jobs:
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - uses: actions/setup-node@v4
         with:
           node-version: 22
+      - name: Test cache version bump for shell asset changes
+        run: node tests/service-worker-cache-version.test.mjs
       - name: Test safe offline shell caching and API bypass
         run: node tests/service-worker-shell-cache.test.mjs
       - name: Install Chromium browser test dependencies
