@@ -70,3 +70,17 @@ test("published report viewer is cleared when account or trainee context changes
   assert.match(publication, /requestEpoch !== contextEpoch \|\| currentTraineeId\(\) !== traineeId/,
     "A stale history query must not render data into a newly selected trainee's panel.");
 });
+
+
+test("full report download requires exact trainee and assigned-coach storage path", () => {
+  const publication = read("top-genesis-publication.js");
+  assert.match(publication, /trainee_id,coach_user_id,analysis_date/,
+    "The publication query must retain the owner identities needed to validate the report path.");
+  assert.match(publication, /const expectedPrefix = String\(row\.coach_user_id \|\| ""\) \+ "\/" \+ requestedTraineeId \+ "\/published\//);
+  assert.match(publication, /String\(row\.trainee_id \|\| ""\) !== String\(requestedTraineeId\)/,
+    "A report row for another trainee must never be opened.");
+  assert.match(publication, /report_storage_path\)\.startsWith\(expectedPrefix\)/,
+    "A report must live under its assigned coach and exact trainee folder.");
+  assert.match(publication, /0-9a-f-\]\{36\}\\\\\.html/,
+    "Only generated UUID HTML report objects should be opened.");
+});
