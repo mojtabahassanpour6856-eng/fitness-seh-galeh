@@ -17,6 +17,11 @@ begin;
 alter table public.trainee_payment_receipts
   add column if not exists membership_id bigint;
 
+-- Stable client-generated submission key makes a receipt insert idempotent
+-- when the network drops after PostgreSQL commits but before the browser sees it.
+alter table public.trainee_payment_receipts
+  add column if not exists submission_operation_id uuid;
+
 alter table public.trainee_payments
   add column if not exists membership_id bigint;
 
@@ -115,6 +120,10 @@ alter table public.trainee_payments
 alter table public.trainee_payments
   validate constraint trainee_payments_trainee_receipt_fk;
 
+create unique index if not exists trainee_payment_receipts_submission_operation_uidx
+  on public.trainee_payment_receipts (submitted_by, submission_operation_id)
+  where submission_operation_id is not null;
+
 create unique index if not exists trainee_payments_one_per_receipt_uidx
   on public.trainee_payments (receipt_id)
   where receipt_id is not null;
@@ -125,6 +134,8 @@ create index if not exists trainee_payment_receipts_membership_lookup_idx
 create index if not exists trainee_payments_membership_lookup_idx
   on public.trainee_payments (trainee_id, membership_id);
 
+comment on column public.trainee_payment_receipts.submission_operation_id is
+  'Stable client operation UUID used to prevent duplicate receipt submissions after network retries.';
 comment on column public.trainee_payment_receipts.membership_id is
   'Specific membership settled by this receipt; NULL legacy rows require manual reconciliation.';
 comment on column public.trainee_payments.membership_id is
