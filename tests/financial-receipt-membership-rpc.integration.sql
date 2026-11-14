@@ -120,6 +120,40 @@ begin
 end;
 $$;
 
+-- PostgreSQL numeric special values must never be treated as valid money.
+insert into public.trainee_payment_receipts
+  (id,trainee_id,membership_id,submitted_by,receipt_path,amount,payment_date)
+values
+  ('40000000-0000-0000-0000-000000000007',
+   '30000000-0000-0000-0000-000000000001',1,
+   '20000000-0000-0000-0000-000000000001',
+   'synthetic/non-finite-amount.jpg','NaN'::numeric,'2026-11-14');
+
+do $
+declare
+  v_count integer;
+begin
+  begin
+    perform public.review_trainee_payment_receipt(
+      '40000000-0000-0000-0000-000000000007','approved',
+      '60000000-0000-0000-0000-000000000007','2026-11-14'
+    );
+    raise exception 'non-finite receipt amount should be rejected';
+  exception when sqlstate '23514' then null;
+  end;
+  select count(*) into v_count from public.trainee_payments
+   where receipt_id='40000000-0000-0000-0000-000000000007';
+  if v_count<>0 then
+    raise exception 'non-finite receipt amount created a payment';
+  end if;
+  if not exists(select 1 from public.trainee_payment_receipts
+    where id='40000000-0000-0000-0000-000000000007'
+      and review_status='pending') then
+    raise exception 'non-finite receipt amount changed review status';
+  end if;
+end;
+$;
+
 -- Legacy receipt with no trusted membership link must remain pending.
 insert into public.trainee_payment_receipts
   (id,trainee_id,membership_id,submitted_by,receipt_path,amount,payment_date)
