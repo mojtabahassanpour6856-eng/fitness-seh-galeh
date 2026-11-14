@@ -38,7 +38,9 @@ function makeBackend() {
     failSelectResponseOnce: false,
     uploadCalls: 0,
     insertCalls: 0,
+    events: [],
     async call(op, payload) {
+      this.events.push({ op, payload, objectCount: this.objects.size, receiptCount: this.receipts.length });
       if (op === 'upload') {
         this.uploadCalls++;
         if (this.objects.has(payload.path)) return { error: { message: 'Object already exists' } };
@@ -144,7 +146,7 @@ async function installHarness(page, backend) {
       page = await context.newPage();
       await installHarness(page, backend);
       await page.evaluate(() => window.submitPaymentReceipt());
-      assert.equal(backend.receipts.length, 1, 'retry after upload interruption must create one receipt');
+      assert.equal(backend.receipts.length, 1, 'retry after upload interruption must create one receipt; diagnostics=' + JSON.stringify({events:backend.events,objects:[...backend.objects.keys()],receipts:backend.receipts,lastAlert:await page.evaluate(() => window.__lastAlert || null),pending:await page.evaluate(() => localStorage.getItem('seh-receipt-submit-op:trainee-user-9:trainee-501'))}));
       assert.equal(backend.objects.size, 1, 'retry must reuse the deterministic storage object');
       assert.equal(backend.receipts[0].submission_operation_id, pendingBefore.operationId);
       assert.equal(await page.evaluate(() => localStorage.getItem('seh-receipt-submit-op:trainee-user-9:trainee-501')), null);
