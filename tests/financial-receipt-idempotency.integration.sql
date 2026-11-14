@@ -100,7 +100,7 @@ do $fallback$
 begin
  if not exists(select 1 from public.trainee_payments
    where trainee_id='30000000-0000-0000-0000-000000000001'
-     and amount=66000 and payment_date='2026-11-14'
+     and membership_id=2 and amount=66000 and payment_date='2026-11-14'
      and description='تأیید فیش واریزی') then
    raise exception 'NULL receipt date did not use caller-supplied browser-local fallback';
  end if;
@@ -153,7 +153,7 @@ create trigger fixture_fail_selected_payment
 before insert on public.trainee_payments
 for each row execute function public.fixture_fail_selected_payment();
 
-insert into public.trainee_payment_receipts(id,trainee_id,submitted_by,receipt_path,amount,payment_date) values
+insert into public.trainee_payment_receipts(id,trainee_id,membership_id,submitted_by,receipt_path,amount,payment_date) values
  ('40000000-0000-0000-0000-000000000004','30000000-0000-0000-0000-000000000001',1,'20000000-0000-0000-0000-000000000001','synthetic/receipt-failure.jpg',55555,'2026-11-14');
 
 set role authenticated;
