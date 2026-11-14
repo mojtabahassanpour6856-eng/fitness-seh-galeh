@@ -206,7 +206,7 @@ forcedStatus = null;
 // A failed update must not remove the currently active shell cache.
 const originalFetch = globalThis.fetch;
 // Simulate a newer worker whose required index cannot be fetched.
-// Its failed install must not mutate or delete the currently active v2 cache.
+// Its failed install must not mutate or delete the currently active v3 cache.
 offline = true;
 const updateListeners = {};
 let updateSkipWaitingCalls = 0;
@@ -215,7 +215,7 @@ const updateSelf = {
   addEventListener(name, fn) { updateListeners[name] = fn; },
   async skipWaiting() { updateSkipWaitingCalls++; }
 };
-vm.runInNewContext(swSource.replace("seh-shell-v3", "seh-shell-v3"), {
+vm.runInNewContext(swSource.replace("seh-shell-v3", "seh-shell-v4"), {
   self: updateSelf, clients, caches, fetch: mockFetch, URL, Promise, Response,
   setTimeout, clearTimeout, console
 });
@@ -223,7 +223,7 @@ let failedUpdateInstall;
 updateListeners.install({ waitUntil(promise) { failedUpdateInstall = promise; } });
 await assert.rejects(failedUpdateInstall, /Required app shell index\.html could not be cached/);
 assert.ok(stores.has('seh-shell-v3'), 'failed update preserves the previously active shell cache');
-assert.ok(!stores.has('seh-shell-v3'), 'failed update removes its incomplete cache');
+assert.ok(!stores.has('seh-shell-v4'), 'failed update removes its incomplete cache');
 assert.equal(updateSkipWaitingCalls, 0, 'failed update never calls skipWaiting');
 offline = false;
 
