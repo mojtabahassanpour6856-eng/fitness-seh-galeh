@@ -33,9 +33,10 @@ const context={
   clearTimeout:()=>{},
   Promise
 };
-const coordinator=html.match(/<script id="seh-auth-session-singleflight-v1">([\s\S]*?)<\/script>/);
-assert.ok(coordinator,'shared session coordinator must exist');
-vm.runInNewContext(coordinator[1],context);
+const coordinatorStart=html.indexOf('/* SEH_AUTH_SESSION_SINGLEFLIGHT_V1_START */');
+const coordinatorEnd=html.indexOf('/* SEH_AUTH_SESSION_SINGLEFLIGHT_V1_END */',coordinatorStart);
+assert.ok(coordinatorStart>=0&&coordinatorEnd>coordinatorStart,'shared session coordinator must exist');
+vm.runInNewContext(html.slice(coordinatorStart,coordinatorEnd+'/* SEH_AUTH_SESSION_SINGLEFLIGHT_V1_END */'.length),context);
 vm.runInNewContext(match[1],context);
 
 function fireScheduled(delay){
