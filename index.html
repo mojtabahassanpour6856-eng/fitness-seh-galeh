@@ -15461,5 +15461,28 @@ window.sehNutritionBuilderBridge={
   };
 })();
 </script>
-</body>
-</html>
+
+<script id="seh-auth-finish-login-singleflight-v1">
+/* Prevent concurrent restore/login triggers from running the stacked login pipeline twice. */
+(function(){
+  'use strict';
+  if(window.__sehFinishLoginGuardInstalled)return;
+  var original=window.finishLogin;
+  if(typeof original!=='function')return;
+  var active=null;
+  window.finishLogin=function(user){
+    var id=String(user&&user.id||'');
+    if(active){
+      if(active.id===id)return active.promise;
+      return Promise.reject(new Error('تکمیل ورود حساب دیگری هنوز در حال انجام است؛ چند لحظه بعد دوباره تلاش کنید.'));
+    }
+    var context=this,args=arguments;
+    var base=Promise.resolve().then(function(){return original.apply(context,args);});
+    var tracked=base.finally(function(){if(active&&active.promise===tracked)active=null;});
+    active={id:id,promise:tracked};
+    return tracked;
+  };
+  window.__sehFinishLoginGuardInstalled=true;
+})();
+</script>
+</body></html>
