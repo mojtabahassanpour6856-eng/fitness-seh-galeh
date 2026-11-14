@@ -172,19 +172,19 @@ do $$
 declare v_result text;
 begin
   if dblink_send_query('receipt_race_a',
-    $$select public.review_receipt_idempotent(
+    $query$select public.review_receipt_idempotent(
       '40000000-0000-0000-0000-000000000005','approve',
       '50000000-0000-0000-0000-000000000007'
-    )::text$$) <> 1 then
+    )::text$query$) <> 1 then
     raise exception 'could not start first concurrent approval';
   end if;
   perform * from dblink_get_result('receipt_race_a') as t(result text);
 
   if dblink_send_query('receipt_race_b',
-    $$select public.review_receipt_idempotent(
+    $query$select public.review_receipt_idempotent(
       '40000000-0000-0000-0000-000000000005','approve',
       '50000000-0000-0000-0000-000000000008'
-    )::text$$) <> 1 then
+    )::text$query$) <> 1 then
     raise exception 'could not start second concurrent approval';
   end if;
 
