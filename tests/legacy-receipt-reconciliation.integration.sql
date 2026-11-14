@@ -160,7 +160,7 @@ $$;
 
 reset role;
 
-do $
+do $$
 declare
   v_count integer;
 begin
