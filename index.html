@@ -2492,7 +2492,25 @@ window.fetch=async function(input,init={}){
   return ORIGINAL_FETCH(input,init);
 };
 let authProfile=null;
-function showAuthError(msg){const e=$('authError');e.textContent=msg||'ورود انجام نشد.';e.style.display='block';}
+function showAuthError(msg){
+  const message=String(msg||'ورود انجام نشد.');
+  const screen=$('authScreen'),bar=$('authUserBar');
+  const appAlreadyOpen=!!(document.body&&!document.body.classList.contains('locked')&&screen&&screen.style.display==='none'&&bar&&bar.style.display!=='none');
+  if(appAlreadyOpen){
+    let box=$('sehStartupStatus');
+    if(!box){
+      box=document.createElement('div');box.id='sehStartupStatus';box.setAttribute('role','status');
+      box.style.cssText='margin:10px 0;padding:10px 12px;border:1px solid #c58b28;border-radius:10px;background:#fff8e8;color:#5b4215;line-height:1.8;font-size:13px;white-space:pre-wrap';
+      const close=document.createElement('button');close.type='button';close.textContent='بستن';close.style.cssText='float:left;margin-inline-start:10px;padding:3px 9px;font-size:12px';
+      close.addEventListener('click',()=>box.remove());box.appendChild(close);
+      const text=document.createElement('span');text.id='sehStartupStatusText';box.appendChild(text);
+      bar.appendChild(box);
+    }
+    const text=$('sehStartupStatusText');if(text)text.textContent=message;
+    return;
+  }
+  const e=$('authError');if(e){e.textContent=message;e.style.display='block';}
+}
 async function loginApp(){
   const email=$('loginEmail').value.trim(),password=$('loginPassword').value;
   if(!email||!password){showAuthError('ایمیل و رمز عبور را وارد کنید.');return;}
@@ -15486,6 +15504,7 @@ window.sehNutritionBuilderBridge={
       var appVisible=!!(document.body&&!document.body.classList.contains('locked')&&screen&&screen.style.display==='none'&&bar&&bar.style.display!=='none');
       if(appVisible){
         console.warn('[SEH auth] Optional post-login initializer failed after the app became available; keeping the authenticated session.',error);
+        if(typeof window.showAuthError==='function')window.showAuthError('ورود انجام شده، اما بارگذاری یکی از بخش‌های تکمیلی کامل نشد. اتصال اینترنت را بررسی کنید؛ اطلاعات حساب شما حفظ شده است.');
         return undefined;
       }
       throw error;
