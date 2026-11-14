@@ -66,6 +66,7 @@ const context={
   clearTimeout:timer=>{const i=timers.indexOf(timer);if(i>=0)timers.splice(i,1);}
 };
 
+vm.runInNewContext(script('seh-auth-session-singleflight-v1'),context);
 vm.runInNewContext(script('seh-coach-dashboard-session-recovery-20261016'),context);
 vm.runInNewContext(script('seh-auth-session-restore-watchdog-v1'),context);
 vm.runInNewContext(script('seh-auth-finish-login-singleflight-v1'),context);
@@ -84,7 +85,7 @@ assert.equal(finishCalls,1,'dashboard recovery starts the first login pipeline')
 assert.equal(fire(900),1,'auth watchdog schedules its restoration attempt');
 await flush();
 assert.equal(finishCalls,1,'watchdog joins the in-flight finishLogin promise instead of starting a second pipeline');
-assert.ok(sessionReads>=2,'both recovery mechanisms were actually triggered');
+assert.equal(sessionReads,1,'startup recovery paths share one session read even when their timers are staggered');
 releaseFinish();
 await flush();
 assert.equal(bodyClasses.has('locked'),false,'successful login unlocks the app shell');
