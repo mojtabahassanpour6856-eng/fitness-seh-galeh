@@ -1,6 +1,6 @@
 # Draft client integration: exact membership per receipt
 
-**Status: isolated prototype only. Do not merge or deploy.** This client expects the draft database migration and `review_trainee_payment_receipt` RPC from PR #226. No production schema or data was changed.
+**Status: isolated prototype only. Do not merge or deploy.** This client expects the draft schema and `review_trainee_payment_receipt` RPC from PR #226, plus the coach-created membership/payment RPC from dependent PR #228. No production schema or data was changed.
 
 ## Implemented in this branch
 
@@ -10,13 +10,14 @@
 - Legacy receipts with a NULL or invalid membership link are labelled as requiring manual reconciliation and cannot be approved through the UI.
 - Receipt approval/rejection calls the atomic `review_trainee_payment_receipt` RPC. The browser keeps a stable operation UUID in sessionStorage for retry; approval creates a payment linked to the same membership and updates only that membership.
 - If the client feature flag is off, receipt review fails closed rather than using the previous three-request bulk-update path.
-- When the feature flag is on, the old direct coach path for creating a paid membership is blocked until a dedicated atomic membership-plus-payment RPC is implemented. This avoids creating a payment without a membership reference.
+- When the feature flag is on, the active coach `saveSubscription` handler calls `create_coach_membership_with_payment` instead of issuing separate membership and payment writes. The RPC returns the new membership/payment IDs and creates both rows in one transaction.
+- The coach creation handler persists a stable operation UUID and original payload in `localStorage`. A retry after a lost response reuses the same operation. The key is cleared only after all post-save refreshes complete; if the feature flag is turned off while a pending operation exists, the legacy write path is blocked to avoid a duplicate.
 
 ## Feature flag and rollout order
 
 `window.SEH_RECEIPT_MEMBERSHIP_LINK_ENABLED` defaults to false. It must only be set to true after:
 1. PR #226's nullable-link migration and atomic receipt-review RPC have been reviewed and applied in a controlled environment.
-2. The direct coach membership-plus-payment RPC is implemented and tested.
+2. PR #228's direct coach membership-plus-payment RPC is reviewed and its disposable PostgreSQL 17 workflow passes.
 3. The manual reconciliation workflow for legacy NULL-linked receipts is ready.
 4. The complete client is tested against a disposable database containing the exact migration set.
 
@@ -24,7 +25,7 @@ Do not enable this flag in production yet. With the flag off, the new selector r
 
 ## Still required before release
 
-- Implement a separate atomic RPC for coach-created membership + optional payment, returning the newly created membership ID and linking the payment to it. It must have actor/trainee authorization, operation UUID idempotency, payload mismatch protection, and tests for paid, unpaid, zero-amount, replay, and failure rollback.
+- Complete the review and integration of PR #228's atomic coach membership/payment RPC, including browser-level retry and concurrent submission tests.
 - Implement coach UI to manually reconcile a legacy receipt to a membership. Never auto-map legacy receipts. The reconciliation action must validate trainee ownership and be audited.
 - Add integration tests for the browser payload contract and run end-to-end tests for trainee submission, coach review, retry after simulated network loss, rejection, concurrent review, and legacy receipts.
 - Verify the selector refreshes when a trainee has no membership or multiple membership history rows.
@@ -32,4 +33,4 @@ Do not enable this flag in production yet. With the flag off, the new selector r
 
 ## Safety
 
-This branch changes only `index.html` and this document. It does not change main, production Supabase, RLS, grants, Auth, Storage, existing records, or student data. The branch and its PR must remain Draft until all release gates pass.
+This branch changes only `index.html`, this document, and its syntax-check workflow. It does not change main, production Supabase, RLS, grants, Auth, Storage, existing records, or student data. The branch and its PR must remain Draft until all release gates pass.
