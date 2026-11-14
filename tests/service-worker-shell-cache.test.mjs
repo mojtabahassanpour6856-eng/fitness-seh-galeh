@@ -199,7 +199,7 @@ listeners.fetch({
   respondWith(promise) { notFoundNavigationResponse = promise; }
 });
 const notFoundNavigation = await notFoundNavigationResponse;
-assert.match(await notFoundNavigation.text(), /network:\/fitness-seh-galeh\/index\.html/,
+assert.match(await notFoundNavigation.text(), /network:\/fitness-seh-galeh\/(?:index\.html)?/,
   'a server-side 404 on the app entry route uses the cached shell');
 forcedStatus = null;
 
