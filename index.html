@@ -4045,6 +4045,9 @@ const plans=workoutResult.data||[], nutrition=nutritionResult.data||[];
     if(end&&end<start)return alert('تاریخ پایان عضویت نباید قبل از تاریخ شروع باشد.');
     if(paid==='پرداخت شده'&&amount<=0)return alert('برای ثبت شهریه پرداخت‌شده، مبلغ را وارد کنید.');
     const traineeId=String(currentClient.id),useAtomicMembership=window.SEH_RECEIPT_MEMBERSHIP_LINK_ENABLED===true;
+    const atomicStorageKey='seh-coach-membership-create:'+traineeId;
+    if(!useAtomicMembership&&localStorage.getItem(atomicStorageKey))return alert('یک ثبت اتمیک قبلی هنوز نتیجه قطعی نگرفته است؛ برای جلوگیری از ثبت تکراری، ابتدا همان عملیات را با مربی پیگیری کنید.');
+    let atomicStorageKeyToClear=null;
     try{
       await window.ensureMembershipCardNumber(traineeId);
       if(useAtomicMembership){
@@ -4078,12 +4081,14 @@ const plans=workoutResult.data||[], nutrition=nutritionResult.data||[];
         if(!data?.success||!data?.membership_id||(paymentStatus==='paid'&&!data?.payment_id)||(paymentStatus!=='paid'&&data?.payment_created===true)){
           throw new Error('پاسخ نهایی ثبت عضویت و پرداخت تأیید نشد؛ شناسه عملیات حفظ شده و می‌توانید با همان اطلاعات دوباره تلاش کنید.');
         }
-        localStorage.removeItem(storageKey);
+        atomicStorageKeyToClear=storageKey;
       }else{
         await sbWrite('/trainee_memberships','POST',{trainee_id:traineeId,start_date:start,end_date:end,status:'active',amount,payment_status:paid==='پرداخت شده'?'paid':'unpaid',description:'عضویت باشگاه'});
         if(paid==='پرداخت شده'&&amount>0)await sbWrite('/trainee_payments','POST',{trainee_id:traineeId,amount,payment_date:today(),description:'شهریه پرداخت‌شده توسط مربی'});
       }
-      await loadClients();await loadMembershipHistory();await loadCoachReceipts();await loadMembershipCard();alert('عضویت و اطلاعات کارت ذخیره شد. شماره عضویت: '+String((await sbGet(`/trainee_membership_cards?trainee_id=eq.${encodeURIComponent(traineeId)}&select=card_number&limit=1`))[0]?.card_number||'ثبت نشده'));
+      await loadClients();await loadMembershipHistory();await loadCoachReceipts();await loadMembershipCard();
+      if(atomicStorageKeyToClear)localStorage.removeItem(atomicStorageKeyToClear);
+      alert('عضویت و اطلاعات کارت ذخیره شد. شماره عضویت: '+String((await sbGet(`/trainee_membership_cards?trainee_id=eq.${encodeURIComponent(traineeId)}&select=card_number&limit=1`))[0]?.card_number||'ثبت نشده'));
     }catch(e){alert('ثبت عضویت انجام نشد.\\n'+(e?.message||String(e)))}
   };
 
