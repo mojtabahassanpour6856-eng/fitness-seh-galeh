@@ -28,7 +28,7 @@ create or replace function public.review_trainee_payment_receipt(
 returns jsonb
 language plpgsql
 security definer
-set search_path = pg_catalog, public, private, pg_temp
+set search_path = ''
 as $function$
 declare
   v_actor uuid := auth.uid();
