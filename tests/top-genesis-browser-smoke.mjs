@@ -734,6 +734,13 @@ Waist-Hip Ratio (WHO),0.889
   });
   await integrationPage.addScriptTag({ path: path.join(root, "top-genesis-publication.js") });
   await integrationPage.waitForTimeout(100);
+  await integrationPage.waitForFunction(() => {
+    const frame = document.querySelector("#topGenesisPdfAnalyzerFrame");
+    return frame?.contentDocument?.querySelector("#trainingNotes") &&
+      frame.contentDocument.querySelector("#nutritionNotes") &&
+      frame.contentDocument.querySelector("#coachApprove") &&
+      frame.contentDocument.querySelector("#sendToTrainee");
+  }, null, { timeout: 10000 });
   const analyzerFrame = integrationPage.frames().find(frame =>
     frame.url().includes("top-genesis-pdf-test.html?embedded=1"));
   assert.ok(analyzerFrame, "The embedded analyzer frame must be available for the publication test.");
