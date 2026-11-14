@@ -1,0 +1,31 @@
+name: Test Top Genesis trainee isolation
+
+on:
+  push:
+    branches: [fix/top-genesis-trainee-isolation-20261114]
+    paths:
+      - "top-genesis-pdf-app-embed.js"
+      - "top-genesis-pdf-test.html"
+      - "top-genesis-publication.js"
+      - "tests/top-genesis-trainee-isolation.test.mjs"
+      - ".github/workflows/test-top-genesis-trainee-isolation.yml"
+  pull_request:
+    paths:
+      - "top-genesis-pdf-app-embed.js"
+      - "top-genesis-pdf-test.html"
+      - "top-genesis-publication.js"
+      - "tests/top-genesis-trainee-isolation.test.mjs"
+      - ".github/workflows/test-top-genesis-trainee-isolation.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  isolation-regression:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - run: node --test tests/top-genesis-trainee-isolation.test.mjs

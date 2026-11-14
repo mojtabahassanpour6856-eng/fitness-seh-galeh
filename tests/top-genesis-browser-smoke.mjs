@@ -663,9 +663,37 @@ Waist-Hip Ratio (WHO),0.889
     anchor.setAttribute("aria-hidden", "false");
     document.body.appendChild(anchor);
     window.authProfile = { role: "coach" };
+    window.currentClient = { id: "trainee-fatemeh-fixture" };
+  });
+  await integrationPage.evaluate(() => {
+    window.__publicationModuleLoaded = false;
+    const watch = new MutationObserver(() => {
+      const script = document.querySelector('script[data-top-genesis-publication-loader]');
+      if (script) {
+        script.addEventListener("load", () => { window.__publicationModuleLoaded = true; }, { once: true });
+        watch.disconnect();
+      }
+    });
+    watch.observe(document.head, { childList: true, subtree: true });
   });
   await integrationPage.addScriptTag({ path: path.join(root, "top-genesis-pdf-app-embed.js") });
   await integrationPage.waitForSelector("#topGenesisPdfAnalyzerPanel");
+  await integrationPage.waitForFunction(() => window.__publicationModuleLoaded === true, null, { timeout: 10000 });
+  await integrationPage.waitForFunction(() => {
+    const frame = document.querySelector("#topGenesisPdfAnalyzerFrame");
+    return frame?.contentDocument?.documentElement?.dataset.topGenesisTraineeId === "trainee-fatemeh-fixture";
+  }, null, { timeout: 10000 });
+  const firstNonce = await integrationPage.locator("#topGenesisPdfAnalyzerFrame").getAttribute("data-context-nonce");
+  await integrationPage.evaluate(() => { window.currentClient = { id: "trainee-javad-fixture" }; });
+  await integrationPage.waitForFunction(() => {
+    const frame = document.querySelector("#topGenesisPdfAnalyzerFrame");
+    return frame?.dataset.boundTraineeId === "trainee-javad-fixture" &&
+      frame.contentDocument?.documentElement?.dataset.topGenesisTraineeId === "trainee-javad-fixture";
+  }, null, { timeout: 10000 });
+  const switchedNonce = await integrationPage.locator("#topGenesisPdfAnalyzerFrame").getAttribute("data-context-nonce");
+  assert.notEqual(switchedNonce, firstNonce, "Each trainee preview must receive a fresh context nonce.");
+  assert.equal(await integrationPage.locator("#topGenesisPdfAnalyzerFrame").evaluate(el => el.contentDocument.documentElement.dataset.topGenesisTraineeId),
+    "trainee-javad-fixture", "The new preview must be bound to the newly selected trainee.");
   assert.equal(await integrationPage.locator("#topGenesisArchivePanel").count(), 0,
     "The standalone analyzer test must not load or require the legacy archive.");
   assert.equal(await integrationPage.locator("#topGenesisPdfAnalyzerPanel").evaluate(el => el.style.display), "block");
@@ -679,10 +707,248 @@ Waist-Hip Ratio (WHO),0.889
   await integrationPage.waitForFunction(() =>
     document.querySelector("#topGenesisPdfAnalyzerPanel")?.style.display === "block", null, { timeout: 7000 });
   const analyzerEmbedSource = fs.readFileSync(path.join(root, "top-genesis-pdf-app-embed.js"), "utf8");
-  assert.match(analyzerEmbedSource, /host\.style\.display\s*=\s*isCoach\(\)\s*\?\s*"block"\s*:\s*"none"/,
-    "The embedded analyzer must be hidden for trainee sessions.");
+  assert.match(analyzerEmbedSource, /if \(!context\)\s*\{/,
+    "The embedded analyzer must be hidden and unmounted when no coach trainee is selected.");
+  assert.match(analyzerEmbedSource, /boundTraineeId !== context\.traineeId/,
+    "The embedded analyzer must reset when the selected trainee changes.");
   assert.match(analyzerEmbedSource, /top-genesis-publication\.js/,
     "The standalone analyzer entry must continue loading the report publication module.");
+  // Exercise the real parent/iframe publication message path with a mocked
+  // Storage rejection. A failed upload must return its exact stage to the
+  // analyzer and must never create a publication database row.
+  await integrationPage.evaluate(() => {
+    window.authProfile = { role: "coach" };
+    window.currentClient = { id: "trainee-javad-fixture" };
+    window.__publicationInsertCount = 0;
+    window.__publicationUploadCount = 0;
+    window.AUTH_SUPABASE = {
+      auth: { async getUser() { return { data: { user: { id: "coach-fixture-1" } }, error: null }; } },
+      storage: {
+        from() {
+          return {
+            async upload(path) {
+              window.__publicationUploadCount += 1;
+              if (window.__publicationScenario === "network-failure") {
+                throw new TypeError("Failed to fetch");
+              }
+              if (window.__publicationScenario === "success" ||
+                  window.__publicationScenario === "insert-failure" ||
+                  window.__publicationScenario === "cleanup-failure") {
+                window.__uploadedReportPath = path;
+                return { data: { path }, error: null };
+              }
+              return { error: Object.assign(new Error("simulated storage denied"), {
+                name: "StorageApiError", status: 403, code: "42501"
+              }) };
+            },
+            async remove(paths) {
+              window.__removedReportPaths = paths;
+              if (window.__publicationScenario === "cleanup-failure") {
+                return { error: new Error("simulated cleanup denied") };
+              }
+              return { data: [], error: null };
+            }
+          };
+        }
+      },
+      from() {
+        return {
+          async insert() {
+            window.__publicationInsertCount += 1;
+            return { error: window.__publicationScenario === "insert-failure" ||
+              window.__publicationScenario === "cleanup-failure"
+              ? new Error("simulated database insert denied") : null };
+          }
+        };
+      }
+    };
+  });
+  // The embed module loads the publication handler itself; do not inject a
+  // second copy, or the same approved message would be processed twice.
+  await integrationPage.waitForTimeout(50);
+  const analyzerFrame = integrationPage.frames().filter(frame =>
+    frame.url().includes("top-genesis-pdf-test.html?embedded=1")).at(-1);
+  assert.ok(analyzerFrame, "The embedded analyzer frame must be available for the publication test.");
+  await analyzerFrame.evaluate(() => {
+    const root = document.documentElement;
+    const requestId = "storage-failure-fixture";
+    window.__publicationReply = null;
+    // This synthetic message bypasses the UI click handler, so capture the
+    // parent reply independently of the analyzer's click-scoped request ID.
+    window.addEventListener("message", event => {
+      if (event.origin === window.location.origin &&
+          event.source === window.parent &&
+          event.data?.type === "top-genesis-publish-result" &&
+          event.data.requestId === requestId) {
+        window.__publicationReply = event.data;
+      }
+    });
+    const payload = {
+      traineeId: root.dataset.topGenesisTraineeId,
+      contextNonce: root.dataset.topGenesisContextNonce || window.__topGenesisContextNonce || "",
+      analysisDate: "2026-11-14",
+      metrics: { weight_kg: { value: 77, unit: "kg", status: "valid" } },
+      trainingNotes: "برنامه تمرینی آزمایشی",
+      nutritionNotes: "برنامه تغذیه آزمایشی",
+      reportHtml: '<!doctype html><html><body><main id="result">گزارش آزمایشی</main></body></html>'
+    };
+    window.__publicationPayload = payload;
+    window.parent.postMessage({
+      type: "top-genesis-approved-report",
+      requestId,
+      payload
+    }, window.location.origin);
+  });
+  await integrationPage.waitForFunction(() => {
+    const frame = document.querySelector("#topGenesisPdfAnalyzerFrame");
+    const reply = frame?.contentWindow?.__publicationReply;
+    return reply?.requestId === "storage-failure-fixture";
+  }, null, { timeout: 10000 });
+  const publicationReply = await integrationPage.locator("#topGenesisPdfAnalyzerFrame").evaluate(frame =>
+    frame.contentWindow.__publicationReply);
+  assert.equal(publicationReply.ok, false, "A rejected Storage upload must return a failed publication result.");
+  assert.match(publicationReply.message, /مرحله ناموفق: بارگذاری فایل گزارش در فضای ذخیره‌سازی/,
+    "The publication reply must identify the failed Storage stage.");
+  assert.match(publicationReply.message, /simulated storage denied/,
+    "The publication reply must preserve the concrete Storage error.");
+  assert.match(publicationReply.message, /وضعیت HTTP 403/,
+    "The publication reply must include the concrete HTTP status.");
+  assert.equal(await integrationPage.evaluate(() => window.__publicationInsertCount), 0,
+    "A Storage upload failure must not insert a trainee publication row.");
+  console.log("[smoke] simulated Storage failure returned exact stage and prevented database insert");
+
+  // A browser-level fetch failure after a successful preflight must be
+  // diagnosed as a network/CORS-path failure, without attempting a DB insert.
+  await integrationPage.evaluate(() => {
+    window.__publicationScenario = "network-failure";
+    window.__publicationInsertCount = 0;
+    window.__publicationUploadCount = 0;
+  });
+  await analyzerFrame.evaluate(() => {
+    const requestId = "storage-network-failure-fixture";
+    window.__publicationReply = null;
+    window.addEventListener("message", event => {
+      if (event.origin === window.location.origin && event.source === window.parent &&
+          event.data?.type === "top-genesis-publish-result" && event.data.requestId === requestId) {
+        window.__publicationReply = event.data;
+      }
+    });
+    window.parent.postMessage({
+      type: "top-genesis-approved-report", requestId, payload: window.__publicationPayload
+    }, window.location.origin);
+  });
+  await integrationPage.waitForFunction(() =>
+    document.querySelector("#topGenesisPdfAnalyzerFrame")?.contentWindow?.__publicationReply?.requestId === "storage-network-failure-fixture",
+    null, { timeout: 10000 });
+  const networkFailureReply = await analyzerFrame.evaluate(() => window.__publicationReply);
+  assert.equal(networkFailureReply.ok, false);
+  assert.match(networkFailureReply.message, /مرحله ناموفق: بارگذاری فایل گزارش در فضای ذخیره‌سازی/);
+  assert.match(networkFailureReply.message, /احتمال اختلال شبکه یا محدودیت CORS/);
+  assert.match(networkFailureReply.message, /Failed to fetch/);
+  assert.equal(await integrationPage.evaluate(() => window.__publicationInsertCount), 0,
+    "A browser fetch failure must never create a publication database row.");
+  console.log("[smoke] browser fetch failure identifies network/CORS stage and prevents database insert");
+
+  // A successful publication retried with the same request ID must replay
+  // the first result without uploading or inserting a second time.
+  await integrationPage.evaluate(() => {
+    window.__publicationScenario = "success";
+    window.__publicationInsertCount = 0;
+    window.__publicationUploadCount = 0;
+  });
+  await analyzerFrame.evaluate(() => {
+    const requestId = "dedupe-success-fixture";
+    window.__publicationReply = null;
+    window.addEventListener("message", event => {
+      if (event.origin === window.location.origin && event.source === window.parent &&
+          event.data?.type === "top-genesis-publish-result" && event.data.requestId === requestId) {
+        window.__publicationReply = event.data;
+      }
+    });
+    window.parent.postMessage({ type: "top-genesis-approved-report", requestId,
+      payload: window.__publicationPayload }, window.location.origin);
+  });
+  await integrationPage.waitForFunction(() =>
+    document.querySelector("#topGenesisPdfAnalyzerFrame")?.contentWindow?.__publicationReply?.requestId === "dedupe-success-fixture",
+    null, { timeout: 10000 });
+  const dedupeSuccess = await analyzerFrame.evaluate(() => window.__publicationReply);
+  assert.equal(dedupeSuccess.ok, true, "A valid publication should succeed in the browser fixture.");
+  assert.equal(await integrationPage.evaluate(() => window.__publicationUploadCount), 1);
+  assert.equal(await integrationPage.evaluate(() => window.__publicationInsertCount), 1);
+  await analyzerFrame.evaluate(() => window.parent.postMessage({
+    type: "top-genesis-approved-report", requestId: "dedupe-success-fixture",
+    payload: window.__publicationPayload
+  }, window.location.origin));
+  await integrationPage.waitForTimeout(100);
+  assert.equal(await integrationPage.evaluate(() => window.__publicationUploadCount), 1,
+    "A duplicate successful request must not upload a second report.");
+  assert.equal(await integrationPage.evaluate(() => window.__publicationInsertCount), 1,
+    "A duplicate successful request must not insert a second publication row.");
+  console.log("[smoke] duplicate successful publication replays result without duplicate upload or insert");
+
+
+  // A database insert failure after a successful upload must remove the
+  // uploaded HTML report so no orphaned private file is left behind.
+  await integrationPage.evaluate(() => {
+    window.__publicationInsertCount = 0;
+    window.__publicationUploadCount = 0;
+    window.__removedReportPaths = null;
+    window.__uploadedReportPath = null;
+  });
+  await integrationPage.evaluate(() => { window.__publicationScenario = "insert-failure"; });
+  await analyzerFrame.evaluate(() => {
+    const requestId = "database-failure-fixture";
+    window.__publicationReply = null;
+    window.addEventListener("message", event => {
+      if (event.origin === window.location.origin &&
+          event.source === window.parent &&
+          event.data?.type === "top-genesis-publish-result" &&
+          event.data.requestId === requestId) window.__publicationReply = event.data;
+    });
+    window.parent.postMessage({
+      type: "top-genesis-approved-report",
+      requestId,
+      payload: window.__publicationPayload
+    }, window.location.origin);
+  });
+  await integrationPage.waitForFunction(() =>
+    document.querySelector("#topGenesisPdfAnalyzerFrame")?.contentWindow?.__publicationReply?.requestId === "database-failure-fixture",
+  null, { timeout: 10000 });
+  const databaseFailureReply = await integrationPage.locator("#topGenesisPdfAnalyzerFrame")
+    .evaluate(frame => frame.contentWindow.__publicationReply);
+  assert.equal(databaseFailureReply.ok, false);
+  assert.match(databaseFailureReply.message, /مرحله ناموفق: ثبت اطلاعات گزارش در پایگاه داده/);
+  assert.equal(await integrationPage.evaluate(() => window.__publicationInsertCount), 1);
+  assert.deepEqual(await integrationPage.evaluate(() => window.__removedReportPaths),
+    [await integrationPage.evaluate(() => window.__uploadedReportPath)],
+    "A successful upload followed by a failed database insert must remove the orphaned report file.");
+  console.log("[smoke] database failure triggers temporary report cleanup");
+
+  // Cleanup failures must be surfaced instead of silently hiding orphan risk.
+  await integrationPage.evaluate(() => { window.__publicationScenario = "cleanup-failure"; });
+  await analyzerFrame.evaluate(() => {
+    const requestId = "cleanup-failure-fixture";
+    window.__publicationReply = null;
+    window.addEventListener("message", event => {
+      if (event.origin === window.location.origin &&
+          event.source === window.parent &&
+          event.data?.type === "top-genesis-publish-result" &&
+          event.data.requestId === requestId) window.__publicationReply = event.data;
+    });
+    window.parent.postMessage({
+      type: "top-genesis-approved-report",
+      requestId,
+      payload: window.__publicationPayload
+    }, window.location.origin);
+  });
+  await integrationPage.waitForFunction(() =>
+    document.querySelector("#topGenesisPdfAnalyzerFrame")?.contentWindow?.__publicationReply?.requestId === "cleanup-failure-fixture",
+  null, { timeout: 10000 });
+  const cleanupFailureReply = await integrationPage.locator("#topGenesisPdfAnalyzerFrame")
+    .evaluate(frame => frame.contentWindow.__publicationReply);
+  assert.equal(cleanupFailureReply.ok, false);
+  assert.match(cleanupFailureReply.message, /پاکسازی فایل موقت نیز ناموفق بود/);
+  console.log("[smoke] cleanup failure is explicitly reported");
   await integrationPage.close();
 
   console.log('[smoke] coach role-switch assertions passed');
