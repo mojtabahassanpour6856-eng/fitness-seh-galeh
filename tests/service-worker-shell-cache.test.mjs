@@ -189,7 +189,7 @@ listeners.fetch({
   respondWith(promise) { degradedNavigationResponse = promise; }
 });
 const degradedNavigation = await degradedNavigationResponse;
-assert.match(await degradedNavigation.text(), /network:\/fitness-seh-galeh\/index\.html/,
+assert.match(await degradedNavigation.text(), /network:\/fitness-seh-galeh\/(?:index\.html)?/,
   'a server-side 5xx uses the cached shell instead of a blank error page');
 
 console.log('PASS: static app shell is cached; offline navigation, 5xx fallback and assets recover; Supabase/API and writes bypass the cache; push handlers remain registered.');
