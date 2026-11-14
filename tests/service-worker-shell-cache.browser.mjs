@@ -68,10 +68,27 @@ try {
     "a server-side 404 on the app entry route must fall back to the cached shell");
   forceEntry404 = false;
 
+  await page.evaluate(() => localStorage.setItem(
+    "seh.offline-safe-shell.v1", JSON.stringify({ version: 1, view: "home" })
+  ));
   await context.setOffline(true);
   await page.goto(base + "/", { waitUntil: "domcontentloaded", timeout: 15000 });
-  assert.equal(await page.locator("#authScreen").count(), 1,
-    "the main app shell must still render after an offline reload");
+  await page.waitForFunction(() => document.body.classList.contains("seh-offline-shell"), null, { timeout: 10000 });
+  assert.equal(await page.locator("#authScreen").evaluate(el => getComputedStyle(el).display), "none",
+    "a previously verified offline user must not be bounced back to the login screen");
+  assert.equal(await page.locator(".hero").evaluate(el => getComputedStyle(el).display !== "none"), true,
+    "the safe brand shell must remain visible offline");
+  assert.equal(await page.locator(".nav").evaluate(el => getComputedStyle(el).display), "none",
+    "private navigation must stay hidden in restricted offline mode");
+  assert.equal(await page.locator(".section").first().evaluate(el => getComputedStyle(el).display), "none",
+    "private app sections must stay hidden in restricted offline mode");
+  assert.match(await page.locator("#sehOfflineShellNotice").innerText(), /حالت آفلاین/,
+    "the offline restriction must be clearly explained");
+
+  await page.evaluate(() => localStorage.removeItem("seh.offline-safe-shell.v1"));
+  await page.reload({ waitUntil: "domcontentloaded", timeout: 15000 });
+  assert.equal(await page.locator("#authScreen").evaluate(el => getComputedStyle(el).display), "flex",
+    "without a safe marker, offline startup must remain locked on the public entry screen");
 
   const nutritionPage = await context.newPage();
   await nutritionPage.goto(base + "/coach-nutrition-builder.html", {
