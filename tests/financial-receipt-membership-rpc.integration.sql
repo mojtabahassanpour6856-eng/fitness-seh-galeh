@@ -3,29 +3,8 @@
 \set ON_ERROR_STOP on
 \i tests/financial-receipt-idempotency.fixture.sql
 
--- Mirror the draft migration's relationship constraints in disposable PostgreSQL.
-alter table public.trainee_payments add column receipt_id uuid;
-alter table public.trainee_memberships
-  add constraint trainee_memberships_trainee_id_id_key unique (trainee_id,id);
-alter table public.trainee_payment_receipts
-  add constraint trainee_payment_receipts_trainee_id_id_key unique (trainee_id,id);
-alter table public.trainee_payment_receipts
-  add constraint trainee_payment_receipts_trainee_membership_fk
-  foreign key (trainee_id,membership_id)
-  references public.trainee_memberships(trainee_id,id)
-  deferrable initially deferred;
-alter table public.trainee_payments
-  add constraint trainee_payments_trainee_membership_fk
-  foreign key (trainee_id,membership_id)
-  references public.trainee_memberships(trainee_id,id)
-  deferrable initially deferred;
-alter table public.trainee_payments
-  add constraint trainee_payments_trainee_receipt_fk
-  foreign key (trainee_id,receipt_id)
-  references public.trainee_payment_receipts(trainee_id,id)
-  deferrable initially deferred;
-create unique index trainee_payments_one_per_receipt_uidx
-  on public.trainee_payments(receipt_id) where receipt_id is not null;
+-- Execute the actual draft schema migration against disposable fixture tables.
+\i supabase/drafts/20261114000100_receipt_membership_link.sql
 
 create or replace function private.can_access_trainee(p_trainee_id uuid)
 returns boolean
