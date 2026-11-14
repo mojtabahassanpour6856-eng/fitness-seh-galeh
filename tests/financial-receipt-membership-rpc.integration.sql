@@ -125,7 +125,7 @@ update public.trainee_payment_receipts
    set submission_operation_id='70000000-0000-0000-0000-000000000001'
  where id='40000000-0000-0000-0000-000000000001';
 
-do $
+do $$
 begin
   begin
     insert into public.trainee_payment_receipts
@@ -140,7 +140,7 @@ begin
   exception when unique_violation then null;
   end;
 end;
-$;
+$$;
 
 -- PostgreSQL numeric special values must never be treated as valid money.
 insert into public.trainee_payment_receipts
@@ -151,7 +151,7 @@ values
    '20000000-0000-0000-0000-000000000001',
    'synthetic/non-finite-amount.jpg','NaN'::numeric,'2026-11-14');
 
-do $
+do $$
 declare
   v_count integer;
 begin
