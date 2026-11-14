@@ -2,6 +2,7 @@
 -- Atomic coach path: create one membership and, when marked paid, exactly
 -- one payment linked to the membership returned by this same transaction.
 -- Depends on PR #226 draft migration adding trainee_payments.membership_id.
+-- This draft is exercised only by a disposable PostgreSQL CI database.
 
 begin;
 
