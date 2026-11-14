@@ -713,12 +713,22 @@ Waist-Hip Ratio (WHO),0.889
       storage: {
         from() {
           return {
-            async upload() {
+            async upload(path) {
+              if (window.__publicationScenario === "insert-failure") {
+                window.__uploadedReportPath = path;
+                return { data: { path }, error: null };
+              }
               return { error: Object.assign(new Error("simulated storage denied"), {
                 name: "StorageApiError", status: 403, code: "42501"
               }) };
             },
-            async remove() { throw new Error("Cleanup must not run before a successful upload."); }
+            async remove(paths) {
+              window.__removedReportPaths = paths;
+              if (window.__publicationScenario === "cleanup-failure") {
+                return { error: new Error("simulated cleanup denied") };
+              }
+              return { data: [], error: null };
+            }
           };
         }
       },
@@ -726,7 +736,8 @@ Waist-Hip Ratio (WHO),0.889
         return {
           async insert() {
             window.__publicationInsertCount += 1;
-            return { error: null };
+            return { error: window.__publicationScenario === "insert-failure"
+              ? new Error("simulated database insert denied") : null };
           }
         };
       }
@@ -760,6 +771,7 @@ Waist-Hip Ratio (WHO),0.889
       nutritionNotes: "برنامه تغذیه آزمایشی",
       reportHtml: '<!doctype html><html><body><main id="result">گزارش آزمایشی</main></body></html>'
     };
+    window.__publicationPayload = payload;
     window.parent.postMessage({
       type: "top-genesis-approved-report",
       requestId,
@@ -783,6 +795,63 @@ Waist-Hip Ratio (WHO),0.889
   assert.equal(await integrationPage.evaluate(() => window.__publicationInsertCount), 0,
     "A Storage upload failure must not insert a trainee publication row.");
   console.log("[smoke] simulated Storage failure returned exact stage and prevented database insert");
+
+  // A database insert failure after a successful upload must remove the
+  // uploaded HTML report so no orphaned private file is left behind.
+  await integrationPage.evaluate(() => { window.__publicationScenario = "insert-failure"; });
+  await analyzerFrame.evaluate(() => {
+    const requestId = "database-failure-fixture";
+    window.__publicationReply = null;
+    window.addEventListener("message", event => {
+      if (event.origin === window.location.origin &&
+          event.source === window.parent &&
+          event.data?.type === "top-genesis-publish-result" &&
+          event.data.requestId === requestId) window.__publicationReply = event.data;
+    });
+    window.parent.postMessage({
+      type: "top-genesis-approved-report",
+      requestId,
+      payload: window.__publicationPayload
+    }, window.location.origin);
+  });
+  await integrationPage.waitForFunction(() =>
+    document.querySelector("#topGenesisPdfAnalyzerFrame")?.contentWindow?.__publicationReply?.requestId === "database-failure-fixture",
+  null, { timeout: 10000 });
+  const databaseFailureReply = await integrationPage.locator("#topGenesisPdfAnalyzerFrame")
+    .evaluate(frame => frame.contentWindow.__publicationReply);
+  assert.equal(databaseFailureReply.ok, false);
+  assert.match(databaseFailureReply.message, /مرحله ناموفق: ثبت اطلاعات گزارش در پایگاه داده/);
+  assert.equal(await integrationPage.evaluate(() => window.__publicationInsertCount), 1);
+  assert.deepEqual(await integrationPage.evaluate(() => window.__removedReportPaths),
+    [await integrationPage.evaluate(() => window.__uploadedReportPath)],
+    "A successful upload followed by a failed database insert must remove the orphaned report file.");
+  console.log("[smoke] database failure triggers temporary report cleanup");
+
+  // Cleanup failures must be surfaced instead of silently hiding orphan risk.
+  await integrationPage.evaluate(() => { window.__publicationScenario = "cleanup-failure"; });
+  await analyzerFrame.evaluate(() => {
+    const requestId = "cleanup-failure-fixture";
+    window.__publicationReply = null;
+    window.addEventListener("message", event => {
+      if (event.origin === window.location.origin &&
+          event.source === window.parent &&
+          event.data?.type === "top-genesis-publish-result" &&
+          event.data.requestId === requestId) window.__publicationReply = event.data;
+    });
+    window.parent.postMessage({
+      type: "top-genesis-approved-report",
+      requestId,
+      payload: window.__publicationPayload
+    }, window.location.origin);
+  });
+  await integrationPage.waitForFunction(() =>
+    document.querySelector("#topGenesisPdfAnalyzerFrame")?.contentWindow?.__publicationReply?.requestId === "cleanup-failure-fixture",
+  null, { timeout: 10000 });
+  const cleanupFailureReply = await integrationPage.locator("#topGenesisPdfAnalyzerFrame")
+    .evaluate(frame => frame.contentWindow.__publicationReply);
+  assert.equal(cleanupFailureReply.ok, false);
+  assert.match(cleanupFailureReply.message, /پاکسازی فایل موقت نیز ناموفق بود/);
+  console.log("[smoke] cleanup failure is explicitly reported");
   await integrationPage.close();
 
   console.log('[smoke] coach role-switch assertions passed');
