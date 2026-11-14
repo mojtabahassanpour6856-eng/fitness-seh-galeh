@@ -79,7 +79,8 @@ create or replace function public.create_membership_atomic(
   p_amount numeric,
   p_payment_status text,
   p_card_holder text,
-  p_operation_id uuid
+  p_operation_id uuid,
+  p_payment_date date default current_date
 )
 returns jsonb
 language plpgsql
@@ -115,7 +116,8 @@ begin
   v_hash := encode(digest(jsonb_build_object(
     'trainee_id',p_trainee_id,'start_date',p_start_date,'end_date',p_end_date,
     'description',p_description,'amount',p_amount,
-    'payment_status',p_payment_status,'card_holder',p_card_holder
+    'payment_status',p_payment_status,'card_holder',p_card_holder,
+    'payment_date',p_payment_date
   )::text,'sha256'),'hex');
 
   insert into private.operation_ledger(actor_uid,operation_kind,operation_id,request_hash)
@@ -176,13 +178,15 @@ begin
     trainee_id,start_date,end_date,status,description,amount,
     payment_status,card_number,card_holder
   ) values (
-    p_trainee_id,p_start_date,p_end_date,'active',p_description,p_amount,
+    p_trainee_id,p_start_date,p_end_date,
+    case when p_payment_status='paid' then 'active' else 'pending' end,
+    p_description,p_amount,
     p_payment_status,v_card,p_card_holder
   ) returning id into v_membership_id;
 
   if p_payment_status='paid' and coalesce(p_amount,0)>0 then
     insert into public.trainee_payments(trainee_id,amount,payment_date,description)
-    values(p_trainee_id,p_amount,current_date,p_description)
+    values(p_trainee_id,p_amount,p_payment_date,'پرداخت عضویت')
     returning id into v_payment_id;
   end if;
 
@@ -200,7 +204,7 @@ $rpc$;
 
 revoke all on schema private from public,anon,authenticated;
 revoke all on all tables in schema private from public,anon,authenticated;
-revoke all on function public.create_membership_atomic(uuid,date,date,text,numeric,text,text,uuid)
+revoke all on function public.create_membership_atomic(uuid,date,date,text,numeric,text,text,uuid,date)
   from public,anon;
 grant usage on schema public to authenticated;
 grant execute on function public.create_membership_atomic(uuid,date,date,text,numeric,text,text,uuid)
