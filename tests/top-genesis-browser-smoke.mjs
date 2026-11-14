@@ -734,11 +734,6 @@ Waist-Hip Ratio (WHO),0.889
                 window.__uploadedReportPath = path;
                 return { data: { path }, error: null };
               }
-              if (window.__publicationScenario === "insert-failure" ||
-                  window.__publicationScenario === "cleanup-failure") {
-                window.__uploadedReportPath = path;
-                return { data: { path }, error: null };
-              }
               return { error: Object.assign(new Error("simulated storage denied"), {
                 name: "StorageApiError", status: 403, code: "42501"
               }) };
