@@ -7,6 +7,7 @@ on:
     paths:
       - 'index.html'
       - 'tests/receipt-upload-network.e2e.cjs'
+      - 'tests/receipt-supabase-client-contract.cjs'
       - '.github/workflows/test-receipt-upload-network-e2e.yml'
   pull_request:
     branches:
