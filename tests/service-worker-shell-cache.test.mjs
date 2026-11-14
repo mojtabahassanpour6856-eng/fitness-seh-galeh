@@ -78,7 +78,7 @@ listeners.install({ waitUntil(promise) { installPromise = promise; } });
 await installPromise;
 assert.equal(skipWaitingCalls, 1, 'service worker activates after attempting shell precache');
 
-const cache = await caches.open('seh-shell-v1');
+const cache = await caches.open('seh-shell-v2');
 const cachedIndex = await cache.match(scope + 'index.html');
 const cachedSdk = await cache.match(scope + 'vendor/supabase-2.119.0.js');
 const cachedNutritionBuilder = await cache.match(scope + 'coach-nutrition-builder.html');
@@ -169,4 +169,6 @@ const degradedNavigation = await degradedNavigationResponse;
 assert.match(await degradedNavigation.text(), /network:\/fitness-seh-galeh\/index\.html/,
   'a server-side 5xx uses the cached shell instead of a blank error page');
 
+// A failed update must not remove the currently active shell cache.
+const originalFetch = globalThis.fetch;
 console.log('PASS: static app shell is cached; offline navigation, 5xx fallback and assets recover; Supabase/API and writes bypass the cache; push handlers remain registered.');
