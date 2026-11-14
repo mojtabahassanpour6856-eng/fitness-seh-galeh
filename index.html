@@ -4,9 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <!-- Low-risk startup optimization: warm up connections to services used on app startup. -->
-<link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
-<link rel="preload" as="script" href="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2" crossorigin>
-<link rel="dns-prefetch" href="//cdn.jsdelivr.net">
+<link rel="preload" as="script" href="./vendor/supabase-2.119.0.js">
 <link rel="preconnect" href="https://qfakyudgidsumeuoqoot.supabase.co" crossorigin>
 <link rel="dns-prefetch" href="//qfakyudgidsumeuoqoot.supabase.co">
 <title>فیتنس سه‌قلعه</title>
@@ -2409,8 +2407,35 @@ async function loadActivityToday(){
 function esc(s){return String(s).replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[m]));}
 
 </script>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2" onerror="this.onerror=null;this.src='https://unpkg.com/@supabase/supabase-js@2'"></script>
 <script>
+/* SEH_SUPABASE_SDK_LOADER: same-origin, self-hosted pinned SDK. */
+(function(){
+  'use strict';
+  function showFailure(){
+    window.__sehSupabaseSdkLoadFailed=true;
+    var box=document.getElementById('authError');
+    if(box){
+      box.style.display='block';
+      box.textContent='کتابخانه اتصال از فایل داخلی برنامه بارگذاری نشد. صفحه را دوباره بارگذاری کنید؛ اگر مشکل ادامه داشت، به مربی اطلاع دهید.';
+    }
+  }
+  window.__sehSupabaseSdkLoaded=function(){
+    if(window.supabase&&typeof window.supabase.createClient==='function'){
+      window.__sehSupabaseSdkReady=true;
+      window.__sehSupabaseSdkLoadFailed=false;
+    }else showFailure();
+  };
+  window.__sehSupabaseSdkFailed=showFailure;
+})();
+</script>
+<script id="seh-supabase-sdk" src="./vendor/supabase-2.119.0.js" onload="window.__sehSupabaseSdkLoaded()" onerror="window.__sehSupabaseSdkFailed()"></script>
+<script>
+if(!window.supabase||typeof window.supabase.createClient!=='function'){
+  window.__sehSupabaseSdkLoadFailed=true;
+  var sdkErrorBox=document.getElementById('authError');
+  if(sdkErrorBox){sdkErrorBox.style.display='block';sdkErrorBox.textContent='کتابخانه اتصال آماده نشد. اتصال اینترنت را بررسی و صفحه را دوباره بارگذاری کنید.';}
+  throw new Error('Supabase SDK unavailable; application startup stopped safely.');
+}
 window.AUTH_SUPABASE=window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY,{auth:{autoRefreshToken:true,persistSession:true,detectSessionInUrl:true,storage:window.localStorage}});
 /* SEH_FIX_ORIGINAL_FETCH_SCOPE_20261016: expose the original browser fetch across classic-script scopes */
 const AUTH_SUPABASE=window.AUTH_SUPABASE;const ORIGINAL_FETCH=(typeof window.__SEH_ORIGINAL_FETCH==="function"?window.__SEH_ORIGINAL_FETCH:window.fetch.bind(window));window.__SEH_ORIGINAL_FETCH=ORIGINAL_FETCH;
@@ -2467,7 +2492,25 @@ window.fetch=async function(input,init={}){
   return ORIGINAL_FETCH(input,init);
 };
 let authProfile=null;
-function showAuthError(msg){const e=$('authError');e.textContent=msg||'ورود انجام نشد.';e.style.display='block';}
+function showAuthError(msg){
+  const message=String(msg||'ورود انجام نشد.');
+  const screen=$('authScreen'),bar=$('authUserBar');
+  const appAlreadyOpen=!!(document.body&&!document.body.classList.contains('locked')&&screen&&screen.style.display==='none'&&bar&&bar.style.display!=='none');
+  if(appAlreadyOpen){
+    let box=$('sehStartupStatus');
+    if(!box){
+      box=document.createElement('div');box.id='sehStartupStatus';box.setAttribute('role','status');
+      box.style.cssText='margin:10px 0;padding:10px 12px;border:1px solid #c58b28;border-radius:10px;background:#fff8e8;color:#5b4215;line-height:1.8;font-size:13px;white-space:pre-wrap';
+      const close=document.createElement('button');close.type='button';close.textContent='بستن';close.style.cssText='float:left;margin-inline-start:10px;padding:3px 9px;font-size:12px';
+      close.addEventListener('click',()=>box.remove());box.appendChild(close);
+      const text=document.createElement('span');text.id='sehStartupStatusText';box.appendChild(text);
+      bar.appendChild(box);
+    }
+    const text=$('sehStartupStatusText');if(text)text.textContent=message;
+    return;
+  }
+  const e=$('authError');if(e){e.textContent=message;e.style.display='block';}
+}
 async function loginApp(){
   const email=$('loginEmail').value.trim(),password=$('loginPassword').value;
   if(!email||!password){showAuthError('ایمیل و رمز عبور را وارد کنید.');return;}
@@ -14555,13 +14598,23 @@ window.sehResetTurnstile=function(){};
   if(window.__sehCoachFirstLoadGuardInstalled)return;
   window.__sehCoachFirstLoadGuardInstalled=true;
   let clientsLoadInFlight=null;
+  let retryTimer=null;
+  let retryAttempt=0;
+  const retryDelays=[1500,4000,9000,18000];
   const originalLoadClients=window.loadClients;
   if(typeof originalLoadClients==="function"){
     window.loadClients=function(){
       if(clientsLoadInFlight)return clientsLoadInFlight;
       clientsLoadInFlight=Promise.resolve().then(()=>originalLoadClients.apply(this,arguments))
-        .then(result=>{window.__sehCoachListLoadAttempted=true;return result;})
-        .catch(error=>{window.__sehCoachListLoadAttempted=true;throw error;})
+        .then(result=>{
+          // The final loadClients implementation catches its own network errors and resolves.
+          // Detect its visible failure state so a swallowed error cannot disable retries.
+          const listBody=document.getElementById("clientTableBody");
+          const legacyList=document.getElementById("clientList");
+          const visibleFailure=[listBody,legacyList].filter(Boolean).some(node=>/دریافت شاگردان ناموفق بود|خطا در دریافت شاگردان از پایگاه داده|بارگذاری شاگردان ناموفق بود/i.test(String(node.textContent||node.innerHTML||"")));
+          if(visibleFailure)throw new Error("بارگذاری فهرست شاگردان در رابط کاربری ناموفق گزارش شد.");
+          window.__sehCoachListLoadAttempted=true;retryAttempt=0;return result;
+        })
         .finally(()=>{clientsLoadInFlight=null;});
       return clientsLoadInFlight;
     };
@@ -14574,22 +14627,57 @@ window.sehResetTurnstile=function(){};
     if(!isCoach()||window.__sehCoachListLoadAttempted||typeof window.loadClients!=="function")return;
     await window.loadClients();
   }
+  function showRetryNotice(){
+    if(typeof window.showAuthError==="function"){
+      window.showAuthError("اتصال برقرار نشد و فهرست شاگردان کامل بارگذاری نشد؛ برنامه دوباره برای دریافت اطلاعات تلاش می‌کند.");
+    }
+  }
+  function scheduleRetry(){
+    if(retryTimer!==null||window.__sehCoachListLoadAttempted||!isCoach())return;
+    if(retryAttempt>=retryDelays.length)return;
+    const delay=retryDelays[retryAttempt++];
+    retryTimer=setTimeout(async()=>{
+      retryTimer=null;
+      try{await ensureCoachList();}
+      catch(error){
+        console.warn("بارگذاری فهرست شاگردان ناموفق بود؛ تلاش مجدد زمان‌بندی شد.",error);
+        showRetryNotice();
+        scheduleRetry();
+      }
+    },delay);
+  }
+  async function tryInitialLoad(){
+    try{await ensureCoachList();}
+    catch(error){
+      console.warn("بارگذاری اولیه فهرست شاگردان ناموفق بود؛ نشست حفظ می‌شود و تلاش مجدد انجام خواهد شد.",error);
+      showRetryNotice();
+      scheduleRetry();
+    }
+  }
   const previousFinish=window.finishLogin;
   if(typeof previousFinish==="function"){
     window.finishLogin=async function(){
       const result=await previousFinish.apply(this,arguments);
-      if(isCoach()&&!window.__sehCoachListLoadAttempted)await ensureCoachList();
+      if(isCoach()&&!window.__sehCoachListLoadAttempted)void tryInitialLoad();
       return result;
     };
   }
+  function retryOnRecovery(){
+    if(!isCoach()||window.__sehCoachListLoadAttempted)return;
+    if(retryTimer!==null){clearTimeout(retryTimer);retryTimer=null;}
+    retryAttempt=0;
+    void tryInitialLoad();
+  }
+  window.addEventListener("online",retryOnRecovery);
+  window.addEventListener("pageshow",retryOnRecovery);
   function waitForSessionAndLoad(){
     let tries=0;
-    const timer=setInterval(async()=>{
+    const timer=setInterval(()=>{
       tries++;
       if(window.__sehCoachListLoadAttempted){clearInterval(timer);return;}
       if(isCoach()){
         clearInterval(timer);
-        try{await ensureCoachList();}catch(e){console.warn("بارگذاری اولیه فهرست مربی انجام نشد؛ امکان تلاش دوباره وجود دارد.",e);}
+        void tryInitialLoad();
         return;
       }
       if(tries>=40)clearInterval(timer);
@@ -15436,5 +15524,41 @@ window.sehNutritionBuilderBridge={
   };
 })();
 </script>
-</body>
-</html>
+
+<script id="seh-auth-finish-login-singleflight-v1">
+/* Prevent concurrent restore/login triggers from running the stacked login pipeline twice. */
+(function(){
+  'use strict';
+  if(window.__sehFinishLoginGuardInstalled)return;
+  var original=window.finishLogin;
+  if(typeof original!=='function')return;
+  var active=null;
+  window.finishLogin=function(user){
+    var id=String(user&&user.id||'');
+    if(active){
+      if(active.id===id)return active.promise;
+      return Promise.reject(new Error('تکمیل ورود حساب دیگری هنوز در حال انجام است؛ چند لحظه بعد دوباره تلاش کنید.'));
+    }
+    var context=this,args=arguments;
+    var base=Promise.resolve().then(function(){return original.apply(context,args);});
+    /* A late optional dashboard/widget wrapper must not turn an already-visible
+       authenticated app into a failed login. Core auth/profile failures remain visible. */
+    var guarded=base.catch(function(error){
+      var screen=document.getElementById('authScreen');
+      var bar=document.getElementById('authUserBar');
+      var appVisible=!!(document.body&&!document.body.classList.contains('locked')&&screen&&screen.style.display==='none'&&bar&&bar.style.display!=='none');
+      if(appVisible){
+        console.error('[SEH auth] Post-login initialization failed after the authenticated shell became visible.',error);
+        if(typeof window.showAuthError==='function')window.showAuthError('ورود انجام شده، اما بارگذاری یکی از بخش‌ها کامل نشد. اتصال اینترنت را بررسی کنید و دوباره تلاش کنید؛ نشست شما حفظ شده است.');
+        throw error;
+      }
+      throw error;
+    });
+    var tracked=guarded.finally(function(){if(active&&active.promise===tracked)active=null;});
+    active={id:id,promise:tracked};
+    return tracked;
+  };
+  window.__sehFinishLoginGuardInstalled=true;
+})();
+</script>
+</body></html>

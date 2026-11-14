@@ -1,0 +1,64 @@
+name: Build pinned Supabase browser SDK artifact
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - fix/pinned-supabase-loader-20261113
+    paths:
+      - '.github/workflows/vendor-supabase-sdk.yml'
+      - 'vendor/supabase-2.119.0.js'
+      - 'vendor/supabase-2.119.0.js.sha256'
+      - 'vendor/SUPABASE-SDK-VERSION.txt'
+      - 'vendor/SUPABASE-SDK-LICENSE.txt'
+
+permissions:
+  contents: read
+
+jobs:
+  vendor-sdk:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out the reviewed feature branch
+        uses: actions/checkout@v4
+        with:
+          ref: fix/pinned-supabase-loader-20261113
+          persist-credentials: false
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Download exact npm release and verify it matches the committed browser asset
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p vendor
+          test -s vendor/supabase-2.119.0.js
+          test -s vendor/supabase-2.119.0.js.sha256
+          npm pack @supabase/supabase-js@2.119.0 --ignore-scripts --silent
+          archive="$(ls -1 supabase-supabase-js-2.119.0.tgz)"
+          mkdir package-unpacked
+          tar -xzf "$archive" -C package-unpacked
+          package_bundle="package-unpacked/package/dist/umd/supabase.js"
+          test -s "$package_bundle"
+          node -e "const p=require('./package-unpacked/package/package.json'); if(p.version!=='2.119.0') process.exit(1); console.log('Verified @supabase/supabase-js '+p.version)"
+          expected_hash="$(awk 'NR==1 {print $1}' vendor/supabase-2.119.0.js.sha256)"
+          tracked_hash="$(sha256sum vendor/supabase-2.119.0.js | awk '{print $1}')"
+          package_hash="$(sha256sum "$package_bundle" | awk '{print $1}')"
+          test "$expected_hash" = "$tracked_hash"
+          test "$package_hash" = "$expected_hash"
+          echo "PASS: npm package UMD bundle exactly matches committed vendor asset and recorded SHA-256 ($package_hash)"
+          test -s package-unpacked/package/LICENSE
+          test -s vendor/SUPABASE-SDK-LICENSE.txt
+          cmp -s package-unpacked/package/LICENSE vendor/SUPABASE-SDK-LICENSE.txt
+          echo "PASS: committed license matches the pinned npm package"
+          cp "$package_bundle" vendor/supabase-2.119.0.js
+          sha256sum vendor/supabase-2.119.0.js > vendor/supabase-2.119.0.js.sha256
+          printf 'Package: @supabase/supabase-js\nVersion: 2.119.0\nSource: npm registry package tarball\n' > vendor/SUPABASE-SDK-VERSION.txt
+      - name: Publish SDK files as a build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: supabase-js-2.119.0-vendor
+          path: vendor/
+          if-no-files-found: error
+          retention-days: 7

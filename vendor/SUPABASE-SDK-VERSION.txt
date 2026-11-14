@@ -1,0 +1,3 @@
+Package: @supabase/supabase-js
+Version: 2.119.0
+Source: npm registry package tarball
