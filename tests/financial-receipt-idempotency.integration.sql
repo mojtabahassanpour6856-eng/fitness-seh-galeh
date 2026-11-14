@@ -86,7 +86,7 @@ insert into public.trainee_payment_receipts(id,trainee_id,submitted_by,receipt_p
 select public.review_receipt_idempotent(
  '40000000-0000-0000-0000-000000000006','approved',
  '50000000-0000-0000-0000-000000000010','2026-11-14');
-do $
+do $fallback$
 begin
  if not exists(select 1 from public.trainee_payments
    where trainee_id='30000000-0000-0000-0000-000000000001'
@@ -95,7 +95,7 @@ begin
    raise exception 'NULL receipt date did not use caller-supplied browser-local fallback';
  end if;
 end;
-$;
+$fallback$;
 
 -- Cross-coach access must fail, and the failed operation must roll back its ledger claim.
 select set_config('request.jwt.claim.sub','10000000-0000-0000-0000-000000000002',false);
