@@ -1,0 +1,47 @@
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import vm from 'node:vm';
+
+const html=fs.readFileSync('index.html','utf8');
+const match=html.match(/<script id="seh-auth-session-singleflight-v1">([\\s\\S]*?)<\\/script>/);
+assert.ok(match,'shared session coordinator must exist');
+
+const timers=new Map();
+let nextTimer=1;
+const setTimeoutFake=(fn,delay)=>{const id=nextTimer++;timers.set(id,{fn,delay});return id;};
+const clearTimeoutFake=id=>timers.delete(id);
+let calls=0,releaseHung;
+const window={
+  AUTH_SUPABASE:{auth:{getSession(){
+    calls++;
+    return new Promise(resolve=>{releaseHung=resolve;});
+  }}}
+};
+vm.runInNewContext(match[1],{window,Promise,setTimeout:setTimeoutFake,clearTimeout:clearTimeoutFake});
+
+const stalled=window.__sehGetSessionSingleFlight();
+assert.equal(calls,1,'one underlying request starts');
+const timeout=[...timers.entries()][0];
+assert.ok(timeout,'a bounded timeout is installed');
+assert.equal(timeout[1].delay,12000,'session restoration has a 12-second upper wait');
+timers.delete(timeout[0]);
+timeout[1].fn();
+await assert.rejects(stalled,/۱۲ ثانیه/,'a stalled request must reject with a retryable timeout');
+assert.equal(timers.size,0,'the timeout is cleaned up');
+
+window.AUTH_SUPABASE.auth.getSession=async()=>{
+  calls++;
+  return {data:{session:{user:{id:'coach-1'}}},error:null};
+};
+const retry=window.__sehGetSessionSingleFlight();
+const joined=window.__sehGetSessionSingleFlight();
+assert.equal(retry,joined,'concurrent callers share the same in-flight request');
+const [resultA,resultB]=await Promise.all([retry,joined]);
+assert.equal(calls,2,'a fresh request can start after the timed-out wait');
+assert.equal(resultA,resultB,'joined callers receive the same result');
+const cached=await window.__sehGetSessionSingleFlight();
+assert.equal(cached,resultA,'a very short successful-session cache prevents staggered startup recovery from rereading the same session');
+assert.equal(calls,2,'the cached startup result avoids an extra request');
+
+if(releaseHung)releaseHung({data:{session:null},error:null});
+console.log('PASS: session coordinator deduplicates concurrent and staggered startup reads, times out stalled waits, and permits retry without clearing auth storage.');
