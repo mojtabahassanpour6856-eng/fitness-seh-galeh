@@ -17,9 +17,8 @@
     } catch (_) { return null; }
   }
 
-  function createFrame(traineeId) {
+  function createFrame(traineeId, nonce) {
     const frame = document.createElement("iframe");
-    const nonce = crypto.randomUUID();
     frame.id = "topGenesisPdfAnalyzerFrame";
     frame.title = "پیش‌نمایش تحلیل گزارش تاپ جنسیس";
     frame.loading = "eager";
@@ -70,8 +69,7 @@
       if (activeFrame) activeFrame.remove();
       boundTraineeId = context.traineeId;
       contextNonce = crypto.randomUUID();
-      activeFrame = createFrame(context.traineeId);
-      activeFrame.dataset.contextNonce = contextNonce;
+      activeFrame = createFrame(context.traineeId, contextNonce);
       host.appendChild(activeFrame);
     }
   }
