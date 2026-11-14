@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import vm from 'node:vm';
 const html=fs.readFileSync('index.html','utf8');
-const match=html.match(/<script id="seh-auth-finish-login-singleflight-v1">([\\s\\S]*?)<\\/script>/);
+const match=html.match(/<script id="seh-auth-finish-login-singleflight-v1">([\s\S]*?)<\/script>/);
 assert.ok(match,'single-flight login guard must be present in the real app HTML');
 let calls=0,release;
 const gate=new Promise(resolve=>{release=resolve;});
