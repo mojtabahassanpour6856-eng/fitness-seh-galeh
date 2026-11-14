@@ -1,6 +1,7 @@
 -- Disposable PostgreSQL 17 fixture for receipt-review idempotency.
 -- This is NOT a production migration. It creates only synthetic tables/data in CI.
 \set ON_ERROR_STOP on
+create extension if not exists pgcrypto;
 
 create role anon nologin;
 create role authenticated nologin;
@@ -92,15 +93,15 @@ begin
   if not coalesce(private.is_coach(), false) then
     raise exception 'Coach role required' using errcode='42501';
   end if;
-  if p_receipt_id is null or p_operation_id is null
+  if p_receipt_id is null or p_operation_id is null or p_decision is null
      or p_decision not in ('approve','reject') then
     raise exception 'Invalid receipt review request' using errcode='22023';
   end if;
 
-  v_hash := md5(jsonb_build_object(
+  v_hash := encode(digest(jsonb_build_object(
     'receipt_id',p_receipt_id,
     'decision',p_decision
-  )::text);
+  )::text,'sha256'),'hex');
 
   insert into private.operation_ledger
     (actor_uid,operation_kind,operation_id,request_hash)
