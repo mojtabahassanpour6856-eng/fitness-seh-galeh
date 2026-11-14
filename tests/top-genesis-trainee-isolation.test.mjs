@@ -27,3 +27,29 @@ test("publisher rejects stale, mismatched, or switched trainee contexts before w
   assert.match(publisher, /payloadContextNonce !== String\(frame\.dataset\.contextNonce \|\| ""\)/);
   assert.match(publisher, /assertSameTraineeContext\(\);\s*const \{ error \} = await window\.AUTH_SUPABASE\.from\(TABLE\)\.insert/);
 });
+
+
+test("publisher removes an uploaded report when trainee context changes or publication fails", () => {
+  const publisher = read("top-genesis-publication.js");
+  const uploadAt = publisher.indexOf(".upload(reportPath");
+  const postUploadGuardAt = publisher.indexOf("assertSameTraineeContext();", uploadAt);
+  const insertAt = publisher.indexOf(".from(TABLE).insert", postUploadGuardAt);
+  const cleanupAt = publisher.indexOf(".remove([uploadedReportPath])");
+  assert.ok(uploadAt >= 0, "The private report must be uploaded before its publication row is inserted.");
+  assert.ok(postUploadGuardAt > uploadAt && postUploadGuardAt < insertAt,
+    "The trainee context must be revalidated after upload and immediately before database insertion.");
+  assert.ok(cleanupAt > insertAt,
+    "A failed insert or post-upload context check must attempt to remove the uploaded object.");
+  assert.match(publisher, /if (uploadedReportPath)s*{s*trys*{s*await window\.AUTH_SUPABASE\.storage\.from\("trainee-health-reports"\)\.remove\(\[uploadedReportPath\]\)/);
+});
+
+test("iframe handshake is retryable and every context request receives the currently bound identity", () => {
+  const embed = read("top-genesis-pdf-app-embed.js");
+  const html = read("top-genesis-pdf-test.html");
+  assert.match(html, /top-genesis-context-request/,
+    "The child analyzer must request context after its message listener is ready.");
+  assert.match(embed, /event\.data\?\.type === "top-genesis-context-request"/,
+    "The parent must respond to a late or retried context request.");
+  assert.match(embed, /type: "top-genesis-context"[\s\S]*?traineeId: boundTraineeId[\s\S]*?contextNonce/,
+    "The retry response must carry the same bound trainee ID and nonce as the active iframe.");
+});
