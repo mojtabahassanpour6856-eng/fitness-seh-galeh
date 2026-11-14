@@ -24,7 +24,7 @@ release();assert.equal(await p1,'same');
 assert.equal(await a.window.finishLogin({id:'same'}),'same');assert.equal(calls,2);
 const visible=setup(async()=>{throw new Error('optional widget failed');},true);
 await assert.rejects(visible.window.finishLogin({id:'logged-in'}),/optional widget failed/,'post-login failures must remain observable to callers');
-assert.equal(visible.warnings.length,0);
+assert.equal(visible.warnings.length,1,'post-login failure is logged');
 assert.match(html,/Post-login initialization failed after the authenticated shell became visible/,'post-login failures must be logged rather than silently swallowed');
 const locked=setup(async()=>{throw new Error('profile permission denied');},false);
 await assert.rejects(locked.window.finishLogin({id:'not-ready'}),/profile permission denied/,'core failure must remain visible when app shell is locked');
