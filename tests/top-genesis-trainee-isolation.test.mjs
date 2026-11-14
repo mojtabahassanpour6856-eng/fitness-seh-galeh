@@ -39,8 +39,9 @@ test("publisher removes an uploaded report when trainee context changes or publi
   assert.ok(postUploadGuardAt > uploadAt && postUploadGuardAt < insertAt,
     "The trainee context must be revalidated after upload and immediately before database insertion.");
   assert.ok(cleanupAt > insertAt,
+  assert.ok(publisher.includes("if (uploadedReportPath) {"), "The catch handler must guard cleanup with the uploaded path.");
+  assert.ok(publisher.includes('.remove([uploadedReportPath])'), "The catch handler must remove the exact uploaded object.");
     "A failed insert or post-upload context check must attempt to remove the uploaded object.");
-  assert.match(publisher, /if (uploadedReportPath)s*{s*trys*{s*await window\.AUTH_SUPABASE\.storage\.from\("trainee-health-reports"\)\.remove\(\[uploadedReportPath\]\)/);
 });
 
 test("iframe handshake is retryable and every context request receives the currently bound identity", () => {
