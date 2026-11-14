@@ -3,7 +3,7 @@ import fs from 'node:fs';
 import vm from 'node:vm';
 
 const html=fs.readFileSync('index.html','utf8');
-const match=html.match(/<script id="seh-auth-session-singleflight-v1">([\\s\\S]*?)<\\/script>/);
+const match=html.match(/<script id="seh-auth-session-singleflight-v1">([\s\S]*?)<\/script>/);
 assert.ok(match,'shared session coordinator must exist');
 
 const timers=new Map();
