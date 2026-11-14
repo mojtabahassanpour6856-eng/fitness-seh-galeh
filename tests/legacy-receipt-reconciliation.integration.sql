@@ -75,19 +75,6 @@ begin
     raise exception 'manual reconciliation changed membership payment/status';
   end if;
 
-  -- The audit record must identify the coach, selected membership, reason and confirmation.
-  select count(*) into v_count
-    from private.receipt_membership_reconciliation_audit
-   where receipt_id='40000000-0000-0000-0000-000000000008'
-     and trainee_id='30000000-0000-0000-0000-000000000001'
-     and membership_id=1
-     and coach_user_id='10000000-0000-0000-0000-000000000001'
-     and reason='بررسی اصل فیش و تطبیق با عضویت آبان'
-     and confirmed_not_already_recorded is true;
-  if v_count <> 1 then
-    raise exception 'manual reconciliation audit record is missing or incorrect';
-  end if;
-
   -- Reusing the operation UUID with a different target or reason is rejected.
   begin
     perform public.reconcile_legacy_trainee_receipt_membership(
@@ -169,8 +156,22 @@ $$;
 
 reset role;
 
-do $$
+do $
+declare
+  v_count integer;
 begin
+  select count(*) into v_count
+    from private.receipt_membership_reconciliation_audit
+   where receipt_id='40000000-0000-0000-0000-000000000008'
+     and trainee_id='30000000-0000-0000-0000-000000000001'
+     and membership_id=1
+     and coach_user_id='10000000-0000-0000-0000-000000000001'
+     and reason='بررسی اصل فیش و تطبیق با عضویت آبان'
+     and confirmed_not_already_recorded is true;
+  if v_count <> 1 then
+    raise exception 'manual reconciliation audit record is missing or incorrect';
+  end if;
+
   if has_function_privilege(
        'anon',
        'public.reconcile_legacy_trainee_receipt_membership(uuid,bigint,uuid,text,boolean)',
