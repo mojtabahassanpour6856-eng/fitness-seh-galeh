@@ -734,13 +734,16 @@ Waist-Hip Ratio (WHO),0.889
   });
   await integrationPage.addScriptTag({ path: path.join(root, "top-genesis-publication.js") });
   await integrationPage.waitForTimeout(100);
-  await integrationPage.locator("#topGenesisPdfAnalyzerFrame").evaluate(frame => {
-    frame.contentWindow.postMessage({
+  const analyzerFrame = integrationPage.frames().find(frame =>
+    frame.url().includes("top-genesis-pdf-test.html?embedded=1"));
+  assert.ok(analyzerFrame, "The embedded analyzer frame must be available for the publication test.");
+  await analyzerFrame.evaluate(() => {
+    window.parent.postMessage({
       type: "top-genesis-approved-report",
       requestId: "storage-failure-fixture",
       payload: {
         traineeId: "trainee-javad-fixture",
-        contextNonce: frame.dataset.contextNonce,
+        contextNonce: document.documentElement.dataset.topGenesisContextNonce,
         analysisDate: "2026-11-14",
         metrics: { weight_kg: { value: 78, unit: "kg", status: "needs_coach_review" } },
         trainingNotes: "برنامه تمرینی آزمایشی",
