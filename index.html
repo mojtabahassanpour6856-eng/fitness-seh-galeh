@@ -15478,7 +15478,19 @@ window.sehNutritionBuilderBridge={
     }
     var context=this,args=arguments;
     var base=Promise.resolve().then(function(){return original.apply(context,args);});
-    var tracked=base.finally(function(){if(active&&active.promise===tracked)active=null;});
+    /* A late optional dashboard/widget wrapper must not turn an already-visible
+       authenticated app into a failed login. Core auth/profile failures remain visible. */
+    var guarded=base.catch(function(error){
+      var screen=document.getElementById('authScreen');
+      var bar=document.getElementById('authUserBar');
+      var appVisible=!!(document.body&&!document.body.classList.contains('locked')&&screen&&screen.style.display==='none'&&bar&&bar.style.display!=='none');
+      if(appVisible){
+        console.warn('[SEH auth] Optional post-login initializer failed after the app became available; keeping the authenticated session.',error);
+        return undefined;
+      }
+      throw error;
+    });
+    var tracked=guarded.finally(function(){if(active&&active.promise===tracked)active=null;});
     active={id:id,promise:tracked};
     return tracked;
   };
