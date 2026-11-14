@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="fa" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#f4ead8">
+  <title>نمونه آزمایشی تداوم آفلاین | مربی من</title>
+  <style>
+    :root{font-family:Tahoma,Arial,sans-serif;color:#28251f;background:#f7f3eb}
+    *{box-sizing:border-box}body{margin:0;padding:24px;min-height:100vh;display:grid;place-items:center}
+    main{width:min(100%,720px);background:#fff;border:1px solid #e7dcc9;border-radius:22px;padding:24px;box-shadow:0 12px 36px #392b1510}
+    h1{font-size:1.35rem;margin:0 0 8px;color:#8a682c}p{line-height:1.9}
+    .badge{display:inline-block;padding:7px 12px;border-radius:999px;background:#eee7db;font-size:.88rem}
+    .panel{margin:18px 0;padding:16px;border-radius:14px;background:#faf7f1;border:1px solid #eee4d4}
+    .warning{background:#fff4dc;border-color:#efd59b}.good{background:#edf7ee;border-color:#c9e5ce}
+    button{border:0;border-radius:10px;padding:11px 14px;margin:5px;cursor:pointer;background:#9a773c;color:white;font:inherit}
+    button.secondary{background:#e9e1d4;color:#403626}
+    button:disabled{opacity:.4;cursor:not-allowed}
+    ul{line-height:2}.muted{color:#70695f;font-size:.9rem}
+    code{direction:ltr;display:inline-block}
+  </style>
+</head>
+<body>
+<main>
+  <h1>مربی من | تداوم امن در زمان قطع اینترنت</h1>
+  <span id="state" class="badge">در حال بررسی وضعیت…</span>
+  <section id="message" class="panel" aria-live="polite"></section>
+  <section class="panel">
+    <strong>نمای محیط اصلی برنامه</strong>
+    <p id="view">صفحه اصلی برنامه</p>
+    <p class="muted">این نمونه فقط پوسته و مسیر غیرحساس را نگه می‌دارد؛ هیچ اطلاعات شاگرد، پرداخت، فایل آنالیز یا توکن ورود در حالت آفلاین نمایش داده نمی‌شود.</p>
+  </section>
+  <div>
+    <button id="goOnline">شبیه‌سازی اینترنت + تأیید هویت</button>
+    <button id="goOffline" class="secondary">قطع اینترنت</button>
+    <button id="expire" class="secondary">رد شدن تأیید هویت</button>
+    <button id="clear" class="secondary">پاک کردن نشانگر آزمایش</button>
+  </div>
+  <p class="muted">این صفحه مستقل از نسخه اصلی است و به Supabase یا داده‌های واقعی متصل نیست.</p>
+</main>
+<script type="module">
+  import { createOfflineContinuity } from './offline-continuity.mjs';
+
+  const stateEl = document.querySelector('#state');
+  const messageEl = document.querySelector('#message');
+  const viewEl = document.querySelector('#view');
+  const controller = createOfflineContinuity({ storage: window.localStorage });
+
+  let online = navigator.onLine;
+  let verified = false;
+
+  function render() {
+    const state = controller.resolve({ online, verified });
+    stateEl.textContent = ({
+      'authenticated-online':'متصل و هویت تأییدشده',
+      'offline-limited':'آفلاین؛ محیط برنامه حفظ شده',
+      'offline-guest':'آفلاین؛ ورود آنلاین لازم است',
+      'reauth-required':'اتصال برقرار؛ تأیید هویت لازم است'
+    })[state];
+    messageEl.className = 'panel ' + (state === 'offline-limited' ? 'warning' : state === 'authenticated-online' ? 'good' : '');
+    messageEl.textContent = ({
+      'authenticated-online':'اتصال برقرار است و هویت در این نمونه تأیید شده. امکانات وابسته به سرور در دسترس نمونه هستند.',
+      'offline-limited':'از محیط اصلی خارج نشده‌اید. فقط پوسته و مسیر غیرحساس باقی می‌ماند؛ اطلاعات خصوصی و همه عملیات سروری مسدود هستند.',
+      'offline-guest':'برای امنیت، بدون سابقه حضور آنلاین فقط صفحه عمومی نمایش داده می‌شود. ورود آفلاین انجام نمی‌شود.',
+      'reauth-required':'اینترنت برگشته است؛ تا زمانی که سرور هویت را دوباره تأیید نکند، بخش خصوصی باز نمی‌شود.'
+    })[state];
+    viewEl.textContent = 'مسیر پوسته: ' + controller.getSafeView();
+  }
+
+  document.querySelector('#goOffline').onclick = () => { online = false; verified = false; render(); };
+  document.querySelector('#goOnline').onclick = () => { online = true; verified = true; controller.rememberSafeView('home'); render(); };
+  document.querySelector('#expire').onclick = () => { online = true; verified = false; render(); };
+  document.querySelector('#clear').onclick = () => { controller.clear(); online = false; verified = false; render(); };
+  window.addEventListener('offline', () => { online = false; verified = false; render(); });
+  window.addEventListener('online', () => { online = true; verified = false; render(); });
+  render();
+</script>
+</body>
+</html>
