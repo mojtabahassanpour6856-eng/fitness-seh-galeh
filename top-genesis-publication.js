@@ -366,6 +366,13 @@
     const requestedTraineeId = currentTraineeId();
     const requestedEpoch = contextEpoch;
     if (!requestedTraineeId || (!currentCoach() && !currentTrainee())) return;
+    const expectedPrefix = String(row.coach_user_id || "") + "/" + requestedTraineeId + "/published/";
+    if (String(row.trainee_id || "") !== String(requestedTraineeId) ||
+        !row.coach_user_id || !String(row.report_storage_path).startsWith(expectedPrefix) ||
+        !/^[0-9a-f-]{36}\\.html$/i.test(String(row.report_storage_path).slice(expectedPrefix.length))) {
+      console.warn("Top Genesis report path does not match the selected trainee and assigned coach.");
+      return;
+    }
     const oldText = button?.textContent;
     if (button) { button.disabled = true; button.textContent = "در حال دریافت گزارش…"; }
     try {
@@ -402,7 +409,7 @@
     if (body && !lastLoadedTrainee) body.textContent = "در حال دریافت گزارش‌ها…";
     try {
       const { data, error } = await window.AUTH_SUPABASE.from(TABLE)
-        .select("id,analysis_date,report_metrics,training_notes,nutrition_notes,report_storage_path,published_at")
+        .select("id,trainee_id,coach_user_id,analysis_date,report_metrics,training_notes,nutrition_notes,report_storage_path,published_at")
         .eq("trainee_id", traineeId)
         .order("analysis_date", { ascending: true })
         .order("created_at", { ascending: true });
