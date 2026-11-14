@@ -3,8 +3,10 @@ import fs from 'node:fs';
 import vm from 'node:vm';
 
 const html=fs.readFileSync('index.html','utf8');
-const match=html.match(/<script id="seh-auth-session-singleflight-v1">([\s\S]*?)<\/script>/);
-assert.ok(match,'shared session coordinator must exist');
+const start=html.indexOf('/* SEH_AUTH_SESSION_SINGLEFLIGHT_V1_START */');
+const end=html.indexOf('/* SEH_AUTH_SESSION_SINGLEFLIGHT_V1_END */',start);
+assert.ok(start>=0&&end>start,'shared session coordinator must exist');
+const coordinator=html.slice(start,end+'/* SEH_AUTH_SESSION_SINGLEFLIGHT_V1_END */'.length);
 
 const timers=new Map();
 let nextTimer=1;
@@ -18,7 +20,7 @@ const window={
     return new Promise(resolve=>{releaseHung=resolve;});
   }}}
 };
-vm.runInNewContext(match[1],{window,Promise,setTimeout:setTimeoutFake,clearTimeout:clearTimeoutFake});
+vm.runInNewContext(coordinator,{window,Promise,setTimeout:setTimeoutFake,clearTimeout:clearTimeoutFake});
 
 const stalled=window.__sehGetSessionSingleFlight();
 assert.equal(calls,1,'one underlying request starts');
