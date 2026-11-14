@@ -470,3 +470,119 @@ The existing test project is missing the four financial tables and contains perm
 - no production export, real names, phone numbers, receipt files, or copied personal data.
 
 No SQL/DDL, migration, grant, policy, function, data, Storage, Auth, or application runtime change was made in this follow-up. Only this design-gate section was added to the audit document on the isolated Git branch.
+
+
+## Prototype milestone: isolated receipt-review idempotency fixture — 2026-11-14
+
+A separate branch, `prototype/receipt-idempotency-fixture-20261114`, was created from the audit branch. It contains a disposable PostgreSQL 17 fixture and CI workflow, not a production migration:
+
+- `tests/financial-receipt-idempotency.fixture.sql`: synthetic coach/trainee identities, receipt/payment tables, private operation ledger, and a narrowly scoped `review_receipt_idempotent` RPC.
+- `tests/financial-receipt-idempotency.integration.sql`: assertions for same-operation replay, same-ID/different-payload rejection, terminal receipt protection under a different operation ID, rejection without payment, cross-coach denial, trainee-role denial, atomic rollback after an injected payment failure, and denial of direct ledger reads.
+- `.github/workflows/test-financial-receipt-idempotency.yml`: disposable PostgreSQL 17 CI service; no Supabase credentials or production data.
+
+The fixture intentionally uses only synthetic identities and does not connect to either Supabase project. It is a prototype of the receipt review boundary, not an implementation for the live app.
+
+### Important scope limitations (not yet passed release gates)
+
+1. The fixture has not yet been confirmed green by a completed GitHub Actions run. A pending commit status is not a passing test.
+2. It tests sequential retry and transaction rollback, but does not yet exercise two truly concurrent database sessions. A two-session race test remains mandatory before claiming concurrency safety.
+3. The production payment table currently has no receipt foreign key/idempotency key. The fixture does not add a new production column or unique constraint; it tests terminal-state + row-lock protection in the RPC transaction. Production implementation must preserve existing payment schema or separately justify and migrate any linkage.
+4. Membership activation remains deliberately outside this first prototype. Production currently updates all memberships for a trainee during receipt approval, which is too broad without a settled rule for selecting the intended membership. Do not carry that behavior into a new RPC until the business rule is decided and represented in schema/tests.
+5. This fixture does not yet cover membership creation/card allocation, upload staging, outbox replay, sign-out quarantine, or account switching.
+6. The fixture is a minimal transaction/authorization model, not a byte-for-byte copy of production RLS policies, table definitions, or grants. Before porting, compare every relevant production column, check, FK, policy and caller path.
+
+No production or test Supabase project was modified. No application runtime code, existing client handler, live payment, membership, receipt, Auth, Storage, RLS, grant or migration was changed. The fixture exists only in the separate Git branch above.
+
+
+### Concurrent receipt-review race test added and CI-confirmed
+
+The first concurrent-test attempt exposed a test-harness issue: an asynchronous `dblink` result had not been fully drained before issuing COMMIT. The test was corrected to consume the trailing empty result, and a further assertion now verifies that session B is still busy (waiting on the receipt row lock) before session A commits.
+
+The corrected two-session test uses independent PostgreSQL connections, the same authenticated coach identity, one pending synthetic receipt, and two distinct operation UUIDs. It holds session A's transaction open after the RPC returns, confirms session B remains blocked, commits session A, then verifies session B receives the expected terminal-receipt rejection. Final assertions require exactly one payment and an approved receipt.
+
+The GitHub Actions run for commit `3ca40d80b6f7dd4b5c3f8d16878a6265965c86a7` completed the SQL test step successfully on PostgreSQL 17.12. This now verifies the prototype's row-lock race behavior in a real two-session database test, in addition to retry, payload mismatch, authorization, private-ledger ACL, and rollback tests. Earlier intermediate commits in this branch had expected test failures while the harness was being corrected; the latest run is the relevant result.
+
+Still not covered: production schema/RLS parity, membership activation rule, membership/card allocation, receipt upload staging, offline outbox/account switching, and app-client migration. This is a green isolated prototype test, not approval to deploy its SQL to Supabase.
+
+
+### Production membership-history aggregate confirms activation ambiguity
+
+A further aggregate-only production query returned no trainee IDs or personal fields:
+- 11 membership rows belong to 8 trainees.
+- 3 trainees have multiple membership rows; all 3 also have multiple rows whose current status is `active`.
+- Every inspected membership row currently has `status='active'` and `payment_status='paid'`.
+- Receipt review rows: 1 approved, 5 pending.
+- All 12 current payment rows have positive amounts.
+
+This confirms that updating every membership row for a trainee during receipt approval is not a safe default: multiple active historical rows exist for some trainees, and the current data does not reveal which row a new receipt is intended to settle. The prototype therefore continues to update only the receipt and create the corresponding payment; membership activation is intentionally excluded until the UI/business model identifies a specific membership or the schema provides an unambiguous relationship. No personal identifiers or individual financial amounts were retrieved in this aggregate check.
+
+### Prototype hardening
+
+The receipt fixture now uses SHA-256 (via PostgreSQL `pgcrypto`) for canonical JSONB request fingerprints instead of MD5, and explicitly rejects a NULL decision so it cannot fall through to the rejection branch. The latest CI run for commit `9169aa9012938917513de50d2befdf2c57349047` completed successfully on PostgreSQL 17.12, including the SHA-256 fingerprint and NULL-decision rejection checks. The later documentation-only commit does not change the tested SQL.
+
+
+## Prototype milestone: atomic membership creation and card allocation — 2026-11-14
+
+Added a second isolated PostgreSQL 17 fixture and independent GitHub Actions workflow:
+
+- `tests/financial-membership-card.fixture.sql`
+- `tests/financial-membership-card.integration.sql`
+- `.github/workflows/test-financial-membership-card.yml`
+
+The fixture follows the production schema facts inspected read-only:
+- `trainee_membership_cards` has a unique `card_number` and a unique `trainee_id`; it is the canonical one-card-per-trainee registry.
+- `trainee_memberships` is a history table: it must permit multiple rows per trainee, and its copied `card_number` must not be made unique.
+- `trainee_memberships.id` and `trainee_payments.id` are bigint identity-like keys in the production schema, while the registry key is UUID.
+- Membership history carries `start_date`, `end_date`, `status`, `description`, `amount`, `payment_status`, `card_number`, and `card_holder`.
+
+Prototype transaction behavior:
+1. Validate authenticated coach identity and trainee assignment.
+2. Claim a unique operation-ledger key and compare SHA-256 request fingerprint on retries.
+3. Lock the trainee row before card lookup/allocation.
+4. Reuse the canonical registry card when present; otherwise allocate a four-digit candidate protected by the registry's database UNIQUE constraints.
+5. Insert the membership history row and copy the canonical card number.
+6. If the membership is marked paid and amount is positive, create its payment in the same transaction.
+7. Persist the operation result in the same transaction.
+
+CI run `43568950600` completed successfully on PostgreSQL 17.12. It verifies:
+- same operation retry creates only one membership and one payment;
+- a different genuine membership for the same trainee reuses the canonical card while preserving multiple history rows;
+- unpaid membership does not create a payment;
+- changed payload under an existing operation UUID is rejected;
+- invalid date range and cross-coach access are rejected;
+- injected payment failure rolls back membership, card registry allocation and operation-ledger claim;
+- two independent sessions concurrently create memberships for the same trainee: second waits on trainee row lock, both history rows receive the same card, and only one registry row exists;
+- different trainees do not share a card number.
+
+### Scope and safety limits
+
+This is a synthetic test fixture, not a production migration. It is not a complete copy of production RLS, grants, table triggers, sequence ownership, and actual browser handler payloads. The RPC signature and payment condition are prototype decisions requiring parity review against the live `saveSubscription` handler before any production migration. In particular, do not infer that the live handler's exact payment status/date/description semantics have already been preserved.
+
+No production or test Supabase project was changed. No app runtime, live membership, payment, card registry, Auth, Storage, RLS, grant, or migration was modified.
+
+
+### Membership fixture hardening: canonical-card recovery confirmed green
+
+The allocation loop was hardened for a race with a legacy/direct registry writer: after a unique-conflict insert returns no row, it re-reads the trainee's canonical card registry before trying another random candidate. This prevents repeatedly attempting new card numbers when the conflict was actually the unique `trainee_id` constraint.
+
+A deterministic test now pre-seeds a canonical registry card for a synthetic trainee and verifies that a new membership reuses that exact card rather than generating a replacement. The updated full integration workflow passed on PostgreSQL 17.12: [run 43569048588](https://github.com/mojtabahassanpour6856-eng/fitness-seh-galeh/actions/runs/43569048588).
+
+This improves the prototype under mixed-write conditions, but it does not make mixed legacy REST writes idempotent. A production cutover still needs a planned client transition and a later server-side restriction of direct financial writes, after every app caller has moved and rollback has been rehearsed.
+
+## Business rule confirmed: each receipt settles exactly one membership — 2026-11-14
+
+The coach confirmed the intended financial rule: **each membership payment must approve only the specific membership that payment belongs to**. A receipt must not activate every historical membership row for the trainee.
+
+The synthetic receipt fixture has been updated to model this rule:
+- A receipt carries a nullable `membership_id` reference to one `trainee_memberships.id`. Nullable preserves the ability to represent legacy receipts that predate this relationship.
+- A successful approval must have a valid membership reference, and that membership must belong to the same trainee as the receipt. A legacy receipt without a membership link fails closed for approval and requires manual reconciliation; it is never used to guess which membership to activate.
+- The approval transaction locks and activates only that membership row.
+- The created payment row carries the same `membership_id`, so the financial record and membership state point to the same item.
+- Integration assertions verify that a second historical membership for the same trainee remains unpaid and untouched.
+- The synthetic payment table also carries a nullable membership reference to represent historical payment rows without retroactively assigning them.
+
+This is still a CI-only synthetic contract, not a production migration or runtime change. Production currently has no `membership_id` column on receipts or payments. Before implementation, the app must pass the selected membership ID when a trainee submits a receipt, and the coach review UI must display the exact membership being settled. Existing pending/approved receipts without a membership reference must be reconciled manually or remain unapproved; do not infer a membership from amount, date, or latest-row ordering.
+
+The production migration design must add nullable foreign-key references first, audit historical data, then make the new app flow require a membership selection for new receipts. Preserve legacy rows with NULL references. No bulk membership update is permitted in the new contract.
+
+No production or test Supabase project, live app runtime, schema, RLS, grants, Auth, Storage, or trainee data was changed.
