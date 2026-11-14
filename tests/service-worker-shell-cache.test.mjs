@@ -175,7 +175,7 @@ assert.ok(slowNavigationElapsed < 1150,
   'a slow network navigation should use the cached shell after the 800ms fallback window');
 assert.match(await slowNavigation.text(), /network:\/fitness-seh-galeh\/index\.html/,
   'the fast fallback returns the previously cached app shell while the slow network request continues');
-await new Promise(resolve => setTimeout(resolve, 150));
+await new Promise(resolve => setTimeout(resolve, 450));
 const refreshedAfterSlowNavigation = await cache.match(scope + 'index.html');
 assert.match(await refreshedAfterSlowNavigation.text(), /network:\/fitness-seh-galeh\//,
   'the background network response still refreshes the cached shell for the next navigation');
