@@ -403,3 +403,70 @@ This means repeated membership card numbers are currently consistent with a trai
 The aggregate check is only a point-in-time count. It does not prove every membership row is correctly synchronized with the registry, so a future cleanup must first compare membership-to-registry consistency without exposing personal data.
 
 No production records, schema, constraints, grants, policies, functions, settings, or application runtime code were changed. This section records read-only findings only.
+
+
+## Follow-up: transaction/RPC security design gate — 2026-11-14
+
+### Current Supabase documentation and platform changes checked
+
+The current Supabase changelog and database-function/security-advisor documentation were checked before proposing database implementation.
+
+- Supabase's published Data API change says new `public` tables are no longer automatically exposed; the rollout is stated to apply to existing projects from 2026-10-30. A new table must receive explicit grants if the Data API should reach it. Grants and RLS are separate controls. The operation ledger should not receive client-facing grants merely because it is created in a database. See https://supabase.com/changelog/45329-breaking-change-tables-not-exposed-to-data-and-graphql-api-automatically.
+- Current database-function guidance recommends caller privilege (`SECURITY INVOKER`) by default. Supabase's advisor explicitly warns that a `SECURITY DEFINER` function executable by authenticated users is a privileged API endpoint and requires deliberate authorization, restricted EXECUTE grants, and a documented reason. See https://supabase.com/docs/guides/database/functions and https://supabase.com/docs/guides/observability/advisors.
+- The production project is PostgreSQL 17.11.0.003, so Postgres 15+ security-invoker view support is available if needed; no view is required for the operation ledger design.
+
+### Production ACL facts relevant to choosing RPC security
+
+A read-only privilege/catalog query found:
+- `authenticated` currently has table-level SELECT/INSERT/UPDATE/DELETE grants on all four financial tables. Row access remains constrained by their RLS policies.
+- `anon` did not appear among the direct table grants returned for those financial tables.
+- The `private` schema currently has USAGE for `authenticated`, but not `anon`; CREATE is false for both.
+- Existing `private.can_access_trainee(uuid)` and `private.is_coach()` helpers are owned by `postgres`, SECURITY DEFINER, with EXECUTE granted to `authenticated` and `service_role`, but not PUBLIC/anon.
+- Existing nutrition and workout RPCs are SECURITY DEFINER; the named-argument nutrition adapter and trainee-progress RPC are SECURITY INVOKER. Their ACLs explicitly list authenticated/service_role and omit PUBLIC/anon.
+
+This means an authenticated caller can already perform some direct writes to financial tables when RLS allows them. A future RPC must not assume that making the function SECURITY INVOKER alone creates atomicity or idempotency; all business mutations must be inside one database transaction and direct-write bypasses must be addressed in a separate compatibility/migration plan, not by silently removing current client access.
+
+### Chosen design direction for the first financial RPC prototype
+
+Do not implement or deploy yet. The next prototype should be built only in a dedicated isolated financial fixture, with synthetic accounts and rows.
+
+1. **Narrow privileged transaction boundary.** A single public RPC entry point may need `SECURITY DEFINER` to atomically coordinate the private operation ledger and several existing business tables without exposing ledger write access to clients. If used, it must have:
+   - fixed `search_path = pg_catalog, public, private, pg_temp`;
+   - explicit `auth.uid() IS NOT NULL`;
+   - trusted role lookup via `private.is_coach()`, never a client role claim;
+   - exact coach-to-trainee ownership verification using the trusted database relationship;
+   - explicit input validation and row locks;
+   - `REVOKE ALL ... FROM PUBLIC, anon` and only the required `GRANT EXECUTE ... TO authenticated`;
+   - no generic table/column names or dynamic SQL derived from client payload;
+   - security-advisor review and tests proving no cross-coach access.
+   
+   This is a deliberate exception to the SECURITY INVOKER default, justified only if the isolated prototype proves that a single transaction cannot safely use the existing RLS/grants model. If a SECURITY INVOKER design can meet the same requirements without weakening the ledger, prefer it.
+
+2. **Private operation ledger.** Candidate table in a non-API schema, with a unique key on `(actor_uid, operation_kind, operation_id)`, canonical JSONB request hash, stored result JSONB, and creation/completion timestamps. Actor UID is always `auth.uid()`. The table must not be directly writable or readable by `anon`/ordinary client requests. Confirm the project's exposed-schema configuration and effective grants before creating it; do not assume that a schema named `private` is automatically outside the Data API. Ledger insertion, business writes, and result persistence must commit or roll back together.
+
+3. **Replay/concurrency algorithm.** For each call:
+   - validate actor, role, trainee relationship, operation kind and UUID;
+   - canonicalize and hash the complete business payload, excluding transport-only fields;
+   - attempt to claim the unique operation key;
+   - on conflict, lock/read the existing ledger row; return the stored result only if the payload hash matches; reject UUID reuse with a different payload;
+   - for receipt approval/rejection, lock the receipt row with `SELECT ... FOR UPDATE` and transition only from `pending`;
+   - write payment, membership state, receipt state, and ledger result in the same transaction.
+   
+   The unique ledger key serializes retries for the same actor/operation. Receipt row locking independently serializes competing approvals using different operation IDs. A second distinct operation against an already-terminal receipt must return a stable conflict/current state and never create a second payment.
+
+4. **Membership card allocation.** Preserve existing `UNIQUE(card_number)` and `UNIQUE(trainee_id)` constraints on `trainee_membership_cards`. Lock the trainee row or use an equivalent database-side serialization mechanism before checking/allocating a number. Registry allocation and membership insert/copy must occur in one transaction. Do not add uniqueness to `trainee_memberships.card_number`; the aggregate history audit proves that would reject legitimate history.
+
+5. **Legacy direct-write compatibility.** Since authenticated currently has direct DML grants on the finance tables, old clients may continue bypassing the new RPC until the app is migrated. Do not revoke those grants in the same first prototype. First migrate the active handlers behind feature gating, verify the deployed client versions and all call sites, and plan a controlled cutover. Until that gate is passed, the new RPC guarantees apply only to callers that actually use it; they do not magically make old direct REST writes idempotent.
+
+6. **Receipt files remain a separate workflow.** The database transaction must not pretend it can atomically commit a Storage object. Keep upload online-only and use a staged upload record/reconciliation protocol in a later isolated phase. Do not add receipt file operations to the generic offline outbox.
+
+### Test fixture decision
+
+The existing test project is missing the four financial tables and contains permissive test-only objects/advisor findings. It is not an appropriate place to apply this design directly. The preferred next step is a separate, disposable fixture (isolated project or an isolated local Postgres/Supabase stack) with:
+- synthetic coach and trainee auth identities;
+- minimal schema matching the production columns, checks, FKs, relevant RLS policies and grants;
+- the operation ledger and prototype RPC;
+- deterministic concurrency tests with two independent sessions;
+- no production export, real names, phone numbers, receipt files, or copied personal data.
+
+No SQL/DDL, migration, grant, policy, function, data, Storage, Auth, or application runtime change was made in this follow-up. Only this design-gate section was added to the audit document on the isolated Git branch.
