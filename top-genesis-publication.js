@@ -396,7 +396,13 @@
         console.warn("Top Genesis full report:", error);
       }
     } finally {
-      if (button) { button.disabled = false; button.textContent = oldText || "مشاهده گزارش کامل"; }
+      // A completed request must never mutate controls belonging to a newer
+      // trainee/account context (the old button may already be detached).
+      if (button && requestedEpoch === contextEpoch &&
+          requestedTraineeId === currentTraineeId() && button.isConnected) {
+        button.disabled = false;
+        button.textContent = oldText || "مشاهده گزارش کامل";
+      }
     }
   }
   async function loadPublished(force) {
@@ -419,7 +425,9 @@
       lastLoadedTrainee = traineeId;
       lastLoadedAt = Date.now();
     } catch (error) {
-      if (body && currentTraineeId() === traineeId) {
+      // Ignore failures from an obsolete request, including sign-out/sign-in
+      // with the same trainee ID but a different role/session epoch.
+      if (requestEpoch === contextEpoch && body && currentTraineeId() === traineeId) {
         body.textContent = "دریافت گزارش‌های ارسال‌شده انجام نشد. دسترسی پایگاه داده را بررسی کنید.";
         console.warn("Top Genesis published history:", error);
       }
