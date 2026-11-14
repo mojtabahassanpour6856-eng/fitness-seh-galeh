@@ -43,7 +43,6 @@ create table public.trainee_payments (
   id bigint generated always as identity primary key,
   trainee_id uuid not null references public.trainees(id),
   amount numeric(12,2) not null check (amount > 0),
-  receipt_id uuid not null unique references public.trainee_payment_receipts(id),
   created_by uuid not null
 );
 
@@ -153,8 +152,8 @@ begin
   end if;
 
   if p_decision='approve' then
-    insert into public.trainee_payments(trainee_id,amount,receipt_id,created_by)
-    values(v_receipt.trainee_id,v_receipt.amount,v_receipt.id,v_actor);
+    insert into public.trainee_payments(trainee_id,amount,created_by)
+    values(v_receipt.trainee_id,v_receipt.amount,v_actor);
     update public.trainee_payment_receipts
        set review_status='approved',reviewed_by=v_actor,reviewed_at=now()
      where id=v_receipt.id;
