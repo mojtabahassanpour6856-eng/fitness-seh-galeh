@@ -594,7 +594,11 @@
         }
       }
       const errorName = String(error?.name || "Error");
-      const baseErrorMessage = String(error?.message || "خطای نامشخص");
+      const rawErrorMessage = String(error?.message || "خطای نامشخص");
+      const networkFetchFailure = error instanceof TypeError && navigator.onLine !== false;
+      const baseErrorMessage = networkFetchFailure
+        ? "مرورگر نتوانست درخواست را به فضای ذخیره‌سازی برساند؛ احتمال اختلال شبکه یا محدودیت CORS وجود دارد. جزئیات: " + rawErrorMessage
+        : rawErrorMessage;
       const cleanupWarning = cleanupFailure
         ? "؛ پاکسازی فایل موقت نیز ناموفق بود و نیاز به بررسی فضای ذخیره‌سازی دارد"
         : "";
