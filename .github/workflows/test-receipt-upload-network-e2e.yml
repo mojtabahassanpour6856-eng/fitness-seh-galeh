@@ -1,0 +1,37 @@
+name: Receipt upload network interruption browser tests
+
+on:
+  push:
+    branches:
+      - test/receipt-upload-network-e2e-20261114
+    paths:
+      - 'index.html'
+      - 'tests/receipt-upload-network.e2e.cjs'
+      - '.github/workflows/test-receipt-upload-network-e2e.yml'
+  pull_request:
+    branches:
+      - prototype/legacy-receipt-reconciliation-20261114
+    paths:
+      - 'index.html'
+      - 'tests/receipt-upload-network.e2e.cjs'
+      - '.github/workflows/test-receipt-upload-network-e2e.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  chromium-network-retry:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install isolated browser test dependency
+        run: npm install --no-save --no-package-lock playwright
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+      - name: Run receipt upload interruption tests
+        run: node tests/receipt-upload-network.e2e.cjs
