@@ -100,7 +100,7 @@ begin
     raise exception 'Coach role required' using errcode='42501';
   end if;
   if p_receipt_id is null or p_operation_id is null or p_decision is null
-     or p_decision not in ('approve','reject') then
+     or p_decision not in ('approved','rejected') then
     raise exception 'Invalid receipt review request' using errcode='22023';
   end if;
 
@@ -158,7 +158,7 @@ begin
       using errcode='55000';
   end if;
 
-  if p_decision='approve' then
+  if p_decision='approved' then
     insert into public.trainee_payments(trainee_id,amount,payment_date,description)
     values(v_receipt.trainee_id,v_receipt.amount,
            coalesce(v_receipt.payment_date,current_date),'تأیید فیش واریزی');
@@ -178,7 +178,7 @@ begin
     'success',true,
     'receipt_id',v_receipt.id,
     'decision',p_decision,
-    'payment_created',(p_decision='approve')
+    'payment_created',(p_decision='approved')
   );
   update private.operation_ledger
      set result=v_result,completed_at=now()
