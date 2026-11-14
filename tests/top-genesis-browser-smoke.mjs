@@ -854,6 +854,12 @@ Waist-Hip Ratio (WHO),0.889
 
   // A database insert failure after a successful upload must remove the
   // uploaded HTML report so no orphaned private file is left behind.
+  await integrationPage.evaluate(() => {
+    window.__publicationInsertCount = 0;
+    window.__publicationUploadCount = 0;
+    window.__removedReportPaths = null;
+    window.__uploadedReportPath = null;
+  });
   await integrationPage.evaluate(() => { window.__publicationScenario = "insert-failure"; });
   await analyzerFrame.evaluate(() => {
     const requestId = "database-failure-fixture";
