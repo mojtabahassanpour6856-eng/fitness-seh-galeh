@@ -27,6 +27,16 @@ begin
    where trainee_id='30000000-0000-0000-0000-000000000001' and amount=125000;
   if v_count <> 1 then raise exception 'expected exactly one payment after retry; got %',v_count; end if;
 
+  -- A NULL decision must not fall through to the rejection branch.
+  begin
+    perform public.review_receipt_idempotent(
+      '40000000-0000-0000-0000-000000000002',null,
+      '50000000-0000-0000-0000-000000000009'
+    );
+    raise exception 'expected NULL decision to be rejected';
+  exception when sqlstate '22023' then null;
+  end;
+
   -- Reusing the operation ID for a different decision/payload is rejected.
   begin
     perform public.review_receipt_idempotent(
