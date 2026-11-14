@@ -100,9 +100,9 @@ const apiSessionStart=html.indexOf('let __fitnessApiSession=null');
 const apiSessionEnd=html.indexOf('window.fetch=async function',apiSessionStart);
 assert.ok(apiSessionStart>=0&&apiSessionEnd>apiSessionStart,'API session cache and fetch wrapper must exist');
 const apiSessionSource=html.slice(apiSessionStart,apiSessionEnd);
-assert.match(apiSessionSource,/onAuthStateChange\\s*\\(\\s*\\(event,session\\)\\s*=>/,'API token cache must subscribe to auth transitions');
-assert.match(apiSessionSource,/__fitnessApiSession=session\\|\\|null/,'SIGNED_OUT must clear the API token cache');
-assert.match(apiSessionSource,/__fitnessApiSessionAt=Date\\.now\\(\\)/,'auth transitions must refresh API cache timestamp');
-assert.match(apiSessionSource,/if\\(event===['"]SIGNED_OUT['"]\\)/,'sign-out must invalidate pending nutrition state');
+assert.match(apiSessionSource,/onAuthStateChange\s*\(\s*\(event,session\)\s*=>/,'API token cache must subscribe to auth transitions');
+assert.match(apiSessionSource,/__fitnessApiSession=session\|\|null/,'SIGNED_OUT must clear the API token cache');
+assert.match(apiSessionSource,/__fitnessApiSessionAt=Date\.now\(\)/,'auth transitions must refresh API cache timestamp');
+assert.match(apiSessionSource,/if\(event===['"]SIGNED_OUT['"]\)/,'sign-out must invalidate pending nutrition state');
 
 console.log('PASS: session coordinator deduplicates concurrent and staggered startup reads, times out stalled waits, and permits retry without clearing auth storage while keeping the API token cache synchronized with auth transitions.');
