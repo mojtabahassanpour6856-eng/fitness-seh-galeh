@@ -88,15 +88,15 @@ test("full report download requires exact trainee and assigned-coach storage pat
 
 test("stale report downloads cannot restore controls after a trainee or account switch", () => {
   const publication = read("top-genesis-publication.js");
-  assert.match(publication, /button\\.isConnected/);
-  assert.match(publication, /requestedEpoch === contextEpoch/);
+  assert.ok(publication.includes("button.isConnected"));
+  assert.ok(publication.includes("requestedEpoch === contextEpoch"));
   assert.ok(publication.includes("if (requestEpoch === contextEpoch && body && currentTraineeId() === traineeId)"),
     "A stale query error must not overwrite the current account's history panel.");
 });
 
 test("legacy publication rows without a storage path never expose a full-report action", () => {
   const publication = read("top-genesis-publication.js");
-  assert.match(publication, /const action = row\\.report_storage_path/);
+  assert.ok(publication.includes("const action = row.report_storage_path"));
   assert.match(publication, /data-history-details/);
   assert.ok(publication.includes("if (!modal || !frame || !row?.report_storage_path) return"),
     "The report viewer must reject legacy rows that have no storage object.");
