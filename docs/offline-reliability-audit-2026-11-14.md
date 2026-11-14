@@ -518,4 +518,4 @@ This confirms that updating every membership row for a trainee during receipt ap
 
 ### Prototype hardening
 
-The receipt fixture now uses SHA-256 (via PostgreSQL `pgcrypto`) for canonical JSONB request fingerprints instead of MD5, and explicitly rejects a NULL decision so it cannot fall through to the rejection branch. CI for these latest hardening edits is still running at the time of this note; do not treat these newest edits as green until their run completes.
+The receipt fixture now uses SHA-256 (via PostgreSQL `pgcrypto`) for canonical JSONB request fingerprints instead of MD5, and explicitly rejects a NULL decision so it cannot fall through to the rejection branch. The latest CI run for commit `9169aa9012938917513de50d2befdf2c57349047` completed successfully on PostgreSQL 17.12, including the SHA-256 fingerprint and NULL-decision rejection checks. The later documentation-only commit does not change the tested SQL.
