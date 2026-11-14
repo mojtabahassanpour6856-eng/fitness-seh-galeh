@@ -15,9 +15,10 @@ for (const match of html.matchAll(/<script\b[^>]*>([\s\S]*?)<\/script>/gi)) {
   const script = match[1];
   const start = script.indexOf(marker);
   if (start < 0) continue;
-  const end = script.indexOf('\n  };', start);
-  if (end < 0) throw new Error('Could not find the end of submitPaymentReceipt in index.html');
-  handler = script.slice(start, end + '\n  };'.length);
+  const nextHandler = script.indexOf('async function loadCoachReceipts', start);
+  const end = nextHandler < 0 ? -1 : script.lastIndexOf('};', nextHandler);
+  if (end < 0) throw new Error('Could not find the end of submitPaymentReceipt before loadCoachReceipts in index.html');
+  handler = script.slice(start, end + 2);
   break;
 }
 if (!handler) throw new Error('Real submitPaymentReceipt handler was not found in index.html');
