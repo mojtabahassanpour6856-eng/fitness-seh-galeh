@@ -14,6 +14,8 @@ For a pending legacy receipt with no membership link, the coach sees:
 
 The coach must compare the receipt itself with the selected membership. If the coach cannot verify the match, the receipt remains unlinked and pending.
 
+The separate receipt approval/rejection handler also keeps its operation UUID and fallback payment date in `localStorage` until the final receipt and payment rows are verified. This allows a retry after a lost response to replay the same RPC payload instead of generating a new payment operation.
+
 ## Atomic RPC
 
 Function:
