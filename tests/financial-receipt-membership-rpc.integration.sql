@@ -120,6 +120,28 @@ begin
 end;
 $$;
 
+-- A retry of the same trainee receipt submission cannot create a second row.
+update public.trainee_payment_receipts
+   set submission_operation_id='70000000-0000-0000-0000-000000000001'
+ where id='40000000-0000-0000-0000-000000000001';
+
+do $
+begin
+  begin
+    insert into public.trainee_payment_receipts
+      (id,trainee_id,membership_id,submission_operation_id,submitted_by,receipt_path,amount,payment_date)
+    values
+      ('40000000-0000-0000-0000-000000000011',
+       '30000000-0000-0000-0000-000000000001',1,
+       '70000000-0000-0000-0000-000000000001',
+       '20000000-0000-0000-0000-000000000001',
+       'synthetic/replayed-submit.jpg',125000,'2026-11-13');
+    raise exception 'expected duplicate submission operation to be rejected';
+  exception when unique_violation then null;
+  end;
+end;
+$;
+
 -- PostgreSQL numeric special values must never be treated as valid money.
 insert into public.trainee_payment_receipts
   (id,trainee_id,membership_id,submitted_by,receipt_path,amount,payment_date)
