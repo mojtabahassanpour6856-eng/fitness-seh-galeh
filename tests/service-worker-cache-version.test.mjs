@@ -3,8 +3,8 @@ import fs from 'node:fs';
 import { execFileSync } from 'node:child_process';
 
 const base = execFileSync('git', ['merge-base', 'origin/main', 'HEAD'], { encoding: 'utf8' }).trim();
-const changed = execFileSync('git', ['diff', '--name-only', `${base}...HEAD`], { encoding: 'utf8' })
-  .split(/\\r?\\n/)
+const changed = execFileSync('git', ['diff', '--name-only', \`\${base}...HEAD\`], { encoding: 'utf8' })
+  .split(/\r?\n/)
   .filter(Boolean);
 
 const shellAssets = new Set([
@@ -18,7 +18,7 @@ const shellChanged = changed.some(path => shellAssets.has(path));
 if (shellChanged) {
   assert.ok(changed.includes('sw.js'),
     'A cached shell asset changed without updating sw.js; the service worker would keep serving the old cache version.');
-  const previous = execFileSync('git', ['show', `${base}:sw.js`], { encoding: 'utf8' });
+  const previous = execFileSync('git', ['show', \`\${base}:sw.js\`], { encoding: 'utf8' });
   const current = fs.readFileSync('sw.js', 'utf8');
   const readCacheName = source => (source.match(/const SHELL_CACHE_NAME = '([^']+)'/) || [])[1];
   assert.ok(readCacheName(previous), 'Base service worker cache version must be readable');
