@@ -739,6 +739,18 @@ Waist-Hip Ratio (WHO),0.889
   assert.ok(analyzerFrame, "The embedded analyzer frame must be available for the publication test.");
   await analyzerFrame.evaluate(() => {
     const root = document.documentElement;
+    const requestId = "storage-failure-fixture";
+    window.__publicationReply = null;
+    // This synthetic message bypasses the UI click handler, so capture the
+    // parent reply independently of the analyzer's click-scoped request ID.
+    window.addEventListener("message", event => {
+      if (event.origin === window.location.origin &&
+          event.source === window.parent &&
+          event.data?.type === "top-genesis-publish-result" &&
+          event.data.requestId === requestId) {
+        window.__publicationReply = event.data;
+      }
+    });
     const payload = {
       traineeId: root.dataset.topGenesisTraineeId,
       contextNonce: root.dataset.topGenesisContextNonce || window.__topGenesisContextNonce || "",
@@ -750,22 +762,26 @@ Waist-Hip Ratio (WHO),0.889
     };
     window.parent.postMessage({
       type: "top-genesis-approved-report",
-      requestId: "storage-failure-fixture",
+      requestId,
       payload
     }, window.location.origin);
   });
   await integrationPage.waitForFunction(() => {
     const frame = document.querySelector("#topGenesisPdfAnalyzerFrame");
-    const status = frame?.contentDocument?.querySelector("#sendToTraineeStatus")?.textContent || "";
-    return status.includes("مرحله ناموفق: بارگذاری فایل گزارش در فضای ذخیره‌سازی") &&
-      status.includes("simulated storage denied");
+    const reply = frame?.contentWindow?.__publicationReply;
+    return reply?.requestId === "storage-failure-fixture";
   }, null, { timeout: 10000 });
+  const publicationReply = await integrationPage.locator("#topGenesisPdfAnalyzerFrame").evaluate(frame =>
+    frame.contentWindow.__publicationReply);
+  assert.equal(publicationReply.ok, false, "A rejected Storage upload must return a failed publication result.");
+  assert.match(publicationReply.message, /مرحله ناموفق: بارگذاری فایل گزارش در فضای ذخیره‌سازی/,
+    "The publication reply must identify the failed Storage stage.");
+  assert.match(publicationReply.message, /simulated storage denied/,
+    "The publication reply must preserve the concrete Storage error.");
+  assert.match(publicationReply.message, /وضعیت HTTP 403/,
+    "The publication reply must include the concrete HTTP status.");
   assert.equal(await integrationPage.evaluate(() => window.__publicationInsertCount), 0,
     "A Storage upload failure must not insert a trainee publication row.");
-  assert.match(await integrationPage.locator("#topGenesisPdfAnalyzerFrame").evaluate(frame =>
-    frame.contentDocument.querySelector("#sendToTraineeStatus").textContent),
-    /وضعیت HTTP 403/,
-    "The analyzer must receive the concrete HTTP status for a failed upload.");
   console.log("[smoke] simulated Storage failure returned exact stage and prevented database insert");
   await integrationPage.close();
 
