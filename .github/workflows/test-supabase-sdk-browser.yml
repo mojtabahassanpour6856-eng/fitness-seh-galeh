@@ -22,19 +22,19 @@ permissions:
   contents: read
 
 jobs:
-  chromium-startup:
+  browser-engine-startup:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 25
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-      - name: Install Chromium test dependency
+      - name: Install Chromium, Firefox and WebKit test dependencies
         run: |
           npm install --no-save playwright
-          npx playwright install --with-deps chromium
-      - name: Test production startup with real local SDK and simulated 404
+          npx playwright install --with-deps chromium firefox webkit
+      - name: Test production startup in three browser engines with simulated SDK 404
         run: node tests/supabase-sdk-loader.browser.mjs
 
 # Keep this workflow self-triggering for subsequent branch updates.
