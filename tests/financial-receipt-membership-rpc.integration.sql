@@ -5,8 +5,15 @@
 
 -- Mirror the draft migration's relationship constraints in disposable PostgreSQL.
 alter table public.trainee_payments add column receipt_id uuid;
+alter table public.trainee_memberships
+  add constraint trainee_memberships_trainee_id_id_key unique (trainee_id,id);
 alter table public.trainee_payment_receipts
   add constraint trainee_payment_receipts_trainee_id_id_key unique (trainee_id,id);
+alter table public.trainee_payment_receipts
+  add constraint trainee_payment_receipts_trainee_membership_fk
+  foreign key (trainee_id,membership_id)
+  references public.trainee_memberships(trainee_id,id)
+  deferrable initially deferred;
 alter table public.trainee_payments
   add constraint trainee_payments_trainee_membership_fk
   foreign key (trainee_id,membership_id)
@@ -127,7 +134,7 @@ end;
 $$;
 
 -- Coach must not review a receipt owned by another coach.
-select set_config('request.jwt.claim.sub','10000000-0000-0000-0000-000000000002',false);
+select set_config('request.jwt.claim.sub','10000000-0000-0000-0000-000000000001',false);
 do $$
 begin
   begin
