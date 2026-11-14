@@ -4087,8 +4087,9 @@ const plans=workoutResult.data||[], nutrition=nutritionResult.data||[];
         if(paid==='پرداخت شده'&&amount>0)await sbWrite('/trainee_payments','POST',{trainee_id:traineeId,amount,payment_date:today(),description:'شهریه پرداخت‌شده توسط مربی'});
       }
       await loadClients();await loadMembershipHistory();await loadCoachReceipts();await loadMembershipCard();
+      const cardRows=await sbGet(`/trainee_membership_cards?trainee_id=eq.${encodeURIComponent(traineeId)}&select=card_number&limit=1`);
       if(atomicStorageKeyToClear)localStorage.removeItem(atomicStorageKeyToClear);
-      alert('عضویت و اطلاعات کارت ذخیره شد. شماره عضویت: '+String((await sbGet(`/trainee_membership_cards?trainee_id=eq.${encodeURIComponent(traineeId)}&select=card_number&limit=1`))[0]?.card_number||'ثبت نشده'));
+      alert('عضویت و اطلاعات کارت ذخیره شد. شماره عضویت: '+String(cardRows[0]?.card_number||'ثبت نشده'));
     }catch(e){alert('ثبت عضویت انجام نشد.\\n'+(e?.message||String(e)))}
   };
 
