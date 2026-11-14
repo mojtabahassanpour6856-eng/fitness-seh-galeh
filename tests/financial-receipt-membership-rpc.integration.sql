@@ -162,5 +162,54 @@ begin
 end;
 $$;
 
-select 'PASS: exact membership settlement, payment-to-receipt uniqueness, idempotent replay, payload mismatch rejection, legacy NULL fail-closed, rejection no-op, and coach ownership.' as result;
+reset role;
+
+-- Apply the later cutover checks only after the client/RPC migration stage.
+\i supabase/drafts/20261114000200_enforce_new_membership_links.sql
+
+set role authenticated;
+select set_config('request.jwt.claim.sub','10000000-0000-0000-0000-000000000001',false);
+do $cutover$
+begin
+  -- Existing legacy NULL receipt is retained, but cannot be changed without mapping.
+  begin
+    update public.trainee_payment_receipts
+       set review_status='rejected'
+     where id='40000000-0000-0000-0000-000000000008';
+    raise exception 'expected legacy NULL receipt update to be blocked until manual mapping';
+  exception when check_violation then null;
+  end;
+
+  -- New receipt rows must explicitly select a membership.
+  begin
+    insert into public.trainee_payment_receipts
+      (id,trainee_id,membership_id,submitted_by,receipt_path,amount,payment_date)
+    values
+      ('40000000-0000-0000-0000-000000000010',
+       '30000000-0000-0000-0000-000000000001',null,
+       '20000000-0000-0000-0000-000000000001',
+       'synthetic/new-unlinked.jpg',1000,'2026-11-14');
+    raise exception 'expected new receipt without membership link to be blocked';
+  exception when check_violation then null;
+  end;
+
+  -- New payment rows must always be linked to one membership.
+  begin
+    insert into public.trainee_payments
+      (trainee_id,membership_id,amount,payment_date,description)
+    values
+      ('30000000-0000-0000-0000-000000000001',null,1000,'2026-11-14','unlinked');
+    raise exception 'expected new payment without membership link to be blocked';
+  exception when check_violation then null;
+  end;
+
+  if not exists(select 1 from public.trainee_payment_receipts
+    where id='40000000-0000-0000-0000-000000000008'
+      and membership_id is null and review_status='pending') then
+    raise exception 'legacy receipt was not preserved unchanged';
+  end if;
+end;
+$cutover$;
+
+select 'PASS: exact membership settlement, one payment per receipt, cross-trainee FK protection, idempotent replay, legacy NULL reconciliation, fail-closed cutover checks, rejection no-op, and coach ownership.' as result;
 reset role;
