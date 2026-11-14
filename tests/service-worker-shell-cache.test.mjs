@@ -169,6 +169,17 @@ const degradedNavigation = await degradedNavigationResponse;
 assert.match(await degradedNavigation.text(), /network:\/fitness-seh-galeh\/index\.html/,
   'a server-side 5xx uses the cached shell instead of a blank error page');
 
+forcedStatus = 404;
+let notFoundNavigationResponse;
+listeners.fetch({
+  request: { method: 'GET', mode: 'navigate', url: scope },
+  respondWith(promise) { notFoundNavigationResponse = promise; }
+});
+const notFoundNavigation = await notFoundNavigationResponse;
+assert.match(await notFoundNavigation.text(), /network:\/fitness-seh-galeh\/index\.html/,
+  'a server-side 404 on the app entry route uses the cached shell');
+forcedStatus = null;
+
 // A failed update must not remove the currently active shell cache.
 const originalFetch = globalThis.fetch;
 // Simulate a newer worker whose required index cannot be fetched.
