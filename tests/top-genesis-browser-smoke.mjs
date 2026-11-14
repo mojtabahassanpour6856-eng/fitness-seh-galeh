@@ -701,6 +701,67 @@ Waist-Hip Ratio (WHO),0.889
     "The embedded analyzer must reset when the selected trainee changes.");
   assert.match(analyzerEmbedSource, /top-genesis-publication\.js/,
     "The standalone analyzer entry must continue loading the report publication module.");
+  // Exercise the real parent/iframe publication message path with a mocked
+  // Storage rejection. A failed upload must return its exact stage to the
+  // analyzer and must never create a publication database row.
+  await integrationPage.evaluate(() => {
+    window.authProfile = { role: "coach" };
+    window.currentClient = { id: "trainee-javad-fixture" };
+    window.__publicationInsertCount = 0;
+    window.AUTH_SUPABASE = {
+      auth: { async getUser() { return { data: { user: { id: "coach-fixture-1" } }, error: null }; } },
+      storage: {
+        from() {
+          return {
+            async upload() {
+              return { error: Object.assign(new Error("simulated storage denied"), {
+                name: "StorageApiError", status: 403, code: "42501"
+              }) };
+            },
+            async remove() { throw new Error("Cleanup must not run before a successful upload."); }
+          };
+        }
+      },
+      from() {
+        return {
+          async insert() {
+            window.__publicationInsertCount += 1;
+            return { error: null };
+          }
+        };
+      }
+    };
+  });
+  await integrationPage.addScriptTag({ path: path.join(root, "top-genesis-publication.js") });
+  await integrationPage.waitForTimeout(100);
+  await integrationPage.locator("#topGenesisPdfAnalyzerFrame").evaluate(frame => {
+    frame.contentWindow.postMessage({
+      type: "top-genesis-approved-report",
+      requestId: "storage-failure-fixture",
+      payload: {
+        traineeId: "trainee-javad-fixture",
+        contextNonce: frame.dataset.contextNonce,
+        analysisDate: "2026-11-14",
+        metrics: { weight_kg: { value: 78, unit: "kg", status: "needs_coach_review" } },
+        trainingNotes: "برنامه تمرینی آزمایشی",
+        nutritionNotes: "برنامه تغذیه آزمایشی",
+        reportHtml: '<!doctype html><html><body><div id="result">fixture</div></body></html>'
+      }
+    }, window.location.origin);
+  });
+  await integrationPage.waitForFunction(() => {
+    const frame = document.querySelector("#topGenesisPdfAnalyzerFrame");
+    const status = frame?.contentDocument?.querySelector("#sendToTraineeStatus")?.textContent || "";
+    return status.includes("مرحله ناموفق: بارگذاری فایل گزارش در فضای ذخیره‌سازی") &&
+      status.includes("simulated storage denied");
+  }, null, { timeout: 10000 });
+  assert.equal(await integrationPage.evaluate(() => window.__publicationInsertCount), 0,
+    "A Storage upload failure must not insert a trainee publication row.");
+  assert.match(await integrationPage.locator("#topGenesisPdfAnalyzerFrame").evaluate(frame =>
+    frame.contentDocument.querySelector("#sendToTraineeStatus").textContent),
+    /وضعیت HTTP 403/,
+    "The analyzer must receive the concrete HTTP status for a failed upload.");
+  console.log("[smoke] simulated Storage failure returned exact stage and prevented database insert");
   await integrationPage.close();
 
   console.log('[smoke] coach role-switch assertions passed');
