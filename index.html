@@ -7808,28 +7808,75 @@ const oldWorkoutRenderer=window.renderWorkoutList;
   if(window.SEH_RECEIPT_MEMBERSHIP_LINK_ENABLED!==true)return alert("ارسال فیش تا اجرای مهاجرت دیتابیس و فعال‌سازی مسیر اتصال به عضویت موقتاً غیرفعال است؛ لطفاً بعداً دوباره تلاش کنید.");
   const file=$("receiptFile")?.files?.[0],amount=Number($("receiptAmount")?.value||0),rawDate=$("receiptDate")?.value||"",date=isoDate(rawDate);
   const membershipId=String($("receiptMembershipId")?.value||"");
-  if(window.SEH_RECEIPT_MEMBERSHIP_LINK_ENABLED===true&&!membershipId)return alert("ابتدا عضویتی را که این فیش بابت آن پرداخت شده انتخاب کنید.");
-  const submitBtn=$("submitPaymentReceiptBtn");if(submitBtn){submitBtn.disabled=true;submitBtn.textContent="⏳ در حال ارسال فیش…";}
+  const note=($("receiptNote")?.value||"").trim()||null;
+  if(!membershipId)return alert("ابتدا عضویتی را که این فیش بابت آن پرداخت شده انتخاب کنید.");
   if(!file)return alert("لطفاً تصویر یا PDF فیش را انتخاب کنید.");
   if(file.size>5*1024*1024)return alert("حجم فایل باید کمتر از ۵ مگابایت باشد.");
   if(!["image/jpeg","image/png","image/webp","application/pdf"].includes(file.type))return alert("فقط JPG، PNG، WEBP یا PDF مجاز است.");
   if(!Number.isFinite(amount)||amount<=0)return alert("مبلغ واریزی را وارد کنید.");
   if(!date)return alert("تاریخ واریز شمسی معتبر وارد کنید.");
-  const traineeId=currentClient.id;let path=null;
+  const submitBtn=$("submitPaymentReceiptBtn");if(submitBtn){submitBtn.disabled=true;submitBtn.textContent="⏳ در حال ارسال فیش…";}
+  const traineeId=String(currentClient.id);
+  let operationStorageKey=null;
   try{
-   const [session,uploadFile]=await Promise.all([__fitnessGetApiSession(),window.sehOptimizeUploadImage(file)]);const user=session?.user;if(!user)throw new Error("نشست حساب شاگرد معتبر نیست.");
-   const name=uploadFile.name.replace(/[^a-zA-Z0-9._-]/g,"_").slice(-80)||"receipt";
-   path=user.id+"/"+traineeId+"/"+Date.now()+"_"+name;
-   const {error:uploadError}=await AUTH_SUPABASE.storage.from("payment-receipts").upload(path,uploadFile,{upsert:false,contentType:uploadFile.type});
-   if(uploadError)throw uploadError;
-   const receiptPayload={trainee_id:traineeId,submitted_by:user.id,receipt_path:path,amount,payment_date:date,note:($("receiptNote")?.value||"").trim()||null,review_status:"pending"};
-   if(window.SEH_RECEIPT_MEMBERSHIP_LINK_ENABLED===true)receiptPayload.membership_id=Number(membershipId);
-   const {error:insertError}=await AUTH_SUPABASE.from("trainee_payment_receipts").insert(receiptPayload);
-   if(insertError){await AUTH_SUPABASE.storage.from("payment-receipts").remove([path]);throw insertError;}
+   const [session,fileDigest]=await Promise.all([
+    __fitnessGetApiSession(),
+    crypto.subtle.digest("SHA-256",await file.arrayBuffer()).then(buf=>Array.from(new Uint8Array(buf)).map(x=>x.toString(16).padStart(2,"0")).join(""))
+   ]);
+   const user=session?.user;if(!user)throw new Error("نشست حساب شاگرد معتبر نیست.");
+   operationStorageKey="seh-receipt-submit-op:"+String(user.id)+":"+traineeId;
+   const name=file.name.replace(/[^a-zA-Z0-9._-]/g,"_").slice(-80)||"receipt";
+   const operationPayload={traineeId,submittedBy:String(user.id),membershipId:String(membershipId),amount,paymentDate:date,note,fileDigest,fileName:file.name,fileSize:file.size,fileType:file.type,fileLastModified:file.lastModified};
+   let pending=null;
+   try{pending=JSON.parse(localStorage.getItem(operationStorageKey)||"null");}catch(_){throw new Error("اطلاعات ارسال قبلی قابل بازیابی نیست؛ برای جلوگیری از ثبت تکراری، ابتدا با مربی پیگیری کنید.");}
+   let operationId;
+   if(pending){
+    if(!pending.operationId||JSON.stringify(pending.payload)!==JSON.stringify(operationPayload))throw new Error("یک ارسال قبلی هنوز نتیجه قطعی نگرفته است. برای ادامه، همان فایل و همان اطلاعات را انتخاب کنید؛ ارسال جدید تا تعیین تکلیف قبلی مسدود است.");
+    operationId=pending.operationId;
+   }else{
+    operationId=crypto.randomUUID();
+    localStorage.setItem(operationStorageKey,JSON.stringify({operationId,payload:operationPayload}));
+   }
+   const path=user.id+"/"+traineeId+"/receipt_"+operationId+"_"+name;
+   const findExisting=async()=>{
+    const {data,error}=await AUTH_SUPABASE.from("trainee_payment_receipts")
+     .select("id,trainee_id,submitted_by,submission_operation_id,membership_id,receipt_path,amount,payment_date,note,review_status")
+     .eq("submitted_by",user.id).eq("submission_operation_id",operationId).limit(2);
+    if(error)throw error;
+    if((data||[]).length>1)throw new Error("برای یک شناسه ارسال بیش از یک فیش پیدا شد؛ بررسی دستی لازم است.");
+    const row=data?.[0]||null;
+    if(row&&(String(row.trainee_id)!==traineeId||String(row.membership_id)!==membershipId||Number(row.amount)!==amount||row.payment_date!==date||String(row.receipt_path)!==path||String(row.note||"")!==String(note||"")))
+     throw new Error("شناسه ارسال قبلی با اطلاعات فعلی مطابقت ندارد؛ برای جلوگیری از اتصال اشتباه فیش، عملیات متوقف شد.");
+    return row;
+   };
+   let existing=await findExisting();
+   if(!existing){
+    const uploadFile=await window.sehOptimizeUploadImage(file);
+    const {error:uploadError}=await AUTH_SUPABASE.storage.from("payment-receipts").upload(path,uploadFile,{upsert:false,contentType:uploadFile.type});
+    if(uploadError){
+     // A previous attempt may have uploaded the object before its response was lost.
+     // Keep the same deterministic path and continue only if that object is verifiably present.
+     const {data:signed,error:signedError}=await AUTH_SUPABASE.storage.from("payment-receipts").createSignedUrl(path,60);
+     if(signedError||!signed?.signedUrl)throw uploadError;
+    }
+    const receiptPayload={...operationPayload,trainee_id:traineeId,submitted_by:user.id,submission_operation_id:operationId,membership_id:Number(membershipId),receipt_path:path,amount,payment_date:date,note,review_status:"pending"};
+    delete receiptPayload.fileDigest;delete receiptPayload.fileName;delete receiptPayload.fileSize;delete receiptPayload.fileType;delete receiptPayload.fileLastModified;
+    const {error:insertError}=await AUTH_SUPABASE.from("trainee_payment_receipts").insert(receiptPayload);
+    if(insertError){
+     // Never delete the uploaded object on an ambiguous network error: the INSERT may
+     // already have committed. The stable operation key makes the next retry safe.
+     existing=await findExisting();
+     if(!existing)throw insertError;
+    }else{
+     existing=await findExisting();
+    }
+   }
+   if(!existing||existing.review_status!=="pending")throw new Error("ثبت فیش در پایگاه داده هنوز قابل تأیید نیست؛ شناسه عملیات حفظ شد و می‌توانید با همان اطلاعات دوباره تلاش کنید.");
+   localStorage.removeItem(operationStorageKey);
    $("receiptFile").value="";$("receiptAmount").value="";$("receiptNote").value="";
-   alert("فیش با موفقیت برای بررسی مربی ارسال شد؛ وضعیت شهریه پس از تأیید مربی تغییر می‌کند.");
+   alert("فیش با موفقیت ثبت شد؛ در صورت قطع اینترنت، ارسال مجدد همین عملیات باعث ثبت فیش تکراری نمی‌شود.");
    loadTraineeMembership().catch(e=>console.warn("background membership refresh",e));
-  }catch(e){console.error("submitPaymentReceipt failed",e);alert("ارسال فیش انجام نشد. "+(e.message||String(e)));}
+  }catch(e){console.error("submitPaymentReceipt failed",e);alert("ارسال فیش انجام نشد. اطلاعات تلاش قبلی برای بازیابی امن حفظ شده است. "+(e?.message||String(e)));}
   finally{const b=$("submitPaymentReceiptBtn");if(b){b.disabled=false;b.textContent="📨 ارسال فیش برای مربی";}}
  };
 
