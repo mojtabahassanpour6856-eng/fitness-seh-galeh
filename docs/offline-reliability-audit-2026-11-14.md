@@ -492,3 +492,14 @@ The fixture intentionally uses only synthetic identities and does not connect to
 6. The fixture is a minimal transaction/authorization model, not a byte-for-byte copy of production RLS policies, table definitions, or grants. Before porting, compare every relevant production column, check, FK, policy and caller path.
 
 No production or test Supabase project was modified. No application runtime code, existing client handler, live payment, membership, receipt, Auth, Storage, RLS, grant or migration was changed. The fixture exists only in the separate Git branch above.
+
+
+### Concurrent receipt-review race test added and CI-confirmed
+
+The first concurrent-test attempt exposed a test-harness issue: an asynchronous `dblink` result had not been fully drained before issuing COMMIT. The test was corrected to consume the trailing empty result, and a further assertion now verifies that session B is still busy (waiting on the receipt row lock) before session A commits.
+
+The corrected two-session test uses independent PostgreSQL connections, the same authenticated coach identity, one pending synthetic receipt, and two distinct operation UUIDs. It holds session A's transaction open after the RPC returns, confirms session B remains blocked, commits session A, then verifies session B receives the expected terminal-receipt rejection. Final assertions require exactly one payment and an approved receipt.
+
+The GitHub Actions run for commit `3ca40d80b6f7dd4b5c3f8d16878a6265965c86a7` completed the SQL test step successfully on PostgreSQL 17.12. This now verifies the prototype's row-lock race behavior in a real two-session database test, in addition to retry, payload mismatch, authorization, private-ledger ACL, and rollback tests. Earlier intermediate commits in this branch had expected test failures while the harness was being corrected; the latest run is the relevant result.
+
+Still not covered: production schema/RLS parity, membership activation rule, membership/card allocation, receipt upload staging, offline outbox/account switching, and app-client migration. This is a green isolated prototype test, not approval to deploy its SQL to Supabase.
