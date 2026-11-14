@@ -7766,6 +7766,7 @@ const oldWorkoutRenderer=window.renderWorkoutList;
  }
  window.submitPaymentReceipt=async function(){
   if(!isTrainee()||!currentClient?.id)return alert("حساب شاگرد هنوز بارگذاری نشده است؛ یک بار صفحه را تازه‌سازی کنید و دوباره تلاش کنید.");
+  if(window.SEH_RECEIPT_MEMBERSHIP_LINK_ENABLED!==true)return alert("ارسال فیش تا اجرای مهاجرت دیتابیس و فعال‌سازی مسیر اتصال به عضویت موقتاً غیرفعال است؛ لطفاً بعداً دوباره تلاش کنید.");
   const file=$("receiptFile")?.files?.[0],amount=Number($("receiptAmount")?.value||0),rawDate=$("receiptDate")?.value||"",date=isoDate(rawDate);
   const membershipId=String($("receiptMembershipId")?.value||"");
   if(window.SEH_RECEIPT_MEMBERSHIP_LINK_ENABLED===true&&!membershipId)return alert("ابتدا عضویتی را که این فیش بابت آن پرداخت شده انتخاب کنید.");
