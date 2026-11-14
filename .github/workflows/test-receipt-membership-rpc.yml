@@ -12,7 +12,7 @@ on:
       - 'tests/receipt-review-concurrency.sh'
       - '.github/workflows/test-receipt-membership-rpc.yml'
   pull_request:
-    branches: [main]
+    branches: [main, prototype/receipt-idempotency-fixture-20261114]
     paths:
       - 'supabase/drafts/20261114000100_receipt_membership_link.sql'
       - 'supabase/drafts/20261114000110_review_trainee_payment_receipt_rpc.sql'
