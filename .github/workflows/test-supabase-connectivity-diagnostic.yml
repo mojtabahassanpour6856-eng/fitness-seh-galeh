@@ -1,0 +1,29 @@
+name: Supabase live connectivity diagnostic
+
+on:
+  workflow_dispatch:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'index.html'
+      - 'tests/supabase-connectivity-diagnostic.browser.mjs'
+      - '.github/workflows/test-supabase-connectivity-diagnostic.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  safe-connectivity-probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install Chromium
+        run: |
+          npm install --no-save playwright
+          npx playwright install --with-deps chromium
+      - name: Probe Supabase Auth endpoint without signing in or reading data
+        run: node tests/supabase-connectivity-diagnostic.browser.mjs
