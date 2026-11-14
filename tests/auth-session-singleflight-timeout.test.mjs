@@ -12,13 +12,16 @@ const timers=new Map();
 let nextTimer=1;
 const setTimeoutFake=(fn,delay)=>{const id=nextTimer++;timers.set(id,{fn,delay});return id;};
 const clearTimeoutFake=id=>timers.delete(id);
-let calls=0,releaseHung,shownNotice='';
+let calls=0,releaseHung,shownNotice='',authStateListener=null;
 const window={
   showAuthError:message=>{shownNotice=message;},
-  AUTH_SUPABASE:{auth:{getSession(){
-    calls++;
-    return new Promise(resolve=>{releaseHung=resolve;});
-  }}}
+  AUTH_SUPABASE:{auth:{
+    onAuthStateChange(callback){authStateListener=callback;return {data:{subscription:{unsubscribe(){}}}};},
+    getSession(){
+      calls++;
+      return new Promise(resolve=>{releaseHung=resolve;});
+    }
+  }}
 };
 vm.runInNewContext(coordinator,{window,Promise,setTimeout:setTimeoutFake,clearTimeout:clearTimeoutFake});
 
@@ -46,6 +49,23 @@ assert.equal(resultA,resultB,'joined callers receive the same result');
 const cached=await window.__sehGetSessionSingleFlight();
 assert.equal(cached,resultA,'a very short successful-session cache prevents staggered startup recovery from rereading the same session');
 assert.equal(calls,2,'the cached startup result avoids an extra request');
+assert.equal(typeof authStateListener,'function','the coordinator subscribes to auth lifecycle changes');
+
+let nextSession={user:{id:'coach-2'}};
+window.AUTH_SUPABASE.auth.getSession=async()=>{
+  calls++;
+  return {data:{session:nextSession},error:null};
+};
+authStateListener('SIGNED_OUT');
+const afterSignOut=await window.__sehGetSessionSingleFlight();
+assert.equal(afterSignOut.data.session,nextSession,'SIGNED_OUT invalidates the short-lived cached session');
+assert.equal(calls,3,'a new session read occurs after SIGNED_OUT');
+
+nextSession={user:{id:'coach-3',token:'refreshed'}};
+authStateListener('TOKEN_REFRESHED');
+const afterRefresh=await window.__sehGetSessionSingleFlight();
+assert.equal(afterRefresh.data.session,nextSession,'TOKEN_REFRESHED invalidates the cached token/session result');
+assert.equal(calls,4,'a fresh session read occurs after TOKEN_REFRESHED');
 
 if(releaseHung)releaseHung({data:{session:null},error:null});
 
