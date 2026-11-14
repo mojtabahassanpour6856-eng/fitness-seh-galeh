@@ -20,6 +20,8 @@
   let lastLoadedTrainee = null;
   let lastLoadedAt = 0;
   let loading = false;
+  let lastContextKey = null;
+  let contextEpoch = 0;
 
   const $ = (id) => document.getElementById(id);
   const esc = (value) => String(value ?? "").replace(/[&<>"']/g, (c) => ({
@@ -350,10 +352,20 @@
     }
     renderHistory();
   }
+  function closeFullReportViewer() {
+    const modal = $("topGenesisFullReportModal");
+    const frame = $("topGenesisFullReportFrame");
+    if (frame?.dataset.objectUrl) URL.revokeObjectURL(frame.dataset.objectUrl);
+    if (frame) { frame.removeAttribute("src"); delete frame.dataset.objectUrl; }
+    if (modal) { modal.hidden = true; modal.style.display = "none"; }
+  }
   async function openFullReport(row, button) {
     const modal = $("topGenesisFullReportModal");
     const frame = $("topGenesisFullReportFrame");
     if (!modal || !frame || !row?.report_storage_path) return;
+    const requestedTraineeId = currentTraineeId();
+    const requestedEpoch = contextEpoch;
+    if (!requestedTraineeId || (!currentCoach() && !currentTrainee())) return;
     const oldText = button?.textContent;
     if (button) { button.disabled = true; button.textContent = "در حال دریافت گزارش…"; }
     try {
@@ -361,6 +373,9 @@
         .from("trainee-health-reports").download(row.report_storage_path);
       if (error) throw error;
       if (!data) throw new Error("فایل گزارش دریافت نشد.");
+      if (requestedEpoch !== contextEpoch || requestedTraineeId !== currentTraineeId()) {
+        throw new Error("شاگرد یا حساب کاربری تغییر کرده است؛ نمایش گزارش قبلی لغو شد.");
+      }
       if (frame.dataset.objectUrl) URL.revokeObjectURL(frame.dataset.objectUrl);
       const reportBlob = data.type === "text/html" ? data : new Blob([data], { type: "text/html;charset=utf-8" });
       const objectUrl = URL.createObjectURL(reportBlob);
@@ -369,15 +384,18 @@
       modal.hidden = false;
       modal.style.display = "flex";
     } catch (error) {
-      alert("نمایش گزارش کامل انجام نشد. اتصال یا دسترسی گزارش را بررسی کنید.");
-      console.warn("Top Genesis full report:", error);
+      if (requestedEpoch === contextEpoch && requestedTraineeId === currentTraineeId()) {
+        alert("نمایش گزارش کامل انجام نشد. اتصال یا دسترسی گزارش را بررسی کنید.");
+        console.warn("Top Genesis full report:", error);
+      }
     } finally {
       if (button) { button.disabled = false; button.textContent = oldText || "مشاهده گزارش کامل"; }
     }
   }
   async function loadPublished(force) {
     const traineeId = currentTraineeId();
-    if (!traineeId || !window.AUTH_SUPABASE || loading) return;
+    const requestEpoch = contextEpoch;
+    if ((!currentCoach() && !currentTrainee()) || !traineeId || !window.AUTH_SUPABASE || loading) return;
     if (!force && traineeId === lastLoadedTrainee && Date.now() - lastLoadedAt < 20000) return;
     loading = true;
     const body = $("topGenesisPublishedBody");
@@ -389,7 +407,7 @@
         .order("analysis_date", { ascending: true })
         .order("created_at", { ascending: true });
       if (error) throw error;
-      if (currentTraineeId() !== traineeId) return;
+      if (requestEpoch !== contextEpoch || currentTraineeId() !== traineeId) return;
       renderPublished(data || [], traineeId);
       lastLoadedTrainee = traineeId;
       lastLoadedAt = Date.now();
@@ -399,7 +417,7 @@
         console.warn("Top Genesis published history:", error);
       }
     } finally {
-      loading = false;
+      if (requestEpoch === contextEpoch) loading = false;
     }
   }
   function safeMetrics(source) {
@@ -515,6 +533,21 @@
   }
   window.addEventListener("message", handleApprovedReport);
   function tick() {
+    const role = currentCoach() ? "coach" : currentTrainee() ? "trainee" : "signed-out";
+    const traineeId = role === "signed-out" ? "" : String(currentTraineeId() || "");
+    const contextKey = role + ":" + traineeId;
+    if (contextKey !== lastContextKey) {
+      lastContextKey = contextKey;
+      contextEpoch += 1;
+      loading = false;
+      lastLoadedTrainee = null;
+      lastLoadedAt = 0;
+      closeFullReportViewer();
+      const body = $("topGenesisPublishedBody");
+      if (body) body.textContent = role === "signed-out" || !traineeId
+        ? "برای مشاهده گزارش‌ها وارد حساب کاربری شوید."
+        : "در حال دریافت گزارش‌های شاگرد انتخاب‌شده…";
+    }
     removeLegacyProgressAnalysisCards();
     installTraineeAnalysisNavigationGuard();
     mountProgressCard();
