@@ -151,3 +151,69 @@ $$;
 reset role;
 
 select 'PASS: retry idempotency, changed-payload rejection, terminal receipt protection, rejection without payment, coach ownership, trainee role denial, atomic rollback, private ledger ACL.' as result;
+
+
+-- Two independent database sessions race to approve the same pending receipt
+-- using different operation IDs. The first transaction keeps its row lock open
+-- after the RPC returns; the second must wait, then observe the terminal state.
+create extension if not exists dblink;
+insert into public.trainee_payment_receipts(id,trainee_id,submitted_by,amount) values
+ ('40000000-0000-0000-0000-000000000005','30000000-0000-0000-0000-000000000001','20000000-0000-0000-0000-000000000001',45000);
+
+select dblink_connect('receipt_race_a','dbname='||current_database()||' user=postgres');
+select dblink_connect('receipt_race_b','dbname='||current_database()||' user=postgres');
+select dblink_exec('receipt_race_a','set role authenticated');
+select dblink_exec('receipt_race_b','set role authenticated');
+select dblink_exec('receipt_race_a','set request.jwt.claim.sub = ''10000000-0000-0000-0000-000000000001''');
+select dblink_exec('receipt_race_b','set request.jwt.claim.sub = ''10000000-0000-0000-0000-000000000001''');
+select dblink_exec('receipt_race_a','begin');
+
+do $$
+declare v_result text;
+begin
+  if dblink_send_query('receipt_race_a',
+    $$select public.review_receipt_idempotent(
+      '40000000-0000-0000-0000-000000000005','approve',
+      '50000000-0000-0000-0000-000000000007'
+    )::text$$) <> 1 then
+    raise exception 'could not start first concurrent approval';
+  end if;
+  perform * from dblink_get_result('receipt_race_a') as t(result text);
+
+  if dblink_send_query('receipt_race_b',
+    $$select public.review_receipt_idempotent(
+      '40000000-0000-0000-0000-000000000005','approve',
+      '50000000-0000-0000-0000-000000000008'
+    )::text$$) <> 1 then
+    raise exception 'could not start second concurrent approval';
+  end if;
+
+  -- Give session B time to reach and wait on the receipt row lock.
+  perform pg_sleep(0.3);
+  perform dblink_exec('receipt_race_a','commit');
+
+  begin
+    perform * from dblink_get_result('receipt_race_b') as t(result text);
+    raise exception 'second concurrent approval unexpectedly succeeded';
+  exception when sqlstate '55000' then
+    null;
+  end;
+end;
+$$;
+
+select dblink_disconnect('receipt_race_a');
+select dblink_disconnect('receipt_race_b');
+
+do $$
+declare v_count integer; v_status text;
+begin
+  select count(*) into v_count from public.trainee_payments
+   where trainee_id='30000000-0000-0000-0000-000000000001' and amount=45000;
+  if v_count <> 1 then raise exception 'concurrent approval created % payments, expected exactly one',v_count; end if;
+  select review_status into v_status from public.trainee_payment_receipts
+   where id='40000000-0000-0000-0000-000000000005';
+  if v_status <> 'approved' then raise exception 'concurrent approval did not leave receipt approved'; end if;
+end;
+$$;
+
+select 'PASS: two-session concurrent approval race produced one payment and one terminal receipt.' as concurrency_result;
