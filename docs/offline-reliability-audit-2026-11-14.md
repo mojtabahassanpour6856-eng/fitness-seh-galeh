@@ -519,3 +519,43 @@ This confirms that updating every membership row for a trainee during receipt ap
 ### Prototype hardening
 
 The receipt fixture now uses SHA-256 (via PostgreSQL `pgcrypto`) for canonical JSONB request fingerprints instead of MD5, and explicitly rejects a NULL decision so it cannot fall through to the rejection branch. The latest CI run for commit `9169aa9012938917513de50d2befdf2c57349047` completed successfully on PostgreSQL 17.12, including the SHA-256 fingerprint and NULL-decision rejection checks. The later documentation-only commit does not change the tested SQL.
+
+
+## Prototype milestone: atomic membership creation and card allocation — 2026-11-14
+
+Added a second isolated PostgreSQL 17 fixture and independent GitHub Actions workflow:
+
+- `tests/financial-membership-card.fixture.sql`
+- `tests/financial-membership-card.integration.sql`
+- `.github/workflows/test-financial-membership-card.yml`
+
+The fixture follows the production schema facts inspected read-only:
+- `trainee_membership_cards` has a unique `card_number` and a unique `trainee_id`; it is the canonical one-card-per-trainee registry.
+- `trainee_memberships` is a history table: it must permit multiple rows per trainee, and its copied `card_number` must not be made unique.
+- `trainee_memberships.id` and `trainee_payments.id` are bigint identity-like keys in the production schema, while the registry key is UUID.
+- Membership history carries `start_date`, `end_date`, `status`, `description`, `amount`, `payment_status`, `card_number`, and `card_holder`.
+
+Prototype transaction behavior:
+1. Validate authenticated coach identity and trainee assignment.
+2. Claim a unique operation-ledger key and compare SHA-256 request fingerprint on retries.
+3. Lock the trainee row before card lookup/allocation.
+4. Reuse the canonical registry card when present; otherwise allocate a four-digit candidate protected by the registry's database UNIQUE constraints.
+5. Insert the membership history row and copy the canonical card number.
+6. If the membership is marked paid and amount is positive, create its payment in the same transaction.
+7. Persist the operation result in the same transaction.
+
+CI run `43568950600` completed successfully on PostgreSQL 17.12. It verifies:
+- same operation retry creates only one membership and one payment;
+- a different genuine membership for the same trainee reuses the canonical card while preserving multiple history rows;
+- unpaid membership does not create a payment;
+- changed payload under an existing operation UUID is rejected;
+- invalid date range and cross-coach access are rejected;
+- injected payment failure rolls back membership, card registry allocation and operation-ledger claim;
+- two independent sessions concurrently create memberships for the same trainee: second waits on trainee row lock, both history rows receive the same card, and only one registry row exists;
+- different trainees do not share a card number.
+
+### Scope and safety limits
+
+This is a synthetic test fixture, not a production migration. It is not a complete copy of production RLS, grants, table triggers, sequence ownership, and actual browser handler payloads. The RPC signature and payment condition are prototype decisions requiring parity review against the live `saveSubscription` handler before any production migration. In particular, do not infer that the live handler's exact payment status/date/description semantics have already been preserved.
+
+No production or test Supabase project was changed. No app runtime, live membership, payment, card registry, Auth, Storage, RLS, grant, or migration was modified.
