@@ -3634,7 +3634,53 @@ function buildMembershipCard(){const sec=$id('client');if(!sec||$id('membershipC
 window.copyMembershipCard=function(){const v=$id('cardNumber')?.value||'';if(!v)return alert('شماره کارت ثبت نشده است.');if(!navigator.clipboard?.writeText){alert(v);return;}navigator.clipboard.writeText(v).then(()=>alert('شماره کارت کپی شد.')).catch(()=>alert(v));};const prevSelectClient=window.selectClient;window.selectClient=async function(id){await prevSelectClient(id);if(currentClient){if($id('trainingDaysEdit'))$id('trainingDaysEdit').value=currentClient.training_days||'';if($id('trainingTimeEdit'))$id('trainingTimeEdit').value=currentClient.training_time||'';await loadGoal();await loadMembershipCard();await loadWaterGoal();await loadWeeklyWaterLogs();}};
 
   buildAuthTabs();addRegistrationFields();buildGoalBox();addLibraryGoalField();addWaterGoal();addStyle();buildDashboard();buildMembershipCard();addNavDashboard();buildWorkoutControls();addScheduleUI();addPrintButtons();fixLibraryUse();
-  AUTH_SUPABASE.auth.getSession().then(({data})=>{if(data?.session)window.finishLogin(data.session.user);}).catch(e=>console.error(e));
+  <script id="seh-auth-session-singleflight-v1">
+(function(){
+  'use strict';
+  if(window.__sehGetSessionSingleFlight)return;
+  var active=null, cachedResult=null, cachedAt=0, authListenerInstalled=false;
+  var TIMEOUT_MS=12000, CACHE_MS=1200;
+  window.__sehGetSessionSingleFlight=function(){
+    var auth=window.AUTH_SUPABASE;
+    if(!auth||!auth.auth||typeof auth.auth.getSession!=='function'){
+      return Promise.reject(new Error('Supabase session service is unavailable.'));
+    }
+    if(active)return active;
+    if(cachedResult&&Date.now()-cachedAt<CACHE_MS)return Promise.resolve(cachedResult);
+    if(!authListenerInstalled&&typeof auth.auth.onAuthStateChange==='function'){
+      authListenerInstalled=true;
+      try{
+        auth.auth.onAuthStateChange(function(event){
+          if(event==='SIGNED_IN'||event==='SIGNED_OUT'||event==='TOKEN_REFRESHED'){
+            cachedResult=null;cachedAt=0;
+          }
+        });
+      }catch(error){authListenerInstalled=false;}
+    }
+    var request;
+    try{request=Promise.resolve(auth.auth.getSession());}
+    catch(error){return Promise.reject(error);}
+    var timer=null;
+    var timeout=new Promise(function(resolve,reject){
+      timer=setTimeout(function(){
+        reject(new Error('بررسی نشست بیش از ۱۲ ثانیه طول کشید؛ اتصال اینترنت را بررسی کنید.'));
+      },TIMEOUT_MS);
+    });
+    var tracked=Promise.race([request,timeout]).then(function(result){
+      if(result&&!result.error&&result.data&&result.data.session&&result.data.session.user){
+        cachedResult=result;cachedAt=Date.now();
+      }
+      return result;
+    }).finally(function(){
+      if(timer!==null)clearTimeout(timer);
+      if(active===tracked)active=null;
+    });
+    active=tracked;
+    return tracked;
+  };
+})();
+</script>
+window.__sehGetSessionSingleFlight().then(({data})=>{if(data?.session)window.finishLogin(data.session.user);}).catch(e=>console.error(e));
 })();
 
 </script>
@@ -14496,52 +14542,7 @@ window.sehResetTurnstile=function(){};
 </script>
 
 <!-- SEH_FINAL_FETCH_AND_SESSION_RECOVERY_20261016 -->
-<script id="seh-auth-session-singleflight-v1">
-(function(){
-  'use strict';
-  if(window.__sehGetSessionSingleFlight)return;
-  var active=null, cachedResult=null, cachedAt=0, authListenerInstalled=false;
-  var TIMEOUT_MS=12000, CACHE_MS=1200;
-  window.__sehGetSessionSingleFlight=function(){
-    var auth=window.AUTH_SUPABASE;
-    if(!auth||!auth.auth||typeof auth.auth.getSession!=='function'){
-      return Promise.reject(new Error('Supabase session service is unavailable.'));
-    }
-    if(active)return active;
-    if(cachedResult&&Date.now()-cachedAt<CACHE_MS)return Promise.resolve(cachedResult);
-    if(!authListenerInstalled&&typeof auth.auth.onAuthStateChange==='function'){
-      authListenerInstalled=true;
-      try{
-        auth.auth.onAuthStateChange(function(event){
-          if(event==='SIGNED_IN'||event==='SIGNED_OUT'||event==='TOKEN_REFRESHED'){
-            cachedResult=null;cachedAt=0;
-          }
-        });
-      }catch(error){authListenerInstalled=false;}
-    }
-    var request;
-    try{request=Promise.resolve(auth.auth.getSession());}
-    catch(error){return Promise.reject(error);}
-    var timer=null;
-    var timeout=new Promise(function(resolve,reject){
-      timer=setTimeout(function(){
-        reject(new Error('بررسی نشست بیش از ۱۲ ثانیه طول کشید؛ اتصال اینترنت را بررسی کنید.'));
-      },TIMEOUT_MS);
-    });
-    var tracked=Promise.race([request,timeout]).then(function(result){
-      if(result&&!result.error&&result.data&&result.data.session&&result.data.session.user){
-        cachedResult=result;cachedAt=Date.now();
-      }
-      return result;
-    }).finally(function(){
-      if(timer!==null)clearTimeout(timer);
-      if(active===tracked)active=null;
-    });
-    active=tracked;
-    return tracked;
-  };
-})();
-</script>
+
 
 <script id="SEH_FINAL_FETCH_AND_SESSION_RECOVERY_20261016">
 (function(){
