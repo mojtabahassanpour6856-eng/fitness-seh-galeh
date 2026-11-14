@@ -26,6 +26,17 @@ begin
   select count(*) into v_count from public.trainee_payments
    where trainee_id='30000000-0000-0000-0000-000000000001' and amount=125000;
   if v_count <> 1 then raise exception 'expected exactly one payment after retry; got %',v_count; end if;
+  if not exists(select 1 from public.trainee_payments
+    where trainee_id='30000000-0000-0000-0000-000000000001'
+      and amount=125000 and payment_date='2026-11-13'
+      and description='تأیید فیش واریزی') then
+    raise exception 'receipt approval payment fields differ from live browser handler';
+  end if;
+  if (select count(*) from public.trainee_memberships
+      where trainee_id='30000000-0000-0000-0000-000000000001'
+        and status='active' and payment_status='paid') <> 2 then
+    raise exception 'receipt approval must reproduce current UI behavior across all membership history rows';
+  end if;
 
   -- A NULL decision must not fall through to the rejection branch.
   begin
