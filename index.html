@@ -4044,14 +4044,47 @@ const plans=workoutResult.data||[], nutrition=nutritionResult.data||[];
     if(endRaw&&!end)return alert('تاریخ پایان عضویت معتبر نیست؛ نمونه ۱۴۰۵/۰۸/۱۸.');
     if(end&&end<start)return alert('تاریخ پایان عضویت نباید قبل از تاریخ شروع باشد.');
     if(paid==='پرداخت شده'&&amount<=0)return alert('برای ثبت شهریه پرداخت‌شده، مبلغ را وارد کنید.');
-    if(window.SEH_RECEIPT_MEMBERSHIP_LINK_ENABLED===true&&paid==='پرداخت شده'&&amount>0)return alert('ثبت مستقیم عضویتِ پرداخت‌شده تا آماده‌شدن RPC اتمیک مخصوص این مسیر موقتاً متوقف است؛ هیچ عضویت یا پرداختی ثبت نشد.');
-    const traineeId=currentClient.id;
+    const traineeId=String(currentClient.id),useAtomicMembership=window.SEH_RECEIPT_MEMBERSHIP_LINK_ENABLED===true;
     try{
       await window.ensureMembershipCardNumber(traineeId);
-      await sbWrite('/trainee_memberships','POST',{trainee_id:traineeId,start_date:start,end_date:end,status:'active',amount,payment_status:paid==='پرداخت شده'?'paid':'unpaid',description:'عضویت باشگاه'});
-      if(paid==='پرداخت شده'&&amount>0)await sbWrite('/trainee_payments','POST',{trainee_id:traineeId,amount,payment_date:today(),description:'شهریه پرداخت‌شده توسط مربی'});
+      if(useAtomicMembership){
+        if(!window.AUTH_SUPABASE||typeof window.AUTH_SUPABASE.rpc!=='function')throw new Error('اتصال امن دیتابیس آماده نیست؛ هیچ عضویت یا پرداختی ثبت نشد.');
+        const paymentStatus=paid==='پرداخت شده'?'paid':'unpaid';
+        const storageKey='seh-coach-membership-create:'+traineeId;
+        const comparable={trainee_id:traineeId,start_date:start,end_date:end,amount,payment_status:paymentStatus};
+        let pending=null;
+        try{pending=JSON.parse(localStorage.getItem(storageKey)||'null');}catch(_){throw new Error('اطلاعات تلاش قبلی قابل بازیابی نیست؛ برای جلوگیری از ثبت تکراری، ابتدا وضعیت عضویت را با مربی بررسی کنید.');}
+        let operationId,payload;
+        if(pending){
+          if(!pending.operationId||!pending.payload||JSON.stringify({trainee_id:pending.payload.trainee_id,start_date:pending.payload.start_date,end_date:pending.payload.end_date,amount:pending.payload.amount,payment_status:pending.payload.payment_status})!==JSON.stringify(comparable)){
+            throw new Error('یک ثبت قبلی هنوز نتیجه قطعی نگرفته است. برای جلوگیری از عضویت یا پرداخت تکراری، همان اطلاعات قبلی را بازیابی و دوباره ارسال کنید؛ اطلاعات را تغییر ندهید.');
+          }
+          operationId=pending.operationId;payload=pending.payload;
+        }else{
+          operationId=crypto.randomUUID();
+          payload={...comparable,payment_date:paymentStatus==='paid'?today():null};
+          localStorage.setItem(storageKey,JSON.stringify({operationId,payload}));
+        }
+        const {data,error}=await window.AUTH_SUPABASE.rpc('create_coach_membership_with_payment',{
+          p_trainee_id:traineeId,
+          p_operation_id:operationId,
+          p_start_date:payload.start_date,
+          p_end_date:payload.end_date,
+          p_amount:payload.amount,
+          p_payment_status:payload.payment_status,
+          p_payment_date:payload.payment_date
+        });
+        if(error)throw error;
+        if(!data?.success||!data?.membership_id||(paymentStatus==='paid'&&!data?.payment_id)||(paymentStatus!=='paid'&&data?.payment_created===true)){
+          throw new Error('پاسخ نهایی ثبت عضویت و پرداخت تأیید نشد؛ شناسه عملیات حفظ شده و می‌توانید با همان اطلاعات دوباره تلاش کنید.');
+        }
+        localStorage.removeItem(storageKey);
+      }else{
+        await sbWrite('/trainee_memberships','POST',{trainee_id:traineeId,start_date:start,end_date:end,status:'active',amount,payment_status:paid==='پرداخت شده'?'paid':'unpaid',description:'عضویت باشگاه'});
+        if(paid==='پرداخت شده'&&amount>0)await sbWrite('/trainee_payments','POST',{trainee_id:traineeId,amount,payment_date:today(),description:'شهریه پرداخت‌شده توسط مربی'});
+      }
       await loadClients();await loadMembershipHistory();await loadCoachReceipts();await loadMembershipCard();alert('عضویت و اطلاعات کارت ذخیره شد. شماره عضویت: '+String((await sbGet(`/trainee_membership_cards?trainee_id=eq.${encodeURIComponent(traineeId)}&select=card_number&limit=1`))[0]?.card_number||'ثبت نشده'));
-    }catch(e){alert('ثبت عضویت انجام نشد.\\n'+e.message)}
+    }catch(e){alert('ثبت عضویت انجام نشد.\\n'+(e?.message||String(e)))}
   };
 
   // -------- Supplements: active/ended state --------
