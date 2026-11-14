@@ -720,12 +720,20 @@ Waist-Hip Ratio (WHO),0.889
     window.authProfile = { role: "coach" };
     window.currentClient = { id: "trainee-javad-fixture" };
     window.__publicationInsertCount = 0;
+    window.__publicationUploadCount = 0;
     window.AUTH_SUPABASE = {
       auth: { async getUser() { return { data: { user: { id: "coach-fixture-1" } }, error: null }; } },
       storage: {
         from() {
           return {
             async upload(path) {
+              window.__publicationUploadCount += 1;
+              if (window.__publicationScenario === "success" ||
+                  window.__publicationScenario === "insert-failure" ||
+                  window.__publicationScenario === "cleanup-failure") {
+                window.__uploadedReportPath = path;
+                return { data: { path }, error: null };
+              }
               if (window.__publicationScenario === "insert-failure" ||
                   window.__publicationScenario === "cleanup-failure") {
                 window.__uploadedReportPath = path;
@@ -757,6 +765,39 @@ Waist-Hip Ratio (WHO),0.889
       }
     };
   });
+  // A successful publication retried with the same request ID must replay
+  // the first result without uploading or inserting a second time.
+  await integrationPage.evaluate(() => { window.__publicationScenario = "success"; });
+  await analyzerFrame.evaluate(() => {
+    const requestId = "dedupe-success-fixture";
+    window.__publicationReply = null;
+    window.addEventListener("message", event => {
+      if (event.origin === window.location.origin && event.source === window.parent &&
+          event.data?.type === "top-genesis-publish-result" && event.data.requestId === requestId) {
+        window.__publicationReply = event.data;
+      }
+    });
+    window.parent.postMessage({ type: "top-genesis-approved-report", requestId,
+      payload: window.__publicationPayload }, window.location.origin);
+  });
+  await integrationPage.waitForFunction(() =>
+    document.querySelector("#topGenesisPdfAnalyzerFrame")?.contentWindow?.__publicationReply?.requestId === "dedupe-success-fixture",
+    null, { timeout: 10000 });
+  const dedupeSuccess = await analyzerFrame.evaluate(() => window.__publicationReply);
+  assert.equal(dedupeSuccess.ok, true, "A valid publication should succeed in the browser fixture.");
+  assert.equal(await integrationPage.evaluate(() => window.__publicationUploadCount), 1);
+  assert.equal(await integrationPage.evaluate(() => window.__publicationInsertCount), 1);
+  await analyzerFrame.evaluate(() => window.parent.postMessage({
+    type: "top-genesis-approved-report", requestId: "dedupe-success-fixture",
+    payload: window.__publicationPayload
+  }, window.location.origin));
+  await integrationPage.waitForTimeout(100);
+  assert.equal(await integrationPage.evaluate(() => window.__publicationUploadCount), 1,
+    "A duplicate successful request must not upload a second report.");
+  assert.equal(await integrationPage.evaluate(() => window.__publicationInsertCount), 1,
+    "A duplicate successful request must not insert a second publication row.");
+  console.log("[smoke] duplicate successful publication replays result without duplicate upload or insert");
+
   // The embed module loads the publication handler itself; do not inject a
   // second copy, or the same approved message would be processed twice.
   await integrationPage.waitForTimeout(50);
