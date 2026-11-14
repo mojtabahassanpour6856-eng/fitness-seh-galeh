@@ -83,7 +83,7 @@ self.addEventListener('activate', function (event) {
 async function serveNavigation(request) {
   const cachedShell = caches.open(SHELL_CACHE_NAME).then(cache => cache.match(INDEX_URL));
   const network = fetch(request).then(async response => {
-    if (response && response.status >= 500) {
+    if (response && !response.ok) {
       return await cachedShell || response;
     }
     if (response && response.ok && response.type !== 'opaque') {
