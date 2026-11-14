@@ -46,7 +46,9 @@ async function fakeFetch(input, init = {}) {
     const payload = JSON.parse(init.body);
     assert.equal(payload.submission_operation_id, '11111111-1111-4111-8111-111111111111');
     assert.equal(payload.membership_id, 71);
-    assert.match(String(init.headers?.Prefer || init.headers?.prefer || ''), /return=minimal/);
+    // Supabase JS v2 omits Prefer when using the default return=minimal behavior;
+    // PostgREST treats the absent preference as minimal return.
+    assert.equal(new Headers(init.headers).get('prefer'), null);
     return new Response(null, { status: 201 });
   }
   throw new Error('Unexpected Supabase SDK request: ' + method + ' ' + url);
