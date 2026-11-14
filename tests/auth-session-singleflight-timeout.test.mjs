@@ -61,7 +61,7 @@ assert.ok(chatStart>=0&&chatEnd>chatStart,'coach/trainee chat module must exist'
 const chatSource=html.slice(chatStart,chatEnd);
 assert.match(chatSource,/__sehGetSessionSingleFlight/,
   'chat session recovery must use the shared session coordinator');
-assert.doesNotMatch(chatSource,/auth\\.getSession\\s*\\(/,
+assert.doesNotMatch(chatSource,/auth\.getSession\s*\(/,
   'chat must not bypass session deduplication');
 
 const apiHeadersStart=html.indexOf('async function sbApiHeaders');
