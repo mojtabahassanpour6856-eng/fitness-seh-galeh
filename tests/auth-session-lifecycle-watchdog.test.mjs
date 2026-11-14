@@ -3,7 +3,7 @@ import fs from 'node:fs';
 import vm from 'node:vm';
 
 const html=fs.readFileSync('index.html','utf8');
-const match=html.match(/<script id="seh-auth-session-restore-watchdog-v1">([\\s\\S]*?)<\\/script>/);
+const match=html.match(/<script id="seh-auth-session-restore-watchdog-v1">([\s\S]*?)<\/script>/);
 assert.ok(match,'the real session-restore watchdog must exist in index.html');
 
 const listeners={};
@@ -44,7 +44,6 @@ function fireScheduled(delay){
 assert.equal(windowListeners.pageshow.length,1,'pageshow recovery listener is installed');
 assert.equal(listeners['document:visibilitychange'].length,1,'visibility recovery listener is installed');
 
-// Two lifecycle signals arrive together while the persisted session is still locked.
 windowListeners.pageshow[0]();
 listeners['document:visibilitychange'][0]();
 assert.equal(fireScheduled(250),2,'both lifecycle callbacks are scheduled');
@@ -56,7 +55,6 @@ await new Promise(resolve=>setImmediate(resolve));
 assert.equal(loginCalls,1,'the session is finalized once');
 assert.equal(bodyClasses.has('locked'),false,'successful login unlocks the app');
 
-// A later pageshow after successful restoration must not re-run finishLogin/getSession.
 windowListeners.pageshow[0]();
 assert.equal(fireScheduled(250),1);
 await Promise.resolve();
