@@ -568,3 +568,21 @@ The allocation loop was hardened for a race with a legacy/direct registry writer
 A deterministic test now pre-seeds a canonical registry card for a synthetic trainee and verifies that a new membership reuses that exact card rather than generating a replacement. The updated full integration workflow passed on PostgreSQL 17.12: [run 43569048588](https://github.com/mojtabahassanpour6856-eng/fitness-seh-galeh/actions/runs/43569048588).
 
 This improves the prototype under mixed-write conditions, but it does not make mixed legacy REST writes idempotent. A production cutover still needs a planned client transition and a later server-side restriction of direct financial writes, after every app caller has moved and rollback has been rehearsed.
+
+## Business rule confirmed: each receipt settles exactly one membership — 2026-11-14
+
+The coach confirmed the intended financial rule: **each membership payment must approve only the specific membership that payment belongs to**. A receipt must not activate every historical membership row for the trainee.
+
+The synthetic receipt fixture has been updated to model this rule:
+- A receipt carries a nullable `membership_id` reference to one `trainee_memberships.id`. Nullable preserves the ability to represent legacy receipts that predate this relationship.
+- A successful approval must have a valid membership reference, and that membership must belong to the same trainee as the receipt. A legacy receipt without a membership link fails closed for approval and requires manual reconciliation; it is never used to guess which membership to activate.
+- The approval transaction locks and activates only that membership row.
+- The created payment row carries the same `membership_id`, so the financial record and membership state point to the same item.
+- Integration assertions verify that a second historical membership for the same trainee remains unpaid and untouched.
+- The synthetic payment table also carries a nullable membership reference to represent historical payment rows without retroactively assigning them.
+
+This is still a CI-only synthetic contract, not a production migration or runtime change. Production currently has no `membership_id` column on receipts or payments. Before implementation, the app must pass the selected membership ID when a trainee submits a receipt, and the coach review UI must display the exact membership being settled. Existing pending/approved receipts without a membership reference must be reconciled manually or remain unapproved; do not infer a membership from amount, date, or latest-row ordering.
+
+The production migration design must add nullable foreign-key references first, audit historical data, then make the new app flow require a membership selection for new receipts. Preserve legacy rows with NULL references. No bulk membership update is permitted in the new contract.
+
+No production or test Supabase project, live app runtime, schema, RLS, grants, Auth, Storage, or trainee data was changed.
