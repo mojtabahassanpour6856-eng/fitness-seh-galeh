@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { createOfflineContinuity, OFFLINE_CONTINUITY_STORAGE_KEY } from '../experiments/offline-continuity-prototype/offline-continuity.js';
+import { createOfflineContinuity, OFFLINE_CONTINUITY_STORAGE_KEY } from '../experiments/offline-continuity-prototype/offline-continuity.mjs';
 
 function memoryStorage() {
   const values = new Map();
