@@ -736,7 +736,8 @@ Waist-Hip Ratio (WHO),0.889
         return {
           async insert() {
             window.__publicationInsertCount += 1;
-            return { error: window.__publicationScenario === "insert-failure"
+            return { error: window.__publicationScenario === "insert-failure" ||
+              window.__publicationScenario === "cleanup-failure"
               ? new Error("simulated database insert denied") : null };
           }
         };
