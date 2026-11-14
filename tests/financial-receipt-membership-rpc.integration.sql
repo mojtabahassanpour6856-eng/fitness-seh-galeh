@@ -77,6 +77,7 @@ begin
       (trainee_id,membership_id,amount,payment_date,description)
     values
       ('30000000-0000-0000-0000-000000000002',1,1000,'2026-11-14','wrong trainee');
+    set constraints trainee_payments_trainee_membership_fk immediate;
     raise exception 'expected cross-trainee payment membership reference to fail';
   exception when sqlstate '23503' then null;
   end;
@@ -89,6 +90,7 @@ begin
        '30000000-0000-0000-0000-000000000001',3,
        '20000000-0000-0000-0000-000000000001',
        'synthetic/cross-trainee-membership.jpg',1000,'2026-11-14');
+    set constraints trainee_payment_receipts_trainee_membership_fk immediate;
     raise exception 'expected cross-trainee receipt membership reference to fail';
   exception when sqlstate '23503' then null;
   end;
