@@ -1,0 +1,44 @@
+name: Financial membership card allocation fixture
+on:
+  push:
+    branches:
+      - prototype/receipt-idempotency-fixture-20261114
+    paths:
+      - 'tests/financial-membership-card.fixture.sql'
+      - 'tests/financial-membership-card.integration.sql'
+      - '.github/workflows/test-financial-membership-card.yml'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'tests/financial-membership-card.fixture.sql'
+      - 'tests/financial-membership-card.integration.sql'
+      - '.github/workflows/test-financial-membership-card.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  membership-card:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: membership_card_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d membership_card_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+    env:
+      PGPASSWORD: postgres
+      PGHOST: localhost
+      PGPORT: 5432
+      PGUSER: postgres
+      PGDATABASE: membership_card_test
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run synthetic membership and card allocation tests
+        run: psql -v ON_ERROR_STOP=1 -f tests/financial-membership-card.integration.sql
