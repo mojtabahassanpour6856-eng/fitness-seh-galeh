@@ -116,6 +116,27 @@ const asset = await assetResponse;
 assert.match(await asset.text(), /network:\/fitness-seh-galeh\/vendor\/supabase-2\.119\.0\.js/,
   'offline static asset requests use the cached asset');
 
+let nutritionFrameResponse;
+listeners.fetch({
+  request: { method: 'GET', mode: 'navigate', url: scope + 'coach-nutrition-builder.html' },
+  respondWith(promise) { nutritionFrameResponse = promise; }
+});
+const nutritionFrame = await nutritionFrameResponse;
+assert.match(await nutritionFrame.text(), /network:\/fitness-seh-galeh\/coach-nutrition-builder\.html/,
+  'embedded nutrition builder navigation serves its own cached document');
+
+let topGenesisFrameResponse;
+listeners.fetch({
+  request: { method: 'GET', mode: 'navigate', url: scope + 'top-genesis-pdf-test.html?embedded=1' },
+  respondWith(promise) { topGenesisFrameResponse = promise; }
+});
+const topGenesisFrame = await topGenesisFrameResponse;
+assert.match(await topGenesisFrame.text(), /network:\/fitness-seh-galeh\/top-genesis-pdf-test\.html/,
+  'embedded Top Genesis navigation serves its own cached document');
+const appShellAfterFrames = await cache.match(scope + 'index.html');
+assert.match(await appShellAfterFrames.text(), /network:\/fitness-seh-galeh\/index\.html/,
+  'embedded frame navigation never overwrites the cached app shell');
+
 let externalIntercepted = false;
 listeners.fetch({
   request: { method: 'GET', mode: 'cors', url: 'https://qfakyudgidsumeuoqoot.supabase.co/rest/v1/trainees' },
