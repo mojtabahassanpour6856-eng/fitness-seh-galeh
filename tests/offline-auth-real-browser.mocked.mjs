@@ -225,15 +225,22 @@ try {
       { timeout: 8000 }
     );
 
-    // Some app paths complete login from the form handler; setSession only
-    // emits the auth event, so start the normal profile-verification function
-    // if the listener has not already started it.
-    await offline.waitForTimeout(250);
+    // Race the profile request against setSession completion. Supabase may
+    // await auth listeners, while the listener may itself be waiting for this
+    // deliberately-held profile request. Never await setSession unconditionally
+    // before releasing the profile gate: that creates a circular wait.
     let switched = null;
-    if (!profileStarted) {
-      switched = await switchPromise;
+    const firstProgress = await Promise.race([
+      started.then(() => ({ kind: "profile-started" })),
+      switchPromise.then(result => ({ kind: "session-resolved", result })),
+      new Promise(resolve => setTimeout(() => resolve({ kind: "timeout" }), 6000))
+    ]);
+    if (firstProgress.kind === "session-resolved") {
+      switched = firstProgress.result;
       assert.equal(switched.error, null, "Supabase setSession must accept the synthetic replacement account");
       await offline.evaluate(user => window.finishLogin(user), switched.data.user);
+    } else if (firstProgress.kind === "timeout") {
+      throw new Error("Account switch stalled: neither the profile lookup nor setSession completed within 6 seconds");
     }
     await started;
     const duringSwitch = await offline.evaluate(() => ({
