@@ -34,6 +34,8 @@ const base = "http://127.0.0.1:" + server.address().port;
 const context = await browser.newContext({ serviceWorkers: "allow" });
 let profileReads = 0;
 let mockNetworkOnline = true;
+let activeMockUser = { id: userId, role: "coach", full_name: "Offline Test Coach", email: "offline-test@example.invalid" };
+let nextProfileGate = null;
 await context.addInitScript(({ storageKey, userId }) => {
   window.__offlineStorageTrace = [];
   const originalSet = Storage.prototype.setItem;
@@ -65,13 +67,37 @@ await context.route("https://**/*", route => route.abort());
 await context.route(projectUrl + "/**", async route => {
   if (!mockNetworkOnline) { await route.abort("internetdisconnected"); return; }
   const url = new URL(route.request().url());
+  if (url.pathname === "/auth/v1/user") {
+    const authorization = route.request().headers().authorization || "";
+    const token = authorization.replace(/^Bearer\\s+/i, "");
+    let subject = userId;
+    try { subject = JSON.parse(Buffer.from(token.split(".")[1], "base64url").toString("utf8")).sub || userId; } catch (_) {}
+    const account = subject === activeMockUser.id ? activeMockUser : { id: subject, role: "trainee", full_name: "Offline Test Trainee", email: "offline-trainee@example.invalid" };
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        id: account.id, aud: "authenticated", role: "authenticated", email: account.email,
+        app_metadata: { provider: "email", providers: ["email"] },
+        user_metadata: { full_name: account.full_name },
+        created_at: new Date().toISOString()
+      })
+    });
+    return;
+  }
   if (url.pathname === "/rest/v1/profiles") {
     profileReads++;
+    const gate = nextProfileGate;
+    if (gate) {
+      nextProfileGate = null;
+      gate.started();
+      await gate.wait;
+    }
     await route.fulfill({
       status: 200,
       contentType: "application/json",
       headers: { "content-range": "0-0/1" },
-      body: JSON.stringify([{ id: userId, role: "coach", full_name: "Offline Test Coach" }])
+      body: JSON.stringify([activeMockUser])
     });
     return;
   }
@@ -159,6 +185,77 @@ try {
   );
   assert.ok(profileReads > readsBeforeReconnect, "reconnect must revalidate the profile against the mock server");
   assert.equal(await offline.evaluate(() => document.getElementById("authUserText").textContent.includes("Offline Test Coach")), true);
+
+  // Exercise real Supabase SIGNED_IN events for coach -> trainee -> coach.
+  // Hold each profile lookup so the browser can prove the previous account UI
+  // is hidden before the replacement profile is accepted.
+  const accountSwitches = [
+    { id: "33333333-4444-4555-8666-777777777777", role: "trainee", full_name: "Offline Test Trainee", email: "offline-trainee@example.invalid" },
+    { id: userId, role: "coach", full_name: "Offline Test Coach", email: "offline-test@example.invalid" }
+  ];
+  for (const nextAccount of accountSwitches) {
+    let releaseProfile;
+    let markProfileStarted;
+    let profileStarted = false;
+    const wait = new Promise(resolve => { releaseProfile = resolve; });
+    const started = new Promise(resolve => { markProfileStarted = () => { profileStarted = true; resolve(); }; });
+    nextProfileGate = { wait, started: markProfileStarted };
+    activeMockUser = nextAccount;
+
+    const accessToken = await offline.evaluate(account => {
+      const encode = value => btoa(JSON.stringify(value)).replace(/=/g, "").replace(/\\+/g, "-").replace(/\\//g, "_");
+      const now = Math.floor(Date.now() / 1000);
+      return encode({ alg: "HS256", typ: "JWT" }) + "." + encode({
+        sub: account.id, aud: "authenticated", role: "authenticated", email: account.email,
+        iat: now, exp: now + 3600, app_metadata: { provider: "email", providers: ["email"] },
+        user_metadata: { full_name: account.full_name }
+      }) + ".synthetic-signature";
+    }, nextAccount);
+    const switched = await offline.evaluate(async token => window.AUTH_SUPABASE.auth.setSession({
+      access_token: token, refresh_token: "synthetic-refresh-" + Date.now()
+    }), accessToken);
+    assert.equal(switched.error, null, "Supabase setSession must accept the synthetic replacement account");
+
+    await offline.waitForFunction(() =>
+      document.body.classList.contains("locked") &&
+      document.getElementById("authScreen")?.style.display === "flex" &&
+      document.getElementById("authUserBar")?.style.display === "none",
+      { timeout: 8000 }
+    );
+
+    // Some app paths complete login from the form handler; setSession only
+    // emits the auth event, so start the normal profile-verification function
+    // if the listener has not already started it.
+    await offline.waitForTimeout(250);
+    if (!profileStarted) {
+      await offline.evaluate(user => window.finishLogin(user), switched.data.user);
+    }
+    await started;
+    const duringSwitch = await offline.evaluate(() => ({
+      locked: document.body.classList.contains("locked"),
+      authScreen: getComputedStyle(document.getElementById("authScreen")).display,
+      authBar: getComputedStyle(document.getElementById("authUserBar")).display,
+      visibleIdentity: getComputedStyle(document.getElementById("authUserBar")).display === "none"
+        ? "" : document.getElementById("authUserText").textContent
+    }));
+    assert.equal(duringSwitch.locked, true, "private UI must stay locked while the replacement profile is pending");
+    assert.equal(duringSwitch.authScreen, "flex");
+    assert.equal(duringSwitch.authBar, "none", "the previous account identity must not be visible during switching");
+    assert.equal(duringSwitch.visibleIdentity, "");
+
+    releaseProfile();
+    await offline.waitForFunction(account =>
+      !document.body.classList.contains("locked") &&
+      document.getElementById("authUserBar")?.style.display === "block" &&
+      document.getElementById("authUserText")?.textContent.includes(account.full_name),
+      nextAccount,
+      { timeout: 15000 }
+    );
+    const verifiedIdentity = await offline.locator("#authUserText").textContent();
+    assert.ok(verifiedIdentity.includes(nextAccount.role === "coach" ? "مربی" : "شاگرد"),
+      "only the newly verified account role should be displayed: " + verifiedIdentity);
+  }
+
   // The current app has two known, unrelated optional-profile UI startup errors.
   // Keep them visible in the report, but fail this auth/offline regression only on
   // unexpected errors that are not in that narrowly-scoped legacy allowlist.
