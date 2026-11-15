@@ -33,6 +33,7 @@ await new Promise(resolve => server.listen(0, "127.0.0.1", resolve));
 const base = "http://127.0.0.1:" + server.address().port;
 const context = await browser.newContext({ serviceWorkers: "allow" });
 let profileReads = 0;
+let mockNetworkOnline = true;
 await context.addInitScript(({ storageKey, userId }) => {
   window.__offlineStorageTrace = [];
   const originalSet = Storage.prototype.setItem;
@@ -62,6 +63,7 @@ await context.addInitScript(({ storageKey, userId }) => {
 
 await context.route("https://**/*", route => route.abort());
 await context.route(projectUrl + "/**", async route => {
+  if (!mockNetworkOnline) { await route.abort("internetdisconnected"); return; }
   const url = new URL(route.request().url());
   if (url.pathname === "/rest/v1/profiles") {
     profileReads++;
@@ -110,6 +112,7 @@ try {
   assert.ok(profileReads >= 1, "the real finishLogin flow must validate the mocked coach profile");
   await online.close();
 
+  mockNetworkOnline = false;
   await context.setOffline(true);
   const offline = await context.newPage();
   await offline.goto(base + "/index.html", { waitUntil: "domcontentloaded", timeout: 15000 });
@@ -146,6 +149,7 @@ try {
   assert.deepEqual(restricted.marker, { version: 1, view: "home" }, "the offline marker must contain no identity or private data");
   const readsBeforeReconnect = profileReads;
 
+  mockNetworkOnline = true;
   await context.setOffline(false);
   await offline.waitForFunction(() =>
     !document.body.classList.contains("seh-offline-shell") &&
