@@ -1,13 +1,15 @@
 name: Offline auth real-browser mocked-backend integration
 on:
   pull_request:
-    branches: [main]
+    branches: [experiment/offline-auth-shell-integration-main-20261114]
     paths:
       - 'index.html'
       - 'sw.js'
       - 'vendor/supabase-2.119.0.js'
       - 'tests/offline-auth-real-browser.mocked.mjs'
       - '.github/workflows/test-offline-auth-real-browser-mocked.yml'
+  push:
+    branches: [test/offline-auth-real-browser-mock-20261115]
   workflow_dispatch:
 permissions:
   contents: read
