@@ -264,13 +264,27 @@ try {
     releaseProfile();
     if (!switched) switched = await switchPromise;
     assert.equal(switched.error, null, "Supabase setSession must accept the synthetic replacement account");
-    await offline.waitForFunction(account =>
-      !document.body.classList.contains("locked") &&
-      document.getElementById("authUserBar")?.style.display === "block" &&
-      document.getElementById("authUserText")?.textContent.includes(account.full_name),
-      nextAccount,
-      { timeout: 15000 }
-    );
+    try {
+      await offline.waitForFunction(account =>
+        !document.body.classList.contains("locked") &&
+        document.getElementById("authUserBar")?.style.display === "block" &&
+        document.getElementById("authUserText")?.textContent.includes(account.full_name),
+        nextAccount,
+        { timeout: 15000 }
+      );
+    } catch (error) {
+      const state = await offline.evaluate(() => ({
+        bodyClass: document.body.className,
+        authScreen: document.getElementById("authScreen")?.style.display,
+        authBar: document.getElementById("authUserBar")?.style.display,
+        authText: document.getElementById("authUserText")?.textContent,
+        authProfile: window.authProfile || null,
+        profileText: document.querySelector("#authScreen")?.innerText?.slice(0, 800),
+        sessionUser: null
+      })).catch(e => ({ evaluationError: e.message }));
+      console.log("ACCOUNT SWITCH POST-VERIFY STATE: " + JSON.stringify({role: nextAccount.role, profileReads, state, pageErrors: errors}));
+      throw error;
+    }
     const verifiedIdentity = await offline.locator("#authUserText").textContent();
     assert.ok(verifiedIdentity.includes(nextAccount.role === "coach" ? "مربی" : "شاگرد"),
       "only the newly verified account role should be displayed: " + verifiedIdentity);
