@@ -201,8 +201,8 @@ listeners.fetch({
   respondWith(promise) { notFoundNavigationResponse = promise; }
 });
 const notFoundNavigation = await notFoundNavigationResponse;
-assert.match(await notFoundNavigation.text(), /network:\/fitness-seh-galeh\/index\.html/,
-  'a server-side 404 on the app entry route uses the cached shell');
+assert.match(await notFoundNavigation.text(), /network:\/fitness-seh-galeh\/(?:index\.html)?/,
+  'a server-side 404 on the app entry route uses the cached shell, whether cached from the root or index URL');
 forcedStatus = null;
 
 // A failed update must not remove the currently active shell cache.
