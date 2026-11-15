@@ -273,12 +273,16 @@ try {
       locked: document.body.classList.contains("locked"),
       authScreen: getComputedStyle(document.getElementById("authScreen")).display,
       authBar: getComputedStyle(document.getElementById("authUserBar")).display,
+      traineeMode: document.body.classList.contains("seh-trainee-mode"),
+      authProfile: window.authProfile ?? null,
       visibleIdentity: getComputedStyle(document.getElementById("authUserBar")).display === "none"
         ? "" : document.getElementById("authUserText").textContent
     }));
     assert.equal(duringSwitch.locked, true, "private UI must stay locked while the replacement profile is pending");
     assert.equal(duringSwitch.authScreen, "flex");
     assert.equal(duringSwitch.authBar, "none", "the previous account identity must not be visible during switching");
+    assert.equal(duringSwitch.traineeMode, false, "the previous account role mode must be removed during switching");
+    assert.equal(duringSwitch.authProfile, null, "the previous verified profile must be discarded during switching");
     assert.equal(duringSwitch.visibleIdentity, "");
 
     releaseProfile();
