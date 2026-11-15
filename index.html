@@ -2463,7 +2463,7 @@ window.AUTH_SUPABASE=window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY,{aut
       authListenerInstalled=true;
       try{
         auth.auth.onAuthStateChange(function(event){
-          if(event==='SIGNED_IN'||event==='SIGNED_OUT'){
+          if(event==='SIGNED_OUT'){
             try{window.localStorage.removeItem('seh.offline-safe-shell.v1');}catch(storageError){}
           }
           if(event==='SIGNED_IN'||event==='SIGNED_OUT'||event==='TOKEN_REFRESHED'){
@@ -2608,6 +2608,9 @@ if(profileError) throw profileError;
       }
     }
     authProfile=rows[0];document.body.classList.remove('locked');$('authScreen').style.display='none';$('authUserBar').style.display='block';$('authUserText').textContent=`${authProfile.full_name||user.email} | ${authProfile.role==='coach'?'مربی':'شاگرد'}`;
+    // Persist only a non-identifying shell marker after the server profile has been verified.
+    // This also covers early session-restore handlers that run before late wrappers are installed.
+    try{window.localStorage.setItem('seh.offline-safe-shell.v1',JSON.stringify({version:1,view:'home'}));}catch(storageError){}
     // Show the correct dashboard immediately after authentication.
     // The food catalog can load in the background; waiting for it here delayed
     // the first paint and made the app appear to jump when the coach panel opened.
@@ -3340,6 +3343,8 @@ window.loadDashboard = loadDashboard;
       }
       if(rows.length&&rows[0].role==='trainee'){await setupTraineeAuth(user);return;}
       authProfile=rows[0];document.body.classList.remove('locked');$id('authScreen').style.display='none';$id('authUserBar').style.display='block';$id('authUserText').textContent=`${authProfile.full_name||user.email} | مربی`;
+      // Persist a non-identifying offline shell marker only after this override verifies the coach profile.
+      try{window.localStorage.setItem('seh.offline-safe-shell.v1',JSON.stringify({version:1,view:'home'}));}catch(storageError){}
       qsAll('.nav button').forEach(b=>b.style.display='block');showSection('coach',qsAll('.nav button').find(b=>String(b.getAttribute('onclick')||'').includes("'coach'"))||null);await window.loadClients();await loadExercises();await loadLibraryExercises();
     }catch(e){console.error(e);showAuthError('بررسی پروفایل انجام نشد. '+(e.message||''));}
   };
