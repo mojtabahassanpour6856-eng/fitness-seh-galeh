@@ -103,6 +103,24 @@ await context.route(projectUrl + "/**", async route => {
     });
     return;
   }
+  // The real trainee login path resolves the profile's auth_user_id against
+  // the trainees table. Supply a synthetic linked trainee record instead of
+  // letting the generic empty-table mock reject an otherwise valid account.
+  if (url.pathname === "/rest/v1/trainees" && url.searchParams.has("auth_user_id")) {
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      headers: { "content-range": "0-0/1" },
+      body: JSON.stringify([{
+        id: "88888888-9999-4aaa-8bbb-cccccccccccc",
+        auth_user_id: activeMockUser.id,
+        full_name: activeMockUser.full_name,
+        phone: "09120000000",
+        status: "active"
+      }])
+    });
+    return;
+  }
   if (url.pathname.startsWith("/rest/v1/") || url.pathname.startsWith("/rest/v1/rpc/")) {
     await route.fulfill({ status: 200, contentType: "application/json", headers: { "content-range": "*/0" }, body: "[]" });
     return;
