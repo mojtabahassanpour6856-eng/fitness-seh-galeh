@@ -4,11 +4,16 @@ Status: design-only experiment. This document does not change the live database,
 
 ## Findings that constrain the design
 
-- Legacy health-file uploads used a two-folder object path: `auth user UUID / trainee UUID / filename`.
-- The historical client flow uploaded the object first and inserted the `trainee_injuries` row second. Its cleanup path did not inspect the Storage `remove()` result's returned `error`, so a failed delete could go unnoticed.
+- The current production upload entry point is the `TRAINEE_HEALTH_REPORT_V1` block in root `index.html` (the live main file is 1.2 MB; the GitHub contents API was used to inspect it because the file-content helper did not return large-file contents).
+- The current path is two folders plus filename: `auth user UUID / trainee UUID / health_<timestamp>_<filename>`.
+- The current client flow uploads first, then inserts a `trainee_injuries` row with a `HEALTH_REPORT_FILE::` JSON pointer in `movement_limit`.
+- On insert failure, the current catch calls Storage `remove([path])` but ignores the returned `{ error }` and also swallows thrown cleanup exceptions. Therefore cleanup can fail silently while the original insert error is rethrown.
+- The current code also has a similar unchecked Storage removal after a payment-receipt insert failure; that is a separate payment-flow concern and is not included in this health-file design PR.
 - `trainee_injuries.trainee_id` references `trainees.id` with `ON DELETE CASCADE`. Deleting a trainee can remove database rows without deleting the corresponding Storage object.
 - The live schema currently has multiple other trainee-owned tables with cascading foreign keys. A hard delete is therefore a broad data-erasure operation.
+- The current reader accepts the `HEALTH_REPORT_FILE::` pointer from either `movement_limit` or `coach_note`; the database inventory found no such marker in the 10 currently surviving injury rows.
 - The four legacy image objects have not been mapped to a surviving trainee or a reliable row reference. They are explicitly out of scope for automatic cleanup.
+- No hard-delete action for an already-enrolled trainee was found in the current main client HTML. The database does contain a server-side registration-rejection routine that hard-deletes an unapproved trainee; its cascade behavior remains a lifecycle case to protect.
 
 ## Non-negotiable safety rules
 
@@ -113,9 +118,9 @@ No state transition may move `retained` back to `pending` automatically.
 ## Blocking questions to resolve before writing a migration
 
 1. Inventory every current and historical health-file reference format. The current database inspection found no `HEALTH_REPORT_FILE::` marker among the 10 injury rows, so that marker must not be assumed to be the only format.
-2. Confirm the exact current production UI entry point for health-file uploads. The historical implementation is present in Git history, while the current main `index.html` does not provide a usable source file through the repository connector.
-3. Decide retention periods and whether hard deletion is legally/operationally required, or archive is sufficient.
-4. Choose a server-side worker deployment mechanism and schedule only after verifying current Supabase documentation and project capabilities.
+2. Decide retention periods and whether hard deletion is legally/operationally required, or archive is sufficient.
+3. Choose a server-side worker deployment mechanism and schedule only after verifying current Supabase documentation and project capabilities.
+4. Inspect the exact current database RPC and all reference tables before finalizing the transaction that marks a job `retained`.
 
 ## Scope boundary
 
