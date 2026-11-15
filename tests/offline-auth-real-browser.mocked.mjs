@@ -33,6 +33,7 @@ await new Promise(resolve => server.listen(0, "127.0.0.1", resolve));
 const base = "http://127.0.0.1:" + server.address().port;
 const context = await browser.newContext({ serviceWorkers: "allow" });
 let profileReads = 0;
+const restRequests = [];
 let mockNetworkOnline = true;
 let activeMockUser = { id: userId, role: "coach", full_name: "Offline Test Coach", email: "offline-test@example.invalid" };
 let nextProfileGate = null;
@@ -67,6 +68,7 @@ await context.route("https://**/*", route => route.abort());
 await context.route(projectUrl + "/**", async route => {
   if (!mockNetworkOnline) { await route.abort("internetdisconnected"); return; }
   const url = new URL(route.request().url());
+  if (url.pathname.startsWith("/rest/v1/")) restRequests.push({method:route.request().method(),path:url.pathname,search:url.search});
   if (url.pathname === "/auth/v1/user") {
     const authorization = route.request().headers().authorization || "";
     const token = authorization.split(" ").slice(1).join(" ");
@@ -282,7 +284,7 @@ try {
         profileText: document.querySelector("#authScreen")?.innerText?.slice(0, 800),
         sessionUser: null
       })).catch(e => ({ evaluationError: e.message }));
-      console.log("ACCOUNT SWITCH POST-VERIFY STATE: " + JSON.stringify({role: nextAccount.role, profileReads, state, pageErrors: errors}));
+      console.log("ACCOUNT SWITCH POST-VERIFY STATE: " + JSON.stringify({role: nextAccount.role, profileReads, restRequests: restRequests.slice(-30), state, pageErrors: errors}));
       throw error;
     }
     const verifiedIdentity = await offline.locator("#authUserText").textContent();
