@@ -115,6 +115,7 @@ try {
   mockNetworkOnline = false;
   await context.setOffline(true);
   const offline = await context.newPage();
+  offline.on("pageerror", error => errors.push({ message: error.message, stack: error.stack || "" }));
   await offline.goto(base + "/index.html", { waitUntil: "domcontentloaded", timeout: 15000 });
   try {
     await offline.waitForFunction(() => document.body?.classList.contains("seh-offline-shell"), { timeout: 10000 });
