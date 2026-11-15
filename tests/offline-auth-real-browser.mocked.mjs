@@ -211,10 +211,12 @@ try {
         user_metadata: { full_name: account.full_name }
       }) + ".synthetic-signature";
     }, nextAccount);
-    const switched = await offline.evaluate(async token => window.AUTH_SUPABASE.auth.setSession({
+    // Do not await setSession yet: Supabase awaits auth listeners, and the
+    // app may intentionally keep that listener pending while profile verification
+    // is held below. Starting it without awaiting lets us inspect the locked UI.
+    const switchPromise = offline.evaluate(token => window.AUTH_SUPABASE.auth.setSession({
       access_token: token, refresh_token: "synthetic-refresh-" + Date.now()
     }), accessToken);
-    assert.equal(switched.error, null, "Supabase setSession must accept the synthetic replacement account");
 
     await offline.waitForFunction(() =>
       document.body.classList.contains("locked") &&
@@ -227,7 +229,10 @@ try {
     // emits the auth event, so start the normal profile-verification function
     // if the listener has not already started it.
     await offline.waitForTimeout(250);
+    let switched = null;
     if (!profileStarted) {
+      switched = await switchPromise;
+      assert.equal(switched.error, null, "Supabase setSession must accept the synthetic replacement account");
       await offline.evaluate(user => window.finishLogin(user), switched.data.user);
     }
     await started;
@@ -244,6 +249,8 @@ try {
     assert.equal(duringSwitch.visibleIdentity, "");
 
     releaseProfile();
+    if (!switched) switched = await switchPromise;
+    assert.equal(switched.error, null, "Supabase setSession must accept the synthetic replacement account");
     await offline.waitForFunction(account =>
       !document.body.classList.contains("locked") &&
       document.getElementById("authUserBar")?.style.display === "block" &&
