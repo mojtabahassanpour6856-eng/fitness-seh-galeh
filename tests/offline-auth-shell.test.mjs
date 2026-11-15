@@ -141,3 +141,47 @@ test('auth sign-in and sign-out transitions invalidate the previous shell marker
   authListener('SIGNED_OUT');
   assert.equal(h.storage.getItem(SAFE_KEY),null);
 });
+
+
+test('malformed or outdated safe-shell markers never unlock the offline shell',async()=>{
+  for(const markerValue of [
+    {version:2,view:'home'},
+    {version:1,view:'private'},
+    {version:1,view:'home',role:'coach',userId:'must-not-be-used'}
+  ]){
+    const h=createHarness({online:false,marker:false});
+    h.storage.setItem(SAFE_KEY,JSON.stringify(markerValue));
+    vm.runInNewContext(scriptById('seh-auth-session-restore-watchdog-v1'),h.context);
+    h.runTimers(900);await flush();
+    assert.equal(h.bodyClasses.has('locked'),true);
+    assert.equal(h.bodyClasses.has('seh-offline-shell'),false);
+    assert.equal(h.sessionReads,0);
+  }
+});
+
+test('a resolved finishLogin that did not expose authenticated UI does not create a safe marker',async()=>{
+  const h=createHarness({online:true,marker:false});
+  h.window.finishLogin=async()=>undefined;
+  vm.runInNewContext(scriptById('seh-auth-finish-login-singleflight-v1'),h.context);
+  await h.window.finishLogin({id:'profile-not-loaded'});
+  assert.equal(h.storage.getItem(SAFE_KEY),null);
+});
+
+test('SIGNED_IN clears the old marker before a successful new login writes a fresh minimal marker',async()=>{
+  const h=createHarness({online:true,marker:true,session:true});
+  delete h.window.__sehGetSessionSingleFlight;
+  let authListener;
+  h.window.AUTH_SUPABASE.auth.onAuthStateChange=callback=>{
+    authListener=callback;
+    return {data:{subscription:{unsubscribe(){}}}};
+  };
+  const start=html.indexOf('/* SEH_AUTH_SESSION_SINGLEFLIGHT_V1_START */');
+  const end=html.indexOf('/* SEH_AUTH_SESSION_SINGLEFLIGHT_V1_END */',start);
+  vm.runInNewContext(html.slice(start,end+'/* SEH_AUTH_SESSION_SINGLEFLIGHT_V1_END */'.length),h.context);
+  await h.window.__sehGetSessionSingleFlight();
+  authListener('SIGNED_IN');
+  assert.equal(h.storage.getItem(SAFE_KEY),null,'the previous account marker is invalidated');
+  vm.runInNewContext(scriptById('seh-auth-finish-login-singleflight-v1'),h.context);
+  await h.window.finishLogin({id:'new-account'});
+  assert.deepEqual(JSON.parse(h.storage.getItem(SAFE_KEY)),{version:1,view:'home'});
+});
