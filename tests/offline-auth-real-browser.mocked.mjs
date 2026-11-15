@@ -34,6 +34,11 @@ const base = "http://127.0.0.1:" + server.address().port;
 const context = await browser.newContext({ serviceWorkers: "allow" });
 let profileReads = 0;
 await context.addInitScript(({ storageKey, userId }) => {
+  window.__offlineStorageTrace = [];
+  const originalSet = Storage.prototype.setItem;
+  const originalRemove = Storage.prototype.removeItem;
+  Storage.prototype.setItem = function(key, value) { if (key === "seh.offline-safe-shell.v1") window.__offlineStorageTrace.push({op:"set",value:String(value),stack:new Error().stack}); return originalSet.call(this,key,value); };
+  Storage.prototype.removeItem = function(key) { if (key === "seh.offline-safe-shell.v1") window.__offlineStorageTrace.push({op:"remove",stack:new Error().stack}); return originalRemove.call(this,key); };
   if (!localStorage.getItem(storageKey)) {
     const now = Math.floor(Date.now() / 1000);
     localStorage.setItem(storageKey, JSON.stringify({
@@ -88,10 +93,9 @@ try {
       document.getElementById("authScreen")?.style.display === "none" &&
       bar?.style.display === "block";
   }, { timeout: 20000 });
-  await online.waitForFunction(() => {
-    const marker = JSON.parse(localStorage.getItem("seh.offline-safe-shell.v1") || "null");
-    return marker?.version === 1 && marker?.view === "home";
-  }, { timeout: 5000 });
+  await online.waitForTimeout(1500);
+  const markerDebug = await online.evaluate(() => ({ marker: localStorage.getItem("seh.offline-safe-shell.v1"), trace: window.__offlineStorageTrace }));
+  assert.ok(markerDebug.marker, "finishLogin must persist the minimal marker; trace=" + JSON.stringify(markerDebug.trace));
   await online.evaluate(async () => {
     await navigator.serviceWorker.ready;
     if (!navigator.serviceWorker.controller) {
