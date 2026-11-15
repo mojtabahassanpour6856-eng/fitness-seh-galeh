@@ -1,0 +1,25 @@
+name: Health report upload cleanup regression
+
+on:
+  pull_request:
+    branches: ["main"]
+    paths:
+      - "index.html"
+      - "tests/health-upload-cleanup-error-handling.test.mjs"
+      - ".github/workflows/test-health-upload-cleanup.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  health-upload-cleanup:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Run health upload cleanup regression tests
+        run: node --test tests/health-upload-cleanup-error-handling.test.mjs
