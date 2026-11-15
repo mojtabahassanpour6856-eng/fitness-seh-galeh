@@ -113,7 +113,21 @@ try {
   await context.setOffline(true);
   const offline = await context.newPage();
   await offline.goto(base + "/index.html", { waitUntil: "domcontentloaded", timeout: 15000 });
-  await offline.waitForFunction(() => document.body?.classList.contains("seh-offline-shell"), { timeout: 10000 });
+  try {
+    await offline.waitForFunction(() => document.body?.classList.contains("seh-offline-shell"), { timeout: 10000 });
+  } catch (error) {
+    const state = await offline.evaluate(() => ({
+      online: navigator.onLine,
+      controlled: !!navigator.serviceWorker.controller,
+      marker: localStorage.getItem("seh.offline-safe-shell.v1"),
+      bodyClasses: document.body?.className,
+      authScreen: document.getElementById("authScreen")?.style.display,
+      authBar: document.getElementById("authUserBar")?.style.display,
+      notice: !!document.getElementById("sehOfflineShellNotice"),
+      href: location.href
+    })).catch(e => ({ evaluationError: e.message }));
+    throw new Error("Offline shell did not appear; browser state=" + JSON.stringify(state));
+  }
   const restricted = await offline.evaluate(() => ({
     shell: document.body.classList.contains("seh-offline-shell"),
     authScreen: getComputedStyle(document.getElementById("authScreen")).display,
