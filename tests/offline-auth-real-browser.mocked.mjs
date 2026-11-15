@@ -242,7 +242,13 @@ try {
     } else if (firstProgress.kind === "timeout") {
       throw new Error("Account switch stalled: neither the profile lookup nor setSession completed within 6 seconds");
     }
-    await started;
+    await Promise.race([
+      started,
+      new Promise((_, reject) => setTimeout(() => reject(new Error(
+        "Account switch stalled: profile lookup did not start within 8 seconds"
+      )), 8000))
+    ]);
+    console.log("Account switch profile lookup started for role=" + nextAccount.role);
     const duringSwitch = await offline.evaluate(() => ({
       locked: document.body.classList.contains("locked"),
       authScreen: getComputedStyle(document.getElementById("authScreen")).display,
