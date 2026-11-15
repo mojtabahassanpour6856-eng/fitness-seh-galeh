@@ -144,13 +144,14 @@ test('auth sign-in and sign-out transitions invalidate the previous shell marker
 
 
 test('malformed or outdated safe-shell markers never unlock the offline shell',async()=>{
-  for(const markerValue of [
-    {version:2,view:'home'},
-    {version:1,view:'private'},
-    {version:1,view:'home',role:'coach',userId:'must-not-be-used'}
-  ]){
+  const invalidMarkers=[
+    JSON.stringify({version:2,view:'home'}),
+    JSON.stringify({version:1,view:'private'}),
+    '{not-valid-json'
+  ];
+  for(const markerValue of invalidMarkers){
     const h=createHarness({online:false,marker:false});
-    h.storage.setItem(SAFE_KEY,JSON.stringify(markerValue));
+    h.storage.setItem(SAFE_KEY,markerValue);
     vm.runInNewContext(scriptById('seh-auth-session-restore-watchdog-v1'),h.context);
     h.runTimers(900);await flush();
     assert.equal(h.bodyClasses.has('locked'),true);
