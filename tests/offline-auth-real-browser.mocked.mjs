@@ -238,7 +238,7 @@ try {
     if (firstProgress.kind === "session-resolved") {
       switched = firstProgress.result;
       assert.equal(switched.error, null, "Supabase setSession must accept the synthetic replacement account");
-      await offline.evaluate(user => window.finishLogin(user), switched.data.user);
+      await offline.evaluate(user => { void window.finishLogin(user); return true; }, switched.data.user);
     } else if (firstProgress.kind === "timeout") {
       throw new Error("Account switch stalled: neither the profile lookup nor setSession completed within 6 seconds");
     }
