@@ -9708,6 +9708,10 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
   const traineeRole=()=>{try{return (window.authProfile||authProfile)?.role==='trainee'}catch(e){return false}};
   const client=()=>{try{return typeof currentClient!=='undefined'?currentClient:window.currentClient||null}catch(e){return window.currentClient||null}};
   const escapeHtml=v=>String(v??'').replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
+  const removeUploadedHealthFile = async (storage, path) => {
+    const result = await storage.from('trainee-health-reports').remove([path]);
+    if (result?.error) throw result.error;
+  };
   function ensureHealthCard(){
     if(!traineeRole())return;
     const section=$('client');if(!section)return;
@@ -9753,6 +9757,7 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
     if(!['application/pdf','image/jpeg','image/png','image/webp'].includes(file.type))return alert('فقط PDF، JPG، PNG یا WEBP مجاز است.');
     const btn=$('uploadHealthReportBtn');if(btn){btn.disabled=true;btn.textContent='⏳ در حال آپلود…';}
     let path=null;
+    let cleanupFailure=null;
     try{
       const [session,uploadFile]=await Promise.all([__fitnessGetApiSession(),window.sehOptimizeUploadImage(file)]);
       const user=session?.user;
@@ -9765,7 +9770,14 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
       try{
         await sbWrite('/trainee_injuries','POST',{trainee_id:c.id,problem_type:'آزمایش یا مدرک پزشکی',body_area:'فایل ارسالی شاگرد',severity:'ارسال‌شده توسط شاگرد',record_date:typeof today==='function'?today():new Date().toISOString().slice(0,10),movement_limit:note,coach_note:null});
       }catch(dbError){
-        try{await AUTH_SUPABASE.storage.from('trainee-health-reports').remove([path]);}catch(_){}
+        if(path){
+          try{
+            await removeUploadedHealthFile(AUTH_SUPABASE.storage,path);
+          }catch(cleanupError){
+            cleanupFailure=cleanupError;
+            console.error('health report upload cleanup failed:',{path,dbError,cleanupError});
+          }
+        }
         throw dbError;
       }
       $('healthReportFile').value='';if($('healthFileNote'))$('healthFileNote').value='';
@@ -9775,7 +9787,10 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
     }catch(e){
       console.error('upload health report',e);
       const msg=String(e?.message||e);
-      if(msg.includes('trainee-health-reports')||msg.toLowerCase().includes('bucket'))alert('آپلود انجام نشد؛ فضای ذخیره‌سازی خصوصی trainee-health-reports یا دسترسی آن هنوز در Supabase تنظیم نشده است. '+msg);
+      if(cleanupFailure){
+        const cleanupMessage=String(cleanupFailure?.message||cleanupFailure);
+        alert('ثبت اطلاعات فایل در پرونده انجام نشد و پاکسازی فایل موقت هم ناموفق بود. ممکن است فایل بدون سابقه در فضای ذخیره‌سازی باقی مانده باشد؛ برای جلوگیری از حذف اشتباه، بررسی دستی لازم است.\nخطای ثبت: '+msg+'\nخطای پاکسازی: '+cleanupMessage);
+      }else if(msg.includes('trainee-health-reports')||msg.toLowerCase().includes('bucket'))alert('آپلود انجام نشد؛ فضای ذخیره‌سازی خصوصی trainee-health-reports یا دسترسی آن هنوز در Supabase تنظیم نشده است. '+msg);
       else alert('ارسال فایل انجام نشد. '+msg);
     }finally{window.sehResetTurnstile?.(btn);if(btn){btn.disabled=false;btn.textContent='📤 ارسال آزمایش برای مربی';}}
   };

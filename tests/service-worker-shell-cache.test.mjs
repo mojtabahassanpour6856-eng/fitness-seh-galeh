@@ -3,6 +3,8 @@ import fs from 'node:fs';
 import vm from 'node:vm';
 
 const swSource = fs.readFileSync('sw.js', 'utf8');
+const currentCacheName = (swSource.match(/const SHELL_CACHE_NAME = '([^']+)'/) || [])[1];
+assert.ok(currentCacheName, 'service worker shell cache version is readable');
 const html = fs.readFileSync('index.html', 'utf8');
 assert.match(html, /seh-app-shell-service-worker-registration-v1/);
 assert.match(html, /\.register\('\.\/sw\.js',\s*\{scope:'\.\/'\}\)/);
@@ -80,7 +82,7 @@ listeners.install({ waitUntil(promise) { installPromise = promise; } });
 await installPromise;
 assert.equal(skipWaitingCalls, 1, 'service worker activates after attempting shell precache');
 
-const cache = await caches.open('seh-shell-v2');
+const cache = await caches.open(currentCacheName);
 const cachedIndex = await cache.match(scope + 'index.html');
 const cachedSdk = await cache.match(scope + 'vendor/supabase-2.119.0.js');
 const cachedNutritionBuilder = await cache.match(scope + 'coach-nutrition-builder.html');
@@ -199,14 +201,14 @@ listeners.fetch({
   respondWith(promise) { notFoundNavigationResponse = promise; }
 });
 const notFoundNavigation = await notFoundNavigationResponse;
-assert.match(await notFoundNavigation.text(), /network:\/fitness-seh-galeh\/index\.html/,
-  'a server-side 404 on the app entry route uses the cached shell');
+assert.match(await notFoundNavigation.text(), /network:\/fitness-seh-galeh\/(?:index\.html)?/,
+  'a server-side 404 on the app entry route uses the cached shell, whether cached from the root or index URL');
 forcedStatus = null;
 
 // A failed update must not remove the currently active shell cache.
 const originalFetch = globalThis.fetch;
 // Simulate a newer worker whose required index cannot be fetched.
-// Its failed install must not mutate or delete the currently active v2 cache.
+// Its failed install must not mutate or delete the currently active cache.
 offline = true;
 const updateListeners = {};
 let updateSkipWaitingCalls = 0;
@@ -215,15 +217,16 @@ const updateSelf = {
   addEventListener(name, fn) { updateListeners[name] = fn; },
   async skipWaiting() { updateSkipWaitingCalls++; }
 };
-vm.runInNewContext(swSource.replace("seh-shell-v2", "seh-shell-v3"), {
+const nextCacheName = currentCacheName + '-test-update';
+vm.runInNewContext(swSource.replace(currentCacheName, nextCacheName), {
   self: updateSelf, clients, caches, fetch: mockFetch, URL, Promise, Response,
   setTimeout, clearTimeout, console
 });
 let failedUpdateInstall;
 updateListeners.install({ waitUntil(promise) { failedUpdateInstall = promise; } });
 await assert.rejects(failedUpdateInstall, /Required app shell index\.html could not be cached/);
-assert.ok(stores.has('seh-shell-v2'), 'failed update preserves the previously active shell cache');
-assert.ok(!stores.has('seh-shell-v3'), 'failed update removes its incomplete cache');
+assert.ok(stores.has(currentCacheName), 'failed update preserves the previously active shell cache');
+assert.ok(!stores.has(nextCacheName), 'failed update removes its incomplete cache');
 assert.equal(updateSkipWaitingCalls, 0, 'failed update never calls skipWaiting');
 offline = false;
 
