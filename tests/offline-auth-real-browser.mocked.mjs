@@ -87,7 +87,7 @@ await context.route(projectUrl + "/**", async route => {
 try {
   const online = await context.newPage();
   const errors = [];
-  online.on("pageerror", error => errors.push(error.message));
+  online.on("pageerror", error => errors.push({ message: error.message, stack: error.stack || "" }));
   await online.goto(base + "/index.html", { waitUntil: "domcontentloaded" });
   await online.waitForFunction(() => {
     const bar = document.getElementById("authUserBar");
@@ -165,9 +165,9 @@ try {
     /^addProfileBasicFields is not defined$/,
     /^Failed to execute 'insertBefore' on 'Node'/
   ];
-  const unexpectedErrors = errors.filter(message => !knownNonAuthStartupErrors.some(pattern => pattern.test(message)));
+  const unexpectedErrors = errors.filter(entry => !knownNonAuthStartupErrors.some(pattern => pattern.test(entry.message)));
   assert.deepEqual(unexpectedErrors, [], "unexpected uncaught errors during auth/offline lifecycle");
-  if (errors.length) console.log("KNOWN NON-AUTH STARTUP ERRORS (not part of this test): " + JSON.stringify(errors));
+  if (errors.length) console.log("KNOWN NON-AUTH STARTUP ERROR DETAILS (investigation only; not part of this auth regression): " + JSON.stringify(errors));
   console.log("PASS: actual app HTML + pinned Supabase SDK + mocked profile endpoint passed online sign-in, offline PWA-shell reopen, private UI hiding, and authenticated reconnect.");
 } finally {
   await context.close();
