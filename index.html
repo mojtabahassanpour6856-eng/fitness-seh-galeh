@@ -2608,6 +2608,9 @@ if(profileError) throw profileError;
       }
     }
     authProfile=rows[0];document.body.classList.remove('locked');$('authScreen').style.display='none';$('authUserBar').style.display='block';$('authUserText').textContent=`${authProfile.full_name||user.email} | ${authProfile.role==='coach'?'مربی':'شاگرد'}`;
+    // Persist only a non-identifying shell marker after the server profile has been verified.
+    // This also covers early session-restore handlers that run before late wrappers are installed.
+    try{window.localStorage.setItem('seh.offline-safe-shell.v1',JSON.stringify({version:1,view:'home'}));}catch(storageError){}
     // Show the correct dashboard immediately after authentication.
     // The food catalog can load in the background; waiting for it here delayed
     // the first paint and made the app appear to jump when the coach panel opened.
