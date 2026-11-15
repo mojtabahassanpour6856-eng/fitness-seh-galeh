@@ -1,0 +1,34 @@
+name: Offline auth real-browser mocked-backend integration
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'index.html'
+      - 'sw.js'
+      - 'vendor/supabase-2.119.0.js'
+      - 'tests/offline-auth-real-browser.mocked.mjs'
+      - '.github/workflows/test-offline-auth-real-browser-mocked.yml'
+  push:
+    branches: [test/offline-auth-real-browser-mock-20261115]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  chromium-mocked-auth:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install Chromium test browser
+        run: |
+          npm install --no-save playwright
+          npx playwright install --with-deps chromium
+      - name: Run actual app auth lifecycle with synthetic account and mocked Supabase
+        run: node tests/offline-auth-real-browser.mocked.mjs
+      - name: Run offline auth shell unit regressions
+        run: node tests/offline-auth-shell.test.mjs
+      - name: Run service worker shell-cache regressions
+        run: node tests/service-worker-shell-cache.test.mjs

@@ -1,0 +1,20 @@
+name: Offline auth shell recovery regression
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'index.html'
+      - 'tests/offline-auth-shell.test.mjs'
+      - '.github/workflows/test-offline-auth-shell.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  offline-auth-shell:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: node tests/offline-auth-shell.test.mjs
