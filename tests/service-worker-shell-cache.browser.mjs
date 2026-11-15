@@ -6,6 +6,9 @@ import { fileURLToPath } from "node:url";
 import { chromium } from "playwright";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
+const swSource = fs.readFileSync(path.join(root, "sw.js"), "utf8");
+const shellCacheName = (swSource.match(/const SHELL_CACHE_NAME = '([^']+)'/) || [])[1];
+assert.ok(shellCacheName, "service worker shell cache version is readable");
 const mime = {
   ".html": "text/html; charset=utf-8",
   ".js": "text/javascript; charset=utf-8",
@@ -49,7 +52,7 @@ try {
   await page.waitForFunction(() => !!navigator.serviceWorker.controller, null, { timeout: 15000 });
 
   const initialCache = await page.evaluate(async () => {
-    const cache = await caches.open("seh-shell-v2");
+    const cache = await caches.open(shellCacheName);
     const keys = await cache.keys();
     return keys.map(request => new URL(request.url).pathname);
   });
@@ -88,7 +91,7 @@ try {
     "the cached Top Genesis page must load its own offline document");
 
   const shellStillIntact = await genesisPage.evaluate(async () => {
-    const cache = await caches.open("seh-shell-v2");
+    const cache = await caches.open(shellCacheName);
     const response = await cache.match(new URL("index.html", location.href).href);
     return response ? await response.text() : "";
   });
