@@ -135,7 +135,14 @@ test('SIGNED_IN preserves the non-identifying shell marker; SIGNED_OUT invalidat
   vm.runInNewContext(html.slice(start,end+'/* SEH_AUTH_SESSION_SINGLEFLIGHT_V1_END */'.length),h.context);
   await h.window.__sehGetSessionSingleFlight();
   assert.equal(typeof authListener,'function');
+  // Simulate a previously authenticated coach UI before a second account signs in.
+  h.bodyClasses.delete('locked');
+  h.elements.authScreen.style.display='none';
+  h.elements.authUserBar.style.display='block';
   authListener('SIGNED_IN',{user:{id:'different-account-after-switch'}});
+  assert.equal(h.bodyClasses.has('locked'),true,'a new SIGNED_IN event must lock the old private UI immediately');
+  assert.equal(h.elements.authScreen.style.display,'flex','the public entry screen must replace the previous account view');
+  assert.equal(h.elements.authUserBar.style.display,'none','the previous account identity must disappear during profile verification');
   assert.deepEqual(JSON.parse(h.storage.getItem(SAFE_KEY)),{version:1,view:'home'},'account-switch SIGNED_IN must retain only the generic marker, never the new or previous account identity');
   assert.equal(h.storage.getItem(SAFE_KEY).includes('different-account-after-switch'),false,'the marker must never store an account identifier');
   authListener('SIGNED_OUT');
