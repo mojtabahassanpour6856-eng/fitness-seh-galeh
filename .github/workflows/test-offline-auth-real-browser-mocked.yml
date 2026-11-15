@@ -1,7 +1,7 @@
 name: Offline auth real-browser mocked-backend integration
 on:
   pull_request:
-    branches: [experiment/offline-auth-shell-integration-main-20261114]
+    branches: [main]
     paths:
       - 'index.html'
       - 'sw.js'
