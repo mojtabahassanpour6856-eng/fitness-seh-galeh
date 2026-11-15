@@ -135,8 +135,9 @@ test('SIGNED_IN preserves the non-identifying shell marker; SIGNED_OUT invalidat
   vm.runInNewContext(html.slice(start,end+'/* SEH_AUTH_SESSION_SINGLEFLIGHT_V1_END */'.length),h.context);
   await h.window.__sehGetSessionSingleFlight();
   assert.equal(typeof authListener,'function');
-  authListener('SIGNED_IN');
-  assert.deepEqual(JSON.parse(h.storage.getItem(SAFE_KEY)),{version:1,view:'home'});
+  authListener('SIGNED_IN',{user:{id:'different-account-after-switch'}});
+  assert.deepEqual(JSON.parse(h.storage.getItem(SAFE_KEY)),{version:1,view:'home'},'account-switch SIGNED_IN must retain only the generic marker, never the new or previous account identity');
+  assert.equal(h.storage.getItem(SAFE_KEY).includes('different-account-after-switch'),false,'the marker must never store an account identifier');
   authListener('SIGNED_OUT');
   assert.equal(h.storage.getItem(SAFE_KEY),null);
 });
