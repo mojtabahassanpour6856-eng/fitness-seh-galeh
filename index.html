@@ -2463,7 +2463,7 @@ window.AUTH_SUPABASE=window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY,{aut
       authListenerInstalled=true;
       try{
         auth.auth.onAuthStateChange(function(event){
-          if(event==='SIGNED_IN'||event==='SIGNED_OUT'){
+          if(event==='SIGNED_OUT'){
             try{window.localStorage.removeItem('seh.offline-safe-shell.v1');}catch(storageError){}
           }
           if(event==='SIGNED_IN'||event==='SIGNED_OUT'||event==='TOKEN_REFRESHED'){

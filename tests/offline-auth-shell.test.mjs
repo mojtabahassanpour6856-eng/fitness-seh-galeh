@@ -124,7 +124,7 @@ test('successful finishLogin stores only a minimal safe-shell marker',async()=>{
   assert.deepEqual(JSON.parse(h.storage.getItem(SAFE_KEY)),{version:1,view:'home'});
 });
 
-test('auth sign-in and sign-out transitions invalidate the previous shell marker',async()=>{
+test('SIGNED_IN preserves the non-identifying shell marker; SIGNED_OUT invalidates it',async()=>{
   const h=createHarness({online:true,marker:true,session:true});
   delete h.window.__sehGetSessionSingleFlight;
   let authListener;
@@ -136,8 +136,7 @@ test('auth sign-in and sign-out transitions invalidate the previous shell marker
   await h.window.__sehGetSessionSingleFlight();
   assert.equal(typeof authListener,'function');
   authListener('SIGNED_IN');
-  assert.equal(h.storage.getItem(SAFE_KEY),null);
-  h.storage.setItem(SAFE_KEY,JSON.stringify({version:1,view:'home'}));
+  assert.deepEqual(JSON.parse(h.storage.getItem(SAFE_KEY)),{version:1,view:'home'});
   authListener('SIGNED_OUT');
   assert.equal(h.storage.getItem(SAFE_KEY),null);
 });
@@ -168,7 +167,7 @@ test('a resolved finishLogin that did not expose authenticated UI does not creat
   assert.equal(h.storage.getItem(SAFE_KEY),null);
 });
 
-test('SIGNED_IN clears the old marker before a successful new login writes a fresh minimal marker',async()=>{
+test('restored SIGNED_IN keeps the limited shell available until verified login; SIGNED_OUT clears it',async()=>{
   const h=createHarness({online:true,marker:true,session:true});
   delete h.window.__sehGetSessionSingleFlight;
   let authListener;
@@ -181,7 +180,7 @@ test('SIGNED_IN clears the old marker before a successful new login writes a fre
   vm.runInNewContext(html.slice(start,end+'/* SEH_AUTH_SESSION_SINGLEFLIGHT_V1_END */'.length),h.context);
   await h.window.__sehGetSessionSingleFlight();
   authListener('SIGNED_IN');
-  assert.equal(h.storage.getItem(SAFE_KEY),null,'the previous account marker is invalidated');
+  assert.deepEqual(JSON.parse(h.storage.getItem(SAFE_KEY)),{version:1,view:'home'},'restoring an existing session must not erase the restricted-shell marker');
   vm.runInNewContext(scriptById('seh-auth-finish-login-singleflight-v1'),h.context);
   await h.window.finishLogin({id:'new-account'});
   assert.deepEqual(JSON.parse(h.storage.getItem(SAFE_KEY)),{version:1,view:'home'});
