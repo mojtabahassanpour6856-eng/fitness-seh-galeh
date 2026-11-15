@@ -2917,7 +2917,7 @@ if($("prDate"))$("prDate").value=today();if($("anDate"))$("anDate").value=today(
   window.dashOpen=function(section){
     const btn=qsAll('.nav button').find(b=>String(b.getAttribute('onclick')||'').includes("'"+section+"'"));
     if(section==='analysis')buildTraineeAnalysisSection();
-    if(section==='client'){addProfileBasicFields();if(currentClient)loadProfileBasic();}
+    if(section==='client'){if(typeof window.addProfileBasicFields==='function')window.addProfileBasicFields();if(currentClient&&typeof window.loadProfileBasic==='function')window.loadProfileBasic();}
     showSection(section==='analysis'?'traineeAnalysis':section==='activity'?'activitySection':section,btn||null);
     if(section==='activity'){if(typeof loadActivityToday==='function')loadActivityToday();if(typeof previewActivityCalories==='function')previewActivityCalories();return;}
     if(section==='analysis'){return;}
@@ -4100,7 +4100,7 @@ const plans=workoutResult.data||[], nutrition=nutritionResult.data||[];
 
   // -------- Nutrition: substitution is linked to the actual meal food; custom food remains DB-backed --------
   
-  addProfileBasicFields();
+  if(typeof window.addProfileBasicFields==='function')window.addProfileBasicFields();
 
   // -------- Subscription/payment completeness --------
   const originalSaveSubscription=window.saveSubscription;
@@ -5791,7 +5791,7 @@ window.useLibraryExercise=async function(id){
     const notes=document.getElementById('workoutExerciseNotes');
     if(!card||!wrap||!notes)return;
     const notesLabel=notes.previousElementSibling;
-    if(notesLabel&&notesLabel.tagName==='LABEL'&&(wrap.parentElement!==card||wrap.nextElementSibling!==notesLabel)){
+    if(notesLabel&&notesLabel.tagName==='LABEL'&&notesLabel.parentElement===card&&(wrap.parentElement!==card||wrap.nextElementSibling!==notesLabel)){
       card.insertBefore(wrap,notesLabel);
     }else if(wrap.parentElement!==card){
       card.appendChild(wrap);
