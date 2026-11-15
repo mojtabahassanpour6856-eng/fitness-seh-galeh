@@ -70,9 +70,10 @@ Expected:
 3. Repeat with the trainee test account, then switch accounts online.
 
 Expected:
-- Sign-out/account transitions invalidate the previous safe-shell marker.
-- No previous account's private data is displayed.
-- Without a current safe marker, offline startup stays on the public entry screen.
+- A completed sign-out (`SIGNED_OUT`) clears the safe-shell marker.
+- A new `SIGNED_IN` event may retain the generic marker, but it must never reveal private UI offline; after reconnect, the current account's session and profile must be validated before private UI appears.
+- Switching from coach to trainee or trainee to coach must not display the previous account's private data, even briefly.
+- After sign-out, with no new successful online authentication, offline startup stays on the public entry screen.
 
 ### F. Intermittent network / captive portal
 
