@@ -51,11 +51,11 @@ try {
   await page.evaluate(async () => await navigator.serviceWorker.ready);
   await page.waitForFunction(() => !!navigator.serviceWorker.controller, null, { timeout: 15000 });
 
-  const initialCache = await page.evaluate(async () => {
-    const cache = await caches.open(shellCacheName);
+  const initialCache = await page.evaluate(async cacheName => {
+    const cache = await caches.open(cacheName);
     const keys = await cache.keys();
     return keys.map(request => new URL(request.url).pathname);
-  });
+  }, shellCacheName);
   assert.ok(initialCache.some(path => path.endsWith("/index.html")),
     "Chromium must precache the main app shell");
   assert.ok(initialCache.some(path => path.endsWith("/vendor/supabase-2.119.0.js")),
@@ -90,11 +90,11 @@ try {
   assert.equal(await genesisPage.locator("#topGenesisZip").count(), 1,
     "the cached Top Genesis page must load its own offline document");
 
-  const shellStillIntact = await genesisPage.evaluate(async () => {
-    const cache = await caches.open(shellCacheName);
+  const shellStillIntact = await genesisPage.evaluate(async cacheName => {
+    const cache = await caches.open(cacheName);
     const response = await cache.match(new URL("index.html", location.href).href);
     return response ? await response.text() : "";
-  });
+  }, shellCacheName);
   assert.match(shellStillIntact, /Fitness Seh Galeh|فیتنس سه‌قلعه/i,
     "embedded HTML navigations must never overwrite the cached main app shell");
 
