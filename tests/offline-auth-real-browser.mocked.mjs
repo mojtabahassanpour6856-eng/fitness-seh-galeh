@@ -69,7 +69,7 @@ await context.route(projectUrl + "/**", async route => {
   const url = new URL(route.request().url());
   if (url.pathname === "/auth/v1/user") {
     const authorization = route.request().headers().authorization || "";
-    const token = authorization.replace(/^Bearer\\s+/i, "");
+    const token = authorization.split(" ").slice(1).join(" ");
     let subject = userId;
     try { subject = JSON.parse(Buffer.from(token.split(".")[1], "base64url").toString("utf8")).sub || userId; } catch (_) {}
     const account = subject === activeMockUser.id ? activeMockUser : { id: subject, role: "trainee", full_name: "Offline Test Trainee", email: "offline-trainee@example.invalid" };
@@ -203,7 +203,7 @@ try {
     activeMockUser = nextAccount;
 
     const accessToken = await offline.evaluate(account => {
-      const encode = value => btoa(JSON.stringify(value)).replace(/=/g, "").replace(/\\+/g, "-").replace(/\\//g, "_");
+      const encode = value => btoa(JSON.stringify(value)).split("=").join("").split("+").join("-").split("/").join("_");
       const now = Math.floor(Date.now() / 1000);
       return encode({ alg: "HS256", typ: "JWT" }) + "." + encode({
         sub: account.id, aud: "authenticated", role: "authenticated", email: account.email,
