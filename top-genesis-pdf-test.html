@@ -70,6 +70,22 @@ pre{white-space:pre-wrap;overflow-wrap:anywhere;background:#f7f7f7;padding:12px;
 (function(){
 "use strict";
 const embeddedMode=new URLSearchParams(window.location.search).get("embedded")==="1";
+let coachContext=null;
+let coachContextReady=!embeddedMode;
+window.addEventListener("message",event=>{
+ if(event.origin!==window.location.origin||event.source!==window.parent||event.data?.type!=="top-genesis-context")return;
+ const traineeId=String(event.data.traineeId||"");
+ const contextNonce=String(event.data.contextNonce||"");
+ if(!traineeId||!contextNonce)return;
+ coachContext={traineeId,contextNonce};
+ document.documentElement.dataset.topGenesisTraineeId=traineeId;
+ document.documentElement.dataset.topGenesisContextNonce=contextNonce;
+ coachContextReady=true;
+ if(typeof updateApprovalState==="function")updateApprovalState();
+});
+if(embeddedMode&&window.parent!==window){
+ window.parent.postMessage({type:"top-genesis-context-request"} ,window.location.origin);
+}
 const analysisDateInput=document.getElementById("analysisDate");
 const analysisDateDisplay=document.getElementById("analysisDateDisplay");
 const jalaliPicker=document.getElementById("analysisJalaliPicker");
@@ -394,7 +410,7 @@ button.addEventListener("click",async()=>{
   const nutritionNotes=document.getElementById("nutritionNotes");
   function updateApprovalState(){
    const notesComplete=Boolean(trainingNotes&&trainingNotes.value.trim()&&nutritionNotes&&nutritionNotes.value.trim());
-   const approved=Boolean(notesComplete&&approveBox.checked);
+   const approved=Boolean(notesComplete&&approveBox.checked&&coachContextReady&&(!embeddedMode||coachContext?.traineeId&&coachContext?.contextNonce));
    document.getElementById("pngReport").disabled=!approved;
    document.getElementById("shareReport").disabled=!approved;
    document.getElementById("sendToTrainee").disabled=!approved;
@@ -409,12 +425,13 @@ button.addEventListener("click",async()=>{
   sendButton.addEventListener("click",()=>{
    if(!embeddedMode||window.parent===window){sendStatus.textContent="ارسال فقط از داخل پنل مربی امکان‌پذیر است.";return;}
    if(!approveBox.checked){sendStatus.textContent="ابتدا تأیید نهایی مربی را فعال کنید.";return;}
+   if(!coachContextReady||!coachContext?.traineeId||!coachContext?.contextNonce){sendStatus.textContent="اتصال امن به شاگرد انتخاب‌شده برقرار نیست؛ صفحه را دوباره بارگذاری کنید.";return;}
    sendRequestId=crypto.randomUUID();
    sendButton.disabled=true;
    sendStatus.textContent="در حال آماده‌سازی گزارش کامل و ارسال امن به پنل شاگرد…";
    try {
     const reportHtml=buildTraineeSafeReportHtml();
-    window.parent.postMessage({type:"top-genesis-approved-report",requestId:sendRequestId,payload:{analysisDate:document.getElementById("analysisDate").value,metrics:data.metrics,trainingNotes:trainingNotes.value,nutritionNotes:nutritionNotes.value,reportHtml}},window.location.origin);
+    window.parent.postMessage({type:"top-genesis-approved-report",requestId:sendRequestId,payload:{traineeId:coachContext.traineeId,contextNonce:coachContext.contextNonce,analysisDate:document.getElementById("analysisDate").value,metrics:data.metrics,trainingNotes:trainingNotes.value,nutritionNotes:nutritionNotes.value,reportHtml}},window.location.origin);
    } catch(error) {
     sendButton.disabled=false;
     sendStatus.textContent=error?.message||"آماده‌سازی نسخه شاگرد انجام نشد.";

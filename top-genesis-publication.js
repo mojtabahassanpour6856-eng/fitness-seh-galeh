@@ -20,6 +20,20 @@
   let lastLoadedTrainee = null;
   let lastLoadedAt = 0;
   let loading = false;
+  let lastContextKey = null;
+  let contextEpoch = 0;
+  // Deduplicate repeated iframe messages in this coach page session. The
+  // analyzer may retry a postMessage after a delayed response; the same
+  // request ID must never upload or insert a second publication.
+  const publicationRequests = new Map();
+  function rememberPublicationResult(key, result) {
+    const entry = publicationRequests.get(key);
+    if (entry) entry.result = result;
+    while (publicationRequests.size > 100) {
+      const oldest = publicationRequests.keys().next().value;
+      publicationRequests.delete(oldest);
+    }
+  }
 
   const $ = (id) => document.getElementById(id);
   const esc = (value) => String(value ?? "").replace(/[&<>"']/g, (c) => ({
@@ -350,10 +364,27 @@
     }
     renderHistory();
   }
+  function closeFullReportViewer() {
+    const modal = $("topGenesisFullReportModal");
+    const frame = $("topGenesisFullReportFrame");
+    if (frame?.dataset.objectUrl) URL.revokeObjectURL(frame.dataset.objectUrl);
+    if (frame) { frame.removeAttribute("src"); delete frame.dataset.objectUrl; }
+    if (modal) { modal.hidden = true; modal.style.display = "none"; }
+  }
   async function openFullReport(row, button) {
     const modal = $("topGenesisFullReportModal");
     const frame = $("topGenesisFullReportFrame");
     if (!modal || !frame || !row?.report_storage_path) return;
+    const requestedTraineeId = currentTraineeId();
+    const requestedEpoch = contextEpoch;
+    if (!requestedTraineeId || (!currentCoach() && !currentTrainee())) return;
+    const expectedPrefix = String(row.coach_user_id || "") + "/" + requestedTraineeId + "/published/";
+    if (String(row.trainee_id || "") !== String(requestedTraineeId) ||
+        !row.coach_user_id || !String(row.report_storage_path).startsWith(expectedPrefix) ||
+        !/^[0-9a-f-]{36}\\.html$/i.test(String(row.report_storage_path).slice(expectedPrefix.length))) {
+      console.warn("Top Genesis report path does not match the selected trainee and assigned coach.");
+      return;
+    }
     const oldText = button?.textContent;
     if (button) { button.disabled = true; button.textContent = "در حال دریافت گزارش…"; }
     try {
@@ -361,6 +392,9 @@
         .from("trainee-health-reports").download(row.report_storage_path);
       if (error) throw error;
       if (!data) throw new Error("فایل گزارش دریافت نشد.");
+      if (requestedEpoch !== contextEpoch || requestedTraineeId !== currentTraineeId()) {
+        throw new Error("شاگرد یا حساب کاربری تغییر کرده است؛ نمایش گزارش قبلی لغو شد.");
+      }
       if (frame.dataset.objectUrl) URL.revokeObjectURL(frame.dataset.objectUrl);
       const reportBlob = data.type === "text/html" ? data : new Blob([data], { type: "text/html;charset=utf-8" });
       const objectUrl = URL.createObjectURL(reportBlob);
@@ -369,37 +403,48 @@
       modal.hidden = false;
       modal.style.display = "flex";
     } catch (error) {
-      alert("نمایش گزارش کامل انجام نشد. اتصال یا دسترسی گزارش را بررسی کنید.");
-      console.warn("Top Genesis full report:", error);
+      if (requestedEpoch === contextEpoch && requestedTraineeId === currentTraineeId()) {
+        alert("نمایش گزارش کامل انجام نشد. اتصال یا دسترسی گزارش را بررسی کنید.");
+        console.warn("Top Genesis full report:", error);
+      }
     } finally {
-      if (button) { button.disabled = false; button.textContent = oldText || "مشاهده گزارش کامل"; }
+      // A completed request must never mutate controls belonging to a newer
+      // trainee/account context (the old button may already be detached).
+      if (button && requestedEpoch === contextEpoch &&
+          requestedTraineeId === currentTraineeId() && button.isConnected) {
+        button.disabled = false;
+        button.textContent = oldText || "مشاهده گزارش کامل";
+      }
     }
   }
   async function loadPublished(force) {
     const traineeId = currentTraineeId();
-    if (!traineeId || !window.AUTH_SUPABASE || loading) return;
+    const requestEpoch = contextEpoch;
+    if ((!currentCoach() && !currentTrainee()) || !traineeId || !window.AUTH_SUPABASE || loading) return;
     if (!force && traineeId === lastLoadedTrainee && Date.now() - lastLoadedAt < 20000) return;
     loading = true;
     const body = $("topGenesisPublishedBody");
     if (body && !lastLoadedTrainee) body.textContent = "در حال دریافت گزارش‌ها…";
     try {
       const { data, error } = await window.AUTH_SUPABASE.from(TABLE)
-        .select("id,analysis_date,report_metrics,training_notes,nutrition_notes,report_storage_path,published_at")
+        .select("id,trainee_id,coach_user_id,analysis_date,report_metrics,training_notes,nutrition_notes,report_storage_path,published_at")
         .eq("trainee_id", traineeId)
         .order("analysis_date", { ascending: true })
         .order("created_at", { ascending: true });
       if (error) throw error;
-      if (currentTraineeId() !== traineeId) return;
+      if (requestEpoch !== contextEpoch || currentTraineeId() !== traineeId) return;
       renderPublished(data || [], traineeId);
       lastLoadedTrainee = traineeId;
       lastLoadedAt = Date.now();
     } catch (error) {
-      if (body && currentTraineeId() === traineeId) {
+      // Ignore failures from an obsolete request, including sign-out/sign-in
+      // with the same trainee ID but a different role/session epoch.
+      if (requestEpoch === contextEpoch && body && currentTraineeId() === traineeId) {
         body.textContent = "دریافت گزارش‌های ارسال‌شده انجام نشد. دسترسی پایگاه داده را بررسی کنید.";
         console.warn("Top Genesis published history:", error);
       }
     } finally {
-      loading = false;
+      if (requestEpoch === contextEpoch) loading = false;
     }
   }
   function safeMetrics(source) {
@@ -438,13 +483,43 @@
     const frame = $("topGenesisPdfAnalyzerFrame");
     if (!frame || event.source !== frame.contentWindow || event.origin !== window.location.origin ||
         event.data?.type !== "top-genesis-approved-report") return;
-    const requestId = String(event.data.requestId || "");
+    const requestId = String(event.data.requestId || "").slice(0, 120);
+    if (!requestId) {
+      reply(frame, requestId, false, "شناسه درخواست ارسال گزارش معتبر نیست؛ دوباره تلاش کنید.");
+      return;
+    }
+    const requestKey = String(currentTraineeId() || "") + ":" + requestId;
+    const previousRequest = publicationRequests.get(requestKey);
+    if (previousRequest) {
+      if (previousRequest.result) {
+        reply(frame, requestId, previousRequest.result.ok, previousRequest.result.message);
+      } else {
+        reply(frame, requestId, false, "این درخواست قبلاً دریافت شده و هنوز در حال پردازش است؛ لطفاً چند لحظه صبر کنید.");
+      }
+      return;
+    }
+    publicationRequests.set(requestKey, { result: null });
     let uploadedReportPath = null;
+    let publicationStage = "اعتبارسنجی گزارش";
     try {
       if (!currentCoach()) throw new Error("ارسال گزارش فقط از حساب مربی امکان‌پذیر است.");
       const traineeId = currentTraineeId();
       if (!traineeId) throw new Error("ابتدا شاگرد موردنظر را انتخاب کنید.");
       const payload = event.data.payload || {};
+      const payloadTraineeId = String(payload.traineeId || "");
+      const payloadContextNonce = String(payload.contextNonce || "");
+      if (!payloadTraineeId || payloadTraineeId !== traineeId ||
+          payloadTraineeId !== String(frame.dataset.boundTraineeId || "") ||
+          !payloadContextNonce || payloadContextNonce !== String(frame.dataset.contextNonce || "")) {
+        throw new Error("شاگرد انتخاب‌شده هنگام تحلیل تغییر کرده است؛ برای جلوگیری از ارسال گزارش فرد اشتباه، دوباره فایل همان شاگرد را تحلیل کنید.");
+      }
+      const assertSameTraineeContext = () => {
+        if (currentTraineeId() !== traineeId ||
+            String(frame.dataset.boundTraineeId || "") !== traineeId ||
+            String(frame.dataset.contextNonce || "") !== payloadContextNonce) {
+          throw new Error("شاگرد انتخاب‌شده تغییر کرده است؛ ارسال گزارش متوقف شد.");
+        }
+      };
       const date = String(payload.analysisDate || "");
       if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) throw new Error("تاریخ آنالیز معتبر نیست.");
       const metrics = safeMetrics(payload.metrics);
@@ -459,11 +534,14 @@
       if (reportBytes <= 0 || reportBytes > 9 * 1024 * 1024) {
         throw new Error("حجم گزارش کامل بیش از حد مجاز است؛ تعداد تصاویر اسکن را بررسی کنید.");
       }
+      publicationStage = "بررسی نشست مربی";
       const { data: userData, error: userError } = await window.AUTH_SUPABASE.auth.getUser();
       if (userError) throw userError;
       const coachId = userData?.user?.id;
       if (!coachId) throw new Error("نشست مربی معتبر نیست؛ دوباره وارد شوید.");
+      assertSameTraineeContext();
       const reportPath = coachId + "/" + traineeId + "/published/" + crypto.randomUUID() + ".html";
+      publicationStage = "بارگذاری فایل گزارش در فضای ذخیره‌سازی";
       const { error: uploadError } = await window.AUTH_SUPABASE.storage
         .from("trainee-health-reports")
         .upload(reportPath, new Blob([reportHtml], { type: "text/html;charset=utf-8" }), {
@@ -473,6 +551,8 @@
         });
       if (uploadError) throw uploadError;
       uploadedReportPath = reportPath;
+      assertSameTraineeContext();
+      publicationStage = "ثبت اطلاعات گزارش در پایگاه داده";
       const { error } = await window.AUTH_SUPABASE.from(TABLE).insert({
         trainee_id: traineeId,
         coach_user_id: coachId,
@@ -484,21 +564,75 @@
       });
       if (error) throw error;
       uploadedReportPath = null;
-      reply(frame, requestId, true, "گزارش تأییدشده با موفقیت به پنل پیشرفت شاگرد ارسال شد.");
+      const successMessage = "گزارش تأییدشده با موفقیت به پنل پیشرفت شاگرد ارسال شد.";
+      rememberPublicationResult(requestKey, { ok: true, message: successMessage });
+      reply(frame, requestId, true, successMessage);
       lastLoadedTrainee = null;
       if ($("progress")?.classList.contains("active")) {
         mountProgressCard();
         loadPublished(true);
       }
     } catch (error) {
+      let cleanupFailure = null;
       if (uploadedReportPath) {
-        try { await window.AUTH_SUPABASE.storage.from("trainee-health-reports").remove([uploadedReportPath]); } catch (_) {}
+        try {
+          const { error: cleanupError } = await window.AUTH_SUPABASE.storage
+            .from("trainee-health-reports")
+            .remove([uploadedReportPath]);
+          if (cleanupError) cleanupFailure = cleanupError;
+        } catch (cleanupError) {
+          cleanupFailure = cleanupError;
+        }
+        if (cleanupFailure) {
+          console.error("Top Genesis temporary report cleanup failed:", {
+            path: uploadedReportPath,
+            name: String(cleanupFailure?.name || "Error"),
+            message: String(cleanupFailure?.message || "Unknown cleanup error"),
+            status: cleanupFailure?.status ?? null,
+            code: cleanupFailure?.code ?? null
+          });
+        }
       }
-      reply(frame, requestId, false, error?.message || "ارسال گزارش انجام نشد.");
+      const errorName = String(error?.name || "Error");
+      const rawErrorMessage = String(error?.message || "خطای نامشخص");
+      const networkFetchFailure = error instanceof TypeError && navigator.onLine !== false;
+      const baseErrorMessage = networkFetchFailure
+        ? "مرورگر نتوانست درخواست را به فضای ذخیره‌سازی برساند؛ احتمال اختلال شبکه یا محدودیت CORS وجود دارد. جزئیات: " + rawErrorMessage
+        : rawErrorMessage;
+      const cleanupWarning = cleanupFailure
+        ? "؛ پاکسازی فایل موقت نیز ناموفق بود و نیاز به بررسی فضای ذخیره‌سازی دارد"
+        : "";
+      const errorMessage = baseErrorMessage + cleanupWarning;
+      const errorStatus = Number.isFinite(Number(error?.status)) ? `، وضعیت HTTP ${Number(error.status)}` : "";
+      const errorCode = error?.code ? `، کد ${String(error.code).slice(0, 40)}` : "";
+      const offline = navigator.onLine === false ? "؛ اتصال اینترنت مرورگر قطع است" : "";
+      console.error("Top Genesis publication failed:", {
+        stage: publicationStage, name: errorName, message: errorMessage,
+        status: error?.status ?? null, code: error?.code ?? null,
+        browserOnline: navigator.onLine
+      });
+      const failureMessage = `مرحله ناموفق: ${publicationStage}. ${errorMessage} (${errorName}${errorStatus}${errorCode})${offline}`;
+      rememberPublicationResult(requestKey, { ok: false, message: failureMessage });
+      reply(frame, requestId, false, failureMessage);
     }
   }
   window.addEventListener("message", handleApprovedReport);
   function tick() {
+    const role = currentCoach() ? "coach" : currentTrainee() ? "trainee" : "signed-out";
+    const traineeId = role === "signed-out" ? "" : String(currentTraineeId() || "");
+    const contextKey = role + ":" + traineeId;
+    if (contextKey !== lastContextKey) {
+      lastContextKey = contextKey;
+      contextEpoch += 1;
+      loading = false;
+      lastLoadedTrainee = null;
+      lastLoadedAt = 0;
+      closeFullReportViewer();
+      const body = $("topGenesisPublishedBody");
+      if (body) body.textContent = role === "signed-out" || !traineeId
+        ? "برای مشاهده گزارش‌ها وارد حساب کاربری شوید."
+        : "در حال دریافت گزارش‌های شاگرد انتخاب‌شده…";
+    }
     removeLegacyProgressAnalysisCards();
     installTraineeAnalysisNavigationGuard();
     mountProgressCard();
