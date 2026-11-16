@@ -32,7 +32,7 @@ test("publisher rejects stale, mismatched, or switched trainee contexts before w
 test("publisher validates the persisted coach session with its explicit access token", () => {
   const publisher = read("top-genesis-publication.js");
   assert.match(publisher, /__sehGetSessionSingleFlight/);
-  assert.match(publisher, /const coachSession = sessionResult/);
+  assert.match(publisher, /let coachSession = sessionResult/);
   assert.match(publisher, /auth\.getUser\(coachSession\.access_token\)/,
     "The server-verified coach identity must be checked against the explicit persisted access token.");
   assert.doesNotMatch(publisher, /auth\.getUser\(\)/,
