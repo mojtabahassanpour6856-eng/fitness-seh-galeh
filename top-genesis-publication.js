@@ -243,6 +243,8 @@
       '<h4>توصیه تغذیه‌ای مربی</h4><p>' + esc(row.nutrition_notes || "ثبت نشده") + '</p>';
   }
   function renderPublished(rows, traineeId) {
+    publishedRowsById.clear();
+    (rows || []).forEach(row => publishedRowsById.set(String(row.id), row));
     const body = $("topGenesisPublishedBody");
     if (!body || currentTraineeId() !== traineeId) return;
     if (!rows.length) {
