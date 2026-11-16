@@ -381,7 +381,7 @@
     const expectedPrefix = String(row.coach_user_id || "") + "/" + requestedTraineeId + "/published/";
     if (String(row.trainee_id || "") !== String(requestedTraineeId) ||
         !row.coach_user_id || !String(row.report_storage_path).startsWith(expectedPrefix) ||
-        !/^[0-9a-f-]{36}\\.html$/i.test(String(row.report_storage_path).slice(expectedPrefix.length))) {
+        !/^[0-9a-f-]{36}\.html$/i.test(String(row.report_storage_path).slice(expectedPrefix.length))) {
       console.warn("Top Genesis report path does not match the selected trainee and assigned coach.");
       return;
     }
