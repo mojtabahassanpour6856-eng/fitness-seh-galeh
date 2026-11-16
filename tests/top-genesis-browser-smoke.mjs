@@ -722,7 +722,7 @@ Waist-Hip Ratio (WHO),0.889
     window.__publicationInsertCount = 0;
     window.__publicationUploadCount = 0;
     window.AUTH_SUPABASE = {
-      auth: { async getUser() { return { data: { user: { id: "coach-fixture-1" } }, error: null }; } },
+      auth: { async getSession() { return { data: { session: { access_token: "coach-fixture-access-token" } }, error: null }; }, async getUser(token) { if (token !== "coach-fixture-access-token") throw new Error("missing fixture access token"); return { data: { user: { id: "coach-fixture-1" } }, error: null }; } },
       storage: {
         from() {
           return {
