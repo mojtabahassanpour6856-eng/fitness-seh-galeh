@@ -569,16 +569,65 @@
       if (!coachId) throw new Error("نشست مربی از سوی سرویس ورود تأیید نشد؛ دوباره وارد حساب مربی شوید.");
       assertSameTraineeContext();
       const reportPath = coachId + "/" + traineeId + "/published/" + crypto.randomUUID() + ".html";
-      publicationStage = "بارگذاری فایل گزارش در فضای ذخیره‌سازی";
-      const { error: uploadError } = await window.AUTH_SUPABASE.storage
-        .from("trainee-health-reports")
-        .upload(reportPath, new Blob([reportHtml], { type: "text/html;charset=utf-8" }), {
-          contentType: "text/html",
-          cacheControl: "3600",
-          upsert: false
-        });
-      if (uploadError) throw uploadError;
+      // Reserve this unique path before the first request. If the browser loses
+      // the response after Storage accepted the object, the catch block can
+      // still attempt cleanup rather than leaving an orphaned report.
       uploadedReportPath = reportPath;
+      publicationStage = "بارگذاری فایل گزارش در فضای ذخیره‌سازی";
+      const reportBlob = new Blob([reportHtml], { type: "text/html;charset=utf-8" });
+      let uploadResult = null;
+      let lastUploadError = null;
+      const maxUploadAttempts = 3;
+      for (let attempt = 1; attempt <= maxUploadAttempts; attempt += 1) {
+        assertSameTraineeContext();
+        try {
+          uploadResult = await window.AUTH_SUPABASE.storage
+            .from("trainee-health-reports")
+            .upload(reportPath, reportBlob, {
+              contentType: "text/html",
+              cacheControl: "3600",
+              // Keep INSERT-only Storage permissions. A retry never requires
+              // UPDATE permission on the private bucket.
+              upsert: false
+            });
+          lastUploadError = uploadResult?.error || null;
+          if (!lastUploadError) break;
+          const uploadStatus = Number(lastUploadError?.status || lastUploadError?.statusCode || 0);
+          const uploadMessage = String(lastUploadError?.message || "");
+          const duplicateObject = uploadStatus === 409 ||
+            /already exists|duplicate/i.test(uploadMessage) ||
+            String(lastUploadError?.name || "").toLowerCase().includes("alreadyexists");
+          if (duplicateObject) {
+            // The first request may have reached Storage even if its response
+            // was lost. Confirm the exact UUID object exists before treating
+            // this retry as a successful upload.
+            const { data: existingObject, error: verifyError } = await window.AUTH_SUPABASE.storage
+              .from("trainee-health-reports")
+              .download(reportPath);
+            if (!verifyError && existingObject) {
+              lastUploadError = null;
+              break;
+            }
+            if (verifyError) lastUploadError = verifyError;
+          }
+          if (!lastUploadError) break;
+        } catch (error) {
+          lastUploadError = error;
+        }
+        const status = Number(lastUploadError?.status || lastUploadError?.statusCode || 0);
+        const errorText = String(lastUploadError?.message || lastUploadError?.name || "");
+        const retryable = lastUploadError instanceof TypeError ||
+          status >= 500 || /failed to fetch|fetch failed|network|timeout|unknown error/i.test(errorText) ||
+          String(lastUploadError?.name || "").toLowerCase().includes("unknown");
+        if (!retryable || attempt === maxUploadAttempts) break;
+        console.warn("Top Genesis Storage upload retry:", {
+          attempt, nextAttempt: attempt + 1, status: status || null,
+          name: String(lastUploadError?.name || "Error"),
+          message: errorText.slice(0, 180)
+        });
+        await new Promise(resolve => setTimeout(resolve, 700 * attempt));
+      }
+      if (lastUploadError) throw lastUploadError;
       assertSameTraineeContext();
       publicationStage = "ثبت اطلاعات گزارش در پایگاه داده";
       const { error } = await window.AUTH_SUPABASE.from(TABLE).insert({
