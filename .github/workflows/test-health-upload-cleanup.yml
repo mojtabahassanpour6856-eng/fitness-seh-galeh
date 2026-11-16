@@ -1,0 +1,26 @@
+name: Health upload cleanup tests
+on:
+  pull_request:
+    paths:
+      - 'index.html'
+      - 'health-upload-cleanup.js'
+      - 'tests/health-upload-cleanup.test.js'
+      - '.github/workflows/test-health-upload-cleanup.yml'
+  push:
+    branches:
+      - main
+      - 'fix/health-upload-cleanup-result-check-*'
+    paths:
+      - 'index.html'
+      - 'health-upload-cleanup.js'
+      - 'tests/health-upload-cleanup.test.js'
+      - '.github/workflows/test-health-upload-cleanup.yml'
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - run: node --test tests/health-upload-cleanup.test.js
