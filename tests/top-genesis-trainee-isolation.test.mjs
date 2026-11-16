@@ -109,8 +109,14 @@ test("legacy publication rows without a storage path never expose a full-report 
   const publication = read("top-genesis-publication.js");
   assert.ok(publication.includes("const action = row.report_storage_path"));
   assert.match(publication, /data-history-details/);
-  assert.ok(publication.includes("if (!modal || !frame || !row?.report_storage_path) return"),
-    "The report viewer must reject legacy rows that have no storage object.");
+  assert.match(publication, /function ensureFullReportViewer\(\)/,
+    "The full report modal must be created lazily if the history panel was re-rendered.");
+  assert.match(publication, /publishedRowsById\.set\(String\(row\.id\), row\)/,
+    "The current publication rows must remain addressable after the history list is replaced.");
+  assert.match(publication, /document\.addEventListener\("click", async event =>[\s\S]*?\[data-history-report\][\s\S]*?openFullReport\(row, button\)/,
+    "Report clicks must be delegated from the document so list re-rendering cannot detach the handler.");
+  assert.match(publication, /if \(!modal \|\| !frame \|\| !row\?\.report_storage_path\) \{[\s\S]*?alert\(/,
+    "Missing viewer state must be surfaced instead of silently returning.");
 });
 
 
