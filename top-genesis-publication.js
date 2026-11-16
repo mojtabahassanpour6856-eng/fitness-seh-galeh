@@ -586,12 +586,30 @@
             .upload(reportPath, reportBlob, {
               contentType: "text/html",
               cacheControl: "3600",
-              // The path contains a fresh UUID for this publication. Reusing
-              // it with upsert makes retries safe if the first response was
-              // lost after the object was successfully written.
-              upsert: true
+              // Keep INSERT-only Storage permissions. A retry never requires
+              // UPDATE permission on the private bucket.
+              upsert: false
             });
           lastUploadError = uploadResult?.error || null;
+          if (!lastUploadError) break;
+          const uploadStatus = Number(lastUploadError?.status || lastUploadError?.statusCode || 0);
+          const uploadMessage = String(lastUploadError?.message || "");
+          const duplicateObject = uploadStatus === 409 ||
+            /already exists|duplicate/i.test(uploadMessage) ||
+            String(lastUploadError?.name || "").toLowerCase().includes("alreadyexists");
+          if (duplicateObject) {
+            // The first request may have reached Storage even if its response
+            // was lost. Confirm the exact UUID object exists before treating
+            // this retry as a successful upload.
+            const { data: existingObject, error: verifyError } = await window.AUTH_SUPABASE.storage
+              .from("trainee-health-reports")
+              .download(reportPath);
+            if (!verifyError && existingObject) {
+              lastUploadError = null;
+              break;
+            }
+            if (verifyError) lastUploadError = verifyError;
+          }
           if (!lastUploadError) break;
         } catch (error) {
           lastUploadError = error;
