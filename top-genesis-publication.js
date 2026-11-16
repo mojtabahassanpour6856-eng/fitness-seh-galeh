@@ -534,11 +534,28 @@
       if (reportBytes <= 0 || reportBytes > 9 * 1024 * 1024) {
         throw new Error("حجم گزارش کامل بیش از حد مجاز است؛ تعداد تصاویر اسکن را بررسی کنید.");
       }
-      publicationStage = "بررسی نشست مربی";
-      const { data: userData, error: userError } = await window.AUTH_SUPABASE.auth.getUser();
+      publicationStage = "بازیابی نشست مربی";
+      const auth = window.AUTH_SUPABASE?.auth;
+      if (!auth || typeof auth.getSession !== "function" || typeof auth.getUser !== "function") {
+        throw new Error("سرویس نشست مربی در این صفحه آماده نیست؛ صفحه را تازه‌سازی کنید.");
+      }
+      // Read the persisted session through the app's single-flight session
+      // coordinator. Passing the access token explicitly to getUser avoids a
+      // race where getUser() tries to re-read a session while auth storage is
+      // being refreshed by another request.
+      const sessionResult = typeof window.__sehGetSessionSingleFlight === "function"
+        ? await window.__sehGetSessionSingleFlight()
+        : await auth.getSession();
+      if (sessionResult?.error) throw sessionResult.error;
+      let coachSession = sessionResult?.data?.session || null;
+      if (!coachSession?.access_token) {
+        throw new Error("نشست ورود مربی در مرورگر پیدا نشد؛ لطفاً صفحه را تازه‌سازی کنید و دوباره با حساب مربی وارد شوید. اطلاعات شاگردان تغییری نکرده است.");
+      }
+      publicationStage = "اعتبارسنجی نشست مربی";
+      const { data: userData, error: userError } = await auth.getUser(coachSession.access_token);
       if (userError) throw userError;
       const coachId = userData?.user?.id;
-      if (!coachId) throw new Error("نشست مربی معتبر نیست؛ دوباره وارد شوید.");
+      if (!coachId) throw new Error("نشست مربی از سوی سرویس ورود تأیید نشد؛ دوباره وارد حساب مربی شوید.");
       assertSameTraineeContext();
       const reportPath = coachId + "/" + traineeId + "/published/" + crypto.randomUUID() + ".html";
       publicationStage = "بارگذاری فایل گزارش در فضای ذخیره‌سازی";
