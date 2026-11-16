@@ -92,7 +92,7 @@ test("full report download requires exact trainee and assigned-coach storage pat
     "A report row for another trainee must never be opened.");
   assert.match(publication, /report_storage_path\)\.startsWith\(expectedPrefix\)/,
     "A report must live under its assigned coach and exact trainee folder.");
-  assert.match(publication, /0-9a-f-\]\{36\}\\\\\.html/,
+  assert.match(publication, /0-9a-f-\]\{36\}\\\.html/,
     "Only generated UUID HTML report objects should be opened.");
 });
 
