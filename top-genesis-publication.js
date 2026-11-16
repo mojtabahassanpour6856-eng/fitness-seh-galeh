@@ -22,6 +22,7 @@
   let loading = false;
   let lastContextKey = null;
   let contextEpoch = 0;
+  const publishedRowsById = new Map();
   // Deduplicate repeated iframe messages in this coach page session. The
   // analyzer may retry a postMessage after a delayed response; the same
   // request ID must never upload or insert a second publication.
@@ -242,6 +243,8 @@
       '<h4>توصیه تغذیه‌ای مربی</h4><p>' + esc(row.nutrition_notes || "ثبت نشده") + '</p>';
   }
   function renderPublished(rows, traineeId) {
+    publishedRowsById.clear();
+    (rows || []).forEach(row => publishedRowsById.set(String(row.id), row));
     const body = $("topGenesisPublishedBody");
     if (!body || currentTraineeId() !== traineeId) return;
     if (!rows.length) {
@@ -341,6 +344,10 @@
     });
     // Keep the report viewer mounted across history refreshes. Recreating it
     // here revoked the active Blob URL and unexpectedly closed an open report.
+    ensureFullReportViewer();
+    renderHistory();
+  }
+  function ensureFullReportViewer() {
     let modal = $("topGenesisFullReportModal");
     if (!modal) {
       modal = document.createElement("div");
@@ -362,7 +369,7 @@
       });
       modal.addEventListener("click", event => { if (event.target === modal) closeModal(); });
     }
-    renderHistory();
+    return { modal, frame: $("topGenesisFullReportFrame") };
   }
   function closeFullReportViewer() {
     const modal = $("topGenesisFullReportModal");
@@ -372,9 +379,13 @@
     if (modal) { modal.hidden = true; modal.style.display = "none"; }
   }
   async function openFullReport(row, button) {
-    const modal = $("topGenesisFullReportModal");
-    const frame = $("topGenesisFullReportFrame");
-    if (!modal || !frame || !row?.report_storage_path) return;
+    const viewer = ensureFullReportViewer();
+    const modal = viewer.modal;
+    const frame = viewer.frame;
+    if (!modal || !frame || !row?.report_storage_path) {
+      alert("نمایشگر گزارش آماده نشد؛ صفحه را تازه‌سازی کنید.");
+      return;
+    }
     const requestedTraineeId = currentTraineeId();
     const requestedEpoch = contextEpoch;
     if (!requestedTraineeId || (!currentCoach() && !currentTrainee())) return;
@@ -656,6 +667,20 @@
     const visibleSection = currentCoach() ? $("progress") : $("traineeAnalysis");
     if (visibleSection?.classList.contains("active")) loadPublished(false);
   }
+  // Capture report clicks at document level: the history list can be
+  // re-rendered/reparented during role changes, which may detach its listener.
+  document.addEventListener("click", async event => {
+    const button = event.target?.closest?.("[data-history-report]");
+    if (!button) return;
+    event.preventDefault();
+    event.stopPropagation();
+    const row = publishedRowsById.get(String(button.dataset.historyReport || ""));
+    if (!row?.report_storage_path) {
+      alert("اطلاعات این گزارش در فهرست فعلی پیدا نشد؛ فهرست را تازه‌سازی کنید.");
+      return;
+    }
+    await openFullReport(row, button);
+  }, true);
   if (document.readyState === "loading") {
     document.addEventListener("DOMContentLoaded", tick, { once: true });
   } else tick();
