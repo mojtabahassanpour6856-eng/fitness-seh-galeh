@@ -29,6 +29,17 @@ test("publisher rejects stale, mismatched, or switched trainee contexts before w
 });
 
 
+test("publisher validates the persisted coach session with its explicit access token", () => {
+  const publisher = read("top-genesis-publication.js");
+  assert.match(publisher, /__sehGetSessionSingleFlight/);
+  assert.match(publisher, /let coachSession = sessionResult/);
+  assert.match(publisher, /auth\.getUser\(coachSession\.access_token\)/,
+    "The server-verified coach identity must be checked against the explicit persisted access token.");
+  assert.doesNotMatch(publisher, /auth\.getUser\(\)/,
+    "Avoid getUser() without a token, which can race the SDK's internal session lookup and return AuthSessionMissingError.");
+  assert.match(publisher, /نشست ورود مربی در مرورگر پیدا نشد/);
+});
+
 test("publisher removes an uploaded report when trainee context changes or publication fails", () => {
   const publisher = read("top-genesis-publication.js");
   const uploadAt = publisher.indexOf(".upload(reportPath");

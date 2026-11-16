@@ -32,6 +32,13 @@ assert.match(html, /const weighted=manualRows\.filter/,
   "Progress trend must use trainee-entered manual records only.");
 assert.match(html, /const historyRows=manualRows\.slice\(\)/,
   "Progress history must use trainee-entered manual records only.");
+assert.match(html, /let progressHistoryRequestSeq=0;[\s\S]*?const requestId=\+\+progressHistoryRequestSeq/,
+  "Manual body-analysis history requests must be sequenced to prevent stale responses from overwriting a newly selected trainee.");
+assert.match(html, /el\.dataset\.boundTraineeId!==selectedId[\s\S]*?در حال دریافت تاریخچه شاگرد انتخاب‌شده/,
+  "The history panel must clear the previous trainee's rows as soon as the selected trainee changes.");
+assert.match(html, /requestId!==progressHistoryRequestSeq\|\|!currentClient\|\|String\(currentClient\.id\)!==String\(traineeId\)/,
+  "A history response must be discarded unless it still belongs to the currently selected trainee.");
+
 assert.match(embed, /const anchor = document\.getElementById\("bodyAnalysisEntryPanel"\)/);
 assert.match(embed, /anchor\.appendChild\(host\)/,
   "The PDF/ZIP analyzer must be nested inside the unified Body Analysis card.");

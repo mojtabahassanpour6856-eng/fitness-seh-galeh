@@ -3460,15 +3460,40 @@ window.loadDashboard = loadDashboard;
     }
   }
 
+  let progressHistoryRequestSeq=0;
   async function loadProgressHistory(){
-    const traineeId=currentClient?.id;if(traineeId==null)return;
-    let el=$id('progressHistory');if(!el){el=document.createElement('div');el.id='progressHistory';el.className='card';el.innerHTML='<h2>📋 تاریخچه آنالیز بدن</h2><div id="progressHistoryBody"></div>';const profile=window.authProfile||(typeof authProfile!=='undefined'?authProfile:null);const sec=profile?.role==='coach'?$id('bodyAnalysisEntryPanel'):$id('progress');if(sec)sec.appendChild(el);}
+    const requestId=++progressHistoryRequestSeq;
+    const traineeId=currentClient?.id;
+    let el=$id('progressHistory');
+    if(!el){
+      el=document.createElement('div');el.id='progressHistory';el.className='card';
+      el.innerHTML='<h2>📋 تاریخچه آنالیز بدن</h2><div id="progressHistoryBody"></div>';
+      const profile=window.authProfile||(typeof authProfile!=='undefined'?authProfile:null);
+      const sec=profile?.role==='coach'?$id('bodyAnalysisEntryPanel'):$id('progress');
+      if(sec)sec.appendChild(el);
+    }
+    const body=$id('progressHistoryBody');
+    if(!body)return;
+    const selectedId=traineeId==null?'':String(traineeId);
+    // Never leave the previous trainee's measurements visible while the next
+    // trainee's query is pending or when no trainee is selected.
+    if(el.dataset.boundTraineeId!==selectedId){
+      el.dataset.boundTraineeId=selectedId;
+      body.textContent=selectedId?'در حال دریافت تاریخچه شاگرد انتخاب‌شده…':'ابتدا شاگرد را انتخاب کنید.';
+    }else if(selectedId){
+      body.textContent='در حال به‌روزرسانی تاریخچه شاگرد انتخاب‌شده…';
+    }
+    if(traineeId==null)return;
     try{
       const rows=await sbGet(`/body_analyses?trainee_id=eq.${encodeURIComponent(traineeId)}&select=analysis_date,weight,body_fat,muscle_mass,abdomen,waist,chest,hip,thigh&order=analysis_date.desc`);
-      if(!currentClient||String(currentClient.id)!==String(traineeId))return;
-      const body=$id('progressHistoryBody');if(!body)return;
-      body.innerHTML=rows.length?`<div class="v4-table"><table><thead><tr><th>تاریخ</th><th>وزن</th><th>چربی</th><th>عضله</th><th>شکم</th><th>کمر</th><th>سینه</th><th>باسن</th><th>ران</th></tr></thead><tbody>${rows.map(x=>`<tr><td>${esc2(x.analysis_date||'')}</td><td>${esc2(x.weight??'—')}</td><td>${esc2(x.body_fat??'—')}</td><td>${esc2(x.muscle_mass??'—')}</td><td>${esc2(x.abdomen??'—')}</td><td>${esc2(x.waist??'—')}</td><td>${esc2(x.chest??'—')}</td><td>${esc2(x.hip??'—')}</td><td>${esc2(x.thigh??'—')}</td></tr>`).join('')}</tbody></table></div>`:'<p class="muted">هنوز رکوردی ثبت نشده است.</p>';
-    }catch(e){if(currentClient&&String(currentClient.id)===String(traineeId))console.error(e);}
+      if(requestId!==progressHistoryRequestSeq||!currentClient||String(currentClient.id)!==String(traineeId)||el.dataset.boundTraineeId!==selectedId)return;
+      body.innerHTML=rows.length?`<div class="v4-table"><table><thead><tr><th>تاریخ</th><th>وزن</th><th>چربی</th><th>عضله</th><th>شکم</th><th>کمر</th><th>سینه</th><th>باسن</th><th>ران</th></tr></thead><tbody>${rows.map(x=>`<tr><td>${esc2(x.analysis_date||'')}</td><td>${esc2(x.weight??'—')}</td><td>${esc2(x.body_fat??'—')}</td><td>${esc2(x.muscle_mass??'—')}</td><td>${esc2(x.abdomen??'—')}</td><td>${esc2(x.waist??'—')}</td><td>${esc2(x.chest??'—')}</td><td>${esc2(x.hip??'—')}</td><td>${esc2(x.thigh??'—')}</td></tr>`).join('')}</tbody></table></div>`:'<p class="muted">هنوز رکوردی برای این شاگرد ثبت نشده است.</p>';
+    }catch(e){
+      if(requestId===progressHistoryRequestSeq&&currentClient&&String(currentClient.id)===String(traineeId)){
+        body.textContent='دریافت تاریخچه این شاگرد انجام نشد؛ لطفاً دوباره تلاش کنید.';
+        console.error(e);
+      }
+    }
   }
 
   window.printPlan=async function(kind){
