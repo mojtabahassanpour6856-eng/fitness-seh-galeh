@@ -172,15 +172,17 @@ test("cached approved analysis history renders after its card is mounted, before
 });
 
 
-test("publisher polling preserves the coach analysis view and keeps manual progress widgets in Progress", () => {
+test("publisher polling preserves coach analysis and isolates obsolete trainee widgets", () => {
   const publication = read("top-genesis-publication.js");
   const cleanup = publication.slice(publication.indexOf("function removeLegacyProgressAnalysisCards()"), publication.indexOf("function installTraineeAnalysisNavigationGuard"));
   assert.match(cleanup, /const coachAnalysisView = \$\("coachAnalysisView"\)/);
-  assert.match(cleanup, /analysisPanel\.appendChild\(coachAnalysisView\)/,
-    "The latest coach analysis view must remain mounted in the analysis panel.");
+  assert.match(cleanup, /if \(coachView\)[\s\S]*?analysisPanel\.appendChild\(coachAnalysisView\)/,
+    "The latest coach analysis view must remain mounted in the coach analysis panel.");
   assert.match(cleanup, /\["progressTrend", "progressHistory"\]/);
   assert.match(cleanup, /progressSection\.appendChild\(node\)/,
-    "Manual progress chart/history must stay inside the Progress section.");
-  assert.doesNotMatch(cleanup, /node\.remove\(\)/,
-    "Polling must not delete the coach analysis card that the Progress loader otherwise recreates.");
+    "Manual progress chart/history must stay inside the coach Progress section.");
+  assert.match(cleanup, /else \{[\s\S]*?\["coachAnalysisView", "progressTrend", "progressHistory"\][\s\S]*?if \(node\) node\.remove\(\)/,
+    "Obsolete legacy widgets may be removed from the trainee view only.");
+  assert.doesNotMatch(cleanup, /manualProgressCard|progressEntryPanel/,
+    "The trainee's manual progress entry and stored data must not be removed.");
 });
