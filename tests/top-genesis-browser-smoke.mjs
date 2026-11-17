@@ -647,8 +647,9 @@ Waist-Hip Ratio (WHO),0.889
   assert.match(appShellSource, /<section id="bodyAnalysis" class="section">[\s\S]*?id="bodyAnalysisEntryPanel"/, "The coach body-analysis mount point must live inside the unified Body Analysis section.");
   assert.match(publicationSource, /installTraineeAnalysisNavigationGuard/, "The trainee analysis route must be kept visible after legacy navigation callbacks.");
   assert.match(publicationSource, /setTimeout\(reveal, 420\)/, "The trainee analysis route must survive delayed dashboard restoration callbacks.");
-  assert.match(publicationSource, /removeLegacyProgressAnalysisCards/, "Legacy body-analysis widgets must be removed from the progress panel.");
-  assert.match(publicationSource, /\["coachAnalysisView", "progressTrend", "progressHistory"\]/, "Only legacy body-analysis widgets may be removed; manual progress data remains untouched.");
+  assert.match(publicationSource, /removeLegacyProgressAnalysisCards/, "The publication module must retain its progress-card lifecycle guard.");
+  assert.match(publicationSource, /analysisPanel && coachAnalysisView && coachAnalysisView\.parentElement !== analysisPanel[\s\S]*?analysisPanel\.appendChild\(coachAnalysisView\)/, "The coach analysis receipt must be preserved inside Body Analysis.");
+  assert.match(publicationSource, /\["progressTrend", "progressHistory"\][\s\S]*?progressSection\.appendChild\(node\)/, "Manual progress widgets must remain in Progress rather than being deleted.");
   assert.doesNotMatch(appShellSource, /<script[^>]+src=["'][^"']*top-genesis-archive\.js/i,
     "The production app must not load the legacy archive module.");
 
