@@ -968,17 +968,17 @@ Waist-Hip Ratio (WHO),0.889
     window.currentClient = { id: "trainee-fixture-1" };
     window.AUTH_SUPABASE = {
       from() {
-        const orderCount = { value: 0 };
+        // Supabase query builders are chainable through every order() call and
+        // become awaitable only when the complete query is awaited.
+        const result = { data: [
+          { id:"a1", analysis_date:"2026-10-01", report_metrics:{ weight_kg:{value:82,unit:"kg",status:"needs_coach_review"}, body_fat_percent:{value:22,unit:"%",status:"needs_coach_review"} }, training_notes:"تمرین مقاومتی طبق برنامه", nutrition_notes:"پروتئین کافی" },
+          { id:"a2", analysis_date:"2026-11-01", report_metrics:{ weight_kg:{value:79,unit:"kg",status:"needs_coach_review"}, body_fat_percent:{value:19,unit:"%",status:"needs_coach_review"} }, training_notes:"افزایش تدریجی فشار تمرین", nutrition_notes:"تنظیم کالری روزانه" }
+        ], error:null };
         const chain = {
           select() { return this; },
           eq() { return this; },
-          order() {
-            orderCount.value += 1;
-            return orderCount.value === 1 ? this : Promise.resolve({ data: [
-              { id:"a1", analysis_date:"2026-10-01", report_metrics:{ weight_kg:{value:82,unit:"kg",status:"needs_coach_review"}, body_fat_percent:{value:22,unit:"%",status:"needs_coach_review"} }, training_notes:"تمرین مقاومتی طبق برنامه", nutrition_notes:"پروتئین کافی" },
-              { id:"a2", analysis_date:"2026-11-01", report_metrics:{ weight_kg:{value:79,unit:"kg",status:"needs_coach_review"}, body_fat_percent:{value:19,unit:"%",status:"needs_coach_review"} }, training_notes:"افزایش تدریجی فشار تمرین", nutrition_notes:"تنظیم کالری روزانه" }
-            ], error:null });
-          }
+          order() { return this; },
+          then(resolve, reject) { return Promise.resolve(result).then(resolve, reject); }
         };
         return chain;
       }
