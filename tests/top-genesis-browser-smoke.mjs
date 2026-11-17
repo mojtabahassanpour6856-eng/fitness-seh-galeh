@@ -1041,10 +1041,23 @@ Waist-Hip Ratio (WHO),0.889
   await traineeProgressPage.waitForFunction(() => document.querySelector("#traineeAnalysis")?.classList.contains("active"));
   console.log('[smoke] trainee analysis route, manual progress preservation and navigation passed');
   console.log('[smoke] trainee report card mounted');
-  await traineeProgressPage.waitForFunction(() => {
-    const body = document.querySelector("#topGenesisPublishedBody");
-    return body && body.querySelectorAll("polyline").length >= 2;
-  });
+  try {
+    await traineeProgressPage.waitForFunction(() => {
+      const body = document.querySelector("#topGenesisPublishedBody");
+      return body && body.querySelectorAll("polyline").length >= 2;
+    }, null, { timeout: 15000 });
+  } catch (error) {
+    const diagnostic = await traineeProgressPage.evaluate(() => ({
+      bodyText: document.querySelector("#topGenesisPublishedBody")?.innerText || null,
+      bodyHtml: document.querySelector("#topGenesisPublishedBody")?.innerHTML?.slice(0, 5000) || null,
+      historyArticles: document.querySelectorAll("#topGenesisHistoryList article").length,
+      charts: document.querySelectorAll("#topGenesisPublishedBody polyline").length,
+      role: window.authProfile?.role || null,
+      traineeId: window.currentClient?.id || null
+    }));
+    console.error("[smoke] trainee history rendering diagnostic", diagnostic);
+    throw error;
+  }
   assert.match(await traineeProgressPage.locator("#topGenesisPublishedProgress").innerText(), /گزارش‌های تأییدشده آنالیز بدن/);
   assert.match(await traineeProgressPage.locator("#topGenesisPublishedBody").innerText(), /۷۹/);
   assert.match(await traineeProgressPage.locator("#topGenesisPublishedBody").innerText(), /تاریخچه آنالیزها/);
