@@ -639,55 +639,66 @@
       const reportBlob = new Blob([reportHtml], { type: "text/html;charset=utf-8" });
       let uploadResult = null;
       let lastUploadError = null;
-      const maxUploadAttempts = 3;
+      // Mobile networks can drop the response after Storage has already
+      // accepted a large report. Reuse one immutable UUID path and verify that
+      // exact object before retrying, so a lost response cannot create duplicates.
+      const maxUploadAttempts = 5;
+      const storage = window.AUTH_SUPABASE.storage.from("trainee-health-reports");
+      const isRetryableStorageError = error => {
+        const status = Number(error?.status || error?.statusCode || 0);
+        const message = String(error?.message || error?.name || "");
+        const name = String(error?.name || "").toLowerCase();
+        return error instanceof TypeError || status >= 500 ||
+          /failed to fetch|fetch failed|network|timeout|unknown error|storageunknownerror/i.test(message) ||
+          name.includes("unknown") || name.includes("network");
+      };
+      const verifyUploadedObject = async () => {
+        try {
+          const { data, error } = await storage.download(reportPath);
+          return !error && Boolean(data);
+        } catch (_) {
+          return false;
+        }
+      };
       for (let attempt = 1; attempt <= maxUploadAttempts; attempt += 1) {
         assertSameTraineeContext();
         try {
-          uploadResult = await window.AUTH_SUPABASE.storage
-            .from("trainee-health-reports")
-            .upload(reportPath, reportBlob, {
-              contentType: "text/html",
-              cacheControl: "3600",
-              // Keep INSERT-only Storage permissions. A retry never requires
-              // UPDATE permission on the private bucket.
-              upsert: false
-            });
+          uploadResult = await storage.upload(reportPath, reportBlob, {
+            contentType: "text/html",
+            cacheControl: "3600",
+            // INSERT-only Storage permissions: never require UPDATE for retries.
+            upsert: false
+          });
           lastUploadError = uploadResult?.error || null;
-          if (!lastUploadError) break;
-          const uploadStatus = Number(lastUploadError?.status || lastUploadError?.statusCode || 0);
-          const uploadMessage = String(lastUploadError?.message || "");
-          const duplicateObject = uploadStatus === 409 ||
-            /already exists|duplicate/i.test(uploadMessage) ||
-            String(lastUploadError?.name || "").toLowerCase().includes("alreadyexists");
-          if (duplicateObject) {
-            // The first request may have reached Storage even if its response
-            // was lost. Confirm the exact UUID object exists before treating
-            // this retry as a successful upload.
-            const { data: existingObject, error: verifyError } = await window.AUTH_SUPABASE.storage
-              .from("trainee-health-reports")
-              .download(reportPath);
-            if (!verifyError && existingObject) {
-              lastUploadError = null;
-              break;
-            }
-            if (verifyError) lastUploadError = verifyError;
-          }
           if (!lastUploadError) break;
         } catch (error) {
           lastUploadError = error;
         }
+
         const status = Number(lastUploadError?.status || lastUploadError?.statusCode || 0);
         const errorText = String(lastUploadError?.message || lastUploadError?.name || "");
-        const retryable = lastUploadError instanceof TypeError ||
-          status >= 500 || /failed to fetch|fetch failed|network|timeout|unknown error/i.test(errorText) ||
-          String(lastUploadError?.name || "").toLowerCase().includes("unknown");
+        const errorName = String(lastUploadError?.name || "Error");
+        const duplicateObject = status === 409 ||
+          /already exists|duplicate/i.test(errorText) ||
+          errorName.toLowerCase().includes("alreadyexists");
+        const retryable = duplicateObject || isRetryableStorageError(lastUploadError);
+
+        // A network error is ambiguous: the server may have stored the object
+        // but the response was lost. Confirm it before sending the same path again.
+        if (retryable && await verifyUploadedObject()) {
+          lastUploadError = null;
+          console.info("Top Genesis Storage upload verified after ambiguous response.", { attempt });
+          break;
+        }
         if (!retryable || attempt === maxUploadAttempts) break;
+
         console.warn("Top Genesis Storage upload retry:", {
           attempt, nextAttempt: attempt + 1, status: status || null,
-          name: String(lastUploadError?.name || "Error"),
-          message: errorText.slice(0, 180)
+          name: errorName, message: errorText.slice(0, 180),
+          browserOnline: navigator.onLine !== false
         });
-        await new Promise(resolve => setTimeout(resolve, 700 * attempt));
+        const backoffMs = Math.min(5000, 800 * (2 ** (attempt - 1)));
+        await new Promise(resolve => setTimeout(resolve, backoffMs));
       }
       if (lastUploadError) throw lastUploadError;
       assertSameTraineeContext();
