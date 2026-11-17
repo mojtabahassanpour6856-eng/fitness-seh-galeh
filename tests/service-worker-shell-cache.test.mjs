@@ -80,7 +80,9 @@ listeners.install({ waitUntil(promise) { installPromise = promise; } });
 await installPromise;
 assert.equal(skipWaitingCalls, 1, 'service worker activates after attempting shell precache');
 
-const cache = await caches.open('seh-shell-v4');
+const cacheName = (swSource.match(/const SHELL_CACHE_NAME = '([^']+)'/) || [])[1];
+assert.ok(cacheName, 'service worker shell cache name is discoverable');
+const cache = await caches.open(cacheName);
 const cachedIndex = await cache.match(scope + 'index.html');
 const cachedSdk = await cache.match(scope + 'vendor/supabase-2.119.0.js');
 const cachedNutritionBuilder = await cache.match(scope + 'coach-nutrition-builder.html');
