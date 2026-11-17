@@ -19,7 +19,11 @@
   const CHART_KEYS = ["weight_kg", "body_fat_percent", "fat_mass_kg", "lean_mass_kg", "bmi"];
   let lastLoadedTrainee = null;
   let lastLoadedAt = 0;
-  let loading = false;
+  // Per-trainee request state avoids duplicate reads during repeated navigation.
+  let activeLoadToken = 0;
+  let loadingTraineeId = null;
+  const publishedCache = new Map();
+  const PUBLISHED_CACHE_TTL_MS = 15000;
   let lastContextKey = null;
   let contextEpoch = 0;
   const publishedRowsById = new Map();
@@ -431,11 +435,23 @@
   async function loadPublished(force) {
     const traineeId = currentTraineeId();
     const requestEpoch = contextEpoch;
-    if ((!currentCoach() && !currentTrainee()) || !traineeId || !window.AUTH_SUPABASE || loading) return;
+    if ((!currentCoach() && !currentTrainee()) || !traineeId || !window.AUTH_SUPABASE) return;
     if (!force && traineeId === lastLoadedTrainee && Date.now() - lastLoadedAt < 20000) return;
-    loading = true;
+    if (loadingTraineeId === traineeId) return;
+
     const body = $("topGenesisPublishedBody");
-    if (body && !lastLoadedTrainee) body.textContent = "در حال دریافت گزارش‌ها…";
+    const cached = publishedCache.get(traineeId);
+    const cacheIsFresh = cached && Date.now() - cached.savedAt < PUBLISHED_CACHE_TTL_MS;
+    if (cacheIsFresh) {
+      renderPublished(cached.rows, traineeId);
+    } else if (body) {
+      body.setAttribute("aria-live", "polite");
+      body.setAttribute("aria-busy", "true");
+      body.textContent = "در حال دریافت سوابق آنالیز…";
+    }
+
+    const requestToken = ++activeLoadToken;
+    loadingTraineeId = traineeId;
     try {
       const { data, error } = await window.AUTH_SUPABASE.from(TABLE)
         .select("id,trainee_id,coach_user_id,analysis_date,report_metrics,training_notes,nutrition_notes,report_storage_path,published_at")
@@ -443,19 +459,28 @@
         .order("analysis_date", { ascending: true })
         .order("created_at", { ascending: true });
       if (error) throw error;
-      if (requestEpoch !== contextEpoch || currentTraineeId() !== traineeId) return;
-      renderPublished(data || [], traineeId);
+      if (requestEpoch !== contextEpoch || requestToken !== activeLoadToken ||
+          currentTraineeId() !== traineeId) return;
+      const rows = data || [];
+      publishedCache.set(traineeId, { rows, savedAt: Date.now() });
+      renderPublished(rows, traineeId);
       lastLoadedTrainee = traineeId;
       lastLoadedAt = Date.now();
     } catch (error) {
-      // Ignore failures from an obsolete request, including sign-out/sign-in
-      // with the same trainee ID but a different role/session epoch.
-      if (requestEpoch === contextEpoch && body && currentTraineeId() === traineeId) {
-        body.textContent = "دریافت گزارش‌های ارسال‌شده انجام نشد. دسترسی پایگاه داده را بررسی کنید.";
+      if (requestEpoch === contextEpoch && requestToken === activeLoadToken &&
+          body && currentTraineeId() === traineeId) {
+        if (!cacheIsFresh) {
+          body.innerHTML = '<p class="muted">دریافت سوابق آنالیز انجام نشد. اتصال اینترنت یا دسترسی را بررسی و دوباره تلاش کنید.</p>' +
+            '<button type="button" id="topGenesisRetryHistory" style="margin-top:8px;padding:8px 12px;border:1px solid #c5a45b;border-radius:8px;background:#fffaf0">تلاش دوباره</button>';
+          $("topGenesisRetryHistory")?.addEventListener("click", () => loadPublished(true), { once: true });
+        }
         console.warn("Top Genesis published history:", error);
       }
     } finally {
-      if (requestEpoch === contextEpoch) loading = false;
+      if (requestToken === activeLoadToken) {
+        loadingTraineeId = null;
+        $("topGenesisPublishedBody")?.removeAttribute("aria-busy");
+      }
     }
   }
   function safeMetrics(source) {
@@ -701,7 +726,8 @@
     if (contextKey !== lastContextKey) {
       lastContextKey = contextKey;
       contextEpoch += 1;
-      loading = false;
+      activeLoadToken += 1;
+      loadingTraineeId = null;
       lastLoadedTrainee = null;
       lastLoadedAt = 0;
       closeFullReportViewer();
