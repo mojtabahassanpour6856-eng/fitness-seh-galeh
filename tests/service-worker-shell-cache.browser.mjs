@@ -89,11 +89,11 @@ try {
   assert.equal(await genesisPage.locator("#topGenesisZip").count(), 1,
     "the cached Top Genesis page must load its own offline document");
 
-  const shellStillIntact = await genesisPage.evaluate(async () => {
-    const cache = await caches.open("seh-shell-v4");
+  const shellStillIntact = await genesisPage.evaluate(async cacheName => {
+    const cache = await caches.open(cacheName);
     const response = await cache.match(new URL("index.html", location.href).href);
     return response ? await response.text() : "";
-  });
+  }, shellCacheName);
   assert.match(shellStillIntact, /Fitness Seh Galeh|فیتنس سه‌قلعه/i,
     "embedded HTML navigations must never overwrite the cached main app shell");
 
