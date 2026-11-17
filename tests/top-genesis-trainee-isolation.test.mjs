@@ -190,17 +190,17 @@ test("publisher polling preserves coach analysis and isolates obsolete trainee w
 
 test("publisher verifies ambiguous Storage uploads and retries transient network failures without changing the object path", () => {
   const publisher = read("top-genesis-publication.js");
-  assert.match(publisher, /const maxUploadAttempts = 5/,
+  assert.ok(publisher.includes("const maxUploadAttempts = 5"),
     "Transient upload failures should receive several bounded attempts.");
-  assert.match(publisher, /const verifyUploadedObject = async () =>/);
-  assert.match(publisher, /storage\.download\(reportPath\)/,
+  assert.ok(publisher.includes("const verifyUploadedObject = async () =>"));
+  assert.ok(publisher.includes("storage.download(reportPath)"),
     "The exact object must be checked after a lost or ambiguous upload response.");
-  assert.match(publisher, /if \(retryable && await verifyUploadedObject\(\)\)/,
+  assert.ok(publisher.includes("if (retryable && await verifyUploadedObject())"),
     "A server-accepted object with a lost response must be treated as uploaded.");
-  assert.match(publisher, /const backoffMs = Math\.min\(5000, 800 \* \(2 \*\* \(attempt - 1\)\)\)/,
+  assert.ok(publisher.includes("const backoffMs = Math.min(5000, 800 * (2 ** (attempt - 1)))"),
     "Retries must use bounded exponential backoff.");
-  assert.match(publisher, /upsert: false/,
+  assert.ok(publisher.includes("upsert: false"),
     "Retries must preserve insert-only storage permissions and avoid overwriting reports.");
-  assert.match(publisher, /const reportPath = coachId \+ "\/" \+ traineeId \+ "\/published\/" \+ crypto\.randomUUID\(\)/,
+  assert.ok(publisher.includes('const reportPath = coachId + "/" + traineeId + "/published/" + crypto.randomUUID()'),
     "All attempts in one publication must reuse the same unique path.");
 });
