@@ -99,6 +99,8 @@ function runRouteForRole(role) {
   };
   const window = {
     authProfile: { role },
+    loadProgressHistoryCalls: 0,
+    loadProgressHistory() { this.loadProgressHistoryCalls += 1; },
     showSection(id, btn) {
       const activeSection = nodes[id];
       document.querySelectorAll(".section").forEach(item => {
@@ -125,6 +127,8 @@ assert.equal(coachRoute.progress.hidden, true,
 assert.equal(coachRoute.navAnalysis._classes.has("active"), true,
   "The Body Analysis navigation button must be marked active.");
 assert.equal(coachRoute.panel.hidden, false);
+assert.equal(coachRoute.loadProgressHistoryCalls, 1,
+  "Opening Body Analysis must load the coach analysis receipt without navigating to Progress.");
 const traineeRoute = runRouteForRole("trainee");
 assert.equal(traineeRoute.bodyAnalysis._classes.has("active"), false,
   "The coach-only direct route must not activate for trainee accounts.");
