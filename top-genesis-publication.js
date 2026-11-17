@@ -450,6 +450,13 @@
       }
     }
   }
+  // Public entry point for the coach's dedicated Body Analysis route.
+  // This is separate from window.loadProgressHistory, which reads legacy manual records.
+  window.loadTopGenesisPublishedHistory = function () {
+    mountProgressCard();
+    return loadPublished(false);
+  };
+
   async function loadPublished(force) {
     const traineeId = currentTraineeId();
     const requestEpoch = contextEpoch;
