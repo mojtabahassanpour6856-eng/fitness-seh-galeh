@@ -15599,11 +15599,25 @@ window.sehNutritionBuilderBridge={
       try{window.showSection("bodyAnalysis",document.getElementById("navBodyAnalysis"));}catch(error){console.warn("مسیر مستقیم آنالیز بدن:",error);}
     }
     panel.hidden=false;
-    // The coach receipt loader was previously triggered only by opening Progress.
-    // Refresh it on the Body Analysis route so no unrelated navigation is needed.
+    // The approved Top Genesis card uses its own publication-table loader;
+    // loadProgressHistory only reads legacy body_analyses records.
     if(typeof window.loadProgressHistory==="function"){
       try{window.loadProgressHistory();}catch(error){console.warn("بارگذاری تاریخچه آنالیز مربی:",error);}
     }
+    // The publication module is loaded asynchronously by the analyzer embed.
+    // Wait briefly for its public loader so a fast direct-card click cannot miss it.
+    var refreshPublishedHistory=function(attempt){
+      if(typeof window.loadTopGenesisPublishedHistory==="function"){
+        try{
+          Promise.resolve(window.loadTopGenesisPublishedHistory()).catch(function(error){
+            console.warn("بارگذاری گزارش‌های تأییدشده تاپ جنسیس:",error);
+          });
+        }catch(error){console.warn("بارگذاری گزارش‌های تأییدشده تاپ جنسیس:",error);}
+        return;
+      }
+      if(attempt>0)window.setTimeout(function(){refreshPublishedHistory(attempt-1);},150);
+    };
+    refreshPublishedHistory(20);
     section.scrollIntoView({behavior:"smooth",block:"start"});
   };
 })();
