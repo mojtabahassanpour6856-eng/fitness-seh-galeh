@@ -284,6 +284,16 @@ try {
   assert.ok(await coverLogo.evaluate(img => img.naturalWidth > 0));
   assert.equal(await page.locator("[data-review]").count(), 5,
     "The coach must review lighting, background, image clarity, movement and scan completeness.");
+  assert.equal(await page.locator(".coach-review-panel").count(), 1,
+    "Coach review controls must remain available in the coach workspace.");
+  assert.equal(await page.locator(".report-page .coach-review-panel").count(), 0,
+    "Internal coach controls must never be included in student report pages.");
+  assert.equal(await page.locator(".report-page [data-review]").count(), 0,
+    "Quality-review selectors must not appear in exported report pages.");
+  assert.equal(await page.locator(".report-page #coachApprove").count(), 0,
+    "The internal approval checkbox must not appear in student report pages.");
+  assert.equal(await page.locator("#studentTrainingNotes").count(), 1);
+  assert.equal(await page.locator("#studentNutritionNotes").count(), 1);
   assert.equal(await page.locator("#pngReport").isDisabled(), true,
     "Multi-page PNG export must remain locked until manual review and coach approval.");
   await page.locator("[data-review]").evaluateAll(items => items.forEach(item => {
@@ -292,6 +302,8 @@ try {
   }));
   await page.locator("#trainingNotes").fill("برنامه تمرینی پس از بررسی سابقه و هدف شاگرد تنظیم شود.");
   await page.locator("#nutritionNotes").fill("توصیه تغذیه‌ای پس از بررسی هدف و فعالیت شاگرد تکمیل شود.");
+  assert.match(await page.locator("#studentTrainingNotes").innerText(), /بررسی سابقه و هدف شاگرد/);
+  assert.match(await page.locator("#studentNutritionNotes").innerText(), /بررسی هدف و فعالیت شاگرد/);
   await page.locator("#coachApprove").check();
   assert.equal(await page.locator("#pngReport").isDisabled(), false);
   assert.equal(await page.locator("#shareReport").isDisabled(), false);
@@ -391,6 +403,7 @@ try {
   assert.equal(printableReportScaffold.hasPrintButtonCode,true,"Printable report must expose a print action after extraction.");
   assert.equal(printableReportScaffold.hasCoachSignoff,true,"Printable report must include coach sign-off fields.");
   assert.equal(printableReportScaffold.hasPersianReportTitle,true,"Printable report must have a Persian title.");
+  await page.evaluate(() => document.body.classList.add("print-report"));
   await page.emulateMedia({ media: "print" });
   const printLayout = await page.evaluate(() => ({
     font: getComputedStyle(document.querySelector(".report-cover")).fontFamily,
@@ -398,7 +411,8 @@ try {
       const style = getComputedStyle(node);
       return style.breakAfter === "page" || style.pageBreakAfter === "always";
     }),
-    noHorizontalOverflow: document.documentElement.scrollWidth <= window.innerWidth + 1
+    noHorizontalOverflow: document.documentElement.scrollWidth <= window.innerWidth + 1,
+    coachReviewHidden: getComputedStyle(document.querySelector(".coach-review-panel")).display === "none"
   }));
   assert.match(printLayout.font, /Vazirmatn/,
     "Print layout must retain the Persian-capable report font.");
@@ -406,6 +420,9 @@ try {
     "Each report section must be separated cleanly when printed.");
   assert.equal(printLayout.noHorizontalOverflow, true,
     "Print layout must not overflow horizontally.");
+  assert.equal(printLayout.coachReviewHidden, true,
+    "Internal coach controls must be hidden from the printable student report.");
+  await page.evaluate(() => document.body.classList.remove("print-report"));
   await page.emulateMedia({ media: "screen" });
   const suspiciousAnalysis = await page.evaluate(() => window.TopGenesisSimpleAnalysis({
     weight_kg:{value:57,status:"within_initial_range_needs_coach_review"},
