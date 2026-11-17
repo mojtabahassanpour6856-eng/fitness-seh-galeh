@@ -15599,6 +15599,11 @@ window.sehNutritionBuilderBridge={
       try{window.showSection("bodyAnalysis",document.getElementById("navBodyAnalysis"));}catch(error){console.warn("مسیر مستقیم آنالیز بدن:",error);}
     }
     panel.hidden=false;
+    // The coach receipt loader was previously triggered only by opening Progress.
+    // Refresh it on the Body Analysis route so no unrelated navigation is needed.
+    if(typeof window.loadProgressHistory==="function"){
+      try{window.loadProgressHistory();}catch(error){console.warn("بارگذاری تاریخچه آنالیز مربی:",error);}
+    }
     section.scrollIntoView({behavior:"smooth",block:"start"});
   };
 })();
