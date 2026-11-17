@@ -743,7 +743,14 @@
     installTraineeAnalysisNavigationGuard();
     mountProgressCard();
     const visibleSection = currentCoach() ? $("progress") : $("traineeAnalysis");
-    if (visibleSection?.classList.contains("active")) loadPublished(false);
+    // Coaches need the approved-report history ready as soon as they select a trainee;
+    // waiting until they open the Progress section makes the Analysis card look empty
+    // until an unrelated navigation event happens. loadPublished() already deduplicates
+    // in-flight requests and caches each trainee, so this is safe across page mutations.
+    const coachHasSelectedTrainee = currentCoach() && Boolean(currentTraineeId());
+    if (coachHasSelectedTrainee || visibleSection?.classList.contains("active")) {
+      loadPublished(false);
+    }
   }
   // Capture report clicks at document level: the history list can be
   // re-rendered/reparented during role changes, which may detach its listener.

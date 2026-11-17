@@ -152,3 +152,11 @@ test("duplicate Top Genesis publication request IDs cannot create duplicate uplo
   assert.match(publisher, /rememberPublicationResult\(requestKey, \{ ok: true, message: successMessage \}\)/,
     "Successful outcomes must be cached so retries replay the same result.");
 });
+
+
+test("coach approved analysis history loads immediately after trainee selection without opening Progress", () => {
+  const publication = read("top-genesis-publication.js");
+  assert.match(publication, /const coachHasSelectedTrainee = currentCoach\(\) && Boolean\(currentTraineeId\(\)\)/);
+  assert.match(publication, /if \(coachHasSelectedTrainee \|\| visibleSection\?\.classList\.contains\("active"\)\)\s*\{\s*loadPublished\(false\);/,
+    "A selected trainee must trigger the approved-report history query even when the coach has not opened Progress.");
+});
