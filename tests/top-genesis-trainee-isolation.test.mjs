@@ -186,3 +186,21 @@ test("publisher polling preserves coach analysis and isolates obsolete trainee w
   assert.doesNotMatch(cleanup, /manualProgressCard|progressEntryPanel/,
     "The trainee's manual progress entry and stored data must not be removed.");
 });
+
+
+test("publisher verifies ambiguous Storage uploads and retries transient network failures without changing the object path", () => {
+  const publisher = read("top-genesis-publication.js");
+  assert.match(publisher, /const maxUploadAttempts = 5/,
+    "Transient upload failures should receive several bounded attempts.");
+  assert.match(publisher, /const verifyUploadedObject = async () =>/);
+  assert.match(publisher, /storage\.download\(reportPath\)/,
+    "The exact object must be checked after a lost or ambiguous upload response.");
+  assert.match(publisher, /if \(retryable && await verifyUploadedObject\(\)\)/,
+    "A server-accepted object with a lost response must be treated as uploaded.");
+  assert.match(publisher, /const backoffMs = Math\.min\(5000, 800 \* \(2 \*\* \(attempt - 1\)\)\)/,
+    "Retries must use bounded exponential backoff.");
+  assert.match(publisher, /upsert: false/,
+    "Retries must preserve insert-only storage permissions and avoid overwriting reports.");
+  assert.match(publisher, /const reportPath = coachId \+ "\/" \+ traineeId \+ "\/published\/" \+ crypto\.randomUUID\(\)/,
+    "All attempts in one publication must reuse the same unique path.");
+});
