@@ -647,8 +647,9 @@ Waist-Hip Ratio (WHO),0.889
   assert.match(appShellSource, /<section id="bodyAnalysis" class="section">[\s\S]*?id="bodyAnalysisEntryPanel"/, "The coach body-analysis mount point must live inside the unified Body Analysis section.");
   assert.match(publicationSource, /installTraineeAnalysisNavigationGuard/, "The trainee analysis route must be kept visible after legacy navigation callbacks.");
   assert.match(publicationSource, /setTimeout\(reveal, 420\)/, "The trainee analysis route must survive delayed dashboard restoration callbacks.");
-  assert.match(publicationSource, /removeLegacyProgressAnalysisCards/, "Legacy body-analysis widgets must be removed from the progress panel.");
-  assert.match(publicationSource, /\["coachAnalysisView", "progressTrend", "progressHistory"\]/, "Only legacy body-analysis widgets may be removed; manual progress data remains untouched.");
+  assert.match(publicationSource, /removeLegacyProgressAnalysisCards/, "The publication module must retain its progress-card lifecycle guard.");
+  assert.match(publicationSource, /analysisPanel && coachAnalysisView && coachAnalysisView\.parentElement !== analysisPanel[\s\S]*?analysisPanel\.appendChild\(coachAnalysisView\)/, "The coach analysis receipt must be preserved inside Body Analysis.");
+  assert.match(publicationSource, /\["progressTrend", "progressHistory"\][\s\S]*?progressSection\.appendChild\(node\)/, "Manual progress widgets must remain in Progress rather than being deleted.");
   assert.doesNotMatch(appShellSource, /<script[^>]+src=["'][^"']*top-genesis-archive\.js/i,
     "The production app must not load the legacy archive module.");
 
@@ -967,17 +968,17 @@ Waist-Hip Ratio (WHO),0.889
     window.currentClient = { id: "trainee-fixture-1" };
     window.AUTH_SUPABASE = {
       from() {
-        const orderCount = { value: 0 };
+        // Supabase query builders are chainable through every order() call and
+        // become awaitable only when the complete query is awaited.
+        const result = { data: [
+          { id:"a1", analysis_date:"2026-10-01", report_metrics:{ weight_kg:{value:82,unit:"kg",status:"needs_coach_review"}, body_fat_percent:{value:22,unit:"%",status:"needs_coach_review"} }, training_notes:"تمرین مقاومتی طبق برنامه", nutrition_notes:"پروتئین کافی" },
+          { id:"a2", analysis_date:"2026-11-01", report_metrics:{ weight_kg:{value:79,unit:"kg",status:"needs_coach_review"}, body_fat_percent:{value:19,unit:"%",status:"needs_coach_review"} }, training_notes:"افزایش تدریجی فشار تمرین", nutrition_notes:"تنظیم کالری روزانه" }
+        ], error:null };
         const chain = {
           select() { return this; },
           eq() { return this; },
-          order() {
-            orderCount.value += 1;
-            return orderCount.value === 1 ? this : Promise.resolve({ data: [
-              { id:"a1", analysis_date:"2026-10-01", report_metrics:{ weight_kg:{value:82,unit:"kg",status:"needs_coach_review"}, body_fat_percent:{value:22,unit:"%",status:"needs_coach_review"} }, training_notes:"تمرین مقاومتی طبق برنامه", nutrition_notes:"پروتئین کافی" },
-              { id:"a2", analysis_date:"2026-11-01", report_metrics:{ weight_kg:{value:79,unit:"kg",status:"needs_coach_review"}, body_fat_percent:{value:19,unit:"%",status:"needs_coach_review"} }, training_notes:"افزایش تدریجی فشار تمرین", nutrition_notes:"تنظیم کالری روزانه" }
-            ], error:null });
-          }
+          order() { return this; },
+          then(resolve, reject) { return Promise.resolve(result).then(resolve, reject); }
         };
         return chain;
       }
@@ -1011,11 +1012,22 @@ Waist-Hip Ratio (WHO),0.889
   await traineeProgressPage.addScriptTag({ path: path.join(root, "top-genesis-publication.js") });
   console.log('[smoke] publication script loaded');
   await traineeProgressPage.waitForSelector("#topGenesisPublishedProgress", { state: "attached" });
-  await traineeProgressPage.evaluate(() => window.dashOpen("analysis"));
+  await traineeProgressPage.evaluate(() => {
+    window.dashOpen("analysis");
+    // The isolated fixture has no real app navigation events. Trigger the same
+    // visible-page refresh used by the app so the history loader runs deterministically.
+    document.dispatchEvent(new Event("visibilitychange"));
+  });
   await traineeProgressPage.waitForSelector("#topGenesisPublishedProgress", { state: "visible" });
   await traineeProgressPage.waitForFunction(() =>
     document.querySelector("#traineeAnalysis")?.classList.contains("active") &&
     getComputedStyle(document.querySelector("#traineeAnalysis")).display !== "none");
+  // Trigger the visible-page refresh only after the lazy navigation guard has
+  // actually revealed the analysis section. Dispatching it immediately after
+  // dashOpen races the guard's deferred reveal and can leave the fixture idle.
+  await traineeProgressPage.evaluate(() => {
+    document.dispatchEvent(new Event("visibilitychange"));
+  });
   assert.equal(await traineeProgressPage.locator("#progress #coachAnalysisView, #progress #progressTrend, #progress #progressHistory").count(), 0,
     "Legacy analysis cards must be removed from progress while the manual progress section remains intact.");
   assert.equal(await traineeProgressPage.locator("#progress #manualProgressCard").count(), 1,
@@ -1029,10 +1041,23 @@ Waist-Hip Ratio (WHO),0.889
   await traineeProgressPage.waitForFunction(() => document.querySelector("#traineeAnalysis")?.classList.contains("active"));
   console.log('[smoke] trainee analysis route, manual progress preservation and navigation passed');
   console.log('[smoke] trainee report card mounted');
-  await traineeProgressPage.waitForFunction(() => {
-    const body = document.querySelector("#topGenesisPublishedBody");
-    return body && body.querySelectorAll("polyline").length >= 2;
-  });
+  try {
+    await traineeProgressPage.waitForFunction(() => {
+      const body = document.querySelector("#topGenesisPublishedBody");
+      return body && body.querySelectorAll("polyline").length >= 2;
+    }, null, { timeout: 15000 });
+  } catch (error) {
+    const diagnostic = await traineeProgressPage.evaluate(() => ({
+      bodyText: document.querySelector("#topGenesisPublishedBody")?.innerText || null,
+      bodyHtml: document.querySelector("#topGenesisPublishedBody")?.innerHTML?.slice(0, 5000) || null,
+      historyArticles: document.querySelectorAll("#topGenesisHistoryList article").length,
+      charts: document.querySelectorAll("#topGenesisPublishedBody polyline").length,
+      role: window.authProfile?.role || null,
+      traineeId: window.currentClient?.id || null
+    }));
+    console.error("[smoke] trainee history rendering diagnostic", diagnostic);
+    throw error;
+  }
   assert.match(await traineeProgressPage.locator("#topGenesisPublishedProgress").innerText(), /گزارش‌های تأییدشده آنالیز بدن/);
   assert.match(await traineeProgressPage.locator("#topGenesisPublishedBody").innerText(), /۷۹/);
   assert.match(await traineeProgressPage.locator("#topGenesisPublishedBody").innerText(), /تاریخچه آنالیزها/);

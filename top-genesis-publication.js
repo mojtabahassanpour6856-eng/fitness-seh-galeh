@@ -88,22 +88,28 @@
   // new approved-report experience.
   function removeLegacyProgressAnalysisCards() {
     // The coach's latest body-analysis view belongs inside the analysis panel.
-    // The previous implementation removed it on every tick, so it vanished
-    // until opening Progress caused the progress loader to recreate it.
-    // Keep that view mounted, and keep manual progress widgets in Progress.
-    if (!currentCoach()) return;
+    // Keep manual progress widgets in Progress for coaches; hide obsolete
+    // legacy widgets from trainee Progress without touching the manual entry card.
+    const coachView = currentCoach();
     const analysisPanel = $("bodyAnalysisEntryPanel");
     const progressSection = $("progress");
     const coachAnalysisView = $("coachAnalysisView");
-    if (analysisPanel && coachAnalysisView && coachAnalysisView.parentElement !== analysisPanel) {
-      analysisPanel.appendChild(coachAnalysisView);
-    }
-    ["progressTrend", "progressHistory"].forEach(id => {
-      const node = $(id);
-      if (progressSection && node && node.parentElement !== progressSection) {
-        progressSection.appendChild(node);
+    if (coachView) {
+      if (analysisPanel && coachAnalysisView && coachAnalysisView.parentElement !== analysisPanel) {
+        analysisPanel.appendChild(coachAnalysisView);
       }
-    });
+      ["progressTrend", "progressHistory"].forEach(id => {
+        const node = $(id);
+        if (progressSection && node && node.parentElement !== progressSection) {
+          progressSection.appendChild(node);
+        }
+      });
+    } else {
+      ["coachAnalysisView", "progressTrend", "progressHistory"].forEach(id => {
+        const node = $(id);
+        if (node) node.remove();
+      });
+    }
   }
   function installTraineeAnalysisNavigationGuard() {
     const original = window.dashOpen;
@@ -262,6 +268,7 @@
     (rows || []).forEach(row => publishedRowsById.set(String(row.id), row));
     const body = $("topGenesisPublishedBody");
     if (!body || currentTraineeId() !== traineeId) return;
+    body.dataset.renderedTraineeId = traineeId;
     if (!rows.length) {
       body.innerHTML = '<p class="muted">هنوز گزارشی از آنالیز تاپ جنسیس برای شما ارسال نشده است.</p>';
       return;
@@ -456,7 +463,11 @@
     const body = $("topGenesisPublishedBody");
     const cached = publishedCache.get(traineeId);
     const cacheIsFresh = cached && Date.now() - cached.savedAt < PUBLISHED_CACHE_TTL_MS;
-    if (cached) {
+    // MutationObserver calls tick() after DOM changes. Re-rendering cached rows
+    // on every tick replaces the card HTML again, which triggers the observer
+    // indefinitely and can freeze the page. Paint cached rows only when this
+    // card has not yet been rendered for the selected trainee.
+    if (cached && body?.dataset.renderedTraineeId !== traineeId) {
       renderPublished(cached.rows, traineeId);
     }
 
