@@ -87,11 +87,14 @@
   // not the trainee's manual progress card and must not remain beside the
   // new approved-report experience.
   function removeLegacyProgressAnalysisCards() {
-    const progress = $("progress");
-    if (!progress) return;
+    // The legacy loader can mount these cards in #progress or #bodyAnalysisEntryPanel.
+    // The coach-only panel is where the old history card was moved, so checking
+    // only #progress leaves a misleading empty history beside approved reports.
+    // Remove legacy cards globally for coaches; trainee progress UI is untouched.
+    if (!currentCoach()) return;
     ["coachAnalysisView", "progressTrend", "progressHistory"].forEach(id => {
       const node = $(id);
-      if (node && progress.contains(node)) node.remove();
+      if (node) node.remove();
     });
   }
   function installTraineeAnalysisNavigationGuard() {
