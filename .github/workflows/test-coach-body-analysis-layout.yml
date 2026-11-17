@@ -1,0 +1,21 @@
+name: Coach Body Analysis layout regression
+
+on:
+  pull_request:
+    paths:
+      - "index.html"
+      - "tests/coach-body-analysis-layout-regression.mjs"
+      - ".github/workflows/test-coach-body-analysis-layout.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  coach-body-analysis-layout:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - run: node tests/coach-body-analysis-layout-regression.mjs
