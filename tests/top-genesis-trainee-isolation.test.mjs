@@ -160,3 +160,13 @@ test("coach approved analysis history loads immediately after trainee selection 
   assert.match(publication, /if \(coachHasSelectedTrainee \|\| visibleSection\?\.classList\.contains\("active"\)\)\s*\{\s*loadPublished\(false\);/,
     "A selected trainee must trigger the approved-report history query even when the coach has not opened Progress.");
 });
+
+
+test("cached approved analysis history renders after its card is mounted, before recent-load guards", () => {
+  const publication = read("top-genesis-publication.js");
+  const loader = publication.slice(publication.indexOf("async function loadPublished(force)"), publication.indexOf("function safeMetrics"));
+  assert.ok(loader.indexOf("renderPublished(cached.rows, traineeId)") < loader.indexOf("if (!force && traineeId === lastLoadedTrainee"),
+    "A recent successful query must not prevent cached rows from rendering into a card mounted later.");
+  assert.ok(loader.indexOf("renderPublished(cached.rows, traineeId)") < loader.indexOf("if (loadingTraineeId === traineeId)"),
+    "A card mounted while a request is in flight must receive cached rows before the in-flight guard.");
+});
