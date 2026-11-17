@@ -170,3 +170,17 @@ test("cached approved analysis history renders after its card is mounted, before
   assert.ok(loader.indexOf("renderPublished(cached.rows, traineeId)") < loader.indexOf("if (loadingTraineeId === traineeId)"),
     "A card mounted while a request is in flight must receive cached rows before the in-flight guard.");
 });
+
+
+test("publisher polling preserves the coach analysis view and keeps manual progress widgets in Progress", () => {
+  const publication = read("top-genesis-publication.js");
+  const cleanup = publication.slice(publication.indexOf("function removeLegacyProgressAnalysisCards()"), publication.indexOf("function installTraineeAnalysisNavigationGuard"));
+  assert.match(cleanup, /const coachAnalysisView = \$\("coachAnalysisView"\)/);
+  assert.match(cleanup, /analysisPanel\.appendChild\(coachAnalysisView\)/,
+    "The latest coach analysis view must remain mounted in the analysis panel.");
+  assert.match(cleanup, /\["progressTrend", "progressHistory"\]/);
+  assert.match(cleanup, /progressSection\.appendChild\(node\)/,
+    "Manual progress chart/history must stay inside the Progress section.");
+  assert.doesNotMatch(cleanup, /node\.remove\(\)/,
+    "Polling must not delete the coach analysis card that the Progress loader otherwise recreates.");
+});
