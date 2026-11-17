@@ -268,6 +268,7 @@
     (rows || []).forEach(row => publishedRowsById.set(String(row.id), row));
     const body = $("topGenesisPublishedBody");
     if (!body || currentTraineeId() !== traineeId) return;
+    body.dataset.renderedTraineeId = traineeId;
     if (!rows.length) {
       body.innerHTML = '<p class="muted">هنوز گزارشی از آنالیز تاپ جنسیس برای شما ارسال نشده است.</p>';
       return;
@@ -462,7 +463,11 @@
     const body = $("topGenesisPublishedBody");
     const cached = publishedCache.get(traineeId);
     const cacheIsFresh = cached && Date.now() - cached.savedAt < PUBLISHED_CACHE_TTL_MS;
-    if (cached) {
+    // MutationObserver calls tick() after DOM changes. Re-rendering cached rows
+    // on every tick replaces the card HTML again, which triggers the observer
+    // indefinitely and can freeze the page. Paint cached rows only when this
+    // card has not yet been rendered for the selected trainee.
+    if (cached && body?.dataset.renderedTraineeId !== traineeId) {
       renderPublished(cached.rows, traineeId);
     }
 
