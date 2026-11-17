@@ -687,9 +687,7 @@
         // but the response was lost. Confirm it before sending the same path again.
         if (retryable && await verifyUploadedObject()) {
           lastUploadError = null;
-          console.info("Top Genesis Storage upload verified after ambiguous response.", {
-            attempt, path: reportPath
-          });
+          console.info("Top Genesis Storage upload verified after ambiguous response.", { attempt });
           break;
         }
         if (!retryable || attempt === maxUploadAttempts) break;
