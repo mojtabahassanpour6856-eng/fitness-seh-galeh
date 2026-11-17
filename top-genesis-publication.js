@@ -87,14 +87,22 @@
   // not the trainee's manual progress card and must not remain beside the
   // new approved-report experience.
   function removeLegacyProgressAnalysisCards() {
-    // The legacy loader can mount these cards in #progress or #bodyAnalysisEntryPanel.
-    // The coach-only panel is where the old history card was moved, so checking
-    // only #progress leaves a misleading empty history beside approved reports.
-    // Remove legacy cards globally for coaches; trainee progress UI is untouched.
+    // The coach's latest body-analysis view belongs inside the analysis panel.
+    // The previous implementation removed it on every tick, so it vanished
+    // until opening Progress caused the progress loader to recreate it.
+    // Keep that view mounted, and keep manual progress widgets in Progress.
     if (!currentCoach()) return;
-    ["coachAnalysisView", "progressTrend", "progressHistory"].forEach(id => {
+    const analysisPanel = $("bodyAnalysisEntryPanel");
+    const progressSection = $("progress");
+    const coachAnalysisView = $("coachAnalysisView");
+    if (analysisPanel && coachAnalysisView && coachAnalysisView.parentElement !== analysisPanel) {
+      analysisPanel.appendChild(coachAnalysisView);
+    }
+    ["progressTrend", "progressHistory"].forEach(id => {
       const node = $(id);
-      if (node) node.remove();
+      if (progressSection && node && node.parentElement !== progressSection) {
+        progressSection.appendChild(node);
+      }
     });
   }
   function installTraineeAnalysisNavigationGuard() {
