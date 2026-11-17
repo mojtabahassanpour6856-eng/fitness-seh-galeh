@@ -439,15 +439,23 @@
     const traineeId = currentTraineeId();
     const requestEpoch = contextEpoch;
     if ((!currentCoach() && !currentTrainee()) || !traineeId || !window.AUTH_SUPABASE) return;
-    if (!force && traineeId === lastLoadedTrainee && Date.now() - lastLoadedAt < 20000) return;
-    if (loadingTraineeId === traineeId) return;
 
+    // The history card may be mounted after the first database request (for
+    // example, when its host panel is created lazily during navigation).
+    // Always paint any cached rows into the current DOM before request guards:
+    // a previous successful load must not suppress rendering into a newly
+    // mounted card.
     const body = $("topGenesisPublishedBody");
     const cached = publishedCache.get(traineeId);
     const cacheIsFresh = cached && Date.now() - cached.savedAt < PUBLISHED_CACHE_TTL_MS;
-    if (cacheIsFresh) {
+    if (cached) {
       renderPublished(cached.rows, traineeId);
-    } else if (body) {
+    }
+
+    if (!force && traineeId === lastLoadedTrainee && Date.now() - lastLoadedAt < 20000) return;
+    if (loadingTraineeId === traineeId) return;
+
+    if (!cacheIsFresh && body) {
       body.setAttribute("aria-live", "polite");
       body.setAttribute("aria-busy", "true");
       body.textContent = "در حال دریافت سوابق آنالیز…";
