@@ -115,7 +115,7 @@ function runRouteForRole(role) {
   };
   vm.runInNewContext(routeSource, { window, document });
   window.openCoachBodyAnalysis();
-  return { bodyAnalysis, progress, dashboard, navAnalysis, navOther, panel };
+  return { bodyAnalysis, progress, dashboard, navAnalysis, navOther, panel, loadProgressHistoryCalls: window.loadProgressHistoryCalls };
 }
 const coachRoute = runRouteForRole("coach");
 assert.equal(coachRoute.bodyAnalysis._classes.has("active"), true,
