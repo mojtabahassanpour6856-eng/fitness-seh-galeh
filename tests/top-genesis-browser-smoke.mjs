@@ -1022,6 +1022,12 @@ Waist-Hip Ratio (WHO),0.889
   await traineeProgressPage.waitForFunction(() =>
     document.querySelector("#traineeAnalysis")?.classList.contains("active") &&
     getComputedStyle(document.querySelector("#traineeAnalysis")).display !== "none");
+  // Trigger the visible-page refresh only after the lazy navigation guard has
+  // actually revealed the analysis section. Dispatching it immediately after
+  // dashOpen races the guard's deferred reveal and can leave the fixture idle.
+  await traineeProgressPage.evaluate(() => {
+    document.dispatchEvent(new Event("visibilitychange"));
+  });
   assert.equal(await traineeProgressPage.locator("#progress #coachAnalysisView, #progress #progressTrend, #progress #progressHistory").count(), 0,
     "Legacy analysis cards must be removed from progress while the manual progress section remains intact.");
   assert.equal(await traineeProgressPage.locator("#progress #manualProgressCard").count(), 1,
