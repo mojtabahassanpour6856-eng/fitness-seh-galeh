@@ -459,16 +459,16 @@
         .order("analysis_date", { ascending: true })
         .order("created_at", { ascending: true });
       if (error) throw error;
-      if (requestEpoch !== contextEpoch || requestToken !== activeLoadToken ||
-          currentTraineeId() !== traineeId) return;
+      if (requestEpoch !== contextEpoch || currentTraineeId() !== traineeId) return;
+      if (requestToken !== activeLoadToken) return;
       const rows = data || [];
       publishedCache.set(traineeId, { rows, savedAt: Date.now() });
       renderPublished(rows, traineeId);
       lastLoadedTrainee = traineeId;
       lastLoadedAt = Date.now();
     } catch (error) {
-      if (requestEpoch === contextEpoch && requestToken === activeLoadToken &&
-          body && currentTraineeId() === traineeId) {
+      if (requestEpoch === contextEpoch && body && currentTraineeId() === traineeId) {
+        if (requestToken !== activeLoadToken) return;
         if (!cacheIsFresh) {
           body.innerHTML = '<p class="muted">دریافت سوابق آنالیز انجام نشد. اتصال اینترنت یا دسترسی را بررسی و دوباره تلاش کنید.</p>' +
             '<button type="button" id="topGenesisRetryHistory" style="margin-top:8px;padding:8px 12px;border:1px solid #c5a45b;border-radius:8px;background:#fffaf0">تلاش دوباره</button>';
