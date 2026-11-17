@@ -22,6 +22,8 @@ assert.match(section[1], /آنالیز بدن شاگرد/,
   "The unified card must have the Body Analysis heading.");
 assert.match(html, /window\.openCoachBodyAnalysis=function\(\)[\s\S]*?profile\.role!=="coach"[\s\S]*?window\.showSection\("bodyAnalysis"/,
   "The coach route must use the shared section navigation and be role-guarded.");
+assert.match(html, /window\.loadTopGenesisPublishedHistory\(\)/,
+  "Opening Body Analysis must explicitly refresh the approved Top Genesis publication history.");
 assert.match(html, /function ensureProgressCards\(\)[\s\S]*?analysisSec\.appendChild\(viewer\)[\s\S]*?progressSec\.appendChild\(chart\)[\s\S]*?progressSec\.appendChild\(history\)/,
   "Coach analysis receipt stays in Body Analysis while trend and history are placed in Progress.");
 assert.match(html, /const manualRows=list\.filter\(x=>String\(x\.notes\|\|''\)\.includes\('MANUAL_PROGRESS_ENTRY'\)\)/,
@@ -46,6 +48,8 @@ assert.doesNotMatch(embed, /insertAdjacentElement\("afterend", host\)/,
   "The PDF/ZIP analyzer must not render as a separate adjacent card.");
 assert.match(publication, /const target = \$\("bodyAnalysisEntryPanel"\)/,
   "Published analysis reports must be placed inside the unified Body Analysis card.");
+assert.match(publication, /window\.loadTopGenesisPublishedHistory = function \(\)[\s\S]*?mountProgressCard\(\)[\s\S]*?return loadPublished\(false\)/,
+  "The direct coach route must have an explicit public loader for approved Top Genesis history.");
 assert.match(html, /analysisSec=\$\('bodyAnalysisEntryPanel'\)/,
   "The coach analysis receipt must be anchored to the Body Analysis card.");
 assert.match(html, /progressSec=\$\('progress'\)/,
@@ -101,6 +105,8 @@ function runRouteForRole(role) {
     authProfile: { role },
     loadProgressHistoryCalls: 0,
     loadProgressHistory() { this.loadProgressHistoryCalls += 1; },
+    loadTopGenesisPublishedHistoryCalls: 0,
+    loadTopGenesisPublishedHistory() { this.loadTopGenesisPublishedHistoryCalls += 1; },
     showSection(id, btn) {
       const activeSection = nodes[id];
       document.querySelectorAll(".section").forEach(item => {
@@ -115,7 +121,7 @@ function runRouteForRole(role) {
   };
   vm.runInNewContext(routeSource, { window, document });
   window.openCoachBodyAnalysis();
-  return { bodyAnalysis, progress, dashboard, navAnalysis, navOther, panel, loadProgressHistoryCalls: window.loadProgressHistoryCalls };
+  return { bodyAnalysis, progress, dashboard, navAnalysis, navOther, panel, loadProgressHistoryCalls: window.loadProgressHistoryCalls, loadTopGenesisPublishedHistoryCalls: window.loadTopGenesisPublishedHistoryCalls };
 }
 const coachRoute = runRouteForRole("coach");
 assert.equal(coachRoute.bodyAnalysis._classes.has("active"), true,
@@ -129,6 +135,8 @@ assert.equal(coachRoute.navAnalysis._classes.has("active"), true,
 assert.equal(coachRoute.panel.hidden, false);
 assert.equal(coachRoute.loadProgressHistoryCalls, 1,
   "Opening Body Analysis must load the coach analysis receipt without navigating to Progress.");
+assert.equal(coachRoute.loadTopGenesisPublishedHistoryCalls, 1,
+  "Opening Body Analysis must load approved Top Genesis publications without navigating to Progress.");
 const traineeRoute = runRouteForRole("trainee");
 assert.equal(traineeRoute.bodyAnalysis._classes.has("active"), false,
   "The coach-only direct route must not activate for trainee accounts.");
