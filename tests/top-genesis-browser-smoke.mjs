@@ -1012,7 +1012,12 @@ Waist-Hip Ratio (WHO),0.889
   await traineeProgressPage.addScriptTag({ path: path.join(root, "top-genesis-publication.js") });
   console.log('[smoke] publication script loaded');
   await traineeProgressPage.waitForSelector("#topGenesisPublishedProgress", { state: "attached" });
-  await traineeProgressPage.evaluate(() => window.dashOpen("analysis"));
+  await traineeProgressPage.evaluate(() => {
+    window.dashOpen("analysis");
+    // The isolated fixture has no real app navigation events. Trigger the same
+    // visible-page refresh used by the app so the history loader runs deterministically.
+    document.dispatchEvent(new Event("visibilitychange"));
+  });
   await traineeProgressPage.waitForSelector("#topGenesisPublishedProgress", { state: "visible" });
   await traineeProgressPage.waitForFunction(() =>
     document.querySelector("#traineeAnalysis")?.classList.contains("active") &&
