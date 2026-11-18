@@ -56,9 +56,9 @@ function buildProgressHistoryRows(analysisRows,weightRows){
  const coachRows=allAnalysisRows
   .filter(row=>!isProgressManualRecord(row))
   .map(row=>Object.assign({},row,{_weightOnly:false,_coachAnalysis:true}));
- const matchedAnalysisWeights=new Set(allAnalysisRows.map(row=>progressWeightKey(row.analysis_date,row.weight)).filter(Boolean));
+ const matchedManualWeights=new Set(manualRows.map(row=>progressWeightKey(row.analysis_date,row.weight)).filter(Boolean));
  const weightOnly=(Array.isArray(weightRows)?weightRows:[])
-  .filter(row=>!matchedAnalysisWeights.has(progressWeightKey(row.log_date,row.weight)))
+  .filter(row=>!matchedManualWeights.has(progressWeightKey(row.log_date,row.weight)))
   .map(row=>({
    id:"weight-log-"+String(row.id??""),
    created_at:row.created_at??null,
