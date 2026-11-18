@@ -6,6 +6,8 @@ import { fileURLToPath } from "node:url";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const html = fs.readFileSync(path.join(root, "index.html"), "utf8");
+const publication = fs.readFileSync(path.join(root, "top-genesis-publication.js"), "utf8");
+const archive = fs.readFileSync(path.join(root, "top-genesis-archive.js"), "utf8");
 const start = html.indexOf("const PROGRESS_HISTORY_PAGE_SIZE=500;");
 const end = html.indexOf("async function sbWrite(path,method,body){", start);
 assert.ok(start >= 0 && end > start, "The shared paginated history reader must exist.");
@@ -36,6 +38,8 @@ function loadHelpers(sbGet) {
 await testPagination();
 testSourceClassificationAndDeduplication();
 await testPerTraineeFetchCache();
+await testPublishedHistoryPagination();
+testArchivePaginationAndTraineeGuard();
 
 function testPagination() {
   const calls = [];
@@ -88,6 +92,86 @@ function testSourceClassificationAndDeduplication() {
   assert.ok(!Object.hasOwn(analyses[0], "_weightOnly"), "The source rows must not be mutated.");
 }
 
+async function testPublishedHistoryPagination() {
+  const start = publication.indexOf("const PUBLISHED_HISTORY_PAGE_SIZE = 500;");
+  const end = publication.indexOf("async function loadPublished(force)", start);
+  assert.ok(start >= 0 && end > start, "Published Top Genesis history must have a dedicated paginated reader.");
+  const helperSource = publication.slice(start, end);
+  const rows = Array.from({ length: 1201 }, (_, i) => ({ id: "publication-" + (i + 1) }));
+  const ranges = [];
+  const fakeSupabase = {
+    from() {
+      const query = {
+        select() { return this; },
+        eq() { return this; },
+        order() { return this; },
+        range(from, to) {
+          ranges.push([from, to]);
+          return Promise.resolve({ data: rows.slice(from, to + 1), error: null });
+        }
+      };
+      return query;
+    }
+  };
+  const sandbox = {
+    TABLE: "trainee_body_analysis_publications",
+    PUBLISHED_HISTORY_PAGE_SIZE: 500,
+    contextEpoch: 1,
+    activeLoadToken: 1,
+    currentTraineeId: () => "trainee-a",
+    window: { AUTH_SUPABASE: fakeSupabase }
+  };
+  vm.runInNewContext(helperSource + ";globalThis.__fetchAll=fetchAllPublishedRows;", sandbox);
+  const result = await sandbox.__fetchAll("trainee-a", 1, 1);
+  assert.equal(result.length, 1201, "All approved Top Genesis reports must be loaded across pages.");
+  assert.deepEqual(ranges, [[0, 499], [500, 999], [1000, 1499]]);
+  assert.ok(helperSource.includes('.order("id", { ascending: true })'),
+    "Published history pagination must have a unique ordering tie-breaker.");
+
+  let activeTrainee = "trainee-a";
+  let staleCalls = 0;
+  const staleSupabase = {
+    from() {
+      return {
+        select() { return this; },
+        eq() { return this; },
+        order() { return this; },
+        range() {
+          staleCalls++;
+          activeTrainee = "trainee-b";
+          return Promise.resolve({ data: rows.slice(0, 500), error: null });
+        }
+      };
+    }
+  };
+  const staleSandbox = {
+    TABLE: "trainee_body_analysis_publications",
+    PUBLISHED_HISTORY_PAGE_SIZE: 500,
+    contextEpoch: 1,
+    activeLoadToken: 1,
+    currentTraineeId: () => activeTrainee,
+    window: { AUTH_SUPABASE: staleSupabase }
+  };
+  vm.runInNewContext(helperSource + ";globalThis.__fetchAll=fetchAllPublishedRows;", staleSandbox);
+  const staleResult = await staleSandbox.__fetchAll("trainee-a", 1, 1);
+  assert.equal(staleResult, null, "A publication-history load must stop if the selected trainee changes.");
+  assert.equal(staleCalls, 1, "No further pages may be fetched after the trainee context changes.");
+}
+
+function testArchivePaginationAndTraineeGuard() {
+  assert.ok(archive.includes("const ARCHIVE_PAGE_SIZE = 500;"),
+    "The private PDF archive must use bounded pages.");
+  assert.ok(archive.includes(".range(offset, offset + ARCHIVE_PAGE_SIZE - 1)"),
+    "The private PDF archive must request every page explicitly.");
+  assert.ok(archive.includes("let archiveRefreshToken = 0;") &&
+    archive.includes("token !== archiveRefreshToken"),
+    "Stale archive requests must be discarded.");
+  assert.ok(archive.includes("selectedId !== lastMountedTraineeId"),
+    "Changing the selected trainee must trigger an archive refresh.");
+  assert.ok(archive.includes('String(current.trainee.id) !== traineeId'),
+    "An archive response must not render after the coach switches trainees.");
+}
+
 async function testPerTraineeFetchCache() {
   const calls = [];
   const fakeSbGet = async path => {
@@ -112,4 +196,4 @@ async function testPerTraineeFetchCache() {
     "Every page must use deterministic ordering with a unique ID tie-breaker.");
 }
 
-console.log("[progress-history] pagination, source classification, cross-table deduplication, and trainee-scoped cache passed.");
+console.log("[progress-history] manual and Top Genesis pagination, source classification, cross-table deduplication, RPC, and trainee isolation passed.");
