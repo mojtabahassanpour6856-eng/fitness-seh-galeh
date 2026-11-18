@@ -40,6 +40,7 @@ testSourceClassificationAndDeduplication();
 await testPerTraineeFetchCache();
 await testPublishedHistoryPagination();
 testArchivePaginationAndTraineeGuard();
+testArbitraryReportComparison();
 
 function testPagination() {
   const calls = [];
@@ -158,6 +159,56 @@ async function testPublishedHistoryPagination() {
   assert.equal(staleCalls, 1, "No further pages may be fetched after the trainee context changes.");
 }
 
+function testArbitraryReportComparison() {
+  const start = publication.indexOf("function bodyMeasurementLabel(key)");
+  const end = publication.indexOf("function metricValue(metric, key)", start);
+  assert.ok(start >= 0 && end > start, "The report comparison helper must exist.");
+  const helperSource = publication.slice(start, end);
+  const labels = {
+    weight_kg: ["وزن", "کیلوگرم"],
+    body_fat_percent: ["درصد چربی", "٪"],
+    bmi: ["BMI", ""]
+  };
+  const validMetric = metric => !!metric && metric.value !== null && metric.value !== undefined &&
+    metric.value !== "" && Number.isFinite(Number(metric.value)) &&
+    !["invalid_range", "conflict_review", "not_reported"].includes(metric.status);
+  const build = new Function("METRIC_LABELS", "validMetric", helperSource + ";return buildComparisonRows;")(labels, validMetric);
+  const older = { report_metrics: {
+    weight_kg: { value: 80, unit: "kg" },
+    body_fat_percent: { value: 25, unit: "%" },
+    body_measurements_cm: {
+      waist_abdominal_cm: { value: 90, unit: "cm" },
+      chest_cm: { value: 100, unit: "cm" }
+    }
+  }};
+  const newer = { report_metrics: {
+    weight_kg: { value: 78, unit: "kg" },
+    body_fat_percent: { value: 22, unit: "%" },
+    body_measurements_cm: {
+      waist_abdominal_cm: { value: 85, unit: "cm" },
+      chest_cm: { value: 39, unit: "inch" }
+    }
+  }};
+  const rows = build(older, newer);
+  const weight = rows.find(row => row.key === "weight_kg");
+  const fat = rows.find(row => row.key === "body_fat_percent");
+  const waist = rows.find(row => row.key === "body_measurements_cm.waist_abdominal_cm");
+  const chest = rows.find(row => row.key === "body_measurements_cm.chest_cm");
+  assert.equal(weight.change, -2);
+  assert.equal(fat.change, -3);
+  assert.equal(waist.change, -5);
+  assert.equal(chest.change, null, "Values with different units must not be subtracted.");
+  assert.equal(chest.unitMismatch, true);
+  assert.ok(publication.includes('data-history-compare="'),
+    "Every published history item must be selectable for comparison.");
+  assert.ok(publication.includes("buildComparisonRows(older,newer)"),
+    "The UI must compare the two selected report snapshots.");
+  assert.ok(publication.includes("selectedRows.sort"),
+    "Comparison must be oriented from the older report to the newer report.");
+  assert.ok(publication.includes("selected.length > 2"),
+    "The UI must cap the selection at exactly two reports.");
+}
+
 function testArchivePaginationAndTraineeGuard() {
   assert.ok(archive.includes("const ARCHIVE_PAGE_SIZE = 500;"),
     "The private PDF archive must use bounded pages.");
@@ -196,4 +247,4 @@ async function testPerTraineeFetchCache() {
     "Every page must use deterministic ordering with a unique ID tie-breaker.");
 }
 
-console.log("[progress-history] manual and Top Genesis pagination, source classification, cross-table deduplication, RPC, and trainee isolation passed.");
+console.log("[progress-history] manual and Top Genesis pagination, source classification, cross-table deduplication, RPC, trainee isolation, and two-report comparison passed.");
