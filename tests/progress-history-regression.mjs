@@ -6,12 +6,10 @@ import { fileURLToPath } from "node:url";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const html = fs.readFileSync(path.join(root, "index.html"), "utf8");
+const helperSource = fs.readFileSync(path.join(root, "progress-history.js"), "utf8");
 const publication = fs.readFileSync(path.join(root, "top-genesis-publication.js"), "utf8");
 const archive = fs.readFileSync(path.join(root, "top-genesis-archive.js"), "utf8");
-const start = html.indexOf("const PROGRESS_HISTORY_PAGE_SIZE=500;");
-const end = html.indexOf("async function sbWrite(path,method,body){", start);
-assert.ok(start >= 0 && end > start, "The shared paginated history reader must exist.");
-const helperSource = html.slice(start, end);
+assert.ok(helperSource.includes("async function sbGetAllPages"), "The shared paginated history reader must exist.");
 
 const saveStart = html.indexOf("async function saveProgress(){");
 const saveEnd = html.indexOf("async function saveAnalysis(){", saveStart);
