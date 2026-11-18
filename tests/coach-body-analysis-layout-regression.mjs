@@ -7,6 +7,7 @@ import vm from "node:vm";
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const read = file => fs.readFileSync(path.join(root, file), "utf8");
 const html = read("index.html");
+const progressHistory = read("progress-history.js");
 const embed = read("top-genesis-pdf-app-embed.js");
 const publication = read("top-genesis-publication.js");
 
@@ -26,14 +27,26 @@ assert.match(html, /window\.loadTopGenesisPublishedHistory\(\)/,
   "Opening Body Analysis must explicitly refresh the approved Top Genesis publication history.");
 assert.match(html, /function ensureProgressCards\(\)[\s\S]*?analysisSec\.appendChild\(viewer\)[\s\S]*?progressSec\.appendChild\(chart\)[\s\S]*?progressSec\.appendChild\(history\)/,
   "Coach analysis receipt stays in Body Analysis while trend and history are placed in Progress.");
-assert.match(html, /const manualRows=list\.filter\(x=>String\(x\.notes\|\|''\)\.includes\('MANUAL_PROGRESS_ENTRY'\)\)/,
-  "Trainee-entered manual records must be identified by their explicit marker.");
-assert.match(html, /const coachRows=list\.filter\(x=>!String\(x\.notes\|\|''\)\.includes\('MANUAL_PROGRESS_ENTRY'\)\)/,
-  "Manual trainee records must be excluded from the coach analysis receipt.");
-assert.match(html, /const weighted=manualRows\.filter/,
-  "Progress trend must use trainee-entered manual records only.");
-assert.match(html, /const historyRows=manualRows\.slice\(\)/,
-  "Progress history must use trainee-entered manual records only.");
+assert.ok(progressHistory.includes("function isProgressManualRecord(row)"),
+  "Manual and legacy progress records must be classified by their source markers.");
+assert.ok(progressHistory.includes("function progressSourceLabel(row)"),
+  "Every progress row must expose a truthful source label.");
+assert.ok(progressHistory.includes("function buildProgressHistoryRows(analysisRows,weightRows)"),
+  "Manual progress and independent weight logs must be combined without inventing measurements.");
+assert.ok(html.includes("const manualRows=list.filter(isProgressManualRecord)"),
+  "Explicit student markers and legacy manual rows must be separated from coach analyses.");
+assert.ok(html.includes("const coachRows=list.filter(x=>!isProgressManualRecord(x)&&x._weightOnly!==true)"),
+  "Coach analyses must stay separate from manual and independent weight records.");
+assert.ok(html.includes("const weighted=progressRows.filter"),
+  "The weight trend must include manual progress and independent weight logs.");
+assert.ok(html.includes("const historyRows=progressRows.slice()"),
+  "The history table must display the combined manual and weight-only timeline.");
+assert.ok(html.includes("getTraineeProgressHistoryData(traineeId,force)"),
+  "The chart must load all progress sources through the shared paginated reader.");
+assert.ok(progressHistory.includes('sbGetAllPages("/body_analyses?'),
+  "Body analysis history must be retrieved through pagination.");
+assert.ok(progressHistory.includes('sbGetAllPages("/weight_logs?'),
+  "Independent weight history must be retrieved through pagination.");
 assert.match(html, /let progressHistoryRequestSeq=0;[\s\S]*?const requestId=\+\+progressHistoryRequestSeq/,
   "Manual body-analysis history requests must be sequenced to prevent stale responses from overwriting a newly selected trainee.");
 assert.match(html, /el\.dataset\.boundTraineeId!==selectedId[\s\S]*?در حال دریافت تاریخچه شاگرد انتخاب‌شده/,

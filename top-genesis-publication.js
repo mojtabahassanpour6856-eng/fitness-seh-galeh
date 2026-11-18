@@ -60,6 +60,61 @@
       metric.value !== "" && Number.isFinite(Number(metric.value)) &&
       !["invalid_range", "conflict_review", "not_reported"].includes(metric.status);
   }
+  function bodyMeasurementLabel(key) {
+    const labels = {
+      neck_cm:"دور گردن",chest_cm:"دور سینه",chest_region_cm:"ناحیه سینه",
+      bicep_left_cm:"بازوی چپ",bicep_right_cm:"بازوی راست",
+      bicep_left_lower_cm:"پایین بازوی چپ",bicep_right_lower_cm:"پایین بازوی راست",
+      upper_arm_left_cm:"بازوی چپ",upper_arm_right_cm:"بازوی راست",
+      forearm_left_cm:"ساعد چپ",forearm_right_cm:"ساعد راست",
+      high_hip_cm:"بالاترین قسمت باسن",hip_cm:"دور باسن",hip_region_cm:"ناحیه باسن",
+      waist_abdominal_cm:"دور شکم",waist_lower_cm:"دور کمر پایین",
+      waist_narrowest_cm:"باریک‌ترین قسمت کمر",lower_waist_region_cm:"ناحیه کمر پایین",
+      upper_waist_region_cm:"ناحیه کمر بالا",thigh_left_upper_cm:"بالای ران چپ",
+      thigh_right_upper_cm:"بالای ران راست",mid_thigh_left_cm:"وسط ران چپ",
+      mid_thigh_right_cm:"وسط ران راست",thigh_left_lower_cm:"پایین ران چپ",
+      thigh_right_lower_cm:"پایین ران راست",thigh_left_cm:"ران چپ",thigh_right_cm:"ران راست",
+      calf_left_cm:"ساق چپ",calf_right_cm:"ساق راست"
+    };
+    return labels[key] || ("اندازه " + String(key || "").replace(/_/g, " "));
+  }
+  function buildComparisonRows(older, newer) {
+    const output = [];
+    for (const key of Object.keys(METRIC_LABELS)) {
+      const a = older.report_metrics?.[key];
+      const b = newer.report_metrics?.[key];
+      const aValid = validMetric(a), bValid = validMetric(b);
+      if (!aValid && !bValid) continue;
+      const unitA = String(a?.unit || METRIC_LABELS[key][1] || "");
+      const unitB = String(b?.unit || METRIC_LABELS[key][1] || "");
+      const sameUnit = !aValid || !bValid || unitA === unitB;
+      output.push({
+        key,label:METRIC_LABELS[key][0],unit:unitA || unitB,
+        olderValue:aValid?Number(a.value):null,newerValue:bValid?Number(b.value):null,
+        olderValid:aValid,newerValid:bValid,
+        change:aValid&&bValid&&sameUnit?Number(b.value)-Number(a.value):null,
+        unitMismatch:aValid&&bValid&&!sameUnit
+      });
+    }
+    const olderMeasures = older.report_metrics?.body_measurements_cm || {};
+    const newerMeasures = newer.report_metrics?.body_measurements_cm || {};
+    const measureKeys = new Set([...Object.keys(olderMeasures),...Object.keys(newerMeasures)]);
+    for (const key of measureKeys) {
+      const a = olderMeasures[key], b = newerMeasures[key];
+      const aValid = validMetric(a), bValid = validMetric(b);
+      if (!aValid && !bValid) continue;
+      const unitA = String(a?.unit || "cm"), unitB = String(b?.unit || "cm");
+      const sameUnit = !aValid || !bValid || unitA === unitB;
+      output.push({
+        key:"body_measurements_cm."+key,label:bodyMeasurementLabel(key),unit:unitA || unitB,
+        olderValue:aValid?Number(a.value):null,newerValue:bValid?Number(b.value):null,
+        olderValid:aValid,newerValid:bValid,
+        change:aValid&&bValid&&sameUnit?Number(b.value)-Number(a.value):null,
+        unitMismatch:aValid&&bValid&&!sameUnit
+      });
+    }
+    return output;
+  }
   function metricValue(metric, key) {
     if (!validMetric(metric)) return "—";
     const unit = METRIC_LABELS[key]?.[1] || "";
@@ -316,10 +371,23 @@
       '<label id="topGenesisDateFromWrap" hidden>از تاریخ <input id="topGenesisDateFrom" type="date" lang="fa-IR" style="padding:7px;border:1px solid #d8c69e;border-radius:8px"></label>' +
       '<label id="topGenesisDateToWrap" hidden>تا تاریخ <input id="topGenesisDateTo" type="date" lang="fa-IR" style="padding:7px;border:1px solid #d8c69e;border-radius:8px"></label>' +
       '<span id="topGenesisHistoryCount" class="muted" style="font-size:12px"></span></div>' +
+      '<div id="topGenesisCompareControls" style="display:flex;flex-wrap:wrap;align-items:center;gap:8px;padding:10px;margin:8px 0;border:1px solid #eadfc9;border-radius:10px;background:#fffdf8">' +
+      '<span id="topGenesisCompareStatus" class="muted" style="flex:1 1 220px">برای مقایسه، دو آنالیز را انتخاب کنید.</span>' +
+      '<button type="button" id="topGenesisCompareButton" disabled style="width:auto;padding:8px 12px;border:1px solid #c5a45b;border-radius:8px;background:#fffaf0;color:#765b2e">مقایسه دو آنالیز</button>' +
+      '<button type="button" id="topGenesisClearCompare" style="width:auto;padding:8px 12px;border:1px solid #ddd;border-radius:8px;background:#fff">پاک کردن انتخاب</button></div>' +
+      '<div id="topGenesisCompareResult" hidden style="margin:10px 0"></div>' +
       '<div id="topGenesisHistoryList"></div>';
     const mode = $("topGenesisHistoryMode");
     const from = $("topGenesisDateFrom");
     const to = $("topGenesisDateTo");
+    const resetComparison = () => {
+      const result = $("topGenesisCompareResult");
+      if (result) { result.hidden = true; result.innerHTML = ""; }
+      const button = $("topGenesisCompareButton");
+      if (button) button.disabled = true;
+      const status = $("topGenesisCompareStatus");
+      if (status) status.textContent = "برای مقایسه، دو آنالیز را انتخاب کنید.";
+    };
     const renderHistory = () => {
       const selected = mode.value;
       $("topGenesisDateFromWrap").hidden = selected !== "range";
@@ -341,10 +409,11 @@
           : '<button type="button" data-history-details="' + esc(row.id) + '" aria-expanded="false" style="border:1px solid #c5a45b;border-radius:8px;background:#fffaf0;padding:7px 11px;color:#765b2e">مشاهده جزئیات</button>';
         return '<article style="border:1px solid #eee3d1;border-radius:10px;padding:10px;margin:8px 0;background:#fff">' +
           '<div style="display:flex;justify-content:space-between;gap:8px;align-items:center;flex-wrap:wrap"><b>' +
-          esc(dateFa(row.analysis_date)) + '</b>' + action + '</div>' +
+          esc(dateFa(row.analysis_date)) + '</b><label style="display:inline-flex;align-items:center;gap:5px;font-size:12px"><input type="checkbox" data-history-compare="' + esc(row.id) + '"> انتخاب برای مقایسه</label>' + action + '</div>' +
           '<div class="muted" style="font-size:12px;margin-top:5px">' + fa(count, 0) + ' شاخص معتبر ثبت‌شده</div>' +
           '<div id="topGenesisDetails-' + esc(row.id) + '" hidden style="margin-top:12px">' + rowDetails(row) + '</div></article>';
       }).join("") : '<p class="muted">در این بازه گزارشی ثبت نشده است.</p>';
+      resetComparison();
     };
     mode.addEventListener("change", renderHistory);
     from.addEventListener("change", renderHistory);
@@ -363,6 +432,55 @@
       panel.hidden = !panel.hidden;
       button.setAttribute("aria-expanded", String(!panel.hidden));
       button.textContent = panel.hidden ? "مشاهده جزئیات" : "بستن جزئیات";
+    });
+    const historyList = $("topGenesisHistoryList");
+    const compareButton = $("topGenesisCompareButton");
+    const compareStatus = $("topGenesisCompareStatus");
+    const compareResult = $("topGenesisCompareResult");
+    historyList.addEventListener("change", event => {
+      if (!event.target.matches("[data-history-compare]")) return;
+      const selected = Array.from(historyList.querySelectorAll("[data-history-compare]:checked"));
+      if (selected.length > 2) {
+        event.target.checked = false;
+        if (compareStatus) compareStatus.textContent = "برای مقایسه فقط دو آنالیز را انتخاب کنید.";
+        return;
+      }
+      compareButton.disabled = selected.length !== 2;
+      if (compareStatus) compareStatus.textContent = selected.length === 2
+        ? "دو آنالیز انتخاب شدند؛ برای دیدن اختلاف شاخص‌ها دکمه مقایسه را بزنید."
+        : "آنالیز انتخاب‌شده: " + fa(selected.length, 0) + " از ۲";
+    });
+    compareButton.addEventListener("click", () => {
+      const ids = Array.from(historyList.querySelectorAll("[data-history-compare]:checked")).map(input => input.dataset.historyCompare);
+      if (ids.length !== 2) return;
+      const selectedRows = ids.map(id => publishedRowsById.get(String(id))).filter(Boolean);
+      if (selectedRows.length !== 2) return;
+      selectedRows.sort((a,b) =>
+        String(a.analysis_date||"").localeCompare(String(b.analysis_date||"")) ||
+        String(a.created_at||"").localeCompare(String(b.created_at||""))
+      );
+      const older = selectedRows[0], newer = selectedRows[1];
+      const comparisonRows = buildComparisonRows(older,newer);
+      const unitText = unit => unit === "cm" ? "سانتی‌متر" : unit === "kg" ? "کیلوگرم" : unit === "%" ? "٪" : unit;
+      const valueText = (valid,value,unit) => valid ? fa(value,2) + (unitText(unit) ? " " + unitText(unit) : "") : "—";
+      const changeText = row => {
+        if (row.change === null) return row.unitMismatch ? "واحد متفاوت" : "—";
+        const value = (row.change > 0 ? "+" : "") + fa(row.change,2);
+        return value + (unitText(row.unit) ? " " + unitText(row.unit) : "");
+      };
+      compareResult.innerHTML = '<section style="border:1px solid #d8b65d;border-radius:12px;padding:12px;background:#fffdf8">' +
+        '<h3 style="margin-top:0">مقایسه دو آنالیز انتخاب‌شده</h3>' +
+        '<p class="muted">آنالیز قدیمی: <b>' + esc(dateFa(older.analysis_date)) + '</b>　|　آنالیز جدید: <b>' + esc(dateFa(newer.analysis_date)) + '</b></p>' +
+        (comparisonRows.length ? '<div style="overflow-x:auto"><table style="width:100%;min-width:520px;border-collapse:collapse"><thead><tr><th>شاخص</th><th>آنالیز قدیمی</th><th>آنالیز جدید</th><th>تغییر</th></tr></thead><tbody>' +
+          comparisonRows.map(row => '<tr><td>' + esc(row.label) + '</td><td>' + esc(valueText(row.olderValid,row.olderValue,row.unit)) + '</td><td>' + esc(valueText(row.newerValid,row.newerValue,row.unit)) + '</td><td><b>' + esc(changeText(row)) + '</b></td></tr>').join("") +
+          '</tbody></table></div>' : '<p class="muted">شاخص عددی معتبری برای مقایسه این دو گزارش وجود ندارد.</p>') +
+        '</section>';
+      compareResult.hidden = false;
+      compareResult.scrollIntoView({ behavior:"smooth", block:"nearest" });
+    });
+    $("topGenesisClearCompare").addEventListener("click", () => {
+      historyList.querySelectorAll("[data-history-compare]").forEach(input => { input.checked = false; });
+      resetComparison();
     });
     // Keep the report viewer mounted across history refreshes. Recreating it
     // here revoked the active Blob URL and unexpectedly closed an open report.
@@ -457,6 +575,37 @@
     return loadPublished(false);
   };
 
+  const PUBLISHED_HISTORY_PAGE_SIZE = 500;
+  async function fetchAllPublishedRows(traineeId, requestEpoch, requestToken) {
+    const all = [];
+    const seenIds = new Set();
+    let offset = 0;
+    let pageCount = 0;
+    while (true) {
+      if (++pageCount > 10000) throw new Error("تعداد صفحات تاریخچه آنالیز از حد ایمن بیشتر شد.");
+      if (requestEpoch !== contextEpoch || requestToken !== activeLoadToken ||
+          String(currentTraineeId()) !== String(traineeId)) return null;
+      const { data, error } = await window.AUTH_SUPABASE.from(TABLE)
+        .select("id,trainee_id,coach_user_id,analysis_date,report_metrics,training_notes,nutrition_notes,report_storage_path,published_at")
+        .eq("trainee_id", traineeId)
+        .order("analysis_date", { ascending: true })
+        .order("created_at", { ascending: true })
+        .order("id", { ascending: true })
+        .range(offset, offset + PUBLISHED_HISTORY_PAGE_SIZE - 1);
+      if (error) throw error;
+      const page = Array.isArray(data) ? data : [];
+      for (const row of page) {
+        const id = row && row.id != null ? String(row.id) : null;
+        if (id !== null && seenIds.has(id)) continue;
+        if (id !== null) seenIds.add(id);
+        all.push(row);
+      }
+      if (page.length < PUBLISHED_HISTORY_PAGE_SIZE) break;
+      offset += page.length;
+    }
+    return all;
+  }
+
   async function loadPublished(force) {
     const traineeId = currentTraineeId();
     const requestEpoch = contextEpoch;
@@ -490,15 +639,10 @@
     const requestToken = ++activeLoadToken;
     loadingTraineeId = traineeId;
     try {
-      const { data, error } = await window.AUTH_SUPABASE.from(TABLE)
-        .select("id,trainee_id,coach_user_id,analysis_date,report_metrics,training_notes,nutrition_notes,report_storage_path,published_at")
-        .eq("trainee_id", traineeId)
-        .order("analysis_date", { ascending: true })
-        .order("created_at", { ascending: true });
-      if (error) throw error;
+      const rows = await fetchAllPublishedRows(traineeId, requestEpoch, requestToken);
+      if (!rows) return;
       if (requestEpoch !== contextEpoch || currentTraineeId() !== traineeId) return;
       if (requestToken !== activeLoadToken) return;
-      const rows = data || [];
       publishedCache.set(traineeId, { rows, savedAt: Date.now() });
       renderPublished(rows, traineeId);
       lastLoadedTrainee = traineeId;

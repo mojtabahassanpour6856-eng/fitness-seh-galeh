@@ -7,6 +7,9 @@
   const TABLE = "body_analysis_reports";
   const MAX_BYTES = 10 * 1024 * 1024;
   let mounted = false;
+  let lastMountedTraineeId = null;
+  let archiveRefreshToken = 0;
+  const ARCHIVE_PAGE_SIZE = 500;
 
   const $ = (id) => document.getElementById(id);
   const esc = (v) => String(v ?? "").replace(/[&<>"']/g, (c) => ({
@@ -33,14 +36,24 @@
       } catch (_) { return false; }
     })();
     const existing = $("topGenesisArchivePanel");
+    const trainee = window.currentClient || (typeof currentClient !== "undefined" ? currentClient : null);
+    const selectedId = isCoach && trainee?.id ? String(trainee.id) : "";
     // This archive contains upload/delete controls and is strictly coach-only.
     // Remove it immediately if a single-page session changes to a trainee.
     if (!isCoach) {
       if (existing) existing.remove();
       mounted = false;
+      lastMountedTraineeId = null;
+      archiveRefreshToken += 1;
       return;
     }
-    if (mounted && existing) return;
+    if (mounted && existing) {
+      if (selectedId !== lastMountedTraineeId) {
+        lastMountedTraineeId = selectedId;
+        refresh();
+      }
+      return;
+    }
     const anchor = $("bodyAnalysisEntryPanel");
     if (!anchor) return;
     const host = document.createElement("section");
@@ -62,23 +75,55 @@
     $("tgReportDate").value = new Date().toISOString().slice(0,10);
     $("tgUploadBtn").addEventListener("click", upload);
     mounted = true;
+    lastMountedTraineeId = selectedId;
     refresh();
   }
 
   async function refresh() {
+    const token = ++archiveRefreshToken;
     const ctx = currentCoachAndTrainee();
     const list = $("tgReportList");
     if (!list) return;
-    if (!ctx) { list.textContent = "برای آرشیو، وارد حساب مربی شوید و یک شاگرد را انتخاب کنید."; return; }
+    if (!ctx) {
+      list.dataset.boundTraineeId = "";
+      list.textContent = "برای آرشیو، وارد حساب مربی شوید و یک شاگرد را انتخاب کنید.";
+      return;
+    }
+    const traineeId = String(ctx.trainee.id);
+    list.dataset.boundTraineeId = traineeId;
     list.textContent = "در حال دریافت فهرست…";
     try {
-      const { data, error } = await ctx.sb.from(TABLE)
-        .select("id,analysis_date,original_file_name,file_size_bytes,parse_status,created_at,storage_path")
-        .eq("trainee_id", ctx.trainee.id)
-        .order("analysis_date", { ascending: false });
-      if (error) throw error;
-      if (!data?.length) { list.textContent = "هنوز گزارشی برای این شاگرد ذخیره نشده است."; return; }
-      list.innerHTML = data.map((r) => `
+      const rows = [];
+      const seenIds = new Set();
+      let offset = 0;
+      let pageCount = 0;
+      while (true) {
+        if (++pageCount > 10000) throw new Error("تعداد صفحات آرشیو از حد ایمن بیشتر شد.");
+        const active = currentCoachAndTrainee();
+        if (token !== archiveRefreshToken || !active || String(active.trainee.id) !== traineeId) return;
+        const { data, error } = await ctx.sb.from(TABLE)
+          .select("id,analysis_date,original_file_name,file_size_bytes,parse_status,created_at,storage_path")
+          .eq("trainee_id", traineeId)
+          .order("analysis_date", { ascending: false })
+          .order("created_at", { ascending: false })
+          .order("id", { ascending: false })
+          .range(offset, offset + ARCHIVE_PAGE_SIZE - 1);
+        if (error) throw error;
+        const page = Array.isArray(data) ? data : [];
+        for (const row of page) {
+          const id = row && row.id != null ? String(row.id) : null;
+          if (id !== null && seenIds.has(id)) continue;
+          if (id !== null) seenIds.add(id);
+          rows.push(row);
+        }
+        const current = currentCoachAndTrainee();
+        if (token !== archiveRefreshToken || !current || String(current.trainee.id) !== traineeId) return;
+        if (page.length < ARCHIVE_PAGE_SIZE) break;
+        offset += page.length;
+      }
+      if (token !== archiveRefreshToken || list.dataset.boundTraineeId !== traineeId) return;
+      if (!rows.length) { list.textContent = "هنوز گزارشی برای این شاگرد ذخیره نشده است."; return; }
+      list.innerHTML = rows.map((r) => `
         <div style="display:flex;gap:8px;align-items:center;justify-content:space-between;flex-wrap:wrap;border:1px solid #eee2bf;border-radius:9px;padding:9px;margin:7px 0;background:#fff">
           <div><b>${esc(r.analysis_date)}</b><div style="font-size:12px">${esc(r.original_file_name)} · ${(Number(r.file_size_bytes)/1024/1024).toFixed(2)} MB</div><small>وضعیت: ${esc(r.parse_status)}</small></div>
           <div style="display:flex;gap:6px;flex-wrap:wrap"><button type="button" data-tg-open="${esc(r.id)}" style="width:auto">مشاهده PDF</button><button type="button" data-tg-delete="${esc(r.id)}" style="width:auto;background:#a83232;color:#fff;border:0">حذف</button></div>
@@ -90,7 +135,10 @@
         button.addEventListener("click", () => deleteReport(button, button.getAttribute("data-tg-delete")));
       });
     } catch (e) {
-      list.textContent = "دریافت آرشیو انجام نشد: " + (e?.message || String(e));
+      const current = currentCoachAndTrainee();
+      if (token === archiveRefreshToken && current && String(current.trainee.id) === traineeId) {
+        list.textContent = "دریافت آرشیو انجام نشد: " + (e?.message || String(e));
+      }
     }
   }
 

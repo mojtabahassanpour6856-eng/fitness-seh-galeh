@@ -3,7 +3,7 @@
  */
 'use strict';
 
-const SHELL_CACHE_NAME = 'seh-shell-v6';
+const SHELL_CACHE_NAME = 'seh-shell-v10';
 const SHELL_ASSETS = [
   'index.html',
   'manifest.json',
@@ -17,7 +17,8 @@ const SHELL_ASSETS = [
   'top-genesis-pdf-parser.js',
   'top-genesis-csv-parser.js',
   'top-genesis-publication.js',
-  'top-genesis-archive.js'
+  'top-genesis-archive.js',
+  'progress-history.js'
 ];
 const SHELL_ASSET_PATHS = new Set(SHELL_ASSETS);
 const APP_SCOPE = new URL(self.registration.scope);
