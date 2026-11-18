@@ -2031,8 +2031,8 @@ function getTraineeProgressHistoryData(traineeId,force=false){
  if(pending)return pending;
  const encoded=encodeURIComponent(key);
  const promise=Promise.all([
-  sbGetAllPages("/body_analyses?trainee_id=eq."+encoded+"&select=id,created_at,analysis_date,weight,body_fat,muscle_mass,body_water,visceral_fat,abdomen,waist,chest,hip,thigh,notes&order=analysis_date.asc,created_at.asc,id.asc"),
-  sbGetAllPages("/weight_logs?trainee_id=eq."+encoded+"&select=id,created_at,log_date,weight&order=log_date.asc,created_at.asc,id.asc")
+  sbGetAllPages("/body_analyses?trainee_id=eq."+encoded+"&select=id,created_at,analysis_date,weight,body_fat,muscle_mass,body_water,visceral_fat,abdomen,waist,chest,hip,thigh,notes&order=created_at.asc.nullsfirst,id.asc"),
+  sbGetAllPages("/weight_logs?trainee_id=eq."+encoded+"&select=id,created_at,log_date,weight&order=created_at.asc.nullsfirst,id.asc")
  ]).then(([analysisRows,weightRows])=>{
   const data={analysisRows,weightRows};
   progressHistoryReadCache.set(key,{data,savedAt:Date.now()});
