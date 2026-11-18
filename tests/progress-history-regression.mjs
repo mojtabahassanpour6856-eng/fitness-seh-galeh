@@ -72,13 +72,14 @@ function testSourceClassificationAndDeduplication() {
   const weightLogs = [
     { id: 1, log_date: "2026-01-01", weight: 80 },
     { id: 2, log_date: "2026-01-02", weight: "79.0" },
-    { id: 3, log_date: "2026-01-04", weight: 78 },
-    { id: 4, log_date: "2026-01-04", weight: 78 }
+    { id: 3, log_date: "2026-01-03", weight: 82 },
+    { id: 4, log_date: "2026-01-04", weight: 78 },
+    { id: 5, log_date: "2026-01-04", weight: 78 }
   ];
   const rows = api.buildProgressHistoryRows(analyses, weightLogs);
-  assert.equal(rows.length, 4, "Matching rows across tables are shown once; distinct weight-log IDs remain visible.");
+  assert.equal(rows.length, 5, "Only logs paired with manual progress are deduplicated; a matching coach scan remains a separate source.");
   assert.equal(rows.filter(row => !row._weightOnly).length, 2);
-  assert.equal(rows.filter(row => row._weightOnly).length, 2);
+  assert.equal(rows.filter(row => row._weightOnly).length, 3);
   assert.equal(api.progressSourceLabel(rows.find(row => row.id === "manual-1")), "ثبت شاگرد");
   assert.equal(api.progressSourceLabel(rows.find(row => row.id === "legacy-1")), "ثبت قدیمی · منبع نامشخص");
   assert.equal(api.progressSourceLabel(rows.find(row => row._weightOnly)), "فقط ثبت وزن");
