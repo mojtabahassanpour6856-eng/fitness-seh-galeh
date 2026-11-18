@@ -457,6 +457,37 @@
     return loadPublished(false);
   };
 
+  const PUBLISHED_HISTORY_PAGE_SIZE = 500;
+  async function fetchAllPublishedRows(traineeId, requestEpoch, requestToken) {
+    const all = [];
+    const seenIds = new Set();
+    let offset = 0;
+    let pageCount = 0;
+    while (true) {
+      if (++pageCount > 10000) throw new Error("تعداد صفحات تاریخچه آنالیز از حد ایمن بیشتر شد.");
+      if (requestEpoch !== contextEpoch || requestToken !== activeLoadToken ||
+          String(currentTraineeId()) !== String(traineeId)) return null;
+      const { data, error } = await window.AUTH_SUPABASE.from(TABLE)
+        .select("id,trainee_id,coach_user_id,analysis_date,report_metrics,training_notes,nutrition_notes,report_storage_path,published_at")
+        .eq("trainee_id", traineeId)
+        .order("analysis_date", { ascending: true })
+        .order("created_at", { ascending: true })
+        .order("id", { ascending: true })
+        .range(offset, offset + PUBLISHED_HISTORY_PAGE_SIZE - 1);
+      if (error) throw error;
+      const page = Array.isArray(data) ? data : [];
+      for (const row of page) {
+        const id = row && row.id != null ? String(row.id) : null;
+        if (id !== null && seenIds.has(id)) continue;
+        if (id !== null) seenIds.add(id);
+        all.push(row);
+      }
+      if (page.length < PUBLISHED_HISTORY_PAGE_SIZE) break;
+      offset += page.length;
+    }
+    return all;
+  }
+
   async function loadPublished(force) {
     const traineeId = currentTraineeId();
     const requestEpoch = contextEpoch;
@@ -490,15 +521,10 @@
     const requestToken = ++activeLoadToken;
     loadingTraineeId = traineeId;
     try {
-      const { data, error } = await window.AUTH_SUPABASE.from(TABLE)
-        .select("id,trainee_id,coach_user_id,analysis_date,report_metrics,training_notes,nutrition_notes,report_storage_path,published_at")
-        .eq("trainee_id", traineeId)
-        .order("analysis_date", { ascending: true })
-        .order("created_at", { ascending: true });
-      if (error) throw error;
+      const rows = await fetchAllPublishedRows(traineeId, requestEpoch, requestToken);
+      if (!rows) return;
       if (requestEpoch !== contextEpoch || currentTraineeId() !== traineeId) return;
       if (requestToken !== activeLoadToken) return;
-      const rows = data || [];
       publishedCache.set(traineeId, { rows, savedAt: Date.now() });
       renderPublished(rows, traineeId);
       lastLoadedTrainee = traineeId;
