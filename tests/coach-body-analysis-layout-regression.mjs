@@ -26,11 +26,11 @@ assert.match(html, /window\.loadTopGenesisPublishedHistory\(\)/,
   "Opening Body Analysis must explicitly refresh the approved Top Genesis publication history.");
 assert.match(html, /function ensureProgressCards\(\)[\s\S]*?analysisSec\.appendChild\(viewer\)[\s\S]*?progressSec\.appendChild\(chart\)[\s\S]*?progressSec\.appendChild\(history\)/,
   "Coach analysis receipt stays in Body Analysis while trend and history are placed in Progress.");
-assert.ok(html.includes("function isProgressManualRecord(row)"),
+assert.ok(progressHistory.includes("function isProgressManualRecord(row)"),
   "Manual and legacy progress records must be classified by their source markers.");
-assert.ok(html.includes("function progressSourceLabel(row)"),
+assert.ok(progressHistory.includes("function progressSourceLabel(row)"),
   "Every progress row must expose a truthful source label.");
-assert.ok(html.includes("function buildProgressHistoryRows(analysisRows,weightRows)"),
+assert.ok(progressHistory.includes("function buildProgressHistoryRows(analysisRows,weightRows)"),
   "Manual progress and independent weight logs must be combined without inventing measurements.");
 assert.ok(html.includes("const manualRows=list.filter(isProgressManualRecord)"),
   "Explicit student markers and legacy manual rows must be separated from coach analyses.");
@@ -42,9 +42,9 @@ assert.ok(html.includes("const historyRows=progressRows.slice()"),
   "The history table must display the combined manual and weight-only timeline.");
 assert.ok(html.includes("getTraineeProgressHistoryData(traineeId,force)"),
   "The chart must load all progress sources through the shared paginated reader.");
-assert.ok(html.includes('sbGetAllPages("/body_analyses?'),
+assert.ok(progressHistory.includes('sbGetAllPages("/body_analyses?'),
   "Body analysis history must be retrieved through pagination.");
-assert.ok(html.includes('sbGetAllPages("/weight_logs?'),
+assert.ok(progressHistory.includes('sbGetAllPages("/weight_logs?'),
   "Independent weight history must be retrieved through pagination.");
 assert.match(html, /let progressHistoryRequestSeq=0;[\s\S]*?const requestId=\+\+progressHistoryRequestSeq/,
   "Manual body-analysis history requests must be sequenced to prevent stale responses from overwriting a newly selected trainee.");
