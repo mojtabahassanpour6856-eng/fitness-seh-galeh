@@ -62,6 +62,7 @@ function testSourceClassificationAndDeduplication() {
   const api = loadHelpers(async () => []);
   const analyses = [
     { id: "manual-1", analysis_date: "2026-01-01", weight: 80, notes: "MANUAL_PROGRESS_ENTRY: ثبت دستی" },
+    { id: "legacy-duplicate", analysis_date: "2026-01-01", weight: "80.0", notes: "ثبت پیشرفت دوره‌ای" },
     { id: "legacy-1", analysis_date: "2026-01-02", weight: 79, notes: "ثبت پیشرفت دوره‌ای" },
     { id: "coach-1", analysis_date: "2026-01-03", weight: 82, notes: "BMI: 24 | BMR: 1700" }
   ];
@@ -82,6 +83,7 @@ function testSourceClassificationAndDeduplication() {
   assert.ok(rows.filter(row => row._weightOnly).every(row =>
     row.waist === null && row.chest === null && row.body_fat === null && row.muscle_mass === null
   ), "Weight-only rows must not receive fabricated body measurements.");
+  assert.ok(!rows.some(row => row.id === "legacy-duplicate"), "An exact legacy duplicate must defer to the explicit marker without deleting either database row.");
   assert.ok(!rows.some(row => row.id === "coach-1"), "Coach/device analyses must not enter the manual progress timeline.");
   assert.ok(!Object.hasOwn(analyses[0], "_weightOnly"), "The source rows must not be mutated.");
 }
