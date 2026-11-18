@@ -11,6 +11,19 @@ const end = html.indexOf("async function sbWrite(path,method,body){", start);
 assert.ok(start >= 0 && end > start, "The shared paginated history reader must exist.");
 const helperSource = html.slice(start, end);
 
+const saveStart = html.indexOf("async function saveProgress(){");
+const saveEnd = html.indexOf("async function saveAnalysis(){", saveStart);
+assert.ok(saveStart >= 0 && saveEnd > saveStart, "The progress submission handler must exist.");
+const saveProgress = html.slice(saveStart, saveEnd);
+assert.ok(saveProgress.includes('sbWrite("/rpc/record_trainee_progress","POST"'),
+  "Trainee progress must use the deployed atomic RPC.");
+assert.ok(saveProgress.includes("p_trainee_id:traineeId") && saveProgress.includes("p_log_date:date") &&
+  saveProgress.includes("p_weight:weight"), "The RPC must receive the exact trainee, date, and weight.");
+assert.doesNotMatch(saveProgress, /sbWrite\(["']\/weight_logs["'],["']POST["']/,
+  "The client must not split a trainee progress submission into separate weight and body-analysis writes.");
+assert.ok(saveProgress.includes("COACH_PROGRESS_ENTRY: ثبت توسط مربی"),
+  "Coach-originated entries must retain an explicit coach marker.");
+
 function loadHelpers(sbGet) {
   const sandbox = { sbGet, Date };
   vm.runInNewContext(
