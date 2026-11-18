@@ -7,6 +7,7 @@ import vm from "node:vm";
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const read = file => fs.readFileSync(path.join(root, file), "utf8");
 const html = read("index.html");
+const progressHistory = read("progress-history.js");
 const embed = read("top-genesis-pdf-app-embed.js");
 const publication = read("top-genesis-publication.js");
 
