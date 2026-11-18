@@ -1993,10 +1993,18 @@ function progressSourceLabel(row){
  return "آنالیز مربی";
 }
 function buildProgressHistoryRows(analysisRows,weightRows){
- const manualRows=(Array.isArray(analysisRows)?analysisRows:[])
-  .filter(isProgressManualRecord)
+ const allManualRows=(Array.isArray(analysisRows)?analysisRows:[]).filter(isProgressManualRecord);
+ const explicitMarkerKeys=new Set(allManualRows
+  .filter(row=>String(row&&row.notes||"").includes("MANUAL_PROGRESS_ENTRY"))
+  .map(row=>progressWeightKey(row.analysis_date,row.weight)).filter(Boolean));
+ // When a new idempotent marker row matches a legacy row exactly, show the
+ // explicit source row once. Keep all other same-day entries: equal values
+ // alone are not enough evidence to discard distinct historical records.
+ const manualRows=allManualRows
+  .filter(row=>String(row&&row.notes||"").includes("MANUAL_PROGRESS_ENTRY")||
+    !explicitMarkerKeys.has(progressWeightKey(row.analysis_date,row.weight)))
   .map(row=>Object.assign({},row,{_weightOnly:false}));
- const matchedManualWeights=new Set(manualRows.map(row=>progressWeightKey(row.analysis_date,row.weight)).filter(Boolean));
+ const matchedManualWeights=new Set(allManualRows.map(row=>progressWeightKey(row.analysis_date,row.weight)).filter(Boolean));
  const weightOnly=(Array.isArray(weightRows)?weightRows:[])
   .filter(row=>!matchedManualWeights.has(progressWeightKey(row.log_date,row.weight)))
   .map(row=>({
