@@ -20,7 +20,7 @@ function loadHelpers(sbGet) {
   return sandbox.__api;
 }
 
-testPagination();
+await testPagination();
 testSourceClassificationAndDeduplication();
 await testPerTraineeFetchCache();
 
@@ -28,8 +28,8 @@ function testPagination() {
   const calls = [];
   const fakeSbGet = async path => {
     calls.push(path);
-    const limit = Number((path.match(/[?&]limit=(\\d+)/) || [])[1] || 500);
-    const offset = Number((path.match(/[?&]offset=(\\d+)/) || [])[1] || 0);
+    const limit = Number((path.match(/[?&]limit=(\d+)/) || [])[1] || 500);
+    const offset = Number((path.match(/[?&]offset=(\d+)/) || [])[1] || 0);
     const total = 1201;
     return Array.from({ length: Math.max(0, Math.min(limit, total - offset)) }, (_, i) => ({
       id: offset + i + 1
