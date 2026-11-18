@@ -2436,32 +2436,42 @@ async function saveProgress(){
  const weight=Number($("prWeight").value);
  if(!date){alert("تاریخ ثبت را انتخاب کنید.");return;}
  if(!Number.isFinite(weight)||weight<=0){alert("وزن را به کیلوگرم وارد کنید.");return;}
- const body={trainee_id:traineeId,log_date:date,weight:weight};
  const measurements={
-  trainee_id:traineeId,analysis_date:date,weight:weight,
   waist:Number($("waist").value)||null,
   chest:Number($("chest").value)||null,
   hip:Number($("hip").value)||null,
   abdomen:Number($("glute").value)||null,
-  thigh:Number($("thigh").value)||null,
-  notes:"ثبت پیشرفت دوره‌ای"
+  thigh:Number($("thigh").value)||null
  };
+ const profile=window.authProfile||(typeof authProfile!=="undefined"?authProfile:null);
  try{
-  if(authProfile?.role==="trainee"){
-   await sbWrite("/weight_logs","POST",body);
-   if(!currentClient||String(currentClient.id)!==String(traineeId))throw new Error("شاگرد هنگام ثبت تغییر کرده است؛ لطفاً دوباره تلاش کنید.");
-   await sbWrite("/body_analyses","POST",measurements);
-   alert("وزن و اندازه‌های پیشرفت شما ثبت شد و برای مربی قابل مشاهده است.");
-  }else if(authProfile?.role==="coach"){
-   await sbWrite("/weight_logs","POST",body);
-   if(!currentClient||String(currentClient.id)!==String(traineeId))throw new Error("شاگرد هنگام ثبت تغییر کرده است؛ ثبت ادامه پیدا نکرد.");
-   await sbWrite("/body_analyses","POST",measurements);
-   await loadClients();
-   alert("وزن و اندازه‌های پیشرفت ثبت شد.");
+  if(profile?.role==="trainee"){
+   // The deployed SECURITY INVOKER RPC validates ownership and writes both
+   // tables atomically with the MANUAL_PROGRESS_ENTRY provenance marker.
+   // This replaces the old two-request flow whose note did not satisfy RLS.
+   await sbWrite("/rpc/record_trainee_progress","POST",{
+    p_trainee_id:traineeId,p_log_date:date,p_weight:weight,
+    p_waist:measurements.waist,p_chest:measurements.chest,
+    p_hip:measurements.hip,p_abdomen:measurements.abdomen,p_thigh:measurements.thigh
+   });
+   alert("وزن و اندازه‌های پیشرفت شما به‌صورت یکپارچه ثبت شد و برای مربی قابل مشاهده است.");
+  }else if(profile?.role==="coach"){
+   // Coaches do not have INSERT permission on weight_logs. Keep their entry
+   // in body_analyses with an explicit coach marker instead of attempting a
+   // write that RLS will reject.
+   await sbWrite("/body_analyses","POST",{
+    trainee_id:traineeId,analysis_date:date,weight,
+    waist:measurements.waist,chest:measurements.chest,hip:measurements.hip,
+    abdomen:measurements.abdomen,thigh:measurements.thigh,
+    notes:"COACH_PROGRESS_ENTRY: ثبت توسط مربی"
+   });
+   alert("ثبت پیشرفت توسط مربی ذخیره شد.");
   }else{
    alert("برای ثبت اطلاعات ابتدا وارد حساب شوید.");return;
   }
- }catch(e){alert("ثبت پیشرفت انجام نشد.\\n"+e.message);}
+ }catch(e){
+  alert("ثبت پیشرفت انجام نشد.\\n"+e.message);
+ }
 }
 async function saveAnalysis(){
  if(typeof authProfile==="undefined"||authProfile?.role!=="coach"){alert("ثبت آنالیز دستگاه فقط توسط مربی انجام می‌شود.");return;}
