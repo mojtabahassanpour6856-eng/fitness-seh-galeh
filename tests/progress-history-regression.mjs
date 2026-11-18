@@ -77,8 +77,8 @@ function testSourceClassificationAndDeduplication() {
     { id: 5, log_date: "2026-01-04", weight: 78 }
   ];
   const rows = api.buildProgressHistoryRows(analyses, weightLogs);
-  assert.equal(rows.length, 5, "Only logs paired with manual progress are deduplicated; a matching coach scan remains a separate source.");
-  assert.equal(rows.filter(row => !row._weightOnly).length, 2);
+  assert.equal(rows.length, 6, "Only logs paired with manual progress are deduplicated; a matching coach scan remains a separate source.");
+  assert.equal(rows.filter(row => !row._weightOnly).length, 3);
   assert.equal(rows.filter(row => row._weightOnly).length, 3);
   assert.equal(api.progressSourceLabel(rows.find(row => row.id === "manual-1")), "ثبت شاگرد");
   assert.equal(api.progressSourceLabel(rows.find(row => row.id === "legacy-1")), "ثبت قدیمی · منبع نامشخص");
@@ -88,7 +88,7 @@ function testSourceClassificationAndDeduplication() {
     row.waist === null && row.chest === null && row.body_fat === null && row.muscle_mass === null
   ), "Weight-only rows must not receive fabricated body measurements.");
   assert.ok(!rows.some(row => row.id === "legacy-duplicate"), "An exact legacy duplicate must defer to the explicit marker without deleting either database row.");
-  assert.ok(!rows.some(row => row.id === "coach-1"), "Coach/device analyses must not enter the manual progress timeline.");
+  assert.equal(api.progressSourceLabel(rows.find(row => row.id === "coach-1")), "آنالیز مربی", "Coach/device analyses must retain their separate source label.");
   assert.ok(!Object.hasOwn(analyses[0], "_weightOnly"), "The source rows must not be mutated.");
 }
 
