@@ -5,6 +5,7 @@ on:
     paths:
       - "index.html"
       - "tests/coach-body-analysis-layout-regression.mjs"
+      - "tests/progress-history-regression.mjs"
       - ".github/workflows/test-coach-body-analysis-layout.yml"
 
 permissions:
@@ -19,3 +20,4 @@ jobs:
         with:
           node-version: 20
       - run: node tests/coach-body-analysis-layout-regression.mjs
+      - run: node tests/progress-history-regression.mjs
