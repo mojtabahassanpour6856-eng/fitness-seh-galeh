@@ -4,6 +4,9 @@ on:
   pull_request:
     paths:
       - "index.html"
+      - "top-genesis-publication.js"
+      - "top-genesis-archive.js"
+      - "sw.js"
       - "tests/coach-body-analysis-layout-regression.mjs"
       - "tests/progress-history-regression.mjs"
       - ".github/workflows/test-coach-body-analysis-layout.yml"
