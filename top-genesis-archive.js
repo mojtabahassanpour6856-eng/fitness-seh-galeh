@@ -126,10 +126,13 @@
       list.innerHTML = rows.map((r) => `
         <div style="display:flex;gap:8px;align-items:center;justify-content:space-between;flex-wrap:wrap;border:1px solid #eee2bf;border-radius:9px;padding:9px;margin:7px 0;background:#fff">
           <div><b>${esc(r.analysis_date)}</b><div style="font-size:12px">${esc(r.original_file_name)} · ${(Number(r.file_size_bytes)/1024/1024).toFixed(2)} MB</div><small>وضعیت: ${esc(r.parse_status)}</small></div>
-          <div style="display:flex;gap:6px;flex-wrap:wrap"><button type="button" data-tg-open="${esc(r.id)}" style="width:auto">مشاهده PDF</button><button type="button" data-tg-delete="${esc(r.id)}" style="width:auto;background:#a83232;color:#fff;border:0">حذف</button></div>
+          <div style="display:flex;gap:6px;flex-wrap:wrap"><button type="button" data-tg-open="${esc(r.id)}" style="width:auto">مشاهده PDF</button><button type="button" data-tg-replace="${esc(r.id)}" style="width:auto;background:#fff8e8;color:#765b2e;border:1px solid #d8b65d">جایگزینی PDF</button><button type="button" data-tg-delete="${esc(r.id)}" style="width:auto;background:#a83232;color:#fff;border:0">حذف</button></div>
         </div>`).join("");
       list.querySelectorAll("[data-tg-open]").forEach((button) => {
         button.addEventListener("click", () => openReport(button.getAttribute("data-tg-open")));
+      });
+      list.querySelectorAll("[data-tg-replace]").forEach((button) => {
+        button.addEventListener("click", () => replaceReport(button, button.getAttribute("data-tg-replace")));
       });
       list.querySelectorAll("[data-tg-delete]").forEach((button) => {
         button.addEventListener("click", () => deleteReport(button, button.getAttribute("data-tg-delete")));
@@ -198,29 +201,139 @@
   }
 
 
+
+  async function replaceReport(button, id) {
+    const initial = currentCoachAndTrainee();
+    if (!initial) return alert("نشست مربی یا شاگرد انتخاب‌شده معتبر نیست.");
+    const traineeId = String(initial.trainee.id);
+    const input = document.createElement("input");
+    input.type = "file";
+    input.accept = "application/pdf,.pdf";
+    input.style.display = "none";
+    document.body.appendChild(input);
+    input.addEventListener("change", async () => {
+      const file = input.files?.[0];
+      input.remove();
+      if (!file) return;
+      if (!(file.type === "application/pdf" || file.name.toLowerCase().endsWith(".pdf"))) {
+        alert("فقط فایل PDF پذیرفته می‌شود."); return;
+      }
+      if (file.size <= 0 || file.size > MAX_BYTES) {
+        alert("حجم فایل باید بیشتر از صفر و حداکثر ۱۰ مگابایت باشد."); return;
+      }
+      const ctx = currentCoachAndTrainee();
+      if (!ctx || String(ctx.trainee.id) !== traineeId) {
+        alert("شاگرد انتخاب‌شده تغییر کرده است؛ عملیات متوقف شد."); return;
+      }
+      button.disabled = true;
+      button.textContent = "در حال بررسی PDF…";
+      let newPath = null;
+      try {
+        if (!window.TopGenesisPdfParser?.extract) {
+          throw new Error("استخراج‌کننده PDF در دسترس نیست. صفحه را تازه‌سازی کنید.");
+        }
+        const parsed = await window.TopGenesisPdfParser.extract(file);
+        const metrics = parsed && typeof parsed === "object" ? parsed : null;
+        if (!metrics || !Object.keys(metrics).some(key => !["flags","scan_pages","scan_page_numbers","ocr_pages","engine","page_count","review_required"].includes(key))) {
+          throw new Error("اطلاعات قابل استخراج از PDF پیدا نشد؛ فایل قبلی حفظ شد.");
+        }
+        const metricNames = {
+          height_cm:"قد", weight_kg:"وزن", body_fat_percent:"درصد چربی",
+          bmi:"BMI", resting_metabolic_rate_kcal:"سوخت‌وساز پایه",
+          daily_energy_expenditure_kcal:"مصرف انرژی روزانه", fat_mass_kg:"توده چربی",
+          lean_mass_kg:"توده بدون چربی", waist_circumference_cm:"دور کمر"
+        };
+        const preview = Object.entries(metricNames)
+          .filter(([key]) => metrics[key]?.value != null)
+          .map(([key,label]) => label + ": " + metrics[key].value + (metrics[key].unit ? " " + metrics[key].unit : ""))
+          .join("\n");
+        const flags = Array.isArray(metrics.flags) && metrics.flags.length ? "\n\nهشدارها:\n• " + metrics.flags.slice(0,8).join("\n• ") : "";
+        const summary = preview || "مقادیر اصلی شناسایی نشد؛ فایل قبلی حفظ می‌شود.";
+        if (!preview) throw new Error("مقادیر اصلی قابل تشخیص نیستند. فایل قبلی حفظ شد.");
+        if (!window.confirm("پیش‌نمایش استخراج PDF جدید:\n\n" + summary + flags + "\n\nاین اطلاعات نیازمند بررسی مربی هستند. آیا PDF جدید جایگزین شود؟")) {
+          return;
+        }
+        const activeBeforeUpload = currentCoachAndTrainee();
+        if (!activeBeforeUpload || String(activeBeforeUpload.trainee.id) !== traineeId) {
+          throw new Error("شاگرد هنگام بررسی تغییر کرد؛ عملیات متوقف شد.");
+        }
+        const { data: oldRow, error: readError } = await ctx.sb.from(TABLE)
+          .select("id,storage_path,analysis_date").eq("id", id).eq("trainee_id", traineeId).single();
+        if (readError) throw readError;
+        if (!oldRow?.storage_path) throw new Error("مسیر فایل قبلی پیدا نشد؛ هیچ چیزی تغییر نکرد.");
+        const { data: userData, error: userError } = await ctx.sb.auth.getUser();
+        if (userError) throw userError;
+        const coachId = userData?.user?.id;
+        if (!coachId) throw new Error("نشست مربی معتبر نیست؛ دوباره وارد شوید.");
+        const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, "_").slice(-90) || "report.pdf";
+        newPath = coachId + "/" + traineeId + "/" + crypto.randomUUID() + "-" + safeName;
+        const { error: uploadError } = await ctx.sb.storage.from(BUCKET)
+          .upload(newPath, file, { contentType: "application/pdf", upsert: false });
+        if (uploadError) throw uploadError;
+        const active = currentCoachAndTrainee();
+        if (!active || String(active.trainee.id) !== traineeId) throw new Error("شاگرد هنگام بارگذاری تغییر کرد؛ ثبت متوقف شد.");
+        const { data: updated, error: updateError } = await ctx.sb.from(TABLE)
+          .update({
+            storage_path: newPath, original_file_name: file.name,
+            mime_type: "application/pdf", file_size_bytes: file.size,
+            parse_status: "needs_review", extracted_metrics: metrics,
+            parse_error: null, coach_summary: null
+          })
+          .eq("id", id).eq("trainee_id", traineeId).select("id").maybeSingle();
+        if (updateError) throw updateError;
+        if (!updated?.id) throw new Error("رکورد آنالیز به‌روزرسانی نشد؛ فایل قبلی حفظ شد.");
+        newPath = null;
+        const { error: cleanupError } = await ctx.sb.storage.from(BUCKET).remove([oldRow.storage_path]);
+        await refresh();
+        const status = $("tgReportStatus");
+        if (status) status.textContent = cleanupError
+          ? "PDF جدید ثبت شد و اطلاعات استخراج‌شده برای بررسی مربی ذخیره شد؛ پاک‌سازی فایل قبلی ناموفق بود."
+          : "PDF جایگزین شد. اطلاعات استخراج‌شده در وضعیت بررسی مربی ذخیره شد؛ تاریخ و رکورد حفظ شدند.";
+        if (cleanupError) console.error("Top Genesis old-file cleanup failed", cleanupError);
+      } catch (e) {
+        if (newPath) {
+          const cleanup = await ctx.sb.storage.from(BUCKET).remove([newPath]);
+          if (cleanup.error) console.error("Top Genesis replacement rollback cleanup failed", cleanup.error);
+        }
+        alert("جایگزینی انجام نشد؛ آنالیز قبلی حفظ شد. " + (e?.message || String(e)));
+      } finally {
+        button.disabled = false;
+        button.textContent = "جایگزینی PDF";
+      }
+    }, { once: true });
+    input.click();
+  }
+
   async function deleteReport(button, id) {
     const ctx = currentCoachAndTrainee();
     if (!ctx) return alert("نشست مربی یا شاگرد انتخاب‌شده معتبر نیست.");
-    if (!window.confirm("این گزارش PDF و رکورد آن برای همین شاگرد به‌طور کامل حذف شود؟ این کار قابل بازگشت نیست.")) return;
+    const traineeId = String(ctx.trainee.id);
+    if (!window.confirm("این گزارش PDF و رکورد آن برای همین شاگرد حذف شود؟ این کار قابل بازگشت نیست.")) return;
     button.disabled = true;
     button.textContent = "در حال حذف…";
     try {
       const { data: row, error: rowError } = await ctx.sb.from(TABLE)
-        .select("id,storage_path").eq("id", id).eq("trainee_id", ctx.trainee.id).single();
+        .select("id,storage_path").eq("id", id).eq("trainee_id", traineeId).single();
       if (rowError) throw rowError;
       if (!row?.storage_path) throw new Error("مسیر فایل پیدا نشد؛ هیچ چیزی حذف نشد.");
-      const { error: storageError } = await ctx.sb.storage.from(BUCKET).remove([row.storage_path]);
-      if (storageError) throw storageError;
-      const { error: deleteError } = await ctx.sb.from(TABLE)
-        .delete().eq("id", id).eq("trainee_id", ctx.trainee.id);
-      if (deleteError) {
-        alert("خود فایل از فضای ذخیره‌سازی حذف شد، اما حذف رکورد پایگاه داده انجام نشد. لطفاً دوباره تلاش کنید یا دسترسی‌ها بررسی شود. جزئیات: " + deleteError.message);
-        await refresh();
-        return;
+      const active = currentCoachAndTrainee();
+      if (!active || String(active.trainee.id) !== traineeId) {
+        throw new Error("شاگرد انتخاب‌شده تغییر کرده است؛ حذف متوقف شد.");
       }
+      // Remove the database reference first. A Storage cleanup failure then
+      // leaves only an orphaned private object, never a live row with a
+      // missing PDF. Cleanup can be retried safely by an administrator.
+      const { data: deleted, error: deleteError } = await ctx.sb.from(TABLE)
+        .delete().eq("id", id).eq("trainee_id", traineeId).select("id").maybeSingle();
+      if (deleteError) throw deleteError;
+      if (!deleted?.id) throw new Error("رکورد حذف نشد؛ فایل اصلی دست‌نخورده باقی ماند.");
+      const { error: storageError } = await ctx.sb.storage.from(BUCKET).remove([row.storage_path]);
       await refresh();
       const status = $("tgReportStatus");
-      if (status) status.textContent = "گزارش انتخاب‌شده و فایل PDF آن با موفقیت حذف شدند.";
+      if (status) status.textContent = storageError
+        ? "رکورد آنالیز حذف شد، اما پاک‌سازی فایل خصوصی ناموفق بود و باید جداگانه بررسی شود."
+        : "رکورد آنالیز و فایل PDF آن با موفقیت حذف شدند.";
+      if (storageError) console.error("Top Genesis deleted-file cleanup failed", storageError);
     } catch (e) {
       alert("حذف گزارش انجام نشد: " + (e?.message || String(e)));
       button.disabled = false;
