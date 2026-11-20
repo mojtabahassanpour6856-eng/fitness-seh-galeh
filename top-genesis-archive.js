@@ -153,26 +153,32 @@
   async function deleteReport(button, id) {
     const ctx = currentCoachAndTrainee();
     if (!ctx) return alert("نشست مربی یا شاگرد انتخاب‌شده معتبر نیست.");
-    if (!window.confirm("این گزارش PDF و رکورد آن برای همین شاگرد به‌طور کامل حذف شود؟ این کار قابل بازگشت نیست.")) return;
+    const traineeId = String(ctx.trainee.id);
+    if (!window.confirm("این گزارش PDF و رکورد آن برای همین شاگرد حذف شود؟ این کار قابل بازگشت نیست.")) return;
     button.disabled = true;
     button.textContent = "در حال حذف…";
     try {
       const { data: row, error: rowError } = await ctx.sb.from(TABLE)
-        .select("id,storage_path").eq("id", id).eq("trainee_id", ctx.trainee.id).single();
+        .select("id,storage_path").eq("id", id).eq("trainee_id", traineeId).single();
       if (rowError) throw rowError;
       if (!row?.storage_path) throw new Error("مسیر فایل پیدا نشد؛ هیچ چیزی حذف نشد.");
-      const { error: storageError } = await ctx.sb.storage.from(BUCKET).remove([row.storage_path]);
-      if (storageError) throw storageError;
-      const { error: deleteError } = await ctx.sb.from(TABLE)
-        .delete().eq("id", id).eq("trainee_id", ctx.trainee.id);
-      if (deleteError) {
-        alert("خود فایل از فضای ذخیره‌سازی حذف شد، اما حذف رکورد پایگاه داده انجام نشد. لطفاً دوباره تلاش کنید یا دسترسی‌ها بررسی شود. جزئیات: " + deleteError.message);
-        await refresh();
-        return;
+      const active = currentCoachAndTrainee();
+      if (!active || String(active.trainee.id) !== traineeId) {
+        throw new Error("شاگرد انتخاب‌شده تغییر کرده است؛ حذف متوقف شد.");
       }
+      // Delete the database reference first. If Storage cleanup fails, only an
+      // unreferenced private object remains; the database never points to a missing PDF.
+      const { data: deleted, error: deleteError } = await ctx.sb.from(TABLE)
+        .delete().eq("id", id).eq("trainee_id", traineeId).select("id").maybeSingle();
+      if (deleteError) throw deleteError;
+      if (!deleted?.id) throw new Error("رکورد حذف نشد؛ فایل اصلی دست‌نخورده باقی ماند.");
+      const { error: storageError } = await ctx.sb.storage.from(BUCKET).remove([row.storage_path]);
       await refresh();
       const status = $("tgReportStatus");
-      if (status) status.textContent = "گزارش انتخاب‌شده و فایل PDF آن با موفقیت حذف شدند.";
+      if (status) status.textContent = storageError
+        ? "رکورد آنالیز حذف شد، اما پاک‌سازی فایل خصوصی ناموفق بود و باید جداگانه بررسی شود."
+        : "رکورد آنالیز و فایل PDF آن با موفقیت حذف شدند.";
+      if (storageError) console.error("Top Genesis deleted-file cleanup failed", storageError);
     } catch (e) {
       alert("حذف گزارش انجام نشد: " + (e?.message || String(e)));
       button.disabled = false;
