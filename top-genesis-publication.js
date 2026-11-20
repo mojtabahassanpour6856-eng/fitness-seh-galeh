@@ -337,7 +337,8 @@
       $("topGenesisHistoryList").innerHTML = filtered.length ? filtered.map(row => {
         const count = Object.keys(METRIC_LABELS).filter(key => validMetric(row.report_metrics?.[key])).length;
         const action = row.report_storage_path
-          ? '<button type="button" data-history-report="' + esc(row.id) + '" style="border:1px solid #c5a45b;border-radius:8px;background:#fffaf0;padding:7px 11px;color:#765b2e">مشاهده گزارش کامل</button>'
+          ? '<div style="display:flex;gap:6px;flex-wrap:wrap"><button type="button" data-history-report="' + esc(row.id) + '" style="border:1px solid #c5a45b;border-radius:8px;background:#fffaf0;padding:7px 11px;color:#765b2e">مشاهده گزارش کامل</button>' +
+            (currentCoach() ? '<button type="button" data-history-delete="' + esc(row.id) + '" style="border:1px solid #a83232;border-radius:8px;background:#a83232;padding:7px 11px;color:#fff">حذف</button>' : '') + '</div>'
           : '<button type="button" data-history-details="' + esc(row.id) + '" aria-expanded="false" style="border:1px solid #c5a45b;border-radius:8px;background:#fffaf0;padding:7px 11px;color:#765b2e">مشاهده جزئیات</button>';
         return '<article style="border:1px solid #eee3d1;border-radius:10px;padding:10px;margin:8px 0;background:#fff">' +
           '<div style="display:flex;justify-content:space-between;gap:8px;align-items:center;flex-wrap:wrap"><b>' +
@@ -350,6 +351,12 @@
     from.addEventListener("change", renderHistory);
     to.addEventListener("change", renderHistory);
     $("topGenesisHistoryList").addEventListener("click", async event => {
+      const deleteButton = event.target.closest("[data-history-delete]");
+      if (deleteButton) {
+        const row = rows.find(item => item.id === deleteButton.dataset.historyDelete);
+        if (row) await deletePublishedReport(row, deleteButton);
+        return;
+      }
       const reportButton = event.target.closest("[data-history-report]");
       if (reportButton) {
         const row = rows.find(item => item.id === reportButton.dataset.historyReport);
@@ -450,6 +457,48 @@
       }
     }
   }
+  async function deletePublishedReport(row, button) {
+    if (!currentCoach()) return alert("حذف گزارش فقط از حساب مربی امکان‌پذیر است.");
+    const traineeId = currentTraineeId();
+    const coachId = window.authProfile?.user_id || window.authProfile?.id || null;
+    const epoch = contextEpoch;
+    if (!traineeId || String(row.trainee_id) !== String(traineeId) || !row.id || !row.report_storage_path) {
+      return alert("گزارش یا شاگرد انتخاب‌شده معتبر نیست؛ حذف انجام نشد.");
+    }
+    if (!confirm("گزارش کامل این تاریخ برای شاگرد انتخاب‌شده حذف شود؟ این کار قابل بازگشت نیست.")) return;
+    button.disabled = true;
+    const oldText = button.textContent;
+    button.textContent = "در حال حذف…";
+    try {
+      if (epoch !== contextEpoch || traineeId !== currentTraineeId() || !currentCoach()) {
+        throw new Error("شاگرد یا حساب مربی تغییر کرده است؛ حذف متوقف شد.");
+      }
+      const { data: deleted, error } = await window.AUTH_SUPABASE.from(TABLE)
+        .delete().eq("id", row.id).eq("trainee_id", traineeId)
+        .eq("coach_user_id", row.coach_user_id).select("id").maybeSingle();
+      if (error) throw error;
+      if (!deleted?.id) throw new Error("گزارش از پایگاه داده حذف نشد؛ فایل اصلی دست‌نخورده باقی ماند.");
+      const { error: storageError } = await window.AUTH_SUPABASE.storage
+        .from("trainee-health-reports").remove([row.report_storage_path]);
+      const cached = publishedCache.get(traineeId);
+      if (cached) {
+        const nextRows = cached.rows.filter(item => String(item.id) !== String(row.id));
+        publishedCache.set(traineeId, { rows: nextRows, savedAt: Date.now() });
+        renderPublished(nextRows, traineeId);
+      } else {
+        await loadPublished(true);
+      }
+      closeFullReportViewer();
+      if (storageError) {
+        alert("گزارش از فهرست حذف شد، اما پاک‌سازی فایل ذخیره‌شده ناموفق بود و باید جداگانه بررسی شود.");
+        console.error("Top Genesis published report storage cleanup failed", storageError);
+      }
+    } catch (error) {
+      alert("حذف گزارش انجام نشد: " + (error?.message || String(error)));
+      if (button.isConnected) { button.disabled = false; button.textContent = oldText; }
+    }
+  }
+
   // Public entry point for the coach's dedicated Body Analysis route.
   // This is separate from window.loadProgressHistory, which reads legacy manual records.
   window.loadTopGenesisPublishedHistory = function () {
