@@ -226,14 +226,41 @@
         alert("شاگرد انتخاب‌شده تغییر کرده است؛ عملیات متوقف شد."); return;
       }
       button.disabled = true;
-      button.textContent = "در حال جایگزینی…";
+      button.textContent = "در حال بررسی PDF…";
       let newPath = null;
       try {
+        if (!window.TopGenesisPdfParser?.extract) {
+          throw new Error("استخراج‌کننده PDF در دسترس نیست. صفحه را تازه‌سازی کنید.");
+        }
+        const parsed = await window.TopGenesisPdfParser.extract(file);
+        const metrics = parsed && typeof parsed === "object" ? parsed : null;
+        if (!metrics || !Object.keys(metrics).some(key => !["flags","scan_pages","scan_page_numbers","ocr_pages","engine","page_count","review_required"].includes(key))) {
+          throw new Error("اطلاعات قابل استخراج از PDF پیدا نشد؛ فایل قبلی حفظ شد.");
+        }
+        const metricNames = {
+          height_cm:"قد", weight_kg:"وزن", body_fat_percent:"درصد چربی",
+          bmi:"BMI", resting_metabolic_rate_kcal:"سوخت‌وساز پایه",
+          daily_energy_expenditure_kcal:"مصرف انرژی روزانه", fat_mass_kg:"توده چربی",
+          lean_mass_kg:"توده بدون چربی", waist_circumference_cm:"دور کمر"
+        };
+        const preview = Object.entries(metricNames)
+          .filter(([key]) => metrics[key]?.value != null)
+          .map(([key,label]) => label + ": " + metrics[key].value + (metrics[key].unit ? " " + metrics[key].unit : ""))
+          .join("\n");
+        const flags = Array.isArray(metrics.flags) && metrics.flags.length ? "\n\nهشدارها:\n• " + metrics.flags.slice(0,8).join("\n• ") : "";
+        const summary = preview || "مقادیر اصلی شناسایی نشد؛ فایل قبلی حفظ می‌شود.";
+        if (!preview) throw new Error("مقادیر اصلی قابل تشخیص نیستند. فایل قبلی حفظ شد.");
+        if (!window.confirm("پیش‌نمایش استخراج PDF جدید:\n\n" + summary + flags + "\n\nاین اطلاعات نیازمند بررسی مربی هستند. آیا PDF جدید جایگزین شود؟")) {
+          return;
+        }
+        const activeBeforeUpload = currentCoachAndTrainee();
+        if (!activeBeforeUpload || String(activeBeforeUpload.trainee.id) !== traineeId) {
+          throw new Error("شاگرد هنگام بررسی تغییر کرد؛ عملیات متوقف شد.");
+        }
         const { data: oldRow, error: readError } = await ctx.sb.from(TABLE)
-          .select("id,storage_path").eq("id", id).eq("trainee_id", traineeId).single();
+          .select("id,storage_path,analysis_date").eq("id", id).eq("trainee_id", traineeId).single();
         if (readError) throw readError;
         if (!oldRow?.storage_path) throw new Error("مسیر فایل قبلی پیدا نشد؛ هیچ چیزی تغییر نکرد.");
-
         const { data: userData, error: userError } = await ctx.sb.auth.getUser();
         if (userError) throw userError;
         const coachId = userData?.user?.id;
@@ -243,28 +270,25 @@
         const { error: uploadError } = await ctx.sb.storage.from(BUCKET)
           .upload(newPath, file, { contentType: "application/pdf", upsert: false });
         if (uploadError) throw uploadError;
-
         const active = currentCoachAndTrainee();
-        if (!active || String(active.trainee.id) !== traineeId) {
-          throw new Error("شاگرد هنگام بارگذاری تغییر کرد؛ فایل جدید ثبت نشد.");
-        }
+        if (!active || String(active.trainee.id) !== traineeId) throw new Error("شاگرد هنگام بارگذاری تغییر کرد؛ ثبت متوقف شد.");
         const { data: updated, error: updateError } = await ctx.sb.from(TABLE)
           .update({
             storage_path: newPath, original_file_name: file.name,
             mime_type: "application/pdf", file_size_bytes: file.size,
-            parse_status: "pending", extracted_metrics: {}
+            parse_status: "needs_review", extracted_metrics: metrics,
+            parse_error: null, coach_summary: null
           })
           .eq("id", id).eq("trainee_id", traineeId).select("id").maybeSingle();
         if (updateError) throw updateError;
         if (!updated?.id) throw new Error("رکورد آنالیز به‌روزرسانی نشد؛ فایل قبلی حفظ شد.");
-
         newPath = null;
         const { error: cleanupError } = await ctx.sb.storage.from(BUCKET).remove([oldRow.storage_path]);
         await refresh();
         const status = $("tgReportStatus");
         if (status) status.textContent = cleanupError
-          ? "آنالیز جدید جایگزین شد؛ اما پاک‌سازی فایل قدیمی ناموفق بود و باید جداگانه بررسی شود."
-          : "آنالیز با موفقیت جایگزین شد. تاریخ و جایگاه رکورد حفظ شدند و فایل قبلی پاک شد.";
+          ? "PDF جدید ثبت شد و اطلاعات استخراج‌شده برای بررسی مربی ذخیره شد؛ پاک‌سازی فایل قبلی ناموفق بود."
+          : "PDF جایگزین شد. اطلاعات استخراج‌شده در وضعیت بررسی مربی ذخیره شد؛ تاریخ و رکورد حفظ شدند.";
         if (cleanupError) console.error("Top Genesis old-file cleanup failed", cleanupError);
       } catch (e) {
         if (newPath) {
@@ -272,13 +296,13 @@
           if (cleanup.error) console.error("Top Genesis replacement rollback cleanup failed", cleanup.error);
         }
         alert("جایگزینی انجام نشد؛ آنالیز قبلی حفظ شد. " + (e?.message || String(e)));
+      } finally {
         button.disabled = false;
         button.textContent = "جایگزینی PDF";
       }
     }, { once: true });
     input.click();
   }
-
 
   async function deleteReport(button, id) {
     const ctx = currentCoachAndTrainee();
