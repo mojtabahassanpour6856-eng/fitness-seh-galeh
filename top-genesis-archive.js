@@ -126,10 +126,13 @@
       list.innerHTML = rows.map((r) => `
         <div style="display:flex;gap:8px;align-items:center;justify-content:space-between;flex-wrap:wrap;border:1px solid #eee2bf;border-radius:9px;padding:9px;margin:7px 0;background:#fff">
           <div><b>${esc(r.analysis_date)}</b><div style="font-size:12px">${esc(r.original_file_name)} · ${(Number(r.file_size_bytes)/1024/1024).toFixed(2)} MB</div><small>وضعیت: ${esc(r.parse_status)}</small></div>
-          <div style="display:flex;gap:6px;flex-wrap:wrap"><button type="button" data-tg-open="${esc(r.id)}" style="width:auto">مشاهده PDF</button><button type="button" data-tg-delete="${esc(r.id)}" style="width:auto;background:#a83232;color:#fff;border:0">حذف</button></div>
+          <div style="display:flex;gap:6px;flex-wrap:wrap"><button type="button" data-tg-open="${esc(r.id)}" style="width:auto">مشاهده PDF</button><button type="button" data-tg-replace="${esc(r.id)}" style="width:auto;background:#fff8e8;color:#765b2e;border:1px solid #d8b65d">جایگزینی PDF</button><button type="button" data-tg-delete="${esc(r.id)}" style="width:auto;background:#a83232;color:#fff;border:0">حذف</button></div>
         </div>`).join("");
       list.querySelectorAll("[data-tg-open]").forEach((button) => {
         button.addEventListener("click", () => openReport(button.getAttribute("data-tg-open")));
+      });
+      list.querySelectorAll("[data-tg-replace]").forEach((button) => {
+        button.addEventListener("click", () => replaceReport(button, button.getAttribute("data-tg-replace")));
       });
       list.querySelectorAll("[data-tg-delete]").forEach((button) => {
         button.addEventListener("click", () => deleteReport(button, button.getAttribute("data-tg-delete")));
@@ -195,6 +198,85 @@
       button.disabled = false;
       button.textContent = "ذخیره گزارش در آرشیو خصوصی";
     }
+  }
+
+
+
+  async function replaceReport(button, id) {
+    const initial = currentCoachAndTrainee();
+    if (!initial) return alert("نشست مربی یا شاگرد انتخاب‌شده معتبر نیست.");
+    const traineeId = String(initial.trainee.id);
+    const input = document.createElement("input");
+    input.type = "file";
+    input.accept = "application/pdf,.pdf";
+    input.style.display = "none";
+    document.body.appendChild(input);
+    input.addEventListener("change", async () => {
+      const file = input.files?.[0];
+      input.remove();
+      if (!file) return;
+      if (!(file.type === "application/pdf" || file.name.toLowerCase().endsWith(".pdf"))) {
+        alert("فقط فایل PDF پذیرفته می‌شود."); return;
+      }
+      if (file.size <= 0 || file.size > MAX_BYTES) {
+        alert("حجم فایل باید بیشتر از صفر و حداکثر ۱۰ مگابایت باشد."); return;
+      }
+      const ctx = currentCoachAndTrainee();
+      if (!ctx || String(ctx.trainee.id) !== traineeId) {
+        alert("شاگرد انتخاب‌شده تغییر کرده است؛ عملیات متوقف شد."); return;
+      }
+      button.disabled = true;
+      button.textContent = "در حال جایگزینی…";
+      let newPath = null;
+      try {
+        const { data: oldRow, error: readError } = await ctx.sb.from(TABLE)
+          .select("id,storage_path").eq("id", id).eq("trainee_id", traineeId).single();
+        if (readError) throw readError;
+        if (!oldRow?.storage_path) throw new Error("مسیر فایل قبلی پیدا نشد؛ هیچ چیزی تغییر نکرد.");
+
+        const { data: userData, error: userError } = await ctx.sb.auth.getUser();
+        if (userError) throw userError;
+        const coachId = userData?.user?.id;
+        if (!coachId) throw new Error("نشست مربی معتبر نیست؛ دوباره وارد شوید.");
+        const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, "_").slice(-90) || "report.pdf";
+        newPath = coachId + "/" + traineeId + "/" + crypto.randomUUID() + "-" + safeName;
+        const { error: uploadError } = await ctx.sb.storage.from(BUCKET)
+          .upload(newPath, file, { contentType: "application/pdf", upsert: false });
+        if (uploadError) throw uploadError;
+
+        const active = currentCoachAndTrainee();
+        if (!active || String(active.trainee.id) !== traineeId) {
+          throw new Error("شاگرد هنگام بارگذاری تغییر کرد؛ فایل جدید ثبت نشد.");
+        }
+        const { data: updated, error: updateError } = await ctx.sb.from(TABLE)
+          .update({
+            storage_path: newPath, original_file_name: file.name,
+            mime_type: "application/pdf", file_size_bytes: file.size,
+            parse_status: "pending", extracted_metrics: {}
+          })
+          .eq("id", id).eq("trainee_id", traineeId).select("id").maybeSingle();
+        if (updateError) throw updateError;
+        if (!updated?.id) throw new Error("رکورد آنالیز به‌روزرسانی نشد؛ فایل قبلی حفظ شد.");
+
+        newPath = null;
+        const { error: cleanupError } = await ctx.sb.storage.from(BUCKET).remove([oldRow.storage_path]);
+        await refresh();
+        const status = $("tgReportStatus");
+        if (status) status.textContent = cleanupError
+          ? "آنالیز جدید جایگزین شد؛ اما پاک‌سازی فایل قدیمی ناموفق بود و باید جداگانه بررسی شود."
+          : "آنالیز با موفقیت جایگزین شد. تاریخ و جایگاه رکورد حفظ شدند و فایل قبلی پاک شد.";
+        if (cleanupError) console.error("Top Genesis old-file cleanup failed", cleanupError);
+      } catch (e) {
+        if (newPath) {
+          const cleanup = await ctx.sb.storage.from(BUCKET).remove([newPath]);
+          if (cleanup.error) console.error("Top Genesis replacement rollback cleanup failed", cleanup.error);
+        }
+        alert("جایگزینی انجام نشد؛ آنالیز قبلی حفظ شد. " + (e?.message || String(e)));
+        button.disabled = false;
+        button.textContent = "جایگزینی PDF";
+      }
+    }, { once: true });
+    input.click();
   }
 
 
