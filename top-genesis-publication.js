@@ -460,7 +460,6 @@
   async function deletePublishedReport(row, button) {
     if (!currentCoach()) return alert("حذف گزارش فقط از حساب مربی امکان‌پذیر است.");
     const traineeId = currentTraineeId();
-    const coachId = window.authProfile?.user_id || window.authProfile?.id || null;
     const epoch = contextEpoch;
     if (!traineeId || String(row.trainee_id) !== String(traineeId) || !row.id || !row.report_storage_path) {
       return alert("گزارش یا شاگرد انتخاب‌شده معتبر نیست؛ حذف انجام نشد.");
