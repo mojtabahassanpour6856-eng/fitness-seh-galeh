@@ -46,6 +46,11 @@ export async function processOneRecoveryOutboxItem({
   });
   const lease = oneRow(claimed);
   if (!lease) return { status: 'idle' };
+  if (typeof lease.provider_idempotency_key !== 'string' ||
+      lease.provider_idempotency_key.length < 1 ||
+      lease.provider_idempotency_key.length > 200) {
+    return { status: 'invalid_lease' };
+  }
   const fencedLease = { ...lease, workerId };
 
   const heartbeat = await rpc(admin, 'recovery_outbox_heartbeat', {
