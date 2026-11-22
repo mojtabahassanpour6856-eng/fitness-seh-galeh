@@ -208,7 +208,7 @@ RETURNS boolean
 LANGUAGE plpgsql
 SECURITY DEFINER
 SET search_path = ''
-AS $
+AS $$
 BEGIN
   UPDATE public.trainee_password_recovery_requests
   SET delivery_outcome = 'attempting', delivery_attempted_at = now(), updated_at = now()
@@ -217,7 +217,7 @@ BEGIN
     AND delivery_outcome = 'pending';
   RETURN FOUND;
 END;
-$;
+$$;
 
 CREATE OR REPLACE FUNCTION recovery_private.finish_recovery_delivery(
   p_request_id uuid,
@@ -228,7 +228,7 @@ RETURNS boolean
 LANGUAGE plpgsql
 SECURITY DEFINER
 SET search_path = ''
-AS $
+AS $$
 BEGIN
   IF p_outcome IS NULL OR p_outcome NOT IN ('sent','confirmed_failure','unknown') THEN
     RAISE EXCEPTION 'Invalid delivery outcome';
@@ -249,7 +249,7 @@ BEGIN
 
   RETURN FOUND;
 END;
-$;
+$$;
 
 CREATE OR REPLACE FUNCTION recovery_private.claim_recovery_reset(
   p_request_id uuid,
