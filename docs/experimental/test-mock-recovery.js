@@ -260,9 +260,9 @@ assert.throws(() => s.verify({requestId:'r1',traineeId:'t1',code:'1111'}),/Inval
 s.verify({requestId:'r1',traineeId:'t1',code});
 assert.equal(s.requests.get('r1').state,STATES.VERIFIED);
 assert.throws(() => s.verify({requestId:'r1',traineeId:'t1',code}),/Invalid state/);
-s.complete({requestId:'r1',traineeId:'t1'});
-assert.equal(s.requests.get('r1').state,STATES.COMPLETED);
-assert.throws(() => s.complete({requestId:'r1',traineeId:'t1'}),/Not verified/);
+assert.equal(s.applyPasswordReset({requestId:'r1',traineeId:'t1',operationId:'r1-reset',
+  updateAuth:()=>({ok:true})}).state,STATES.COMPLETED);
+assert.throws(() => s.complete({requestId:'r1',traineeId:'t1'}),/Direct completion is disabled/);
 const exp=sys();
 exp.request({traineeId:'t3',coachId:'c3',requestId:'r3'});
 exp.approve({requestId:'r3',authenticatedCoachId:'c3'});
