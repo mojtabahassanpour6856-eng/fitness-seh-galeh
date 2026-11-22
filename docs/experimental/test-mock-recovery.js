@@ -138,6 +138,29 @@ assert.throws(()=>transitionIsolation.completeForAuthenticatedTrainee({requestId
   e=>e.message==='Recovery request unavailable');
 assert.equal(transitionIsolation.completeForAuthenticatedTrainee({requestId:'iso-request',authenticatedTraineeId:'iso-trainee'}).state,STATES.COMPLETED);
 
+
+const replayGuard = new MockRecovery({secret,now:()=>now,cooldownMs:0});
+replayGuard.request({traineeId:'replay-trainee',coachId:'replay-coach',requestId:'replay-request'});
+replayGuard.approve({requestId:'replay-request',authenticatedCoachId:'replay-coach'});
+const replayCode = replayGuard.mockMessages.at(-1).body.match(/(\\d{4})$/)[1];
+assert.equal(replayGuard.verifyForAuthenticatedTrainee({requestId:'replay-request',authenticatedTraineeId:'replay-trainee',code:replayCode}).state,STATES.VERIFIED);
+assert.throws(()=>replayGuard.verifyForAuthenticatedTrainee({requestId:'replay-request',authenticatedTraineeId:'replay-trainee',code:replayCode}),/Invalid state/,
+  'the same code must not verify twice');
+assert.equal(replayGuard.completeForAuthenticatedTrainee({requestId:'replay-request',authenticatedTraineeId:'replay-trainee'}).state,STATES.COMPLETED);
+assert.throws(()=>replayGuard.completeForAuthenticatedTrainee({requestId:'replay-request',authenticatedTraineeId:'replay-trainee'}),/Not verified/,
+  'a consumed recovery grant must not complete twice');
+assert.equal(replayGuard.requests.get('replay-request').state,STATES.COMPLETED,
+  'replay attempts must not move a completed recovery backwards');
+
+const cancelGuard = new MockRecovery({secret,now:()=>now,cooldownMs:0});
+cancelGuard.request({traineeId:'cancel-owner',coachId:'cancel-coach',requestId:'cancel-owned'});
+assert.throws(()=>cancelGuard.cancelForAuthenticatedTrainee({requestId:'cancel-owned',authenticatedTraineeId:'intruder'}),
+  e=>e.message==='Recovery request unavailable');
+assert.equal(cancelGuard.requests.get('cancel-owned').state,STATES.REQUESTED);
+assert.equal(cancelGuard.cancelForAuthenticatedTrainee({requestId:'cancel-owned',authenticatedTraineeId:'cancel-owner'}).state,STATES.CANCELLED);
+assert.throws(()=>cancelGuard.cancelForAuthenticatedTrainee({requestId:'cancel-owned',authenticatedTraineeId:'cancel-owner'}),/Invalid state/,
+  'cancel is a one-way transition');
+
 const s = sys();
 assert.equal(s.request({traineeId:'t1',coachId:'c1',requestId:'r1'}).state, STATES.REQUESTED);
 const firstRequestSnapshot = s.requests.get('r1');
