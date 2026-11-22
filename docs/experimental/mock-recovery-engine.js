@@ -44,7 +44,7 @@ class MockRecovery {
   }
   request({ traineeId, coachId, requestId }) {
     if (!traineeId || !coachId || !requestId) throw new Error('Required identifiers missing');
-    if (this.requests.has(requestId)) return this.requests.get(requestId); // idempotent request key
+    if (this.requests.has(requestId)) {\n      const existing = this.requests.get(requestId);\n      if (existing.traineeId !== traineeId || existing.coachId !== coachId) throw new Error('Idempotency key conflict');\n      return existing; // safe retry by the same identities only\n    }
     const last = this.lastRequestAt.get(traineeId) || 0;
     if (this.now() - last < this.cooldownMs) throw new Error('Cooldown active');
     const r = { requestId, traineeId, coachId, state: STATES.REQUESTED, createdAt: this.now(), attempts: 0 };
