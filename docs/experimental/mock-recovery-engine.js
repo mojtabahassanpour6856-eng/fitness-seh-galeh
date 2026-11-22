@@ -66,8 +66,8 @@ class MockRecovery {
         throw new Error('Active recovery request exists');
       }
     }
-    const last = this.lastRequestAt.get(traineeId) || 0;
-    if (this.now() - last < this.cooldownMs) throw new Error('Cooldown active');
+    const last = this.lastRequestAt.get(traineeId);
+    if (last !== undefined && this.now() - last < this.cooldownMs) throw new Error('Cooldown active');
     const history = (this.requestHistory.get(traineeId) || []).filter(ts => this.now() - ts < this.requestWindowMs);
     if (history.length >= this.maxRequestsPerWindow) throw new Error('Request rate limit reached');
     const r = { requestId, traineeId, coachId, state: STATES.REQUESTED, createdAt: this.now(), attempts: 0 };
@@ -75,7 +75,7 @@ class MockRecovery {
     this.lastRequestAt.set(traineeId, this.now());
     history.push(this.now());
     this.requestHistory.set(traineeId, history);
-    return r;
+    return { ...r };
   }
   approve({ requestId, authenticatedCoachId }) {
     this.sweepExpired();
@@ -120,7 +120,7 @@ class MockRecovery {
     const r = this.#get(requestId);
     if (r.traineeId !== traineeId) throw new Error('Trainee ownership check failed');
     if (r.state !== STATES.CODE_ISSUED) throw new Error('Invalid state');
-    if (this.now() >= r.expiresAt) { r.state = STATES.EXPIRED; r.codeDigest = null; throw new Error('Code expired'); }
+    if (this.now() >= r.expiresAt) { r.state = STATES.EXPIRED; r.codeDigest = null; r.expiresAt = null; r.expiredAt = this.now(); throw new Error('Code expired'); }
     if (r.attempts >= this.maxAttempts) throw new Error('Attempt limit reached');
     if (typeof code !== 'string' || !/^\d{4}$/.test(code)) { r.attempts++; if (r.attempts >= this.maxAttempts) { r.state = STATES.EXPIRED; r.codeDigest = null; r.expiresAt = null; r.expiredAt = this.now(); } throw new Error('Invalid code'); }
     r.attempts++;
@@ -169,6 +169,7 @@ class MockRecovery {
         r.state = STATES.EXPIRED;
         r.expiredAt = now;
         r.codeDigest = null;
+        r.expiresAt = null;
         expiredCount++;
       }
     }
