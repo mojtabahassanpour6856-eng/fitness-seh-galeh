@@ -126,7 +126,11 @@ jobs:
       - name: Start disposable local Auth stack only
         run: |
           cd /tmp/recovery-auth-local
-          supabase start -x studio,realtime,storage-api,imgproxy,edge-runtime,logflare,vector,postgres-meta,supavisor,mailpit
+          if ! supabase start -x studio,realtime,storage-api,imgproxy,edge-runtime,logflare,vector,postgres-meta,supavisor,mailpit > /tmp/recovery-auth-supabase-start.log 2>&1; then
+            echo "Disposable local Auth stack failed to start; startup output is intentionally redacted."
+            exit 1
+          fi
+          echo "Disposable local Auth stack started; startup output redacted."
       - name: Export loopback-only local Auth credentials
         shell: bash
         run: |
