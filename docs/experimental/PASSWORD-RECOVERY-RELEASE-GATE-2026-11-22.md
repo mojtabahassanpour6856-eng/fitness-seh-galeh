@@ -123,3 +123,12 @@ Commit: `964007729b590741fa5b6088d555c225aa8731bc`.
 
 ## Next real integration prerequisites
 The full HTTP/Auth matrix must not be attempted using ordinary trainee accounts. It requires a dedicated disposable Test Auth user, a matching isolated trainee row and coach assignment, a test-only SMS adapter that cannot reach Mediana, and explicit approval for any Test database writes or function deployment. Until those prerequisites exist, only non-mutating HTTP probes and disposable local fixtures are appropriate.
+
+
+## HTTP smoke harness review and execution limitation (2026-11-22)
+- Reviewed the first smoke-test draft and tightened its CORS assertions: it now requires the exact configured app origin to be allowed and separately verifies that a synthetic unapproved origin is not granted access. This avoids the flawed assumption that a synthetic origin itself should be allowlisted.
+- The harness still sends only OPTIONS and GET; it has no POST path and cannot create or mutate recovery requests.
+- A live, non-mutating network probe was attempted from the available execution environment, but DNS resolution for the Supabase Test host failed before any HTTP connection could be established. Therefore no HTTP status/header result was obtained and no endpoint behavior is claimed as tested.
+- Updated harness commit: `06bf7c89160100dab408c1e1209124ef870435a9`.
+- Required environment variables when running from a network-enabled trusted environment: `RECOVERY_TEST_FUNCTION_URL` and `RECOVERY_ALLOWED_ORIGIN`. Use the actual approved Test app origin; do not use a wildcard.
+- This does not alter the release gate: live HTTP/Auth integration remains unverified, and Production remains NOT READY.
