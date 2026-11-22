@@ -18,6 +18,7 @@ const trainee='20000000-0000-4000-8000-000000000001';
 const trainee2='20000000-0000-4000-8000-000000000002';
 const trainee3='20000000-0000-4000-8000-000000000003';
 const trainee4='20000000-0000-4000-8000-000000000004';
+const trainee5='20000000-0000-4000-8000-000000000005';
 const req1='30000000-0000-4000-8000-000000000001';
 const req2='30000000-0000-4000-8000-000000000002';
 const req3='30000000-0000-4000-8000-000000000003';
@@ -82,7 +83,8 @@ async function main() {
       ('20000000-0000-4000-8000-000000000001','10000000-0000-4000-8000-000000000001','10000000-0000-4000-8000-000000000003','active','+989123456789'),
       ('20000000-0000-4000-8000-000000000002','10000000-0000-4000-8000-000000000001','10000000-0000-4000-8000-000000000003','active','+989123456789'),
       ('20000000-0000-4000-8000-000000000003','10000000-0000-4000-8000-000000000002','10000000-0000-4000-8000-000000000003','active','+989123456789'),
-      ('20000000-0000-4000-8000-000000000004','10000000-0000-4000-8000-000000000002','10000000-0000-4000-8000-000000000003','active','+989123456789');
+      ('20000000-0000-4000-8000-000000000004','10000000-0000-4000-8000-000000000002','10000000-0000-4000-8000-000000000003','active','+989123456789'),
+      ('20000000-0000-4000-8000-000000000005','10000000-0000-4000-8000-000000000002','10000000-0000-4000-8000-000000000003','active','+989123450000');
     INSERT INTO public.trainee_password_recovery_requests(id,trainee_id,phone_normalized,status)
     VALUES
       ('30000000-0000-4000-8000-000000000001','20000000-0000-4000-8000-000000000001','+989123456789','pending'),
@@ -110,10 +112,24 @@ async function main() {
       has_schema_privilege('service_role','recovery_private','USAGE') AS service_usage,
       has_schema_privilege('anon','recovery_private','USAGE') AS anon_usage,
       has_function_privilege('service_role','recovery_private.claim_recovery_reset(uuid,text,uuid)','EXECUTE') AS service_execute,
-      has_function_privilege('anon','recovery_private.claim_recovery_reset(uuid,text,uuid)','EXECUTE') AS anon_execute
+      has_function_privilege('anon','recovery_private.claim_recovery_reset(uuid,text,uuid)','EXECUTE') AS anon_execute,
+      has_function_privilege('service_role','recovery_private.submit_recovery_request(text)','EXECUTE') AS service_request_execute,
+      has_function_privilege('anon','recovery_private.submit_recovery_request(text)','EXECUTE') AS anon_request_execute
   `);
-  assert.deepEqual(acl.rows[0],{service_usage:true,anon_usage:false,service_execute:true,anon_execute:false});
+  assert.deepEqual(acl.rows[0],{service_usage:true,anon_usage:false,service_execute:true,anon_execute:false,service_request_execute:true,anon_request_execute:false});
   console.log('PASS: recovery RPC schema and execute privileges are restricted to service_role');
+
+  const submits=await Promise.all(Array.from({length:8},()=>callAsService(
+    'SELECT recovery_private.submit_recovery_request($1) AS inserted',['+989123450000']
+  )));
+  assert.equal(submits.filter(x=>x.rows[0].inserted===true).length,1);
+  let submitted=await pool.query("SELECT count(*)::int AS n FROM public.trainee_password_recovery_requests WHERE trainee_id=$1 AND status='pending'",[trainee5]);
+  assert.equal(submitted.rows[0].n,1);
+  r=await callAsService('SELECT recovery_private.submit_recovery_request($1) AS inserted',['+989123456789']);
+  assert.equal(r.rows[0].inserted,false,'ambiguous duplicate phone records must not select an account');
+  r=await callAsService('SELECT recovery_private.submit_recovery_request($1) AS inserted',['+989999999999']);
+  assert.equal(r.rows[0].inserted,false,'unknown phone must not create a request');
+  console.log('PASS: concurrent request submissions create one row; ambiguous/unknown phones create none');
 
   let r=await callAsService(
     'SELECT recovery_private.coach_review_recovery_request($1,$2,$3,$4,$5,$6) AS result',
