@@ -10,6 +10,11 @@ const handler = await readFile(handlerPath, 'utf8');
 assert.match(adapterPath.pathname, /\/docs\/experimental\//);
 assert.match(adapter, /SUPABASE_SERVICE_ROLE_KEY/);
 assert.match(adapter, /SUPABASE_ANON_KEY/);
+assert.match(adapter, /RECOVERY_HMAC_KEYS: Deno\.env\.get\("RECOVERY_HMAC_KEYS"\)/);
+assert.match(adapter, /RECOVERY_DELIVERY_KEYS: Deno\.env\.get\("RECOVERY_DELIVERY_KEYS"\)/);
+assert.match(adapter, /RECOVERY_DELIVERY_KEY_VERSION: Deno\.env\.get\("RECOVERY_DELIVERY_KEY_VERSION"\)/);
+assert.doesNotMatch(adapter, /RECOVERY_HMAC_SECRET/);
+
 assert.match(adapter, /Deno\.serve\(handler\)/);
 assert.match(adapter, /Intentionally no deliveryAdapter/);
 assert.doesNotMatch(adapter, /deploy_edge_function/);
