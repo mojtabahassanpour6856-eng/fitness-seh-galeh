@@ -52,8 +52,6 @@ assert.equal(grantSweep.request({traineeId:'gs',coachId:'gc',requestId:'gs2'}).s
 
 
 let unknownNow = 18000000;
-const unknownExpiry = new MockRecovery({secret,now:()=>unknownNow,cooldownMs:0,requestTTLms:500});
-unknownExpiry.request({traineeId:'ux',coachId:'uc',requestId:'ux1'});
 const unknownDelivery = new MockRecovery({secret,now:()=>unknownNow,cooldownMs:0,requestTTLms:500,delivery:()=>{throw new Error('timeout');}});
 unknownDelivery.request({traineeId:'uy',coachId:'uc',requestId:'uy1'});
 assert.equal(unknownDelivery.approve({requestId:'uy1',authenticatedCoachId:'uc'}).delivery,'UNKNOWN');
