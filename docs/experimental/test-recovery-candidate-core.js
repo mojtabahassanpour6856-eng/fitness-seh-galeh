@@ -60,10 +60,14 @@ import {
       k1:'candidate-test-secret-longer-than-32-bytes'
     }),
     RECOVERY_HMAC_KEY_VERSION:'k1',
-    RECOVERY_ALLOWED_ORIGINS:'https://app.test,https://admin.app.test'
+    RECOVERY_ALLOWED_ORIGINS:'https://app.test,https://admin.app.test',
+    RECOVERY_DELIVERY_KEYS: JSON.stringify({d1:Buffer.alloc(32,7).toString('base64')}),
+    RECOVERY_DELIVERY_KEY_VERSION:'d1'
   });
   assert.equal(configured.hmac, 'candidate-test-secret-longer-than-32-bytes');
   assert.equal(configured.hmacKeys.k0, 'older-candidate-test-secret-longer-than-32-bytes');
+  assert.equal(configured.deliveryKeyVersion,'d1');
+  assert.equal(configured.deliveryKeys.d1,Buffer.alloc(32,7).toString('base64'));
   assert.deepEqual(configured.origins, ['https://app.test','https://admin.app.test']);
 }
 console.log('PASS: candidate crypto, phone normalization, generic response, CORS allowlist, and fail-closed Auth outcome primitives.');
