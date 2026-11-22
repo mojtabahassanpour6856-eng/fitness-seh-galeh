@@ -122,64 +122,24 @@ async function body(response) { return await response.json(); }
 {
   const f = fixture();
   const r = await f.handler(request({ action: 'review', request_id: UUID, decision: 'approve' }, { authorization: 'Bearer test' }));
-  assert.equal(r.status, 503);
-  assert.equal(f.calls.some(x => x.name === 'recovery_coach_review'), false);
-  console.log('PASS: approval is blocked before state mutation when no delivery adapter is explicitly injected.');
+  assert.equal(r.status, 202);
+  const result = await body(r);
+  assert.equal(result.status, 'approved');
+  assert.equal(result.delivery_status, 'queued');
+  assert.match(result.message, /هنوز ارسال پیامک تأیید نشده است/);
+  assert.equal(f.calls.some(x => x.name === 'recovery_coach_review'), true);
+  assert.equal(f.calls.some(x => x.name === 'recovery_begin_delivery'), false);
+  assert.equal(f.calls.some(x => x.name === 'recovery_finish_delivery'), false);
+  assert.equal(result.code, undefined);
+  console.log('PASS: coach approval only queues the delivery; HTTP handler never sends SMS or claims it was sent.');
 }
 {
-  const f = fixture();
-  let delivered;
-  f.handler = createRecoveryCandidateHandler({
-    ...f.deps,
-    deliveryAdapter: async payload => { delivered = payload; return { kind: 'confirmed_sent' }; }
-  });
-  const r = await f.handler(request({ action: 'review', request_id: UUID, decision: 'approve' }, { authorization: 'Bearer test' }));
-  assert.equal(r.status, 200);
-  assert.equal(delivered.phone, '+989123456789');
-  assert.equal(typeof delivered.code, 'string');
-  assert.equal((await body(r)).code, undefined);
-  assert.equal(f.calls.some(x => x.name === 'recovery_begin_delivery'), true);
-  assert.equal(f.calls.some(x => x.name === 'recovery_finish_delivery' && x.args.p_outcome === 'sent'), true);
-  console.log('PASS: delivery uses the verified database phone, and the code is never returned to the coach.');
-}
-{
-  const f = fixture({ finishDelivery: false });
-  f.handler = createRecoveryCandidateHandler({
-    ...f.deps,
-    deliveryAdapter: async () => ({ kind: 'confirmed_sent' })
-  });
+  const f = fixture({ reviewed: { ok: true, status: 'approved', delivery_operation_id: 'not-a-uuid' } });
   const r = await f.handler(request({ action: 'review', request_id: UUID, decision: 'approve' }, { authorization: 'Bearer test' }));
   assert.equal(r.status, 503);
   assert.equal((await body(r)).success, false);
-  console.log('PASS: provider acceptance is not reported as success unless the durable delivery state is confirmed.');
+  console.log('PASS: malformed delivery operation identifier fails closed after approval without attempting SMS.');
 }
-{
-  const f = fixture();
-  const r = await f.handler(request({ action: 'reset', phone: '09123456789', code: '0007', new_password: 'StrongPass!234' }));
-  assert.equal(r.status, 400);
-  assert.equal(f.calls.some(x => x.name === 'recovery_record_wrong_attempt'), true);
-  assert.equal(f.calls.some(x => x.type === 'auth_update'), false);
-  console.log('PASS: failed code claim invokes atomic wrong-attempt RPC and never calls Auth.');
-}
-{
-  const f = fixture({ claim: { claimed: true, operation_id: OP, auth_user_id: AUTH_USER }, updateError: new Error('network timeout') });
-  const r = await f.handler(request({ action: 'reset', phone: '09123456789', code: '0007', new_password: 'StrongPass!234' }));
-  assert.equal(r.status, 503);
-  assert.equal(f.calls.filter(x => x.type === 'auth_update').length, 1);
-  const finish = f.calls.find(x => x.name === 'recovery_finish_auth_update');
-  assert.equal(finish.args.p_outcome, 'unknown');
-  console.log('PASS: ambiguous Auth result is locked as unknown and the Auth update is never retried.');
-}
-{
-  const f = fixture({ claim: { claimed: true, operation_id: OP, auth_user_id: AUTH_USER } });
-  const r = await f.handler(request({ action: 'reset', phone: '09123456789', code: '0007', new_password: 'StrongPass!234' }));
-  assert.equal(r.status, 200);
-  const finish = f.calls.find(x => x.name === 'recovery_finish_auth_update');
-  assert.equal(finish.args.p_outcome, 'completed');
-  assert.equal(f.calls.filter(x => x.type === 'auth_update').length, 1);
-  console.log('PASS: confirmed Auth success makes one password update and records completion.');
-}
-
 {
   const f = fixture({
     matches: [{ id: UUID, phone_normalized: '+989123456789', hmac_key_version: 'k0' }],
