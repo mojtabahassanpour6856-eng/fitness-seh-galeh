@@ -16,12 +16,21 @@ const wrappers = [
   'recovery_finish_delivery',
   'recovery_claim_reset',
   'recovery_begin_auth_update',
-  'recovery_finish_auth_update',\n  'recovery_outbox_claim',\n  'recovery_outbox_heartbeat',\n  'recovery_outbox_begin_send',\n  'recovery_outbox_finish',\n  'recovery_outbox_reconcile_expired'
+  'recovery_finish_auth_update'
 ];
 for (const name of wrappers) {
   assert.match(migration, new RegExp('CREATE OR REPLACE FUNCTION public\\.' + name + '\\s*\\('), name + ' wrapper must exist');
   assert.match(handler, new RegExp("'" + name + "'"), name + ' must be called by handler');
   assert.match(migration, new RegExp('GRANT EXECUTE ON FUNCTION public\\.' + name), name + ' must have explicit grant');
+}
+
+const workerWrappers = [
+  'recovery_outbox_claim','recovery_outbox_heartbeat','recovery_outbox_begin_send',
+  'recovery_outbox_finish','recovery_outbox_reconcile_expired'
+];
+for (const name of workerWrappers) {
+  assert.match(migration, new RegExp('CREATE OR REPLACE FUNCTION public\\.' + name + '\\s*\\('), name + ' worker wrapper must exist');
+  assert.match(migration, new RegExp('GRANT EXECUTE ON FUNCTION public\\.' + name), name + ' worker wrapper must be service-role granted');
 }
 for (const column of [
   'operation_id','processing_started_at','auth_outcome','auth_attempted_at',
