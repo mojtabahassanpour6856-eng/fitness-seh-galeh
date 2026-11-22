@@ -39,7 +39,7 @@ Status: production design requirements only. No live auth integration or session
 10. No logs, analytics, or client errors contain plaintext password, code, reset grant, or full phone number.
 
 ## Current mock limitations
-The current MockRecovery fixture accepts identity values as function arguments and its complete() method only changes an in-memory state. It has no authentication middleware, trusted account/coach directory, reset grant, password provider, session store, or revocation mechanism. It therefore cannot validate any of the requirements above. Never expose this fixture as an endpoint or use it to change a real password.
+The current MockRecovery fixture is an in-memory state machine with test-only identity arguments and callback seams. Direct `complete()` and its legacy authenticated wrapper are disabled; `applyPasswordResetForAuthenticatedTrainee()` requires an explicit mock Auth result and is not real authentication middleware. The fixture has no durable ledger, trusted account/coach directory, real password provider, real session store, or revocation mechanism. It therefore cannot validate the production requirements above. Never expose this fixture as an endpoint or use it to change a real password.
 
 ## Coach reassignment race
 - Resolve the authenticated coach from the server-side session; never accept an actor identity from the request body.
@@ -48,7 +48,7 @@ The current MockRecovery fixture accepts identity values as function arguments a
 - Tests must cover reassignment between request and approval, reassignment between approval and dispatch, and cross-coach access after reassignment.
 
 ## Authenticated-context transition adapters (mock only)
-The experimental fixture now provides wrappers for coach approval/rejection and trainee verification/completion/cancellation. Each wrapper expects the actor ID to have been resolved by trusted server middleware and normalizes missing-request and wrong-owner failures to a generic unavailable response. These wrappers are test seams, not authentication middleware: production must not accept actor IDs from request JSON, and must enforce ownership atomically in persistent storage for every transition.
+The experimental fixture provides wrappers for coach approval/rejection and trainee verification, Auth-backed reset, and cancellation. The legacy completion wrapper is deliberately disabled. Each active wrapper expects the actor ID to have been resolved by trusted server middleware and normalizes missing-request and wrong-owner failures to a generic unavailable response. These wrappers are test seams, not authentication middleware: production must not accept actor IDs from request JSON, and must enforce ownership atomically in persistent storage for every transition.
 
 ## Single-use transitions and concurrency requirements
 - The mock verifies sequential replay resistance: a recovery code cannot verify twice, a consumed grant cannot complete twice, and cancellation is terminal.
