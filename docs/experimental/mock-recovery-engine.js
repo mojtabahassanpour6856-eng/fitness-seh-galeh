@@ -32,13 +32,14 @@ function safeEqualHex(a, b) {
 }
 
 class MockRecovery {
-  constructor({ secret, now = () => Date.now(), codeTTLms = 24 * 60 * 60_000, maxAttempts = 5, cooldownMs = 60_000, delivery = () => ({ ok: true }) } = {}) {
+  constructor({ secret, now = () => Date.now(), codeTTLms = 24 * 60 * 60_000, maxAttempts = 5, cooldownMs = 60_000, maxDeliveryAttempts = 3, delivery = () => ({ ok: true }) } = {}) {
     this.secret = secret;
     this.now = now;
     this.codeTTLms = codeTTLms;
     this.maxAttempts = maxAttempts;
     this.cooldownMs = cooldownMs;
     this.delivery = delivery;
+    this.maxDeliveryAttempts = maxDeliveryAttempts;
     this.requests = new Map();
     this.lastRequestAt = new Map();
     this.mockMessages = [];
@@ -72,8 +73,10 @@ class MockRecovery {
     if (r.coachId !== authenticatedCoachId) throw new Error('Coach ownership check failed');
     // Double-click/retry is idempotent: do not generate or deliver a second code.
     if (r.state === STATES.CODE_ISSUED) return { requestId, state: r.state, expiresAt: r.expiresAt, delivery: 'MOCK_ONLY', idempotent: true };
-    if (r.state !== STATES.REQUESTED) throw new Error('Invalid state');
-    r.state = STATES.APPROVED; r.approvedAt = this.now();
+    if (![STATES.REQUESTED, STATES.APPROVED].includes(r.state)) throw new Error('Invalid state');
+    if ((r.deliveryAttempts || 0) >= this.maxDeliveryAttempts) throw new Error('Delivery attempt limit reached');
+    if (r.state === STATES.REQUESTED) { r.state = STATES.APPROVED; r.approvedAt = this.now(); }
+    r.deliveryAttempts = (r.deliveryAttempts || 0) + 1;
     const code = generateCode();
     const outcome = this.delivery({ requestId, traineeId: r.traineeId, code });
     if (!outcome || outcome.ok !== true) {
