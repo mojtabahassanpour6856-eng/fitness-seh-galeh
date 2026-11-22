@@ -110,8 +110,18 @@ async function main(){
  assert.equal(secondOutbox.rows.length,1);
  const secondOutboxId=secondOutbox.rows[0].id;
  // Non-service roles cannot execute privileged RPCs or read the table.
- const acl=await pool.query("SELECT has_function_privilege('anon','recovery_private.claim_recovery_outbox(uuid,integer)','EXECUTE') AS anon_claim, has_function_privilege('authenticated','recovery_private.finish_recovery_outbox(uuid,uuid,bigint,text,text,text)','EXECUTE') AS auth_finish, has_table_privilege('anon','public.trainee_password_recovery_outbox','SELECT') AS anon_read");
- assert.deepEqual(acl.rows[0],{anon_claim:false,auth_finish:false,anon_read:false});
+ const acl=await pool.query(`SELECT
+   has_function_privilege('anon','recovery_private.claim_recovery_outbox(uuid,integer)','EXECUTE') AS anon_private_claim,
+   has_function_privilege('authenticated','recovery_private.finish_recovery_outbox(uuid,uuid,bigint,text,text,text)','EXECUTE') AS auth_private_finish,
+   has_function_privilege('anon','public.recovery_outbox_claim(uuid,integer)','EXECUTE') AS anon_public_claim,
+   has_function_privilege('authenticated','public.recovery_outbox_finish(uuid,uuid,bigint,text,text,text)','EXECUTE') AS auth_public_finish,
+   has_function_privilege('service_role','public.recovery_outbox_claim(uuid,integer)','EXECUTE') AS service_public_claim,
+   has_table_privilege('anon','public.trainee_password_recovery_outbox','SELECT') AS anon_read,
+   has_table_privilege('service_role','public.trainee_password_recovery_outbox','INSERT') AS service_direct_insert`);
+ assert.deepEqual(acl.rows[0],{
+   anon_private_claim:false,auth_private_finish:false,anon_public_claim:false,
+   auth_public_finish:false,service_public_claim:true,anon_read:false,service_direct_insert:false
+ });
  console.log('PASS: anonymous/authenticated roles cannot execute worker RPCs or read Outbox');
  // Add a second independent pending item only after the first item has been fenced and reconciled.
  // Second synthetic item: heartbeat extends a live lease and accepted send finalizes once.
