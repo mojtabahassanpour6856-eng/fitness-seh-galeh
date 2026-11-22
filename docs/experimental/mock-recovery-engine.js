@@ -8,7 +8,7 @@ const crypto = require('node:crypto');
 
 const STATES = Object.freeze({
   REQUESTED: 'REQUESTED', APPROVED: 'APPROVED', CODE_ISSUED: 'CODE_ISSUED',
-  VERIFIED: 'VERIFIED', COMPLETED: 'COMPLETED', REJECTED: 'REJECTED',
+  VERIFIED: 'VERIFIED', DELIVERY_PENDING: 'DELIVERY_PENDING', COMPLETED: 'COMPLETED', REJECTED: 'REJECTED',
   EXPIRED: 'EXPIRED', CANCELLED: 'CANCELLED'
 });
 
@@ -77,6 +77,7 @@ class MockRecovery {
     if ((r.deliveryAttempts || 0) >= this.maxDeliveryAttempts) throw new Error('Delivery attempt limit reached');
     if (r.state === STATES.REQUESTED) { r.state = STATES.APPROVED; r.approvedAt = this.now(); }
     r.deliveryAttempts = (r.deliveryAttempts || 0) + 1;
+    r.state = STATES.DELIVERY_PENDING; // blocks re-entrant approval during delivery callback
     const code = generateCode();
     const outcome = this.delivery({ requestId, traineeId: r.traineeId, code });
     if (!outcome || outcome.ok !== true) {
