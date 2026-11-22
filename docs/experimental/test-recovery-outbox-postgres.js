@@ -41,7 +41,7 @@ async function main(){
      'SELECT public.recovery_coach_review_encrypted($1,$2,$3,$4,$5,$6,$7,$8) AS result',
      reviewArgs(reviewRequest,coach,'c')
    );
-   assert.equal(rolled.rows[0].result.ok,true);
+   assert.equal(rolled.rows[0].result.ok,true,JSON.stringify(rolled.rows[0].result));
    const inside=await tx.query('SELECT count(*)::int AS n FROM public.trainee_password_recovery_outbox WHERE recovery_request_id=$1',[reviewRequest]);
    assert.equal(inside.rows[0].n,1,'Outbox row must exist inside the approval transaction');
    await tx.query('ROLLBACK');
