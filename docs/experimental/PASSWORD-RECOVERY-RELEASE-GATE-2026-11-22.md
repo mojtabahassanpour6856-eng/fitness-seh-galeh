@@ -301,3 +301,12 @@ A custom private schema may not be callable through Supabase PostgREST unless ex
 Workflow run `45049632108` completed **success**. Its PostgreSQL job exercised the wrappers under `SET ROLE service_role` and verified the restricted grants, along with all previous atomic request, delivery, reset, Auth ambiguity, migration preflight, and concurrency checks. This remains disposable PostgreSQL evidence only; actual PostgREST reachability and Edge Function integration are not yet tested.
 
 No Supabase API settings, schemas, functions, or live data were changed.
+
+
+## Candidate HTTP handler and Edge runtime adapter added — isolated tests PASS
+
+A dependency-injected handler candidate now connects the proposed HTTP actions to the service-role-only RPC wrappers. A separate Deno/Supabase adapter is stored only under `docs/experimental`, not in the deployable `supabase/functions` tree. It has no SMS provider configured; coach approval fails closed before changing request state when no delivery adapter is injected. Unit tests use only an in-memory synthetic delivery adapter and never send a real message.
+
+Workflow run `45050296581` completed **success** on commit `357852129e64ed3048a578161bcb8c20bf7eac07`; both jobs passed. The handler tests cover generic request responses, CORS rejection, disabled provider behavior, delivery to the database-verified phone only, no code disclosure to coach, wrong-code handling, one Auth update attempt, ambiguous Auth lockout, and confirmed success. The disposable PostgreSQL atomic RPC/concurrency suite also passed.
+
+**Remaining integration gates:** compile/check in the actual Supabase Edge Runtime; validate PostgREST wrapper reachability and service-role grants in Supabase Test; run real HTTP/authentication and coach authorization tests with isolated test identities; select and approve a delivery provider; test Auth session invalidation; verify logs, monitoring, reconciliation, and rollback. No Supabase project was changed, no function deployed, no real SMS sent, and no trainee password/session changed.
