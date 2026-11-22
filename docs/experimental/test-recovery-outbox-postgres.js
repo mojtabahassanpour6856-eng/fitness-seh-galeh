@@ -145,6 +145,10 @@ async function main(){
  assert.equal(l.outbox_id,secondOutboxId,'the second approved request must supply the next pending Outbox item');
  assert.equal(await asService("SELECT recovery_private.heartbeat_recovery_outbox($1,$2,$3,45) AS ok",[l.outbox_id,workerA,l.lease_generation]).then(r=>r.rows[0].ok),true);
  assert.equal(await asService("SELECT recovery_private.begin_recovery_outbox_send($1,$2,$3) AS ok",[l.outbox_id,workerA,l.lease_generation]).then(r=>r.rows[0].ok),true);
+ const fetchedPayload=await asService("SELECT * FROM public.recovery_outbox_fetch_payload($1,$2,$3)",[l.outbox_id,workerA,l.lease_generation]);
+ assert.equal(fetchedPayload.rowCount,1,'only the live send-start owner may fetch ciphertext');
+ assert.deepEqual(fetchedPayload.rows[0].delivery_payload,{v:1,alg:'A256GCM',kid:'d1',iv:'AAAAAAAAAAAAAAAA',ct:'AAAAAAAAAAAAAAAAAAAAAAAAAAA='});
+ assert.equal((await asService("SELECT * FROM public.recovery_outbox_fetch_payload($1,$2,$3)",[l.outbox_id,workerB,l.lease_generation])).rowCount,0,'wrong owner cannot fetch ciphertext');
  assert.equal(await asService("SELECT recovery_private.finish_recovery_outbox($1,$2,$3,'sent','mock-provider-id',NULL) AS ok",[l.outbox_id,workerA,l.lease_generation]).then(r=>r.rows[0].ok),true);
  assert.equal(await asService("SELECT recovery_private.finish_recovery_outbox($1,$2,$3,'sent','duplicate',NULL) AS ok",[l.outbox_id,workerA,l.lease_generation]).then(r=>r.rows[0].ok),false);
  const delivered=await pool.query("SELECT delivery_outcome,status FROM public.trainee_password_recovery_requests WHERE id=$1",[secondRequest]);
@@ -152,6 +156,10 @@ async function main(){
  assert.equal(delivered.rows[0].status,'approved');
  const outboxSent=await pool.query("SELECT status FROM public.trainee_password_recovery_outbox WHERE id=$1",[l.outbox_id]);
  assert.equal(outboxSent.rows[0].status,'sent');
+ const clearedSent=await pool.query('SELECT delivery_payload FROM public.trainee_password_recovery_requests WHERE id=$1',[secondRequest]);
+ const clearedOutbox=await pool.query('SELECT delivery_payload FROM public.trainee_password_recovery_outbox WHERE id=$1',[l.outbox_id]);
+ assert.equal(clearedSent.rows[0].delivery_payload,null,'request ciphertext must clear on sent');
+ assert.equal(clearedOutbox.rows[0].delivery_payload,null,'Outbox ciphertext must clear on sent');
  console.log('PASS: live lease heartbeat and atomic one-time successful completion');
 
  // Reuse the synthetic fixture with a fresh operation to exercise definite failure
@@ -178,6 +186,8 @@ async function main(){
  const failedOutbox=await pool.query("SELECT status,last_safe_error_code FROM public.trainee_password_recovery_outbox WHERE id=$1",[fl.outbox_id]);
  assert.equal(failedOutbox.rows[0].status,'failed');
  assert.equal(failedOutbox.rows[0].last_safe_error_code,'provider_rejected');
+ assert.equal((await pool.query('SELECT delivery_payload FROM public.trainee_password_recovery_requests WHERE id=$1',[secondRequest])).rows[0].delivery_payload,null);
+ assert.equal((await pool.query('SELECT delivery_payload FROM public.trainee_password_recovery_outbox WHERE id=$1',[fl.outbox_id])).rows[0].delivery_payload,null);
  console.log('PASS: definite delivery failure atomically clears token and returns request for coach review');
 
  // A fresh approval operation can be attempted; ambiguous delivery must remain unknown.
@@ -196,6 +206,8 @@ async function main(){
  assert.equal(ambiguousRequest.rows[0].delivery_outcome,'unknown');
  const ambiguousOutbox=await pool.query("SELECT status FROM public.trainee_password_recovery_outbox WHERE id=$1",[ul.outbox_id]);
  assert.equal(ambiguousOutbox.rows[0].status,'unknown');
+ assert.equal((await pool.query('SELECT delivery_payload FROM public.trainee_password_recovery_requests WHERE id=$1',[secondRequest])).rows[0].delivery_payload,null);
+ assert.equal((await pool.query('SELECT delivery_payload FROM public.trainee_password_recovery_outbox WHERE id=$1',[ul.outbox_id])).rows[0].delivery_payload,null);
  assert.equal((await asService("SELECT * FROM recovery_private.claim_recovery_outbox($1,30)",[workerA])).rowCount,0,
    'ambiguous provider result must never be automatically resent');
  console.log('PASS: ambiguous delivery outcome stays unknown and is never automatically retried');
