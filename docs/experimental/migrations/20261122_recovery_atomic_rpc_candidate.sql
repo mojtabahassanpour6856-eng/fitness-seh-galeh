@@ -24,7 +24,10 @@ ALTER TABLE public.trainee_password_recovery_requests
   ADD COLUMN IF NOT EXISTS auth_outcome text,
   ADD COLUMN IF NOT EXISTS auth_attempted_at timestamptz,
   ADD COLUMN IF NOT EXISTS auth_last_error_code text,
-  ADD COLUMN IF NOT EXISTS hmac_key_version text;
+  ADD COLUMN IF NOT EXISTS hmac_key_version text,
+  ADD COLUMN IF NOT EXISTS delivery_operation_id uuid,
+  ADD COLUMN IF NOT EXISTS delivery_outcome text,
+  ADD COLUMN IF NOT EXISTS delivery_attempted_at timestamptz;
 
 ALTER TABLE public.trainee_password_recovery_requests
   DROP CONSTRAINT IF EXISTS trainee_password_recovery_auth_outcome_check;
@@ -32,6 +35,13 @@ ALTER TABLE public.trainee_password_recovery_requests
   ADD CONSTRAINT trainee_password_recovery_auth_outcome_check
   CHECK (auth_outcome IS NULL OR auth_outcome IN
     ('claimed','attempting','completed','confirmed_no_change','unknown'));
+
+ALTER TABLE public.trainee_password_recovery_requests
+  DROP CONSTRAINT IF EXISTS trainee_password_recovery_delivery_outcome_check;
+ALTER TABLE public.trainee_password_recovery_requests
+  ADD CONSTRAINT trainee_password_recovery_delivery_outcome_check
+  CHECK (delivery_outcome IS NULL OR delivery_outcome IN
+    ('pending','attempting','sent','confirmed_failure','unknown'));
 
 ALTER TABLE public.trainee_password_recovery_requests
   DROP CONSTRAINT IF EXISTS trainee_password_recovery_auth_error_code_check;
@@ -73,6 +83,7 @@ DECLARE
   v_current_coach uuid;
   v_approval_status text;
   v_archived_at timestamptz;
+  v_delivery_operation_id uuid;
 BEGIN
   IF p_decision IS NULL OR p_decision NOT IN ('approve','reject') THEN
     RETURN jsonb_build_object('ok', false, 'reason', 'invalid_decision');
@@ -125,16 +136,19 @@ BEGIN
     RETURN jsonb_build_object('ok', false, 'reason', 'invalid_token_material');
   END IF;
 
+  v_delivery_operation_id := gen_random_uuid();
   UPDATE public.trainee_password_recovery_requests
   SET status = 'approved', reviewed_at = now(), reviewed_by = p_actor_user_id,
       token_hash = p_token_hash, token_expires_at = p_token_expires_at,
       token_attempts = 0, hmac_key_version = p_hmac_key_version,
+      delivery_operation_id = v_delivery_operation_id,
+      delivery_outcome = 'pending', delivery_attempted_at = NULL,
       operation_id = NULL, processing_started_at = NULL,
       auth_outcome = NULL, auth_attempted_at = NULL, auth_last_error_code = NULL,
       updated_at = now()
   WHERE id = p_request_id AND status = 'pending';
 
-  RETURN jsonb_build_object('ok', true, 'status', 'approved');
+  RETURN jsonb_build_object('ok', true, 'status', 'approved', 'delivery_operation_id', v_delivery_operation_id);
 END;
 $$;
 
@@ -181,6 +195,57 @@ BEGIN
   );
 END;
 $$;
+
+CREATE OR REPLACE FUNCTION recovery_private.begin_recovery_delivery(
+  p_request_id uuid,
+  p_delivery_operation_id uuid
+)
+RETURNS boolean
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = ''
+AS $
+BEGIN
+  UPDATE public.trainee_password_recovery_requests
+  SET delivery_outcome = 'attempting', delivery_attempted_at = now(), updated_at = now()
+  WHERE id = p_request_id AND status = 'approved'
+    AND delivery_operation_id = p_delivery_operation_id
+    AND delivery_outcome = 'pending';
+  RETURN FOUND;
+END;
+$;
+
+CREATE OR REPLACE FUNCTION recovery_private.finish_recovery_delivery(
+  p_request_id uuid,
+  p_delivery_operation_id uuid,
+  p_outcome text
+)
+RETURNS boolean
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = ''
+AS $
+BEGIN
+  IF p_outcome IS NULL OR p_outcome NOT IN ('sent','confirmed_failure','unknown') THEN
+    RAISE EXCEPTION 'Invalid delivery outcome';
+  END IF;
+
+  UPDATE public.trainee_password_recovery_requests
+  SET status = CASE WHEN p_outcome = 'confirmed_failure' THEN 'pending' ELSE 'approved' END,
+      token_hash = CASE WHEN p_outcome = 'confirmed_failure' THEN NULL ELSE token_hash END,
+      token_expires_at = CASE WHEN p_outcome = 'confirmed_failure' THEN NULL ELSE token_expires_at END,
+      reviewed_at = CASE WHEN p_outcome = 'confirmed_failure' THEN NULL ELSE reviewed_at END,
+      reviewed_by = CASE WHEN p_outcome = 'confirmed_failure' THEN NULL ELSE reviewed_by END,
+      token_attempts = CASE WHEN p_outcome = 'confirmed_failure' THEN 0 ELSE token_attempts END,
+      delivery_outcome = p_outcome,
+      updated_at = now()
+  WHERE id = p_request_id AND status = 'approved'
+    AND delivery_operation_id = p_delivery_operation_id
+    AND delivery_outcome IN ('attempting','unknown');
+
+  RETURN FOUND;
+END;
+$;
 
 CREATE OR REPLACE FUNCTION recovery_private.claim_recovery_reset(
   p_request_id uuid,
@@ -239,6 +304,7 @@ BEGIN
     AND r.token_hash = p_code_digest
     AND r.token_expires_at > now()
     AND r.token_attempts < 5
+    AND r.delivery_outcome = 'sent'
   RETURNING r.phone_normalized INTO v_phone;
 
   IF NOT FOUND THEN
@@ -314,6 +380,8 @@ $$;
 REVOKE ALL ON ALL FUNCTIONS IN SCHEMA recovery_private FROM PUBLIC, anon, authenticated;
 GRANT EXECUTE ON FUNCTION recovery_private.coach_review_recovery_request(uuid,uuid,text,text,timestamptz,text) TO service_role;
 GRANT EXECUTE ON FUNCTION recovery_private.record_recovery_wrong_attempt(uuid,text,integer) TO service_role;
+GRANT EXECUTE ON FUNCTION recovery_private.begin_recovery_delivery(uuid,uuid) TO service_role;
+GRANT EXECUTE ON FUNCTION recovery_private.finish_recovery_delivery(uuid,uuid,text) TO service_role;
 GRANT EXECUTE ON FUNCTION recovery_private.claim_recovery_reset(uuid,text,uuid) TO service_role;
 GRANT EXECUTE ON FUNCTION recovery_private.begin_recovery_auth_update(uuid,uuid) TO service_role;
 GRANT EXECUTE ON FUNCTION recovery_private.finish_recovery_auth_update(uuid,uuid,text,text) TO service_role;
