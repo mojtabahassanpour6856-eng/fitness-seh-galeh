@@ -79,3 +79,6 @@ Execution status: these test cases have been authored and committed, but a succe
 
 ## Owner-scoped request reads
 The fixture exposes `getForCoach` and `getForTrainee` read helpers. Both require an actor ID and return the same generic `Recovery request unavailable` error for a missing request or a request owned by someone else. Returned snapshots intentionally omit internal identifiers, code digests, and delivery internals where not needed. These helpers are test seams only: production must derive actor identity from authenticated middleware and apply authorization in the database query itself (not fetch by ID and authorize later).
+
+## Replay checks and concurrency boundary
+Regression tests verify that a code cannot be accepted twice, a completed recovery cannot be completed again, and cancellation is a terminal transition. These are sequential state-machine checks only. Because this fixture is synchronous and in-memory, it cannot establish race safety across concurrent requests or multiple server instances. Production must use transactional conditional updates/row locks and integration tests that issue simultaneous requests against separate application instances.
