@@ -56,11 +56,12 @@ function fixture(overrides = {}) {
       select: () => {
         if (table === 'profiles') return queryResult({ role: 'coach' });
         if (table === 'trainee_password_recovery_requests') {
+          const filters = [];
           const q = {
-            select() { return q; }, eq() { return q; }, in() { return q; },
+            select() { return q; }, eq(column, value) { filters.push([column, value]); return q; }, in() { return q; },
             order() { return q; }, limit() { return q; },
             maybeSingle: async () => ({ data: state.target, error: null }),
-            then(resolve, reject) { return Promise.resolve({ data: state.listRows || [], error: null }).then(resolve, reject); }
+            then(resolve, reject) { const rows = filters.some(([k,v]) => k === 'status' && v === 'approved') ? state.matches : (state.listRows || []); return Promise.resolve({ data: rows, error: null }).then(resolve, reject); }
           };
           // Reset lookup is a list query; coach recipient lookup uses maybeSingle.
           q.limit = n => { calls.push({ type: 'limit', n }); return q; };
@@ -84,7 +85,7 @@ function fixture(overrides = {}) {
     randomUUID: () => OP,
     ...overrides.deps
   };
-  return { handler: createRecoveryCandidateHandler(deps), calls, state };
+  return { handler: createRecoveryCandidateHandler(deps), calls, state, deps };
 }
 function request(body, { origin = 'https://app.example.test', authorization = '' } = {}) {
   const headers = { 'content-type': 'application/json' };
@@ -125,8 +126,17 @@ async function body(response) { return await response.json(); }
   const f = fixture();
   let delivered;
   f.handler = createRecoveryCandidateHandler({
-    env: ENV, admin: f.handler && undefined
+    ...f.deps,
+    deliveryAdapter: async payload => { delivered = payload; return { kind: 'confirmed_sent' }; }
   });
+  const r = await f.handler(request({ action: 'review', request_id: UUID, decision: 'approve' }, { authorization: 'Bearer test' }));
+  assert.equal(r.status, 200);
+  assert.equal(delivered.phone, '+989123456789');
+  assert.equal(typeof delivered.code, 'string');
+  assert.equal((await body(r)).code, undefined);
+  assert.equal(f.calls.some(x => x.name === 'recovery_begin_delivery'), true);
+  assert.equal(f.calls.some(x => x.name === 'recovery_finish_delivery' && x.args.p_outcome === 'sent'), true);
+  console.log('PASS: delivery uses the verified database phone, and the code is never returned to the coach.');
 }
 {
   const f = fixture();
