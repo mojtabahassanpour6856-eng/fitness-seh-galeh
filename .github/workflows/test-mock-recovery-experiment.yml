@@ -18,6 +18,7 @@ on:
       - 'docs/experimental/test-recovery-candidate-handler.js'
       - 'docs/experimental/trainee-password-recovery-edge-candidate.ts'
       - 'docs/experimental/test-recovery-edge-adapter-contract.js'
+      - 'docs/experimental/test-recovery-handler-sql-contract.js'
       - 'docs/experimental/migrations/20261122_recovery_atomic_rpc_candidate.sql'
       - 'docs/experimental/test-recovery-atomic-rpc-candidate.js'
       - 'docs/experimental/postgres-concurrency-test.js'
@@ -55,6 +56,8 @@ jobs:
         run: node docs/experimental/test-recovery-candidate-handler.js
       - name: Verify Edge adapter remains non-deployable and provider-disabled
         run: node docs/experimental/test-recovery-edge-adapter-contract.js
+      - name: Verify handler and candidate migration contract alignment
+        run: node docs/experimental/test-recovery-handler-sql-contract.js
 
   postgres-concurrency-tests:
     runs-on: ubuntu-latest
