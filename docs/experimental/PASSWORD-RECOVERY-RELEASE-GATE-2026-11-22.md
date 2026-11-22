@@ -196,3 +196,12 @@ Read the active `trainee-password-recovery` Edge Function in both Supabase proje
 
 ### Release distance estimate
 The project is still **NOT READY FOR PRODUCTION**. Remaining gates are not just cosmetic: they include a redesigned fail-closed Auth operation/reconciliation flow, atomic assignment-safe coach review, uniform public responses, active-state uniqueness including processing, safe code generation/HMAC, atomic attempt accounting, approved delivery provider, CORS allowlist, isolated real HTTP/Auth tests, session invalidation verification, logging/monitoring, and a reviewed rollback/reconciliation plan. A calendar estimate is not reliable until the chosen delivery provider and Test Auth environment are available and the candidate implementation is agreed.
+
+
+## Follow-up implementation preparation (2026-11-22)
+
+- Read-only Test schema inspection confirmed the recovery request table lacks durable Auth operation identity, processing-start time, Auth outcome, delivery outcome, and HMAC key-version fields. No schema changes were made.
+- The current `trainees.coach_user_id` column is available to support an atomic database-side coach assignment check. The candidate must replace the current read-then-update review sequence with one privileged, narrowly scoped database operation that checks current assignment and pending status in the same transaction.
+- The implementation contract now records the required RPC/transaction authorization shape, required schema additions, and test-only delivery adapter boundary.
+- No candidate Edge Function source has been deployed or substituted for the live function. No Test/Production migration, password update, trainee mutation, or SMS was performed.
+- The report and contract are design artifacts only. They do not count as a live integration test or a completed fix.
