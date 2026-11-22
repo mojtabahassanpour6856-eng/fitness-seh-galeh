@@ -209,6 +209,25 @@ class MockRecovery {
     }
     return expiredCount;
   }
+  // Scoped lookup helpers model non-enumerating owner reads for tests.
+  // Production handlers must still resolve actor identity from authenticated server context.
+  getForCoach({ requestId, authenticatedCoachId }) {
+    const r = this.requests.get(requestId);
+    if (!r || !authenticatedCoachId || r.coachId !== authenticatedCoachId) {
+      throw new Error('Recovery request unavailable');
+    }
+    return { requestId: r.requestId, state: r.state, createdAt: r.createdAt,
+      approvedAt: r.approvedAt || null, rejectedAt: r.rejectedAt || null,
+      expiresAt: r.expiresAt || null };
+  }
+  getForTrainee({ requestId, authenticatedTraineeId }) {
+    const r = this.requests.get(requestId);
+    if (!r || !authenticatedTraineeId || r.traineeId !== authenticatedTraineeId) {
+      throw new Error('Recovery request unavailable');
+    }
+    return { requestId: r.requestId, state: r.state, createdAt: r.createdAt,
+      expiresAt: r.expiresAt || null, completedAt: r.completedAt || null };
+  }
   #get(id) { const r = this.requests.get(id); if (!r) throw new Error('Request not found'); return r; }
 }
 module.exports = { STATES, generateCode, digestCode, safeEqualHex, MockRecovery };
