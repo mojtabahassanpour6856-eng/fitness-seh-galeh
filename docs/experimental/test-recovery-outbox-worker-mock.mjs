@@ -134,4 +134,49 @@ const malformedProvider=new FakeRecoverySmsProvider([{kind:'malformed'}]);
 assert.deepEqual(await processOneRecoveryOutboxItem({admin:malformedAdmin,workerId,deliveryKeys,cryptoImpl:webcrypto,provider:malformedProvider}),{status:'unknown'});
 assert.equal(malformedAdmin.calls.at(-1).args.p_outcome,'unknown');
 
-console.log('PASS: fake-only worker success, timeout-to-unknown/no-resend, trainee recheck, and real-provider rejection.');
+
+const definiteFailureAdmin=makeAdmin();
+const definiteFailureProvider=new FakeRecoverySmsProvider([{kind:'definite_failure'}]);
+assert.deepEqual(
+  await processOneRecoveryOutboxItem({admin:definiteFailureAdmin,workerId,deliveryKeys,cryptoImpl:webcrypto,provider:definiteFailureProvider}),
+  {status:'failed'}
+);
+assert.equal(definiteFailureProvider.calls.length,1);
+assert.equal(definiteFailureAdmin.calls.at(-1).args.p_outcome,'failed');
+assert.equal(definiteFailureAdmin.calls.at(-1).args.p_safe_error_code,'provider_definite_failure');
+
+const finishFalseAdmin=makeAdmin();
+const finishFalseOriginal=finishFalseAdmin.rpc.bind(finishFalseAdmin);
+let finishFalseCalls=0;
+finishFalseAdmin.rpc=async(name,args)=>{
+  if(name==='recovery_outbox_finish') {
+    finishFalseCalls++;
+    return {data:false};
+  }
+  return finishFalseOriginal(name,args);
+};
+const finishFalseProvider=new FakeRecoverySmsProvider([{kind:'accepted',messageId:'accepted-finish-not-confirmed'}]);
+assert.deepEqual(
+  await processOneRecoveryOutboxItem({admin:finishFalseAdmin,workerId,deliveryKeys,cryptoImpl:webcrypto,provider:finishFalseProvider}),
+  {status:'unknown'}
+);
+assert.equal(finishFalseProvider.calls.length,1,'accepted provider send with unconfirmed DB completion must never resend');
+assert.equal(finishFalseCalls,1,'a failed fenced completion must not trigger a second provider attempt');
+
+const requestLookupErrorAdmin=makeAdmin();
+const requestFrom=requestLookupErrorAdmin.from.bind(requestLookupErrorAdmin);
+requestLookupErrorAdmin.from=(table)=>{
+  const q=requestFrom(table);
+  if(table==='trainee_password_recovery_requests') {
+    return {select(){return this;},eq(){return this;},async maybeSingle(){return {data:null,error:new Error('MOCK_DB_READ_FAILED')}}};
+  }
+  return q;
+};
+const requestLookupErrorProvider=new FakeRecoverySmsProvider();
+assert.deepEqual(
+  await processOneRecoveryOutboxItem({admin:requestLookupErrorAdmin,workerId,deliveryKeys,cryptoImpl:webcrypto,provider:requestLookupErrorProvider}),
+  {status:'failed'}
+);
+assert.equal(requestLookupErrorProvider.calls.length,0,'request read failure must block provider invocation');
+
+console.log('PASS: fake-only worker success, definite/ambiguous provider outcomes, lost lease, DB read failures, encrypted payload failures, and real-provider rejection.');
