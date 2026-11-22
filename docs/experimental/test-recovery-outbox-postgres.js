@@ -223,6 +223,15 @@ async function main(){
  const {webcrypto}=require('node:crypto');
  const {encryptRecoveryDeliveryCode}=await import('./recovery-delivery-payload-crypto.mjs');
  const {FakeRecoverySmsProvider,processOneRecoveryOutboxItem}=await import('./recovery-outbox-worker-mock.mjs');
+ const e2eTrainee='20000000-0000-4000-8000-000000000078';
+ const e2ePhone='+989123450003';
+ await pool.query(`INSERT INTO public.trainees(id,coach_user_id,auth_user_id,approval_status,phone_normalized,archived_at)
+   VALUES ($1,$2,'10000000-0000-4000-8000-000000000003','active',$3,NULL)`,[e2eTrainee,coach,e2ePhone]);
+ const submitted=await asService('SELECT public.recovery_submit_request($1) AS ok',[e2ePhone]);
+ assert.equal(submitted.rows[0].ok,true,'real request submission RPC must create the recovery request');
+ const submittedRequest=await pool.query('SELECT id FROM public.trainee_password_recovery_requests WHERE trainee_id=$1 AND status=$2',[e2eTrainee,'pending']);
+ assert.equal(submittedRequest.rows.length,1);
+ const e2eRequestId=submittedRequest.rows[0].id;
  const e2eOperation='60000000-0000-4000-8000-000000000777';
  const e2eWorker='50000000-0000-4000-8000-000000000077';
  const e2eKey=webcrypto.getRandomValues(new Uint8Array(32));
@@ -230,15 +239,15 @@ async function main(){
  const e2eKeys={d1:e2eKeyBase64};
  const e2eEnvelope=await encryptRecoveryDeliveryCode({
    code:'4826',key:e2eKeyBase64,keyVersion:'d1',
-   requestId:secondRequest,operationId:e2eOperation,cryptoImpl:webcrypto
+   requestId:e2eRequestId,operationId:e2eOperation,cryptoImpl:webcrypto
  });
  await pool.query(`UPDATE public.trainee_password_recovery_requests
    SET status='pending',delivery_outcome=NULL,delivery_operation_id=NULL,
        token_hash=NULL,token_expires_at=NULL,reviewed_at=NULL,reviewed_by=NULL,
-       token_attempts=0,updated_at=now() WHERE id=$1`,[secondRequest]);
+       token_attempts=0,updated_at=now() WHERE id=$1`,[e2eRequestId]);
  const e2eApproval=await asService(
    'SELECT public.recovery_coach_review_encrypted($1,$2,$3,$4,$5,$6,$7,$8) AS result',
-   [secondRequest,coach,'approve','9'.repeat(64),new Date(Date.now()+8*60_000).toISOString(),'k1',e2eOperation,e2eEnvelope]
+   [e2eRequestId,coach,'approve','9'.repeat(64),new Date(Date.now()+8*60_000).toISOString(),'k1',e2eOperation,e2eEnvelope]
  );
  assert.equal(e2eApproval.rows[0].result.ok,true,JSON.stringify(e2eApproval.rows[0].result));
  const e2eProvider=new FakeRecoverySmsProvider([{kind:'accepted',messageId:'e2e-provider-accepted'}]);
@@ -267,18 +276,46 @@ async function main(){
  assert.deepEqual(e2eResult,{status:'sent'});
  assert.equal(e2eProvider.calls.length,1);
  assert.equal(e2eProvider.calls[0].code,'4826');
- assert.equal(e2eProvider.calls[0].phone,'+989123450002');
+ assert.equal(e2eProvider.calls[0].phone,e2ePhone);
  assert.equal(e2eProvider.calls[0].idempotencyKey,'trainee-recovery:'+e2eOperation);
  const e2eState=await pool.query(`SELECT r.delivery_outcome,o.status,r.delivery_payload AS request_payload,
    o.delivery_payload AS outbox_payload FROM public.trainee_password_recovery_requests r
    JOIN public.trainee_password_recovery_outbox o ON o.recovery_request_id=r.id
-   WHERE r.id=$1 AND o.delivery_operation_id=$2`,[secondRequest,e2eOperation]);
+   WHERE r.id=$1 AND o.delivery_operation_id=$2`,[e2eRequestId,e2eOperation]);
  assert.equal(e2eState.rows.length,1);
  assert.equal(e2eState.rows[0].delivery_outcome,'sent');
  assert.equal(e2eState.rows[0].status,'sent');
  assert.equal(e2eState.rows[0].request_payload,null);
  assert.equal(e2eState.rows[0].outbox_payload,null);
- console.log('PASS: end-to-end real PostgreSQL RPC + encrypted Worker + fake provider + terminal payload cleanup');
+ console.log('PASS: end-to-end real PostgreSQL request + coach approval + encrypted Worker + fake provider + terminal payload cleanup');
+ // Continue through reset-code redemption and a mocked Auth update; no real Auth account is mutated.
+ const authOperation='70000000-0000-4000-8000-000000000777';
+ const resetClaim=await asService(
+   'SELECT public.recovery_claim_reset($1,$2,$3) AS result',
+   [e2eRequestId,'9'.repeat(64),authOperation]
+ );
+ assert.equal(resetClaim.rows[0].result.claimed,true,JSON.stringify(resetClaim.rows[0].result));
+ const authStarted=await asService(
+   'SELECT public.recovery_begin_auth_update($1,$2) AS ok',[e2eRequestId,authOperation]
+ );
+ assert.equal(authStarted.rows[0].ok,true);
+ // This represents a successful Auth adapter response in the disposable test only.
+ const authFinished=await asService(
+   'SELECT public.recovery_finish_auth_update($1,$2,$3,$4) AS ok',
+   [e2eRequestId,authOperation,'completed',null]
+ );
+ assert.equal(authFinished.rows[0].ok,true);
+ const fullyCompleted=await pool.query(
+   'SELECT status,delivery_outcome,auth_outcome,token_hash,token_expires_at FROM public.trainee_password_recovery_requests WHERE id=$1',
+   [e2eRequestId]
+ );
+ assert.equal(fullyCompleted.rows[0].status,'completed');
+ assert.equal(fullyCompleted.rows[0].delivery_outcome,'sent');
+ assert.equal(fullyCompleted.rows[0].auth_outcome,'completed');
+ assert.equal(fullyCompleted.rows[0].token_hash,null);
+ assert.equal(fullyCompleted.rows[0].token_expires_at,null);
+ console.log('PASS: full disposable lifecycle from request submission through mock delivery, redemption, and mocked Auth completion');
+
  console.log('All disposable PostgreSQL Outbox/Worker integration checks passed.');
 }
 main().catch(e=>{console.error(e);process.exitCode=1;}).finally(()=>pool.end());
