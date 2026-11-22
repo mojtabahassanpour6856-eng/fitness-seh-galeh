@@ -20,3 +20,7 @@ The mock supports trainee cancellation only while a request is still `REQUESTED`
 
 ## Mock delivery failure and retry cap
 `approve()` accepts a simulated delivery callback. If it reports failure, no code digest is stored and state remains `APPROVED`, allowing a controlled retry. `maxDeliveryAttempts` defaults to 3 total attempts (initial delivery included). After the limit, another attempt throws and does not call the delivery callback. Successful delivery transitions to `CODE_ISSUED` and subsequent approvals are idempotent. This is only simulated behavior; production needs provider response handling, retry scheduling/backoff, delivery idempotency, and delivery-status callbacks where supported.
+
+
+## Re-entrant approval guard
+The fixture now marks delivery as `DELIVERY_PENDING` before invoking the synchronous mock delivery callback. A nested/re-entrant approval cannot proceed from that state, preventing duplicate mock code issuance in this narrow fixture. This is **not** a concurrency primitive for production: asynchronous workers, parallel server instances, and database races must be protected with transactional state transitions, row locks or compare-and-swap, and an idempotency key enforced by persistent storage.
