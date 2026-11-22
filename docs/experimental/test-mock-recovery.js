@@ -141,6 +141,16 @@ staleApprovedNow += 1000;
 assert.equal(staleApproved.sweepExpired(),1);
 assert.equal(staleApproved.requests.get('ra').state,STATES.EXPIRED);
 assert.equal(staleApproved.request({traineeId:'ta',coachId:'ca',requestId:'ra2'}).state,STATES.REQUESTED);
+// Rate limit total recovery requests per rolling window even after rejection.
+let rateNow=9000000;
+const rateLimited = new MockRecovery({secret,now:()=>rateNow,cooldownMs:0,maxRequestsPerWindow:2,requestWindowMs:1000});
+rateLimited.request({traineeId:'rate',coachId:'coach',requestId:'rate1'});
+rateLimited.reject({requestId:'rate1',authenticatedCoachId:'coach'});
+rateLimited.request({traineeId:'rate',coachId:'coach',requestId:'rate2'});
+rateLimited.reject({requestId:'rate2',authenticatedCoachId:'coach'});
+assert.throws(()=>rateLimited.request({traineeId:'rate',coachId:'coach',requestId:'rate3'}),/rate limit/i);
+rateNow+=1000;
+assert.equal(rateLimited.request({traineeId:'rate',coachId:'coach',requestId:'rate4'}).state,STATES.REQUESTED);
 const cooldown=sys();
 cooldown.request({traineeId:'t5',coachId:'c5',requestId:'r5'});
 assert.throws(()=>cooldown.request({traineeId:'t5',coachId:'c5',requestId:'r6'}),/Cooldown/);
