@@ -54,8 +54,8 @@ No merge to main, deployment, schema migration, Auth setting change, real SMS, o
 - [x] Add same-operation idempotency and new-operation retry after authoritative non-application.
 - [x] Add trainee-scoped status retrieval to model recovery after page close/network loss.
 - [x] Explicitly mark session revocation as not modeled/unverified.
-- [ ] Execute the updated Node.js test suite and inspect its actual output.
-- [ ] Confirm the GitHub Actions run for the latest branch commit is completed and passing.
+- [x] Execute the updated Node.js test suite on GitHub Actions (Node.js 22.23.5); output: `All mock recovery engine tests passed.`
+- [x] Confirm GitHub Actions run #40 passed for tested code commit `799fc11d1389f9422e81914aeb1f2d9b25e7c9f2` (workflow run `45035288345`). Documentation-only follow-up commits were added afterward; engine/test files match the tested blobs.
 - [ ] Inspect the real project's Auth SDK/API version and provider-supported password update and session revocation behavior.
 - [ ] Build durable, transactional operation ledger and provider reconciliation only in a separately authorized isolated integration environment.
 - [ ] Test real provider failure, post-commit timeout, old-password rejection, new-password login, multi-session behavior, and concurrent duplicate submissions using disposable test accounts only.
