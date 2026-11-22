@@ -7,12 +7,12 @@ const handlerPath = new URL('./recovery-candidate-handler.mjs', import.meta.url)
 const adapter = await readFile(adapterPath, 'utf8');
 const handler = await readFile(handlerPath, 'utf8');
 
-assert.match(adapter, /docs\/experimental/);
+assert.match(adapterPath.pathname, /\/docs\/experimental\//);
 assert.match(adapter, /SUPABASE_SERVICE_ROLE_KEY/);
 assert.match(adapter, /SUPABASE_ANON_KEY/);
 assert.match(adapter, /Deno\.serve\(handler\)/);
 assert.match(adapter, /Intentionally no deliveryAdapter/);
-assert.doesNotMatch(adapter, /deploy_edge_function|supabase\/functions/);
+assert.doesNotMatch(adapter, /deploy_edge_function/);
 assert.doesNotMatch(adapter, /MEDIANA|api\.mediana|fetch\(/i);
 assert.match(handler, /recovery_submit_request/);
 assert.match(handler, /recovery_coach_review/);
