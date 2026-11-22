@@ -6,6 +6,12 @@ const adapterPath = new URL('./trainee-password-recovery-edge-candidate.ts', imp
 const handlerPath = new URL('./recovery-candidate-handler.mjs', import.meta.url);
 const adapter = await readFile(adapterPath, 'utf8');
 const handler = await readFile(handlerPath, 'utf8');
+const sdkVersionPath = new URL('../../vendor/SUPABASE-SDK-VERSION.txt', import.meta.url);
+const sdkVersionMarker = await readFile(sdkVersionPath, 'utf8');
+const candidateSdkVersion = adapter.match(/@supabase\/supabase-js@(\d+\.\d+\.\d+)/)?.[1];
+const appSdkVersion = sdkVersionMarker.match(/Version:\s*(\d+\.\d+\.\d+)/)?.[1];
+assert.ok(candidateSdkVersion, 'candidate must pin an exact Supabase JS version');
+assert.equal(candidateSdkVersion, appSdkVersion, 'candidate Auth adapter must use the same SDK version pinned by the app');
 
 assert.match(adapterPath.pathname, /\/docs\/experimental\//);
 assert.match(adapter, /SUPABASE_SERVICE_ROLE_KEY/);
