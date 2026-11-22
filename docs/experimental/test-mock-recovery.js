@@ -107,8 +107,9 @@ assert.equal(resumable.getForTrainee({requestId:'resume-r',authenticatedTraineeI
   'client can resume by reading durable operation status in production');
 assert.throws(()=>resumable.getForTrainee({requestId:'resume-r',authenticatedTraineeId:'other'}),/unavailable/);
 resetNow+=10*60_000;
-assert.throws(()=>resumable.reconcilePasswordReset({requestId:'resume-r',traineeId:'resume-user',
-  operationId:'resume-op',lookupAuth:()=> 'NOT_APPLIED'}),/No matching|expired/i);
+assert.equal(resumable.reconcilePasswordReset({requestId:'resume-r',traineeId:'resume-user',
+  operationId:'resume-op',lookupAuth:()=> 'NOT_APPLIED'}).state,STATES.EXPIRED,
+  'after authoritative non-application, an expired grant must not be reused');
 
 
 
