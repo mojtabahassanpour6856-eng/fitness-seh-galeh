@@ -1,9 +1,13 @@
 'use strict';
 import assert from 'node:assert/strict';
 import { createRecoveryCandidateHandler } from './recovery-candidate-handler.mjs';
+import { digestRecoveryCode } from './recovery-candidate-core.mjs';
 
 const ENV = {
-  RECOVERY_HMAC_SECRET: 'candidate-test-secret-longer-than-32-bytes',
+  RECOVERY_HMAC_KEYS: JSON.stringify({
+    k0: 'older-candidate-test-secret-longer-than-32-bytes',
+    k1: 'candidate-test-secret-longer-than-32-bytes'
+  }),
   RECOVERY_HMAC_KEY_VERSION: 'k1',
   RECOVERY_ALLOWED_ORIGINS: 'https://app.example.test'
 };
