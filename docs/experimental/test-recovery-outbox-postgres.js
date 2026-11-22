@@ -113,6 +113,7 @@ async function main(){
  const live=await asService("SELECT * FROM recovery_private.claim_recovery_outbox($1,30)",[workerA]);
  assert.equal(live.rowCount,1);
  const l=live.rows[0];
+ assert.equal(l.outbox_id,secondOutboxId,'the second approved request must supply the next pending Outbox item');
  assert.equal(await asService("SELECT recovery_private.heartbeat_recovery_outbox($1,$2,$3,45) AS ok",[l.outbox_id,workerA,l.lease_generation]).then(r=>r.rows[0].ok),true);
  assert.equal(await asService("SELECT recovery_private.begin_recovery_outbox_send($1,$2,$3) AS ok",[l.outbox_id,workerA,l.lease_generation]).then(r=>r.rows[0].ok),true);
  assert.equal(await asService("SELECT recovery_private.finish_recovery_outbox($1,$2,$3,'sent','mock-provider-id',NULL) AS ok",[l.outbox_id,workerA,l.lease_generation]).then(r=>r.rows[0].ok),true);
