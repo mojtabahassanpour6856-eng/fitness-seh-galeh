@@ -51,15 +51,23 @@ async function main(){
  );
  assert.equal(duplicateReview.rows[0].result.ok,false);
  assert.equal((await pool.query('SELECT count(*)::int AS n FROM public.trainee_password_recovery_outbox WHERE recovery_request_id=$1',[reviewRequest])).rows[0].n,1);
- await pool.query("UPDATE public.trainee_password_recovery_outbox SET status='failed' WHERE recovery_request_id=$1",[reviewRequest]);
  console.log('PASS: coach approval atomically enqueues one Outbox row; rollback and duplicate approval are safe');
 
- const requests=await pool.query("SELECT id FROM public.trainee_password_recovery_requests ORDER BY id LIMIT 2");
- assert.equal(requests.rows.length,2,'requires two synthetic recovery request fixtures from preceding disposable CI job');
- const [reqA,reqB]=requests.rows.map(x=>x.id);
- const ids=['60000000-0000-4000-8000-000000000001','60000000-0000-4000-8000-000000000002'];
- await pool.query("INSERT INTO public.trainee_password_recovery_outbox(id,recovery_request_id,delivery_operation_id,provider_idempotency_key) VALUES ($1,$2,$3,$4)",
- [ids[0],reqA,'70000000-0000-4000-8000-000000000001','recovery-outbox:'+ids[0]]);
+ const secondRequest='30000000-0000-4000-8000-000000000006';
+ await pool.query(`INSERT INTO public.trainees(id,coach_user_id,auth_user_id,approval_status,phone_normalized)
+   VALUES ('20000000-0000-4000-8000-000000000007',$1,'10000000-0000-4000-8000-000000000003','active','+989123450002')`,[coach]);
+ await pool.query(`INSERT INTO public.trainee_password_recovery_requests(id,trainee_id,phone_normalized,status)
+   VALUES ($1,'20000000-0000-4000-8000-000000000007','+989123450002','pending')`,[secondRequest]);
+ const secondApproval=await asService(
+   'SELECT public.recovery_coach_review($1,$2,$3,$4,$5,$6) AS result',
+   [secondRequest,coach,'approve','d'.repeat(64),new Date(Date.now()+10*60_000).toISOString(),'k1']
+ );
+ assert.equal(secondApproval.rows[0].result.ok,true);
+ const requests=await pool.query("SELECT id FROM public.trainee_password_recovery_outbox WHERE recovery_request_id=ANY($1::uuid[]) ORDER BY created_at",
+ [[reviewRequest,secondRequest]]);
+ assert.equal(requests.rows.length,2,'two approved synthetic requests must each create an Outbox row');
+ const reqA=reviewRequest, reqB=secondRequest;
+ const ids=requests.rows.map(x=>x.id);
  // Two independent PostgreSQL sessions race to claim one pending row.
  const race=await Promise.all([workerA,workerB].map(w=>asService(
  "SELECT * FROM recovery_private.claim_recovery_outbox($1,30)",[w]
@@ -95,8 +103,6 @@ async function main(){
  assert.deepEqual(acl.rows[0],{anon_claim:false,auth_finish:false,anon_read:false});
  console.log('PASS: anonymous/authenticated roles cannot execute worker RPCs or read Outbox');
  // Add a second independent pending item only after the first item has been fenced and reconciled.
- await pool.query("INSERT INTO public.trainee_password_recovery_outbox(id,recovery_request_id,delivery_operation_id,provider_idempotency_key) VALUES ($1,$2,$3,$4)",
- [ids[1],reqB,'70000000-0000-4000-8000-000000000002','recovery-outbox:'+ids[1]]);
  // Second synthetic item: heartbeat extends a live lease and accepted send finalizes once.
  const live=await asService("SELECT * FROM recovery_private.claim_recovery_outbox($1,30)",[workerA]);
  assert.equal(live.rowCount,1);
