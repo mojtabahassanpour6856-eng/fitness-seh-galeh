@@ -10,7 +10,7 @@ const key=Buffer.alloc(32,9).toString('base64');
 const deliveryKeys={d1:key};
 const envelope=await encryptRecoveryDeliveryCode({code:'0427',key,keyVersion:'d1',requestId,operationId,cryptoImpl:webcrypto});
 
-function makeAdmin({targetValid=true,fetchPayload=true}={}) {
+function makeAdmin({targetValid=true,fetchPayload=true,archived=false}={}) {
   const calls=[];
   const lease={outbox_id:'6ba7b813-9dad-41d1-80b4-00c04fd430c8',recovery_request_id:requestId,
     lease_generation:4,provider_idempotency_key:'trainee-recovery:'+operationId};
@@ -30,7 +30,7 @@ function makeAdmin({targetValid=true,fetchPayload=true}={}) {
     from(table) {
       return {select(){return this;},eq(){return this;},async maybeSingle(){
         if(table==='trainee_password_recovery_requests') return {data:{id:requestId,trainee_id:'trainee-1',phone_normalized:'+989123456789',status:'approved',delivery_outcome:'attempting',delivery_operation_id:operationId}};
-        return {data:targetValid?{id:'trainee-1',phone_normalized:'+989123456789',approval_status:'active'}:{id:'trainee-1',phone_normalized:'+989000000000',approval_status:'active'}};
+        return {data:targetValid?{id:'trainee-1',phone_normalized:'+989123456789',approval_status:'active',archived_at:archived?'2026-01-01T00:00:00Z':null}:{id:'trainee-1',phone_normalized:'+989000000000',approval_status:'active',archived_at:null}};
       }};
     }
   };
@@ -58,6 +58,27 @@ const unusedProvider=new FakeRecoverySmsProvider();
 const failed=await processOneRecoveryOutboxItem({admin:invalidAdmin,workerId,deliveryKeys,cryptoImpl:webcrypto,provider:unusedProvider});
 assert.deepEqual(failed,{status:'failed'});
 assert.equal(unusedProvider.calls.length,0,'phone/status mismatch must block provider call');
+
+const archivedAdmin=makeAdmin({archived:true});
+const archivedProvider=new FakeRecoverySmsProvider();
+assert.deepEqual(await processOneRecoveryOutboxItem({admin:archivedAdmin,workerId,deliveryKeys,cryptoImpl:webcrypto,provider:archivedProvider}),{status:'failed'});
+assert.equal(archivedProvider.calls.length,0,'archived trainee must not receive recovery SMS');
+
+const ambiguousCommitAdmin=makeAdmin();
+let finishCalls=0;
+const originalRpc=ambiguousCommitAdmin.rpc.bind(ambiguousCommitAdmin);
+ambiguousCommitAdmin.rpc=async(name,args)=>{
+  if(name==='recovery_outbox_finish'){
+    finishCalls++;
+    if(finishCalls===1) throw new Error('MOCK_DB_RESPONSE_LOST_AFTER_PROVIDER_ACCEPTANCE');
+    return {data:false};
+  }
+  return originalRpc(name,args);
+};
+const acceptedBeforeDbLoss=new FakeRecoverySmsProvider([{kind:'accepted',messageId:'accepted-but-db-unknown'}]);
+assert.deepEqual(await processOneRecoveryOutboxItem({admin:ambiguousCommitAdmin,workerId,deliveryKeys,cryptoImpl:webcrypto,provider:acceptedBeforeDbLoss}),{status:'unknown'});
+assert.equal(acceptedBeforeDbLoss.calls.length,1,'accepted message followed by DB response loss must never be sent twice');
+assert.equal(finishCalls,2,'worker attempts a fenced unknown finalization after ambiguous sent finalization');
 
 await assert.rejects(
   processOneRecoveryOutboxItem({admin:makeAdmin(),workerId,deliveryKeys,cryptoImpl:webcrypto,provider:{send:async()=>({accepted:true})}}),
