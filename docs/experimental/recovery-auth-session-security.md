@@ -40,3 +40,9 @@ Status: production design requirements only. No live auth integration or session
 
 ## Current mock limitations
 The current MockRecovery fixture accepts identity values as function arguments and its complete() method only changes an in-memory state. It has no authentication middleware, trusted account/coach directory, reset grant, password provider, session store, or revocation mechanism. It therefore cannot validate any of the requirements above. Never expose this fixture as an endpoint or use it to change a real password.
+
+## Coach reassignment race
+- Resolve the authenticated coach from the server-side session; never accept an actor identity from the request body.
+- Resolve the trainee's current coach assignment from the authoritative database when the request is created and re-check it immediately before approval/rejection and before any SMS dispatch.
+- If assignment changed after request creation, fail closed: invalidate the stale request, do not send a code, and require a new request under the current coach. Do not silently transfer approval authority to a different coach.
+- Tests must cover reassignment between request and approval, reassignment between approval and dispatch, and cross-coach access after reassignment.
