@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow">
+<title>آزمایش اتصال فیتنس سه‌قلعه</title>
+<style>
+*{box-sizing:border-box}body{margin:0;padding:16px;background:#faf7ef;color:#302919;font:15px Tahoma,Arial,sans-serif;line-height:1.8}
+main{max-width:850px;margin:auto}.card{background:white;border:1px solid #e4d8bf;border-radius:14px;padding:16px;margin:12px 0}
+h1{font-size:1.3rem;color:#80612b}button{font:inherit;border:0;border-radius:9px;padding:10px 15px;background:#80612b;color:white;margin:4px;cursor:pointer}button:disabled{opacity:.5}
+pre{white-space:pre-wrap;overflow-wrap:anywhere;background:#f5f2eb;padding:12px;border-radius:9px;direction:ltr;text-align:left;font:12px/1.6 monospace}
+.status{font-weight:bold}.muted{color:#716b60}.pass{color:#17643b}.fail{color:#a12c27}.warn{color:#916000}
+</style>
+</head>
+<body><main>
+<h1>فیتنس سه‌قلعه | بررسی مسیر اتصال</h1>
+<div class="card">
+<p>این صفحه فقط دسترسی شبکه به فایل‌ها و سرویس‌های عمومی مورد استفاده اپ را اندازه‌گیری می‌کند. رمز، توکن ورود، اطلاعات شاگردان و داده‌های پایگاه داده خوانده یا ارسال نمی‌شوند.</p>
+<p class="muted">آزمایش را یک‌بار با اینترنت عادی و یک‌بار با وضعیت VPN خاموش/روشن (در صورت امکان) اجرا کنید. برای مقایسه، همین صفحه را با همان گوشی و اپراتور باز کنید.</p>
+<button id="run">شروع بررسی</button><button id="copy" disabled>کپی گزارش</button>
+<div id="status" class="status">آماده اجرا</div>
+</div>
+<div class="card"><h2>نتیجه</h2><pre id="out">هنوز آزمایشی اجرا نشده است.</pre></div>
+</main>
+<script>
+(function(){
+'use strict';
+const $=id=>document.getElementById(id);
+const appBase='https://mojtabahassanpour6856-eng.github.io/fitness-seh-galeh/';
+const probes=[
+ {name:'GitHub Pages - صفحه اصلی اپ',url:appBase,method:'GET'},
+ {name:'GitHub Pages - فایل manifest',url:appBase+'manifest.json?probe='+Date.now(),method:'GET'},
+ {name:'GitHub Pages - فایل Service Worker',url:appBase+'sw.js?probe='+Date.now(),method:'GET'},
+ {name:'Supabase Auth health',url:'https://qfakyudgidsumeuoqoot.supabase.co/auth/v1/health',method:'GET'},
+ {name:'jsDelivr - کتابخانه Supabase (همان الگوی فعلی اپ)',url:'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2',method:'HEAD'},
+ {name:'unpkg - مسیر جایگزین فعلی اپ',url:'https://unpkg.com/@supabase/supabase-js@2',method:'HEAD'},
+ {name:'cdnjs - ابزار ساخت تصویر',url:'https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js',method:'HEAD'},
+ {name:'Google Fonts - فونت Vazirmatn',url:'https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;500;700&display=swap',method:'GET'}
+];
+let report='';
+async function probe(p){
+ const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),10000),start=performance.now();
+ try{
+  const response=await fetch(p.url,{method:p.method,mode:'cors',cache:'no-store',signal:controller.signal,credentials:'omit'});
+  return {name:p.name,result:'پاسخ دریافت شد',status:response.status,ok:response.ok,ms:Math.round(performance.now()-start),type:response.type};
+ }catch(e){
+  return {name:p.name,result:e&&e.name==='AbortError'?'مهلت ۱۰ ثانیه تمام شد':'خطای شبکه یا CORS',error:String(e&&e.message||e),ms:Math.round(performance.now()-start)};
+ }finally{clearTimeout(timer);}
+}
+$('run').addEventListener('click',async()=>{
+ $('run').disabled=true;$('copy').disabled=true;$('status').textContent='در حال آزمایش؛ ممکن است تا یک دقیقه طول بکشد…';
+ const c=navigator.connection||navigator.mozConnection||navigator.webkitConnection;
+ const sw=await (async()=>{try{return (await navigator.serviceWorker.getRegistrations()).map(x=>({scope:x.scope,scriptURL:x.active?.scriptURL||x.waiting?.scriptURL||x.installing?.scriptURL||null}));}catch(e){return 'در دسترس نیست: '+e.message;}})();
+ const meta={
+  time:new Date().toISOString(),
+  pageOrigin:location.origin,
+  browser:navigator.userAgent,
+  online:navigator.onLine,
+  connection:c?{effectiveType:c.effectiveType||null,rtt:c.rtt||null,downlink:c.downlink||null,saveData:c.saveData||false}:'اطلاعات نوع شبکه در مرورگر موجود نیست',
+  serviceWorkers:sw,
+  note:'این گزارش هیچ اطلاعات ورود یا داده شاگردی ندارد.'
+ };
+ const results=[];
+ for(const p of probes){const x=await probe(p);results.push(x);$('out').textContent=JSON.stringify({meta,results},null,2);}
+ report=JSON.stringify({meta,results},null,2);
+ const failed=results.filter(x=>x.error||x.ok===false);
+ $('status').textContent=failed.length?'بررسی تمام شد؛ '+failed.length+' مورد نیازمند بررسی دارد.':'بررسی تمام شد؛ همه مسیرها پاسخ HTTP داده‌اند. (این نتیجه تضمین دسترسی کامل اپ نیست.)';
+ $('status').className='status '+(failed.length?'warn':'pass');
+ $('copy').disabled=false;$('run').disabled=false;
+});
+$('copy').addEventListener('click',async()=>{
+ try{await navigator.clipboard.writeText(report);$('status').textContent='گزارش کپی شد؛ آن را برای مربی ارسال کنید.';}
+ catch(e){$('status').textContent='کپی خودکار ممکن نشد؛ متن گزارش را دستی انتخاب کنید.';}
+});
+})();
+</script>
+</body></html>
