@@ -51,3 +51,12 @@ When the configured failed-code attempt limit is reached, the fixture now transi
 
 ## Active-flow isolation and state encapsulation
 The fixture now treats `APPROVED` and `DELIVERY_PENDING` as active states when preventing parallel requests, and includes `DELIVERY_PENDING` in pending-request expiry cleanup. `request()` returns a shallow snapshot rather than the mutable internal record. Tests cover a second request during a re-entrant delivery callback and mutation of the returned snapshot. This remains single-process mock behavior; production needs database-enforced uniqueness and atomic transitions.
+
+
+## Additional edge-case hardening
+- The first request made when the injected clock is zero is accepted; cooldown is enforced only after a prior timestamp exists.
+- Both first-time and idempotent request responses are detached snapshots, not mutable references to internal state.
+- Code expiry cleanup clears the digest and expiry timestamp.
+- Tests cover the zero-clock cooldown boundary and detached response behavior.
+
+Execution status: these test cases have been authored and committed, but a successful GitHub Actions run has not yet been observed. Do not treat the mock suite as passing until a run log confirms it.
