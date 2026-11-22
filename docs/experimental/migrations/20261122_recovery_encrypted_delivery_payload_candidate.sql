@@ -187,6 +187,39 @@ CREATE TRIGGER trainee_recovery_outbox_clear_terminal_payload
 BEFORE UPDATE OF status ON public.trainee_password_recovery_outbox
 FOR EACH ROW EXECUTE FUNCTION recovery_private.clear_terminal_recovery_payload();
 
+CREATE OR REPLACE FUNCTION recovery_private.fetch_recovery_outbox_payload(
+  p_outbox_id uuid,p_worker_id uuid,p_generation bigint
+)
+RETURNS TABLE(recovery_request_id uuid,delivery_operation_id uuid,delivery_payload jsonb)
+LANGUAGE sql SECURITY DEFINER SET search_path = ''
+AS $fetch_payload$
+  SELECT o.recovery_request_id,o.delivery_operation_id,o.delivery_payload
+  FROM public.trainee_password_recovery_outbox o
+  JOIN public.trainee_password_recovery_requests r
+    ON r.id=o.recovery_request_id
+   AND r.delivery_operation_id=o.delivery_operation_id
+  WHERE o.id=p_outbox_id AND o.status='processing'
+    AND o.lock_owner=p_worker_id AND o.lease_generation=p_generation
+    AND o.locked_until>now() AND o.send_started_at IS NOT NULL
+    AND o.delivery_payload IS NOT NULL
+    AND r.status='approved' AND r.delivery_outcome='attempting'
+    AND r.delivery_payload IS NOT NULL
+    AND r.delivery_payload=o.delivery_payload
+$fetch_payload$;
+
+CREATE OR REPLACE FUNCTION public.recovery_outbox_fetch_payload(
+  p_outbox_id uuid,p_worker_id uuid,p_generation bigint
+)
+RETURNS TABLE(recovery_request_id uuid,delivery_operation_id uuid,delivery_payload jsonb)
+LANGUAGE sql SECURITY DEFINER SET search_path = ''
+AS $fetch_wrapper$ SELECT * FROM recovery_private.fetch_recovery_outbox_payload(
+  p_outbox_id,p_worker_id,p_generation
+) $fetch_wrapper$;
+
+REVOKE ALL ON FUNCTION recovery_private.fetch_recovery_outbox_payload(uuid,uuid,bigint) FROM PUBLIC,anon,authenticated;
+GRANT EXECUTE ON FUNCTION recovery_private.fetch_recovery_outbox_payload(uuid,uuid,bigint) TO service_role;
+REVOKE ALL ON FUNCTION public.recovery_outbox_fetch_payload(uuid,uuid,bigint) FROM PUBLIC,anon,authenticated;
+GRANT EXECUTE ON FUNCTION public.recovery_outbox_fetch_payload(uuid,uuid,bigint) TO service_role;
 REVOKE ALL ON FUNCTION recovery_private.coach_review_recovery_request_encrypted(uuid,uuid,text,text,timestamptz,text,uuid,jsonb) FROM PUBLIC,anon,authenticated;
 GRANT EXECUTE ON FUNCTION recovery_private.coach_review_recovery_request_encrypted(uuid,uuid,text,text,timestamptz,text,uuid,jsonb) TO service_role;
 REVOKE ALL ON FUNCTION public.recovery_coach_review_encrypted(uuid,uuid,text,text,timestamptz,text,uuid,jsonb) FROM PUBLIC,anon,authenticated;
