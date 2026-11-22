@@ -82,6 +82,7 @@ async function main(){
  console.log('PASS: lease generation fences stale heartbeat, send-start, and completion');
  // Once send-start is durable, an expired lease must not be claimed by another worker.
  await pool.query("UPDATE public.trainee_password_recovery_outbox SET locked_until=now()-interval '1 second' WHERE id=$1",[lease.outbox_id]);
+ assert.equal(await asService("SELECT recovery_private.finish_recovery_outbox($1,$2,$3,'sent','late-before-reconcile',NULL) AS ok",[lease.outbox_id,workerB,newer.lease_generation]).then(r=>r.rows[0].ok),false,'expired lease owner cannot finalize even before reconciliation');
  const blocked=await asService("SELECT * FROM recovery_private.claim_recovery_outbox($1,30)",[workerA]);
  assert.equal(blocked.rowCount,0,'send-started message must not be automatically re-claimed');
  const reconciled=await asService("SELECT recovery_private.reconcile_expired_recovery_outbox() AS n");
