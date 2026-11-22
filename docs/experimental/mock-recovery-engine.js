@@ -122,11 +122,11 @@ class MockRecovery {
     if (r.state !== STATES.CODE_ISSUED) throw new Error('Invalid state');
     if (this.now() >= r.expiresAt) { r.state = STATES.EXPIRED; r.codeDigest = null; throw new Error('Code expired'); }
     if (r.attempts >= this.maxAttempts) throw new Error('Attempt limit reached');
-    if (typeof code !== 'string' || !/^\d{4}$/.test(code)) { r.attempts++; if (r.attempts >= this.maxAttempts) r.state = STATES.EXPIRED; throw new Error('Invalid code'); }
+    if (typeof code !== 'string' || !/^\d{4}$/.test(code)) { r.attempts++; if (r.attempts >= this.maxAttempts) { r.state = STATES.EXPIRED; r.codeDigest = null; r.expiresAt = null; r.expiredAt = this.now(); } throw new Error('Invalid code'); }
     r.attempts++;
     const candidate = digestCode(code, this.secret);
     if (!safeEqualHex(candidate, r.codeDigest)) {
-      if (r.attempts >= this.maxAttempts) r.state = STATES.EXPIRED;
+      if (r.attempts >= this.maxAttempts) { r.state = STATES.EXPIRED; r.codeDigest = null; r.expiresAt = null; r.expiredAt = this.now(); }
       throw new Error('Invalid code');
     }
     r.codeDigest = null; r.state = STATES.VERIFIED; r.verifiedAt = this.now();
