@@ -145,6 +145,22 @@ async function main() {
     await anonClient.query('RESET ROLE');
     anonClient.release();
   }
+  const concurrentRate=await Promise.all(Array.from({length:10},()=>callAsService(
+    'SELECT public.consume_registration_rate_limit($1,3600,3) AS allowed',['b'.repeat(64)]
+  )));
+  assert.equal(concurrentRate.filter(x=>x.rows[0].allowed===true).length,3,
+    'concurrent requests must atomically admit exactly the configured maximum');
+  await pool.query("UPDATE recovery_private.recovery_request_rate_limits SET window_started_at=now()-interval '2 seconds' WHERE key_hash=$1",['a'.repeat(64)]);
+  const afterWindow=await callAsService('SELECT public.consume_registration_rate_limit($1,1,2) AS allowed',['a'.repeat(64)]);
+  assert.equal(afterWindow.rows[0].allowed,true,'expired fixed window must reset the counter');
+  const serviceTableClient=await pool.connect();
+  try {
+    await serviceTableClient.query('SET ROLE service_role');
+    await assert.rejects(serviceTableClient.query('SELECT * FROM recovery_private.recovery_request_rate_limits'),/permission denied/);
+  } finally {
+    await serviceTableClient.query('RESET ROLE');
+    serviceTableClient.release();
+  }
   console.log('PASS: atomic fixed-window rate limiter enforces cap, validates hashed keys, and is service-role-only');
 
 
