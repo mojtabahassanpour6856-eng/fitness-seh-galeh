@@ -141,7 +141,7 @@ $$;
 CREATE OR REPLACE FUNCTION recovery_private.record_recovery_wrong_attempt(
   p_request_id uuid,
   p_submitted_digest text,
-  p_max_attempts smallint DEFAULT 5
+  p_max_attempts integer DEFAULT 5
 )
 RETURNS jsonb
 LANGUAGE plpgsql
@@ -313,7 +313,7 @@ $$;
 
 REVOKE ALL ON ALL FUNCTIONS IN SCHEMA recovery_private FROM PUBLIC, anon, authenticated;
 GRANT EXECUTE ON FUNCTION recovery_private.coach_review_recovery_request(uuid,uuid,text,text,timestamptz,text) TO service_role;
-GRANT EXECUTE ON FUNCTION recovery_private.record_recovery_wrong_attempt(uuid,text,smallint) TO service_role;
+GRANT EXECUTE ON FUNCTION recovery_private.record_recovery_wrong_attempt(uuid,text,integer) TO service_role;
 GRANT EXECUTE ON FUNCTION recovery_private.claim_recovery_reset(uuid,text,uuid) TO service_role;
 GRANT EXECUTE ON FUNCTION recovery_private.begin_recovery_auth_update(uuid,uuid) TO service_role;
 GRANT EXECUTE ON FUNCTION recovery_private.finish_recovery_auth_update(uuid,uuid,text,text) TO service_role;
