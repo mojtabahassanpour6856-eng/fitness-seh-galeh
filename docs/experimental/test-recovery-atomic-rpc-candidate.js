@@ -137,7 +137,14 @@ async function main() {
   assert.equal(rateThree.rows[0].allowed,false,'third request must be blocked within the fixed window');
   const badRate=await callAsService('SELECT public.consume_registration_rate_limit($1,3600,2) AS allowed',['not-a-hash']);
   assert.equal(badRate.rows[0].allowed,false,'malformed pseudonymous key must fail closed');
-  await assert.rejects(pool.query('SET ROLE anon; SELECT public.consume_registration_rate_limit($1,3600,2)',[rateKey]));
+  const anonClient=await pool.connect();
+  try {
+    await anonClient.query('SET ROLE anon');
+    await assert.rejects(anonClient.query('SELECT public.consume_registration_rate_limit($1,3600,2)',[rateKey]),/permission denied/);
+  } finally {
+    await anonClient.query('RESET ROLE');
+    anonClient.release();
+  }
   console.log('PASS: atomic fixed-window rate limiter enforces cap, validates hashed keys, and is service-role-only');
 
 
