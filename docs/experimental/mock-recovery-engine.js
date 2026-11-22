@@ -8,7 +8,7 @@ const crypto = require('node:crypto');
 
 const STATES = Object.freeze({
   REQUESTED: 'REQUESTED', APPROVED: 'APPROVED', CODE_ISSUED: 'CODE_ISSUED',
-  VERIFIED: 'VERIFIED', DELIVERY_PENDING: 'DELIVERY_PENDING', COMPLETED: 'COMPLETED', REJECTED: 'REJECTED',
+  VERIFIED: 'VERIFIED', DELIVERY_PENDING: 'DELIVERY_PENDING', DELIVERY_UNKNOWN: 'DELIVERY_UNKNOWN', COMPLETED: 'COMPLETED', REJECTED: 'REJECTED',
   EXPIRED: 'EXPIRED', CANCELLED: 'CANCELLED'
 });
 
@@ -62,7 +62,7 @@ class MockRecovery {
       if (active.state === STATES.CODE_ISSUED && this.now() >= active.expiresAt) {
         active.state = STATES.EXPIRED; active.codeDigest = null;
       }
-      if ([STATES.REQUESTED, STATES.APPROVED, STATES.DELIVERY_PENDING, STATES.CODE_ISSUED, STATES.VERIFIED].includes(active.state)) {
+      if ([STATES.REQUESTED, STATES.APPROVED, STATES.DELIVERY_PENDING, STATES.DELIVERY_UNKNOWN, STATES.CODE_ISSUED, STATES.VERIFIED].includes(active.state)) {
         throw new Error('Active recovery request exists');
       }
     }
@@ -93,12 +93,12 @@ class MockRecovery {
     try { outcome = this.delivery({ requestId, traineeId: r.traineeId, code }); }
     catch (deliveryError) {
       // Never leave the fixture stuck in DELIVERY_PENDING after a thrown callback.
-      r.state = STATES.APPROVED;
-      r.deliveryStatus = 'FAILED';
-      r.deliveryFailedAt = this.now();
+      r.state = STATES.DELIVERY_UNKNOWN;
+      r.deliveryStatus = 'UNKNOWN';
+      r.deliveryUnknownAt = this.now();
       r.codeDigest = null;
       r.expiresAt = null;
-      return { requestId, state: r.state, delivery: 'FAILED', retryable: true, error: 'Delivery callback failed' };
+      return { requestId, state: r.state, delivery: 'UNKNOWN', retryable: false, error: 'Delivery outcome is ambiguous; reconcile provider status before retry' };
     }
     if (!outcome || outcome.ok !== true) {
       r.state = STATES.APPROVED;
@@ -168,11 +168,16 @@ class MockRecovery {
     const now = this.now();
     let expiredCount = 0;
     for (const r of this.requests.values()) {
-      if ([STATES.REQUESTED, STATES.APPROVED, STATES.DELIVERY_PENDING].includes(r.state) && now - r.createdAt >= this.requestTTLms) {
+      if ([STATES.REQUESTED, STATES.APPROVED, STATES.DELIVERY_PENDING, STATES.DELIVERY_UNKNOWN].includes(r.state) && now - r.createdAt >= this.requestTTLms) {
         r.state = STATES.EXPIRED;
         r.expiredAt = now;
         r.codeDigest = null;
         r.expiresAt = null;
+        expiredCount++;
+      } else if (r.state === STATES.VERIFIED && (!r.grantExpiresAt || now >= r.grantExpiresAt)) {
+        r.state = STATES.EXPIRED;
+        r.expiredAt = now;
+        r.grantExpiresAt = null;
         expiredCount++;
       } else if (r.state === STATES.CODE_ISSUED && now >= r.expiresAt) {
         r.state = STATES.EXPIRED;
