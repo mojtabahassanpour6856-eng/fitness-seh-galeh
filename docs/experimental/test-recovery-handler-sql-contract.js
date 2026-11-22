@@ -16,7 +16,7 @@ const wrappers = [
   'recovery_finish_delivery',
   'recovery_claim_reset',
   'recovery_begin_auth_update',
-  'recovery_finish_auth_update'
+  'recovery_finish_auth_update',\n  'recovery_outbox_claim',\n  'recovery_outbox_heartbeat',\n  'recovery_outbox_begin_send',\n  'recovery_outbox_finish',\n  'recovery_outbox_reconcile_expired'
 ];
 for (const name of wrappers) {
   assert.match(migration, new RegExp('CREATE OR REPLACE FUNCTION public\\.' + name + '\\s*\\('), name + ' wrapper must exist');
@@ -33,7 +33,8 @@ for (const column of [
 assert.match(handler, /profiles/);
 assert.match(handler, /select\('role'\)/);
 assert.match(handler, /trainees!inner\(full_name,coach_user_id\)/);
-assert.match(handler, /trainees!inner\(phone_normalized,coach_user_id,approval_status,archived_at\)/);
+assert.match(handler, /delivery_status: 'queued'/);
+assert.doesNotMatch(handler, /recovery_begin_delivery|recovery_finish_delivery|deliveryAdapter/);
 assert.match(migration, /t\.approval_status = 'active'/);
 assert.match(migration, /t\.archived_at IS NULL/);
 assert.match(migration, /GRANT EXECUTE ON FUNCTION public\.recovery_submit_request\(text\) TO service_role/);
