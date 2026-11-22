@@ -1,0 +1,52 @@
+'use strict';
+const assert = require('node:assert/strict');
+const { STATES, generateCode, safeEqualHex, MockRecovery } = require('./mock-recovery-engine');
+
+const secret = 'mock-test-secret-key-with-at-least-32-chars';
+let now = 1000000;
+const sys = () => new MockRecovery({ secret, now: () => now, codeTTLms: 300000, maxAttempts: 3, cooldownMs: 60000 });
+
+// Leading zeroes remain strings; deterministic sampler edge fixtures.
+assert.equal(generateCode(n => Buffer.from([0, 0])), '0000');
+assert.equal(generateCode(n => Buffer.from([0x27, 0x0f])), '9999'); // 9999 is within accepted range
+assert.throws(() => generateCode(n => Buffer.from([0xea, 0x60])), /never/); // replaced below by retry fixture
+
+const retryCode = generateCode((() => { let i=0; return () => i++===0 ? Buffer.from([0xea,0x60]) : Buffer.from([0,1]); })());
+assert.equal(retryCode, '0001');
+
+const s = sys();
+const req = s.request({ traineeId:'t1', coachId:'c1', requestId:'r1' });
+assert.equal(req.state, STATES.REQUESTED);
+assert.throws(() => s.approve({requestId:'r1', authenticatedCoachId:'c2'}), /ownership/);
+const issued = s.approve({requestId:'r1', authenticatedCoachId:'c1'});
+assert.equal(issued.delivery, 'MOCK_ONLY');
+const code = s.mockMessages[0].body.split(': ').pop();
+assert.equal(code.length, 4);
+assert.throws(() => s.verify({requestId:'r1', traineeId:'t2', code}), /ownership/);
+assert.throws(() => s.verify({requestId:'r1', traineeId:'t1', code:'1111'}), /Invalid code/);
+s.verify({requestId:'r1', traineeId:'t1', code});
+assert.equal(s.requests.get('r1').state, STATES.VERIFIED);
+s.complete({requestId:'r1', traineeId:'t1'});
+assert.equal(s.requests.get('r1').state, STATES.COMPLETED);
+assert.throws(() => s.complete({requestId:'r1', traineeId:'t1'}), /Not verified/);
+
+const exp = sys();
+exp.request({traineeId:'t3', coachId:'c3', requestId:'r3'});
+exp.approve({requestId:'r3', authenticatedCoachId:'c3'});
+now += 300000;
+assert.throws(() => exp.verify({requestId:'r3', traineeId:'t3', code:exp.mockMessages[0].body.slice(-4)}), /expired/i);
+assert.equal(exp.requests.get('r3').state, STATES.EXPIRED);
+
+const attempts = sys();
+attempts.request({traineeId:'t4', coachId:'c4', requestId:'r4'});
+attempts.approve({requestId:'r4', authenticatedCoachId:'c4'});
+for (let i=0;i<3;i++) assert.throws(()=>attempts.verify({requestId:'r4', traineeId:'t4', code:'9999'}), /Invalid code/);
+assert.throws(()=>attempts.verify({requestId:'r4', traineeId:'t4', code:'9999'}), /Invalid state|Attempt limit/);
+
+const cooldown = sys();
+cooldown.request({traineeId:'t5', coachId:'c5', requestId:'r5'});
+assert.throws(()=>cooldown.request({traineeId:'t5', coachId:'c5', requestId:'r6'}), /Cooldown/);
+
+assert.equal(safeEqualHex('a'.repeat(64), 'a'.repeat(64)), true);
+assert.equal(safeEqualHex('a'.repeat(64), 'b'.repeat(64)), false);
+console.log('All mock recovery engine tests passed.');
