@@ -121,10 +121,25 @@ async function main() {
       has_function_privilege('service_role','public.recovery_submit_request(text)','EXECUTE') AS service_request_execute,
       has_function_privilege('anon','public.recovery_submit_request(text)','EXECUTE') AS anon_request_execute,
       has_function_privilege('service_role','public.recovery_submit_request(text)','EXECUTE') AS public_service_request_execute,
-      has_function_privilege('anon','public.recovery_coach_review(uuid,uuid,text,text,timestamptz,text)','EXECUTE') AS anon_public_review_execute
+      has_function_privilege('anon','public.recovery_coach_review(uuid,uuid,text,text,timestamptz,text)','EXECUTE') AS anon_public_review_execute,
+       has_function_privilege('service_role','public.consume_registration_rate_limit(text,integer,integer)','EXECUTE') AS service_rate_execute,
+       has_function_privilege('anon','public.consume_registration_rate_limit(text,integer,integer)','EXECUTE') AS anon_rate_execute
   `);
-  assert.deepEqual(acl.rows[0],{service_usage:true,anon_usage:false,service_execute:true,anon_execute:false,service_request_execute:true,anon_request_execute:false,public_service_request_execute:true,anon_public_review_execute:false});
+  assert.deepEqual(acl.rows[0],{service_usage:true,anon_usage:false,service_execute:true,anon_execute:false,service_request_execute:true,anon_request_execute:false,public_service_request_execute:true,anon_public_review_execute:false,service_rate_execute:true,anon_rate_execute:false});
   console.log('PASS: recovery RPC schema and execute privileges are restricted to service_role');
+
+  const rateKey='a'.repeat(64);
+  const rateOne=await callAsService('SELECT public.consume_registration_rate_limit($1,3600,2) AS allowed',[rateKey]);
+  const rateTwo=await callAsService('SELECT public.consume_registration_rate_limit($1,3600,2) AS allowed',[rateKey]);
+  const rateThree=await callAsService('SELECT public.consume_registration_rate_limit($1,3600,2) AS allowed',[rateKey]);
+  assert.equal(rateOne.rows[0].allowed,true);
+  assert.equal(rateTwo.rows[0].allowed,true);
+  assert.equal(rateThree.rows[0].allowed,false,'third request must be blocked within the fixed window');
+  const badRate=await callAsService('SELECT public.consume_registration_rate_limit($1,3600,2) AS allowed',['not-a-hash']);
+  assert.equal(badRate.rows[0].allowed,false,'malformed pseudonymous key must fail closed');
+  await assert.rejects(pool.query('SET ROLE anon; SELECT public.consume_registration_rate_limit($1,3600,2)',[rateKey]));
+  console.log('PASS: atomic fixed-window rate limiter enforces cap, validates hashed keys, and is service-role-only');
+
 
   let r;
   const submits=await Promise.all(Array.from({length:8},()=>callAsService(
