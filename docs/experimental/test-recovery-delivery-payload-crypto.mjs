@@ -24,6 +24,16 @@ await assert.rejects(
   decryptRecoveryDeliveryCode({envelope:first,keys,requestId:'6ba7b813-9dad-41d1-80b4-00c04fd430c8',operationId,cryptoImpl:webcrypto}),
   /DELIVERY_PAYLOAD_AUTHENTICATION_FAILED/
 );
+// A copied envelope must not decrypt when transplanted to another request or operation.
+const transplanted={...first};
+await assert.rejects(
+  decryptRecoveryDeliveryCode({envelope:transplanted,keys,requestId,operationId:otherOperationId,cryptoImpl:webcrypto}),
+  /DELIVERY_PAYLOAD_AUTHENTICATION_FAILED/
+);
+await assert.rejects(
+  decryptRecoveryDeliveryCode({envelope:transplanted,keys,requestId:'6ba7b813-9dad-41d1-80b4-00c04fd430c8',operationId,cryptoImpl:webcrypto}),
+  /DELIVERY_PAYLOAD_AUTHENTICATION_FAILED/
+);
 const tampered={...first,ct:(first.ct[0]==='A'?'B':'A')+first.ct.slice(1)};
 await assert.rejects(
   decryptRecoveryDeliveryCode({envelope:tampered,keys,requestId,operationId,cryptoImpl:webcrypto}),
