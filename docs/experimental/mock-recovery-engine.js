@@ -295,7 +295,12 @@ class MockRecovery {
     }
   }
   // Legacy wrapper retained only to fail closed; callers must use the Auth-backed method above.
-  completeForAuthenticatedTrainee() {
+  completeForAuthenticatedTrainee({ requestId, authenticatedTraineeId }) {
+    if (!authenticatedTraineeId) throw new Error('Recovery request unavailable');
+    let r;
+    try { r = this.#get(requestId); }
+    catch (error) { throw new Error('Recovery request unavailable'); }
+    if (r.traineeId !== authenticatedTraineeId) throw new Error('Recovery request unavailable');
     throw new Error('Direct completion is disabled; use applyPasswordResetForAuthenticatedTrainee');
   }
   cancelForAuthenticatedTrainee({ requestId, authenticatedTraineeId }) {
