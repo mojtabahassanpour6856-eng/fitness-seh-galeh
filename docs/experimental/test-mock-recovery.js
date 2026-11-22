@@ -438,7 +438,7 @@ let lockedNow = 41000000;
 const lockedUnknown = new MockRecovery({secret,now:()=>lockedNow,cooldownMs:0,requestTTLms:100});
 lockedUnknown.request({traineeId:'locked-trainee',coachId:'locked-coach',requestId:'locked-r'});
 lockedUnknown.approve({requestId:'locked-r',authenticatedCoachId:'locked-coach'});
-const lockedCode = lockedUnknown.mockMessages.at(-1).body.match(/(\\d{4})$/)[1];
+const lockedCode = lockedUnknown.mockMessages.at(-1).body.match(/(\d{4})$/)[1];
 lockedUnknown.verify({requestId:'locked-r',traineeId:'locked-trainee',code:lockedCode});
 lockedUnknown.applyPasswordReset({requestId:'locked-r',traineeId:'locked-trainee',
   operationId:'locked-op',updateAuth:()=>{throw new Error('ambiguous transport failure');}});
@@ -456,7 +456,7 @@ assert.equal(lockedUnknown.requests.get('locked-r').state,STATES.RESET_UNKNOWN,
 const pendingLock = new MockRecovery({secret,now:()=>lockedNow,cooldownMs:0});
 pendingLock.request({traineeId:'pending-trainee',coachId:'pending-coach',requestId:'pending-r'});
 pendingLock.approve({requestId:'pending-r',authenticatedCoachId:'pending-coach'});
-const pendingCode = pendingLock.mockMessages.at(-1).body.match(/(\\d{4})$/)[1];
+const pendingCode = pendingLock.mockMessages.at(-1).body.match(/(\d{4})$/)[1];
 pendingLock.verify({requestId:'pending-r',traineeId:'pending-trainee',code:pendingCode});
 let blockedDuringAuth = false;
 pendingLock.applyPasswordReset({requestId:'pending-r',traineeId:'pending-trainee',operationId:'pending-op',
