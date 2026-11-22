@@ -179,4 +179,28 @@ async function body(response) { return await response.json(); }
   assert.equal(f.calls.filter(x => x.type === 'auth_update').length, 1);
   console.log('PASS: confirmed Auth success makes one password update and records completion.');
 }
+
+{
+  const f = fixture({
+    matches: [{ id: UUID, phone_normalized: '+989123456789', hmac_key_version: 'k0' }],
+    claim: { claimed: true, operation_id: OP, auth_user_id: AUTH_USER }
+  });
+  const r = await f.handler(request({ action: 'reset', phone: '09123456789', code: '0007', new_password: 'StrongPass!234' }));
+  assert.equal(r.status, 200);
+  const claim = f.calls.find(x => x.name === 'recovery_claim_reset');
+  assert.equal(claim.args.p_code_digest, digestRecoveryCode('0007', 'older-candidate-test-secret-longer-than-32-bytes', 'k0'));
+  console.log('PASS: reset uses the exact historical HMAC key version recorded on the request.');
+}
+{
+  const f = fixture({
+    matches: [{ id: UUID, phone_normalized: '+989123456789', hmac_key_version: 'retired-missing-key' }]
+  });
+  const r = await f.handler(request({ action: 'reset', phone: '09123456789', code: '0007', new_password: 'StrongPass!234' }));
+  assert.equal(r.status, 400);
+  assert.equal(f.calls.some(x => x.name === 'recovery_claim_reset'), false);
+  assert.equal(f.calls.some(x => x.name === 'recovery_record_wrong_attempt'), false);
+  assert.equal(f.calls.some(x => x.type === 'auth_update'), false);
+  console.log('PASS: missing historical HMAC key fails closed without consuming attempts or calling Auth.');
+}
+
 console.log('All dependency-injected recovery handler candidate tests passed.');
