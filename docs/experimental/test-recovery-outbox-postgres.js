@@ -76,6 +76,8 @@ async function main(){
  assert.equal(await asService("SELECT recovery_private.heartbeat_recovery_outbox($1,$2,$3,30) AS ok",[lease.outbox_id,workerA,lease.lease_generation]).then(r=>r.rows[0].ok),false);
  assert.equal(await asService("SELECT recovery_private.begin_recovery_outbox_send($1,$2,$3) AS ok",[lease.outbox_id,workerA,lease.lease_generation]).then(r=>r.rows[0].ok),false);
  assert.equal(await asService("SELECT recovery_private.begin_recovery_outbox_send($1,$2,$3) AS ok",[lease.outbox_id,workerB,newer.lease_generation]).then(r=>r.rows[0].ok),true);
+ const attempting=await pool.query("SELECT delivery_outcome FROM public.trainee_password_recovery_requests WHERE id=$1",[lease.recovery_request_id]);
+ assert.equal(attempting.rows[0].delivery_outcome,'attempting','send-start and request state must commit atomically');
  assert.equal(await asService("SELECT recovery_private.finish_recovery_outbox($1,$2,$3,'sent','stale-id',NULL) AS ok",[lease.outbox_id,workerA,lease.lease_generation]).then(r=>r.rows[0].ok),false);
  console.log('PASS: lease generation fences stale heartbeat, send-start, and completion');
  // Once send-start is durable, an expired lease must not be claimed by another worker.
@@ -87,6 +89,8 @@ async function main(){
  const row=await pool.query("SELECT status,attempt_count,lease_generation FROM public.trainee_password_recovery_outbox WHERE id=$1",[lease.outbox_id]);
  assert.equal(row.rows[0].status,'unknown');
  assert.equal(row.rows[0].attempt_count,1);
+ const requestUnknown=await pool.query("SELECT delivery_outcome FROM public.trainee_password_recovery_requests WHERE id=$1",[lease.recovery_request_id]);
+ assert.equal(requestUnknown.rows[0].delivery_outcome,'unknown','expired send lease must reconcile both records to unknown');
  assert.equal(await asService("SELECT recovery_private.finish_recovery_outbox($1,$2,$3,'sent','late',NULL) AS ok",[lease.outbox_id,workerB,newer.lease_generation]).then(r=>r.rows[0].ok),false);
  console.log('PASS: expired lease after durable send-start becomes unknown; no second claim or stale finalization');
  // Create the second approved request only now, so the concurrent claim race above
@@ -118,7 +122,12 @@ async function main(){
  assert.equal(await asService("SELECT recovery_private.begin_recovery_outbox_send($1,$2,$3) AS ok",[l.outbox_id,workerA,l.lease_generation]).then(r=>r.rows[0].ok),true);
  assert.equal(await asService("SELECT recovery_private.finish_recovery_outbox($1,$2,$3,'sent','mock-provider-id',NULL) AS ok",[l.outbox_id,workerA,l.lease_generation]).then(r=>r.rows[0].ok),true);
  assert.equal(await asService("SELECT recovery_private.finish_recovery_outbox($1,$2,$3,'sent','duplicate',NULL) AS ok",[l.outbox_id,workerA,l.lease_generation]).then(r=>r.rows[0].ok),false);
- console.log('PASS: live lease heartbeat and one-time successful completion');
+ const delivered=await pool.query("SELECT delivery_outcome,status FROM public.trainee_password_recovery_requests WHERE id=$1",[secondRequest]);
+ assert.equal(delivered.rows[0].delivery_outcome,'sent');
+ assert.equal(delivered.rows[0].status,'approved');
+ const outboxSent=await pool.query("SELECT status FROM public.trainee_password_recovery_outbox WHERE id=$1",[l.outbox_id]);
+ assert.equal(outboxSent.rows[0].status,'sent');
+ console.log('PASS: live lease heartbeat and atomic one-time successful completion');
  console.log('All disposable PostgreSQL Outbox/Worker integration checks passed.');
 }
 main().catch(e=>{console.error(e);process.exitCode=1;}).finally(()=>pool.end());
