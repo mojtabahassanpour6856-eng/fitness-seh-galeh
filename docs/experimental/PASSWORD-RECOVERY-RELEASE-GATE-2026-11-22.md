@@ -141,3 +141,21 @@ The full HTTP/Auth matrix must not be attempted using ordinary trainee accounts.
 - Contract test commit: `c0ea23b4d8b998f3daaae38da6a9767d3e708d94`.
 - Workflow update commit: `b4617bed344d663a91514ee8dfdcad16439e5948`.
 - No Supabase endpoint request, database write, password update, SMS, or deploy occurred.
+
+
+## Focused authorization and abuse regression suite added (2026-11-22)
+Added `docs/experimental/test-recovery-authorization-abuse.js` to the isolated experiment branch. The suite covers:
+- identical generic denial text for wrong-owner versus unknown request reads (coach and trainee);
+- wrong-coach approval/rejection attempts leave state unchanged and trigger no mock delivery;
+- duplicate coach approval is idempotent and invokes the delivery adapter only once;
+- the configured wrong-code attempt cap expires the code and clears its digest;
+- expired codes cannot be replayed;
+- idempotency-key reuse with different ownership data is rejected.
+
+The suite uses only the in-memory MockRecovery engine and mock delivery adapter. It does not test HTTP response uniformity, JWT verification, Supabase RLS, database atomicity, real provider behavior, or production authorization. Those remain separate integration gates.
+
+Added the suite to the experiment workflow and path filters. The new workflow execution has not been independently observed; combined status/workflow-run lookup for the current branch commit may be empty through the available connector. Do not treat the suite as passed until an actual run is visible.
+
+Test file commit: `aa6ec9349d6f11f6592a40fb1fdefedff7b18a4c`.
+Workflow update commit: `3fd444ba7ce7139f4d76a16a535bd2150b69d8a7`.
+No Supabase endpoint, database, Auth user, password, SMS provider, or Production resource was accessed or changed.
