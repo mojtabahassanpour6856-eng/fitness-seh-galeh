@@ -38,5 +38,11 @@ assert.match(migration, /t\.approval_status = 'active'/);
 assert.match(migration, /t\.archived_at IS NULL/);
 assert.match(migration, /GRANT EXECUTE ON FUNCTION public\.recovery_submit_request\(text\) TO service_role/);
 assert.doesNotMatch(migration, /GRANT EXECUTE ON FUNCTION public\.recovery_[a-z_]+\([^;]+ TO anon/);
+const deliveryFinish = migration.split('CREATE OR REPLACE FUNCTION recovery_private.finish_recovery_delivery')[1].split('CREATE OR REPLACE FUNCTION recovery_private.claim_recovery_reset')[0];
+const authFinish = migration.split('CREATE OR REPLACE FUNCTION recovery_private.finish_recovery_auth_update')[1].split('REVOKE ALL ON ALL FUNCTIONS')[0];
+assert.match(deliveryFinish, /delivery_outcome = 'attempting'/, 'delivery finalization must only close a live attempt');
+assert.doesNotMatch(deliveryFinish, /delivery_outcome IN \('attempting','unknown'\)/, 'unknown delivery must not be silently resolved by retry');
+assert.match(authFinish, /auth_outcome = 'attempting'/, 'Auth finalization must only close a live attempt');
+assert.doesNotMatch(authFinish, /auth_outcome IN \('attempting','unknown'\)/, 'unknown Auth outcome must remain locked pending authoritative reconciliation');
 
 console.log('PASS: candidate handler RPC names, required migration columns, coach/profile fields, and service-role grants are statically aligned.');
