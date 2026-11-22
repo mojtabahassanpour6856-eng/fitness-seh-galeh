@@ -8,7 +8,7 @@ const crypto = require('node:crypto');
 
 const STATES = Object.freeze({
   REQUESTED: 'REQUESTED', APPROVED: 'APPROVED', CODE_ISSUED: 'CODE_ISSUED',
-  VERIFIED: 'VERIFIED', DELIVERY_PENDING: 'DELIVERY_PENDING', DELIVERY_UNKNOWN: 'DELIVERY_UNKNOWN', COMPLETED: 'COMPLETED', REJECTED: 'REJECTED',
+  VERIFIED: 'VERIFIED', RESET_PENDING: 'RESET_PENDING', RESET_UNKNOWN: 'RESET_UNKNOWN', DELIVERY_PENDING: 'DELIVERY_PENDING', DELIVERY_UNKNOWN: 'DELIVERY_UNKNOWN', COMPLETED: 'COMPLETED', REJECTED: 'REJECTED',
   EXPIRED: 'EXPIRED', CANCELLED: 'CANCELLED', STALE_ASSIGNMENT: 'STALE_ASSIGNMENT'
 });
 
@@ -72,7 +72,7 @@ class MockRecovery {
       if (active.state === STATES.CODE_ISSUED && this.now() >= active.expiresAt) {
         active.state = STATES.EXPIRED; active.codeDigest = null;
       }
-      if ([STATES.REQUESTED, STATES.APPROVED, STATES.DELIVERY_PENDING, STATES.DELIVERY_UNKNOWN, STATES.CODE_ISSUED, STATES.VERIFIED].includes(active.state)) {
+      if ([STATES.REQUESTED, STATES.APPROVED, STATES.DELIVERY_PENDING, STATES.DELIVERY_UNKNOWN, STATES.CODE_ISSUED, STATES.VERIFIED, STATES.RESET_PENDING, STATES.RESET_UNKNOWN].includes(active.state)) {
         throw new Error('Active recovery request exists');
       }
     }
@@ -147,21 +147,81 @@ class MockRecovery {
     r.codeDigest = null; r.state = STATES.VERIFIED; r.verifiedAt = this.now(); r.grantExpiresAt = this.now() + Math.min(this.codeTTLms, 10 * 60_000);
     return { requestId, state: r.state };
   }
-  complete({ requestId, traineeId }) {
+  // The provider callback is a mock-only seam. It must never receive or log a plaintext password.
+  // {ok:true} means confirmed success; {ok:false} means confirmed no-change; throw means ambiguous.
+  applyPasswordReset({ requestId, traineeId, operationId, updateAuth }) {
     this.sweepExpired();
     const r = this.#get(requestId);
     if (r.traineeId !== traineeId) throw new Error('Trainee ownership check failed');
+    if (typeof operationId !== 'string' || !operationId || typeof updateAuth !== 'function') {
+      throw new Error('Operation identifier and mock Auth adapter required');
+    }
+    r.authOperations ||= new Map();
+    const prior = r.authOperations.get(operationId);
+    if (prior) return { requestId, operationId, state: r.state, authOutcome: prior.outcome, idempotent: true };
     if (r.state !== STATES.VERIFIED) throw new Error('Not verified');
-    // The mock models a short-lived, one-time post-verification grant.
     if (!r.grantExpiresAt || this.now() >= r.grantExpiresAt) {
-      r.state = STATES.EXPIRED;
-      r.expiredAt = this.now();
-      r.grantExpiresAt = null;
+      r.state = STATES.EXPIRED; r.expiredAt = this.now(); r.grantExpiresAt = null;
       throw new Error('Reset grant expired');
     }
-    r.state = STATES.COMPLETED; r.completedAt = this.now();
+    r.state = STATES.RESET_PENDING;
+    r.resetOperationId = operationId;
+    r.resetStartedAt = this.now();
+    try {
+      const outcome = updateAuth({ requestId, traineeId, operationId });
+      if (!outcome || outcome.ok !== true) {
+        r.state = STATES.VERIFIED;
+        r.resetLastFailureAt = this.now();
+        r.resetOperationId = null;
+        r.authOperations.set(operationId, { outcome: 'REJECTED', at: this.now() });
+        return { requestId, operationId, state: r.state, authOutcome: 'REJECTED', retryableWithNewOperationId: true };
+      }
+      this.#markPasswordResetSucceeded(r);
+      r.authOperations.set(operationId, { outcome: 'SUCCEEDED', at: this.now() });
+      return { requestId, operationId, state: r.state, authOutcome: 'SUCCEEDED' };
+    } catch (error) {
+      // A thrown transport error may occur after Auth committed the password change.
+      r.state = STATES.RESET_UNKNOWN;
+      r.resetUnknownAt = this.now();
+      r.authOperations.set(operationId, { outcome: 'UNKNOWN', at: this.now() });
+      return { requestId, operationId, state: r.state, authOutcome: 'UNKNOWN', retryable: false,
+        message: 'Password update outcome is unknown; reconcile Auth status before retrying' };
+    }
+  }
+  reconcilePasswordReset({ requestId, traineeId, operationId, lookupAuth }) {
+    this.sweepExpired();
+    const r = this.#get(requestId);
+    if (r.traineeId !== traineeId) throw new Error('Trainee ownership check failed');
+    if (r.state !== STATES.RESET_UNKNOWN || r.resetOperationId !== operationId ||
+        typeof lookupAuth !== 'function') throw new Error('No matching ambiguous Auth operation');
+    let status;
+    try { status = lookupAuth({ requestId, traineeId, operationId }); }
+    catch (error) { return { requestId, operationId, state: r.state, authOutcome: 'UNKNOWN', retryable: false }; }
+    if (status === 'SUCCEEDED') {
+      this.#markPasswordResetSucceeded(r);
+      r.authOperations.set(operationId, { outcome: 'SUCCEEDED', at: this.now() });
+      return { requestId, operationId, state: r.state, authOutcome: 'SUCCEEDED' };
+    }
+    if (status === 'NOT_APPLIED') {
+      r.state = STATES.VERIFIED;
+      r.resetOperationId = null;
+      r.resetReconciledAt = this.now();
+      r.authOperations.set(operationId, { outcome: 'NOT_APPLIED', at: this.now() });
+      return { requestId, operationId, state: r.state, authOutcome: 'NOT_APPLIED', retryableWithNewOperationId: true };
+    }
+    return { requestId, operationId, state: r.state, authOutcome: 'UNKNOWN', retryable: false };
+  }
+  #markPasswordResetSucceeded(r) {
+    r.state = STATES.COMPLETED;
+    r.completedAt = this.now();
     r.grantExpiresAt = null;
-    return { requestId, state: r.state };
+    r.codeDigest = null;
+    r.expiresAt = null;
+    r.sessionsRevocationStatus = 'NOT_MODELED';
+  }
+  // Legacy shortcut deliberately disabled: completion requires a confirmed Auth outcome.
+  complete() {
+    throw new Error('Direct completion is disabled; use applyPasswordReset with a confirmed Auth result');
   }
   cancel({ requestId, traineeId }) {
     this.sweepExpired();
@@ -267,7 +327,9 @@ class MockRecovery {
       throw new Error('Recovery request unavailable');
     }
     return { requestId: r.requestId, state: r.state, createdAt: r.createdAt,
-      expiresAt: r.expiresAt || null, completedAt: r.completedAt || null };
+      expiresAt: r.expiresAt || null, completedAt: r.completedAt || null,
+      resetStartedAt: r.resetStartedAt || null, resetUnknownAt: r.resetUnknownAt || null,
+      resetReconciledAt: r.resetReconciledAt || null };
   }
   #get(id) { const r = this.requests.get(id); if (!r) throw new Error('Request not found'); return r; }
 }
