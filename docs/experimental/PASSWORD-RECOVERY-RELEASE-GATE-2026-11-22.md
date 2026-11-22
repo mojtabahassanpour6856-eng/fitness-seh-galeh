@@ -233,3 +233,16 @@ Follow-up run `45047406596`:
 - Disposable PostgreSQL concurrency job: **success**. The complete workflow run `45047406596` finished with conclusion **success** (both jobs successful).
 
 These are isolated CI checks only. The candidate module is not an Edge Function and does not implement database RPCs, JWT middleware, real Auth, SMS, or persistence. The live Test/Production functions and schemas remain untouched; production release remains **NOT READY**.
+
+
+## Atomic RPC candidate test evidence (2026-11-22)
+
+Added a separate experimental SQL draft and disposable PostgreSQL 16 integration test:
+- `docs/experimental/migrations/20261122_recovery_atomic_rpc_candidate.sql`
+- `docs/experimental/test-recovery-atomic-rpc-candidate.js`
+
+The draft includes operation metadata, a `processing`-inclusive active-request unique index, and service-role-only functions in a non-exposed schema. The functions pin an empty `search_path`, fully qualify relations, and deny schema/function access to anon/authenticated/public. Tests exercise row-lock-protected coach authorization during concurrent reassignment, atomic wrong-code limits, single-winner reset claims, active uniqueness during processing, fail-closed Auth ambiguity, authoritative reconciliation, completion, and privilege boundaries.
+
+Workflow run `45047881214` completed **success**. The PostgreSQL job checked out candidate SQL commit `9745175f69d93e2eb2a113ee3250782c3f11fe70`; both workflow jobs succeeded.
+
+**Updated release status: NOT READY FOR PRODUCTION.** These checks use disposable PostgreSQL fixture tables only. The candidate SQL has not been applied to Supabase Test or Production. Real Edge Function HTTP/Auth integration, test-only SMS delivery, delivery ambiguity/idempotency, session behavior, logs, monitoring, and rollback/reconciliation remain untested. No live database/function/auth/password/SMS changes were made.
