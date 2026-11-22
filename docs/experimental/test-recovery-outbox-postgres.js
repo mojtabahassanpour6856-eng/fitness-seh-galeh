@@ -80,6 +80,7 @@ async function main(){
  assert.equal(race.reduce((n,r)=>n+r.rowCount,0),1,'only one worker may claim the same Outbox item');
  const lease=race.find(r=>r.rowCount===1).rows[0];
  assert.equal(Number(lease.lease_generation),1);
+ assert.equal((await asService("SELECT * FROM public.recovery_outbox_fetch_payload($1,$2,$3)",[lease.outbox_id,workerA,lease.lease_generation])).rowCount,0,'ciphertext must not be fetchable before durable send-start');
  console.log('PASS: two independent sessions; exactly one atomic Outbox claim');
  // Before send-start, expired lease may be reclaimed with a higher generation.
  await pool.query("UPDATE public.trainee_password_recovery_outbox SET locked_until=now()-interval '1 second' WHERE id=$1",[lease.outbox_id]);
@@ -87,6 +88,7 @@ async function main(){
  assert.equal(reclaim.rowCount,1);
  const newer=reclaim.rows[0];
  assert.equal(Number(newer.lease_generation),2);
+ assert.equal((await asService("SELECT * FROM public.recovery_outbox_fetch_payload($1,$2,$3)",[lease.outbox_id,workerB,lease.lease_generation])).rowCount,0,'stale generation cannot fetch after lease reclaim');
  assert.equal(await asService("SELECT recovery_private.heartbeat_recovery_outbox($1,$2,$3,30) AS ok",[lease.outbox_id,workerA,lease.lease_generation]).then(r=>r.rows[0].ok),false);
  assert.equal(await asService("SELECT recovery_private.begin_recovery_outbox_send($1,$2,$3) AS ok",[lease.outbox_id,workerA,lease.lease_generation]).then(r=>r.rows[0].ok),false);
  assert.equal(await asService("SELECT recovery_private.begin_recovery_outbox_send($1,$2,$3) AS ok",[lease.outbox_id,workerB,newer.lease_generation]).then(r=>r.rows[0].ok),true);
