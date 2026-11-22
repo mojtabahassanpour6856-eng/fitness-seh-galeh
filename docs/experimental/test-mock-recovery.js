@@ -81,6 +81,20 @@ assert.equal(authUnknown.requests.get('auth-unknown-r').grantExpiresAt,null);
 assert.throws(()=>authUnknown.applyPasswordReset({requestId:'auth-unknown-r',traineeId:'auth-unknown',
   operationId:'replay-after-success',updateAuth:()=>({ok:true})}),/verified/i);
 
+// A Promise-returning adapter is ambiguous in this synchronous fixture, never a false rejection.
+const asyncAuth = sys();
+asyncAuth.request({traineeId:'async-auth',coachId:'coach',requestId:'async-auth-r'});
+asyncAuth.approve({requestId:'async-auth-r',authenticatedCoachId:'coach'});
+const asyncCode=asyncAuth.mockMessages.at(-1).body.slice(-4);
+asyncAuth.verify({requestId:'async-auth-r',traineeId:'async-auth',code:asyncCode});
+let asyncCalls=0;
+assert.equal(asyncAuth.applyPasswordReset({requestId:'async-auth-r',traineeId:'async-auth',
+  operationId:'async-op',updateAuth:()=>{asyncCalls++;return Promise.resolve({ok:true});}}).authOutcome,'UNKNOWN');
+assert.equal(asyncAuth.requests.get('async-auth-r').state,STATES.RESET_UNKNOWN);
+assert.equal(asyncCalls,1);
+assert.equal(asyncAuth.reconcilePasswordReset({requestId:'async-auth-r',traineeId:'async-auth',
+  operationId:'async-op',lookupAuth:()=> 'SUCCEEDED'}).state,STATES.COMPLETED);
+
 // A reconciled NOT_APPLIED result returns to VERIFIED; retry uses a NEW operation ID only.
 const authNotApplied = sys();
 authNotApplied.request({traineeId:'not-applied',coachId:'coach',requestId:'not-applied-r'});
