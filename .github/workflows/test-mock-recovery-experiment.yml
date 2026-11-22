@@ -28,6 +28,8 @@ on:
       - 'docs/experimental/trainee-password-recovery-edge-candidate.ts'
       - 'docs/experimental/test-recovery-edge-adapter-contract.js'
       - 'docs/experimental/test-recovery-handler-sql-contract.js'
+      - 'docs/experimental/test-recovery-auth-admin-sdk-contract.mjs'
+      - 'docs/experimental/test-recovery-auth-local-stack.mjs'
       - 'docs/experimental/migrations/20261122_recovery_atomic_rpc_candidate.sql'
       - 'docs/experimental/migrations/20261122_dispose_expired_legacy_approved_request.sql'
       - 'docs/experimental/test-recovery-atomic-rpc-candidate.js'
@@ -96,6 +98,51 @@ jobs:
           deno-version: v2.x
       - name: Type-check non-deployable Edge adapter candidate
         run: deno check docs/experimental/trainee-password-recovery-edge-candidate.ts
+
+
+  supabase-local-auth-integration:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - name: Checkout isolated experiment branch
+        uses: actions/checkout@v4
+        with:
+          ref: experiment/trainee-password-recovery-mock-20261122
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install pinned Supabase JS SDK
+        run: npm install --no-save @supabase/supabase-js@2.119.0
+      - name: Set up pinned Supabase CLI
+        uses: supabase/setup-cli@v3
+        with:
+          version: 3.2.0
+      - name: Initialize isolated local Supabase project (no remote linking)
+        run: |
+          mkdir -p /tmp/recovery-auth-local
+          cd /tmp/recovery-auth-local
+          supabase init
+      - name: Start disposable local Auth stack only
+        run: |
+          cd /tmp/recovery-auth-local
+          supabase start -x studio,realtime,storage-api,imgproxy,edge-runtime,logflare,vector,postgres-meta,supavisor,mailpit
+      - name: Export loopback-only local Auth credentials
+        shell: bash
+        run: |
+          cd /tmp/recovery-auth-local
+          eval "$(supabase status -o env)"
+          case "$API_URL" in http://127.0.0.1:*|http://localhost:*) ;; *) echo "Refusing non-local Auth URL"; exit 1 ;; esac
+          echo "SUPABASE_URL=$API_URL" >> "$GITHUB_ENV"
+          echo "SUPABASE_ANON_KEY=$ANON_KEY" >> "$GITHUB_ENV"
+          echo "SUPABASE_SERVICE_ROLE_KEY=$SERVICE_ROLE_KEY" >> "$GITHUB_ENV"
+      - name: Test password update and session revocation against disposable Auth
+        run: node docs/experimental/test-recovery-auth-local-stack.mjs
+      - name: Stop disposable local Supabase stack
+        if: always()
+        run: |
+          cd /tmp/recovery-auth-local
+          supabase stop --no-backup
 
   postgres-concurrency-tests:
     runs-on: ubuntu-latest
