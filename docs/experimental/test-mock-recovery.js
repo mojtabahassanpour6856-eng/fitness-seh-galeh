@@ -428,3 +428,5 @@ assert.throws(()=>cooldown.request({traineeId:'t5',coachId:'c5',requestId:'r6'})
 assert.equal(safeEqualHex('a'.repeat(64),'a'.repeat(64)),true);
 assert.equal(safeEqualHex('a'.repeat(64),'b'.repeat(64)),false);
 console.log('All mock recovery engine tests passed.');
+
+// CI rerun marker: isolated mock-only suite; no live Auth, database, trainee data, or SMS.
