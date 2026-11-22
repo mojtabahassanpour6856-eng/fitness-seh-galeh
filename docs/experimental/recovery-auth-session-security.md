@@ -46,3 +46,6 @@ The current MockRecovery fixture accepts identity values as function arguments a
 - Resolve the trainee's current coach assignment from the authoritative database when the request is created and re-check it immediately before approval/rejection and before any SMS dispatch.
 - If assignment changed after request creation, fail closed: invalidate the stale request, do not send a code, and require a new request under the current coach. Do not silently transfer approval authority to a different coach.
 - Tests must cover reassignment between request and approval, reassignment between approval and dispatch, and cross-coach access after reassignment.
+
+## Authenticated-context transition adapters (mock only)
+The experimental fixture now provides wrappers for coach approval/rejection and trainee verification/completion/cancellation. Each wrapper expects the actor ID to have been resolved by trusted server middleware and normalizes missing-request and wrong-owner failures to a generic unavailable response. These wrappers are test seams, not authentication middleware: production must not accept actor IDs from request JSON, and must enforce ownership atomically in persistent storage for every transition.
