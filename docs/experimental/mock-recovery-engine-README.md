@@ -10,4 +10,6 @@ This is a local in-memory state-machine fixture, **not a password reset implemen
 - The in-memory map is not concurrency-safe and must not be reused for production.
 - The mock code generator uses unbiased rejection sampling; codes remain strings to preserve leading zeros.
 
+The experimental default validity window is 24 hours (86400000 ms), matching the requested policy. This is only a fixture setting; production expiry must be enforced server-side.
+
 The next gate is reviewing the implementation and fixing/expanding tests before building any UI or production integration.
