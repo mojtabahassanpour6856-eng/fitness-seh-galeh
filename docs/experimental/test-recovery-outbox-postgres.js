@@ -222,6 +222,7 @@ async function main(){
  // End-to-end exercise: real PostgreSQL RPCs + production Worker module + fake SMS provider.
  const {webcrypto}=require('node:crypto');
  const {encryptRecoveryDeliveryCode}=await import('./recovery-delivery-payload-crypto.mjs');
+ const {digestRecoveryCode}=await import('./recovery-candidate-core.mjs');
  const {FakeRecoverySmsProvider,processOneRecoveryOutboxItem}=await import('./recovery-outbox-worker-mock.mjs');
  const e2eTrainee='20000000-0000-4000-8000-000000000078';
  const e2ePhone='+989123450003';
@@ -233,6 +234,8 @@ async function main(){
  assert.equal(submittedRequest.rows.length,1);
  const e2eRequestId=submittedRequest.rows[0].id;
  const e2eOperation='60000000-0000-4000-8000-000000000777';
+ const e2eHmacKey='disposable-test-hmac-key-with-more-than-thirty-two-bytes';
+ const e2eCodeDigest=digestRecoveryCode('4826',e2eHmacKey,'k1');
  const e2eWorker='50000000-0000-4000-8000-000000000077';
  const e2eKey=webcrypto.getRandomValues(new Uint8Array(32));
  const e2eKeyBase64=Buffer.from(e2eKey).toString('base64');
@@ -247,7 +250,7 @@ async function main(){
        token_attempts=0,updated_at=now() WHERE id=$1`,[e2eRequestId]);
  const e2eApproval=await asService(
    'SELECT public.recovery_coach_review_encrypted($1,$2,$3,$4,$5,$6,$7,$8) AS result',
-   [e2eRequestId,coach,'approve','9'.repeat(64),new Date(Date.now()+8*60_000).toISOString(),'k1',e2eOperation,e2eEnvelope]
+   [e2eRequestId,coach,'approve',e2eCodeDigest,new Date(Date.now()+8*60_000).toISOString(),'k1',e2eOperation,e2eEnvelope]
  );
  assert.equal(e2eApproval.rows[0].result.ok,true,JSON.stringify(e2eApproval.rows[0].result));
  const e2eProvider=new FakeRecoverySmsProvider([{kind:'accepted',messageId:'e2e-provider-accepted'}]);
@@ -292,7 +295,7 @@ async function main(){
  const authOperation='70000000-0000-4000-8000-000000000777';
  const resetClaim=await asService(
    'SELECT public.recovery_claim_reset($1,$2,$3) AS result',
-   [e2eRequestId,'9'.repeat(64),authOperation]
+   [e2eRequestId,e2eCodeDigest,authOperation]
  );
  assert.equal(resetClaim.rows[0].result.claimed,true,JSON.stringify(resetClaim.rows[0].result));
  const authStarted=await asService(
