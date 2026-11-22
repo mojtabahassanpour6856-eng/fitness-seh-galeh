@@ -32,7 +32,7 @@ function safeEqualHex(a, b) {
 }
 
 class MockRecovery {
-  constructor({ secret, now = () => Date.now(), codeTTLms = 5 * 60_000, maxAttempts = 5, cooldownMs = 60_000 } = {}) {
+  constructor({ secret, now = () => Date.now(), codeTTLms = 24 * 60 * 60_000, maxAttempts = 5, cooldownMs = 60_000 } = {}) {
     this.secret = secret;
     this.now = now;
     this.codeTTLms = codeTTLms;
@@ -44,7 +44,11 @@ class MockRecovery {
   }
   request({ traineeId, coachId, requestId }) {
     if (!traineeId || !coachId || !requestId) throw new Error('Required identifiers missing');
-    if (this.requests.has(requestId)) {\n      const existing = this.requests.get(requestId);\n      if (existing.traineeId !== traineeId || existing.coachId !== coachId) throw new Error('Idempotency key conflict');\n      return existing; // safe retry by the same identities only\n    }
+    if (this.requests.has(requestId)) {
+      const existing = this.requests.get(requestId);
+      if (existing.traineeId !== traineeId || existing.coachId !== coachId) throw new Error('Idempotency key conflict');
+      return existing; // safe retry by the same identities only
+    }
     const last = this.lastRequestAt.get(traineeId) || 0;
     if (this.now() - last < this.cooldownMs) throw new Error('Cooldown active');
     const r = { requestId, traineeId, coachId, state: STATES.REQUESTED, createdAt: this.now(), attempts: 0 };
