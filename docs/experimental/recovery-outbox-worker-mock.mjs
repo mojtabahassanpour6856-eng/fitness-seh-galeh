@@ -86,11 +86,12 @@ export async function processOneRecoveryOutboxItem({
     }
     const request = requestResult.data;
     const traineeResult = await admin.from('trainees')
-      .select('id,phone_normalized,approval_status')
+      .select('id,phone_normalized,approval_status,archived_at')
       .eq('id', request.trainee_id).maybeSingle();
     const trainee = traineeResult?.data;
     const validTarget = !traineeResult?.error && trainee &&
       trainee.approval_status === 'active' &&
+      trainee.archived_at == null &&
       trainee.phone_normalized === request.phone_normalized &&
       request.status === 'approved' &&
       request.delivery_outcome === 'attempting' &&
