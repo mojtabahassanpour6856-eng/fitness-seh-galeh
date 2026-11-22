@@ -151,6 +151,17 @@ rateLimited.reject({requestId:'rate2',authenticatedCoachId:'coach'});
 assert.throws(()=>rateLimited.request({traineeId:'rate',coachId:'coach',requestId:'rate3'}),/rate limit/i);
 rateNow+=1000;
 assert.equal(rateLimited.request({traineeId:'rate',coachId:'coach',requestId:'rate4'}).state,STATES.REQUESTED);
+// Expired pending requests cannot be cancelled or rejected after their TTL.
+let terminalNow=12000000;
+const staleTerminal = new MockRecovery({secret,now:()=>terminalNow,cooldownMs:0,requestTTLms:50});
+staleTerminal.request({traineeId:'stc',coachId:'stcc',requestId:'stc1'});
+terminalNow+=50;
+assert.throws(()=>staleTerminal.cancel({requestId:'stc1',traineeId:'stc'}),/Invalid state/);
+assert.equal(staleTerminal.requests.get('stc1').state,STATES.EXPIRED);
+staleTerminal.request({traineeId:'str',coachId:'strc',requestId:'str1'});
+terminalNow+=50;
+assert.throws(()=>staleTerminal.reject({requestId:'str1',authenticatedCoachId:'strc'}),/Invalid state/);
+assert.equal(staleTerminal.requests.get('str1').state,STATES.EXPIRED);
 const cooldown=sys();
 cooldown.request({traineeId:'t5',coachId:'c5',requestId:'r5'});
 assert.throws(()=>cooldown.request({traineeId:'t5',coachId:'c5',requestId:'r6'}),/Cooldown/);
