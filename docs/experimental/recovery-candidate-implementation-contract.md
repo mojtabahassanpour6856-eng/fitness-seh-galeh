@@ -234,3 +234,10 @@ The next implementation artifact must be a separately named, non-deployable cand
 - fail closed if a DB RPC or Auth result is ambiguous.
 
 No provider adapter is selected yet. The current Mediana restriction remains in force; therefore the candidate must keep delivery disabled unless a provider is explicitly configured and approved. Do not deploy or run against either Supabase project as part of candidate authoring.
+
+
+## PostgREST RPC exposure resolved without exposing the private schema (2026-11-22)
+
+The Edge Function cannot safely assume a custom Postgres schema is reachable through PostgREST unless it is added to Supabase's exposed-schema configuration. To avoid requiring that project-level setting, the candidate migration now keeps `recovery_private` unexposed and adds narrowly scoped wrappers in the already exposed `public` schema. Each wrapper is invoker-security, schema-qualifies the private function, revokes execution from PUBLIC/anon/authenticated, and grants EXECUTE only to `service_role`. The service role alone has USAGE on `recovery_private`.
+
+Workflow run `45049632108` completed **success** after this change. Its disposable PostgreSQL suite invokes the public wrappers under `SET ROLE service_role` and checks the privilege boundary; all candidate RPC/concurrency/state-transition assertions passed. This proves the SQL/role behavior in the disposable fixture, not the actual Supabase PostgREST gateway configuration or a live Edge Function call.
