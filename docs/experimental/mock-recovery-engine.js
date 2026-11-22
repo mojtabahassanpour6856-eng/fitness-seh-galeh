@@ -103,6 +103,13 @@ class MockRecovery {
     r.state = STATES.COMPLETED; r.completedAt = this.now();
     return { requestId, state: r.state };
   }
+  cancel({ requestId, traineeId }) {
+    const r = this.#get(requestId);
+    if (r.traineeId !== traineeId) throw new Error('Trainee ownership check failed');
+    if (r.state !== STATES.REQUESTED) throw new Error('Invalid state');
+    r.state = STATES.CANCELLED; r.cancelledAt = this.now();
+    return { requestId, state: r.state };
+  }
   reject({ requestId, authenticatedCoachId }) {
     const r = this.#get(requestId);
     if (r.coachId !== authenticatedCoachId) throw new Error('Coach ownership check failed');
