@@ -10,6 +10,7 @@ on:
       - 'docs/experimental/recovery-outbox-worker-model.js'
       - 'docs/experimental/test-recovery-outbox-worker-model.js'
       - 'docs/experimental/migrations/20261122_recovery_outbox_worker_candidate.sql'
+      - 'docs/experimental/migrations/20261122_recovery_encrypted_delivery_payload_candidate.sql'
       - 'docs/experimental/test-recovery-outbox-postgres.js'
       - 'docs/experimental/test-mock-recovery.js'
       - 'docs/experimental/test-recovery-crypto.js'
