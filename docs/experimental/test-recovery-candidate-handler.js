@@ -9,6 +9,8 @@ const ENV = {
     k1: 'candidate-test-secret-longer-than-32-bytes'
   }),
   RECOVERY_HMAC_KEY_VERSION: 'k1',
+  RECOVERY_DELIVERY_KEYS: JSON.stringify({ d1: Buffer.alloc(32, 7).toString('base64') }),
+  RECOVERY_DELIVERY_KEY_VERSION: 'd1',
   RECOVERY_ALLOWED_ORIGINS: 'https://app.example.test'
 };
 const UUID = '6ba7b810-9dad-41d1-80b4-00c04fd430c8';
@@ -47,6 +49,7 @@ function fixture(overrides = {}) {
       const map = {
         recovery_submit_request: state.submit,
         recovery_coach_review: state.reviewed,
+        recovery_coach_review_encrypted: state.reviewed,
         recovery_begin_delivery: state.beginDelivery,
         recovery_finish_delivery: state.finishDelivery,
         recovery_claim_reset: state.claim,
@@ -127,7 +130,13 @@ async function body(response) { return await response.json(); }
   assert.equal(result.status, 'approved');
   assert.equal(result.delivery_status, 'queued');
   assert.match(result.message, /هنوز ارسال پیامک تأیید نشده است/);
-  assert.equal(f.calls.some(x => x.name === 'recovery_coach_review'), true);
+  const approvalCall = f.calls.find(x => x.name === 'recovery_coach_review_encrypted');
+  assert.ok(approvalCall, 'approval must use encrypted-payload RPC');
+  assert.equal(approvalCall.args.p_delivery_operation_id, OP);
+  assert.deepEqual(Object.keys(approvalCall.args.p_delivery_payload).sort(), ['alg','ct','iv','kid','v']);
+  assert.equal(approvalCall.args.p_delivery_payload.alg, 'A256GCM');
+  assert.equal(approvalCall.args.p_delivery_payload.kid, 'd1');
+  assert.equal(f.calls.some(x => x.name === 'recovery_coach_review'), false);
   assert.equal(f.calls.some(x => x.name === 'recovery_begin_delivery'), false);
   assert.equal(f.calls.some(x => x.name === 'recovery_finish_delivery'), false);
   assert.equal(result.code, undefined);
