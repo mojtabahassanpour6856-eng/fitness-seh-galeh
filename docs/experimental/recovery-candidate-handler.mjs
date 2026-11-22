@@ -9,6 +9,7 @@ import {
   isAllowedOrigin, publicRequestAcceptedResponse, assertRecoverySecrets
 } from './recovery-candidate-core.mjs';
 import { createHash, randomUUID } from 'node:crypto';
+import { encryptRecoveryDeliveryCode } from './recovery-delivery-payload-crypto.mjs';
 
 const genericRequest = publicRequestAcceptedResponse();
 const json = (body, status, origin) => {
@@ -118,19 +119,31 @@ export function createRecoveryCandidateHandler(deps) {
 
         const code = decision === 'approve' ? codeGenerator() : null;
         const keyHash = code ? digestRecoveryCode(code, secrets.hmac, secrets.keyVersion) : null;
-        const reviewed = await rpc(deps.admin, 'recovery_coach_review', {
-          p_request_id: requestId, p_actor_user_id: user.id, p_decision: decision,
-          p_token_hash: keyHash,
-          p_token_expires_at: code ? new Date(now() + 15 * 60 * 1000).toISOString() : null,
-          p_hmac_key_version: code ? secrets.keyVersion : null
-        });
+        const operationId = code ? (deps.randomUUID || randomUUID)() : null;
+        const encryptedPayload = code ? await encryptRecoveryDeliveryCode({
+          code, key: secrets.deliveryKeys[secrets.deliveryKeyVersion],
+          keyVersion: secrets.deliveryKeyVersion, requestId, operationId,
+          cryptoImpl: deps.crypto || globalThis.crypto
+        }) : null;
+        const reviewed = decision === 'approve'
+          ? await rpc(deps.admin, 'recovery_coach_review_encrypted', {
+              p_request_id: requestId, p_actor_user_id: user.id, p_decision: decision,
+              p_token_hash: keyHash,
+              p_token_expires_at: new Date(now() + 15 * 60 * 1000).toISOString(),
+              p_hmac_key_version: secrets.keyVersion,
+              p_delivery_operation_id: operationId,
+              p_delivery_payload: encryptedPayload
+            })
+          : await rpc(deps.admin, 'recovery_coach_review', {
+              p_request_id: requestId, p_actor_user_id: user.id, p_decision: decision,
+              p_token_hash: null, p_token_expires_at: null, p_hmac_key_version: null
+            });
         if (!reviewed?.ok) return json({ success: false, message: 'درخواست پیدا نشد، قبلاً بررسی شده یا دسترسی کافی ندارید.' }, 409, corsOrigin);
         if (decision === 'reject') return json({ success: true, status: 'rejected' }, 200, corsOrigin);
 
         // Approval and Outbox enqueue are one database transaction via trigger.
         // This HTTP handler never sends SMS; a separately reviewed Worker owns delivery.
-        const operationId = reviewed.delivery_operation_id;
-        if (!isUuid(operationId)) return json(safeError(), 503, corsOrigin);
+        if (reviewed.delivery_operation_id !== operationId || !isUuid(operationId)) return json(safeError(), 503, corsOrigin);
         return json({
           success: true,
           status: 'approved',
