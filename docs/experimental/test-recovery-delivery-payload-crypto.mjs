@@ -51,4 +51,29 @@ await assert.rejects(
   decryptRecoveryDeliveryCode({envelope:{...first,unexpected:'x'},keys,requestId,operationId,cryptoImpl:webcrypto}),
   /INVALID_ENVELOPE/
 );
+
+const oldKey=Buffer.alloc(32,0x31).toString('base64');
+const newKey=Buffer.alloc(32,0x52).toString('base64');
+const oldEnvelope=await encryptRecoveryDeliveryCode({
+  code:'7319',key:oldKey,keyVersion:'delivery_old',requestId,operationId,cryptoImpl:webcrypto
+});
+// Rotation changes the active write key but retains the old key for in-flight payloads.
+const rotatedKeyring={delivery_old:oldKey,delivery_new:newKey};
+assert.equal(await decryptRecoveryDeliveryCode({
+  envelope:oldEnvelope,keys:rotatedKeyring,requestId,operationId,cryptoImpl:webcrypto
+}),'7319','old envelope must remain decryptable while its key is retained');
+const newEnvelope=await encryptRecoveryDeliveryCode({
+  code:'8426',key:rotatedKeyring.delivery_new,keyVersion:'delivery_new',requestId,operationId,cryptoImpl:webcrypto
+});
+assert.equal(newEnvelope.kid,'delivery_new');
+assert.equal(await decryptRecoveryDeliveryCode({
+  envelope:newEnvelope,keys:rotatedKeyring,requestId,operationId,cryptoImpl:webcrypto
+}),'8426');
+await assert.rejects(
+  decryptRecoveryDeliveryCode({envelope:oldEnvelope,keys:{delivery_new:newKey},requestId,operationId,cryptoImpl:webcrypto}),
+  /DELIVERY_KEY_VERSION_UNAVAILABLE/,
+  'removing an old key before all old payloads are terminal must fail closed'
+);
+console.log('PASS: delivery-key rotation retains old-key decryption while new writes use the active key.');
+
 console.log('PASS: AES-GCM round-trip, nonce uniqueness, AAD binding, tamper rejection, key-version fail-closed, and strict envelope validation.');
