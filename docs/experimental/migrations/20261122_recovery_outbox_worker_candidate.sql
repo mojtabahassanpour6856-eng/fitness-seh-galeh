@@ -82,12 +82,25 @@ CREATE OR REPLACE FUNCTION recovery_private.begin_recovery_outbox_send(
   p_outbox_id uuid,p_worker_id uuid,p_generation bigint
 ) RETURNS boolean LANGUAGE plpgsql SECURITY DEFINER SET search_path = ''
 AS $$
+DECLARE v_row public.trainee_password_recovery_outbox%ROWTYPE;
 BEGIN
+  SELECT * INTO v_row FROM public.trainee_password_recovery_outbox
+  WHERE id=p_outbox_id AND status='processing' AND lock_owner=p_worker_id
+    AND lease_generation=p_generation AND locked_until>now()
+    AND send_started_at IS NULL AND attempt_count<10
+  FOR UPDATE;
+  IF NOT FOUND THEN RETURN false; END IF;
+  UPDATE public.trainee_password_recovery_requests
+  SET delivery_outcome='attempting',delivery_attempted_at=now(),updated_at=now()
+  WHERE id=v_row.recovery_request_id AND status='approved'
+    AND delivery_operation_id=v_row.delivery_operation_id
+    AND delivery_outcome='pending';
+  IF NOT FOUND THEN RETURN false; END IF;
   UPDATE public.trainee_password_recovery_outbox
   SET send_started_at=now(),attempt_count=attempt_count+1,updated_at=now()
   WHERE id=p_outbox_id AND status='processing' AND lock_owner=p_worker_id
     AND lease_generation=p_generation AND locked_until>now()
-    AND send_started_at IS NULL AND attempt_count<10;
+    AND send_started_at IS NULL;
   RETURN FOUND;
 END $$;
 
@@ -96,6 +109,8 @@ CREATE OR REPLACE FUNCTION recovery_private.finish_recovery_outbox(
   p_provider_message_id text DEFAULT NULL,p_safe_error_code text DEFAULT NULL
 ) RETURNS boolean LANGUAGE plpgsql SECURITY DEFINER SET search_path = ''
 AS $$
+DECLARE v_row public.trainee_password_recovery_outbox%ROWTYPE;
+        v_request_outcome text;
 BEGIN
   IF p_outcome NOT IN ('sent','failed','unknown') THEN RAISE EXCEPTION 'invalid outcome'; END IF;
   IF p_outcome IN ('sent','failed') AND p_provider_message_id IS NOT NULL
@@ -103,11 +118,32 @@ BEGIN
   IF p_safe_error_code IS NOT NULL AND
      (length(p_safe_error_code) NOT BETWEEN 1 AND 64 OR p_safe_error_code !~ '^[a-z0-9_.-]+$')
      THEN RAISE EXCEPTION 'invalid safe error code'; END IF;
-  UPDATE public.trainee_password_recovery_outbox
-  SET status=p_outcome,provider_message_id=CASE WHEN p_outcome='sent' THEN p_provider_message_id ELSE NULL END,
-      last_safe_error_code=p_safe_error_code,lock_owner=NULL,locked_until=NULL,updated_at=now()
+  SELECT * INTO v_row FROM public.trainee_password_recovery_outbox
   WHERE id=p_outbox_id AND status='processing' AND lock_owner=p_worker_id
-    AND lease_generation=p_generation AND send_started_at IS NOT NULL;
+    AND lease_generation=p_generation AND send_started_at IS NOT NULL
+  FOR UPDATE;
+  IF NOT FOUND THEN RETURN false; END IF;
+  v_request_outcome := CASE p_outcome WHEN 'sent' THEN 'sent'
+    WHEN 'failed' THEN 'confirmed_failure' ELSE 'unknown' END;
+  UPDATE public.trainee_password_recovery_requests
+  SET status=CASE WHEN v_request_outcome='confirmed_failure' THEN 'pending' ELSE 'approved' END,
+      token_hash=CASE WHEN v_request_outcome='confirmed_failure' THEN NULL ELSE token_hash END,
+      token_expires_at=CASE WHEN v_request_outcome='confirmed_failure' THEN NULL ELSE token_expires_at END,
+      reviewed_at=CASE WHEN v_request_outcome='confirmed_failure' THEN NULL ELSE reviewed_at END,
+      reviewed_by=CASE WHEN v_request_outcome='confirmed_failure' THEN NULL ELSE reviewed_by END,
+      token_attempts=CASE WHEN v_request_outcome='confirmed_failure' THEN 0 ELSE token_attempts END,
+      delivery_outcome=v_request_outcome,updated_at=now()
+  WHERE id=v_row.recovery_request_id AND status='approved'
+    AND delivery_operation_id=v_row.delivery_operation_id
+    AND delivery_outcome='attempting';
+  IF NOT FOUND THEN RETURN false; END IF;
+  UPDATE public.trainee_password_recovery_outbox
+  SET status=p_outcome,
+      provider_message_id=CASE WHEN p_outcome='sent' THEN p_provider_message_id ELSE NULL END,
+      last_safe_error_code=p_safe_error_code,
+      lock_owner=NULL,locked_until=NULL,updated_at=now()
+  WHERE id=p_outbox_id AND status='processing' AND lock_owner=p_worker_id
+    AND lease_generation=p_generation;
   RETURN FOUND;
 END $$;
 
@@ -116,11 +152,28 @@ RETURNS integer LANGUAGE plpgsql SECURITY DEFINER SET search_path = ''
 AS $$
 DECLARE v_count integer;
 BEGIN
-  UPDATE public.trainee_password_recovery_outbox
-  SET status='unknown',lock_owner=NULL,locked_until=NULL,
-      last_safe_error_code='lease_expired_after_send_start',updated_at=now()
-  WHERE status='processing' AND locked_until<=now() AND send_started_at IS NOT NULL;
-  GET DIAGNOSTICS v_count=ROW_COUNT;
+  WITH expired AS (
+    SELECT id,recovery_request_id,delivery_operation_id
+    FROM public.trainee_password_recovery_outbox
+    WHERE status='processing' AND locked_until<=now() AND send_started_at IS NOT NULL
+    FOR UPDATE
+  ), request_updates AS (
+    UPDATE public.trainee_password_recovery_requests r
+    SET delivery_outcome='unknown',updated_at=now()
+    FROM expired e
+    WHERE r.id=e.recovery_request_id AND r.status='approved'
+      AND r.delivery_operation_id=e.delivery_operation_id
+      AND r.delivery_outcome='attempting'
+    RETURNING e.id
+  ), outbox_updates AS (
+    UPDATE public.trainee_password_recovery_outbox o
+    SET status='unknown',lock_owner=NULL,locked_until=NULL,
+        last_safe_error_code='lease_expired_after_send_start',updated_at=now()
+    FROM expired e
+    WHERE o.id=e.id
+    RETURNING o.id
+  )
+  SELECT count(*)::integer INTO v_count FROM outbox_updates;
   RETURN v_count;
 END $$;
 
