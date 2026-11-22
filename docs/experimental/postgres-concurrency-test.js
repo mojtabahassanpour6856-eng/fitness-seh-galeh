@@ -1,6 +1,7 @@
 'use strict';
 
 const { Pool } = require('pg');
+const fs = require('node:fs');
 const assert = require('node:assert/strict');
 
 const pool = new Pool({
@@ -63,41 +64,47 @@ async function main() {
     'this fixture intentionally documents that the current pending/approved-only index permits a new pending row during processing');
   console.log('KNOWN GAP REPRODUCED: partial unique index permits a second pending row while an earlier row is processing');
 
-  // Proposed guard: include processing in the active-flow uniqueness boundary.
+  // Apply the exact draft migration to a disposable table with the current index definition.
+  await pool.query("DROP TABLE IF EXISTS public.trainee_password_recovery_requests");
   await pool.query(`
-    CREATE TABLE recovery_requests_guard_ci (
+    CREATE TABLE public.trainee_password_recovery_requests (
       id bigserial PRIMARY KEY,
       trainee_id text NOT NULL,
       status text NOT NULL
     )
   `);
   await pool.query(`
-    CREATE UNIQUE INDEX recovery_active_guard_ci
-    ON recovery_requests_guard_ci (trainee_id)
-    WHERE status IN ('pending', 'approved', 'processing')
+    CREATE UNIQUE INDEX trainee_password_recovery_one_open_request_per_trainee
+    ON public.trainee_password_recovery_requests (trainee_id)
+    WHERE status IN ('pending', 'approved')
   `);
   await pool.query(
-    "INSERT INTO recovery_requests_guard_ci (trainee_id,status) VALUES ('guarded-trainee','approved')"
+    "INSERT INTO public.trainee_password_recovery_requests (trainee_id,status) VALUES ('migration-guard','approved')"
   );
   await pool.query(
-    "UPDATE recovery_requests_guard_ci SET status='processing' WHERE trainee_id='guarded-trainee'"
+    "UPDATE public.trainee_password_recovery_requests SET status='processing' WHERE trainee_id='migration-guard'"
   );
+  const migrationSql = fs.readFileSync(
+    'docs/experimental/migrations/20261122_include_processing_in_active_recovery_unique_index.sql',
+    'utf8'
+  );
+  await pool.query(migrationSql);
   await assert.rejects(
-    pool.query("INSERT INTO recovery_requests_guard_ci (trainee_id,status) VALUES ('guarded-trainee','pending')"),
+    pool.query("INSERT INTO public.trainee_password_recovery_requests (trainee_id,status) VALUES ('migration-guard','pending')"),
     error => error && error.code === '23505',
-    'the proposed index must reject a second active flow while the first is processing'
+    'the actual draft migration must reject a second active flow during processing'
   );
   const guardedCount = await pool.query(
-    "SELECT count(*)::int AS n FROM recovery_requests_guard_ci WHERE trainee_id='guarded-trainee'"
+    "SELECT count(*)::int AS n FROM public.trainee_password_recovery_requests WHERE trainee_id='migration-guard'"
   );
   assert.equal(guardedCount.rows[0].n, 1);
   await pool.query(
-    "UPDATE recovery_requests_guard_ci SET status='completed' WHERE trainee_id='guarded-trainee'"
+    "UPDATE public.trainee_password_recovery_requests SET status='completed' WHERE trainee_id='migration-guard'"
   );
   await pool.query(
-    "INSERT INTO recovery_requests_guard_ci (trainee_id,status) VALUES ('guarded-trainee','pending')"
+    "INSERT INTO public.trainee_password_recovery_requests (trainee_id,status) VALUES ('migration-guard','pending')"
   );
-  console.log('PASS: proposed three-state unique index blocks parallel flow during processing and permits a new flow after completion');
+  console.log('PASS: exact draft migration blocks a parallel active flow during processing and permits a new flow after completion');
 
   // Atomic attempt increments under contention; cap must not be exceeded.
   const attemptsRow = await pool.query(
