@@ -195,12 +195,22 @@ async function main() {
   assert.equal(r.rows[0].started,true);
   r=await callAsService('SELECT public.recovery_begin_delivery($1,$2) AS started',[req3,deliveryOp3]);
   assert.equal(r.rows[0].started,false);
-  r=await callAsService('SELECT public.recovery_finish_delivery($1,$2,$3) AS changed',[req3,deliveryOp3,'unknown']);
+  // A distinct request proves an unknown delivery cannot be overwritten by a retry.
+  await pool.query(`INSERT INTO public.trainee_password_recovery_requests(id,trainee_id,phone_normalized,status)
+    VALUES ($1,$2,'+989123456789','pending')`,[req4,trainee4]);
+  r=await callAsService(
+    'SELECT public.recovery_coach_review($1,$2,$3,$4,$5,$6) AS result',
+    [req4,coach2,'approve',digest,new Date(Date.now()+15*60_000).toISOString(),'k1']
+  );
+  assert.equal(r.rows[0].result.ok,true);
+  const deliveryOp4=r.rows[0].result.delivery_operation_id;
+  await callAsService('SELECT public.recovery_begin_delivery($1,$2)',[req4,deliveryOp4]);
+  r=await callAsService('SELECT public.recovery_finish_delivery($1,$2,$3) AS changed',[req4,deliveryOp4,'unknown']);
   assert.equal(r.rows[0].changed,true);
-  let blocked=await callAsService('SELECT public.recovery_claim_reset($1,$2,$3) AS result',[req3,digest,'40000000-0000-4000-8000-000000000009']);
+  let blocked=await callAsService('SELECT public.recovery_claim_reset($1,$2,$3) AS result',[req4,digest,'40000000-0000-4000-8000-000000000009']);
   assert.equal(blocked.rows[0].result.claimed,false,'unknown SMS delivery must not permit code redemption');
-  r=await callAsService('SELECT public.recovery_finish_delivery($1,$2,$3) AS changed',[req3,deliveryOp3,'sent']);
-  assert.equal(r.rows[0].changed,true,'authoritative delivery reconciliation may mark sent');
+  r=await callAsService('SELECT public.recovery_finish_delivery($1,$2,$3) AS changed',[req4,deliveryOp4,'sent']);
+  assert.equal(r.rows[0].changed,false,'unknown delivery cannot be overwritten without a dedicated authoritative reconciliation path');
   const opA='40000000-0000-4000-8000-000000000001';
   const opB='40000000-0000-4000-8000-000000000002';
   const claims=await Promise.all([opA,opB].map(op=>callAsService(
@@ -234,27 +244,49 @@ async function main() {
   state=await pool.query('SELECT status,auth_outcome FROM public.trainee_password_recovery_requests WHERE id=$1',[req3]);
   assert.deepEqual(state.rows[0],{status:'processing',auth_outcome:'unknown'});
 
-  // Only an authoritative reconciliation result may unlock the ambiguous operation.
+  // A second finish call cannot reinterpret an ambiguous Auth result as success/no-change.
   r=await callAsService(
     'SELECT public.recovery_finish_auth_update($1,$2,$3,$4) AS changed',
     [req3,winner.operation_id,'confirmed_no_change','auth_confirmed_unchanged']
   );
-  assert.equal(r.rows[0].changed,true);
+  assert.equal(r.rows[0].changed,false,'unknown Auth outcome must remain locked for out-of-band authoritative reconciliation');
   state=await pool.query('SELECT status,auth_outcome FROM public.trainee_password_recovery_requests WHERE id=$1',[req3]);
-  assert.deepEqual(state.rows[0],{status:'approved',auth_outcome:'confirmed_no_change'});
+  assert.deepEqual(state.rows[0],{status:'processing',auth_outcome:'unknown'});
+  console.log('PASS: unknown Auth outcome cannot be reopened by retry or ambiguous follow-up');
 
   const opC='40000000-0000-4000-8000-000000000003';
-  r=await callAsService('SELECT public.recovery_claim_reset($1,$2,$3) AS result',[req3,digest,opC]);
+  const opD='40000000-0000-4000-8000-000000000004';
+  // req1 was safely returned to pending after a provider-confirmed non-delivery.
+  r=await callAsService(
+    'SELECT public.recovery_coach_review($1,$2,$3,$4,$5,$6) AS result',
+    [req1,coach1,'approve',digest,new Date(Date.now()+15*60_000).toISOString(),'k1']
+  );
+  assert.equal(r.rows[0].result.ok,true);
+  const deliveryOp1b=r.rows[0].result.delivery_operation_id;
+  await callAsService('SELECT public.recovery_begin_delivery($1,$2)',[req1,deliveryOp1b]);
+  await callAsService('SELECT public.recovery_finish_delivery($1,$2,$3)',[req1,deliveryOp1b,'sent']);
+  r=await callAsService('SELECT public.recovery_claim_reset($1,$2,$3) AS result',[req1,digest,opC]);
   assert.equal(r.rows[0].result.claimed,true);
-  await callAsService('SELECT public.recovery_begin_auth_update($1,$2)',[req3,opC]);
+  await callAsService('SELECT public.recovery_begin_auth_update($1,$2)',[req1,opC]);
   r=await callAsService(
     'SELECT public.recovery_finish_auth_update($1,$2,$3,$4) AS changed',
-    [req3,opC,'completed',null]
+    [req1,opC,'confirmed_no_change','auth_confirmed_unchanged']
   );
   assert.equal(r.rows[0].changed,true);
-  state=await pool.query('SELECT status,token_hash,token_expires_at,auth_outcome FROM public.trainee_password_recovery_requests WHERE id=$1',[req3]);
+  state=await pool.query('SELECT status,auth_outcome FROM public.trainee_password_recovery_requests WHERE id=$1',[req1]);
+  assert.deepEqual(state.rows[0],{status:'approved',auth_outcome:'confirmed_no_change'});
+
+  r=await callAsService('SELECT public.recovery_claim_reset($1,$2,$3) AS result',[req1,digest,opD]);
+  assert.equal(r.rows[0].result.claimed,true);
+  await callAsService('SELECT public.recovery_begin_auth_update($1,$2)',[req1,opD]);
+  r=await callAsService(
+    'SELECT public.recovery_finish_auth_update($1,$2,$3,$4) AS changed',
+    [req1,opD,'completed',null]
+  );
+  assert.equal(r.rows[0].changed,true);
+  state=await pool.query('SELECT status,token_hash,token_expires_at,auth_outcome FROM public.trainee_password_recovery_requests WHERE id=$1',[req1]);
   assert.deepEqual(state.rows[0],{status:'completed',token_hash:null,token_expires_at:null,auth_outcome:'completed'});
-  console.log('PASS: Auth ambiguity remains locked; authoritative no-change can reopen; confirmed success consumes code');
+  console.log('PASS: known no-change can reopen only from an active attempt; confirmed success consumes code');
 
   // A provider-confirmed non-delivery safely invalidates that code and returns to coach review.
   r=await callAsService('SELECT public.recovery_coach_review($1,$2,$3,$4,$5,$6) AS result',
