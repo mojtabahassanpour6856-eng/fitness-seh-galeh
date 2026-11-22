@@ -27,3 +27,7 @@ The fixture now marks delivery as `DELIVERY_PENDING` before invoking the synchro
 
 
 Delivery callback exceptions are also handled in the fixture: the request returns to `APPROVED`, records failure, clears code digest/expiry, and may retry within the configured attempt limit. The thrown exception text is not exposed in the mock result. A test covers retry after a callback throws.
+
+
+## Stale request expiry
+The fixture adds a default 24-hour `requestTTLms` for requests left in `REQUESTED` or `APPROVED` after failed delivery. `sweepExpired()` marks stale requests as `EXPIRED`, clears code digest/expiry, and returns the count. It runs opportunistically when a new request, approval, or verification is attempted; it is not a background scheduler. A separate 24-hour code validity window remains for `CODE_ISSUED`. Tests cover expiration of both pending states and that a new recovery can then begin. Production should use server-side scheduled cleanup plus state checks at every operation, not rely on client activity.
