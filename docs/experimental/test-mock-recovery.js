@@ -60,6 +60,24 @@ assert.equal(unknownDelivery.sweepExpired(),1);
 assert.equal(unknownDelivery.requests.get('uy1').state,STATES.EXPIRED);
 assert.equal(unknownDelivery.request({traineeId:'uy',coachId:'uc',requestId:'uy2'}).state,STATES.REQUESTED);
 
+
+let assignedCoach = 'coach-A';
+const reassignment = new MockRecovery({secret,now:()=>now,cooldownMs:0,getCurrentCoachId:()=>assignedCoach});
+reassignment.request({traineeId:'move-trainee',coachId:'coach-A',requestId:'move-request'});
+assignedCoach = 'coach-B';
+assert.throws(()=>reassignment.approve({requestId:'move-request',authenticatedCoachId:'coach-A'}),/assignment changed/i,
+  'former coach must not approve after trainee reassignment');
+assert.equal(reassignment.requests.get('move-request').state,STATES.STALE_ASSIGNMENT);
+assert.equal(reassignment.mockMessages.length,0,'stale assignment must not trigger delivery');
+assert.equal(reassignment.request({traineeId:'move-trainee',coachId:'coach-B',requestId:'move-request-B'}).coachId,'coach-B',
+  'trainee may start a new request routed to the current coach after stale request is closed');
+let assignedForReject = 'coach-A';
+const reassignmentReject = new MockRecovery({secret,now:()=>now,cooldownMs:0,getCurrentCoachId:()=>assignedForReject});
+reassignmentReject.request({traineeId:'move-reject',coachId:'coach-A',requestId:'move-reject-request'});
+assignedForReject = 'coach-B';
+assert.throws(()=>reassignmentReject.reject({requestId:'move-reject-request',authenticatedCoachId:'coach-A'}),/assignment changed/i);
+assert.equal(reassignmentReject.requests.get('move-reject-request').state,STATES.STALE_ASSIGNMENT);
+
 const s = sys();
 assert.equal(s.request({traineeId:'t1',coachId:'c1',requestId:'r1'}).state, STATES.REQUESTED);
 const firstRequestSnapshot = s.requests.get('r1');
