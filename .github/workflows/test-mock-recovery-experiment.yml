@@ -14,6 +14,8 @@ on:
       - 'docs/experimental/test-recovery-authorization-abuse.js'
       - 'docs/experimental/recovery-candidate-core.mjs'
       - 'docs/experimental/test-recovery-candidate-core.js'
+      - 'docs/experimental/recovery-candidate-handler.mjs'
+      - 'docs/experimental/test-recovery-candidate-handler.js'
       - 'docs/experimental/migrations/20261122_recovery_atomic_rpc_candidate.sql'
       - 'docs/experimental/test-recovery-atomic-rpc-candidate.js'
       - 'docs/experimental/postgres-concurrency-test.js'
@@ -47,6 +49,8 @@ jobs:
         run: node docs/experimental/test-recovery-authorization-abuse.js
       - name: Run candidate security primitive tests (isolated only)
         run: node docs/experimental/test-recovery-candidate-core.js
+      - name: Run dependency-injected recovery handler candidate tests (isolated only)
+        run: node docs/experimental/test-recovery-candidate-handler.js
 
   postgres-concurrency-tests:
     runs-on: ubuntu-latest
