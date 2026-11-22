@@ -71,3 +71,8 @@ Execution status: these test cases have been authored and committed, but a succe
 
 - The mock can receive an injected `getCurrentCoachId(traineeId)` resolver and rechecks the current assignment immediately before coach approval or rejection. A changed assignment marks the old request STALE_ASSIGNMENT, prevents SMS delivery, and requires a fresh request routed to the current coach.
 - This is only a test seam. The default fixture still accepts `coachId` as input for legacy test setup; production must never trust a client-supplied coach ID. Resolve the trainee and current coach from authenticated server-side identity and authoritative database relationships on every operation.
+
+## Trusted identity test adapter
+- `requestForAuthenticatedTrainee` is a test seam that takes an authenticated trainee identity from trusted server context and resolves the current coach through the injected resolver. Extra client-like fields such as traineeId, coachId, or destinationPhone are ignored.
+- This method is not an authentication mechanism. A real HTTP handler must pass only the identity established by verified server-side middleware; never forward a user-controlled identity field into this method.
+- Unknown/ineligible identities fail with a generic mock error. The fixture still does not implement an HTTP response layer, phone lookup, or account-enumeration timing controls.
