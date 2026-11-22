@@ -56,7 +56,7 @@ async function main() {
       approval_status text not null, phone_normalized text, archived_at timestamptz
     );
     CREATE TABLE public.trainee_password_recovery_requests(
-      id uuid primary key, trainee_id uuid not null references public.trainees(id),
+      id uuid primary key DEFAULT gen_random_uuid(), trainee_id uuid not null references public.trainees(id),
       phone_normalized text not null, status text not null,
       requested_at timestamptz not null default now(),
       reviewed_at timestamptz, reviewed_by uuid references public.profiles(id),
