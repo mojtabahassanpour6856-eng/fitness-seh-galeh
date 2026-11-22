@@ -25,3 +25,12 @@ Review scope: read-only inspection of the current main branch's index.html and e
 
 ## Acceptance gate
 Until the exact auth client/configuration and provider semantics are verified, no live password reset, SMS sending, auth setting change, database migration, merge, or deployment is authorized by this experiment.
+
+## Additional read-only SDK/version finding
+
+- The repository's vendored SDK version marker identifies `@supabase/supabase-js` as `2.119.0`.
+- Existing auth regression tests cover session restoration, lifecycle watchdog behavior, role/profile lookup in the coach login path, and single-flight login coordination.
+- Those tests do not exercise `auth.updateUser`, password recovery token exchange, password mutation, provider operation-status lookup, refresh-token revocation, or already-issued access-token invalidation.
+- The SDK version marker alone does not establish which auth methods/configuration are actually used by the live app. The initialized client, server-side auth configuration, and supported revocation semantics still require a focused read-only trace before provider-specific implementation.
+
+No production file, live Auth setting, user record, or database was changed by this review.
