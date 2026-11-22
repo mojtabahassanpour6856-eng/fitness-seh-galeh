@@ -79,7 +79,17 @@ class MockRecovery {
     r.deliveryAttempts = (r.deliveryAttempts || 0) + 1;
     r.state = STATES.DELIVERY_PENDING; // blocks re-entrant approval during delivery callback
     const code = generateCode();
-    const outcome = this.delivery({ requestId, traineeId: r.traineeId, code });
+    let outcome;
+    try { outcome = this.delivery({ requestId, traineeId: r.traineeId, code }); }
+    catch (deliveryError) {
+      // Never leave the fixture stuck in DELIVERY_PENDING after a thrown callback.
+      r.state = STATES.APPROVED;
+      r.deliveryStatus = 'FAILED';
+      r.deliveryFailedAt = this.now();
+      r.codeDigest = null;
+      r.expiresAt = null;
+      return { requestId, state: r.state, delivery: 'FAILED', retryable: true, error: 'Delivery callback failed' };
+    }
     if (!outcome || outcome.ok !== true) {
       r.state = STATES.APPROVED;
       r.deliveryStatus = 'FAILED';
