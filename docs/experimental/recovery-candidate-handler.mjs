@@ -162,9 +162,14 @@ export function createRecoveryCandidateHandler(deps) {
           else if (deliveryResult?.kind === 'confirmed_failure') outcome = 'confirmed_failure';
         } catch { outcome = 'unknown'; }
 
-        await rpc(deps.admin, 'recovery_finish_delivery', {
+        const deliveryFinalized = await rpc(deps.admin, 'recovery_finish_delivery', {
           p_request_id: requestId, p_delivery_operation_id: operationId, p_outcome: outcome
         });
+        if (deliveryFinalized !== true) {
+          // Provider may have accepted the message, but the durable state did not confirm it.
+          // Never report success or retry; the request remains locked for reconciliation.
+          return json({ success: false, message: 'وضعیت ارسال قابل ثبت نیست؛ برای جلوگیری از استفاده ناامن، درخواست قفل شد.' }, 503, corsOrigin);
+        }
         if (outcome === 'sent')
           return json({ success: true, status: 'approved', message: 'کد به شماره ثبت‌شده شاگرد ارسال شد.' }, 200, corsOrigin);
         return json({ success: false, message: outcome === 'unknown'
