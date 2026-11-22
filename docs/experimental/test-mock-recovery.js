@@ -36,7 +36,7 @@ now+=24 * 60 * 60_000;
 assert.throws(() => exp.verify({requestId:'r3',traineeId:'t3',code:exp.mockMessages[0].body.slice(-4)}),/expired/i);
 assert.equal(exp.requests.get('r3').state,STATES.EXPIRED);
 assert.throws(()=>exp.request({traineeId:'t3',coachId:'c3',requestId:'r3b'}),/Cooldown/);
-ow += 60000;
+now += 60000;
 assert.equal(exp.request({traineeId:'t3',coachId:'c3',requestId:'r3b'}).state,STATES.REQUESTED);
 // Expiry boundary: valid just before 24 hours, invalid exactly at 24 hours.
 let boundaryNow = 2000000;
