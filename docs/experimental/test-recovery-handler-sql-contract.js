@@ -12,8 +12,6 @@ const wrappers = [
   'recovery_submit_request',
   'recovery_coach_review',
   'recovery_record_wrong_attempt',
-  'recovery_begin_delivery',
-  'recovery_finish_delivery',
   'recovery_claim_reset',
   'recovery_begin_auth_update',
   'recovery_finish_auth_update'
