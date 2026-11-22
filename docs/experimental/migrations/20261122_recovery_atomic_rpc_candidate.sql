@@ -464,50 +464,50 @@ GRANT EXECUTE ON FUNCTION recovery_private.finish_recovery_auth_update(uuid,uuid
 -- provide narrowly granted public RPC wrappers for the service-role Edge client.
 CREATE OR REPLACE FUNCTION public.recovery_submit_request(p_phone_normalized text)
 RETURNS boolean LANGUAGE sql SET search_path = ''
-AS $ SELECT recovery_private.submit_recovery_request(p_phone_normalized) $;
+AS $wrap$ SELECT recovery_private.submit_recovery_request(p_phone_normalized) $wrap$;
 
 CREATE OR REPLACE FUNCTION public.recovery_coach_review(
   p_request_id uuid, p_actor_user_id uuid, p_decision text,
   p_token_hash text, p_token_expires_at timestamptz, p_hmac_key_version text
 )
 RETURNS jsonb LANGUAGE sql SET search_path = ''
-AS $ SELECT recovery_private.coach_review_recovery_request(
+AS $wrap$ SELECT recovery_private.coach_review_recovery_request(
   p_request_id,p_actor_user_id,p_decision,p_token_hash,p_token_expires_at,p_hmac_key_version
-) $;
+) $wrap$;
 
 CREATE OR REPLACE FUNCTION public.recovery_record_wrong_attempt(
   p_request_id uuid,p_submitted_digest text,p_max_attempts integer
 )
 RETURNS jsonb LANGUAGE sql SET search_path = ''
-AS $ SELECT recovery_private.record_recovery_wrong_attempt(p_request_id,p_submitted_digest,p_max_attempts) $;
+AS $wrap$ SELECT recovery_private.record_recovery_wrong_attempt(p_request_id,p_submitted_digest,p_max_attempts) $wrap$;
 
 CREATE OR REPLACE FUNCTION public.recovery_begin_delivery(p_request_id uuid,p_delivery_operation_id uuid)
 RETURNS boolean LANGUAGE sql SET search_path = ''
-AS $ SELECT recovery_private.begin_recovery_delivery(p_request_id,p_delivery_operation_id) $;
+AS $wrap$ SELECT recovery_private.begin_recovery_delivery(p_request_id,p_delivery_operation_id) $wrap$;
 
 CREATE OR REPLACE FUNCTION public.recovery_finish_delivery(
   p_request_id uuid,p_delivery_operation_id uuid,p_outcome text
 )
 RETURNS boolean LANGUAGE sql SET search_path = ''
-AS $ SELECT recovery_private.finish_recovery_delivery(p_request_id,p_delivery_operation_id,p_outcome) $;
+AS $wrap$ SELECT recovery_private.finish_recovery_delivery(p_request_id,p_delivery_operation_id,p_outcome) $wrap$;
 
 CREATE OR REPLACE FUNCTION public.recovery_claim_reset(
   p_request_id uuid,p_code_digest text,p_operation_id uuid
 )
 RETURNS jsonb LANGUAGE sql SET search_path = ''
-AS $ SELECT recovery_private.claim_recovery_reset(p_request_id,p_code_digest,p_operation_id) $;
+AS $wrap$ SELECT recovery_private.claim_recovery_reset(p_request_id,p_code_digest,p_operation_id) $wrap$;
 
 CREATE OR REPLACE FUNCTION public.recovery_begin_auth_update(p_request_id uuid,p_operation_id uuid)
 RETURNS boolean LANGUAGE sql SET search_path = ''
-AS $ SELECT recovery_private.begin_recovery_auth_update(p_request_id,p_operation_id) $;
+AS $wrap$ SELECT recovery_private.begin_recovery_auth_update(p_request_id,p_operation_id) $wrap$;
 
 CREATE OR REPLACE FUNCTION public.recovery_finish_auth_update(
   p_request_id uuid,p_operation_id uuid,p_outcome text,p_safe_error_code text
 )
 RETURNS boolean LANGUAGE sql SET search_path = ''
-AS $ SELECT recovery_private.finish_recovery_auth_update(
+AS $wrap$ SELECT recovery_private.finish_recovery_auth_update(
   p_request_id,p_operation_id,p_outcome,p_safe_error_code
-) $;
+) $wrap$;
 
 REVOKE ALL ON FUNCTION public.recovery_submit_request(text) FROM PUBLIC, anon, authenticated;
 REVOKE ALL ON FUNCTION public.recovery_coach_review(uuid,uuid,text,text,timestamptz,text) FROM PUBLIC, anon, authenticated;
