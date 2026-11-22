@@ -172,4 +172,20 @@ async function body(response) { return await response.json(); }
   console.log('PASS: missing historical HMAC key fails closed without consuming attempts or calling Auth.');
 }
 
+{
+  const f = fixture({ claim: { claimed: true, operation_id: OP, auth_user_id: AUTH_USER }, finishAuth: false });
+  const r = await f.handler(request({ action: 'reset', phone: '09123456789', code: '0007', new_password: 'StrongPass!234' }));
+  assert.equal(r.status, 503);
+  assert.equal(f.calls.filter(x => x.type === 'auth_update').length, 1);
+  assert.equal(f.calls.filter(x => x.name === 'recovery_finish_auth_update').length, 1);
+  console.log('PASS: Auth success with unconfirmed durable finalization returns ambiguous response and never repeats update.');
+}
+{
+  const f = fixture({ claim: { claimed: true, operation_id: OP, auth_user_id: AUTH_USER }, updateError: new Error('MOCK_AUTH_TIMEOUT') });
+  const r = await f.handler(request({ action: 'reset', phone: '09123456789', code: '0007', new_password: 'StrongPass!234' }));
+  assert.equal(r.status, 503);
+  assert.equal(f.calls.find(x => x.name === 'recovery_finish_auth_update').args.p_outcome, 'unknown');
+  assert.equal(f.calls.filter(x => x.type === 'auth_update').length, 1);
+  console.log('PASS: ambiguous Auth timeout is persisted as unknown without retry.');
+}
 console.log('All dependency-injected recovery handler candidate tests passed.');
