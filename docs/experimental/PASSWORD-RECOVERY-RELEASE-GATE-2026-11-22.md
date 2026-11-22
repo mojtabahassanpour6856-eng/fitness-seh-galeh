@@ -271,3 +271,24 @@ Added `recovery_private.submit_recovery_request(text)` to the experimental SQL d
 Workflow run `45048555639` completed **success** in both jobs. The PostgreSQL job checked out commit `d9c3a7b545607cd5300410b2acb19d2e1c292226` and confirmed eight concurrent submissions create exactly one pending row; ambiguous duplicate and unknown phone inputs create none. The complete atomic RPC, delivery, Auth-state, migration-preflight, and privilege tests all passed on disposable PostgreSQL 16.
 
 Production release remains **NOT READY**. No Supabase project was modified, and no real SMS or password change occurred.
+
+
+## Latest disposable PostgreSQL suite: PASS (2026-11-22)
+
+Workflow run `45048555639` completed successfully. Both `mock-recovery-tests` and `postgres-concurrency-tests` passed. The PostgreSQL job checked out exact commit `d9c3a7b545607cd5300410b2acb19d2e1c292226`.
+
+Verified on disposable PostgreSQL 16:
+- candidate migration blocks legacy approved/processing rows;
+- service_role-only schema/function privileges;
+- eight concurrent request submissions produce exactly one row; ambiguous/unknown phone records create none;
+- coach reassignment lock prevents former coach approval;
+- wrong-code attempts cap atomically at five;
+- delivery is single-attempt and unknown delivery blocks redemption until authoritative reconciliation;
+- exactly one reset claim wins;
+- Auth unknown remains locked; authoritative no-change and confirmed success transitions work;
+- confirmed delivery failure clears code and returns request to pending;
+- invalid/null transitions fail closed.
+
+This is a meaningful candidate SQL milestone, not a real Supabase integration test. The Edge Function adapter, actual Test Auth password reset, actual HTTP/CORS/auth behavior, provider delivery, session invalidation, logging/monitoring and rollback remain outstanding. No Supabase project was changed and no live SMS/password reset occurred.
+
+**Next safe work:** author a separately named non-deployable Edge Function candidate in this experiment branch, wiring only to the candidate RPC contracts and leaving provider delivery disabled. Then add static/unit tests before any Test-project migration or deployment is considered.
