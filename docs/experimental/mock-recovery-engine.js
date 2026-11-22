@@ -169,6 +169,16 @@ class MockRecovery {
     r.resetStartedAt = this.now();
     try {
       const outcome = updateAuth({ requestId, traineeId, operationId });
+      // This fixture is synchronous. A thenable may already be mutating Auth asynchronously;
+      // never mistake it for a definite rejection or success.
+      if (outcome && typeof outcome.then === 'function') {
+        Promise.resolve(outcome).catch(() => {});
+        r.state = STATES.RESET_UNKNOWN;
+        r.resetUnknownAt = this.now();
+        r.authOperations.set(operationId, { outcome: 'UNKNOWN', at: this.now() });
+        return { requestId, operationId, state: r.state, authOutcome: 'UNKNOWN', retryable: false,
+          message: 'Async Auth adapter result requires authoritative reconciliation' };
+      }
       if (!outcome || outcome.ok !== true) {
         r.state = STATES.VERIFIED;
         r.resetLastFailureAt = this.now();
