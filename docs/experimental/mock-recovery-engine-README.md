@@ -35,3 +35,7 @@ The fixture adds a default 24-hour `requestTTLms` for requests left in `REQUESTE
 
 ## Recovery request rate limit
 A rolling-window limit is added per trainee (default: at most 3 requests in 24 hours), alongside the short cooldown and single-active-request guard. Expired timestamps are pruned when a new request is evaluated. The limit applies even if prior requests were rejected or cancelled, reducing repeated coach notifications. Tests cover hitting the cap and allowing a new request after the window rolls off. Production enforcement must be server-side and based on authenticated trainee identity; consider abuse monitoring and account/IP/device signals without exposing account existence.
+
+
+## Privacy and account-enumeration gate
+See `recovery-privacy-acceptance.md` for the public response contract, server-side identity resolution, verified-phone delivery requirements, coach authorization, abuse controls, and production acceptance tests. The current mock has no account lookup or HTTP layer and cannot demonstrate resistance to account enumeration. Do not connect this fixture directly to a public endpoint.
