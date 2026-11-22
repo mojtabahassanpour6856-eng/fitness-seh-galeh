@@ -95,6 +95,23 @@ assert.throws(()=>trustedRequestSystem.requestForAuthenticatedTrainee({
   authenticatedTraineeId:'unknown-trainee',requestId:'unknown-request'
 }),/unavailable/i,'unknown identity must fail closed without account details');
 
+
+const scopedReads = new MockRecovery({secret,now:()=>now,cooldownMs:0});
+scopedReads.request({traineeId:'owner-trainee',coachId:'owner-coach',requestId:'owner-read'});
+const coachRead = scopedReads.getForCoach({requestId:'owner-read',authenticatedCoachId:'owner-coach'});
+assert.equal(coachRead.state,STATES.REQUESTED);
+assert.equal(Object.hasOwn(coachRead,'traineeId'),false,'coach read must not expose trainee identity');
+assert.equal(Object.hasOwn(coachRead,'codeDigest'),false,'owner read must not expose code digest');
+assert.equal(Object.hasOwn(coachRead,'mockMessages'),false,'owner read must not expose delivery internals');
+assert.throws(()=>scopedReads.getForCoach({requestId:'owner-read',authenticatedCoachId:'other-coach'}),e=>e.message==='Recovery request unavailable');
+assert.throws(()=>scopedReads.getForCoach({requestId:'missing-read',authenticatedCoachId:'owner-coach'}),e=>e.message==='Recovery request unavailable',
+  'wrong owner and unknown request must have identical generic denial');
+const traineeRead = scopedReads.getForTrainee({requestId:'owner-read',authenticatedTraineeId:'owner-trainee'});
+assert.equal(traineeRead.state,STATES.REQUESTED);
+assert.throws(()=>scopedReads.getForTrainee({requestId:'owner-read',authenticatedTraineeId:'other-trainee'}),e=>e.message==='Recovery request unavailable');
+assert.throws(()=>scopedReads.getForTrainee({requestId:'missing-read',authenticatedTraineeId:'owner-trainee'}),e=>e.message==='Recovery request unavailable',
+  'wrong trainee and unknown request must have identical generic denial');
+
 const s = sys();
 assert.equal(s.request({traineeId:'t1',coachId:'c1',requestId:'r1'}).state, STATES.REQUESTED);
 const firstRequestSnapshot = s.requests.get('r1');
