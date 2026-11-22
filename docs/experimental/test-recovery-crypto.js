@@ -1,4 +1,5 @@
 'use strict';
+// CI trigger: focused crypto regression suite.
 const assert = require('node:assert/strict');
 const { generateCode, digestCode, safeEqualHex } = require('./mock-recovery-engine');
 
