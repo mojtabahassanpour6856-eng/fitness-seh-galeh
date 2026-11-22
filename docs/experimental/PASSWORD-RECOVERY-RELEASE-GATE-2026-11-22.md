@@ -326,3 +326,18 @@ Added static alignment checks between the handler's eight RPC calls and the cand
 Workflow run `45050755303` completed **success** on commit `5b40c5c46bcf41e38fa573fddf0edeca11267f1e`. All three jobs passed: mock/handler/security/static contract checks, disposable PostgreSQL concurrency/RPC tests, and Deno type-check.
 
 **Important remaining blocker found by read-only Test schema inspection:** the Test project's current recovery table still has only the pre-migration columns; the candidate handler's additional outcome/operation columns do not exist there yet. The Test database also has a legacy approved recovery request, and the candidate migration's preflight is designed to stop when approved/processing rows exist. Therefore no Test migration or live endpoint call is safe yet. The approved row must first be handled through a separately reviewed, explicit cleanup/reconciliation plan. No database write was performed.
+
+
+## Additional blocker review and key-rotation fix (2026-11-22)
+
+Read-only Test inspection confirmed the existing rate-limit function signature and candidate-referenced profile/trainee columns match. It also found exactly one legacy approved recovery request whose code is already expired, with no processing rows. Its linked trainee is currently active/non-archived. No identifying data is retained in this report.
+
+A guarded, separate Test-only cleanup candidate was added at `docs/experimental/migrations/20261122_dispose_expired_legacy_approved_request.sql`. It aborts unless exactly one expired approved row exists and there are no unexpired approved or processing rows. If explicitly approved and executed, it changes only that recovery-request row to expired and clears the expired code hash/expiry. It does not modify trainee or Auth data. **It has not been run.**
+
+Security review also found that the candidate recorded an HMAC key version but initially supported only one configured secret. The candidate now uses a validated versioned `RECOVERY_HMAC_KEYS` keyring, selects the exact historical key on reset, and fails closed if that version is unavailable. New tests cover both historical-key verification and missing-key refusal.
+
+Before Test migration/endpoint work:
+1. Explicit approval is required to execute the guarded expired-request cleanup in Test.
+2. Then review and explicitly approve the candidate schema migration.
+3. Only after migration should we run PostgREST RPC integration checks and isolated Test Auth account tests.
+No Production changes are authorized by these steps.
