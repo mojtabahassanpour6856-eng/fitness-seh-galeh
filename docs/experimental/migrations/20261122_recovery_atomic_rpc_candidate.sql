@@ -59,6 +59,10 @@ CREATE UNIQUE INDEX IF NOT EXISTS trainee_password_recovery_operation_id_uidx
   ON public.trainee_password_recovery_requests (operation_id)
   WHERE operation_id IS NOT NULL;
 
+CREATE UNIQUE INDEX IF NOT EXISTS trainee_password_recovery_delivery_operation_id_uidx
+  ON public.trainee_password_recovery_requests (delivery_operation_id)
+  WHERE delivery_operation_id IS NOT NULL;
+
 CREATE SCHEMA IF NOT EXISTS recovery_private AUTHORIZATION postgres;
 REVOKE ALL ON SCHEMA recovery_private FROM PUBLIC, anon, authenticated;
 GRANT USAGE ON SCHEMA recovery_private TO service_role;
