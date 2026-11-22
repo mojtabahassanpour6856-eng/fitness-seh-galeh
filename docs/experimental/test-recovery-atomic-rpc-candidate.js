@@ -211,6 +211,8 @@ async function main() {
   assert.equal(blocked.rows[0].result.claimed,false,'unknown SMS delivery must not permit code redemption');
   r=await callAsService('SELECT public.recovery_finish_delivery($1,$2,$3) AS changed',[req4,deliveryOp4,'sent']);
   assert.equal(r.rows[0].changed,false,'unknown delivery cannot be overwritten without a dedicated authoritative reconciliation path');
+  r=await callAsService('SELECT public.recovery_finish_delivery($1,$2,$3) AS changed',[req3,deliveryOp3,'sent']);
+  assert.equal(r.rows[0].changed,true,'confirmed provider acceptance should make the code redeemable');
   const opA='40000000-0000-4000-8000-000000000001';
   const opB='40000000-0000-4000-8000-000000000002';
   const claims=await Promise.all([opA,opB].map(op=>callAsService(
