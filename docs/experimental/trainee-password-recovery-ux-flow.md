@@ -6,7 +6,7 @@ Design only. No production UI, auth-provider calls, database writes, SMS sends, 
 ## Trainee screen states
 1. **Entry** — a “Forgot password?” action on the trainee login screen; it must not change the coach login.
 2. **Request form** — request using the account's registered identifier (prefer phone if already the app's established login identifier). UI wording must not confirm whether an account exists; show a generic “If the account is eligible, the request will be sent to its coach.”
-3. **Pending** — show that the request is waiting for coach review; allow leaving the screen and returning. Avoid exposing sensitive coach details.
+3. **Pending** — show that the request is waiting for coach review; allow leaving the screen and returning. Avoid exposing sensitive coach details. Offer a cancel action only while server state is REQUESTED; after approval/code issuance, cancellation must not imply the delivered code is revoked unless server invalidation is confirmed.
 4. **Rejected** — neutral message and next step to contact the gym/coach; no revealing internal rejection reason.
 5. **Code entry** — four digits as a string (leading zeros retained), numeric keyboard, paste allowed, no auto-submit until four digits; generic incorrect/expired message; remaining attempts and expiry must be server-authoritative.
 6. **New password** — only after verified code; show password and confirm fields, reveal toggle, app's existing password policy, mismatch prevention. Do not accept traineeId/requestId from client as authorization.
