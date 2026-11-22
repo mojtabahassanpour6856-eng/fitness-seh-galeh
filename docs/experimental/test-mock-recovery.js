@@ -8,8 +8,19 @@ assert.equal(generateCode(() => Buffer.from([0, 0])), '0000');
 assert.equal(generateCode(() => Buffer.from([0x27, 0x0f])), '9999');
 const retryCode = generateCode((() => { let i=0; return () => i++===0 ? Buffer.from([0xea,0x60]) : Buffer.from([0,1]); })());
 assert.equal(retryCode, '0001');
+
+let zeroClock = 0;
+const zeroClockSystem = new MockRecovery({secret,now:()=>zeroClock,cooldownMs:60000});
+assert.equal(zeroClockSystem.request({traineeId:'zero',coachId:'coach',requestId:'zero1'}).state, STATES.REQUESTED,
+  'first request at clock zero must not be blocked by cooldown');
+assert.throws(()=>zeroClockSystem.request({traineeId:'zero',coachId:'coach',requestId:'zero2'}), /Cooldown/);
+
 const s = sys();
 assert.equal(s.request({traineeId:'t1',coachId:'c1',requestId:'r1'}).state, STATES.REQUESTED);
+const firstRequestSnapshot = s.requests.get('r1');
+const firstReturned = s.request({traineeId:'t1',coachId:'c1',requestId:'r1'});
+firstReturned.state = STATES.COMPLETED;
+assert.equal(firstRequestSnapshot.state, STATES.REQUESTED, 'first request response must be a detached snapshot');
 assert.equal(s.request({traineeId:'t1',coachId:'c1',requestId:'r1'}).requestId, 'r1');
 const exposedRequest = s.request({traineeId:'t1',coachId:'c1',requestId:'r1'});
 exposedRequest.state = STATES.COMPLETED;
