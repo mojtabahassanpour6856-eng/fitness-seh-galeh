@@ -1,0 +1,157 @@
+'use strict';
+import assert from 'node:assert/strict';
+import { createRecoveryCandidateHandler } from './recovery-candidate-handler.mjs';
+
+const ENV = {
+  RECOVERY_HMAC_SECRET: 'candidate-test-secret-longer-than-32-bytes',
+  RECOVERY_HMAC_KEY_VERSION: 'k1',
+  RECOVERY_ALLOWED_ORIGINS: 'https://app.example.test'
+};
+const UUID = '6ba7b810-9dad-41d1-80b4-00c04fd430c8';
+const OP = '6ba7b811-9dad-41d1-80b4-00c04fd430c8';
+const AUTH_USER = '6ba7b812-9dad-41d1-80b4-00c04fd430c8';
+
+function queryResult(data, error = null) {
+  const q = {
+    select() { return q; }, eq() { return q; }, in() { return q; },
+    order() { return q; }, limit() { return q; },
+    maybeSingle: async () => ({ data, error }),
+    then(resolve, reject) { return Promise.resolve({ data, error }).then(resolve, reject); }
+  };
+  return q;
+}
+function fixture(overrides = {}) {
+  const calls = [];
+  const state = {
+    rate: true, submit: true,
+    reviewed: { ok: true, status: 'approved', delivery_operation_id: OP },
+    beginDelivery: true, finishDelivery: true,
+    matches: [{ id: UUID, phone_normalized: '+989123456789', hmac_key_version: 'k1' }],
+    target: { phone_normalized: '+989123456789', trainees: {
+      phone_normalized: '+989123456789', coach_user_id: AUTH_USER,
+      approval_status: 'active', archived_at: null
+    }},
+    claim: { claimed: false },
+    beginAuth: true, finishAuth: true,
+    updateError: null,
+    ...overrides
+  };
+  const admin = {
+    rpc: async (name, args) => {
+      calls.push({ type: 'rpc', name, args });
+      if (name === 'consume_registration_rate_limit') return { data: state.rate, error: state.rateError || null };
+      const map = {
+        recovery_submit_request: state.submit,
+        recovery_coach_review: state.reviewed,
+        recovery_begin_delivery: state.beginDelivery,
+        recovery_finish_delivery: state.finishDelivery,
+        recovery_claim_reset: state.claim,
+        recovery_record_wrong_attempt: { incremented: true },
+        recovery_begin_auth_update: state.beginAuth,
+        recovery_finish_auth_update: state.finishAuth
+      };
+      return { data: map[name], error: state.rpcError || null };
+    },
+    from: table => ({
+      select: () => {
+        if (table === 'profiles') return queryResult({ role: 'coach' });
+        if (table === 'trainee_password_recovery_requests') {
+          const q = {
+            select() { return q; }, eq() { return q; }, in() { return q; },
+            order() { return q; }, limit() { return q; },
+            maybeSingle: async () => ({ data: state.target, error: null }),
+            then(resolve, reject) { return Promise.resolve({ data: state.listRows || [], error: null }).then(resolve, reject); }
+          };
+          // Reset lookup is a list query; coach recipient lookup uses maybeSingle.
+          q.limit = n => { calls.push({ type: 'limit', n }); return q; };
+          return q;
+        }
+        return queryResult(null);
+      }
+    }),
+    auth: { admin: { updateUserById: async (id, payload) => {
+      calls.push({ type: 'auth_update', id, payload });
+      return { error: state.updateError };
+    }}}
+  };
+  const deps = {
+    env: ENV, admin,
+    createUserClient: authorization => ({
+      auth: { getUser: async () => ({ data: { user: { id: AUTH_USER } }, error: null }) }
+    }),
+    now: () => 1790000000000,
+    randomBytes: size => Buffer.from([0, 7]),
+    randomUUID: () => OP,
+    ...overrides.deps
+  };
+  return { handler: createRecoveryCandidateHandler(deps), calls, state };
+}
+function request(body, { origin = 'https://app.example.test', authorization = '' } = {}) {
+  const headers = { 'content-type': 'application/json' };
+  if (origin) headers.origin = origin;
+  if (authorization) headers.authorization = authorization;
+  return new Request('https://candidate.invalid/', {
+    method: 'POST', headers, body: JSON.stringify(body)
+  });
+}
+async function body(response) { return await response.json(); }
+
+{
+  const a = fixture({ submit: false });
+  const b = fixture({ submit: true });
+  const ra = await a.handler(request({ action: 'request', phone: '09123456789' }));
+  const rb = await b.handler(request({ action: 'request', phone: '09123456789' }));
+  assert.equal(ra.status, 202); assert.equal(rb.status, 202);
+  assert.deepEqual(await body(ra), await body(rb));
+  assert.equal(a.calls.findIndex(x => x.name === 'consume_registration_rate_limit') <
+    a.calls.findIndex(x => x.name === 'recovery_submit_request'), true);
+  assert.equal(b.calls.find(x => x.name === 'recovery_submit_request').args.p_phone_normalized, '+989123456789');
+  console.log('PASS: public request response is identical regardless of internal account eligibility result.');
+}
+{
+  const f = fixture();
+  const r = await f.handler(request({ action: 'request', phone: '09123456789' }, { origin: 'https://evil.example.test' }));
+  assert.equal(r.status, 403);
+  assert.equal(f.calls.length, 0);
+}
+{
+  const f = fixture();
+  const r = await f.handler(request({ action: 'review', request_id: UUID, decision: 'approve' }, { authorization: 'Bearer test' }));
+  assert.equal(r.status, 503);
+  assert.equal(f.calls.some(x => x.name === 'recovery_coach_review'), false);
+  console.log('PASS: approval is blocked before state mutation when no delivery adapter is explicitly injected.');
+}
+{
+  const f = fixture();
+  let delivered;
+  f.handler = createRecoveryCandidateHandler({
+    env: ENV, admin: f.handler && undefined
+  });
+}
+{
+  const f = fixture();
+  const r = await f.handler(request({ action: 'reset', phone: '09123456789', code: '0007', new_password: 'StrongPass!234' }));
+  assert.equal(r.status, 400);
+  assert.equal(f.calls.some(x => x.name === 'recovery_record_wrong_attempt'), true);
+  assert.equal(f.calls.some(x => x.type === 'auth_update'), false);
+  console.log('PASS: failed code claim invokes atomic wrong-attempt RPC and never calls Auth.');
+}
+{
+  const f = fixture({ claim: { claimed: true, operation_id: OP, auth_user_id: AUTH_USER }, updateError: new Error('network timeout') });
+  const r = await f.handler(request({ action: 'reset', phone: '09123456789', code: '0007', new_password: 'StrongPass!234' }));
+  assert.equal(r.status, 503);
+  assert.equal(f.calls.filter(x => x.type === 'auth_update').length, 1);
+  const finish = f.calls.find(x => x.name === 'recovery_finish_auth_update');
+  assert.equal(finish.args.p_outcome, 'unknown');
+  console.log('PASS: ambiguous Auth result is locked as unknown and the Auth update is never retried.');
+}
+{
+  const f = fixture({ claim: { claimed: true, operation_id: OP, auth_user_id: AUTH_USER } });
+  const r = await f.handler(request({ action: 'reset', phone: '09123456789', code: '0007', new_password: 'StrongPass!234' }));
+  assert.equal(r.status, 200);
+  const finish = f.calls.find(x => x.name === 'recovery_finish_auth_update');
+  assert.equal(finish.args.p_outcome, 'completed');
+  assert.equal(f.calls.filter(x => x.type === 'auth_update').length, 1);
+  console.log('PASS: confirmed Auth success makes one password update and records completion.');
+}
+console.log('All dependency-injected recovery handler candidate tests passed.');
