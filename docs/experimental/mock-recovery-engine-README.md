@@ -47,3 +47,7 @@ The fixture now calls `sweepExpired()` before trainee cancellation and coach rej
 
 ## Verification lockout cleanup
 When the configured failed-code attempt limit is reached, the fixture now transitions to `EXPIRED` and immediately clears both the stored code digest and expiry timestamp. Tests assert this cleanup for repeated wrong codes. This is a mock-state hygiene guarantee only; production must make lockout and digest cleanup atomic in persistent storage.
+
+
+## Active-flow isolation and state encapsulation
+The fixture now treats `APPROVED` and `DELIVERY_PENDING` as active states when preventing parallel requests, and includes `DELIVERY_PENDING` in pending-request expiry cleanup. `request()` returns a shallow snapshot rather than the mutable internal record. Tests cover a second request during a re-entrant delivery callback and mutation of the returned snapshot. This remains single-process mock behavior; production needs database-enforced uniqueness and atomic transitions.
