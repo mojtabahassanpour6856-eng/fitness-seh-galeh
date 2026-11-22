@@ -9,7 +9,7 @@ const crypto = require('node:crypto');
 const STATES = Object.freeze({
   REQUESTED: 'REQUESTED', APPROVED: 'APPROVED', CODE_ISSUED: 'CODE_ISSUED',
   VERIFIED: 'VERIFIED', DELIVERY_PENDING: 'DELIVERY_PENDING', DELIVERY_UNKNOWN: 'DELIVERY_UNKNOWN', COMPLETED: 'COMPLETED', REJECTED: 'REJECTED',
-  EXPIRED: 'EXPIRED', CANCELLED: 'CANCELLED'
+  EXPIRED: 'EXPIRED', CANCELLED: 'CANCELLED', STALE_ASSIGNMENT: 'STALE_ASSIGNMENT'
 });
 
 function generateCode(randomBytes = crypto.randomBytes) {
@@ -32,7 +32,7 @@ function safeEqualHex(a, b) {
 }
 
 class MockRecovery {
-  constructor({ secret, now = () => Date.now(), codeTTLms = 24 * 60 * 60_000, requestTTLms = 24 * 60 * 60_000, maxAttempts = 5, cooldownMs = 60_000, maxRequestsPerWindow = 3, requestWindowMs = 24 * 60 * 60_000, maxDeliveryAttempts = 3, delivery = () => ({ ok: true }) } = {}) {
+  constructor({ secret, now = () => Date.now(), codeTTLms = 24 * 60 * 60_000, requestTTLms = 24 * 60 * 60_000, maxAttempts = 5, cooldownMs = 60_000, maxRequestsPerWindow = 3, requestWindowMs = 24 * 60 * 60_000, maxDeliveryAttempts = 3, delivery = () => ({ ok: true }), getCurrentCoachId = null } = {}) {
     this.secret = secret;
     this.now = now;
     this.codeTTLms = codeTTLms;
@@ -43,6 +43,7 @@ class MockRecovery {
     this.requestWindowMs = requestWindowMs;
     this.requestHistory = new Map();
     this.delivery = delivery;
+    this.getCurrentCoachId = getCurrentCoachId;
     this.maxDeliveryAttempts = maxDeliveryAttempts;
     this.requests = new Map();
     this.lastRequestAt = new Map();
@@ -81,6 +82,11 @@ class MockRecovery {
     this.sweepExpired();
     const r = this.#get(requestId);
     if (r.coachId !== authenticatedCoachId) throw new Error('Coach ownership check failed');
+    if (this.getCurrentCoachId && this.getCurrentCoachId(r.traineeId) !== r.coachId) {
+      r.state = STATES.STALE_ASSIGNMENT;
+      r.staleAssignmentAt = this.now();
+      throw new Error('Coach assignment changed; request must be restarted');
+    }
     // Double-click/retry is idempotent: do not generate or deliver a second code.
     if (r.state === STATES.CODE_ISSUED) return { requestId, state: r.state, expiresAt: r.expiresAt, delivery: 'MOCK_ONLY', idempotent: true };
     if (![STATES.REQUESTED, STATES.APPROVED].includes(r.state)) throw new Error('Invalid state');
@@ -160,6 +166,11 @@ class MockRecovery {
     this.sweepExpired();
     const r = this.#get(requestId);
     if (r.coachId !== authenticatedCoachId) throw new Error('Coach ownership check failed');
+    if (this.getCurrentCoachId && this.getCurrentCoachId(r.traineeId) !== r.coachId) {
+      r.state = STATES.STALE_ASSIGNMENT;
+      r.staleAssignmentAt = this.now();
+      throw new Error('Coach assignment changed; request must be restarted');
+    }
     if (r.state !== STATES.REQUESTED) throw new Error('Invalid state');
     r.state = STATES.REJECTED; r.rejectedAt = this.now();
     return { requestId, state: r.state };
