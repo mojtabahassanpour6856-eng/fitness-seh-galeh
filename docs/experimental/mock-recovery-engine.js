@@ -32,10 +32,11 @@ function safeEqualHex(a, b) {
 }
 
 class MockRecovery {
-  constructor({ secret, now = () => Date.now(), codeTTLms = 24 * 60 * 60_000, maxAttempts = 5, cooldownMs = 60_000, maxDeliveryAttempts = 3, delivery = () => ({ ok: true }) } = {}) {
+  constructor({ secret, now = () => Date.now(), codeTTLms = 24 * 60 * 60_000, requestTTLms = 24 * 60 * 60_000, maxAttempts = 5, cooldownMs = 60_000, maxDeliveryAttempts = 3, delivery = () => ({ ok: true }) } = {}) {
     this.secret = secret;
     this.now = now;
     this.codeTTLms = codeTTLms;
+    this.requestTTLms = requestTTLms;
     this.maxAttempts = maxAttempts;
     this.cooldownMs = cooldownMs;
     this.delivery = delivery;
@@ -45,6 +46,7 @@ class MockRecovery {
     this.mockMessages = [];
   }
   request({ traineeId, coachId, requestId }) {
+    this.sweepExpired();
     if (!traineeId || !coachId || !requestId) throw new Error('Required identifiers missing');
     if (this.requests.has(requestId)) {
       const existing = this.requests.get(requestId);
@@ -69,6 +71,7 @@ class MockRecovery {
     return r;
   }
   approve({ requestId, authenticatedCoachId }) {
+    this.sweepExpired();
     const r = this.#get(requestId);
     if (r.coachId !== authenticatedCoachId) throw new Error('Coach ownership check failed');
     // Double-click/retry is idempotent: do not generate or deliver a second code.
@@ -106,6 +109,7 @@ class MockRecovery {
     return { requestId, state: r.state, expiresAt: r.expiresAt, delivery: 'MOCK_ONLY' };
   }
   verify({ requestId, traineeId, code }) {
+    this.sweepExpired();
     const r = this.#get(requestId);
     if (r.traineeId !== traineeId) throw new Error('Trainee ownership check failed');
     if (r.state !== STATES.CODE_ISSUED) throw new Error('Invalid state');
@@ -141,6 +145,25 @@ class MockRecovery {
     if (r.state !== STATES.REQUESTED) throw new Error('Invalid state');
     r.state = STATES.REJECTED; r.rejectedAt = this.now();
     return { requestId, state: r.state };
+  }
+  sweepExpired() {
+    const now = this.now();
+    let expiredCount = 0;
+    for (const r of this.requests.values()) {
+      if ([STATES.REQUESTED, STATES.APPROVED].includes(r.state) && now - r.createdAt >= this.requestTTLms) {
+        r.state = STATES.EXPIRED;
+        r.expiredAt = now;
+        r.codeDigest = null;
+        r.expiresAt = null;
+        expiredCount++;
+      } else if (r.state === STATES.CODE_ISSUED && now >= r.expiresAt) {
+        r.state = STATES.EXPIRED;
+        r.expiredAt = now;
+        r.codeDigest = null;
+        expiredCount++;
+      }
+    }
+    return expiredCount;
   }
   #get(id) { const r = this.requests.get(id); if (!r) throw new Error('Request not found'); return r; }
 }
