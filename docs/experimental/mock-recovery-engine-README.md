@@ -31,3 +31,7 @@ Delivery callback exceptions are also handled in the fixture: the request return
 
 ## Stale request expiry
 The fixture adds a default 24-hour `requestTTLms` for requests left in `REQUESTED` or `APPROVED` after failed delivery. `sweepExpired()` marks stale requests as `EXPIRED`, clears code digest/expiry, and returns the count. It runs opportunistically when a new request, approval, or verification is attempted; it is not a background scheduler. A separate 24-hour code validity window remains for `CODE_ISSUED`. Tests cover expiration of both pending states and that a new recovery can then begin. Production should use server-side scheduled cleanup plus state checks at every operation, not rely on client activity.
+
+
+## Recovery request rate limit
+A rolling-window limit is added per trainee (default: at most 3 requests in 24 hours), alongside the short cooldown and single-active-request guard. Expired timestamps are pruned when a new request is evaluated. The limit applies even if prior requests were rejected or cancelled, reducing repeated coach notifications. Tests cover hitting the cap and allowing a new request after the window rolls off. Production enforcement must be server-side and based on authenticated trainee identity; consider abuse monitoring and account/IP/device signals without exposing account existence.
