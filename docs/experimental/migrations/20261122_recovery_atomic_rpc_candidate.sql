@@ -79,6 +79,961 @@ CREATE SCHEMA IF NOT EXISTS recovery_private AUTHORIZATION postgres;
 REVOKE ALL ON SCHEMA recovery_private FROM PUBLIC, anon, authenticated;
 GRANT USAGE ON SCHEMA recovery_private TO service_role;
 
+-- Per-phone pseudonymous fixed-window limiter. Only SHA-256 key hashes are stored.
+CREATE TABLE IF NOT EXISTS recovery_private.recovery_request_rate_limits (
+  key_hash text PRIMARY KEY CHECK (key_hash ~ '^[a-f0-9]{64}
+  p_phone_normalized text
+)
+RETURNS boolean
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = ''
+AS $$
+DECLARE
+  v_match_count integer;
+  v_trainee_id uuid;
+  v_inserted integer;
+BEGIN
+  IF p_phone_normalized IS NULL OR
+     left(p_phone_normalized, 4) <> '+989' OR
+     length(p_phone_normalized) <> 13 OR
+     substring(p_phone_normalized FROM 5) !~ '^[0-9]{9}$' THEN
+    RETURN false;
+  END IF;
+
+  SELECT count(*) INTO v_match_count
+  FROM public.trainees AS t
+  WHERE t.phone_normalized = p_phone_normalized
+    AND t.approval_status = 'active'
+    AND t.auth_user_id IS NOT NULL
+    AND t.archived_at IS NULL;
+
+  -- Ambiguous duplicate phone records must never pick an arbitrary account.
+  IF v_match_count <> 1 THEN
+    RETURN false;
+  END IF;
+
+  SELECT t.id INTO v_trainee_id
+  FROM public.trainees AS t
+  WHERE t.phone_normalized = p_phone_normalized
+    AND t.approval_status = 'active'
+    AND t.auth_user_id IS NOT NULL
+    AND t.archived_at IS NULL
+  FOR UPDATE;
+
+  IF NOT FOUND THEN
+    RETURN false;
+  END IF;
+
+  INSERT INTO public.trainee_password_recovery_requests
+    (trainee_id, phone_normalized, status)
+  VALUES (v_trainee_id, p_phone_normalized, 'pending')
+  ON CONFLICT (trainee_id)
+    WHERE status IN ('pending','approved','processing')
+  DO NOTHING;
+
+  GET DIAGNOSTICS v_inserted = ROW_COUNT;
+  RETURN v_inserted = 1;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION recovery_private.coach_review_recovery_request(
+  p_request_id uuid,
+  p_actor_user_id uuid,
+  p_decision text,
+  p_token_hash text DEFAULT NULL,
+  p_token_expires_at timestamptz DEFAULT NULL,
+  p_hmac_key_version text DEFAULT NULL
+)
+RETURNS jsonb
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = ''
+AS $$
+DECLARE
+  v_trainee_id uuid;
+  v_status text;
+  v_actor_role text;
+  v_current_coach uuid;
+  v_approval_status text;
+  v_archived_at timestamptz;
+  v_delivery_operation_id uuid;
+BEGIN
+  IF p_decision IS NULL OR p_decision NOT IN ('approve','reject') THEN
+    RETURN jsonb_build_object('ok', false, 'reason', 'invalid_decision');
+  END IF;
+
+  SELECT pr.role INTO v_actor_role
+  FROM public.profiles AS pr
+  WHERE pr.id = p_actor_user_id
+  FOR SHARE;
+
+  IF v_actor_role IS DISTINCT FROM 'coach' THEN
+    RETURN jsonb_build_object('ok', false, 'reason', 'not_authorized');
+  END IF;
+
+  SELECT r.trainee_id, r.status
+    INTO v_trainee_id, v_status
+  FROM public.trainee_password_recovery_requests AS r
+  WHERE r.id = p_request_id
+  FOR UPDATE;
+
+  IF NOT FOUND OR v_status <> 'pending' THEN
+    RETURN jsonb_build_object('ok', false, 'reason', 'not_available');
+  END IF;
+
+  SELECT t.coach_user_id, t.approval_status, t.archived_at
+    INTO v_current_coach, v_approval_status, v_archived_at
+  FROM public.trainees AS t
+  WHERE t.id = v_trainee_id
+  FOR UPDATE;
+
+  IF NOT FOUND OR v_current_coach IS DISTINCT FROM p_actor_user_id
+     OR v_approval_status <> 'active' OR v_archived_at IS NOT NULL THEN
+    RETURN jsonb_build_object('ok', false, 'reason', 'not_authorized');
+  END IF;
+
+  IF p_decision = 'reject' THEN
+    UPDATE public.trainee_password_recovery_requests
+    SET status = 'rejected', reviewed_at = now(), reviewed_by = p_actor_user_id,
+        updated_at = now()
+    WHERE id = p_request_id AND status = 'pending';
+    RETURN jsonb_build_object('ok', true, 'status', 'rejected');
+  END IF;
+
+  IF p_token_hash IS NULL OR p_token_hash !~ '^[a-f0-9]{64}$'
+     OR p_hmac_key_version IS NULL
+     OR p_hmac_key_version !~ '^[A-Za-z0-9_-]{1,32}$'
+     OR p_token_expires_at IS NULL
+     OR p_token_expires_at <= now()
+     OR p_token_expires_at > now() + interval '20 minutes' THEN
+    RETURN jsonb_build_object('ok', false, 'reason', 'invalid_token_material');
+  END IF;
+
+  v_delivery_operation_id := gen_random_uuid();
+  UPDATE public.trainee_password_recovery_requests
+  SET status = 'approved', reviewed_at = now(), reviewed_by = p_actor_user_id,
+      token_hash = p_token_hash, token_expires_at = p_token_expires_at,
+      token_attempts = 0, hmac_key_version = p_hmac_key_version,
+      delivery_operation_id = v_delivery_operation_id,
+      delivery_outcome = 'pending', delivery_attempted_at = NULL,
+      operation_id = NULL, processing_started_at = NULL,
+      auth_outcome = NULL, auth_attempted_at = NULL, auth_last_error_code = NULL,
+      updated_at = now()
+  WHERE id = p_request_id AND status = 'pending';
+
+  RETURN jsonb_build_object('ok', true, 'status', 'approved', 'delivery_operation_id', v_delivery_operation_id);
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION recovery_private.record_recovery_wrong_attempt(
+  p_request_id uuid,
+  p_submitted_digest text,
+  p_max_attempts integer DEFAULT 5
+)
+RETURNS jsonb
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = ''
+AS $$
+DECLARE
+  v_attempts smallint;
+  v_status text;
+BEGIN
+  IF p_max_attempts < 1 OR p_max_attempts > 10 THEN
+    RAISE EXCEPTION 'Invalid attempt threshold';
+  END IF;
+
+  UPDATE public.trainee_password_recovery_requests AS r
+  SET token_attempts = r.token_attempts + 1,
+      status = CASE WHEN r.token_attempts + 1 >= p_max_attempts THEN 'expired' ELSE r.status END,
+      token_hash = CASE WHEN r.token_attempts + 1 >= p_max_attempts THEN NULL ELSE r.token_hash END,
+      token_expires_at = CASE WHEN r.token_attempts + 1 >= p_max_attempts THEN NULL ELSE r.token_expires_at END,
+      updated_at = now()
+  WHERE r.id = p_request_id
+    AND r.status = 'approved'
+    AND r.token_hash IS NOT NULL
+    AND r.token_hash IS DISTINCT FROM p_submitted_digest
+    AND r.token_expires_at > now()
+    AND r.token_attempts < p_max_attempts
+  RETURNING r.token_attempts, r.status INTO v_attempts, v_status;
+
+  IF NOT FOUND THEN
+    RETURN jsonb_build_object('incremented', false);
+  END IF;
+
+  RETURN jsonb_build_object(
+    'incremented', true,
+    'attempts', v_attempts,
+    'expired', v_status = 'expired'
+  );
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION recovery_private.begin_recovery_delivery(
+  p_request_id uuid,
+  p_delivery_operation_id uuid
+)
+RETURNS boolean
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = ''
+AS $$
+BEGIN
+  UPDATE public.trainee_password_recovery_requests
+  SET delivery_outcome = 'attempting', delivery_attempted_at = now(), updated_at = now()
+  WHERE id = p_request_id AND status = 'approved'
+    AND delivery_operation_id = p_delivery_operation_id
+    AND delivery_outcome = 'pending';
+  RETURN FOUND;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION recovery_private.finish_recovery_delivery(
+  p_request_id uuid,
+  p_delivery_operation_id uuid,
+  p_outcome text
+)
+RETURNS boolean
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = ''
+AS $$
+BEGIN
+  IF p_outcome IS NULL OR p_outcome NOT IN ('sent','confirmed_failure','unknown') THEN
+    RAISE EXCEPTION 'Invalid delivery outcome';
+  END IF;
+
+  UPDATE public.trainee_password_recovery_requests
+  SET status = CASE WHEN p_outcome = 'confirmed_failure' THEN 'pending' ELSE 'approved' END,
+      token_hash = CASE WHEN p_outcome = 'confirmed_failure' THEN NULL ELSE token_hash END,
+      token_expires_at = CASE WHEN p_outcome = 'confirmed_failure' THEN NULL ELSE token_expires_at END,
+      reviewed_at = CASE WHEN p_outcome = 'confirmed_failure' THEN NULL ELSE reviewed_at END,
+      reviewed_by = CASE WHEN p_outcome = 'confirmed_failure' THEN NULL ELSE reviewed_by END,
+      token_attempts = CASE WHEN p_outcome = 'confirmed_failure' THEN 0 ELSE token_attempts END,
+      delivery_outcome = p_outcome,
+      updated_at = now()
+  WHERE id = p_request_id AND status = 'approved'
+    AND delivery_operation_id = p_delivery_operation_id
+    AND delivery_outcome = 'attempting';
+
+  RETURN FOUND;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION recovery_private.claim_recovery_reset(
+  p_request_id uuid,
+  p_code_digest text,
+  p_operation_id uuid
+)
+RETURNS jsonb
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = ''
+AS $$
+DECLARE
+  v_trainee_id uuid;
+  v_auth_user_id uuid;
+  v_phone text;
+  v_trainee_phone text;
+  v_approval_status text;
+  v_archived_at timestamptz;
+BEGIN
+  IF p_code_digest IS NULL OR p_code_digest !~ '^[a-f0-9]{64}$'
+     OR p_operation_id IS NULL THEN
+    RETURN jsonb_build_object('claimed', false);
+  END IF;
+
+  SELECT r.trainee_id INTO v_trainee_id
+  FROM public.trainee_password_recovery_requests AS r
+  WHERE r.id = p_request_id
+  FOR UPDATE;
+
+  IF NOT FOUND THEN
+    RETURN jsonb_build_object('claimed', false);
+  END IF;
+
+  SELECT t.auth_user_id, t.phone_normalized, t.approval_status, t.archived_at
+    INTO v_auth_user_id, v_trainee_phone, v_approval_status, v_archived_at
+  FROM public.trainees AS t
+  WHERE t.id = v_trainee_id
+  FOR UPDATE;
+
+  IF NOT FOUND OR v_auth_user_id IS NULL OR v_approval_status <> 'active' OR v_archived_at IS NOT NULL THEN
+    RETURN jsonb_build_object('claimed', false);
+  END IF;
+
+  UPDATE public.trainee_password_recovery_requests AS r
+  SET status = 'processing',
+      operation_id = p_operation_id,
+      processing_started_at = now(),
+      auth_outcome = 'claimed',
+      auth_attempted_at = NULL,
+      auth_last_error_code = NULL,
+      updated_at = now()
+  WHERE r.id = p_request_id
+    AND r.trainee_id = v_trainee_id
+    AND r.phone_normalized = v_trainee_phone
+    AND r.status = 'approved'
+    AND r.token_hash = p_code_digest
+    AND r.token_expires_at > now()
+    AND r.token_attempts < 5
+    AND r.delivery_outcome = 'sent'
+  RETURNING r.phone_normalized INTO v_phone;
+
+  IF NOT FOUND THEN
+    RETURN jsonb_build_object('claimed', false);
+  END IF;
+
+  RETURN jsonb_build_object(
+    'claimed', true,
+    'operation_id', p_operation_id,
+    'auth_user_id', v_auth_user_id
+  );
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION recovery_private.begin_recovery_auth_update(
+  p_request_id uuid,
+  p_operation_id uuid
+)
+RETURNS boolean
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = ''
+AS $$
+BEGIN
+  UPDATE public.trainee_password_recovery_requests
+  SET auth_outcome = 'attempting', auth_attempted_at = now(), updated_at = now()
+  WHERE id = p_request_id AND status = 'processing'
+    AND operation_id = p_operation_id AND auth_outcome = 'claimed';
+  RETURN FOUND;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION recovery_private.finish_recovery_auth_update(
+  p_request_id uuid,
+  p_operation_id uuid,
+  p_outcome text,
+  p_safe_error_code text DEFAULT NULL
+)
+RETURNS boolean
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = ''
+AS $$
+BEGIN
+  IF p_outcome IS NULL OR p_outcome NOT IN ('completed','confirmed_no_change','unknown') THEN
+    RAISE EXCEPTION 'Invalid Auth outcome';
+  END IF;
+  IF p_safe_error_code IS NOT NULL AND
+     (length(p_safe_error_code) NOT BETWEEN 1 AND 64 OR p_safe_error_code !~ '^[a-z0-9_.-]+$') THEN
+    RAISE EXCEPTION 'Unsafe error code';
+  END IF;
+
+  UPDATE public.trainee_password_recovery_requests
+  SET status = CASE
+        WHEN p_outcome = 'completed' THEN 'completed'
+        WHEN p_outcome = 'confirmed_no_change' THEN 'approved'
+        ELSE 'processing'
+      END,
+      completed_at = CASE WHEN p_outcome = 'completed' THEN now() ELSE completed_at END,
+      token_hash = CASE WHEN p_outcome = 'completed' THEN NULL ELSE token_hash END,
+      token_expires_at = CASE WHEN p_outcome = 'completed' THEN NULL ELSE token_expires_at END,
+      auth_outcome = p_outcome,
+      auth_last_error_code = p_safe_error_code,
+      updated_at = now()
+  WHERE id = p_request_id AND status = 'processing'
+    AND operation_id = p_operation_id
+    AND auth_outcome = 'attempting';
+
+  RETURN FOUND;
+END;
+$$;
+
+REVOKE ALL ON ALL FUNCTIONS IN SCHEMA recovery_private FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION recovery_private.submit_recovery_request(text) TO service_role;
+GRANT EXECUTE ON FUNCTION recovery_private.coach_review_recovery_request(uuid,uuid,text,text,timestamptz,text) TO service_role;
+GRANT EXECUTE ON FUNCTION recovery_private.record_recovery_wrong_attempt(uuid,text,integer) TO service_role;
+GRANT EXECUTE ON FUNCTION recovery_private.begin_recovery_delivery(uuid,uuid) TO service_role;
+GRANT EXECUTE ON FUNCTION recovery_private.finish_recovery_delivery(uuid,uuid,text) TO service_role;
+GRANT EXECUTE ON FUNCTION recovery_private.claim_recovery_reset(uuid,text,uuid) TO service_role;
+GRANT EXECUTE ON FUNCTION recovery_private.begin_recovery_auth_update(uuid,uuid) TO service_role;
+GRANT EXECUTE ON FUNCTION recovery_private.finish_recovery_auth_update(uuid,uuid,text,text) TO service_role;
+
+
+-- PostgREST exposes public by default. Keep recovery_private unexposed and
+-- provide narrowly granted public RPC wrappers for the service-role Edge client.
+CREATE OR REPLACE FUNCTION public.consume_registration_rate_limit(
+  p_key_hash text, p_window_seconds integer, p_max_requests integer
+)
+RETURNS boolean LANGUAGE sql SET search_path = ''
+AS $wrap$ SELECT recovery_private.consume_recovery_request_rate_limit(p_key_hash,p_window_seconds,p_max_requests) $wrap$;
+
+CREATE OR REPLACE FUNCTION public.recovery_submit_request(p_phone_normalized text)
+RETURNS boolean LANGUAGE sql SET search_path = ''
+AS $wrap$ SELECT recovery_private.submit_recovery_request(p_phone_normalized) $wrap$;
+
+CREATE OR REPLACE FUNCTION public.recovery_coach_review(
+  p_request_id uuid, p_actor_user_id uuid, p_decision text,
+  p_token_hash text, p_token_expires_at timestamptz, p_hmac_key_version text
+)
+RETURNS jsonb LANGUAGE sql SET search_path = ''
+AS $wrap$ SELECT recovery_private.coach_review_recovery_request(
+  p_request_id,p_actor_user_id,p_decision,p_token_hash,p_token_expires_at,p_hmac_key_version
+) $wrap$;
+
+CREATE OR REPLACE FUNCTION public.recovery_record_wrong_attempt(
+  p_request_id uuid,p_submitted_digest text,p_max_attempts integer
+)
+RETURNS jsonb LANGUAGE sql SET search_path = ''
+AS $wrap$ SELECT recovery_private.record_recovery_wrong_attempt(p_request_id,p_submitted_digest,p_max_attempts) $wrap$;
+
+CREATE OR REPLACE FUNCTION public.recovery_begin_delivery(p_request_id uuid,p_delivery_operation_id uuid)
+RETURNS boolean LANGUAGE sql SET search_path = ''
+AS $wrap$ SELECT recovery_private.begin_recovery_delivery(p_request_id,p_delivery_operation_id) $wrap$;
+
+CREATE OR REPLACE FUNCTION public.recovery_finish_delivery(
+  p_request_id uuid,p_delivery_operation_id uuid,p_outcome text
+)
+RETURNS boolean LANGUAGE sql SET search_path = ''
+AS $wrap$ SELECT recovery_private.finish_recovery_delivery(p_request_id,p_delivery_operation_id,p_outcome) $wrap$;
+
+CREATE OR REPLACE FUNCTION public.recovery_claim_reset(
+  p_request_id uuid,p_code_digest text,p_operation_id uuid
+)
+RETURNS jsonb LANGUAGE sql SET search_path = ''
+AS $wrap$ SELECT recovery_private.claim_recovery_reset(p_request_id,p_code_digest,p_operation_id) $wrap$;
+
+CREATE OR REPLACE FUNCTION public.recovery_begin_auth_update(p_request_id uuid,p_operation_id uuid)
+RETURNS boolean LANGUAGE sql SET search_path = ''
+AS $wrap$ SELECT recovery_private.begin_recovery_auth_update(p_request_id,p_operation_id) $wrap$;
+
+CREATE OR REPLACE FUNCTION public.recovery_finish_auth_update(
+  p_request_id uuid,p_operation_id uuid,p_outcome text,p_safe_error_code text
+)
+RETURNS boolean LANGUAGE sql SET search_path = ''
+AS $wrap$ SELECT recovery_private.finish_recovery_auth_update(
+  p_request_id,p_operation_id,p_outcome,p_safe_error_code
+) $wrap$;
+
+REVOKE ALL ON FUNCTION public.consume_registration_rate_limit(text,integer,integer) FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.consume_registration_rate_limit(text,integer,integer) TO service_role;
+REVOKE ALL ON FUNCTION public.recovery_submit_request(text) FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION public.recovery_coach_review(uuid,uuid,text,text,timestamptz,text) FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION public.recovery_record_wrong_attempt(uuid,text,integer) FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION public.recovery_begin_delivery(uuid,uuid) FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION public.recovery_finish_delivery(uuid,uuid,text) FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION public.recovery_claim_reset(uuid,text,uuid) FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION public.recovery_begin_auth_update(uuid,uuid) FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION public.recovery_finish_auth_update(uuid,uuid,text,text) FROM PUBLIC, anon, authenticated;
+
+GRANT EXECUTE ON FUNCTION public.recovery_submit_request(text) TO service_role;
+GRANT EXECUTE ON FUNCTION public.recovery_coach_review(uuid,uuid,text,text,timestamptz,text) TO service_role;
+GRANT EXECUTE ON FUNCTION public.recovery_record_wrong_attempt(uuid,text,integer) TO service_role;
+GRANT EXECUTE ON FUNCTION public.recovery_begin_delivery(uuid,uuid) TO service_role;
+GRANT EXECUTE ON FUNCTION public.recovery_finish_delivery(uuid,uuid,text) TO service_role;
+GRANT EXECUTE ON FUNCTION public.recovery_claim_reset(uuid,text,uuid) TO service_role;
+GRANT EXECUTE ON FUNCTION public.recovery_begin_auth_update(uuid,uuid) TO service_role;
+GRANT EXECUTE ON FUNCTION public.recovery_finish_auth_update(uuid,uuid,text,text) TO service_role;
+
+COMMIT;
+),
+  window_started_at timestamptz NOT NULL,
+  request_count integer NOT NULL CHECK (request_count >= 1),
+  updated_at timestamptz NOT NULL DEFAULT now()
+);
+REVOKE ALL ON recovery_private.recovery_request_rate_limits FROM PUBLIC, anon, authenticated, service_role;
+
+CREATE OR REPLACE FUNCTION recovery_private.consume_recovery_request_rate_limit(
+  p_key_hash text, p_window_seconds integer, p_max_requests integer
+)
+RETURNS boolean
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = ''
+AS $
+DECLARE
+  v_allowed boolean := false;
+  v_now timestamptz := clock_timestamp();
+BEGIN
+  IF p_key_hash IS NULL OR p_key_hash !~ '^[a-f0-9]{64}
+  p_phone_normalized text
+)
+RETURNS boolean
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = ''
+AS $$
+DECLARE
+  v_match_count integer;
+  v_trainee_id uuid;
+  v_inserted integer;
+BEGIN
+  IF p_phone_normalized IS NULL OR
+     left(p_phone_normalized, 4) <> '+989' OR
+     length(p_phone_normalized) <> 13 OR
+     substring(p_phone_normalized FROM 5) !~ '^[0-9]{9}$' THEN
+    RETURN false;
+  END IF;
+
+  SELECT count(*) INTO v_match_count
+  FROM public.trainees AS t
+  WHERE t.phone_normalized = p_phone_normalized
+    AND t.approval_status = 'active'
+    AND t.auth_user_id IS NOT NULL
+    AND t.archived_at IS NULL;
+
+  -- Ambiguous duplicate phone records must never pick an arbitrary account.
+  IF v_match_count <> 1 THEN
+    RETURN false;
+  END IF;
+
+  SELECT t.id INTO v_trainee_id
+  FROM public.trainees AS t
+  WHERE t.phone_normalized = p_phone_normalized
+    AND t.approval_status = 'active'
+    AND t.auth_user_id IS NOT NULL
+    AND t.archived_at IS NULL
+  FOR UPDATE;
+
+  IF NOT FOUND THEN
+    RETURN false;
+  END IF;
+
+  INSERT INTO public.trainee_password_recovery_requests
+    (trainee_id, phone_normalized, status)
+  VALUES (v_trainee_id, p_phone_normalized, 'pending')
+  ON CONFLICT (trainee_id)
+    WHERE status IN ('pending','approved','processing')
+  DO NOTHING;
+
+  GET DIAGNOSTICS v_inserted = ROW_COUNT;
+  RETURN v_inserted = 1;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION recovery_private.coach_review_recovery_request(
+  p_request_id uuid,
+  p_actor_user_id uuid,
+  p_decision text,
+  p_token_hash text DEFAULT NULL,
+  p_token_expires_at timestamptz DEFAULT NULL,
+  p_hmac_key_version text DEFAULT NULL
+)
+RETURNS jsonb
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = ''
+AS $$
+DECLARE
+  v_trainee_id uuid;
+  v_status text;
+  v_actor_role text;
+  v_current_coach uuid;
+  v_approval_status text;
+  v_archived_at timestamptz;
+  v_delivery_operation_id uuid;
+BEGIN
+  IF p_decision IS NULL OR p_decision NOT IN ('approve','reject') THEN
+    RETURN jsonb_build_object('ok', false, 'reason', 'invalid_decision');
+  END IF;
+
+  SELECT pr.role INTO v_actor_role
+  FROM public.profiles AS pr
+  WHERE pr.id = p_actor_user_id
+  FOR SHARE;
+
+  IF v_actor_role IS DISTINCT FROM 'coach' THEN
+    RETURN jsonb_build_object('ok', false, 'reason', 'not_authorized');
+  END IF;
+
+  SELECT r.trainee_id, r.status
+    INTO v_trainee_id, v_status
+  FROM public.trainee_password_recovery_requests AS r
+  WHERE r.id = p_request_id
+  FOR UPDATE;
+
+  IF NOT FOUND OR v_status <> 'pending' THEN
+    RETURN jsonb_build_object('ok', false, 'reason', 'not_available');
+  END IF;
+
+  SELECT t.coach_user_id, t.approval_status, t.archived_at
+    INTO v_current_coach, v_approval_status, v_archived_at
+  FROM public.trainees AS t
+  WHERE t.id = v_trainee_id
+  FOR UPDATE;
+
+  IF NOT FOUND OR v_current_coach IS DISTINCT FROM p_actor_user_id
+     OR v_approval_status <> 'active' OR v_archived_at IS NOT NULL THEN
+    RETURN jsonb_build_object('ok', false, 'reason', 'not_authorized');
+  END IF;
+
+  IF p_decision = 'reject' THEN
+    UPDATE public.trainee_password_recovery_requests
+    SET status = 'rejected', reviewed_at = now(), reviewed_by = p_actor_user_id,
+        updated_at = now()
+    WHERE id = p_request_id AND status = 'pending';
+    RETURN jsonb_build_object('ok', true, 'status', 'rejected');
+  END IF;
+
+  IF p_token_hash IS NULL OR p_token_hash !~ '^[a-f0-9]{64}$'
+     OR p_hmac_key_version IS NULL
+     OR p_hmac_key_version !~ '^[A-Za-z0-9_-]{1,32}$'
+     OR p_token_expires_at IS NULL
+     OR p_token_expires_at <= now()
+     OR p_token_expires_at > now() + interval '20 minutes' THEN
+    RETURN jsonb_build_object('ok', false, 'reason', 'invalid_token_material');
+  END IF;
+
+  v_delivery_operation_id := gen_random_uuid();
+  UPDATE public.trainee_password_recovery_requests
+  SET status = 'approved', reviewed_at = now(), reviewed_by = p_actor_user_id,
+      token_hash = p_token_hash, token_expires_at = p_token_expires_at,
+      token_attempts = 0, hmac_key_version = p_hmac_key_version,
+      delivery_operation_id = v_delivery_operation_id,
+      delivery_outcome = 'pending', delivery_attempted_at = NULL,
+      operation_id = NULL, processing_started_at = NULL,
+      auth_outcome = NULL, auth_attempted_at = NULL, auth_last_error_code = NULL,
+      updated_at = now()
+  WHERE id = p_request_id AND status = 'pending';
+
+  RETURN jsonb_build_object('ok', true, 'status', 'approved', 'delivery_operation_id', v_delivery_operation_id);
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION recovery_private.record_recovery_wrong_attempt(
+  p_request_id uuid,
+  p_submitted_digest text,
+  p_max_attempts integer DEFAULT 5
+)
+RETURNS jsonb
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = ''
+AS $$
+DECLARE
+  v_attempts smallint;
+  v_status text;
+BEGIN
+  IF p_max_attempts < 1 OR p_max_attempts > 10 THEN
+    RAISE EXCEPTION 'Invalid attempt threshold';
+  END IF;
+
+  UPDATE public.trainee_password_recovery_requests AS r
+  SET token_attempts = r.token_attempts + 1,
+      status = CASE WHEN r.token_attempts + 1 >= p_max_attempts THEN 'expired' ELSE r.status END,
+      token_hash = CASE WHEN r.token_attempts + 1 >= p_max_attempts THEN NULL ELSE r.token_hash END,
+      token_expires_at = CASE WHEN r.token_attempts + 1 >= p_max_attempts THEN NULL ELSE r.token_expires_at END,
+      updated_at = now()
+  WHERE r.id = p_request_id
+    AND r.status = 'approved'
+    AND r.token_hash IS NOT NULL
+    AND r.token_hash IS DISTINCT FROM p_submitted_digest
+    AND r.token_expires_at > now()
+    AND r.token_attempts < p_max_attempts
+  RETURNING r.token_attempts, r.status INTO v_attempts, v_status;
+
+  IF NOT FOUND THEN
+    RETURN jsonb_build_object('incremented', false);
+  END IF;
+
+  RETURN jsonb_build_object(
+    'incremented', true,
+    'attempts', v_attempts,
+    'expired', v_status = 'expired'
+  );
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION recovery_private.begin_recovery_delivery(
+  p_request_id uuid,
+  p_delivery_operation_id uuid
+)
+RETURNS boolean
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = ''
+AS $$
+BEGIN
+  UPDATE public.trainee_password_recovery_requests
+  SET delivery_outcome = 'attempting', delivery_attempted_at = now(), updated_at = now()
+  WHERE id = p_request_id AND status = 'approved'
+    AND delivery_operation_id = p_delivery_operation_id
+    AND delivery_outcome = 'pending';
+  RETURN FOUND;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION recovery_private.finish_recovery_delivery(
+  p_request_id uuid,
+  p_delivery_operation_id uuid,
+  p_outcome text
+)
+RETURNS boolean
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = ''
+AS $$
+BEGIN
+  IF p_outcome IS NULL OR p_outcome NOT IN ('sent','confirmed_failure','unknown') THEN
+    RAISE EXCEPTION 'Invalid delivery outcome';
+  END IF;
+
+  UPDATE public.trainee_password_recovery_requests
+  SET status = CASE WHEN p_outcome = 'confirmed_failure' THEN 'pending' ELSE 'approved' END,
+      token_hash = CASE WHEN p_outcome = 'confirmed_failure' THEN NULL ELSE token_hash END,
+      token_expires_at = CASE WHEN p_outcome = 'confirmed_failure' THEN NULL ELSE token_expires_at END,
+      reviewed_at = CASE WHEN p_outcome = 'confirmed_failure' THEN NULL ELSE reviewed_at END,
+      reviewed_by = CASE WHEN p_outcome = 'confirmed_failure' THEN NULL ELSE reviewed_by END,
+      token_attempts = CASE WHEN p_outcome = 'confirmed_failure' THEN 0 ELSE token_attempts END,
+      delivery_outcome = p_outcome,
+      updated_at = now()
+  WHERE id = p_request_id AND status = 'approved'
+    AND delivery_operation_id = p_delivery_operation_id
+    AND delivery_outcome = 'attempting';
+
+  RETURN FOUND;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION recovery_private.claim_recovery_reset(
+  p_request_id uuid,
+  p_code_digest text,
+  p_operation_id uuid
+)
+RETURNS jsonb
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = ''
+AS $$
+DECLARE
+  v_trainee_id uuid;
+  v_auth_user_id uuid;
+  v_phone text;
+  v_trainee_phone text;
+  v_approval_status text;
+  v_archived_at timestamptz;
+BEGIN
+  IF p_code_digest IS NULL OR p_code_digest !~ '^[a-f0-9]{64}$'
+     OR p_operation_id IS NULL THEN
+    RETURN jsonb_build_object('claimed', false);
+  END IF;
+
+  SELECT r.trainee_id INTO v_trainee_id
+  FROM public.trainee_password_recovery_requests AS r
+  WHERE r.id = p_request_id
+  FOR UPDATE;
+
+  IF NOT FOUND THEN
+    RETURN jsonb_build_object('claimed', false);
+  END IF;
+
+  SELECT t.auth_user_id, t.phone_normalized, t.approval_status, t.archived_at
+    INTO v_auth_user_id, v_trainee_phone, v_approval_status, v_archived_at
+  FROM public.trainees AS t
+  WHERE t.id = v_trainee_id
+  FOR UPDATE;
+
+  IF NOT FOUND OR v_auth_user_id IS NULL OR v_approval_status <> 'active' OR v_archived_at IS NOT NULL THEN
+    RETURN jsonb_build_object('claimed', false);
+  END IF;
+
+  UPDATE public.trainee_password_recovery_requests AS r
+  SET status = 'processing',
+      operation_id = p_operation_id,
+      processing_started_at = now(),
+      auth_outcome = 'claimed',
+      auth_attempted_at = NULL,
+      auth_last_error_code = NULL,
+      updated_at = now()
+  WHERE r.id = p_request_id
+    AND r.trainee_id = v_trainee_id
+    AND r.phone_normalized = v_trainee_phone
+    AND r.status = 'approved'
+    AND r.token_hash = p_code_digest
+    AND r.token_expires_at > now()
+    AND r.token_attempts < 5
+    AND r.delivery_outcome = 'sent'
+  RETURNING r.phone_normalized INTO v_phone;
+
+  IF NOT FOUND THEN
+    RETURN jsonb_build_object('claimed', false);
+  END IF;
+
+  RETURN jsonb_build_object(
+    'claimed', true,
+    'operation_id', p_operation_id,
+    'auth_user_id', v_auth_user_id
+  );
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION recovery_private.begin_recovery_auth_update(
+  p_request_id uuid,
+  p_operation_id uuid
+)
+RETURNS boolean
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = ''
+AS $$
+BEGIN
+  UPDATE public.trainee_password_recovery_requests
+  SET auth_outcome = 'attempting', auth_attempted_at = now(), updated_at = now()
+  WHERE id = p_request_id AND status = 'processing'
+    AND operation_id = p_operation_id AND auth_outcome = 'claimed';
+  RETURN FOUND;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION recovery_private.finish_recovery_auth_update(
+  p_request_id uuid,
+  p_operation_id uuid,
+  p_outcome text,
+  p_safe_error_code text DEFAULT NULL
+)
+RETURNS boolean
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = ''
+AS $$
+BEGIN
+  IF p_outcome IS NULL OR p_outcome NOT IN ('completed','confirmed_no_change','unknown') THEN
+    RAISE EXCEPTION 'Invalid Auth outcome';
+  END IF;
+  IF p_safe_error_code IS NOT NULL AND
+     (length(p_safe_error_code) NOT BETWEEN 1 AND 64 OR p_safe_error_code !~ '^[a-z0-9_.-]+$') THEN
+    RAISE EXCEPTION 'Unsafe error code';
+  END IF;
+
+  UPDATE public.trainee_password_recovery_requests
+  SET status = CASE
+        WHEN p_outcome = 'completed' THEN 'completed'
+        WHEN p_outcome = 'confirmed_no_change' THEN 'approved'
+        ELSE 'processing'
+      END,
+      completed_at = CASE WHEN p_outcome = 'completed' THEN now() ELSE completed_at END,
+      token_hash = CASE WHEN p_outcome = 'completed' THEN NULL ELSE token_hash END,
+      token_expires_at = CASE WHEN p_outcome = 'completed' THEN NULL ELSE token_expires_at END,
+      auth_outcome = p_outcome,
+      auth_last_error_code = p_safe_error_code,
+      updated_at = now()
+  WHERE id = p_request_id AND status = 'processing'
+    AND operation_id = p_operation_id
+    AND auth_outcome = 'attempting';
+
+  RETURN FOUND;
+END;
+$$;
+
+REVOKE ALL ON ALL FUNCTIONS IN SCHEMA recovery_private FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION recovery_private.submit_recovery_request(text) TO service_role;
+GRANT EXECUTE ON FUNCTION recovery_private.coach_review_recovery_request(uuid,uuid,text,text,timestamptz,text) TO service_role;
+GRANT EXECUTE ON FUNCTION recovery_private.record_recovery_wrong_attempt(uuid,text,integer) TO service_role;
+GRANT EXECUTE ON FUNCTION recovery_private.begin_recovery_delivery(uuid,uuid) TO service_role;
+GRANT EXECUTE ON FUNCTION recovery_private.finish_recovery_delivery(uuid,uuid,text) TO service_role;
+GRANT EXECUTE ON FUNCTION recovery_private.claim_recovery_reset(uuid,text,uuid) TO service_role;
+GRANT EXECUTE ON FUNCTION recovery_private.begin_recovery_auth_update(uuid,uuid) TO service_role;
+GRANT EXECUTE ON FUNCTION recovery_private.finish_recovery_auth_update(uuid,uuid,text,text) TO service_role;
+
+
+-- PostgREST exposes public by default. Keep recovery_private unexposed and
+-- provide narrowly granted public RPC wrappers for the service-role Edge client.
+CREATE OR REPLACE FUNCTION public.recovery_submit_request(p_phone_normalized text)
+RETURNS boolean LANGUAGE sql SET search_path = ''
+AS $wrap$ SELECT recovery_private.submit_recovery_request(p_phone_normalized) $wrap$;
+
+CREATE OR REPLACE FUNCTION public.recovery_coach_review(
+  p_request_id uuid, p_actor_user_id uuid, p_decision text,
+  p_token_hash text, p_token_expires_at timestamptz, p_hmac_key_version text
+)
+RETURNS jsonb LANGUAGE sql SET search_path = ''
+AS $wrap$ SELECT recovery_private.coach_review_recovery_request(
+  p_request_id,p_actor_user_id,p_decision,p_token_hash,p_token_expires_at,p_hmac_key_version
+) $wrap$;
+
+CREATE OR REPLACE FUNCTION public.recovery_record_wrong_attempt(
+  p_request_id uuid,p_submitted_digest text,p_max_attempts integer
+)
+RETURNS jsonb LANGUAGE sql SET search_path = ''
+AS $wrap$ SELECT recovery_private.record_recovery_wrong_attempt(p_request_id,p_submitted_digest,p_max_attempts) $wrap$;
+
+CREATE OR REPLACE FUNCTION public.recovery_begin_delivery(p_request_id uuid,p_delivery_operation_id uuid)
+RETURNS boolean LANGUAGE sql SET search_path = ''
+AS $wrap$ SELECT recovery_private.begin_recovery_delivery(p_request_id,p_delivery_operation_id) $wrap$;
+
+CREATE OR REPLACE FUNCTION public.recovery_finish_delivery(
+  p_request_id uuid,p_delivery_operation_id uuid,p_outcome text
+)
+RETURNS boolean LANGUAGE sql SET search_path = ''
+AS $wrap$ SELECT recovery_private.finish_recovery_delivery(p_request_id,p_delivery_operation_id,p_outcome) $wrap$;
+
+CREATE OR REPLACE FUNCTION public.recovery_claim_reset(
+  p_request_id uuid,p_code_digest text,p_operation_id uuid
+)
+RETURNS jsonb LANGUAGE sql SET search_path = ''
+AS $wrap$ SELECT recovery_private.claim_recovery_reset(p_request_id,p_code_digest,p_operation_id) $wrap$;
+
+CREATE OR REPLACE FUNCTION public.recovery_begin_auth_update(p_request_id uuid,p_operation_id uuid)
+RETURNS boolean LANGUAGE sql SET search_path = ''
+AS $wrap$ SELECT recovery_private.begin_recovery_auth_update(p_request_id,p_operation_id) $wrap$;
+
+CREATE OR REPLACE FUNCTION public.recovery_finish_auth_update(
+  p_request_id uuid,p_operation_id uuid,p_outcome text,p_safe_error_code text
+)
+RETURNS boolean LANGUAGE sql SET search_path = ''
+AS $wrap$ SELECT recovery_private.finish_recovery_auth_update(
+  p_request_id,p_operation_id,p_outcome,p_safe_error_code
+) $wrap$;
+
+REVOKE ALL ON FUNCTION public.recovery_submit_request(text) FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION public.recovery_coach_review(uuid,uuid,text,text,timestamptz,text) FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION public.recovery_record_wrong_attempt(uuid,text,integer) FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION public.recovery_begin_delivery(uuid,uuid) FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION public.recovery_finish_delivery(uuid,uuid,text) FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION public.recovery_claim_reset(uuid,text,uuid) FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION public.recovery_begin_auth_update(uuid,uuid) FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION public.recovery_finish_auth_update(uuid,uuid,text,text) FROM PUBLIC, anon, authenticated;
+
+GRANT EXECUTE ON FUNCTION public.recovery_submit_request(text) TO service_role;
+GRANT EXECUTE ON FUNCTION public.recovery_coach_review(uuid,uuid,text,text,timestamptz,text) TO service_role;
+GRANT EXECUTE ON FUNCTION public.recovery_record_wrong_attempt(uuid,text,integer) TO service_role;
+GRANT EXECUTE ON FUNCTION public.recovery_begin_delivery(uuid,uuid) TO service_role;
+GRANT EXECUTE ON FUNCTION public.recovery_finish_delivery(uuid,uuid,text) TO service_role;
+GRANT EXECUTE ON FUNCTION public.recovery_claim_reset(uuid,text,uuid) TO service_role;
+GRANT EXECUTE ON FUNCTION public.recovery_begin_auth_update(uuid,uuid) TO service_role;
+GRANT EXECUTE ON FUNCTION public.recovery_finish_auth_update(uuid,uuid,text,text) TO service_role;
+
+COMMIT;
+
+     OR p_window_seconds IS NULL OR p_window_seconds < 1 OR p_window_seconds > 86400
+     OR p_max_requests IS NULL OR p_max_requests < 1 OR p_max_requests > 20 THEN
+    RETURN false;
+  END IF;
+
+  INSERT INTO recovery_private.recovery_request_rate_limits AS limits
+    (key_hash, window_started_at, request_count, updated_at)
+  VALUES (p_key_hash, v_now, 1, v_now)
+  ON CONFLICT (key_hash) DO UPDATE
+    SET window_started_at = CASE
+          WHEN limits.window_started_at <= v_now - make_interval(secs => p_window_seconds)
+            THEN v_now ELSE limits.window_started_at END,
+        request_count = CASE
+          WHEN limits.window_started_at <= v_now - make_interval(secs => p_window_seconds)
+            THEN 1
+          WHEN limits.request_count < p_max_requests
+            THEN limits.request_count + 1
+          ELSE limits.request_count END,
+        updated_at = v_now
+  RETURNING request_count <= p_max_requests
+    AND window_started_at >= v_now - make_interval(secs => p_window_seconds)
+    INTO v_allowed;
+
+  RETURN coalesce(v_allowed, false);
+END;
+$;
+
 CREATE OR REPLACE FUNCTION recovery_private.submit_recovery_request(
   p_phone_normalized text
 )
