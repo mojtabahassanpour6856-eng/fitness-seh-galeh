@@ -3,8 +3,9 @@
 BEGIN;
 CREATE TABLE IF NOT EXISTS public.trainee_password_recovery_outbox (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  recovery_request_id uuid NOT NULL UNIQUE
+  recovery_request_id uuid NOT NULL
     REFERENCES public.trainee_password_recovery_requests(id) ON DELETE CASCADE,
+  delivery_operation_id uuid NOT NULL UNIQUE,
   status text NOT NULL DEFAULT 'pending'
     CHECK (status IN ('pending','processing','sent','failed','unknown')),
   attempt_count integer NOT NULL DEFAULT 0 CHECK (attempt_count >= 0 AND attempt_count <= 10),
@@ -43,8 +44,14 @@ BEGIN
   END IF;
   SELECT o.* INTO v_row
   FROM public.trainee_password_recovery_outbox o
-  WHERE (o.status = 'pending' AND o.next_attempt_at <= now())
-     OR (o.status = 'processing' AND o.locked_until <= now() AND o.send_started_at IS NULL)
+  WHERE ((o.status = 'pending' AND o.next_attempt_at <= now())
+      OR (o.status = 'processing' AND o.locked_until <= now() AND o.send_started_at IS NULL))
+    AND EXISTS (
+      SELECT 1 FROM public.trainee_password_recovery_requests r
+      WHERE r.id=o.recovery_request_id AND r.status='approved'
+        AND r.delivery_outcome='pending'
+        AND r.delivery_operation_id=o.delivery_operation_id
+    )
   ORDER BY o.next_attempt_at, o.created_at
   FOR UPDATE SKIP LOCKED LIMIT 1;
   IF NOT FOUND THEN RETURN; END IF;
@@ -116,6 +123,46 @@ BEGIN
   GET DIAGNOSTICS v_count=ROW_COUNT;
   RETURN v_count;
 END $$;
+
+
+-- The approved request and its SMS outbox row are committed in the same transaction.
+-- Each approval has its own immutable delivery operation; a later coach re-approval
+-- after confirmed non-delivery therefore creates a distinct Outbox item.
+CREATE OR REPLACE FUNCTION recovery_private.enqueue_approved_recovery_delivery()
+RETURNS trigger LANGUAGE plpgsql SECURITY DEFINER SET search_path = ''
+AS $
+DECLARE v_outbox_operation uuid;
+BEGIN
+  IF NEW.status='approved' AND NEW.delivery_outcome='pending'
+     AND NEW.delivery_operation_id IS NOT NULL
+     AND (TG_OP='INSERT' OR OLD.status IS DISTINCT FROM NEW.status
+          OR OLD.delivery_outcome IS DISTINCT FROM NEW.delivery_outcome
+          OR OLD.delivery_operation_id IS DISTINCT FROM NEW.delivery_operation_id) THEN
+    INSERT INTO public.trainee_password_recovery_outbox
+      (recovery_request_id,delivery_operation_id,provider_idempotency_key)
+    VALUES
+      (NEW.id,NEW.delivery_operation_id,'trainee-recovery:'||NEW.delivery_operation_id::text)
+    ON CONFLICT (delivery_operation_id) DO NOTHING;
+
+    SELECT o.delivery_operation_id INTO v_outbox_operation
+    FROM public.trainee_password_recovery_outbox o
+    WHERE o.recovery_request_id=NEW.id
+      AND o.delivery_operation_id=NEW.delivery_operation_id;
+
+    IF v_outbox_operation IS NULL THEN
+      RAISE EXCEPTION 'recovery outbox enqueue invariant failed';
+    END IF;
+  END IF;
+  RETURN NEW;
+END $;
+
+DROP TRIGGER IF EXISTS trainee_recovery_enqueue_outbox ON public.trainee_password_recovery_requests;
+CREATE TRIGGER trainee_recovery_enqueue_outbox
+AFTER INSERT OR UPDATE OF status,delivery_outcome,delivery_operation_id
+ON public.trainee_password_recovery_requests
+FOR EACH ROW EXECUTE FUNCTION recovery_private.enqueue_approved_recovery_delivery();
+
+REVOKE ALL ON FUNCTION recovery_private.enqueue_approved_recovery_delivery() FROM PUBLIC,anon,authenticated;
 
 REVOKE ALL ON public.trainee_password_recovery_outbox FROM PUBLIC,anon,authenticated;
 GRANT SELECT,INSERT ON public.trainee_password_recovery_outbox TO service_role;
