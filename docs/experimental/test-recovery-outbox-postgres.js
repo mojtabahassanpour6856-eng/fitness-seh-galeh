@@ -131,10 +131,15 @@ async function main(){
    has_function_privilege('authenticated','public.recovery_outbox_finish(uuid,uuid,bigint,text,text,text)','EXECUTE') AS auth_public_finish,
    has_function_privilege('service_role','public.recovery_outbox_claim(uuid,integer)','EXECUTE') AS service_public_claim,
    has_table_privilege('anon','public.trainee_password_recovery_outbox','SELECT') AS anon_read,
-   has_table_privilege('service_role','public.trainee_password_recovery_outbox','INSERT') AS service_direct_insert`);
+   has_table_privilege('service_role','public.trainee_password_recovery_outbox','INSERT') AS service_direct_insert,
+   has_table_privilege('service_role','public.trainee_password_recovery_outbox','UPDATE') AS service_direct_update,
+   has_table_privilege('service_role','public.trainee_password_recovery_requests','UPDATE') AS service_request_direct_update,
+   has_function_privilege('anon','public.recovery_outbox_fetch_payload(uuid,uuid,bigint)','EXECUTE') AS anon_payload_fetch,
+   has_function_privilege('service_role','public.recovery_outbox_fetch_payload(uuid,uuid,bigint)','EXECUTE') AS service_payload_fetch`);
  assert.deepEqual(acl.rows[0],{
    anon_private_claim:false,auth_private_finish:false,anon_public_claim:false,
-   auth_public_finish:false,service_public_claim:true,anon_read:false,service_direct_insert:false
+   auth_public_finish:false,service_public_claim:true,anon_read:false,service_direct_insert:false,service_direct_update:false,
+   service_request_direct_update:false,anon_payload_fetch:false,service_payload_fetch:true
  });
  console.log('PASS: anonymous/authenticated roles cannot execute worker RPCs or read Outbox');
  // Add a second independent pending item only after the first item has been fenced and reconciled.
