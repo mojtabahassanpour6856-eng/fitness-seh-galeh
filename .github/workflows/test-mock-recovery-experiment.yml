@@ -7,6 +7,8 @@ on:
       - experiment/trainee-password-recovery-mock-20261122
     paths:
       - 'docs/experimental/mock-recovery-engine.js'
+      - 'docs/experimental/recovery-outbox-worker-model.js'
+      - 'docs/experimental/test-recovery-outbox-worker-model.js'
       - 'docs/experimental/test-mock-recovery.js'
       - 'docs/experimental/test-recovery-crypto.js'
       - 'docs/experimental/test-recovery-http-smoke.js'
@@ -45,6 +47,8 @@ jobs:
           node-version: 22
       - name: Run isolated mock recovery tests
         run: node docs/experimental/test-mock-recovery.js
+      - name: Run fenced Outbox/Worker model tests (no provider or database)
+        run: node docs/experimental/test-recovery-outbox-worker-model.js
       - name: Run focused cryptographic boundary tests
         run: node docs/experimental/test-recovery-crypto.js
       - name: Verify live HTTP smoke harness cannot mutate recovery state
