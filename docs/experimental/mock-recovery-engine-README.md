@@ -24,3 +24,6 @@ The mock supports trainee cancellation only while a request is still `REQUESTED`
 
 ## Re-entrant approval guard
 The fixture now marks delivery as `DELIVERY_PENDING` before invoking the synchronous mock delivery callback. A nested/re-entrant approval cannot proceed from that state, preventing duplicate mock code issuance in this narrow fixture. This is **not** a concurrency primitive for production: asynchronous workers, parallel server instances, and database races must be protected with transactional state transitions, row locks or compare-and-swap, and an idempotency key enforced by persistent storage.
+
+
+Delivery callback exceptions are also handled in the fixture: the request returns to `APPROVED`, records failure, clears code digest/expiry, and may retry within the configured attempt limit. The thrown exception text is not exposed in the mock result. A test covers retry after a callback throws.
