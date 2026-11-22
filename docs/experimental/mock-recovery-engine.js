@@ -284,13 +284,19 @@ class MockRecovery {
       throw error;
     }
   }
-  completeForAuthenticatedTrainee({ requestId, authenticatedTraineeId }) {
+  // Password mutation wrapper: identity comes only from trusted authenticated context.
+  applyPasswordResetForAuthenticatedTrainee({ requestId, authenticatedTraineeId, operationId, updateAuth }) {
     if (!authenticatedTraineeId) throw new Error('Recovery request unavailable');
-    try { return this.complete({ requestId, traineeId: authenticatedTraineeId }); }
-    catch (error) {
+    try {
+      return this.applyPasswordReset({ requestId, traineeId: authenticatedTraineeId, operationId, updateAuth });
+    } catch (error) {
       if (/Request not found|ownership check failed/.test(error.message)) throw new Error('Recovery request unavailable');
       throw error;
     }
+  }
+  // Legacy wrapper retained only to fail closed; callers must use the Auth-backed method above.
+  completeForAuthenticatedTrainee() {
+    throw new Error('Direct completion is disabled; use applyPasswordResetForAuthenticatedTrainee');
   }
   cancelForAuthenticatedTrainee({ requestId, authenticatedTraineeId }) {
     if (!authenticatedTraineeId) throw new Error('Recovery request unavailable');
