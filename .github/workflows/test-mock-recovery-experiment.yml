@@ -55,6 +55,10 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 22
+      - name: Install pinned Supabase Auth SDK for isolated contract check
+        run: npm install --no-save @supabase/supabase-js@2.119.0
+      - name: Verify Auth Admin password-update SDK contract (intercepted network only)
+        run: node docs/experimental/test-recovery-auth-admin-sdk-contract.mjs
       - name: Run isolated mock recovery tests
         run: node docs/experimental/test-mock-recovery.js
       - name: Run fenced Outbox/Worker model tests (no provider or database)
