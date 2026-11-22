@@ -49,6 +49,15 @@ class MockRecovery {
     this.lastRequestAt = new Map();
     this.mockMessages = [];
   }
+  // Test adapter: authenticatedTraineeId must come from trusted server context, never request JSON.
+  requestForAuthenticatedTrainee({ authenticatedTraineeId, requestId }) {
+    if (!authenticatedTraineeId || typeof this.getCurrentCoachId !== 'function') {
+      throw new Error('Trusted identity resolver unavailable');
+    }
+    const currentCoachId = this.getCurrentCoachId(authenticatedTraineeId);
+    if (!currentCoachId) throw new Error('Recovery unavailable');
+    return this.request({ traineeId: authenticatedTraineeId, coachId: currentCoachId, requestId });
+  }
   request({ traineeId, coachId, requestId }) {
     this.sweepExpired();
     if (!traineeId || !coachId || !requestId) throw new Error('Required identifiers missing');
