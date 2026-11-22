@@ -317,3 +317,12 @@ Workflow run `45050296581` completed **success** on commit `357852129e64ed3048a5
 Added a regression fix: a positive response from a delivery adapter is not reported as successful unless the database confirms the durable delivery-state transition. If provider acceptance is known but the state write fails, the handler returns a generic failure, does not retry delivery, and leaves the request non-redeemable pending reconciliation.
 
 Workflow run `45050432795` completed **success** on commit `3f36873cb316b8d09d790b2c62133716f1160eb2`. Both jobs passed, including the new delivery-finalization failure test and the disposable PostgreSQL atomic RPC suite.
+
+
+## Latest verification: Deno + SQL contract + PostgreSQL all PASS
+
+Added static alignment checks between the handler's eight RPC calls and the candidate migration's public wrappers/service-role grants, plus a Deno 2 type-check of the isolated Edge adapter.
+
+Workflow run `45050755303` completed **success** on commit `5b40c5c46bcf41e38fa573fddf0edeca11267f1e`. All three jobs passed: mock/handler/security/static contract checks, disposable PostgreSQL concurrency/RPC tests, and Deno type-check.
+
+**Important remaining blocker found by read-only Test schema inspection:** the Test project's current recovery table still has only the pre-migration columns; the candidate handler's additional outcome/operation columns do not exist there yet. The Test database also has a legacy approved recovery request, and the candidate migration's preflight is designed to stop when approved/processing rows exist. Therefore no Test migration or live endpoint call is safe yet. The approved row must first be handled through a separately reviewed, explicit cleanup/reconciliation plan. No database write was performed.
