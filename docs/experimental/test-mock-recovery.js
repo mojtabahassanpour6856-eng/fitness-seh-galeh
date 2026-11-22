@@ -211,7 +211,10 @@ assert.throws(()=>transitionIsolation.completeForAuthenticatedTrainee({requestId
   e=>e.message==='Recovery request unavailable');
 assert.throws(()=>transitionIsolation.completeForAuthenticatedTrainee({requestId:'missing-iso',authenticatedTraineeId:'iso-trainee'}),
   e=>e.message==='Recovery request unavailable');
-assert.equal(transitionIsolation.completeForAuthenticatedTrainee({requestId:'iso-request',authenticatedTraineeId:'iso-trainee'}).state,STATES.COMPLETED);
+assert.throws(()=>transitionIsolation.completeForAuthenticatedTrainee({requestId:'iso-request',authenticatedTraineeId:'iso-trainee'}),
+  /Direct completion is disabled/);
+assert.equal(transitionIsolation.applyPasswordResetForAuthenticatedTrainee({requestId:'iso-request',
+  authenticatedTraineeId:'iso-trainee',operationId:'iso-reset-op',updateAuth:()=>({ok:true})}).state,STATES.COMPLETED);
 
 
 const replayGuard = new MockRecovery({secret,now:()=>now,cooldownMs:0});
