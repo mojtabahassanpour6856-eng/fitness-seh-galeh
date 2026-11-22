@@ -25,7 +25,7 @@ assert.equal(grantSystem.verify({requestId:'grant-expiry',traineeId:'grant-train
 const grantRecord = grantSystem.requests.get('grant-expiry');
 assert.equal(grantRecord.grantExpiresAt, grantClock.value + 10*60_000, 'post-verification grant must be short-lived');
 grantClock.value += 10*60_000;
-assert.throws(()=>grantSystem.complete({requestId:'grant-expiry',traineeId:'grant-trainee'}),/expired|not verified/i);
+assert.throws(()=>grantSystem.applyPasswordReset({requestId:'grant-expiry',traineeId:'grant-trainee',operationId:'expired-op',updateAuth:()=>({ok:true})}),/expired/i);
 assert.equal(grantRecord.state,STATES.EXPIRED,'expired reset grant cannot complete');
 assert.equal(grantRecord.grantExpiresAt,null,'expired grant material must be cleared');
 
@@ -34,8 +34,82 @@ oneTime.request({traineeId:'once',coachId:'coach',requestId:'once-request'});
 oneTime.approve({requestId:'once-request',authenticatedCoachId:'coach'});
 const oneTimeCode = oneTime.mockMessages.at(-1).body.match(/(\d{4})$/)[1];
 oneTime.verify({requestId:'once-request',traineeId:'once',code:oneTimeCode});
-assert.equal(oneTime.complete({requestId:'once-request',traineeId:'once'}).state,STATES.COMPLETED);
-assert.throws(()=>oneTime.complete({requestId:'once-request',traineeId:'once'}),/verified/i);
+let onceAuthCalls = 0;
+assert.equal(oneTime.applyPasswordReset({requestId:'once-request',traineeId:'once',operationId:'once-op',
+  updateAuth:()=>{onceAuthCalls++;return {ok:true};}}).state,STATES.COMPLETED);
+assert.equal(oneTime.applyPasswordReset({requestId:'once-request',traineeId:'once',operationId:'once-op',
+  updateAuth:()=>{onceAuthCalls++;return {ok:true};}}).idempotent,true);
+assert.equal(onceAuthCalls,1,'same operation ID must never call Auth twice');
+assert.throws(()=>oneTime.applyPasswordReset({requestId:'once-request',traineeId:'once',operationId:'replay-op',
+  updateAuth:()=>({ok:true})}),/verified/i);
+assert.throws(()=>oneTime.complete({requestId:'once-request',traineeId:'once'}),/Direct completion is disabled/);
+
+// Confirmed Auth rejection leaves recovery uncompleted and allows a fresh operation ID.
+const authRejected = sys();
+authRejected.request({traineeId:'auth-reject',coachId:'coach',requestId:'auth-reject-r'});
+authRejected.approve({requestId:'auth-reject-r',authenticatedCoachId:'coach'});
+const authRejectCode = authRejected.mockMessages.at(-1).body.slice(-4);
+authRejected.verify({requestId:'auth-reject-r',traineeId:'auth-reject',code:authRejectCode});
+assert.equal(authRejected.applyPasswordReset({requestId:'auth-reject-r',traineeId:'auth-reject',
+  operationId:'reject-op',updateAuth:()=>({ok:false})}).authOutcome,'REJECTED');
+assert.equal(authRejected.requests.get('auth-reject-r').state,STATES.VERIFIED);
+assert.equal(authRejected.requests.get('auth-reject-r').grantExpiresAt !== null,true);
+let retryAuthCalls=0;
+assert.equal(authRejected.applyPasswordReset({requestId:'auth-reject-r',traineeId:'auth-reject',
+  operationId:'retry-op',updateAuth:()=>{retryAuthCalls++;return {ok:true};}}).state,STATES.COMPLETED);
+assert.equal(retryAuthCalls,1);
+
+// Auth may commit then transport times out: unknown state blocks blind retry until reconciliation.
+const authUnknown = sys();
+authUnknown.request({traineeId:'auth-unknown',coachId:'coach',requestId:'auth-unknown-r'});
+authUnknown.approve({requestId:'auth-unknown-r',authenticatedCoachId:'coach'});
+const authUnknownCode=authUnknown.mockMessages.at(-1).body.slice(-4);
+authUnknown.verify({requestId:'auth-unknown-r',traineeId:'auth-unknown',code:authUnknownCode});
+let ambiguousCalls=0;
+const ambiguousResult=authUnknown.applyPasswordReset({requestId:'auth-unknown-r',traineeId:'auth-unknown',
+  operationId:'ambiguous-op',updateAuth:()=>{ambiguousCalls++;throw new Error('network timeout');}});
+assert.equal(ambiguousResult.authOutcome,'UNKNOWN');
+assert.equal(authUnknown.requests.get('auth-unknown-r').state,STATES.RESET_UNKNOWN);
+assert.equal(authUnknown.applyPasswordReset({requestId:'auth-unknown-r',traineeId:'auth-unknown',
+  operationId:'ambiguous-op',updateAuth:()=>{ambiguousCalls++;return {ok:true};}}).idempotent,true);
+assert.equal(ambiguousCalls,1,'ambiguous operation must not be blindly repeated');
+assert.equal(authUnknown.reconcilePasswordReset({requestId:'auth-unknown-r',traineeId:'auth-unknown',
+  operationId:'ambiguous-op',lookupAuth:()=> 'PENDING'}).authOutcome,'UNKNOWN');
+assert.equal(authUnknown.reconcilePasswordReset({requestId:'auth-unknown-r',traineeId:'auth-unknown',
+  operationId:'ambiguous-op',lookupAuth:()=> 'SUCCEEDED'}).state,STATES.COMPLETED);
+assert.equal(authUnknown.requests.get('auth-unknown-r').grantExpiresAt,null);
+assert.throws(()=>authUnknown.applyPasswordReset({requestId:'auth-unknown-r',traineeId:'auth-unknown',
+  operationId:'replay-after-success',updateAuth:()=>({ok:true})}),/verified/i);
+
+// A reconciled NOT_APPLIED result returns to VERIFIED; retry uses a NEW operation ID only.
+const authNotApplied = sys();
+authNotApplied.request({traineeId:'not-applied',coachId:'coach',requestId:'not-applied-r'});
+authNotApplied.approve({requestId:'not-applied-r',authenticatedCoachId:'coach'});
+const notAppliedCode=authNotApplied.mockMessages.at(-1).body.slice(-4);
+authNotApplied.verify({requestId:'not-applied-r',traineeId:'not-applied',code:notAppliedCode});
+authNotApplied.applyPasswordReset({requestId:'not-applied-r',traineeId:'not-applied',
+  operationId:'na-op',updateAuth:()=>{throw new Error('timeout');}});
+assert.equal(authNotApplied.reconcilePasswordReset({requestId:'not-applied-r',traineeId:'not-applied',
+  operationId:'na-op',lookupAuth:()=> 'NOT_APPLIED'}).authOutcome,'NOT_APPLIED');
+assert.equal(authNotApplied.applyPasswordReset({requestId:'not-applied-r',traineeId:'not-applied',
+  operationId:'na-op-2',updateAuth:()=>({ok:true})}).state,STATES.COMPLETED);
+
+// Reset grant expiry, page-close recovery, duplicate submit, and owner checks.
+let resetNow=30000000;
+const resumable = new MockRecovery({secret,now:()=>resetNow,cooldownMs:0});
+resumable.request({traineeId:'resume-user',coachId:'resume-coach',requestId:'resume-r'});
+resumable.approve({requestId:'resume-r',authenticatedCoachId:'resume-coach'});
+const resumeCode=resumable.mockMessages.at(-1).body.slice(-4);
+resumable.verify({requestId:'resume-r',traineeId:'resume-user',code:resumeCode});
+resumable.applyPasswordReset({requestId:'resume-r',traineeId:'resume-user',operationId:'resume-op',
+  updateAuth:()=>{throw new Error('client disconnected after provider may have committed');}});
+assert.equal(resumable.getForTrainee({requestId:'resume-r',authenticatedTraineeId:'resume-user'}).state,STATES.RESET_UNKNOWN,
+  'client can resume by reading durable operation status in production');
+assert.throws(()=>resumable.getForTrainee({requestId:'resume-r',authenticatedTraineeId:'other'}),/unavailable/);
+resetNow+=10*60_000;
+assert.throws(()=>resumable.reconcilePasswordReset({requestId:'resume-r',traineeId:'resume-user',
+  operationId:'resume-op',lookupAuth:()=> 'NOT_APPLIED'}),/No matching|expired/i);
+
 
 
 let grantSweepNow = 15000000;
