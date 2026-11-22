@@ -19,9 +19,9 @@ const wrappers = [
   'recovery_finish_auth_update'
 ];
 for (const name of wrappers) {
-  assert.match(migration, new RegExp('CREATE OR REPLACE FUNCTION public\\.' + name + '\\s*\\('), name + ' wrapper must exist');
+  assert.match(migration, new RegExp('CREATE OR REPLACE FUNCTION public\.' + name + '\s*\\('), name + ' wrapper must exist');
   assert.match(handler, new RegExp("'" + name + "'"), name + ' must be called by handler');
-  assert.match(migration, new RegExp('GRANT EXECUTE ON FUNCTION public\\.' + name), name + ' must have explicit grant');
+  assert.match(migration, new RegExp('GRANT EXECUTE ON FUNCTION public\.' + name), name + ' must have explicit grant');
 }
 
 const workerWrappers = [
@@ -29,8 +29,8 @@ const workerWrappers = [
   'recovery_outbox_finish','recovery_outbox_reconcile_expired'
 ];
 for (const name of workerWrappers) {
-  assert.match(outboxMigration, new RegExp('CREATE OR REPLACE FUNCTION public\\.' + name + '\\s*\\('), name + ' worker wrapper must exist');
-  assert.match(outboxMigration, new RegExp('GRANT EXECUTE ON FUNCTION public\\.' + name), name + ' worker wrapper must be service-role granted');
+  assert.match(outboxMigration, new RegExp('CREATE OR REPLACE FUNCTION public\.' + name + '\s*\\('), name + ' worker wrapper must exist');
+  assert.match(outboxMigration, new RegExp('GRANT EXECUTE ON FUNCTION public\.' + name), name + ' worker wrapper must be service-role granted');
 }
 for (const column of [
   'operation_id','processing_started_at','auth_outcome','auth_attempted_at',
@@ -46,8 +46,8 @@ assert.match(handler, /delivery_status: 'queued'/);
 assert.match(handler, /recovery_coach_review_encrypted/);
 assert.match(handler, /encryptRecoveryDeliveryCode/);
 assert.match(core, /RECOVERY_DELIVERY_KEY_VERSION/);
-assert.match(encryptedMigration, /IF TG_TABLE_NAME='trainee_password_recovery_requests' THEN\\s+IF NEW\\.delivery_outcome/);
-assert.match(encryptedMigration, /ELSIF TG_TABLE_NAME='trainee_password_recovery_outbox' THEN\\s+IF NEW\\.status/);
+assert.match(encryptedMigration, /IF TG_TABLE_NAME='trainee_password_recovery_requests' THEN\s+IF NEW\.delivery_outcome/);
+assert.match(encryptedMigration, /ELSIF TG_TABLE_NAME='trainee_password_recovery_outbox' THEN\s+IF NEW\.status/);
 assert.match(encryptedMigration, /delivery_payload jsonb/);
 assert.match(encryptedMigration, /p_delivery_operation_id uuid/);
 assert.match(encryptedMigration, /NEW\.delivery_payload IS NOT NULL/);
