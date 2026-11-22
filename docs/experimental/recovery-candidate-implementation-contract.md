@@ -255,3 +255,10 @@ The runtime adapter deliberately supplies no delivery adapter. Thus approval is 
 Workflow run `45050296581` completed **success** on commit `357852129e64ed3048a578161bcb8c20bf7eac07`; both jobs passed. The mock job passed handler tests for generic public request responses, CORS rejection, disabled-delivery fail-closed behavior, stored-phone-only delivery with no code returned to coach, atomic wrong-attempt RPC invocation, one Auth update attempt, unknown Auth lockout, and confirmed-success completion. The PostgreSQL job also passed the existing disposable atomic RPC/concurrency suite.
 
 This is dependency-injected and disposable-database evidence only. It does not prove Deno compilation in Supabase Edge Runtime, live PostgREST RPC reachability, real Auth/session behavior, or real provider delivery. The candidate is not deployed and must not be treated as production-ready.
+
+
+## Delivery-finalization fail-closed regression (2026-11-22)
+
+A further handler edge case is now guarded: if a provider reports acceptance but the database cannot durably record `delivery_outcome='sent'`, the handler does not report successful delivery and does not retry the provider. The request remains in its non-redeemable locked delivery state for reconciliation. A focused injected test covers this exact outcome.
+
+Workflow run `45050432795` completed **success** on commit `3f36873cb316b8d09d790b2c62133716f1160eb2`; both the handler/mock suite and disposable PostgreSQL suite passed. This is isolated test evidence only.
