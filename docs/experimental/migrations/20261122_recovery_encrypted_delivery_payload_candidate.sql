@@ -21,7 +21,7 @@ ALTER TABLE public.trainee_password_recovery_requests
       AND delivery_payload->>'alg' = 'A256GCM'
       AND delivery_payload->>'kid' ~ '^[A-Za-z0-9_-]{1,32}$'
       AND delivery_payload->>'iv' ~ '^[A-Za-z0-9+/]{16}$'
-      AND delivery_payload->>'ct' ~ '^[A-Za-z0-9+/]{28}$'
+      AND delivery_payload->>'ct' ~ '^[A-Za-z0-9+/]{27}=$'
     )
   );
 ALTER TABLE public.trainee_password_recovery_outbox
@@ -36,7 +36,7 @@ ALTER TABLE public.trainee_password_recovery_outbox
       AND delivery_payload->>'alg' = 'A256GCM'
       AND delivery_payload->>'kid' ~ '^[A-Za-z0-9_-]{1,32}$'
       AND delivery_payload->>'iv' ~ '^[A-Za-z0-9+/]{16}$'
-      AND delivery_payload->>'ct' ~ '^[A-Za-z0-9+/]{28}$'
+      AND delivery_payload->>'ct' ~ '^[A-Za-z0-9+/]{27}=$'
     )
   );
 
@@ -106,7 +106,7 @@ BEGIN
      OR p_delivery_payload->>'alg' <> 'A256GCM'
      OR p_delivery_payload->>'kid' !~ '^[A-Za-z0-9_-]{1,32}$'
      OR p_delivery_payload->>'iv' !~ '^[A-Za-z0-9+/]{16}$'
-     OR p_delivery_payload->>'ct' !~ '^[A-Za-z0-9+/]{28}$'
+     OR p_delivery_payload->>'ct' !~ '^[A-Za-z0-9+/]{27}=$'
      THEN
     RETURN jsonb_build_object('ok',false,'reason','invalid_token_material');
   END IF;
