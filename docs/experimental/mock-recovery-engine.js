@@ -32,13 +32,16 @@ function safeEqualHex(a, b) {
 }
 
 class MockRecovery {
-  constructor({ secret, now = () => Date.now(), codeTTLms = 24 * 60 * 60_000, requestTTLms = 24 * 60 * 60_000, maxAttempts = 5, cooldownMs = 60_000, maxDeliveryAttempts = 3, delivery = () => ({ ok: true }) } = {}) {
+  constructor({ secret, now = () => Date.now(), codeTTLms = 24 * 60 * 60_000, requestTTLms = 24 * 60 * 60_000, maxAttempts = 5, cooldownMs = 60_000, maxRequestsPerWindow = 3, requestWindowMs = 24 * 60 * 60_000, maxDeliveryAttempts = 3, delivery = () => ({ ok: true }) } = {}) {
     this.secret = secret;
     this.now = now;
     this.codeTTLms = codeTTLms;
     this.requestTTLms = requestTTLms;
     this.maxAttempts = maxAttempts;
     this.cooldownMs = cooldownMs;
+    this.maxRequestsPerWindow = maxRequestsPerWindow;
+    this.requestWindowMs = requestWindowMs;
+    this.requestHistory = new Map();
     this.delivery = delivery;
     this.maxDeliveryAttempts = maxDeliveryAttempts;
     this.requests = new Map();
@@ -65,9 +68,13 @@ class MockRecovery {
     }
     const last = this.lastRequestAt.get(traineeId) || 0;
     if (this.now() - last < this.cooldownMs) throw new Error('Cooldown active');
+    const history = (this.requestHistory.get(traineeId) || []).filter(ts => this.now() - ts < this.requestWindowMs);
+    if (history.length >= this.maxRequestsPerWindow) throw new Error('Request rate limit reached');
     const r = { requestId, traineeId, coachId, state: STATES.REQUESTED, createdAt: this.now(), attempts: 0 };
     this.requests.set(requestId, r);
     this.lastRequestAt.set(traineeId, this.now());
+    history.push(this.now());
+    this.requestHistory.set(traineeId, history);
     return r;
   }
   approve({ requestId, authenticatedCoachId }) {
