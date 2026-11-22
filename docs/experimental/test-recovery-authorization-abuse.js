@@ -93,4 +93,24 @@ const make = (extra = {}) => new MockRecovery({
   assert.equal(s.requests.get('same-key').traineeId, 'trainee-F');
 }
 
+
+ 
+// A former coach loses read access immediately after the trainee is reassigned.
+{
+  let currentCoach = 'coach-old';
+  const s = make({ getCurrentCoachId: () => currentCoach });
+  s.request({ traineeId: 'trainee-move', coachId: 'coach-old', requestId: 'read-after-move' });
+  assert.equal(s.getForCoach({
+    requestId: 'read-after-move', authenticatedCoachId: 'coach-old'
+  }).state, STATES.REQUESTED);
+  currentCoach = 'coach-new';
+  assert.throws(() => s.getForCoach({
+    requestId: 'read-after-move', authenticatedCoachId: 'coach-old'
+  }), e => e.message === 'Recovery request unavailable');
+  assert.throws(() => s.getForCoach({
+    requestId: 'read-after-move', authenticatedCoachId: 'coach-new'
+  }), e => e.message === 'Recovery request unavailable',
+  'new coach cannot read a request still bound to the previous assignment; restart must create a fresh request');
+}
+
 console.log('PASS: generic owner denials, coach authorization, duplicate approval, brute-force cap, expiry replay, and idempotency conflict.');
