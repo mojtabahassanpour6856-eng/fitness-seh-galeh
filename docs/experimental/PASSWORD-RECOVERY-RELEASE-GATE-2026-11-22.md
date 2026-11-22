@@ -107,3 +107,19 @@ Commits:
 - Final assertion correction: `362910eb3af96516f84944850f2336ade9ce102a`
 
 These are in-memory mock tests only. The actual deployed Edge Function still has no durable provider reconciliation mechanism. The GitHub Actions workflow is configured to run the expanded tests on pushes to this experiment branch, but the available GitHub run/status interface did not expose a run for the latest commits; execution remains **unverified** until the Actions run itself is inspected.
+
+
+## Non-mutating real-HTTP smoke harness added (2026-11-22)
+Added `docs/experimental/test-recovery-http-smoke.js` on the experiment branch. It is deliberately limited to:
+- an OPTIONS CORS preflight using a synthetic origin;
+- a GET method-rejection probe expecting HTTP 405.
+
+It refuses non-Supabase hosts or an unexpected function path. It sends no POST action, creates no recovery row, does not approve/reject requests, does not change passwords, and cannot send SMS. It is a safe first HTTP probe, not an end-to-end recovery test.
+
+The smoke harness asserts that CORS is an explicit allowlist and will correctly FAIL against the currently inspected Test source because that source returns `Access-Control-Allow-Origin: *`. It has not been run against the Test endpoint; no endpoint request was sent in this step. To run it after an approved CORS candidate is deployed to Test, set `RECOVERY_TEST_FUNCTION_URL` to the Test function URL and execute:
+`node docs/experimental/test-recovery-http-smoke.js`
+
+Commit: `964007729b590741fa5b6088d555c225aa8731bc`.
+
+## Next real integration prerequisites
+The full HTTP/Auth matrix must not be attempted using ordinary trainee accounts. It requires a dedicated disposable Test Auth user, a matching isolated trainee row and coach assignment, a test-only SMS adapter that cannot reach Mediana, and explicit approval for any Test database writes or function deployment. Until those prerequisites exist, only non-mutating HTTP probes and disposable local fixtures are appropriate.
