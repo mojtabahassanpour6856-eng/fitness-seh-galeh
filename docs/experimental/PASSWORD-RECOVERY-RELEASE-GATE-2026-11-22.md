@@ -268,6 +268,6 @@ Workflow run `45048230786` completed **success**. Both jobs passed, including th
 
 Added `recovery_private.submit_recovery_request(text)` to the experimental SQL draft. It refuses invalid, unknown, inactive, archived, or ambiguous duplicate phone matches; inserts at most one active pending request under the partial unique index; and returns only a boolean to the server-side caller. The intended public HTTP response remains generic and identical regardless of account eligibility. A concurrent-submission regression was added to the disposable PostgreSQL suite.
 
-The latest workflow's Mock job is successful; the PostgreSQL job is still running at the time of this report update. Therefore this request-RPC addition is **not yet marked verified**. Previous atomic RPC/delivery/Auth candidate suite run `45048230786` passed before this request-submission function was added.
+Workflow run `45048555639` completed **success** in both jobs. The PostgreSQL job checked out commit `d9c3a7b545607cd5300410b2acb19d2e1c292226` and confirmed eight concurrent submissions create exactly one pending row; ambiguous duplicate and unknown phone inputs create none. The complete atomic RPC, delivery, Auth-state, migration-preflight, and privilege tests all passed on disposable PostgreSQL 16.
 
 Production release remains **NOT READY**. No Supabase project was modified, and no real SMS or password change occurred.
