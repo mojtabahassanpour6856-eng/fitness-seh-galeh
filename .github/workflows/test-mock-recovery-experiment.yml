@@ -1,5 +1,5 @@
 name: Experimental password recovery mock and PostgreSQL tests
-# Disposable PostgreSQL suite also checks PostgREST-safe service-role-only RPC wrappers.
+# Disposable PostgreSQL suite also checks PostgREST-safe service-role-only RPC wrappers with named SQL dollar tags.
 
 on:
   push:
