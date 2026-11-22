@@ -13,12 +13,53 @@ async function asService(sql,args=[]){
 async function main(){
  const migration=fs.readFileSync('docs/experimental/migrations/20261122_recovery_outbox_worker_candidate.sql','utf8');
  await pool.query(migration);
+
+ // The real coach-review RPC must atomically create exactly one Outbox row.
+ const reviewRequest='30000000-0000-4000-8000-000000000005';
+ const coach='10000000-0000-4000-8000-000000000002';
+ const tx=await pool.connect();
+ try {
+   await tx.query('BEGIN');
+   await tx.query('SET LOCAL ROLE service_role');
+   const rolled=await tx.query(
+     'SELECT public.recovery_coach_review($1,$2,$3,$4,$5,$6) AS result',
+     [reviewRequest,coach,'approve','c'.repeat(64),new Date(Date.now()+10*60_000).toISOString(),'k1']
+   );
+   assert.equal(rolled.rows[0].result.ok,true);
+   const inside=await tx.query('SELECT count(*)::int AS n FROM public.trainee_password_recovery_outbox WHERE recovery_request_id=$1',[reviewRequest]);
+   assert.equal(inside.rows[0].n,1,'Outbox row must exist inside the approval transaction');
+   await tx.query('ROLLBACK');
+ } finally { tx.release(); }
+ let rolledBack=await pool.query('SELECT status,delivery_operation_id FROM public.trainee_password_recovery_requests WHERE id=$1',[reviewRequest]);
+ assert.equal(rolledBack.rows[0].status,'pending');
+ assert.equal(rolledBack.rows[0].delivery_operation_id,null);
+ let noOutbox=await pool.query('SELECT count(*)::int AS n FROM public.trainee_password_recovery_outbox WHERE recovery_request_id=$1',[reviewRequest]);
+ assert.equal(noOutbox.rows[0].n,0,'rollback must remove the outbox insert with the approval');
+ const approved=await asService(
+   'SELECT public.recovery_coach_review($1,$2,$3,$4,$5,$6) AS result',
+   [reviewRequest,coach,'approve','c'.repeat(64),new Date(Date.now()+10*60_000).toISOString(),'k1']
+ );
+ assert.equal(approved.rows[0].result.ok,true);
+ const deliveryOp=approved.rows[0].result.delivery_operation_id;
+ const linked=await pool.query('SELECT recovery_request_id,delivery_operation_id,provider_idempotency_key,status FROM public.trainee_password_recovery_outbox WHERE recovery_request_id=$1',[reviewRequest]);
+ assert.equal(linked.rows.length,1);
+ assert.equal(linked.rows[0].delivery_operation_id,deliveryOp);
+ assert.equal(linked.rows[0].provider_idempotency_key,'trainee-recovery:'+deliveryOp);
+ const duplicateReview=await asService(
+   'SELECT public.recovery_coach_review($1,$2,$3,$4,$5,$6) AS result',
+   [reviewRequest,coach,'approve','c'.repeat(64),new Date(Date.now()+10*60_000).toISOString(),'k1']
+ );
+ assert.equal(duplicateReview.rows[0].result.ok,false);
+ assert.equal((await pool.query('SELECT count(*)::int AS n FROM public.trainee_password_recovery_outbox WHERE recovery_request_id=$1',[reviewRequest])).rows[0].n,1);
+ await pool.query("UPDATE public.trainee_password_recovery_outbox SET status='failed' WHERE recovery_request_id=$1",[reviewRequest]);
+ console.log('PASS: coach approval atomically enqueues one Outbox row; rollback and duplicate approval are safe');
+
  const requests=await pool.query("SELECT id FROM public.trainee_password_recovery_requests ORDER BY id LIMIT 2");
  assert.equal(requests.rows.length,2,'requires two synthetic recovery request fixtures from preceding disposable CI job');
  const [reqA,reqB]=requests.rows.map(x=>x.id);
  const ids=['60000000-0000-4000-8000-000000000001','60000000-0000-4000-8000-000000000002'];
- await pool.query("INSERT INTO public.trainee_password_recovery_outbox(id,recovery_request_id,provider_idempotency_key) VALUES ($1,$2,$3)",
- [ids[0],reqA,'recovery-outbox:'+ids[0]]);
+ await pool.query("INSERT INTO public.trainee_password_recovery_outbox(id,recovery_request_id,delivery_operation_id,provider_idempotency_key) VALUES ($1,$2,$3,$4)",
+ [ids[0],reqA,'70000000-0000-4000-8000-000000000001','recovery-outbox:'+ids[0]]);
  // Two independent PostgreSQL sessions race to claim one pending row.
  const race=await Promise.all([workerA,workerB].map(w=>asService(
  "SELECT * FROM recovery_private.claim_recovery_outbox($1,30)",[w]
@@ -54,8 +95,8 @@ async function main(){
  assert.deepEqual(acl.rows[0],{anon_claim:false,auth_finish:false,anon_read:false});
  console.log('PASS: anonymous/authenticated roles cannot execute worker RPCs or read Outbox');
  // Add a second independent pending item only after the first item has been fenced and reconciled.
- await pool.query("INSERT INTO public.trainee_password_recovery_outbox(id,recovery_request_id,provider_idempotency_key) VALUES ($1,$2,$3)",
- [ids[1],reqB,'recovery-outbox:'+ids[1]]);
+ await pool.query("INSERT INTO public.trainee_password_recovery_outbox(id,recovery_request_id,delivery_operation_id,provider_idempotency_key) VALUES ($1,$2,$3,$4)",
+ [ids[1],reqB,'70000000-0000-4000-8000-000000000002','recovery-outbox:'+ids[1]]);
  // Second synthetic item: heartbeat extends a live lease and accepted send finalizes once.
  const live=await asService("SELECT * FROM recovery_private.claim_recovery_outbox($1,30)",[workerA]);
  assert.equal(live.rowCount,1);
