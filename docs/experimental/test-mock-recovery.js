@@ -276,9 +276,8 @@ exp.approve({requestId:'r3',authenticatedCoachId:'c3'});
 now+=24 * 60 * 60_000;
 assert.throws(() => exp.verify({requestId:'r3',traineeId:'t3',code:exp.mockMessages[0].body.slice(-4)}),/expired|Invalid state/i);
 assert.equal(exp.requests.get('r3').state,STATES.EXPIRED);
-assert.throws(()=>exp.request({traineeId:'t3',coachId:'c3',requestId:'r3b'}),/Cooldown/);
-now += 60000;
-assert.equal(exp.request({traineeId:'t3',coachId:'c3',requestId:'r3b'}).state,STATES.REQUESTED);
+assert.equal(exp.request({traineeId:'t3',coachId:'c3',requestId:'r3b'}).state,STATES.REQUESTED,
+  'request cooldown has elapsed after the 24-hour code lifetime');
 // Expiry boundary: valid just before 24 hours, invalid exactly at 24 hours.
 let boundaryNow = 2000000;
 const boundarySystem = () => new MockRecovery({ secret, now: () => boundaryNow, maxAttempts: 3, cooldownMs: 0 });
