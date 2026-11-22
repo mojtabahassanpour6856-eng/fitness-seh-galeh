@@ -36,3 +36,9 @@ Status: design/acceptance criteria only. This file does not implement an HTTP en
 
 ## Explicit non-goals of this mock
 The current in-memory fixture has no phone lookup, account directory, HTTP response layer, authentication middleware, coach directory, SMS provider, database, or production logs. Therefore it cannot prove account-enumeration resistance, identity authenticity, or privacy of a live system.
+
+## Owner-scoped request reads
+- Coach-facing reads must query only requests assigned to the authenticated coach; trainee-facing reads must query only requests owned by the authenticated trainee.
+- A missing request and a request owned by another actor must produce the same generic denial at the public boundary.
+- Never return internal code digests, delivery callback details, full phone numbers, or another user's identity in a request snapshot.
+- Authorization must be enforced in the server/database query boundary and rechecked for every operation. A helper in this in-memory fixture is not production authorization.
