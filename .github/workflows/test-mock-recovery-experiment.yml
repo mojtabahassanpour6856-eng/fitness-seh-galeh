@@ -16,6 +16,7 @@ permissions:
 jobs:
   mock-recovery-tests:
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     steps:
       - name: Checkout isolated experiment branch
         uses: actions/checkout@v4
