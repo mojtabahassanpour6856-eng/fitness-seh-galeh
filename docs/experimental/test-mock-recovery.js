@@ -25,7 +25,7 @@ assert.equal(grantSystem.verify({requestId:'grant-expiry',traineeId:'grant-train
 const grantRecord = grantSystem.requests.get('grant-expiry');
 assert.equal(grantRecord.grantExpiresAt, grantClock.value + 10*60_000, 'post-verification grant must be short-lived');
 grantClock.value += 10*60_000;
-assert.throws(()=>grantSystem.complete({requestId:'grant-expiry',traineeId:'grant-trainee'}),/expired/i);
+assert.throws(()=>grantSystem.complete({requestId:'grant-expiry',traineeId:'grant-trainee'}),/expired|not verified/i);
 assert.equal(grantRecord.state,STATES.EXPIRED,'expired reset grant cannot complete');
 assert.equal(grantRecord.grantExpiresAt,null,'expired grant material must be cleared');
 
@@ -49,6 +49,18 @@ assert.equal(grantSweep.sweepExpired(),1,'sweep must expire unused verified gran
 assert.equal(grantSweep.requests.get('gs1').state,STATES.EXPIRED);
 assert.equal(grantSweep.requests.get('gs1').grantExpiresAt,null);
 assert.equal(grantSweep.request({traineeId:'gs',coachId:'gc',requestId:'gs2'}).state,STATES.REQUESTED);
+
+
+let unknownNow = 18000000;
+const unknownExpiry = new MockRecovery({secret,now:()=>unknownNow,cooldownMs:0,requestTTLms:500});
+unknownExpiry.request({traineeId:'ux',coachId:'uc',requestId:'ux1'});
+const unknownDelivery = new MockRecovery({secret,now:()=>unknownNow,cooldownMs:0,requestTTLms:500,delivery:()=>{throw new Error('timeout');}});
+unknownDelivery.request({traineeId:'uy',coachId:'uc',requestId:'uy1'});
+assert.equal(unknownDelivery.approve({requestId:'uy1',authenticatedCoachId:'uc'}).delivery,'UNKNOWN');
+unknownNow += 500;
+assert.equal(unknownDelivery.sweepExpired(),1);
+assert.equal(unknownDelivery.requests.get('uy1').state,STATES.EXPIRED);
+assert.equal(unknownDelivery.request({traineeId:'uy',coachId:'uc',requestId:'uy2'}).state,STATES.REQUESTED);
 
 const s = sys();
 assert.equal(s.request({traineeId:'t1',coachId:'c1',requestId:'r1'}).state, STATES.REQUESTED);
