@@ -117,9 +117,6 @@ export function createRecoveryCandidateHandler(deps) {
         if (!isUuid(requestId) || !['approve', 'reject'].includes(decision))
           return json({ success: false, message: 'درخواست نامعتبر است.' }, 400, corsOrigin);
 
-        if (decision === 'approve' && typeof delivery !== 'function')
-          return json({ success: false, message: 'ارسال پیامک در محیط آزمایشی غیرفعال است؛ هیچ کدی ارسال نشد.' }, 503, corsOrigin);
-
         const code = decision === 'approve' ? codeGenerator() : null;
         const keyHash = code ? digestRecoveryCode(code, secrets.hmac, secrets.keyVersion) : null;
         const reviewed = await rpc(deps.admin, 'recovery_coach_review', {
@@ -131,50 +128,16 @@ export function createRecoveryCandidateHandler(deps) {
         if (!reviewed?.ok) return json({ success: false, message: 'درخواست پیدا نشد، قبلاً بررسی شده یا دسترسی کافی ندارید.' }, 409, corsOrigin);
         if (decision === 'reject') return json({ success: true, status: 'rejected' }, 200, corsOrigin);
 
+        // Approval and Outbox enqueue are one database transaction via trigger.
+        // This HTTP handler never sends SMS; a separately reviewed Worker owns delivery.
         const operationId = reviewed.delivery_operation_id;
         if (!isUuid(operationId)) return json(safeError(), 503, corsOrigin);
-
-        // Resolve the recipient only from the database after the atomic coach/assignment check.
-        const { data: row, error: rowError } = await deps.admin.from('trainee_password_recovery_requests')
-          .select('phone_normalized,trainees!inner(phone_normalized,coach_user_id,approval_status,archived_at)')
-          .eq('id', requestId).maybeSingle();
-        const trainee = Array.isArray(row?.trainees) ? row.trainees[0] : row?.trainees;
-        const recipient = normalizeIranMobile(trainee?.phone_normalized);
-        const requestPhone = normalizeIranMobile(row?.phone_normalized);
-        if (rowError || !recipient || recipient !== requestPhone ||
-            trainee?.coach_user_id !== user.id || trainee?.approval_status !== 'active' || trainee?.archived_at) {
-          await rpc(deps.admin, 'recovery_begin_delivery', { p_request_id: requestId, p_delivery_operation_id: operationId });
-          await rpc(deps.admin, 'recovery_finish_delivery', {
-            p_request_id: requestId, p_delivery_operation_id: operationId, p_outcome: 'confirmed_failure'
-          });
-          return json({ success: false, message: 'شماره مقصد قابل تأیید نیست؛ کد ارسال نشد.' }, 503, corsOrigin);
-        }
-
-        const began = await rpc(deps.admin, 'recovery_begin_delivery', {
-          p_request_id: requestId, p_delivery_operation_id: operationId
-        });
-        if (began !== true) return json(safeError(), 409, corsOrigin);
-
-        let outcome = 'unknown';
-        try {
-          const deliveryResult = await delivery({ phone: recipient, code, requestId, operationId });
-          if (deliveryResult?.kind === 'confirmed_sent') outcome = 'sent';
-          else if (deliveryResult?.kind === 'confirmed_failure') outcome = 'confirmed_failure';
-        } catch { outcome = 'unknown'; }
-
-        const deliveryFinalized = await rpc(deps.admin, 'recovery_finish_delivery', {
-          p_request_id: requestId, p_delivery_operation_id: operationId, p_outcome: outcome
-        });
-        if (deliveryFinalized !== true) {
-          // Provider may have accepted the message, but the durable state did not confirm it.
-          // Never report success or retry; the request remains locked for reconciliation.
-          return json({ success: false, message: 'وضعیت ارسال قابل ثبت نیست؛ برای جلوگیری از استفاده ناامن، درخواست قفل شد.' }, 503, corsOrigin);
-        }
-        if (outcome === 'sent')
-          return json({ success: true, status: 'approved', message: 'کد به شماره ثبت‌شده شاگرد ارسال شد.' }, 200, corsOrigin);
-        return json({ success: false, message: outcome === 'unknown'
-          ? 'نتیجه ارسال مشخص نیست؛ برای جلوگیری از ارسال تکراری، درخواست قفل شد.'
-          : 'ارسال کد تأیید نشد؛ درخواست به حالت انتظار برگشت.' }, 503, corsOrigin);
+        return json({
+          success: true,
+          status: 'approved',
+          delivery_status: 'queued',
+          message: 'درخواست تأیید شد و در صف ارسال قرار گرفت؛ هنوز ارسال پیامک تأیید نشده است.'
+        }, 202, corsOrigin);
       }
 
       if (action === 'reset') {
