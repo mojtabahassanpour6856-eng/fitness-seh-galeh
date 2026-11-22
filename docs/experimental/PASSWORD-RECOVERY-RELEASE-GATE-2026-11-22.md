@@ -90,3 +90,20 @@ Confirmed directly in the currently deployed source:
 
 ## CI status caveat
 The focused crypto test and workflow edits were committed to the experiment branch. The GitHub connector returned no workflow-run records or commit status for the latest push, so CI execution for that commit remains **unverified**. The test file and workflow configuration were read back successfully; this is not equivalent to a passing run.
+
+
+## Additional fail-closed mock coverage (2026-11-22)
+The in-memory experimental engine and its tests were extended on the experiment branch:
+- `RESET_UNKNOWN` is verified to remain locked after advancing beyond the request TTL and running the generic expiry sweep; a new recovery request is rejected.
+- An authoritative reconciliation lookup that throws leaves the Auth operation in `RESET_UNKNOWN`.
+- A re-entrant second request is blocked while the Auth adapter is executing in `RESET_PENDING`.
+- Repeated coach approval after successful mock delivery is idempotent and does not generate or deliver a second code.
+- **Safety correction:** `DELIVERY_UNKNOWN` is no longer auto-expired by the generic request-TTL sweep. A potentially accepted-but-unacknowledged SMS must not silently release the trainee into a second recovery flow. The test now verifies that the state remains locked and neither a new request nor blind re-approval can proceed.
+
+Commits:
+- Engine fail-closed correction: `fa959b9aa995659345ddd2f0c1c61d5f817fa0df`
+- Extended mock tests: `b187dbc52934cf87fcae417242a6d795d6c4148c`
+- Ambiguous delivery assertion correction: `c70b82b16ee48b82f6875465b8cd487e3b62b6ca`
+- Final assertion correction: `362910eb3af96516f84944850f2336ade9ce102a`
+
+These are in-memory mock tests only. The actual deployed Edge Function still has no durable provider reconciliation mechanism. The GitHub Actions workflow is configured to run the expanded tests on pushes to this experiment branch, but the available GitHub run/status interface did not expose a run for the latest commits; execution remains **unverified** until the Actions run itself is inspected.
