@@ -179,12 +179,16 @@ CREATE OR REPLACE FUNCTION recovery_private.clear_terminal_recovery_payload()
 RETURNS trigger LANGUAGE plpgsql SECURITY DEFINER SET search_path = ''
 AS $clear_payload$
 BEGIN
-  IF TG_TABLE_NAME='trainee_password_recovery_requests'
-     AND NEW.delivery_outcome IN ('sent','confirmed_failure','unknown') THEN
-    NEW.delivery_payload := NULL;
-  ELSIF TG_TABLE_NAME='trainee_password_recovery_outbox'
-     AND NEW.status IN ('sent','failed','unknown') THEN
-    NEW.delivery_payload := NULL;
+  IF TG_TABLE_NAME='trainee_password_recovery_requests' THEN
+    IF NEW.delivery_outcome IN ('sent','confirmed_failure','unknown') THEN
+      NEW.delivery_payload := NULL;
+    END IF;
+  ELSIF TG_TABLE_NAME='trainee_password_recovery_outbox' THEN
+    IF NEW.status IN ('sent','failed','unknown') THEN
+      NEW.delivery_payload := NULL;
+    END IF;
+  ELSE
+    RAISE EXCEPTION 'unexpected recovery payload trigger table';
   END IF;
   RETURN NEW;
 END $clear_payload$;
