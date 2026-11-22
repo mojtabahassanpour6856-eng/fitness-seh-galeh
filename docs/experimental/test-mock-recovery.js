@@ -113,6 +113,17 @@ reentrantSystem.request({traineeId:'tr',coachId:'cr',requestId:'rr'});
 assert.equal(reentrantSystem.approve({requestId:'rr',authenticatedCoachId:'cr'}).state,STATES.CODE_ISSUED);
 assert.match(nestedApprovalError,/Invalid state/);
 assert.equal(reentrantSystem.mockMessages.length,1);
+// Thrown delivery callback must not leave the request permanently pending.
+let throwOnce = true;
+const callbackThrows = new MockRecovery({secret,now:()=>now,cooldownMs:0,delivery:()=>{
+  if (throwOnce) { throwOnce=false; throw new Error('mock provider exception'); }
+  return {ok:true};
+}});
+callbackThrows.request({traineeId:'tx',coachId:'cx',requestId:'rx'});
+assert.equal(callbackThrows.approve({requestId:'rx',authenticatedCoachId:'cx'}).delivery,'FAILED');
+assert.equal(callbackThrows.requests.get('rx').state,STATES.APPROVED);
+assert.equal(callbackThrows.approve({requestId:'rx',authenticatedCoachId:'cx'}).delivery,'MOCK_ONLY');
+assert.equal(callbackThrows.requests.get('rx').state,STATES.CODE_ISSUED);
 const cooldown=sys();
 cooldown.request({traineeId:'t5',coachId:'c5',requestId:'r5'});
 assert.throws(()=>cooldown.request({traineeId:'t5',coachId:'c5',requestId:'r6'}),/Cooldown/);
