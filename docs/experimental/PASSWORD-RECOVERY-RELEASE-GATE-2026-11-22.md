@@ -132,3 +132,12 @@ The full HTTP/Auth matrix must not be attempted using ordinary trainee accounts.
 - Updated harness commit: `06bf7c89160100dab408c1e1209124ef870435a9`.
 - Required environment variables when running from a network-enabled trusted environment: `RECOVERY_TEST_FUNCTION_URL` and `RECOVERY_ALLOWED_ORIGIN`. Use the actual approved Test app origin; do not use a wildcard.
 - This does not alter the release gate: live HTTP/Auth integration remains unverified, and Production remains NOT READY.
+
+
+## Static safety guard for the HTTP smoke harness (2026-11-22)
+- Added `docs/experimental/test-recovery-http-smoke-contract.js`. It statically checks that the live smoke harness contains only OPTIONS and GET fetch methods, pins the expected Supabase function host/path, checks the explicit allowed-origin and denied-origin assertions, and contains no recovery action payload or POST method.
+- Added this guard to the experiment GitHub Actions mock job and its path filters. This is a safety check for the test harness itself, not an endpoint integration test.
+- Ran an equivalent local Node.js static contract check against an isolated copy of the harness structure; it passed. The GitHub Actions run for the resulting branch commit is not visible through the available workflow-run connector, so CI remains unverified.
+- Contract test commit: `c0ea23b4d8b998f3daaae38da6a9767d3e708d94`.
+- Workflow update commit: `b4617bed344d663a91514ee8dfdcad16439e5948`.
+- No Supabase endpoint request, database write, password update, SMS, or deploy occurred.
