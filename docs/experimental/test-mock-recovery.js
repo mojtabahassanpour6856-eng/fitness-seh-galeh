@@ -144,10 +144,11 @@ let unknownNow = 18000000;
 const unknownDelivery = new MockRecovery({secret,now:()=>unknownNow,cooldownMs:0,requestTTLms:500,delivery:()=>{throw new Error('timeout');}});
 unknownDelivery.request({traineeId:'uy',coachId:'uc',requestId:'uy1'});
 assert.equal(unknownDelivery.approve({requestId:'uy1',authenticatedCoachId:'uc'}).delivery,'UNKNOWN');
-unknownNow += 500;
-assert.equal(unknownDelivery.sweepExpired(),1);
-assert.equal(unknownDelivery.requests.get('uy1').state,STATES.EXPIRED);
-assert.equal(unknownDelivery.request({traineeId:'uy',coachId:'uc',requestId:'uy2'}).state,STATES.REQUESTED);
+unknownNow += 24*60*60_000;
+assert.equal(unknownDelivery.sweepExpired(),0,'ambiguous provider delivery must not be auto-expired');
+assert.equal(unknownDelivery.requests.get('uy1').state,STATES.DELIVERY_UNKNOWN);
+assert.throws(()=>unknownDelivery.request({traineeId:'uy',coachId:'uc',requestId:'uy2'}),
+  /Active recovery request exists/,'new code delivery must remain blocked until provider outcome is reconciled');
 
 
 let assignedCoach = 'coach-A';
@@ -477,3 +478,7 @@ const repeatedApproval = approveOnce.approve({requestId:'approve-once-r',authent
 assert.equal(firstApproval.state,STATES.CODE_ISSUED);
 assert.equal(repeatedApproval.idempotent,true);
 assert.equal(approveOnce.mockMessages.length,deliveredCount,'duplicate approval must not deliver a second code');
+
+
+// An ambiguous delivery state cannot be approved again or generate another code.
+assert.equal(unknownDelivery.approve({requestId:'uy1',authenticatedCoachId:'uc'}).state,undefined);
