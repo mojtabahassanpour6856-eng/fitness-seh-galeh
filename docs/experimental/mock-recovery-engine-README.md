@@ -64,3 +64,7 @@ Execution status: these test cases have been authored and committed, but a succe
 - Successful OTP verification now creates a mock-only, one-time reset grant with a maximum 10-minute lifetime (or the shorter configured code TTL).
 - Completion checks grant expiry, consumes it once, and clears its expiry metadata. This models the security boundary; production must issue and atomically consume a server-side grant bound to the authenticated trainee and recovery request.
 - Tests cover grant expiration, cleanup, successful one-time completion, and replay rejection.
+
+- If the delivery adapter throws, its outcome is treated as UNKNOWN rather than definitely failed. The request enters DELIVERY_UNKNOWN, remains active, and cannot be blindly retried. This models the possibility that a provider accepted an SMS before the connection failed. Production must reconcile by provider idempotency key/status or an outbox before retrying.
+- The expiry sweep now expires unused VERIFIED reset grants and clears their grant expiry metadata, allowing a later recovery flow after the old grant has expired.
+- Tests cover ambiguous delivery fail-closed behavior, prevention of blind resend/parallel requests, and automatic expiry of unused grants.
