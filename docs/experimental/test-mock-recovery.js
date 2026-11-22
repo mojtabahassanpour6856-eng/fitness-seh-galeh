@@ -37,6 +37,19 @@ oneTime.verify({requestId:'once-request',traineeId:'once',code:oneTimeCode});
 assert.equal(oneTime.complete({requestId:'once-request',traineeId:'once'}).state,STATES.COMPLETED);
 assert.throws(()=>oneTime.complete({requestId:'once-request',traineeId:'once'}),/verified/i);
 
+
+let grantSweepNow = 15000000;
+const grantSweep = new MockRecovery({secret,now:()=>grantSweepNow,cooldownMs:0});
+grantSweep.request({traineeId:'gs',coachId:'gc',requestId:'gs1'});
+grantSweep.approve({requestId:'gs1',authenticatedCoachId:'gc'});
+const grantSweepCode = grantSweep.mockMessages.at(-1).body.match(/(\\d{4})$/)[1];
+grantSweep.verify({requestId:'gs1',traineeId:'gs',code:grantSweepCode});
+grantSweepNow += 10*60_000;
+assert.equal(grantSweep.sweepExpired(),1,'sweep must expire unused verified grants');
+assert.equal(grantSweep.requests.get('gs1').state,STATES.EXPIRED);
+assert.equal(grantSweep.requests.get('gs1').grantExpiresAt,null);
+assert.equal(grantSweep.request({traineeId:'gs',coachId:'gc',requestId:'gs2'}).state,STATES.REQUESTED);
+
 const s = sys();
 assert.equal(s.request({traineeId:'t1',coachId:'c1',requestId:'r1'}).state, STATES.REQUESTED);
 const firstRequestSnapshot = s.requests.get('r1');
@@ -152,17 +165,20 @@ assert.equal(reentrantSystem.approve({requestId:'rr',authenticatedCoachId:'cr'})
 assert.match(nestedApprovalError,/Invalid state/);
 assert.equal(reentrantSystem.mockMessages.length,1);
 assert.throws(() => reentrantSystem.request({traineeId:'tr',coachId:'cr',requestId:'rr2'}), /Active recovery request exists/, 'DELIVERY_PENDING must block parallel requests');
-// Thrown delivery callback must not leave the request permanently pending.
-let throwOnce = true;
+// A thrown delivery callback has an ambiguous outcome: fail closed, do not blindly resend.
+let throwCalls = 0;
 const callbackThrows = new MockRecovery({secret,now:()=>now,cooldownMs:0,delivery:()=>{
-  if (throwOnce) { throwOnce=false; throw new Error('mock provider exception'); }
-  return {ok:true};
+  throwCalls++;
+  throw new Error('mock provider exception');
 }});
 callbackThrows.request({traineeId:'tx',coachId:'cx',requestId:'rx'});
-assert.equal(callbackThrows.approve({requestId:'rx',authenticatedCoachId:'cx'}).delivery,'FAILED');
-assert.equal(callbackThrows.requests.get('rx').state,STATES.APPROVED);
-assert.equal(callbackThrows.approve({requestId:'rx',authenticatedCoachId:'cx'}).delivery,'MOCK_ONLY');
-assert.equal(callbackThrows.requests.get('rx').state,STATES.CODE_ISSUED);
+const ambiguousDelivery = callbackThrows.approve({requestId:'rx',authenticatedCoachId:'cx'});
+assert.equal(ambiguousDelivery.delivery,'UNKNOWN');
+assert.equal(ambiguousDelivery.retryable,false);
+assert.equal(callbackThrows.requests.get('rx').state,STATES.DELIVERY_UNKNOWN);
+assert.throws(()=>callbackThrows.approve({requestId:'rx',authenticatedCoachId:'cx'}),/Invalid state/);
+assert.throws(()=>callbackThrows.request({traineeId:'tx',coachId:'cx',requestId:'rx2'}),/Active recovery request exists/);
+assert.equal(throwCalls,1,'ambiguous delivery must not trigger a blind resend');
 // Stale REQUESTED requests expire and do not permanently block a fresh recovery.
 let staleNow = 5000000;
 const staleRequests = new MockRecovery({secret,now:()=>staleNow,cooldownMs:0,requestTTLms:1000});
