@@ -4,7 +4,7 @@
  * Do not deploy without explicit approval and completion of the release gates.
  * No SMS provider is configured; coach approval is fail-closed until one is reviewed.
  */
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.0";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.119.0";
 // @ts-ignore -- dependency-injected Node/Deno-compatible candidate module is intentionally kept in docs/experimental.
 import { createRecoveryCandidateHandler } from "./recovery-candidate-handler.mjs";
 
