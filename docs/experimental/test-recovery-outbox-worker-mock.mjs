@@ -59,6 +59,17 @@ const failed=await processOneRecoveryOutboxItem({admin:invalidAdmin,workerId,del
 assert.deepEqual(failed,{status:'failed'});
 assert.equal(unusedProvider.calls.length,0,'phone/status mismatch must block provider call');
 
+const missingIdempotencyAdmin=makeAdmin();
+const missingIdemRpc=missingIdempotencyAdmin.rpc.bind(missingIdempotencyAdmin);
+missingIdempotencyAdmin.rpc=async(name,args)=>{
+  if(name==='recovery_outbox_claim') return {data:[{outbox_id:'6ba7b813-9dad-41d1-80b4-00c04fd430c8',lease_generation:4}]};
+  return missingIdemRpc(name,args);
+};
+const missingIdemProvider=new FakeRecoverySmsProvider();
+assert.deepEqual(await processOneRecoveryOutboxItem({admin:missingIdempotencyAdmin,workerId,deliveryKeys,cryptoImpl:webcrypto,provider:missingIdemProvider}),{status:'invalid_lease'});
+assert.equal(missingIdemProvider.calls.length,0);
+assert.equal(missingIdempotencyAdmin.calls.some(x=>x.name==='recovery_outbox_begin_send'),false,'missing stable idempotency key must block durable send-start');
+
 const archivedAdmin=makeAdmin({archived:true});
 const archivedProvider=new FakeRecoverySmsProvider();
 assert.deepEqual(await processOneRecoveryOutboxItem({admin:archivedAdmin,workerId,deliveryKeys,cryptoImpl:webcrypto,provider:archivedProvider}),{status:'failed'});
