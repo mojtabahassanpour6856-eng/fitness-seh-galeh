@@ -27,8 +27,10 @@ const createUserClient = (authorization: string) => createClient(supabaseUrl, an
 
 const handler = createRecoveryCandidateHandler({
   env: {
-    RECOVERY_HMAC_SECRET: Deno.env.get("RECOVERY_HMAC_SECRET"),
+    RECOVERY_HMAC_KEYS: Deno.env.get("RECOVERY_HMAC_KEYS"),
     RECOVERY_HMAC_KEY_VERSION: Deno.env.get("RECOVERY_HMAC_KEY_VERSION"),
+    RECOVERY_DELIVERY_KEYS: Deno.env.get("RECOVERY_DELIVERY_KEYS"),
+    RECOVERY_DELIVERY_KEY_VERSION: Deno.env.get("RECOVERY_DELIVERY_KEY_VERSION"),
     RECOVERY_ALLOWED_ORIGINS: Deno.env.get("RECOVERY_ALLOWED_ORIGINS")
   },
   admin,
