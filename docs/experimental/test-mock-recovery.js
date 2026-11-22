@@ -126,7 +126,7 @@ assert.throws(()=>transitionIsolation.cancelForAuthenticatedTrainee({requestId:'
 assert.equal(transitionIsolation.requests.get('iso-request').state,STATES.REQUESTED,
   'unauthorized transition attempts must not mutate request state');
 transitionIsolation.approveForAuthenticatedCoach({requestId:'iso-request',authenticatedCoachId:'iso-coach'});
-const isoCode=transitionIsolation.mockMessages.at(-1).body.match(/(\\d{4})$/)[1];
+const isoCode=transitionIsolation.mockMessages.at(-1).body.match(/(\d{4})$/)[1];
 assert.throws(()=>transitionIsolation.verifyForAuthenticatedTrainee({requestId:'iso-request',authenticatedTraineeId:'other-trainee',code:isoCode}),
   e=>e.message==='Recovery request unavailable');
 assert.throws(()=>transitionIsolation.verifyForAuthenticatedTrainee({requestId:'missing-iso',authenticatedTraineeId:'iso-trainee',code:isoCode}),
@@ -142,7 +142,7 @@ assert.equal(transitionIsolation.completeForAuthenticatedTrainee({requestId:'iso
 const replayGuard = new MockRecovery({secret,now:()=>now,cooldownMs:0});
 replayGuard.request({traineeId:'replay-trainee',coachId:'replay-coach',requestId:'replay-request'});
 replayGuard.approve({requestId:'replay-request',authenticatedCoachId:'replay-coach'});
-const replayCode = replayGuard.mockMessages.at(-1).body.match(/(\\d{4})$/)[1];
+const replayCode = replayGuard.mockMessages.at(-1).body.match(/(\d{4})$/)[1];
 assert.equal(replayGuard.verifyForAuthenticatedTrainee({requestId:'replay-request',authenticatedTraineeId:'replay-trainee',code:replayCode}).state,STATES.VERIFIED);
 assert.throws(()=>replayGuard.verifyForAuthenticatedTrainee({requestId:'replay-request',authenticatedTraineeId:'replay-trainee',code:replayCode}),/Invalid state/,
   'the same code must not verify twice');
