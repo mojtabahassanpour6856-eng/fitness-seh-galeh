@@ -241,3 +241,17 @@ No provider adapter is selected yet. The current Mediana restriction remains in 
 The Edge Function cannot safely assume a custom Postgres schema is reachable through PostgREST unless it is added to Supabase's exposed-schema configuration. To avoid requiring that project-level setting, the candidate migration now keeps `recovery_private` unexposed and adds narrowly scoped wrappers in the already exposed `public` schema. Each wrapper is invoker-security, schema-qualifies the private function, revokes execution from PUBLIC/anon/authenticated, and grants EXECUTE only to `service_role`. The service role alone has USAGE on `recovery_private`.
 
 Workflow run `45049632108` completed **success** after this change. Its disposable PostgreSQL suite invokes the public wrappers under `SET ROLE service_role` and checks the privilege boundary; all candidate RPC/concurrency/state-transition assertions passed. This proves the SQL/role behavior in the disposable fixture, not the actual Supabase PostgREST gateway configuration or a live Edge Function call.
+
+
+## Dependency-injected handler and Edge adapter candidate (2026-11-22)
+
+Added:
+- `docs/experimental/recovery-candidate-handler.mjs`: a dependency-injected HTTP handler candidate wiring request submission, coach authentication/list/review, delivery state transitions, code verification, one-time reset claim, and fail-closed Auth update outcomes to the candidate RPC wrappers.
+- `docs/experimental/trainee-password-recovery-edge-candidate.ts`: a Deno/Supabase runtime adapter stored under docs only, not under `supabase/functions`.
+- `docs/experimental/test-recovery-candidate-handler.js` and `test-recovery-edge-adapter-contract.js`.
+
+The runtime adapter deliberately supplies no delivery adapter. Thus approval is blocked before database mutation until a delivery provider is separately reviewed and explicitly wired. No Mediana URL, SMS sender, or network sender is present in the candidate. Tests inject a synthetic delivery adapter in memory only.
+
+Workflow run `45050296581` completed **success** on commit `357852129e64ed3048a578161bcb8c20bf7eac07`; both jobs passed. The mock job passed handler tests for generic public request responses, CORS rejection, disabled-delivery fail-closed behavior, stored-phone-only delivery with no code returned to coach, atomic wrong-attempt RPC invocation, one Auth update attempt, unknown Auth lockout, and confirmed-success completion. The PostgreSQL job also passed the existing disposable atomic RPC/concurrency suite.
+
+This is dependency-injected and disposable-database evidence only. It does not prove Deno compilation in Supabase Edge Runtime, live PostgREST RPC reachability, real Auth/session behavior, or real provider delivery. The candidate is not deployed and must not be treated as production-ready.
