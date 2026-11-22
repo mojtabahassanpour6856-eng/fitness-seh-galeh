@@ -218,8 +218,49 @@ FOR EACH ROW EXECUTE FUNCTION recovery_private.enqueue_approved_recovery_deliver
 
 REVOKE ALL ON FUNCTION recovery_private.enqueue_approved_recovery_delivery() FROM PUBLIC,anon,authenticated;
 
+-- Public-schema RPC wrappers are required for Supabase/PostgREST Edge clients.
+-- The private schema remains unexposed; only service_role may invoke these wrappers.
+CREATE OR REPLACE FUNCTION public.recovery_outbox_claim(p_worker_id uuid,p_lease_seconds integer DEFAULT 60)
+RETURNS TABLE(outbox_id uuid,recovery_request_id uuid,lease_generation bigint,
+              locked_until timestamptz,provider_idempotency_key text)
+LANGUAGE sql SECURITY DEFINER SET search_path = ''
+AS $wrapper$ SELECT * FROM recovery_private.claim_recovery_outbox(p_worker_id,p_lease_seconds) $wrapper$;
+
+CREATE OR REPLACE FUNCTION public.recovery_outbox_heartbeat(
+  p_outbox_id uuid,p_worker_id uuid,p_generation bigint,p_lease_seconds integer DEFAULT 60
+) RETURNS boolean LANGUAGE sql SECURITY DEFINER SET search_path = ''
+AS $wrapper$ SELECT recovery_private.heartbeat_recovery_outbox(p_outbox_id,p_worker_id,p_generation,p_lease_seconds) $wrapper$;
+
+CREATE OR REPLACE FUNCTION public.recovery_outbox_begin_send(
+  p_outbox_id uuid,p_worker_id uuid,p_generation bigint
+) RETURNS boolean LANGUAGE sql SECURITY DEFINER SET search_path = ''
+AS $wrapper$ SELECT recovery_private.begin_recovery_outbox_send(p_outbox_id,p_worker_id,p_generation) $wrapper$;
+
+CREATE OR REPLACE FUNCTION public.recovery_outbox_finish(
+  p_outbox_id uuid,p_worker_id uuid,p_generation bigint,p_outcome text,
+  p_provider_message_id text DEFAULT NULL,p_safe_error_code text DEFAULT NULL
+) RETURNS boolean LANGUAGE sql SECURITY DEFINER SET search_path = ''
+AS $wrapper$ SELECT recovery_private.finish_recovery_outbox(
+  p_outbox_id,p_worker_id,p_generation,p_outcome,p_provider_message_id,p_safe_error_code
+) $wrapper$;
+
+CREATE OR REPLACE FUNCTION public.recovery_outbox_reconcile_expired()
+RETURNS integer LANGUAGE sql SECURITY DEFINER SET search_path = ''
+AS $wrapper$ SELECT recovery_private.reconcile_expired_recovery_outbox() $wrapper$;
+
+REVOKE ALL ON FUNCTION public.recovery_outbox_claim(uuid,integer) FROM PUBLIC,anon,authenticated;
+REVOKE ALL ON FUNCTION public.recovery_outbox_heartbeat(uuid,uuid,bigint,integer) FROM PUBLIC,anon,authenticated;
+REVOKE ALL ON FUNCTION public.recovery_outbox_begin_send(uuid,uuid,bigint) FROM PUBLIC,anon,authenticated;
+REVOKE ALL ON FUNCTION public.recovery_outbox_finish(uuid,uuid,bigint,text,text,text) FROM PUBLIC,anon,authenticated;
+REVOKE ALL ON FUNCTION public.recovery_outbox_reconcile_expired() FROM PUBLIC,anon,authenticated;
+GRANT EXECUTE ON FUNCTION public.recovery_outbox_claim(uuid,integer) TO service_role;
+GRANT EXECUTE ON FUNCTION public.recovery_outbox_heartbeat(uuid,uuid,bigint,integer) TO service_role;
+GRANT EXECUTE ON FUNCTION public.recovery_outbox_begin_send(uuid,uuid,bigint) TO service_role;
+GRANT EXECUTE ON FUNCTION public.recovery_outbox_finish(uuid,uuid,bigint,text,text,text) TO service_role;
+GRANT EXECUTE ON FUNCTION public.recovery_outbox_reconcile_expired() TO service_role;
+
 REVOKE ALL ON public.trainee_password_recovery_outbox FROM PUBLIC,anon,authenticated;
-GRANT SELECT,INSERT ON public.trainee_password_recovery_outbox TO service_role;
+GRANT SELECT ON public.trainee_password_recovery_outbox TO service_role;
 REVOKE ALL ON FUNCTION recovery_private.claim_recovery_outbox(uuid,integer) FROM PUBLIC,anon,authenticated;
 REVOKE ALL ON FUNCTION recovery_private.heartbeat_recovery_outbox(uuid,uuid,bigint,integer) FROM PUBLIC,anon,authenticated;
 REVOKE ALL ON FUNCTION recovery_private.begin_recovery_outbox_send(uuid,uuid,bigint) FROM PUBLIC,anon,authenticated;
