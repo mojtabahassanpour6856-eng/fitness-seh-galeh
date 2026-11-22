@@ -18,6 +18,8 @@ on:
       - 'docs/experimental/test-recovery-authorization-abuse.js'
       - 'docs/experimental/recovery-candidate-core.mjs'
       - 'docs/experimental/test-recovery-candidate-core.js'
+      - 'docs/experimental/recovery-delivery-payload-crypto.mjs'
+      - 'docs/experimental/test-recovery-delivery-payload-crypto.mjs'
       - 'docs/experimental/recovery-candidate-handler.mjs'
       - 'docs/experimental/test-recovery-candidate-handler.js'
       - 'docs/experimental/trainee-password-recovery-edge-candidate.ts'
@@ -61,6 +63,8 @@ jobs:
         run: node docs/experimental/test-recovery-candidate-core.js
       - name: Run dependency-injected recovery handler candidate tests (isolated only)
         run: node docs/experimental/test-recovery-candidate-handler.js
+      - name: Test encrypted recovery delivery payload envelope (no provider or secrets)
+        run: node docs/experimental/test-recovery-delivery-payload-crypto.mjs
       - name: Verify Edge adapter remains non-deployable and provider-disabled
         run: node docs/experimental/test-recovery-edge-adapter-contract.js
       - name: Verify handler and candidate migration contract alignment
