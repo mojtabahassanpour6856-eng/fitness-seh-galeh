@@ -1,4 +1,4 @@
-name: Experimental password recovery mock tests
+name: Experimental password recovery mock and PostgreSQL tests
 
 on:
   push:
@@ -7,6 +7,7 @@ on:
     paths:
       - 'docs/experimental/mock-recovery-engine.js'
       - 'docs/experimental/test-mock-recovery.js'
+      - 'docs/experimental/postgres-concurrency-test.js'
       - '.github/workflows/test-mock-recovery-experiment.yml'
   workflow_dispatch:
 
@@ -28,3 +29,40 @@ jobs:
           node-version: 22
       - name: Run isolated mock recovery tests
         run: node docs/experimental/test-mock-recovery.js
+
+  postgres-concurrency-tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: recovery_ci
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d recovery_ci"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    steps:
+      - name: Checkout isolated experiment branch
+        uses: actions/checkout@v4
+        with:
+          ref: experiment/trainee-password-recovery-mock-20261122
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install PostgreSQL client driver
+        run: npm install --no-save pg
+      - name: Run two-session PostgreSQL concurrency checks
+        env:
+          PGHOST: 127.0.0.1
+          PGPORT: 5432
+          PGUSER: postgres
+          PGPASSWORD: postgres
+          PGDATABASE: recovery_ci
+        run: node docs/experimental/postgres-concurrency-test.js
