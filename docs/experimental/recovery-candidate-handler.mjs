@@ -55,7 +55,6 @@ export function createRecoveryCandidateHandler(deps) {
   const secrets = assertRecoverySecrets(deps.env);
   const now = deps.now || (() => Date.now());
   const random = deps.randomBytes;
-  const delivery = deps.deliveryAdapter; // absent by default: real delivery remains disabled.
   const codeGenerator = () => generateRecoveryCode(random);
 
   return async function handle(req) {
