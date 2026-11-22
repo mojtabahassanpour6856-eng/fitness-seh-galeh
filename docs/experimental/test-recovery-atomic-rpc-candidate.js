@@ -1,4 +1,5 @@
 'use strict';
+// Runs only in the dedicated disposable PostgreSQL CI service.
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const { Pool } = require('pg');
