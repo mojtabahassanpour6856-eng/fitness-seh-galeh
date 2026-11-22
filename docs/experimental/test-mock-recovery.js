@@ -430,3 +430,50 @@ assert.equal(safeEqualHex('a'.repeat(64),'b'.repeat(64)),false);
 console.log('All mock recovery engine tests passed.');
 
 // CI rerun marker: isolated mock-only suite; no live Auth, database, trainee data, or SMS.
+
+
+// Auth-unknown must remain locked after time advances and expiry sweeping.
+let lockedNow = 41000000;
+const lockedUnknown = new MockRecovery({secret,now:()=>lockedNow,cooldownMs:0,requestTTLms:100});
+lockedUnknown.request({traineeId:'locked-trainee',coachId:'locked-coach',requestId:'locked-r'});
+lockedUnknown.approve({requestId:'locked-r',authenticatedCoachId:'locked-coach'});
+const lockedCode = lockedUnknown.mockMessages.at(-1).body.match(/(\\d{4})$/)[1];
+lockedUnknown.verify({requestId:'locked-r',traineeId:'locked-trainee',code:lockedCode});
+lockedUnknown.applyPasswordReset({requestId:'locked-r',traineeId:'locked-trainee',
+  operationId:'locked-op',updateAuth:()=>{throw new Error('ambiguous transport failure');}});
+lockedNow += 24*60*60_000;
+assert.equal(lockedUnknown.sweepExpired(),0,'RESET_UNKNOWN is never auto-expired by the generic sweeper');
+assert.equal(lockedUnknown.requests.get('locked-r').state,STATES.RESET_UNKNOWN);
+assert.throws(()=>lockedUnknown.request({traineeId:'locked-trainee',coachId:'locked-coach',requestId:'locked-r2'}),
+  /Active recovery request exists/,'new recovery flow remains blocked while Auth outcome is unknown');
+assert.equal(lockedUnknown.reconcilePasswordReset({requestId:'locked-r',traineeId:'locked-trainee',
+  operationId:'locked-op',lookupAuth:()=>{throw new Error('reconciliation service unavailable');}}).authOutcome,'UNKNOWN');
+assert.equal(lockedUnknown.requests.get('locked-r').state,STATES.RESET_UNKNOWN,
+  'failed authoritative lookup must preserve the locked state');
+
+// A synchronous re-entrant callback cannot open a second flow while RESET_PENDING.
+const pendingLock = new MockRecovery({secret,now:()=>lockedNow,cooldownMs:0});
+pendingLock.request({traineeId:'pending-trainee',coachId:'pending-coach',requestId:'pending-r'});
+pendingLock.approve({requestId:'pending-r',authenticatedCoachId:'pending-coach'});
+const pendingCode = pendingLock.mockMessages.at(-1).body.match(/(\\d{4})$/)[1];
+pendingLock.verify({requestId:'pending-r',traineeId:'pending-trainee',code:pendingCode});
+let blockedDuringAuth = false;
+pendingLock.applyPasswordReset({requestId:'pending-r',traineeId:'pending-trainee',operationId:'pending-op',
+  updateAuth:()=>{
+    assert.equal(pendingLock.requests.get('pending-r').state,STATES.RESET_PENDING);
+    assert.throws(()=>pendingLock.request({traineeId:'pending-trainee',coachId:'pending-coach',requestId:'pending-r2'}),
+      /Active recovery request exists/);
+    blockedDuringAuth = true;
+    return {ok:true};
+  }});
+assert.equal(blockedDuringAuth,true);
+
+// Coach approval retries are idempotent after one successful delivery.
+const approveOnce = new MockRecovery({secret,now:()=>lockedNow,cooldownMs:0});
+approveOnce.request({traineeId:'approve-once',coachId:'approve-coach',requestId:'approve-once-r'});
+const firstApproval = approveOnce.approve({requestId:'approve-once-r',authenticatedCoachId:'approve-coach'});
+const deliveredCount = approveOnce.mockMessages.length;
+const repeatedApproval = approveOnce.approve({requestId:'approve-once-r',authenticatedCoachId:'approve-coach'});
+assert.equal(firstApproval.state,STATES.CODE_ISSUED);
+assert.equal(repeatedApproval.idempotent,true);
+assert.equal(approveOnce.mockMessages.length,deliveredCount,'duplicate approval must not deliver a second code');
