@@ -209,11 +209,19 @@ export function createRecoveryCandidateHandler(deps) {
         // Auth confirmed success. If this marker fails, the password is still changed and
         // the durable processing row remains locked for manual reconciliation.
         try {
-          await rpc(deps.admin, 'recovery_finish_auth_update', {
+          const finalized = await rpc(deps.admin, 'recovery_finish_auth_update', {
             p_request_id: request.id, p_operation_id: operationId,
             p_outcome: 'completed', p_safe_error_code: null
           });
-        } catch { /* do not invite a second password update */ }
+          if (finalized !== true) {
+            // Auth may already have changed the password, but durable completion is not confirmed.
+            // Never claim success or invite another Auth update in this ambiguous state.
+            return json({ success: false, message: 'نتیجه تغییر رمز هنوز قابل تأیید نیست؛ دوباره تلاش نکنید.' }, 503, corsOrigin);
+          }
+        } catch {
+          // Auth may already have changed the password. Keep the durable processing row locked.
+          return json({ success: false, message: 'نتیجه تغییر رمز هنوز قابل تأیید نیست؛ دوباره تلاش نکنید.' }, 503, corsOrigin);
+        }
         return json({ success: true, message: 'رمز جدید ذخیره شد؛ اکنون با رمز جدید وارد شوید.' }, 200, corsOrigin);
       }
 
