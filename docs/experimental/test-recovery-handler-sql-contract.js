@@ -5,6 +5,7 @@ import { readFile } from 'node:fs/promises';
 const base = new URL('.', import.meta.url);
 const handler = await readFile(new URL('./recovery-candidate-handler.mjs', base), 'utf8');
 const migration = await readFile(new URL('./migrations/20261122_recovery_atomic_rpc_candidate.sql', base), 'utf8');
+const outboxMigration = await readFile(new URL('./migrations/20261122_recovery_outbox_worker_candidate.sql', base), 'utf8');
 const cleanup = await readFile(new URL('./migrations/20261122_dispose_expired_legacy_approved_request.sql', base), 'utf8');
 const core = await readFile(new URL('./recovery-candidate-core.mjs', base), 'utf8');
 
@@ -27,8 +28,8 @@ const workerWrappers = [
   'recovery_outbox_finish','recovery_outbox_reconcile_expired'
 ];
 for (const name of workerWrappers) {
-  assert.match(migration, new RegExp('CREATE OR REPLACE FUNCTION public\\.' + name + '\\s*\\('), name + ' worker wrapper must exist');
-  assert.match(migration, new RegExp('GRANT EXECUTE ON FUNCTION public\\.' + name), name + ' worker wrapper must be service-role granted');
+  assert.match(outboxMigration, new RegExp('CREATE OR REPLACE FUNCTION public\\.' + name + '\\s*\\('), name + ' worker wrapper must exist');
+  assert.match(outboxMigration, new RegExp('GRANT EXECUTE ON FUNCTION public\\.' + name), name + ' worker wrapper must be service-role granted');
 }
 for (const column of [
   'operation_id','processing_started_at','auth_outcome','auth_attempted_at',
