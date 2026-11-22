@@ -5,6 +5,8 @@ import { readFile } from 'node:fs/promises';
 const base = new URL('.', import.meta.url);
 const handler = await readFile(new URL('./recovery-candidate-handler.mjs', base), 'utf8');
 const migration = await readFile(new URL('./migrations/20261122_recovery_atomic_rpc_candidate.sql', base), 'utf8');
+const cleanup = await readFile(new URL('./migrations/20261122_dispose_expired_legacy_approved_request.sql', base), 'utf8');
+const core = await readFile(new URL('./recovery-candidate-core.mjs', base), 'utf8');
 
 const wrappers = [
   'recovery_submit_request',
