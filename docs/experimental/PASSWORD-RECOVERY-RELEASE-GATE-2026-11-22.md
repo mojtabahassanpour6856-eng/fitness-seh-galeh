@@ -74,3 +74,19 @@ The Test project's global security warnings must be triaged separately and not "
 - Updated the experiment workflow to run this focused suite alongside the existing mock and disposable PostgreSQL jobs.
 - The files were committed to the experiment branch and read back for verification. At the time of this report update, no workflow run or commit status for the latest commit was returned by the GitHub connector; therefore this new suite is **authored but not yet CI-verified**.
 - These are cryptographic helper tests only. They do not establish production secret configuration, real Edge Function behavior, Auth outcome reconciliation, HTTP privacy, or provider delivery.
+
+
+## Read-only review of the deployed Test function source (2026-11-22)
+The active Test Edge Function was retrieved again (version 10, SHA `f9bbda8b8d0f38d266fe009a0492ca5008f7f1fc4bd531bf60f70ec302331678`). This was a read-only source inspection; no invocation, deploy, database write, password update, or SMS was performed.
+
+Confirmed directly in the currently deployed source:
+- Public `request` responses are not uniform: an ineligible/nonexistent account returns HTTP 200 with a generic message; an existing open request returns a different HTTP 200 message; a newly inserted request returns HTTP 201. This is a concrete account/request-state disclosure and remains P1.
+- The public `reset` action looks up the newest `approved` row by phone, uses a plain SHA-256 code digest, and increments `token_attempts` with a read-then-write update. These confirm the previously recorded digest and concurrency findings.
+- The claim changes `approved` to `processing`, but the claim filter still uses `token_attempts < 10` while the handler pre-check rejects at 5. This threshold mismatch remains.
+- If `admin.auth.admin.updateUserById` returns an error, the handler unconditionally attempts to move `processing` back to `approved`. The source does not distinguish a definite no-commit rejection from a timeout/ambiguous outcome. This confirms the P0 replay risk.
+- After Auth success, failure to persist `completed` is logged, but the endpoint still returns success. The durable row can remain `processing`; this requires an operation/reconciliation design and monitoring.
+- Coach approval writes the code digest and `approved` state before contacting Mediana. On timeout or unsuccessful provider response it attempts to restore `pending` and clear the token. If the provider accepted the SMS but the response was lost, delivery outcome is ambiguous and the code is invalidated; a provider-outcome state/reconciliation path is needed.
+- CORS remains wildcard. Coach actions do authenticate a Bearer token and check coach role/trainee assignment in the retrieved source, but no real HTTP authorization test has been performed.
+
+## CI status caveat
+The focused crypto test and workflow edits were committed to the experiment branch. The GitHub connector returned no workflow-run records or commit status for the latest push, so CI execution for that commit remains **unverified**. The test file and workflow configuration were read back successfully; this is not equivalent to a passing run.
