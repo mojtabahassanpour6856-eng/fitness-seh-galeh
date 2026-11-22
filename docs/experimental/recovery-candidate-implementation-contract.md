@@ -109,3 +109,37 @@ A candidate is not ready until the corrected source is reviewed, unit and dispos
 ## Current evidence boundary
 
 Existing Mock assertions and disposable PostgreSQL concurrency runs do not exercise the real Edge Function HTTP layer, Supabase Auth, coach authorization, or SMS provider. This contract does not change that status.
+
+
+## Live Test schema facts and atomic coach-review design (read-only, 2026-11-22)
+
+A read-only `information_schema.columns` query against the Test project confirmed the current recovery table has only:
+`id`, `trainee_id`, `phone_normalized`, `status`, `requested_at`, `reviewed_at`, `reviewed_by`, `token_hash`, `token_expires_at`, `token_attempts`, `completed_at`, and `updated_at`.
+It does **not** currently have durable `operation_id`, processing-start timestamp, Auth outcome, delivery outcome, or key-version columns. The live table was not changed.
+
+The `trainees` table has `coach_user_id`, `auth_user_id`, `approval_status`, `phone_normalized`, and `archived_at`; the coach assignment is therefore available for a database-side ownership predicate. The `profiles` table exposes `id` and `role`.
+
+### Required atomic coach review operation
+
+Do not implement review as a separate ownership SELECT followed by an UPDATE. The candidate must perform a single database-side operation/transaction that:
+1. receives request ID, authenticated actor UUID, and decision;
+2. verifies actor profile role is coach;
+3. joins the request's trainee and checks the trainee's *current* `coach_user_id = actor UUID`, active status and non-archived state;
+4. conditionally changes only a `pending` request and records `reviewed_by = actor UUID`;
+5. returns only a minimal success/result marker, never phone, code, or trainee data.
+
+The Edge Function must derive actor UUID from a validated Supabase Auth user, never from request JSON. The RPC/table operation must be inaccessible to anon/authenticated callers and executable only by the server service role. Review its privileges, fixed search_path, schema qualification, and SECURITY DEFINER necessity before writing SQL. The exact function signature and migration are intentionally not supplied as deployable SQL until the candidate schema and grants are reviewed.
+
+### Candidate schema additions to design (not applied)
+
+- Unique operation identifier for each Auth password-update attempt.
+- Processing-start timestamp and terminal/unknown Auth outcome marker.
+- Delivery attempt/operation identity and delivery outcome marker (without plaintext code).
+- HMAC key-version identifier.
+- One authoritative attempt cap and an atomic counter operation.
+
+Do not assume the database and Supabase Auth can share a transaction. An Auth timeout or transport error must leave the operation locked as unknown; no blind retry and no reopening of the same code.
+
+### Delivery provider decision
+
+The current Test function contains a direct Mediana request; the current Production function instead returns the plaintext code to the coach. Neither is acceptable as the candidate delivery contract. Keep delivery behind an injected provider interface. In automated tests, use a capture-only fake provider that records only synthetic test fixtures in isolated memory. Production delivery cannot be implemented until the user chooses an available provider and its delivery semantics (especially timeout/accepted-but-response-lost behavior) are verified.
