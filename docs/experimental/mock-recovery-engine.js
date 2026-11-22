@@ -341,7 +341,8 @@ class MockRecovery {
   // Production handlers must still resolve actor identity from authenticated server context.
   getForCoach({ requestId, authenticatedCoachId }) {
     const r = this.requests.get(requestId);
-    if (!r || !authenticatedCoachId || r.coachId !== authenticatedCoachId) {
+    if (!r || !authenticatedCoachId || r.coachId !== authenticatedCoachId ||
+        (this.getCurrentCoachId && this.getCurrentCoachId(r.traineeId) !== r.coachId)) {
       throw new Error('Recovery request unavailable');
     }
     return { requestId: r.requestId, state: r.state, createdAt: r.createdAt,
