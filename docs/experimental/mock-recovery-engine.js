@@ -209,6 +209,47 @@ class MockRecovery {
     }
     return expiredCount;
   }
+  // Authenticated-context adapters: identity arguments must be supplied by trusted middleware.
+  verifyForAuthenticatedTrainee({ requestId, authenticatedTraineeId, code }) {
+    if (!authenticatedTraineeId) throw new Error('Recovery request unavailable');
+    try { return this.verify({ requestId, traineeId: authenticatedTraineeId, code }); }
+    catch (error) {
+      if (/Request not found|ownership check failed/.test(error.message)) throw new Error('Recovery request unavailable');
+      throw error;
+    }
+  }
+  completeForAuthenticatedTrainee({ requestId, authenticatedTraineeId }) {
+    if (!authenticatedTraineeId) throw new Error('Recovery request unavailable');
+    try { return this.complete({ requestId, traineeId: authenticatedTraineeId }); }
+    catch (error) {
+      if (/Request not found|ownership check failed/.test(error.message)) throw new Error('Recovery request unavailable');
+      throw error;
+    }
+  }
+  cancelForAuthenticatedTrainee({ requestId, authenticatedTraineeId }) {
+    if (!authenticatedTraineeId) throw new Error('Recovery request unavailable');
+    try { return this.cancel({ requestId, traineeId: authenticatedTraineeId }); }
+    catch (error) {
+      if (/Request not found|ownership check failed/.test(error.message)) throw new Error('Recovery request unavailable');
+      throw error;
+    }
+  }
+  approveForAuthenticatedCoach({ requestId, authenticatedCoachId }) {
+    if (!authenticatedCoachId) throw new Error('Recovery request unavailable');
+    try { return this.approve({ requestId, authenticatedCoachId }); }
+    catch (error) {
+      if (/Request not found|ownership check failed/.test(error.message)) throw new Error('Recovery request unavailable');
+      throw error;
+    }
+  }
+  rejectForAuthenticatedCoach({ requestId, authenticatedCoachId }) {
+    if (!authenticatedCoachId) throw new Error('Recovery request unavailable');
+    try { return this.reject({ requestId, authenticatedCoachId }); }
+    catch (error) {
+      if (/Request not found|ownership check failed/.test(error.message)) throw new Error('Recovery request unavailable');
+      throw error;
+    }
+  }
   // Scoped lookup helpers model non-enumerating owner reads for tests.
   // Production handlers must still resolve actor identity from authenticated server context.
   getForCoach({ requestId, authenticatedCoachId }) {
