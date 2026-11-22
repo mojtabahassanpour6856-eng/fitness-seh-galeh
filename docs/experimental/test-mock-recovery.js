@@ -15,6 +15,28 @@ assert.equal(zeroClockSystem.request({traineeId:'zero',coachId:'coach',requestId
   'first request at clock zero must not be blocked by cooldown');
 assert.throws(()=>zeroClockSystem.request({traineeId:'zero',coachId:'coach',requestId:'zero2'}), /Cooldown/);
 
+
+const grantClock = { value: 5000000 };
+const grantSystem = new MockRecovery({secret,now:()=>grantClock.value,codeTTLms:24*60*60_000});
+grantSystem.request({traineeId:'grant-trainee',coachId:'grant-coach',requestId:'grant-expiry'});
+const grantIssued = grantSystem.approve({requestId:'grant-expiry',authenticatedCoachId:'grant-coach'});
+const grantCode = grantSystem.mockMessages.at(-1).body.match(/(\\d{4})$/)[1];
+assert.equal(grantSystem.verify({requestId:'grant-expiry',traineeId:'grant-trainee',code:grantCode}).state,STATES.VERIFIED);
+const grantRecord = grantSystem.requests.get('grant-expiry');
+assert.equal(grantRecord.grantExpiresAt, grantClock.value + 10*60_000, 'post-verification grant must be short-lived');
+grantClock.value += 10*60_000;
+assert.throws(()=>grantSystem.complete({requestId:'grant-expiry',traineeId:'grant-trainee'}),/expired/i);
+assert.equal(grantRecord.state,STATES.EXPIRED,'expired reset grant cannot complete');
+assert.equal(grantRecord.grantExpiresAt,null,'expired grant material must be cleared');
+
+const oneTime = sys();
+oneTime.request({traineeId:'once',coachId:'coach',requestId:'once-request'});
+oneTime.approve({requestId:'once-request',authenticatedCoachId:'coach'});
+const oneTimeCode = oneTime.mockMessages.at(-1).body.match(/(\\d{4})$/)[1];
+oneTime.verify({requestId:'once-request',traineeId:'once',code:oneTimeCode});
+assert.equal(oneTime.complete({requestId:'once-request',traineeId:'once'}).state,STATES.COMPLETED);
+assert.throws(()=>oneTime.complete({requestId:'once-request',traineeId:'once'}),/verified/i);
+
 const s = sys();
 assert.equal(s.request({traineeId:'t1',coachId:'c1',requestId:'r1'}).state, STATES.REQUESTED);
 const firstRequestSnapshot = s.requests.get('r1');
