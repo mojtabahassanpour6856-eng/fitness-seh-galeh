@@ -26,7 +26,7 @@ The mock supports trainee cancellation only while a request is still `REQUESTED`
 The fixture now marks delivery as `DELIVERY_PENDING` before invoking the synchronous mock delivery callback. A nested/re-entrant approval cannot proceed from that state, preventing duplicate mock code issuance in this narrow fixture. This is **not** a concurrency primitive for production: asynchronous workers, parallel server instances, and database races must be protected with transactional state transitions, row locks or compare-and-swap, and an idempotency key enforced by persistent storage.
 
 
-Delivery callback exceptions are also handled in the fixture: the request returns to `APPROVED`, records failure, clears code digest/expiry, and may retry within the configured attempt limit. The thrown exception text is not exposed in the mock result. A test covers retry after a callback throws.
+Delivery callback exceptions are treated as an ambiguous outcome in the fixture: the request enters `DELIVERY_UNKNOWN`, clears code digest/expiry, and is not blindly retried because the provider may have accepted the SMS before timing out. A definite `{ ok: false }` result returns the request to `APPROVED` for a bounded retry. The thrown exception text is not exposed in the mock result.
 
 
 ## Stale request expiry
@@ -76,3 +76,6 @@ Execution status: these test cases have been authored and committed, but a succe
 - `requestForAuthenticatedTrainee` is a test seam that takes an authenticated trainee identity from trusted server context and resolves the current coach through the injected resolver. Extra client-like fields such as traineeId, coachId, or destinationPhone are ignored.
 - This method is not an authentication mechanism. A real HTTP handler must pass only the identity established by verified server-side middleware; never forward a user-controlled identity field into this method.
 - Unknown/ineligible identities fail with a generic mock error. The fixture still does not implement an HTTP response layer, phone lookup, or account-enumeration timing controls.
+
+## Owner-scoped request reads
+The fixture exposes `getForCoach` and `getForTrainee` read helpers. Both require an actor ID and return the same generic `Recovery request unavailable` error for a missing request or a request owned by someone else. Returned snapshots intentionally omit internal identifiers, code digests, and delivery internals where not needed. These helpers are test seams only: production must derive actor identity from authenticated middleware and apply authorization in the database query itself (not fetch by ID and authorize later).
