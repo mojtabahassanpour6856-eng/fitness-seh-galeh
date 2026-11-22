@@ -218,6 +218,67 @@ async function main(){
  assert.equal((await asService("SELECT * FROM recovery_private.claim_recovery_outbox($1,30)",[workerA])).rowCount,0,
    'ambiguous provider result must never be automatically resent');
  console.log('PASS: ambiguous delivery outcome stays unknown and is never automatically retried');
+
+ // End-to-end exercise: real PostgreSQL RPCs + production Worker module + fake SMS provider.
+ const {webcrypto}=require('node:crypto');
+ const {encryptRecoveryDeliveryCode}=await import('./recovery-delivery-payload-crypto.mjs');
+ const {FakeRecoverySmsProvider,processOneRecoveryOutboxItem}=await import('./recovery-outbox-worker-mock.mjs');
+ const e2eOperation='60000000-0000-4000-8000-000000000777';
+ const e2eWorker='50000000-0000-4000-8000-000000000077';
+ const e2eKey=webcrypto.getRandomValues(new Uint8Array(32));
+ const e2eKeyBase64=Buffer.from(e2eKey).toString('base64');
+ const e2eKeys={d1:e2eKeyBase64};
+ const e2eEnvelope=await encryptRecoveryDeliveryCode({
+   code:'4826',key:e2eKeyBase64,keyVersion:'d1',
+   requestId:secondRequest,operationId:e2eOperation,cryptoImpl:webcrypto
+ });
+ await pool.query(`UPDATE public.trainee_password_recovery_requests
+   SET status='pending',delivery_outcome=NULL,delivery_operation_id=NULL,
+       token_hash=NULL,token_expires_at=NULL,reviewed_at=NULL,reviewed_by=NULL,
+       token_attempts=0,updated_at=now() WHERE id=$1`,[secondRequest]);
+ const e2eApproval=await asService(
+   'SELECT public.recovery_coach_review_encrypted($1,$2,$3,$4,$5,$6,$7,$8) AS result',
+   [secondRequest,coach,'approve','9'.repeat(64),new Date(Date.now()+8*60_000).toISOString(),'k1',e2eOperation,e2eEnvelope]
+ );
+ assert.equal(e2eApproval.rows[0].result.ok,true,JSON.stringify(e2eApproval.rows[0].result));
+ const e2eProvider=new FakeRecoverySmsProvider([{kind:'accepted',messageId:'e2e-provider-accepted'}]);
+ const e2eAdmin={
+   async rpc(name,args){
+     const calls={
+       recovery_outbox_claim:['SELECT * FROM public.recovery_outbox_claim($1,$2)',[args.p_worker_id,args.p_lease_seconds],'rows'],
+       recovery_outbox_heartbeat:['SELECT public.recovery_outbox_heartbeat($1,$2,$3,$4) AS ok',[args.p_outbox_id,args.p_worker_id,args.p_generation,args.p_lease_seconds],'scalar'],
+       recovery_outbox_begin_send:['SELECT public.recovery_outbox_begin_send($1,$2,$3) AS ok',[args.p_outbox_id,args.p_worker_id,args.p_generation],'scalar'],
+       recovery_outbox_fetch_payload:['SELECT * FROM public.recovery_outbox_fetch_payload($1,$2,$3)',[args.p_outbox_id,args.p_worker_id,args.p_generation],'rows'],
+       recovery_outbox_finish:['SELECT public.recovery_outbox_finish($1,$2,$3,$4,$5,$6) AS ok',[args.p_outbox_id,args.p_worker_id,args.p_generation,args.p_outcome,args.p_provider_message_id,args.p_safe_error_code],'scalar']
+     };
+     const call=calls[name];if(!call)return {data:null,error:new Error('RPC_NOT_ALLOWED')};
+     try{const result=await asService(call[0],call[1]);return {data:call[2]==='rows'?result.rows:result.rows[0]?.ok??false,error:null};}
+     catch(error){return {data:null,error};}
+   },
+   from(table){
+     if(!['trainee_password_recovery_requests','trainees'].includes(table))throw new Error('TABLE_NOT_ALLOWED');
+     let rowId;
+     return {select(){return this;},eq(column,value){if(column!=='id')throw new Error('FILTER_NOT_ALLOWED');rowId=value;return this;},
+       async maybeSingle(){try{const result=await pool.query('SELECT * FROM public.'+table+' WHERE id=$1',[rowId]);return {data:result.rows[0]||null,error:null};}
+       catch(error){return {data:null,error};}}};
+   }
+ };
+ const e2eResult=await processOneRecoveryOutboxItem({admin:e2eAdmin,workerId:e2eWorker,deliveryKeys:e2eKeys,cryptoImpl:webcrypto,provider:e2eProvider});
+ assert.deepEqual(e2eResult,{status:'sent'});
+ assert.equal(e2eProvider.calls.length,1);
+ assert.equal(e2eProvider.calls[0].code,'4826');
+ assert.equal(e2eProvider.calls[0].phone,'+989123450002');
+ assert.equal(e2eProvider.calls[0].idempotencyKey,'trainee-recovery:'+e2eOperation);
+ const e2eState=await pool.query(`SELECT r.delivery_outcome,o.status,r.delivery_payload AS request_payload,
+   o.delivery_payload AS outbox_payload FROM public.trainee_password_recovery_requests r
+   JOIN public.trainee_password_recovery_outbox o ON o.recovery_request_id=r.id
+   WHERE r.id=$1 AND o.delivery_operation_id=$2`,[secondRequest,e2eOperation]);
+ assert.equal(e2eState.rows.length,1);
+ assert.equal(e2eState.rows[0].delivery_outcome,'sent');
+ assert.equal(e2eState.rows[0].status,'sent');
+ assert.equal(e2eState.rows[0].request_payload,null);
+ assert.equal(e2eState.rows[0].outbox_payload,null);
+ console.log('PASS: end-to-end real PostgreSQL RPC + encrypted Worker + fake provider + terminal payload cleanup');
  console.log('All disposable PostgreSQL Outbox/Worker integration checks passed.');
 }
 main().catch(e=>{console.error(e);process.exitCode=1;}).finally(()=>pool.end());
