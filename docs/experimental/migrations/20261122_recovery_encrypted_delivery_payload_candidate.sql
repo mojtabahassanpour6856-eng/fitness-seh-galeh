@@ -227,8 +227,10 @@ GRANT EXECUTE ON FUNCTION public.recovery_coach_review_encrypted(uuid,uuid,text,
 REVOKE ALL ON FUNCTION recovery_private.clear_terminal_recovery_payload() FROM PUBLIC,anon,authenticated;
 REVOKE ALL ON FUNCTION recovery_private.enqueue_approved_recovery_delivery() FROM PUBLIC,anon,authenticated;
 REVOKE ALL ON public.trainee_password_recovery_requests FROM PUBLIC,anon,authenticated;
-GRANT SELECT,UPDATE ON public.trainee_password_recovery_requests TO service_role;
+REVOKE INSERT,UPDATE,DELETE,TRUNCATE,REFERENCES,TRIGGER ON public.trainee_password_recovery_requests FROM service_role;
+GRANT SELECT ON public.trainee_password_recovery_requests TO service_role;
 REVOKE ALL ON public.trainee_password_recovery_outbox FROM PUBLIC,anon,authenticated;
+REVOKE INSERT,UPDATE,DELETE,TRUNCATE,REFERENCES,TRIGGER ON public.trainee_password_recovery_outbox FROM service_role;
 GRANT SELECT ON public.trainee_password_recovery_outbox TO service_role;
 
 COMMIT;
