@@ -56,3 +56,20 @@ The experimental fixture now provides wrappers for coach approval/rejection and 
 - Production must enforce each transition with a database transaction and conditional update (compare-and-swap), for example update only where state is still the expected prior state and grant is unconsumed and unexpired; require exactly one affected row.
 - Password update and grant consumption must be coordinated through the auth provider's supported API and a durable transaction/outbox/reconciliation design. Do not mark the recovery completed before provider success. For ambiguous provider timeouts, reconcile provider state before deciding whether to retry.
 - Add integration tests that submit two simultaneous verification requests and two simultaneous password-update requests against isolated test accounts; exactly one request may consume the code/grant. Repeat across separate application instances.
+
+
+## Password-update operation state and ambiguous provider response
+
+The experimental state machine now distinguishes a verified grant from an actual password change:
+- `VERIFIED`: OTP accepted; short-lived reset grant exists; no password change is implied.
+- `RESET_PENDING`: a mock Auth call is in progress. Production must persist this transition before the provider call and make it conditional/atomic.
+- `RESET_UNKNOWN`: provider call may have committed but the response was lost. Block a second password update using the same or a new operation ID until authoritative reconciliation.
+- `COMPLETED`: allowed only after a confirmed provider success or authoritative reconciliation proving success.
+
+A definite Auth rejection must leave the recovery incomplete and grant unconsumed; any retry after confirmed non-application must use a new operation ID. A transport exception is not a definite rejection. Reconcile by a provider-supported idempotency key or durable operation reference. If status is pending/unavailable, remain fail-closed. Never mark completion based on a client-side timeout or optimistic UI response.
+
+The client should resume by fetching a trainee-owner-scoped operation status using the recovery request ID; it must not resubmit a password blindly. The operation ledger must survive browser close, process restart, and multiple server instances. Store only non-secret metadata (operation ID, state, timestamps, provider reference where safe, correlation ID); never store plaintext password or reset grant.
+
+## Session behavior after confirmed password change
+
+The mock deliberately sets `sessionsRevocationStatus: NOT_MODELED`. Actual session behavior remains unverified for this project. Before production, determine and test the exact Supabase Auth SDK/provider behavior for refresh-token revocation and already-issued access tokens. Revoke all refresh sessions using a supported provider mechanism where available; document the residual lifetime of access tokens that cannot be revoked. Do not tell trainees that all devices are logged out unless tests prove it. Invalidate every outstanding recovery grant/code/request after success and send a password-changed notification without secrets.
