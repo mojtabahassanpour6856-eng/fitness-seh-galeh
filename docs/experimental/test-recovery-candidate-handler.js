@@ -192,10 +192,10 @@ async function body(response) { return await response.json(); }
 {
   const f = fixture({ rate: false });
   const r = await f.handler(request({ action: 'request', phone: '09123456789' }));
-  assert.equal(r.status, 429);
+  assert.equal(r.status, 202, 'rate-limited requests keep the same generic public response');
   assert.equal(f.calls.some(x => x.name === 'recovery_submit_request'), false,
     'rate-limited requests must not create recovery rows');
-  console.log('PASS: exhausted request rate limit blocks submission before database request creation.');
+  console.log('PASS: exhausted request rate limit blocks submission without revealing eligibility or rate-limit state.');
 }
 {
   const f = fixture({
