@@ -49,6 +49,16 @@ class MockRecovery {
       if (existing.traineeId !== traineeId || existing.coachId !== coachId) throw new Error('Idempotency key conflict');
       return existing; // safe retry by the same identities only
     }
+    // Prevent parallel active recovery flows for the same trainee.
+    for (const active of this.requests.values()) {
+      if (active.traineeId !== traineeId) continue;
+      if (active.state === STATES.CODE_ISSUED && this.now() >= active.expiresAt) {
+        active.state = STATES.EXPIRED; active.codeDigest = null;
+      }
+      if ([STATES.REQUESTED, STATES.CODE_ISSUED, STATES.VERIFIED].includes(active.state)) {
+        throw new Error('Active recovery request exists');
+      }
+    }
     const last = this.lastRequestAt.get(traineeId) || 0;
     if (this.now() - last < this.cooldownMs) throw new Error('Cooldown active');
     const r = { requestId, traineeId, coachId, state: STATES.REQUESTED, createdAt: this.now(), attempts: 0 };
@@ -59,6 +69,8 @@ class MockRecovery {
   approve({ requestId, authenticatedCoachId }) {
     const r = this.#get(requestId);
     if (r.coachId !== authenticatedCoachId) throw new Error('Coach ownership check failed');
+    // Double-click/retry is idempotent: do not generate or deliver a second code.
+    if (r.state === STATES.CODE_ISSUED) return { requestId, state: r.state, expiresAt: r.expiresAt, delivery: 'MOCK_ONLY', idempotent: true };
     if (r.state !== STATES.REQUESTED) throw new Error('Invalid state');
     r.state = STATES.APPROVED; r.approvedAt = this.now();
     const code = generateCode();
@@ -74,6 +86,7 @@ class MockRecovery {
     if (r.state !== STATES.CODE_ISSUED) throw new Error('Invalid state');
     if (this.now() >= r.expiresAt) { r.state = STATES.EXPIRED; r.codeDigest = null; throw new Error('Code expired'); }
     if (r.attempts >= this.maxAttempts) throw new Error('Attempt limit reached');
+    if (typeof code !== 'string' || !/^\\d{4}$/.test(code)) { r.attempts++; if (r.attempts >= this.maxAttempts) r.state = STATES.EXPIRED; throw new Error('Invalid code'); }
     r.attempts++;
     const candidate = digestCode(code, this.secret);
     if (!safeEqualHex(candidate, r.codeDigest)) {
