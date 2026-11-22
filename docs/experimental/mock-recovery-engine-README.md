@@ -68,3 +68,6 @@ Execution status: these test cases have been authored and committed, but a succe
 - If the delivery adapter throws, its outcome is treated as UNKNOWN rather than definitely failed. The request enters DELIVERY_UNKNOWN, remains active, and cannot be blindly retried. This models the possibility that a provider accepted an SMS before the connection failed. Production must reconcile by provider idempotency key/status or an outbox before retrying.
 - The expiry sweep now expires unused VERIFIED reset grants and clears their grant expiry metadata, allowing a later recovery flow after the old grant has expired.
 - Tests cover ambiguous delivery fail-closed behavior, prevention of blind resend/parallel requests, and automatic expiry of unused grants.
+
+- The mock can receive an injected `getCurrentCoachId(traineeId)` resolver and rechecks the current assignment immediately before coach approval or rejection. A changed assignment marks the old request STALE_ASSIGNMENT, prevents SMS delivery, and requires a fresh request routed to the current coach.
+- This is only a test seam. The default fixture still accepts `coachId` as input for legacy test setup; production must never trust a client-supplied coach ID. Resolve the trainee and current coach from authenticated server-side identity and authoritative database relationships on every operation.
