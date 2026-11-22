@@ -39,3 +39,7 @@ A rolling-window limit is added per trainee (default: at most 3 requests in 24 h
 
 ## Privacy and account-enumeration gate
 See `recovery-privacy-acceptance.md` for the public response contract, server-side identity resolution, verified-phone delivery requirements, coach authorization, abuse controls, and production acceptance tests. The current mock has no account lookup or HTTP layer and cannot demonstrate resistance to account enumeration. Do not connect this fixture directly to a public endpoint.
+
+
+## Expiry enforcement on every pending-state action
+The fixture now calls `sweepExpired()` before trainee cancellation and coach rejection as well as request creation, coach approval, and code verification. This prevents a stale `REQUESTED` item from being cancelled/rejected as if it were still live after its TTL. Tests cover both terminal-action paths. The fixture still performs opportunistic cleanup only; production must check expiry atomically inside every state-changing transaction and run scheduled cleanup.
