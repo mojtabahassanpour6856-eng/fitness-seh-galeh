@@ -17,6 +17,8 @@ async function main(){
  // The real coach-review RPC must atomically create exactly one Outbox row.
  const reviewRequest='30000000-0000-4000-8000-000000000005';
  const coach='10000000-0000-4000-8000-000000000002';
+ const initialRequest=await pool.query('SELECT status,delivery_operation_id FROM public.trainee_password_recovery_requests WHERE id=$1',[reviewRequest]);
+ const initialDeliveryOperationId=initialRequest.rows[0].delivery_operation_id;
  const tx=await pool.connect();
  try {
    await tx.query('BEGIN');
@@ -32,7 +34,7 @@ async function main(){
  } finally { tx.release(); }
  let rolledBack=await pool.query('SELECT status,delivery_operation_id FROM public.trainee_password_recovery_requests WHERE id=$1',[reviewRequest]);
  assert.equal(rolledBack.rows[0].status,'pending');
- assert.equal(rolledBack.rows[0].delivery_operation_id,null);
+ assert.equal(rolledBack.rows[0].delivery_operation_id,initialDeliveryOperationId,'rollback must restore the exact pre-approval request state');
  let noOutbox=await pool.query('SELECT count(*)::int AS n FROM public.trainee_password_recovery_outbox WHERE recovery_request_id=$1',[reviewRequest]);
  assert.equal(noOutbox.rows[0].n,0,'rollback must remove the outbox insert with the approval');
  const approved=await asService(
