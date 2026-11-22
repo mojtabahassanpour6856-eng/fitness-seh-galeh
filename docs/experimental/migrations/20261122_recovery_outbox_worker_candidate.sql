@@ -101,8 +101,13 @@ BEGIN
   WHERE id=p_outbox_id AND status='processing' AND lock_owner=p_worker_id
     AND lease_generation=p_generation AND locked_until>now()
     AND send_started_at IS NULL;
-  RETURN FOUND;
-END $$;
+  IF NOT FOUND THEN
+    -- The request row was already updated in this transaction. Raising (not
+    -- returning false) forces the caller's transaction to roll back both rows.
+    RAISE EXCEPTION 'outbox send-start state changed';
+  END IF;
+  RETURN true;
+END $;
 
 CREATE OR REPLACE FUNCTION recovery_private.finish_recovery_outbox(
   p_outbox_id uuid,p_worker_id uuid,p_generation bigint,p_outcome text,
@@ -145,8 +150,12 @@ BEGIN
       lock_owner=NULL,locked_until=NULL,updated_at=now()
   WHERE id=p_outbox_id AND status='processing' AND lock_owner=p_worker_id
     AND lease_generation=p_generation;
-  RETURN FOUND;
-END $$;
+  IF NOT FOUND THEN
+    -- Do not allow a committed request transition without its Outbox transition.
+    RAISE EXCEPTION 'outbox completion state changed';
+  END IF;
+  RETURN true;
+END $;
 
 CREATE OR REPLACE FUNCTION recovery_private.reconcile_expired_recovery_outbox()
 RETURNS integer LANGUAGE plpgsql SECURITY DEFINER SET search_path = ''
