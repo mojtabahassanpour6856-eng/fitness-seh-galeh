@@ -144,7 +144,6 @@ DECLARE v_outbox_operation uuid;
 BEGIN
   IF NEW.status='approved' AND NEW.delivery_outcome='pending'
      AND NEW.delivery_operation_id IS NOT NULL
-     AND NEW.delivery_payload IS NOT NULL
      AND (TG_OP='INSERT' OR OLD.status IS DISTINCT FROM NEW.status
           OR OLD.delivery_outcome IS DISTINCT FROM NEW.delivery_outcome
           OR OLD.delivery_operation_id IS DISTINCT FROM NEW.delivery_operation_id) THEN
@@ -156,7 +155,7 @@ BEGIN
     SELECT o.delivery_operation_id INTO v_outbox_operation
     FROM public.trainee_password_recovery_outbox o
     WHERE o.recovery_request_id=NEW.id AND o.delivery_operation_id=NEW.delivery_operation_id
-      AND o.delivery_payload=NEW.delivery_payload;
+      AND o.delivery_payload IS NOT DISTINCT FROM NEW.delivery_payload;
     IF v_outbox_operation IS NULL THEN
       RAISE EXCEPTION 'encrypted recovery outbox enqueue invariant failed';
     END IF;
