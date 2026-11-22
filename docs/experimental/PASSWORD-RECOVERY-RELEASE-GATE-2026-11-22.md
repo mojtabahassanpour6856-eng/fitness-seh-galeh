@@ -292,3 +292,12 @@ Verified on disposable PostgreSQL 16:
 This is a meaningful candidate SQL milestone, not a real Supabase integration test. The Edge Function adapter, actual Test Auth password reset, actual HTTP/CORS/auth behavior, provider delivery, session invalidation, logging/monitoring and rollback remain outstanding. No Supabase project was changed and no live SMS/password reset occurred.
 
 **Next safe work:** author a separately named non-deployable Edge Function candidate in this experiment branch, wiring only to the candidate RPC contracts and leaving provider delivery disabled. Then add static/unit tests before any Test-project migration or deployment is considered.
+
+
+## PostgREST integration boundary: service-role-only public wrappers
+
+A custom private schema may not be callable through Supabase PostgREST unless exposed in project API settings. To avoid changing API settings or exposing `recovery_private`, the candidate migration now adds schema-qualified public wrapper RPCs, with EXECUTE revoked from PUBLIC/anon/authenticated and granted only to `service_role`. The wrappers use invoker security and call the underlying private functions.
+
+Workflow run `45049632108` completed **success**. Its PostgreSQL job exercised the wrappers under `SET ROLE service_role` and verified the restricted grants, along with all previous atomic request, delivery, reset, Auth ambiguity, migration preflight, and concurrency checks. This remains disposable PostgreSQL evidence only; actual PostgREST reachability and Edge Function integration are not yet tested.
+
+No Supabase API settings, schemas, functions, or live data were changed.
