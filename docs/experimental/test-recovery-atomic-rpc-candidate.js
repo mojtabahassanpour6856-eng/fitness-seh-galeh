@@ -1,5 +1,5 @@
 'use strict';
-// Disposable PostgreSQL CI only: includes migration preflight, delivery-state and Auth-state races.
+// Disposable PostgreSQL CI only: includes atomic request submission, migration preflight, delivery-state and Auth-state races.
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const { Pool } = require('pg');
