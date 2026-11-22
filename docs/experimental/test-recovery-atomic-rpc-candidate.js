@@ -87,13 +87,20 @@ async function main() {
     VALUES
       ('30000000-0000-4000-8000-000000000001','20000000-0000-4000-8000-000000000001','+989123456789','pending'),
       ('30000000-0000-4000-8000-000000000002','20000000-0000-4000-8000-000000000002','+989123456789','pending'),
-      ('30000000-0000-4000-8000-000000000003','20000000-0000-4000-8000-000000000003','+989123456789','pending'),
-      ('30000000-0000-4000-8000-000000000004','20000000-0000-4000-8000-000000000004','+989123456789','approved');
+      ('30000000-0000-4000-8000-000000000003','20000000-0000-4000-8000-000000000003','+989123456789','pending');
+    INSERT INTO public.trainee_password_recovery_requests(id,trainee_id,phone_normalized,status,token_hash,token_expires_at)
+    VALUES ('30000000-0000-4000-8000-000000000004','20000000-0000-4000-8000-000000000004','+989123456789','approved',repeat('a',64),now()+interval '15 minutes');
   `);
 
-  await pool.query('UPDATE public.trainee_password_recovery_requests SET token_hash=$1,token_expires_at=now()+interval \'15 minutes\' WHERE id=$2',[digest,req4]);
   const migration=fs.readFileSync('docs/experimental/migrations/20261122_recovery_atomic_rpc_candidate.sql','utf8');
-  await assert.rejects(pool.query(migration),e=>e && /Legacy approved\/processing requests/.test(e.message));
+  const preflightClient=await pool.connect();
+  try {
+    await preflightClient.query(migration);
+    assert.fail('candidate migration must refuse a legacy approved request');
+  } catch(e) {
+    assert.match(e.message,/Legacy approved\/processing requests/);
+    await preflightClient.query('ROLLBACK');
+  } finally { preflightClient.release(); }
   await pool.query('DELETE FROM public.trainee_password_recovery_requests WHERE id=$1',[req4]);
   await pool.query(migration);
   console.log('PASS: candidate migration refuses to silently strand legacy approved/processing requests');
