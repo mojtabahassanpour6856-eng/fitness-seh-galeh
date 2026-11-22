@@ -459,4 +459,72 @@ GRANT EXECUTE ON FUNCTION recovery_private.claim_recovery_reset(uuid,text,uuid) 
 GRANT EXECUTE ON FUNCTION recovery_private.begin_recovery_auth_update(uuid,uuid) TO service_role;
 GRANT EXECUTE ON FUNCTION recovery_private.finish_recovery_auth_update(uuid,uuid,text,text) TO service_role;
 
+
+-- PostgREST exposes public by default. Keep recovery_private unexposed and
+-- provide narrowly granted public RPC wrappers for the service-role Edge client.
+CREATE OR REPLACE FUNCTION public.recovery_submit_request(p_phone_normalized text)
+RETURNS boolean LANGUAGE sql SET search_path = ''
+AS $ SELECT recovery_private.submit_recovery_request(p_phone_normalized) $;
+
+CREATE OR REPLACE FUNCTION public.recovery_coach_review(
+  p_request_id uuid, p_actor_user_id uuid, p_decision text,
+  p_token_hash text, p_token_expires_at timestamptz, p_hmac_key_version text
+)
+RETURNS jsonb LANGUAGE sql SET search_path = ''
+AS $ SELECT recovery_private.coach_review_recovery_request(
+  p_request_id,p_actor_user_id,p_decision,p_token_hash,p_token_expires_at,p_hmac_key_version
+) $;
+
+CREATE OR REPLACE FUNCTION public.recovery_record_wrong_attempt(
+  p_request_id uuid,p_submitted_digest text,p_max_attempts integer
+)
+RETURNS jsonb LANGUAGE sql SET search_path = ''
+AS $ SELECT recovery_private.record_recovery_wrong_attempt(p_request_id,p_submitted_digest,p_max_attempts) $;
+
+CREATE OR REPLACE FUNCTION public.recovery_begin_delivery(p_request_id uuid,p_delivery_operation_id uuid)
+RETURNS boolean LANGUAGE sql SET search_path = ''
+AS $ SELECT recovery_private.begin_recovery_delivery(p_request_id,p_delivery_operation_id) $;
+
+CREATE OR REPLACE FUNCTION public.recovery_finish_delivery(
+  p_request_id uuid,p_delivery_operation_id uuid,p_outcome text
+)
+RETURNS boolean LANGUAGE sql SET search_path = ''
+AS $ SELECT recovery_private.finish_recovery_delivery(p_request_id,p_delivery_operation_id,p_outcome) $;
+
+CREATE OR REPLACE FUNCTION public.recovery_claim_reset(
+  p_request_id uuid,p_code_digest text,p_operation_id uuid
+)
+RETURNS jsonb LANGUAGE sql SET search_path = ''
+AS $ SELECT recovery_private.claim_recovery_reset(p_request_id,p_code_digest,p_operation_id) $;
+
+CREATE OR REPLACE FUNCTION public.recovery_begin_auth_update(p_request_id uuid,p_operation_id uuid)
+RETURNS boolean LANGUAGE sql SET search_path = ''
+AS $ SELECT recovery_private.begin_recovery_auth_update(p_request_id,p_operation_id) $;
+
+CREATE OR REPLACE FUNCTION public.recovery_finish_auth_update(
+  p_request_id uuid,p_operation_id uuid,p_outcome text,p_safe_error_code text
+)
+RETURNS boolean LANGUAGE sql SET search_path = ''
+AS $ SELECT recovery_private.finish_recovery_auth_update(
+  p_request_id,p_operation_id,p_outcome,p_safe_error_code
+) $;
+
+REVOKE ALL ON FUNCTION public.recovery_submit_request(text) FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION public.recovery_coach_review(uuid,uuid,text,text,timestamptz,text) FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION public.recovery_record_wrong_attempt(uuid,text,integer) FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION public.recovery_begin_delivery(uuid,uuid) FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION public.recovery_finish_delivery(uuid,uuid,text) FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION public.recovery_claim_reset(uuid,text,uuid) FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION public.recovery_begin_auth_update(uuid,uuid) FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION public.recovery_finish_auth_update(uuid,uuid,text,text) FROM PUBLIC, anon, authenticated;
+
+GRANT EXECUTE ON FUNCTION public.recovery_submit_request(text) TO service_role;
+GRANT EXECUTE ON FUNCTION public.recovery_coach_review(uuid,uuid,text,text,timestamptz,text) TO service_role;
+GRANT EXECUTE ON FUNCTION public.recovery_record_wrong_attempt(uuid,text,integer) TO service_role;
+GRANT EXECUTE ON FUNCTION public.recovery_begin_delivery(uuid,uuid) TO service_role;
+GRANT EXECUTE ON FUNCTION public.recovery_finish_delivery(uuid,uuid,text) TO service_role;
+GRANT EXECUTE ON FUNCTION public.recovery_claim_reset(uuid,text,uuid) TO service_role;
+GRANT EXECUTE ON FUNCTION public.recovery_begin_auth_update(uuid,uuid) TO service_role;
+GRANT EXECUTE ON FUNCTION public.recovery_finish_auth_update(uuid,uuid,text,text) TO service_role;
+
 COMMIT;
