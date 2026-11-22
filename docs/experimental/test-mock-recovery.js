@@ -481,4 +481,5 @@ assert.equal(approveOnce.mockMessages.length,deliveredCount,'duplicate approval 
 
 
 // An ambiguous delivery state cannot be approved again or generate another code.
-assert.equal(unknownDelivery.approve({requestId:'uy1',authenticatedCoachId:'uc'}).state,undefined);
+assert.throws(()=>unknownDelivery.approve({requestId:'uy1',authenticatedCoachId:'uc'}),/Invalid state/,
+  'ambiguous provider delivery must not be blindly retried');
