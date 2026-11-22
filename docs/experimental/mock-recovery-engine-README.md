@@ -17,3 +17,6 @@ The next gate is reviewing the implementation and fixing/expanding tests before 
 
 ## Pending-request cancellation
 The mock supports trainee cancellation only while a request is still `REQUESTED`. Ownership is checked against the trainee ID supplied to the fixture; in production this identity must come from the authenticated session, not client input. Cancellation does not send SMS and cannot cancel a code already issued. The fixture has no real delivery retry logic or provider acknowledgement.
+
+## Mock delivery failure and retry cap
+`approve()` accepts a simulated delivery callback. If it reports failure, no code digest is stored and state remains `APPROVED`, allowing a controlled retry. `maxDeliveryAttempts` defaults to 3 total attempts (initial delivery included). After the limit, another attempt throws and does not call the delivery callback. Successful delivery transitions to `CODE_ISSUED` and subsequent approvals are idempotent. This is only simulated behavior; production needs provider response handling, retry scheduling/backoff, delivery idempotency, and delivery-status callbacks where supported.
