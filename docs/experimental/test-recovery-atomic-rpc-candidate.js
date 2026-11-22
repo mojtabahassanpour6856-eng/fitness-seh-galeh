@@ -19,10 +19,12 @@ const trainee2='20000000-0000-4000-8000-000000000002';
 const trainee3='20000000-0000-4000-8000-000000000003';
 const trainee4='20000000-0000-4000-8000-000000000004';
 const trainee5='20000000-0000-4000-8000-000000000005';
+const trainee6='20000000-0000-4000-8000-000000000006';
 const req1='30000000-0000-4000-8000-000000000001';
 const req2='30000000-0000-4000-8000-000000000002';
 const req3='30000000-0000-4000-8000-000000000003';
 const req4='30000000-0000-4000-8000-000000000004';
+const req5='30000000-0000-4000-8000-000000000005';
 const digest='a'.repeat(64);
 const digest2='b'.repeat(64);
 
@@ -84,7 +86,8 @@ async function main() {
       ('20000000-0000-4000-8000-000000000002','10000000-0000-4000-8000-000000000001','10000000-0000-4000-8000-000000000003','active','+989123456789'),
       ('20000000-0000-4000-8000-000000000003','10000000-0000-4000-8000-000000000002','10000000-0000-4000-8000-000000000003','active','+989123456789'),
       ('20000000-0000-4000-8000-000000000004','10000000-0000-4000-8000-000000000002','10000000-0000-4000-8000-000000000003','active','+989123456789'),
-      ('20000000-0000-4000-8000-000000000005','10000000-0000-4000-8000-000000000002','10000000-0000-4000-8000-000000000003','active','+989123450000');
+      ('20000000-0000-4000-8000-000000000005','10000000-0000-4000-8000-000000000002','10000000-0000-4000-8000-000000000003','active','+989123450000'),
+       ('20000000-0000-4000-8000-000000000006','10000000-0000-4000-8000-000000000002','10000000-0000-4000-8000-000000000003','active','+989123450001');
     INSERT INTO public.trainee_password_recovery_requests(id,trainee_id,phone_normalized,status)
     VALUES
       ('30000000-0000-4000-8000-000000000001','20000000-0000-4000-8000-000000000001','+989123456789','pending'),
@@ -92,6 +95,8 @@ async function main() {
       ('30000000-0000-4000-8000-000000000003','20000000-0000-4000-8000-000000000003','+989123456789','pending');
     INSERT INTO public.trainee_password_recovery_requests(id,trainee_id,phone_normalized,status,token_hash,token_expires_at)
     VALUES ('30000000-0000-4000-8000-000000000004','20000000-0000-4000-8000-000000000004','+989123456789','approved',repeat('a',64),now()+interval '15 minutes');
+    INSERT INTO public.trainee_password_recovery_requests(id,trainee_id,phone_normalized,status)
+    VALUES ('30000000-0000-4000-8000-000000000005','20000000-0000-4000-8000-000000000006','+989123450001','pending');
   `);
 
   const migration=fs.readFileSync('docs/experimental/migrations/20261122_recovery_atomic_rpc_candidate.sql','utf8');
@@ -292,13 +297,13 @@ async function main() {
 
   // A provider-confirmed non-delivery safely invalidates that code and returns to coach review.
   r=await callAsService('SELECT public.recovery_coach_review($1,$2,$3,$4,$5,$6) AS result',
-    [req1,coach1,'approve',digest,new Date(Date.now()+15*60_000).toISOString(),'k1']);
+    [req5,coach2,'approve',digest,new Date(Date.now()+15*60_000).toISOString(),'k1']);
   assert.equal(r.rows[0].result.ok,true);
   const deliveryOp1=r.rows[0].result.delivery_operation_id;
-  await callAsService('SELECT public.recovery_begin_delivery($1,$2)',[req1,deliveryOp1]);
-  r=await callAsService('SELECT public.recovery_finish_delivery($1,$2,$3) AS changed',[req1,deliveryOp1,'confirmed_failure']);
+  await callAsService('SELECT public.recovery_begin_delivery($1,$2)',[req5,deliveryOp1]);
+  r=await callAsService('SELECT public.recovery_finish_delivery($1,$2,$3) AS changed',[req5,deliveryOp1,'confirmed_failure']);
   assert.equal(r.rows[0].changed,true);
-  state=await pool.query('SELECT status,token_hash,token_expires_at,delivery_outcome FROM public.trainee_password_recovery_requests WHERE id=$1',[req1]);
+  state=await pool.query('SELECT status,token_hash,token_expires_at,delivery_outcome FROM public.trainee_password_recovery_requests WHERE id=$1',[req5]);
   assert.deepEqual(state.rows[0],{status:'pending',token_hash:null,token_expires_at:null,delivery_outcome:'confirmed_failure'});
   console.log('PASS: confirmed delivery failure clears code and returns request to pending safely');
 
