@@ -105,5 +105,24 @@ export function assertRecoverySecrets(env) {
   if (!origins.length || origins.some(x => !/^https:\/\//.test(x))) {
     throw new Error('RECOVERY_ALLOWED_ORIGINS must contain explicit HTTPS origins');
   }
-  return Object.freeze({ hmacKeys: Object.freeze(hmacKeys), hmac: hmacKeys[keyVersion], keyVersion, origins });
+  let deliveryParsed;
+  try { deliveryParsed = JSON.parse(env?.RECOVERY_DELIVERY_KEYS ?? ''); }
+  catch { throw new Error('RECOVERY_DELIVERY_KEYS must be a valid JSON key map'); }
+  if (!deliveryParsed || typeof deliveryParsed !== 'object' || Array.isArray(deliveryParsed)) {
+    throw new Error('RECOVERY_DELIVERY_KEYS must be a JSON object');
+  }
+  const deliveryKeys = Object.create(null);
+  for (const [version, encoded] of Object.entries(deliveryParsed)) {
+    if (!/^[A-Za-z0-9_-]{1,32}$/.test(version) || typeof encoded !== 'string' ||
+        !/^(?:[A-Za-z0-9+/]{4}){10}[A-Za-z0-9+/]{3}=$/.test(encoded)) {
+      throw new Error('Every delivery key must be a versioned base64-encoded 32-byte key');
+    }
+    deliveryKeys[version] = encoded;
+  }
+  const deliveryKeyVersion = env?.RECOVERY_DELIVERY_KEY_VERSION;
+  if (!deliveryKeyVersion || !Object.hasOwn(deliveryKeys, deliveryKeyVersion)) {
+    throw new Error('RECOVERY_DELIVERY_KEY_VERSION must identify a configured delivery key');
+  }
+  return Object.freeze({ hmacKeys: Object.freeze(hmacKeys), hmac: hmacKeys[keyVersion],
+    keyVersion, origins, deliveryKeys: Object.freeze(deliveryKeys), deliveryKeyVersion });
 }
