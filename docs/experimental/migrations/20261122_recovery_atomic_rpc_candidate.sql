@@ -18,7 +18,7 @@ BEGIN
 END
 $$;
 
-DO $
+DO $guard$
 BEGIN
   IF EXISTS (
     SELECT 1 FROM public.trainee_password_recovery_requests
@@ -28,7 +28,7 @@ BEGIN
       'Legacy approved/processing requests need an explicit disposition before the candidate migration';
   END IF;
 END
-$;
+$guard$;
 
 ALTER TABLE public.trainee_password_recovery_requests
   ADD COLUMN IF NOT EXISTS operation_id uuid,
