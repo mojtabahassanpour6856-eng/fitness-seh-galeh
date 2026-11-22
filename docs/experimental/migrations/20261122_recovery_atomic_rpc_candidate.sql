@@ -515,7 +515,7 @@ GRANT EXECUTE ON FUNCTION recovery_private.finish_recovery_auth_update(uuid,uuid
 CREATE OR REPLACE FUNCTION public.consume_registration_rate_limit(
   p_key_hash text, p_window_seconds integer, p_max_requests integer
 )
-RETURNS boolean LANGUAGE sql SET search_path = ''
+RETURNS boolean LANGUAGE sql SECURITY DEFINER SET search_path = ''
 AS $wrap$ SELECT recovery_private.consume_recovery_request_rate_limit(p_key_hash,p_window_seconds,p_max_requests) $wrap$;
 
 CREATE OR REPLACE FUNCTION public.recovery_submit_request(p_phone_normalized text)
