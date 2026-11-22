@@ -96,6 +96,21 @@ await assert.rejects(
   /REAL_PROVIDER_DISABLED_IN_EXPERIMENT/
 );
 
+const badCipherAdmin=makeAdmin();
+const badCipherRpc=badCipherAdmin.rpc.bind(badCipherAdmin);
+badCipherAdmin.rpc=async(name,args)=>{
+  if(name==='recovery_outbox_fetch_payload'){
+    const result=await badCipherRpc(name,args);
+    result.data[0].delivery_payload={...result.data[0].delivery_payload,ct:'AAAAAAAAAAAAAAAAAAAAAAAAAAA='};
+    return result;
+  }
+  return badCipherRpc(name,args);
+};
+const badCipherProvider=new FakeRecoverySmsProvider();
+assert.deepEqual(await processOneRecoveryOutboxItem({admin:badCipherAdmin,workerId,deliveryKeys,cryptoImpl:webcrypto,provider:badCipherProvider}),{status:'unknown'});
+assert.equal(badCipherProvider.calls.length,0,'AES-GCM authentication failure must never call provider');
+assert.equal(badCipherAdmin.calls.at(-1).args.p_outcome,'unknown','decryption failure after send-start must become terminal unknown');
+
 const missingPayloadAdmin=makeAdmin({fetchPayload:false});
 const noPayloadProvider=new FakeRecoverySmsProvider();
 assert.deepEqual(await processOneRecoveryOutboxItem({admin:missingPayloadAdmin,workerId,deliveryKeys,cryptoImpl:webcrypto,provider:noPayloadProvider}),{status:'unknown'});
