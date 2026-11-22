@@ -143,3 +143,36 @@ Do not assume the database and Supabase Auth can share a transaction. An Auth ti
 ### Delivery provider decision
 
 The current Test function contains a direct Mediana request; the current Production function instead returns the plaintext code to the coach. Neither is acceptable as the candidate delivery contract. Keep delivery behind an injected provider interface. In automated tests, use a capture-only fake provider that records only synthetic test fixtures in isolated memory. Production delivery cannot be implemented until the user chooses an available provider and its delivery semantics (especially timeout/accepted-but-response-lost behavior) are verified.
+
+
+## Atomic RPC candidate drafted and exercised on disposable PostgreSQL (2026-11-22)
+
+Candidate SQL (documentation/experiment only):
+`docs/experimental/migrations/20261122_recovery_atomic_rpc_candidate.sql`
+
+Candidate test:
+`docs/experimental/test-recovery-atomic-rpc-candidate.js`
+
+The draft adds durable operation metadata (`operation_id`, `processing_started_at`, `auth_outcome`, `auth_attempted_at`, safe error code, and HMAC key version), extends active uniqueness to include `processing`, and creates server-only functions in a non-exposed `recovery_private` schema. Function execution is granted only to `service_role`; schema usage and function execution are revoked from `PUBLIC`, `anon`, and `authenticated`. All SECURITY DEFINER functions pin an empty search_path and schema-qualify relations.
+
+Tested behaviors on a disposable PostgreSQL 16 service:
+- a former coach cannot approve after a concurrent reassignment commits; the RPC locks the trainee row and evaluates the current assignment;
+- archived/inactive trainees are rejected;
+- coach RPC response is minimal (no phone/code/trainee details);
+- nine concurrent invalid-code attempts admit exactly five increments and expire/clear the token at the cap;
+- two concurrent correct-code claims have exactly one winner;
+- a processing request remains protected by the active-request unique index;
+- the Auth operation can transition from attempting to unknown and remains locked; only an explicit authoritative reconciliation outcome can return it to approved or completed;
+- confirmed completion consumes the code;
+- null/invalid transitions fail closed;
+- anon cannot use the private schema/functions; service_role can.
+
+Full experiment workflow run `45047881214` completed **success**. The job log confirms it checked out the latest candidate SQL commit `9745175f69d93e2eb2a113ee3250782c3f11fe70`, not merely the workflow-trigger commit.
+
+Evidence boundary:
+- This is a candidate SQL draft exercised against fixture tables on disposable PostgreSQL 16 only.
+- It has not been applied to Supabase Test or Production.
+- It does not yet implement the Edge Function adapter, real Supabase Auth calls, SMS delivery, or real HTTP authorization.
+- The operation ID is a durable marker, not proof of exactly-once semantics across Postgres and Auth. An unknown outcome remains locked until a separately verified authoritative reconciliation procedure is available.
+- Delivery needs its own durable idempotency/outcome design before coach approval can safely trigger a real provider.
+- No live project data or passwords were changed.
