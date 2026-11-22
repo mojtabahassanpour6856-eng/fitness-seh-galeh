@@ -8,6 +8,8 @@ on:
     paths:
       - 'docs/experimental/mock-recovery-engine.js'
       - 'docs/experimental/recovery-outbox-worker-model.js'
+      - 'docs/experimental/recovery-outbox-worker-mock.mjs'
+      - 'docs/experimental/test-recovery-outbox-worker-mock.mjs'
       - 'docs/experimental/test-recovery-outbox-worker-model.js'
       - 'docs/experimental/migrations/20261122_recovery_outbox_worker_candidate.sql'
       - 'docs/experimental/migrations/20261122_recovery_encrypted_delivery_payload_candidate.sql'
@@ -54,6 +56,8 @@ jobs:
         run: node docs/experimental/test-mock-recovery.js
       - name: Run fenced Outbox/Worker model tests (no provider or database)
         run: node docs/experimental/test-recovery-outbox-worker-model.js
+      - name: Run fake-provider-only encrypted Outbox worker tests
+        run: node docs/experimental/test-recovery-outbox-worker-mock.mjs
       - name: Run focused cryptographic boundary tests
         run: node docs/experimental/test-recovery-crypto.js
       - name: Verify live HTTP smoke harness cannot mutate recovery state
