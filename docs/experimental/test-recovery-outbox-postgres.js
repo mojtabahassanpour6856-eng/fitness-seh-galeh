@@ -17,8 +17,8 @@ async function main(){
  assert.equal(requests.rows.length,2,'requires two synthetic recovery request fixtures from preceding disposable CI job');
  const [reqA,reqB]=requests.rows.map(x=>x.id);
  const ids=['60000000-0000-4000-8000-000000000001','60000000-0000-4000-8000-000000000002'];
- await pool.query("INSERT INTO public.trainee_password_recovery_outbox(id,recovery_request_id,provider_idempotency_key) VALUES ($1,$2,$3),($4,$5,$6)",
- [ids[0],reqA,'recovery-outbox:'+ids[0],ids[1],reqB,'recovery-outbox:'+ids[1]]);
+ await pool.query("INSERT INTO public.trainee_password_recovery_outbox(id,recovery_request_id,provider_idempotency_key) VALUES ($1,$2,$3)",
+ [ids[0],reqA,'recovery-outbox:'+ids[0]]);
  // Two independent PostgreSQL sessions race to claim one pending row.
  const race=await Promise.all([workerA,workerB].map(w=>asService(
  "SELECT * FROM recovery_private.claim_recovery_outbox($1,30)",[w]
@@ -53,6 +53,9 @@ async function main(){
  const acl=await pool.query("SELECT has_function_privilege('anon','recovery_private.claim_recovery_outbox(uuid,integer)','EXECUTE') AS anon_claim, has_function_privilege('authenticated','recovery_private.finish_recovery_outbox(uuid,uuid,bigint,text,text,text)','EXECUTE') AS auth_finish, has_table_privilege('anon','public.trainee_password_recovery_outbox','SELECT') AS anon_read");
  assert.deepEqual(acl.rows[0],{anon_claim:false,auth_finish:false,anon_read:false});
  console.log('PASS: anonymous/authenticated roles cannot execute worker RPCs or read Outbox');
+ // Add a second independent pending item only after the first item has been fenced and reconciled.
+ await pool.query("INSERT INTO public.trainee_password_recovery_outbox(id,recovery_request_id,provider_idempotency_key) VALUES ($1,$2,$3)",
+ [ids[1],reqB,'recovery-outbox:'+ids[1]]);
  // Second synthetic item: heartbeat extends a live lease and accepted send finalizes once.
  const live=await asService("SELECT * FROM recovery_private.claim_recovery_outbox($1,30)",[workerA]);
  assert.equal(live.rowCount,1);
