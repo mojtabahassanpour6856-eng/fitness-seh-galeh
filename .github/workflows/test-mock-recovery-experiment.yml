@@ -46,8 +46,6 @@ jobs:
         run: node docs/experimental/test-recovery-authorization-abuse.js
       - name: Run candidate security primitive tests (isolated only)
         run: node docs/experimental/test-recovery-candidate-core.js
-      - name: Run atomic recovery RPC candidate tests (disposable PostgreSQL only)
-        run: node docs/experimental/test-recovery-atomic-rpc-candidate.js
 
   postgres-concurrency-tests:
     runs-on: ubuntu-latest
@@ -85,3 +83,11 @@ jobs:
           PGPASSWORD: postgres
           PGDATABASE: recovery_ci
         run: node docs/experimental/postgres-concurrency-test.js
+      - name: Run atomic recovery RPC candidate tests (disposable PostgreSQL only)
+        env:
+          PGHOST: 127.0.0.1
+          PGPORT: 5432
+          PGUSER: postgres
+          PGPASSWORD: postgres
+          PGDATABASE: recovery_ci
+        run: node docs/experimental/test-recovery-atomic-rpc-candidate.js
