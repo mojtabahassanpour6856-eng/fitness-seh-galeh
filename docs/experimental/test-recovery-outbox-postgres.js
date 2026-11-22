@@ -223,15 +223,145 @@ async function main(){
  const {webcrypto}=require('node:crypto');
  const {encryptRecoveryDeliveryCode}=await import('./recovery-delivery-payload-crypto.mjs');
  const {digestRecoveryCode}=await import('./recovery-candidate-core.mjs');
+ const {createRecoveryCandidateHandler}=await import('./recovery-candidate-handler.mjs');
  const {FakeRecoverySmsProvider,processOneRecoveryOutboxItem}=await import('./recovery-outbox-worker-mock.mjs');
  const e2eTrainee='20000000-0000-4000-8000-000000000078';
  const e2ePhone='+989123450003';
  await pool.query(`INSERT INTO public.trainees(id,coach_user_id,auth_user_id,approval_status,phone_normalized,archived_at)
    VALUES ($1,$2,'10000000-0000-4000-8000-000000000003','active',$3,NULL)`,[e2eTrainee,coach,e2ePhone]);
- const submitted=await asService('SELECT public.recovery_submit_request($1) AS ok',[e2ePhone]);
- assert.equal(submitted.rows[0].ok,true,'real request submission RPC must create the recovery request');
+ const e2eRequestIdQuery=await pool.query('SELECT id FROM public.trainee_password_recovery_requests WHERE trainee_id=$1 AND status=$2',[e2eTrainee,'pending']);
+ assert.equal(e2eRequestIdQuery.rows.length,0,'HTTP request starts without a pre-created recovery row');
+ const e2eOperation='60000000-0000-4000-8000-000000000777';
+ const e2eHmacKey='disposable-test-hmac-key-with-more-than-thirty-two-bytes';
+ const e2eCodeDigest=digestRecoveryCode('4826',e2eHmacKey,'k1');
+ const e2eWorker='50000000-0000-4000-8000-000000000077';
+ const e2eKey=webcrypto.getRandomValues(new Uint8Array(32));
+ const e2eKeyBase64=Buffer.from(e2eKey).toString('base64');
+ const e2eKeys={d1:e2eKeyBase64};
+ const e2eProvider=new FakeRecoverySmsProvider([{kind:'accepted',messageId:'e2e-provider-accepted'}]);
+ const e2eAdmin={
+   async rpc(name,args){
+     const calls={
+       consume_registration_rate_limit:['SELECT true AS ok',[],'scalar'],
+       recovery_submit_request:['SELECT public.recovery_submit_request($1) AS ok',[args.p_phone_normalized],'scalar'],
+       recovery_coach_review_encrypted:['SELECT public.recovery_coach_review_encrypted($1,$2,$3,$4,$5,$6,$7,$8) AS result',[args.p_request_id,args.p_actor_user_id,args.p_decision,args.p_token_hash,args.p_token_expires_at,args.p_hmac_key_version,args.p_delivery_operation_id,args.p_delivery_payload],'json'],
+       recovery_record_wrong_attempt:['SELECT public.recovery_record_wrong_attempt($1,$2,$3) AS result',[args.p_request_id,args.p_submitted_digest,args.p_max_attempts],'json'],
+       recovery_claim_reset:['SELECT public.recovery_claim_reset($1,$2,$3) AS result',[args.p_request_id,args.p_code_digest,args.p_operation_id],'json'],
+       recovery_begin_auth_update:['SELECT public.recovery_begin_auth_update($1,$2) AS ok',[args.p_request_id,args.p_operation_id],'scalar'],
+       recovery_finish_auth_update:['SELECT public.recovery_finish_auth_update($1,$2,$3,$4) AS ok',[args.p_request_id,args.p_operation_id,args.p_outcome,args.p_safe_error_code],'scalar'],
+       recovery_outbox_claim:['SELECT * FROM public.recovery_outbox_claim($1,$2)',[args.p_worker_id,args.p_lease_seconds],'rows'],
+       recovery_outbox_heartbeat:['SELECT public.recovery_outbox_heartbeat($1,$2,$3,$4) AS ok',[args.p_outbox_id,args.p_worker_id,args.p_generation,args.p_lease_seconds],'scalar'],
+       recovery_outbox_begin_send:['SELECT public.recovery_outbox_begin_send($1,$2,$3) AS ok',[args.p_outbox_id,args.p_worker_id,args.p_generation],'scalar'],
+       recovery_outbox_fetch_payload:['SELECT * FROM public.recovery_outbox_fetch_payload($1,$2,$3)',[args.p_outbox_id,args.p_worker_id,args.p_generation],'rows'],
+       recovery_outbox_finish:['SELECT public.recovery_outbox_finish($1,$2,$3,$4,$5,$6) AS ok',[args.p_outbox_id,args.p_worker_id,args.p_generation,args.p_outcome,args.p_provider_message_id,args.p_safe_error_code],'scalar']
+     };
+     const call=calls[name];if(!call)return {data:null,error:new Error('RPC_NOT_ALLOWED:'+name)};
+     try{const result=await asService(call[0],call[1]);return {data:call[2]==='rows'?result.rows:call[2]==='json'?result.rows[0]?.result:result.rows[0]?.ok??false,error:null};}
+     catch(error){return {data:null,error};}
+   },
+   from(table){
+     if(!['trainee_password_recovery_requests','trainees','profiles'].includes(table))throw new Error('TABLE_NOT_ALLOWED');
+     let filters=[];
+     const q={
+       select(){return q;},
+       eq(column,value){filters.push([column,value]);return q;},
+       in(){return q;},order(){return q;},limit(){return q;},
+       async maybeSingle(){
+         try{
+           if(table==='profiles')return {data:{role:'coach'},error:null};
+           const id=filters.find(x=>x[0]==='id')?.[1];
+           const result=await pool.query('SELECT * FROM public.'+table+' WHERE id=$1',[id]);
+           return {data:result.rows[0]||null,error:null};
+         }catch(error){return {data:null,error};}
+       },
+       then(resolve,reject){
+         try{
+           const clauses=filters.map((x,i)=>x[0]+'=
+ const reviewResponse=await httpHandler(post({action:'review',request_id:e2eRequestId,decision:'approve'}));
+ assert.equal(reviewResponse.status,202,'HTTP coach review must use the encrypted approval RPC');
+ const reviewBody=await reviewResponse.json();
+ assert.equal(reviewBody.delivery_status,'queued');
+ assert.match(reviewBody.message,/هنوز ارسال پیامک تأیید نشده است/);
+ const e2eAdmin={
+   async rpc(name,args){
+     const calls={
+       recovery_outbox_claim:['SELECT * FROM public.recovery_outbox_claim($1,$2)',[args.p_worker_id,args.p_lease_seconds],'rows'],
+       recovery_outbox_heartbeat:['SELECT public.recovery_outbox_heartbeat($1,$2,$3,$4) AS ok',[args.p_outbox_id,args.p_worker_id,args.p_generation,args.p_lease_seconds],'scalar'],
+       recovery_outbox_begin_send:['SELECT public.recovery_outbox_begin_send($1,$2,$3) AS ok',[args.p_outbox_id,args.p_worker_id,args.p_generation],'scalar'],
+       recovery_outbox_fetch_payload:['SELECT * FROM public.recovery_outbox_fetch_payload($1,$2,$3)',[args.p_outbox_id,args.p_worker_id,args.p_generation],'rows'],
+       recovery_outbox_finish:['SELECT public.recovery_outbox_finish($1,$2,$3,$4,$5,$6) AS ok',[args.p_outbox_id,args.p_worker_id,args.p_generation,args.p_outcome,args.p_provider_message_id,args.p_safe_error_code],'scalar']
+     };
+     const call=calls[name];if(!call)return {data:null,error:new Error('RPC_NOT_ALLOWED')};
+     try{const result=await asService(call[0],call[1]);return {data:call[2]==='rows'?result.rows:result.rows[0]?.ok??false,error:null};}
+     catch(error){return {data:null,error};}
+   },
+   from(table){
+     if(!['trainee_password_recovery_requests','trainees'].includes(table))throw new Error('TABLE_NOT_ALLOWED');
+     let rowId;
+     return {select(){return this;},eq(column,value){if(column!=='id')throw new Error('FILTER_NOT_ALLOWED');rowId=value;return this;},
+       async maybeSingle(){try{const result=await pool.query('SELECT * FROM public.'+table+' WHERE id=$1',[rowId]);return {data:result.rows[0]||null,error:null};}
+       catch(error){return {data:null,error};}}};
+   }
+ };
+ const e2eResult=await processOneRecoveryOutboxItem({admin:e2eAdmin,workerId:e2eWorker,deliveryKeys:e2eKeys,cryptoImpl:webcrypto,provider:e2eProvider});
+ assert.deepEqual(e2eResult,{status:'sent'});
+ assert.equal(e2eProvider.calls.length,1);
+ assert.equal(e2eProvider.calls[0].code,'4826');
+ assert.equal(e2eProvider.calls[0].phone,e2ePhone);
+ assert.equal(e2eProvider.calls[0].idempotencyKey,'trainee-recovery:'+e2eOperation);
+ const e2eState=await pool.query(`SELECT r.delivery_outcome,o.status,r.delivery_payload AS request_payload,
+   o.delivery_payload AS outbox_payload FROM public.trainee_password_recovery_requests r
+   JOIN public.trainee_password_recovery_outbox o ON o.recovery_request_id=r.id
+   WHERE r.id=$1 AND o.delivery_operation_id=$2`,[e2eRequestId,e2eOperation]);
+ assert.equal(e2eState.rows.length,1);
+ assert.equal(e2eState.rows[0].delivery_outcome,'sent');
+ assert.equal(e2eState.rows[0].status,'sent');
+ assert.equal(e2eState.rows[0].request_payload,null);
+ assert.equal(e2eState.rows[0].outbox_payload,null);
+ console.log('PASS: end-to-end real PostgreSQL request + coach approval + encrypted Worker + fake provider + terminal payload cleanup');
+ // Reset endpoint calls the real PostgreSQL claim/begin/finish RPCs; only Auth is mocked.
+ const resetResponse=await httpHandler(post({action:'reset',phone:e2ePhone,code:'4826',new_password:'MockOnlyPass!123'}));
+ assert.equal(resetResponse.status,200,'HTTP reset must confirm durable Auth completion');
+ assert.equal(authUpdates.length,1,'one mocked Auth update only');
+ assert.equal(authUpdates[0].id,'10000000-0000-4000-8000-000000000003');
+ assert.equal(authUpdates[0].payload.password,'MockOnlyPass!123');
+ const fullyCompleted=await pool.query(
+   'SELECT status,delivery_outcome,auth_outcome,token_hash,token_expires_at FROM public.trainee_password_recovery_requests WHERE id=$1',
+   [e2eRequestId]
+ );
+ assert.equal(fullyCompleted.rows[0].status,'completed');
+ assert.equal(fullyCompleted.rows[0].delivery_outcome,'sent');
+ assert.equal(fullyCompleted.rows[0].auth_outcome,'completed');
+ assert.equal(fullyCompleted.rows[0].token_hash,null);
+ assert.equal(fullyCompleted.rows[0].token_expires_at,null);
+ console.log('PASS: full disposable lifecycle from request submission through mock delivery, redemption, and mocked Auth completion');
+
+ console.log('All disposable PostgreSQL Outbox/Worker integration checks passed.');
+}
+main().catch(e=>{console.error(e);process.exitCode=1;}).finally(()=>pool.end());
++(i+1)).join(' AND ');
+           const values=filters.map(x=>x[1]);
+           return pool.query('SELECT id,phone_normalized,hmac_key_version FROM public.'+table+(clauses?' WHERE '+clauses:''),values).then(result=>resolve({data:result.rows,error:null}),reject);
+         }catch(error){return Promise.reject(error).then(resolve,reject);}
+       }
+     };
+     return q;
+   },
+   auth:{admin:{updateUserById:async (id,payload)=>{authUpdates.push({id,payload});return {data:{user:{id}},error:null};}}}
+ };
+ const authUpdates=[];
+ const httpHandler=createRecoveryCandidateHandler({
+   env:{RECOVERY_HMAC_KEYS:JSON.stringify({k1:e2eHmacKey}),RECOVERY_HMAC_KEY_VERSION:'k1',
+     RECOVERY_DELIVERY_KEYS:JSON.stringify(e2eKeys),RECOVERY_DELIVERY_KEY_VERSION:'d1',
+     RECOVERY_ALLOWED_ORIGINS:'https://app.example.test'},
+   admin:e2eAdmin,createUserClient:()=>({auth:{getUser:async()=>({data:{user:{id:coach}},error:null})}}),
+   now:()=>Date.now(),randomBytes:()=>Buffer.from([0x12,0xDA]),randomUUID:()=>e2eOperation,crypto:webcrypto
+ });
+ const post=body=>new Request('https://candidate.invalid',{method:'POST',headers:{origin:'https://app.example.test','content-type':'application/json',authorization:'Bearer mock-coach'},body:JSON.stringify(body)});
+ const requestResponse=await httpHandler(post({action:'request',phone:e2ePhone}));
+ assert.equal(requestResponse.status,202);
  const submittedRequest=await pool.query('SELECT id FROM public.trainee_password_recovery_requests WHERE trainee_id=$1 AND status=$2',[e2eTrainee,'pending']);
- assert.equal(submittedRequest.rows.length,1);
+ assert.equal(submittedRequest.rows.length,1,'HTTP request action must call the real PostgreSQL submit RPC');
  const e2eRequestId=submittedRequest.rows[0].id;
  const e2eOperation='60000000-0000-4000-8000-000000000777';
  const e2eHmacKey='disposable-test-hmac-key-with-more-than-thirty-two-bytes';
