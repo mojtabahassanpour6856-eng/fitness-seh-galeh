@@ -93,6 +93,14 @@ assert.equal(retryDelivery.delivery,'MOCK_ONLY');
 assert.equal(failDelivery.requests.get('rf').state,STATES.CODE_ISSUED);
 assert.equal(failDelivery.mockMessages.length,1);
 assert.equal(deliveries,1, 'failed attempt was simulated once');
+// Delivery retries are bounded: no unlimited resend loop.
+let retryCalls = 0;
+const retryLimited = new MockRecovery({secret,now:()=>now,cooldownMs:0,maxDeliveryAttempts:2,delivery:()=>{retryCalls++;return {ok:false};}});
+retryLimited.request({traineeId:'tl',coachId:'cl',requestId:'rl'});
+assert.equal(retryLimited.approve({requestId:'rl',authenticatedCoachId:'cl'}).delivery,'FAILED');
+assert.equal(retryLimited.approve({requestId:'rl',authenticatedCoachId:'cl'}).delivery,'FAILED');
+assert.throws(()=>retryLimited.approve({requestId:'rl',authenticatedCoachId:'cl'}),/attempt limit/i);
+assert.equal(retryCalls,2);
 const cooldown=sys();
 cooldown.request({traineeId:'t5',coachId:'c5',requestId:'r5'});
 assert.throws(()=>cooldown.request({traineeId:'t5',coachId:'c5',requestId:'r6'}),/Cooldown/);
