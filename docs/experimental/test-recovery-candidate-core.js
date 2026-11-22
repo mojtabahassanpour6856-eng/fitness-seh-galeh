@@ -51,11 +51,19 @@ import {
   assert.equal(classifyAuthUpdateOutcome({kind:'confirmed_no_change'}), 'auth_update_failed');
   assert.equal(classifyAuthUpdateOutcome({kind:'timeout'}), 'auth_update_unknown');
   assert.equal(classifyAuthUpdateOutcome({kind:'transport_error'}), 'auth_update_unknown');
-  assert.throws(() => assertRecoverySecrets({RECOVERY_HMAC_SECRET:'short',RECOVERY_HMAC_KEY_VERSION:'k1',RECOVERY_ALLOWED_ORIGINS:'https://app.test'}));
-  assert.deepEqual(assertRecoverySecrets({
-    RECOVERY_HMAC_SECRET:'candidate-test-secret-longer-than-32-bytes',
+  assert.throws(() => assertRecoverySecrets({RECOVERY_HMAC_KEYS:'not-json',RECOVERY_HMAC_KEY_VERSION:'k1',RECOVERY_ALLOWED_ORIGINS:'https://app.test'}));
+  assert.throws(() => assertRecoverySecrets({RECOVERY_HMAC_KEYS:JSON.stringify({k0:'short'}),RECOVERY_HMAC_KEY_VERSION:'k1',RECOVERY_ALLOWED_ORIGINS:'https://app.test'}));
+  assert.throws(() => assertRecoverySecrets({RECOVERY_HMAC_KEYS:JSON.stringify({k0:'candidate-test-secret-longer-than-32-bytes'}),RECOVERY_HMAC_KEY_VERSION:'k1',RECOVERY_ALLOWED_ORIGINS:'https://app.test'}));
+  const configured = assertRecoverySecrets({
+    RECOVERY_HMAC_KEYS: JSON.stringify({
+      k0:'older-candidate-test-secret-longer-than-32-bytes',
+      k1:'candidate-test-secret-longer-than-32-bytes'
+    }),
     RECOVERY_HMAC_KEY_VERSION:'k1',
     RECOVERY_ALLOWED_ORIGINS:'https://app.test,https://admin.app.test'
-  }).origins, ['https://app.test','https://admin.app.test']);
+  });
+  assert.equal(configured.hmac, 'candidate-test-secret-longer-than-32-bytes');
+  assert.equal(configured.hmacKeys.k0, 'older-candidate-test-secret-longer-than-32-bytes');
+  assert.deepEqual(configured.origins, ['https://app.test','https://admin.app.test']);
 }
 console.log('PASS: candidate crypto, phone normalization, generic response, CORS allowlist, and fail-closed Auth outcome primitives.');
