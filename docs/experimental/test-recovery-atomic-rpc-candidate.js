@@ -133,6 +133,11 @@ async function main() {
   assert.equal(r.rows[0].result.ok,true);
   assert.equal(r.rows[0].result.status,'approved');
   assert.equal(Object.hasOwn(r.rows[0].result,'phone_normalized'),false);
+  const deliveryOp2=r.rows[0].result.delivery_operation_id;
+  r=await callAsService('SELECT recovery_private.begin_recovery_delivery($1,$2) AS started',[req2,deliveryOp2]);
+  assert.equal(r.rows[0].started,true);
+  r=await callAsService('SELECT recovery_private.finish_recovery_delivery($1,$2,$3) AS changed',[req2,deliveryOp2,'sent']);
+  assert.equal(r.rows[0].changed,true);
 
   const attempts=await Promise.all(Array.from({length:9},()=>callAsService(
     'SELECT recovery_private.record_recovery_wrong_attempt($1,$2,5) AS result',[req2,digest2]
@@ -151,6 +156,17 @@ async function main() {
     [req3,coach2,'approve',digest,new Date(Date.now()+15*60_000).toISOString(),'k1']
   );
   assert.equal(r.rows[0].result.ok,true);
+  const deliveryOp3=r.rows[0].result.delivery_operation_id;
+  r=await callAsService('SELECT recovery_private.begin_recovery_delivery($1,$2) AS started',[req3,deliveryOp3]);
+  assert.equal(r.rows[0].started,true);
+  r=await callAsService('SELECT recovery_private.begin_recovery_delivery($1,$2) AS started',[req3,deliveryOp3]);
+  assert.equal(r.rows[0].started,false);
+  r=await callAsService('SELECT recovery_private.finish_recovery_delivery($1,$2,$3) AS changed',[req3,deliveryOp3,'unknown']);
+  assert.equal(r.rows[0].changed,true);
+  let blocked=await callAsService('SELECT recovery_private.claim_recovery_reset($1,$2,$3) AS result',[req3,digest,'40000000-0000-4000-8000-000000000009']);
+  assert.equal(blocked.rows[0].result.claimed,false,'unknown SMS delivery must not permit code redemption');
+  r=await callAsService('SELECT recovery_private.finish_recovery_delivery($1,$2,$3) AS changed',[req3,deliveryOp3,'sent']);
+  assert.equal(r.rows[0].changed,true,'authoritative delivery reconciliation may mark sent');
   const opA='40000000-0000-4000-8000-000000000001';
   const opB='40000000-0000-4000-8000-000000000002';
   const claims=await Promise.all([opA,opB].map(op=>callAsService(
@@ -164,6 +180,7 @@ async function main() {
       VALUES ('30000000-0000-4000-8000-000000000004',$1,'+989123456789','pending')`,[trainee3]),
     e=>e && e.code==='23505'
   );
+  console.log('PASS: delivery is single-attempt; unknown delivery blocks redemption until authoritative sent reconciliation');
   console.log('PASS: one reset claim wins; processing remains covered by the active-request unique index');
 
   r=await callAsService(
@@ -204,6 +221,18 @@ async function main() {
   state=await pool.query('SELECT status,token_hash,token_expires_at,auth_outcome FROM public.trainee_password_recovery_requests WHERE id=$1',[req3]);
   assert.deepEqual(state.rows[0],{status:'completed',token_hash:null,token_expires_at:null,auth_outcome:'completed'});
   console.log('PASS: Auth ambiguity remains locked; authoritative no-change can reopen; confirmed success consumes code');
+
+  // A provider-confirmed non-delivery safely invalidates that code and returns to coach review.
+  r=await callAsService('SELECT recovery_private.coach_review_recovery_request($1,$2,$3,$4,$5,$6) AS result',
+    [req1,coach1,'approve',digest,new Date(Date.now()+15*60_000).toISOString(),'k1']);
+  assert.equal(r.rows[0].result.ok,true);
+  const deliveryOp1=r.rows[0].result.delivery_operation_id;
+  await callAsService('SELECT recovery_private.begin_recovery_delivery($1,$2)',[req1,deliveryOp1]);
+  r=await callAsService('SELECT recovery_private.finish_recovery_delivery($1,$2,$3) AS changed',[req1,deliveryOp1,'confirmed_failure']);
+  assert.equal(r.rows[0].changed,true);
+  state=await pool.query('SELECT status,token_hash,token_expires_at,delivery_outcome FROM public.trainee_password_recovery_requests WHERE id=$1',[req1]);
+  assert.deepEqual(state.rows[0],{status:'pending',token_hash:null,token_expires_at:null,delivery_outcome:'confirmed_failure'});
+  console.log('PASS: confirmed delivery failure clears code and returns request to pending safely');
 
   // Null decisions and invalid Auth outcomes must not silently fall through.
   const nullDecision=await callAsService(
