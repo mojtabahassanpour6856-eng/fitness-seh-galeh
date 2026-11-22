@@ -101,6 +101,18 @@ assert.equal(retryLimited.approve({requestId:'rl',authenticatedCoachId:'cl'}).de
 assert.equal(retryLimited.approve({requestId:'rl',authenticatedCoachId:'cl'}).delivery,'FAILED');
 assert.throws(()=>retryLimited.approve({requestId:'rl',authenticatedCoachId:'cl'}),/attempt limit/i);
 assert.equal(retryCalls,2);
+// Re-entrant approval during delivery is blocked by DELIVERY_PENDING.
+let nestedApprovalError = '';
+let reentrantSystem;
+reentrantSystem = new MockRecovery({secret,now:()=>now,cooldownMs:0,delivery:()=>{
+  try { reentrantSystem.approve({requestId:'rr',authenticatedCoachId:'cr'}); }
+  catch(e) { nestedApprovalError = e.message; }
+  return {ok:true};
+}});
+reentrantSystem.request({traineeId:'tr',coachId:'cr',requestId:'rr'});
+assert.equal(reentrantSystem.approve({requestId:'rr',authenticatedCoachId:'cr'}).state,STATES.CODE_ISSUED);
+assert.match(nestedApprovalError,/Invalid state/);
+assert.equal(reentrantSystem.mockMessages.length,1);
 const cooldown=sys();
 cooldown.request({traineeId:'t5',coachId:'c5',requestId:'r5'});
 assert.throws(()=>cooldown.request({traineeId:'t5',coachId:'c5',requestId:'r6'}),/Cooldown/);
