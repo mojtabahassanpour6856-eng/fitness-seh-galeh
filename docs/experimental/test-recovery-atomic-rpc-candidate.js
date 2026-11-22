@@ -15,6 +15,8 @@ const pool = new Pool({
 const coach1='10000000-0000-4000-8000-000000000001';
 const coach2='10000000-0000-4000-8000-000000000002';
 const trainee='20000000-0000-4000-8000-000000000001';
+const trainee2='20000000-0000-4000-8000-000000000002';
+const trainee3='20000000-0000-4000-8000-000000000003';
 const req1='30000000-0000-4000-8000-000000000001';
 const req2='30000000-0000-4000-8000-000000000002';
 const req3='30000000-0000-4000-8000-000000000003';
@@ -74,15 +76,15 @@ async function main() {
       ('10000000-0000-4000-8000-000000000002','coach'),
       ('10000000-0000-4000-8000-000000000003','trainee');
     INSERT INTO public.trainees(id,coach_user_id,auth_user_id,approval_status,phone_normalized)
-    VALUES ('20000000-0000-4000-8000-000000000001',
-      '10000000-0000-4000-8000-000000000001',
-      '10000000-0000-4000-8000-000000000003',
-      'active','+989123456789');
+    VALUES
+      ('20000000-0000-4000-8000-000000000001','10000000-0000-4000-8000-000000000001','10000000-0000-4000-8000-000000000003','active','+989123456789'),
+      ('20000000-0000-4000-8000-000000000002','10000000-0000-4000-8000-000000000001','10000000-0000-4000-8000-000000000003','active','+989123456789'),
+      ('20000000-0000-4000-8000-000000000003','10000000-0000-4000-8000-000000000002','10000000-0000-4000-8000-000000000003','active','+989123456789');
     INSERT INTO public.trainee_password_recovery_requests(id,trainee_id,phone_normalized,status)
     VALUES
       ('30000000-0000-4000-8000-000000000001','20000000-0000-4000-8000-000000000001','+989123456789','pending'),
-      ('30000000-0000-4000-8000-000000000002','20000000-0000-4000-8000-000000000001','+989123456789','pending'),
-      ('30000000-0000-4000-8000-000000000003','20000000-0000-4000-8000-000000000001','+989123456789','pending');
+      ('30000000-0000-4000-8000-000000000002','20000000-0000-4000-8000-000000000002','+989123456789','pending'),
+      ('30000000-0000-4000-8000-000000000003','20000000-0000-4000-8000-000000000003','+989123456789','pending');
   `);
 
   const migration=fs.readFileSync('docs/experimental/migrations/20261122_recovery_atomic_rpc_candidate.sql','utf8');
@@ -111,7 +113,7 @@ async function main() {
   const reassign=await pool.connect();
   try {
     await reassign.query('BEGIN');
-    await reassign.query('UPDATE public.trainees SET coach_user_id=$1 WHERE id=$2',[coach2,trainee]);
+    await reassign.query('UPDATE public.trainees SET coach_user_id=$1 WHERE id=$2',[coach2,trainee2]);
     const pending=callAsService(
       'SELECT recovery_private.coach_review_recovery_request($1,$2,$3,$4,$5,$6) AS result',
       [req2,coach1,'approve',digest,new Date(Date.now()+15*60_000).toISOString(),'k1']
@@ -159,7 +161,7 @@ async function main() {
   assert.equal(winner.auth_user_id,'10000000-0000-4000-8000-000000000003');
   await assert.rejects(
     pool.query(`INSERT INTO public.trainee_password_recovery_requests(id,trainee_id,phone_normalized,status)
-      VALUES ('30000000-0000-4000-8000-000000000004',$1,'+989123456789','pending')`,[trainee]),
+      VALUES ('30000000-0000-4000-8000-000000000004',$1,'+989123456789','pending')`,[trainee3]),
     e=>e && e.code==='23505'
   );
   console.log('PASS: one reset claim wins; processing remains covered by the active-request unique index');
@@ -206,7 +208,7 @@ async function main() {
   // Null decisions and invalid Auth outcomes must not silently fall through.
   const nullDecision=await callAsService(
     'SELECT recovery_private.coach_review_recovery_request($1,$2,$3,$4,$5,$6) AS result',
-    [req1,coach2,null,digest,new Date(Date.now()+15*60_000).toISOString(),'k1']
+    [req1,coach1,null,digest,new Date(Date.now()+15*60_000).toISOString(),'k1']
   );
   assert.equal(nullDecision.rows[0].result.ok,false);
   await assert.rejects(callAsService(
