@@ -176,3 +176,19 @@ Evidence boundary:
 - The operation ID is a durable marker, not proof of exactly-once semantics across Postgres and Auth. An unknown outcome remains locked until a separately verified authoritative reconciliation procedure is available.
 - Delivery needs its own durable idempotency/outcome design before coach approval can safely trigger a real provider.
 - No live project data or passwords were changed.
+
+
+## Delivery idempotency and legacy-row migration guard (2026-11-22)
+
+The disposable PostgreSQL candidate now also models SMS delivery separately from code approval:
+- approval creates a unique `delivery_operation_id` and sets `delivery_outcome='pending'`;
+- `begin_recovery_delivery` allows one provider attempt for that operation;
+- confirmed provider acceptance records `sent`;
+- confirmed non-delivery clears the code and returns the request to `pending`;
+- timeout/uncertain provider result records `unknown`; the code cannot be redeemed while delivery is unknown;
+- only authoritative reconciliation can change unknown delivery to sent or confirmed failure;
+- `claim_recovery_reset` requires `delivery_outcome='sent'`.
+
+The candidate migration now refuses to run if legacy rows are already `approved` or `processing`. This is intentional: their delivery/Auth outcomes cannot be reconstructed from the current schema. A live migration must first receive an explicit, reviewed disposition for each such row; it must not silently strand or reopen existing requests.
+
+The latest disposable PostgreSQL test run also proves the preflight guard, one-attempt delivery, unknown-delivery redemption lockout, confirmed-failure reset, and authoritative delivery reconciliation. The provider itself is still not integrated; no live SMS has been sent.
