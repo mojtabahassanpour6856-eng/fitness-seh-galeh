@@ -74,7 +74,7 @@ DECLARE
   v_approval_status text;
   v_phone text;
 BEGIN
-  IF p_decision NOT IN ('approve','reject') THEN
+  IF p_decision IS NULL OR p_decision NOT IN ('approve','reject') THEN
     RETURN jsonb_build_object('ok', false, 'reason', 'invalid_decision');
   END IF;
 
@@ -282,7 +282,7 @@ SECURITY DEFINER
 SET search_path = ''
 AS $$
 BEGIN
-  IF p_outcome NOT IN ('completed','confirmed_no_change','unknown') THEN
+  IF p_outcome IS NULL OR p_outcome NOT IN ('completed','confirmed_no_change','unknown') THEN
     RAISE EXCEPTION 'Invalid Auth outcome';
   END IF;
   IF p_safe_error_code IS NOT NULL AND
@@ -304,7 +304,7 @@ BEGIN
       updated_at = now()
   WHERE id = p_request_id AND status = 'processing'
     AND operation_id = p_operation_id
-    AND auth_outcome = 'attempting';
+    AND auth_outcome IN ('attempting','unknown');
 
   RETURN FOUND;
 END;
