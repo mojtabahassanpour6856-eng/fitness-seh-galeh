@@ -59,6 +59,21 @@ jobs:
       - name: Verify handler and candidate migration contract alignment
         run: node docs/experimental/test-recovery-handler-sql-contract.js
 
+  deno-edge-candidate-check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout isolated experiment branch
+        uses: actions/checkout@v4
+        with:
+          ref: experiment/trainee-password-recovery-mock-20261122
+      - name: Set up Deno
+        uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+      - name: Type-check non-deployable Edge adapter candidate
+        run: deno check docs/experimental/trainee-password-recovery-edge-candidate.ts
+
   postgres-concurrency-tests:
     runs-on: ubuntu-latest
     timeout-minutes: 5
