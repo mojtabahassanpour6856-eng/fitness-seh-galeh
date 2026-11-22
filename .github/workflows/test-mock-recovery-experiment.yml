@@ -9,6 +9,8 @@ on:
       - 'docs/experimental/mock-recovery-engine.js'
       - 'docs/experimental/recovery-outbox-worker-model.js'
       - 'docs/experimental/test-recovery-outbox-worker-model.js'
+      - 'docs/experimental/migrations/20261122_recovery_outbox_worker_candidate.sql'
+      - 'docs/experimental/test-recovery-outbox-postgres.js'
       - 'docs/experimental/test-mock-recovery.js'
       - 'docs/experimental/test-recovery-crypto.js'
       - 'docs/experimental/test-recovery-http-smoke.js'
@@ -123,3 +125,11 @@ jobs:
           PGPASSWORD: postgres
           PGDATABASE: recovery_ci
         run: node docs/experimental/test-recovery-atomic-rpc-candidate.js
+      - name: Run fenced Outbox/Worker PostgreSQL integration tests (disposable only)
+        env:
+          PGHOST: 127.0.0.1
+          PGPORT: 5432
+          PGUSER: postgres
+          PGPASSWORD: postgres
+          PGDATABASE: recovery_ci
+        run: node docs/experimental/test-recovery-outbox-postgres.js
