@@ -60,3 +60,7 @@ The fixture now treats `APPROVED` and `DELIVERY_PENDING` as active states when p
 - Tests cover the zero-clock cooldown boundary and detached response behavior.
 
 Execution status: these test cases have been authored and committed, but a successful GitHub Actions run has not yet been observed. Do not treat the mock suite as passing until a run log confirms it.
+
+- Successful OTP verification now creates a mock-only, one-time reset grant with a maximum 10-minute lifetime (or the shorter configured code TTL).
+- Completion checks grant expiry, consumes it once, and clears its expiry metadata. This models the security boundary; production must issue and atomically consume a server-side grant bound to the authenticated trainee and recovery request.
+- Tests cover grant expiration, cleanup, successful one-time completion, and replay rejection.
