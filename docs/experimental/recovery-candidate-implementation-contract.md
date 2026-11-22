@@ -262,3 +262,15 @@ This is dependency-injected and disposable-database evidence only. It does not p
 A further handler edge case is now guarded: if a provider reports acceptance but the database cannot durably record `delivery_outcome='sent'`, the handler does not report successful delivery and does not retry the provider. The request remains in its non-redeemable locked delivery state for reconciliation. A focused injected test covers this exact outcome.
 
 Workflow run `45050432795` completed **success** on commit `3f36873cb316b8d09d790b2c62133716f1160eb2`; both the handler/mock suite and disposable PostgreSQL suite passed. This is isolated test evidence only.
+
+
+## Handler-to-SQL alignment and Deno type-check (2026-11-22)
+
+Added a static contract test that checks all eight public RPC wrapper names used by the handler exist in the candidate migration, have explicit service_role grants, and that the required migration-added columns and referenced coach/trainee fields are present. Added a Deno 2 type-check job for the isolated Edge adapter.
+
+Workflow run `45050755303` completed **success** on commit `5b40c5c46bcf41e38fa573fddf0edeca11267f1e`. All three jobs passed:
+- Mock/handler/security/static SQL contract suite.
+- Disposable PostgreSQL concurrency and atomic RPC candidate suite.
+- Deno type-check of the non-deployable Edge adapter.
+
+This verifies source-level compatibility and compilation under Deno 2, not live Supabase deployment or PostgREST runtime behavior.
