@@ -67,3 +67,10 @@ No Production changes, no Test schema writes, no Edge Function deployment, no pa
 
 ## Interpretation
 The Test project's global security warnings must be triaged separately and not "fixed" wholesale as part of password recovery, because unrelated policy changes could affect existing app functionality. Leaked-password protection is a worthwhile Auth hardening item, but enabling it is a project setting change and has not been performed.
+
+
+## Focused cryptographic regression tests added (2026-11-22)
+- Added `docs/experimental/test-recovery-crypto.js` to exercise the 16-bit rejection-sampling boundary (reject 60000 and 65535; accept 59999), preservation of leading zeroes, HMAC-SHA-256 key separation, and malformed digest/short-secret rejection.
+- Updated the experiment workflow to run this focused suite alongside the existing mock and disposable PostgreSQL jobs.
+- The files were committed to the experiment branch and read back for verification. At the time of this report update, no workflow run or commit status for the latest commit was returned by the GitHub connector; therefore this new suite is **authored but not yet CI-verified**.
+- These are cryptographic helper tests only. They do not establish production secret configuration, real Edge Function behavior, Auth outcome reconciliation, HTTP privacy, or provider delivery.
