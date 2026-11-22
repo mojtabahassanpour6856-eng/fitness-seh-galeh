@@ -55,21 +55,10 @@ async function main(){
  assert.equal((await pool.query('SELECT count(*)::int AS n FROM public.trainee_password_recovery_outbox WHERE recovery_request_id=$1',[reviewRequest])).rows[0].n,1);
  console.log('PASS: coach approval atomically enqueues one Outbox row; rollback and duplicate approval are safe');
 
- const secondRequest='30000000-0000-4000-8000-000000000006';
- await pool.query(`INSERT INTO public.trainees(id,coach_user_id,auth_user_id,approval_status,phone_normalized)
-   VALUES ('20000000-0000-4000-8000-000000000007',$1,'10000000-0000-4000-8000-000000000003','active','+989123450002')`,[coach]);
- await pool.query(`INSERT INTO public.trainee_password_recovery_requests(id,trainee_id,phone_normalized,status)
-   VALUES ($1,'20000000-0000-4000-8000-000000000007','+989123450002','pending')`,[secondRequest]);
- const secondApproval=await asService(
-   'SELECT public.recovery_coach_review($1,$2,$3,$4,$5,$6) AS result',
-   [secondRequest,coach,'approve','d'.repeat(64),new Date(Date.now()+10*60_000).toISOString(),'k1']
- );
- assert.equal(secondApproval.rows[0].result.ok,true);
- const requests=await pool.query("SELECT id FROM public.trainee_password_recovery_outbox WHERE recovery_request_id=ANY($1::uuid[]) ORDER BY created_at",
- [[reviewRequest,secondRequest]]);
- assert.equal(requests.rows.length,2,'two approved synthetic requests must each create an Outbox row');
- const reqA=reviewRequest, reqB=secondRequest;
- const ids=requests.rows.map(x=>x.id);
+ const reqA=reviewRequest;
+ const firstOutbox=await pool.query('SELECT id FROM public.trainee_password_recovery_outbox WHERE recovery_request_id=$1',[reqA]);
+ assert.equal(firstOutbox.rows.length,1);
+ const ids=[firstOutbox.rows[0].id];
  // Two independent PostgreSQL sessions race to claim one pending row.
  const race=await Promise.all([workerA,workerB].map(w=>asService(
  "SELECT * FROM recovery_private.claim_recovery_outbox($1,30)",[w]
@@ -100,6 +89,21 @@ async function main(){
  assert.equal(row.rows[0].attempt_count,1);
  assert.equal(await asService("SELECT recovery_private.finish_recovery_outbox($1,$2,$3,'sent','late',NULL) AS ok",[lease.outbox_id,workerB,newer.lease_generation]).then(r=>r.rows[0].ok),false);
  console.log('PASS: expired lease after durable send-start becomes unknown; no second claim or stale finalization');
+ // Create the second approved request only now, so the concurrent claim race above
+ // has exactly one eligible Outbox row (two workers competing for that same row).
+ const secondRequest='30000000-0000-4000-8000-000000000006';
+ await pool.query(`INSERT INTO public.trainees(id,coach_user_id,auth_user_id,approval_status,phone_normalized)
+   VALUES ('20000000-0000-4000-8000-000000000007',$1,'10000000-0000-4000-8000-000000000003','active','+989123450002')`,[coach]);
+ await pool.query(`INSERT INTO public.trainee_password_recovery_requests(id,trainee_id,phone_normalized,status)
+   VALUES ($1,'20000000-0000-4000-8000-000000000007','+989123450002','pending')`,[secondRequest]);
+ const secondApproval=await asService(
+   'SELECT public.recovery_coach_review($1,$2,$3,$4,$5,$6) AS result',
+   [secondRequest,coach,'approve','d'.repeat(64),new Date(Date.now()+10*60_000).toISOString(),'k1']
+ );
+ assert.equal(secondApproval.rows[0].result.ok,true);
+ const secondOutbox=await pool.query('SELECT id FROM public.trainee_password_recovery_outbox WHERE recovery_request_id=$1',[secondRequest]);
+ assert.equal(secondOutbox.rows.length,1);
+ const secondOutboxId=secondOutbox.rows[0].id;
  // Non-service roles cannot execute privileged RPCs or read the table.
  const acl=await pool.query("SELECT has_function_privilege('anon','recovery_private.claim_recovery_outbox(uuid,integer)','EXECUTE') AS anon_claim, has_function_privilege('authenticated','recovery_private.finish_recovery_outbox(uuid,uuid,bigint,text,text,text)','EXECUTE') AS auth_finish, has_table_privilege('anon','public.trainee_password_recovery_outbox','SELECT') AS anon_read");
  assert.deepEqual(acl.rows[0],{anon_claim:false,auth_finish:false,anon_read:false});
