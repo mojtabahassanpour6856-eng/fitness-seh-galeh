@@ -54,7 +54,7 @@ class MockRecovery {
     if (this.requests.has(requestId)) {
       const existing = this.requests.get(requestId);
       if (existing.traineeId !== traineeId || existing.coachId !== coachId) throw new Error('Idempotency key conflict');
-      return existing; // safe retry by the same identities only
+      return { ...existing }; // do not expose mutable internal state
     }
     // Prevent parallel active recovery flows for the same trainee.
     for (const active of this.requests.values()) {
@@ -62,7 +62,7 @@ class MockRecovery {
       if (active.state === STATES.CODE_ISSUED && this.now() >= active.expiresAt) {
         active.state = STATES.EXPIRED; active.codeDigest = null;
       }
-      if ([STATES.REQUESTED, STATES.CODE_ISSUED, STATES.VERIFIED].includes(active.state)) {
+      if ([STATES.REQUESTED, STATES.APPROVED, STATES.DELIVERY_PENDING, STATES.CODE_ISSUED, STATES.VERIFIED].includes(active.state)) {
         throw new Error('Active recovery request exists');
       }
     }
@@ -159,7 +159,7 @@ class MockRecovery {
     const now = this.now();
     let expiredCount = 0;
     for (const r of this.requests.values()) {
-      if ([STATES.REQUESTED, STATES.APPROVED].includes(r.state) && now - r.createdAt >= this.requestTTLms) {
+      if ([STATES.REQUESTED, STATES.APPROVED, STATES.DELIVERY_PENDING].includes(r.state) && now - r.createdAt >= this.requestTTLms) {
         r.state = STATES.EXPIRED;
         r.expiredAt = now;
         r.codeDigest = null;
