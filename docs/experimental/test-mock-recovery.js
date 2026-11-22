@@ -211,6 +211,7 @@ assert.throws(()=>transitionIsolation.completeForAuthenticatedTrainee({requestId
   e=>e.message==='Recovery request unavailable');
 assert.throws(()=>transitionIsolation.completeForAuthenticatedTrainee({requestId:'missing-iso',authenticatedTraineeId:'iso-trainee'}),
   e=>e.message==='Recovery request unavailable');
+assert.throws(()=>transitionIsolation.completeForAuthenticatedTrainee({requestId:'iso-request',authenticatedTraineeId:'iso-trainee'}),/Direct completion is disabled/);
 assert.throws(()=>transitionIsolation.completeForAuthenticatedTrainee({requestId:'iso-request',authenticatedTraineeId:'iso-trainee'}),
   /Direct completion is disabled/);
 assert.equal(transitionIsolation.applyPasswordResetForAuthenticatedTrainee({requestId:'iso-request',
@@ -224,8 +225,10 @@ const replayCode = replayGuard.mockMessages.at(-1).body.match(/(\d{4})$/)[1];
 assert.equal(replayGuard.verifyForAuthenticatedTrainee({requestId:'replay-request',authenticatedTraineeId:'replay-trainee',code:replayCode}).state,STATES.VERIFIED);
 assert.throws(()=>replayGuard.verifyForAuthenticatedTrainee({requestId:'replay-request',authenticatedTraineeId:'replay-trainee',code:replayCode}),/Invalid state/,
   'the same code must not verify twice');
-assert.equal(replayGuard.completeForAuthenticatedTrainee({requestId:'replay-request',authenticatedTraineeId:'replay-trainee'}).state,STATES.COMPLETED);
-assert.throws(()=>replayGuard.completeForAuthenticatedTrainee({requestId:'replay-request',authenticatedTraineeId:'replay-trainee'}),/Not verified/,
+assert.equal(replayGuard.applyPasswordResetForAuthenticatedTrainee({requestId:'replay-request',
+  authenticatedTraineeId:'replay-trainee',operationId:'replay-reset-op',updateAuth:()=>({ok:true})}).state,STATES.COMPLETED);
+assert.throws(()=>replayGuard.applyPasswordResetForAuthenticatedTrainee({requestId:'replay-request',
+  authenticatedTraineeId:'replay-trainee',operationId:'replay-reset-op-2',updateAuth:()=>({ok:true})}),/Not verified/,
   'a consumed recovery grant must not complete twice');
 assert.equal(replayGuard.requests.get('replay-request').state,STATES.COMPLETED,
   'replay attempts must not move a completed recovery backwards');
