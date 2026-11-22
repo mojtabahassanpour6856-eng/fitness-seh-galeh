@@ -313,7 +313,7 @@ BEGIN
       updated_at = now()
   WHERE id = p_request_id AND status = 'approved'
     AND delivery_operation_id = p_delivery_operation_id
-    AND delivery_outcome IN ('attempting','unknown');
+    AND delivery_outcome = 'attempting';
 
   RETURN FOUND;
 END;
@@ -443,7 +443,7 @@ BEGIN
       updated_at = now()
   WHERE id = p_request_id AND status = 'processing'
     AND operation_id = p_operation_id
-    AND auth_outcome IN ('attempting','unknown');
+    AND auth_outcome = 'attempting';
 
   RETURN FOUND;
 END;
