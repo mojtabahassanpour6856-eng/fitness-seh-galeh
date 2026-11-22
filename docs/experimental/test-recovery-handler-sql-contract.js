@@ -46,6 +46,8 @@ assert.match(handler, /delivery_status: 'queued'/);
 assert.match(handler, /recovery_coach_review_encrypted/);
 assert.match(handler, /encryptRecoveryDeliveryCode/);
 assert.match(core, /RECOVERY_DELIVERY_KEY_VERSION/);
+assert.match(encryptedMigration, /IF TG_TABLE_NAME='trainee_password_recovery_requests' THEN\\s+IF NEW\\.delivery_outcome/);
+assert.match(encryptedMigration, /ELSIF TG_TABLE_NAME='trainee_password_recovery_outbox' THEN\\s+IF NEW\\.status/);
 assert.match(encryptedMigration, /delivery_payload jsonb/);
 assert.match(encryptedMigration, /p_delivery_operation_id uuid/);
 assert.match(encryptedMigration, /NEW\.delivery_payload IS NOT NULL/);
