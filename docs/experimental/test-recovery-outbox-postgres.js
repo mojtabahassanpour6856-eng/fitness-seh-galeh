@@ -362,7 +362,7 @@ async function main(){
  });
  const resetResponse=await resetHandler(new Request('https://candidate.invalid',{method:'POST',
    headers:{origin:'https://app.example.test','content-type':'application/json'},
-   body:JSON.stringify({action:'reset',phone:e2ePhone,code:'4826',new_password:'MockOnlyPass!123'})}));
+   body:JSON.stringify({action:'reset',phone:e2ePhone,code:'4838',new_password:'MockOnlyPass!123'})}));
  assert.equal(resetResponse.status,200,'HTTP reset handler must complete real PostgreSQL state transitions');
  assert.equal(authUpdates.length,1,'exactly one mocked Auth update must occur');
  assert.equal(authUpdates[0].id,'10000000-0000-4000-8000-000000000003');
