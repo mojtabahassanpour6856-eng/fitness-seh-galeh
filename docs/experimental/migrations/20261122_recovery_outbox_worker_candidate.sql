@@ -121,6 +121,7 @@ BEGIN
   SELECT * INTO v_row FROM public.trainee_password_recovery_outbox
   WHERE id=p_outbox_id AND status='processing' AND lock_owner=p_worker_id
     AND lease_generation=p_generation AND send_started_at IS NOT NULL
+    AND locked_until>now()
   FOR UPDATE;
   IF NOT FOUND THEN RETURN false; END IF;
   v_request_outcome := CASE p_outcome WHEN 'sent' THEN 'sent'
@@ -169,7 +170,7 @@ BEGIN
     UPDATE public.trainee_password_recovery_outbox o
     SET status='unknown',lock_owner=NULL,locked_until=NULL,
         last_safe_error_code='lease_expired_after_send_start',updated_at=now()
-    FROM expired e
+    FROM expired e JOIN request_updates ru ON ru.id=e.id
     WHERE o.id=e.id
     RETURNING o.id
   )
