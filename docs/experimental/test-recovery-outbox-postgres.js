@@ -229,31 +229,62 @@ async function main(){
  const e2ePhone='+989123450003';
  await pool.query(`INSERT INTO public.trainees(id,coach_user_id,auth_user_id,approval_status,phone_normalized,archived_at)
    VALUES ($1,$2,'10000000-0000-4000-8000-000000000003','active',$3,NULL)`,[e2eTrainee,coach,e2ePhone]);
- const submitted=await asService('SELECT public.recovery_submit_request($1) AS ok',[e2ePhone]);
- assert.equal(submitted.rows[0].ok,true,'real request submission RPC must create the recovery request');
- const submittedRequest=await pool.query('SELECT id FROM public.trainee_password_recovery_requests WHERE trainee_id=$1 AND status=$2',[e2eTrainee,'pending']);
- assert.equal(submittedRequest.rows.length,1);
- const e2eRequestId=submittedRequest.rows[0].id;
  const e2eOperation='60000000-0000-4000-8000-000000000777';
  const e2eHmacKey='disposable-test-hmac-key-with-more-than-thirty-two-bytes';
- const e2eCodeDigest=digestRecoveryCode('4826',e2eHmacKey,'k1');
  const e2eWorker='50000000-0000-4000-8000-000000000077';
  const e2eKey=webcrypto.getRandomValues(new Uint8Array(32));
  const e2eKeyBase64=Buffer.from(e2eKey).toString('base64');
  const e2eKeys={d1:e2eKeyBase64};
- const e2eEnvelope=await encryptRecoveryDeliveryCode({
-   code:'4826',key:e2eKeyBase64,keyVersion:'d1',
-   requestId:e2eRequestId,operationId:e2eOperation,cryptoImpl:webcrypto
+ const httpAdmin={
+   async rpc(name,args){
+     const calls={
+       consume_registration_rate_limit:['SELECT public.consume_registration_rate_limit($1,$2,$3) AS result',[args.p_key_hash,args.p_window_seconds,args.p_max_requests]],
+       recovery_submit_request:['SELECT public.recovery_submit_request($1) AS result',[args.p_phone_normalized]],
+       recovery_coach_review_encrypted:['SELECT public.recovery_coach_review_encrypted($1,$2,$3,$4,$5,$6,$7,$8) AS result',
+         [args.p_request_id,args.p_actor_user_id,args.p_decision,args.p_token_hash,args.p_token_expires_at,args.p_hmac_key_version,args.p_delivery_operation_id,args.p_delivery_payload]]
+     };
+     const call=calls[name];if(!call)return {data:null,error:new Error('RPC_NOT_ALLOWED:'+name)};
+     try{const result=await asService(call[0],call[1]);return {data:result.rows[0]?.result??false,error:null};}
+     catch(error){return {data:null,error};}
+   },
+   from(table){
+     if(table!=='profiles')throw new Error('TABLE_NOT_ALLOWED:'+table);
+     let profileId;
+     const q={select(columns){assert.equal(columns,'role');return q;},eq(column,value){assert.equal(column,'id');profileId=value;return q;},
+       async maybeSingle(){assert.equal(profileId,coach);return {data:{role:'coach'},error:null};}};
+     return q;
+   }
+ };
+ const e2eHandler=createRecoveryCandidateHandler({
+   env:{RECOVERY_HMAC_KEYS:JSON.stringify({k1:e2eHmacKey}),RECOVERY_HMAC_KEY_VERSION:'k1',
+     RECOVERY_DELIVERY_KEYS:JSON.stringify(e2eKeys),RECOVERY_DELIVERY_KEY_VERSION:'d1',
+     RECOVERY_ALLOWED_ORIGINS:'https://app.example.test'},
+   admin:httpAdmin,
+   createUserClient:()=>({auth:{getUser:async()=>({data:{user:{id:coach}},error:null})}}),
+   randomBytes:()=>Buffer.from([0x12,0xe6]),randomUUID:()=>e2eOperation,
+   now:()=>Date.now(),crypto:webcrypto
  });
- await pool.query(`UPDATE public.trainee_password_recovery_requests
-   SET status='pending',delivery_outcome=NULL,delivery_operation_id=NULL,
-       token_hash=NULL,token_expires_at=NULL,reviewed_at=NULL,reviewed_by=NULL,
-       token_attempts=0,updated_at=now() WHERE id=$1`,[e2eRequestId]);
- const e2eApproval=await asService(
-   'SELECT public.recovery_coach_review_encrypted($1,$2,$3,$4,$5,$6,$7,$8) AS result',
-   [e2eRequestId,coach,'approve',e2eCodeDigest,new Date(Date.now()+8*60_000).toISOString(),'k1',e2eOperation,e2eEnvelope]
- );
- assert.equal(e2eApproval.rows[0].result.ok,true,JSON.stringify(e2eApproval.rows[0].result));
+ const requestResponse=await e2eHandler(new Request('https://candidate.invalid',{method:'POST',
+   headers:{origin:'https://app.example.test','content-type':'application/json'},
+   body:JSON.stringify({action:'request',phone:e2ePhone})}));
+ assert.equal(requestResponse.status,202,'HTTP trainee request must be accepted generically');
+ const submittedRequest=await pool.query('SELECT id FROM public.trainee_password_recovery_requests WHERE trainee_id=$1 AND status=$2',[e2eTrainee,'pending']);
+ assert.equal(submittedRequest.rows.length,1);
+ const e2eRequestId=submittedRequest.rows[0].id;
+ const reviewResponse=await e2eHandler(new Request('https://candidate.invalid',{method:'POST',
+   headers:{origin:'https://app.example.test',authorization:'Bearer mock-coach-session','content-type':'application/json'},
+   body:JSON.stringify({action:'review',request_id:e2eRequestId,decision:'approve'})}));
+ assert.equal(reviewResponse.status,202,'authenticated coach HTTP review must enqueue delivery');
+ const reviewBody=await reviewResponse.json();
+ assert.equal(reviewBody.delivery_status,'queued');
+ assert.match(reviewBody.message,/هنوز ارسال پیامک تأیید نشده است/);
+ const duplicateReviewResponse=await e2eHandler(new Request('https://candidate.invalid',{method:'POST',
+   headers:{origin:'https://app.example.test',authorization:'Bearer mock-coach-session','content-type':'application/json'},
+   body:JSON.stringify({action:'review',request_id:e2eRequestId,decision:'approve'})}));
+ assert.equal(duplicateReviewResponse.status,409,'duplicate HTTP approval must be rejected');
+ const e2eApproved=await pool.query('SELECT delivery_operation_id,token_hash FROM public.trainee_password_recovery_requests WHERE id=$1',[e2eRequestId]);
+ assert.equal(e2eApproved.rows[0].delivery_operation_id,e2eOperation);
+ assert.match(e2eApproved.rows[0].token_hash,/^[a-f0-9]{64}$/);
  const e2eProvider=new FakeRecoverySmsProvider([{kind:'accepted',messageId:'e2e-provider-accepted'}]);
  const e2eAdmin={
    async rpc(name,args){
@@ -279,7 +310,7 @@ async function main(){
  const e2eResult=await processOneRecoveryOutboxItem({admin:e2eAdmin,workerId:e2eWorker,deliveryKeys:e2eKeys,cryptoImpl:webcrypto,provider:e2eProvider});
  assert.deepEqual(e2eResult,{status:'sent'});
  assert.equal(e2eProvider.calls.length,1);
- assert.equal(e2eProvider.calls[0].code,'4826');
+ assert.equal(e2eProvider.calls[0].code,'4838');
  assert.equal(e2eProvider.calls[0].phone,e2ePhone);
  assert.equal(e2eProvider.calls[0].idempotencyKey,'trainee-recovery:'+e2eOperation);
  const e2eState=await pool.query(`SELECT r.delivery_outcome,o.status,r.delivery_payload AS request_payload,
@@ -291,7 +322,7 @@ async function main(){
  assert.equal(e2eState.rows[0].status,'sent');
  assert.equal(e2eState.rows[0].request_payload,null);
  assert.equal(e2eState.rows[0].outbox_payload,null);
- console.log('PASS: end-to-end real PostgreSQL request + coach approval + encrypted Worker + fake provider + terminal payload cleanup');
+ console.log('PASS: HTTP request + authenticated HTTP coach approval + real PostgreSQL + encrypted Worker + fake provider + terminal payload cleanup');
  // Exercise the actual HTTP reset handler against disposable PostgreSQL; only Auth is mocked.
  const authOperation='70000000-0000-4000-8000-000000000777';
  const authUpdates=[];
