@@ -246,3 +246,19 @@ The draft includes operation metadata, a `processing`-inclusive active-request u
 Workflow run `45047881214` completed **success**. The PostgreSQL job checked out candidate SQL commit `9745175f69d93e2eb2a113ee3250782c3f11fe70`; both workflow jobs succeeded.
 
 **Updated release status: NOT READY FOR PRODUCTION.** These checks use disposable PostgreSQL fixture tables only. The candidate SQL has not been applied to Supabase Test or Production. Real Edge Function HTTP/Auth integration, test-only SMS delivery, delivery ambiguity/idempotency, session behavior, logs, monitoring, and rollback/reconciliation remain untested. No live database/function/auth/password/SMS changes were made.
+
+
+## Delivery-state hardening and migration preflight (2026-11-22)
+
+The experimental SQL candidate now includes durable delivery operation identity and outcome fields, with service-role-only RPCs:
+- one delivery attempt per operation;
+- `sent` is required before a code can be redeemed;
+- `unknown` delivery blocks redemption and automatic retry;
+- confirmed failure clears the code and returns the request to coach review;
+- only authoritative reconciliation can resolve an unknown delivery.
+
+The migration also refuses to proceed if any legacy request is already `approved` or `processing`, because the old schema cannot prove delivery or Auth outcome for those rows. This is especially important because Test currently has an approved request and Production has approved requests; the candidate migration would stop before altering either project. No attempt was made to apply it.
+
+Workflow run `45048230786` completed **success**. Both jobs passed, including the disposable PostgreSQL candidate suite. The job checked out commit `11e099c25cbb9cccffafdf410c088e1e5d1496ad` and reported successful checks for migration preflight, restricted privileges, coach reassignment locking, atomic five-attempt limit, delivery unknown lockout/reconciliation, single reset claim, Auth unknown lockout/reconciliation, and confirmed completion.
+
+**Release remains NOT READY.** Real Edge Function implementation, real Test Auth account/password reset, HTTP/auth middleware, actual provider integration and provider idempotency/timeout semantics, session behavior, logging/monitoring, and rollback/reconciliation remain untested. No Supabase Test/Production schema or function was changed; no real password or SMS was touched.
