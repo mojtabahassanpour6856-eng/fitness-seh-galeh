@@ -310,3 +310,10 @@ A dependency-injected handler candidate now connects the proposed HTTP actions t
 Workflow run `45050296581` completed **success** on commit `357852129e64ed3048a578161bcb8c20bf7eac07`; both jobs passed. The handler tests cover generic request responses, CORS rejection, disabled provider behavior, delivery to the database-verified phone only, no code disclosure to coach, wrong-code handling, one Auth update attempt, ambiguous Auth lockout, and confirmed success. The disposable PostgreSQL atomic RPC/concurrency suite also passed.
 
 **Remaining integration gates:** compile/check in the actual Supabase Edge Runtime; validate PostgREST wrapper reachability and service-role grants in Supabase Test; run real HTTP/authentication and coach authorization tests with isolated test identities; select and approve a delivery provider; test Auth session invalidation; verify logs, monitoring, reconciliation, and rollback. No Supabase project was changed, no function deployed, no real SMS sent, and no trainee password/session changed.
+
+
+## Delivery finalization failure is now fail-closed
+
+Added a regression fix: a positive response from a delivery adapter is not reported as successful unless the database confirms the durable delivery-state transition. If provider acceptance is known but the state write fails, the handler returns a generic failure, does not retry delivery, and leaves the request non-redeemable pending reconciliation.
+
+Workflow run `45050432795` completed **success** on commit `3f36873cb316b8d09d790b2c62133716f1160eb2`. Both jobs passed, including the new delivery-finalization failure test and the disposable PostgreSQL atomic RPC suite.
