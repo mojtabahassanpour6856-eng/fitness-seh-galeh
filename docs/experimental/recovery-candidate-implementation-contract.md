@@ -192,3 +192,10 @@ The disposable PostgreSQL candidate now also models SMS delivery separately from
 The candidate migration now refuses to run if legacy rows are already `approved` or `processing`. This is intentional: their delivery/Auth outcomes cannot be reconstructed from the current schema. A live migration must first receive an explicit, reviewed disposition for each such row; it must not silently strand or reopen existing requests.
 
 The latest disposable PostgreSQL test run also proves the preflight guard, one-attempt delivery, unknown-delivery redemption lockout, confirmed-failure reset, and authoritative delivery reconciliation. The provider itself is still not integrated; no live SMS has been sent.
+
+
+## Atomic public request submission candidate (2026-11-22; CI verification pending)
+
+Added `recovery_private.submit_recovery_request(text)` to the experimental SQL draft. It accepts only a normalized Iranian mobile, requires exactly one active non-archived trainee with an Auth user, refuses ambiguous duplicate phone records, locks the trainee row, and inserts one pending request with conflict handling against the active-request partial unique index. It returns only an internal boolean and is intended for the Edge Function's service-role client after rate limiting. The public handler must return the same generic 202 response for eligible, ineligible, duplicate, and unknown accounts.
+
+The disposable test now covers eight concurrent submissions for one synthetic account (exactly one row), ambiguous duplicate numbers, unknown numbers, and the function privilege boundary. The latest workflow is running; do not mark this new request-RPC test passed until its PostgreSQL job completes.
