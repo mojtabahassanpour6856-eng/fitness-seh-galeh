@@ -8,6 +8,8 @@ on:
       - 'docs/experimental/mock-recovery-engine.js'
       - 'docs/experimental/test-mock-recovery.js'
       - 'docs/experimental/test-recovery-crypto.js'
+      - 'docs/experimental/test-recovery-http-smoke.js'
+      - 'docs/experimental/test-recovery-http-smoke-contract.js'
       - 'docs/experimental/postgres-concurrency-test.js'
       - 'docs/experimental/migrations/20261122_include_processing_in_active_recovery_unique_index.sql'
       - '.github/workflows/test-mock-recovery-experiment.yml'
@@ -33,6 +35,8 @@ jobs:
         run: node docs/experimental/test-mock-recovery.js
       - name: Run focused cryptographic boundary tests
         run: node docs/experimental/test-recovery-crypto.js
+      - name: Verify live HTTP smoke harness cannot mutate recovery state
+        run: node docs/experimental/test-recovery-http-smoke-contract.js
 
   postgres-concurrency-tests:
     runs-on: ubuntu-latest
