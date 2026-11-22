@@ -107,7 +107,7 @@ BEGIN
     RAISE EXCEPTION 'outbox send-start state changed';
   END IF;
   RETURN true;
-END $;
+END $$;
 
 CREATE OR REPLACE FUNCTION recovery_private.finish_recovery_outbox(
   p_outbox_id uuid,p_worker_id uuid,p_generation bigint,p_outcome text,
@@ -155,7 +155,7 @@ BEGIN
     RAISE EXCEPTION 'outbox completion state changed';
   END IF;
   RETURN true;
-END $;
+END $$;
 
 CREATE OR REPLACE FUNCTION recovery_private.reconcile_expired_recovery_outbox()
 RETURNS integer LANGUAGE plpgsql SECURITY DEFINER SET search_path = ''
