@@ -18,6 +18,18 @@ BEGIN
 END
 $$;
 
+DO $
+BEGIN
+  IF EXISTS (
+    SELECT 1 FROM public.trainee_password_recovery_requests
+    WHERE status IN ('approved','processing')
+  ) THEN
+    RAISE EXCEPTION
+      'Legacy approved/processing requests need an explicit disposition before the candidate migration';
+  END IF;
+END
+$;
+
 ALTER TABLE public.trainee_password_recovery_requests
   ADD COLUMN IF NOT EXISTS operation_id uuid,
   ADD COLUMN IF NOT EXISTS processing_started_at timestamptz,
