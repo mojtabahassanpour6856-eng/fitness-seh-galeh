@@ -499,6 +499,7 @@ END;
 $$;
 
 REVOKE ALL ON ALL FUNCTIONS IN SCHEMA recovery_private FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION recovery_private.consume_recovery_request_rate_limit(text,integer,integer) TO service_role;
 GRANT EXECUTE ON FUNCTION recovery_private.submit_recovery_request(text) TO service_role;
 GRANT EXECUTE ON FUNCTION recovery_private.coach_review_recovery_request(uuid,uuid,text,text,timestamptz,text) TO service_role;
 GRANT EXECUTE ON FUNCTION recovery_private.record_recovery_wrong_attempt(uuid,text,integer) TO service_role;
