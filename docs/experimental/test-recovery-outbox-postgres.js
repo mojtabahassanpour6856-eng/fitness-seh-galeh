@@ -12,6 +12,10 @@ async function asService(sql,args=[]){
 }
 async function main(){
  const migration=fs.readFileSync('docs/experimental/migrations/20261122_recovery_outbox_worker_candidate.sql','utf8');
+ const beginFn=migration.slice(migration.indexOf('CREATE OR REPLACE FUNCTION recovery_private.begin_recovery_outbox_send'),migration.indexOf('CREATE OR REPLACE FUNCTION recovery_private.finish_recovery_outbox'));
+ const finishFn=migration.slice(migration.indexOf('CREATE OR REPLACE FUNCTION recovery_private.finish_recovery_outbox'),migration.indexOf('CREATE OR REPLACE FUNCTION recovery_private.reconcile_expired_recovery_outbox'));
+ assert.match(beginFn,/RAISE EXCEPTION 'outbox send-start state changed'/,'begin-send must rollback both row updates if Outbox update fails');
+ assert.match(finishFn,/RAISE EXCEPTION 'outbox completion state changed'/,'finish must rollback both row updates if Outbox update fails');
  await pool.query(migration);
 
  // The real coach-review RPC must atomically create exactly one Outbox row.
