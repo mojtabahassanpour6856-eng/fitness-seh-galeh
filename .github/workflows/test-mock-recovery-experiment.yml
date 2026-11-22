@@ -1,5 +1,5 @@
 name: Experimental password recovery mock and PostgreSQL tests
-# Disposable PostgreSQL candidate suite includes request submission, delivery and Auth state transitions.
+# Disposable PostgreSQL suite also checks PostgREST-safe service-role-only RPC wrappers.
 
 on:
   push:
