@@ -129,14 +129,23 @@ class MockRecovery {
       if (r.attempts >= this.maxAttempts) { r.state = STATES.EXPIRED; r.codeDigest = null; r.expiresAt = null; r.expiredAt = this.now(); }
       throw new Error('Invalid code');
     }
-    r.codeDigest = null; r.state = STATES.VERIFIED; r.verifiedAt = this.now();
+    r.codeDigest = null; r.state = STATES.VERIFIED; r.verifiedAt = this.now(); r.grantExpiresAt = this.now() + Math.min(this.codeTTLms, 10 * 60_000);
     return { requestId, state: r.state };
   }
   complete({ requestId, traineeId }) {
+    this.sweepExpired();
     const r = this.#get(requestId);
     if (r.traineeId !== traineeId) throw new Error('Trainee ownership check failed');
     if (r.state !== STATES.VERIFIED) throw new Error('Not verified');
+    // The mock models a short-lived, one-time post-verification grant.
+    if (!r.grantExpiresAt || this.now() >= r.grantExpiresAt) {
+      r.state = STATES.EXPIRED;
+      r.expiredAt = this.now();
+      r.grantExpiresAt = null;
+      throw new Error('Reset grant expired');
+    }
     r.state = STATES.COMPLETED; r.completedAt = this.now();
+    r.grantExpiresAt = null;
     return { requestId, state: r.state };
   }
   cancel({ requestId, traineeId }) {
