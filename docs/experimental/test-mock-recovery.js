@@ -59,6 +59,8 @@ attempts.request({traineeId:'t4',coachId:'c4',requestId:'r4'});
 attempts.approve({requestId:'r4',authenticatedCoachId:'c4'});
 for(let i=0;i<3;i++) assert.throws(()=>attempts.verify({requestId:'r4',traineeId:'t4',code:'9999'}),/Invalid code/);
 assert.throws(()=>attempts.verify({requestId:'r4',traineeId:'t4',code:'9999'}),/Invalid state|Attempt limit/);
+assert.equal(attempts.requests.get('r4').codeDigest, null, 'lockout clears the stored code digest');
+assert.equal(attempts.requests.get('r4').expiresAt, null, 'lockout clears the code expiry');
 const rejected=sys();
 rejected.request({traineeId:'t6',coachId:'c6',requestId:'r6'});
 assert.throws(() => rejected.reject({requestId:'r6',authenticatedCoachId:'wrong'}),/ownership/);
