@@ -56,3 +56,14 @@ Status: **NOT READY FOR PRODUCTION**. This is a read-only audit report plus isol
 
 ## Safety boundary
 No Production changes, no Test schema writes, no Edge Function deployment, no password mutation, no trainee record mutation, and no live SMS were performed during this audit. The experimental migration is a draft and must not be applied directly to Production.
+
+
+## Additional read-only Supabase Test checks (2026-11-22)
+- Security Advisor returned: leaked-password protection disabled (project-wide Auth hardening); one externally executable SECURITY DEFINER function `public.save_coach_nutrition_builder_plan(jsonb)` (not part of password recovery); five RLS-enabled/no-policy informational findings in archive/experimental tables (not the recovery table).
+- Performance Advisor returned unused-index and multiple-permissive-policy notices across other app tables. These are not a reason to change unrelated production policies during this recovery work.
+- Unified logs query for the last 24 hours returned 2 edge log entries and zero entries whose message text mentioned `trainee-password-recovery`. This does not prove the endpoint is unused or working; it only means no matching function-name mention was found in that log window.
+- No logs containing personal phone numbers or recovery codes were retrieved or displayed.
+- The recovery-specific RLS state remains as previously verified: RLS enabled and deny-all policies for anon/authenticated; the function uses server-side service role access.
+
+## Interpretation
+The Test project's global security warnings must be triaged separately and not "fixed" wholesale as part of password recovery, because unrelated policy changes could affect existing app functionality. Leaked-password protection is a worthwhile Auth hardening item, but enabling it is a project setting change and has not been performed.
