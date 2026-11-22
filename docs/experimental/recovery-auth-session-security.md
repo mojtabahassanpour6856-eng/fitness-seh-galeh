@@ -49,3 +49,10 @@ The current MockRecovery fixture accepts identity values as function arguments a
 
 ## Authenticated-context transition adapters (mock only)
 The experimental fixture now provides wrappers for coach approval/rejection and trainee verification/completion/cancellation. Each wrapper expects the actor ID to have been resolved by trusted server middleware and normalizes missing-request and wrong-owner failures to a generic unavailable response. These wrappers are test seams, not authentication middleware: production must not accept actor IDs from request JSON, and must enforce ownership atomically in persistent storage for every transition.
+
+## Single-use transitions and concurrency requirements
+- The mock verifies sequential replay resistance: a recovery code cannot verify twice, a consumed grant cannot complete twice, and cancellation is terminal.
+- These synchronous in-memory tests do not prove race safety across concurrent HTTP requests, workers, processes, or server instances.
+- Production must enforce each transition with a database transaction and conditional update (compare-and-swap), for example update only where state is still the expected prior state and grant is unconsumed and unexpired; require exactly one affected row.
+- Password update and grant consumption must be coordinated through the auth provider's supported API and a durable transaction/outbox/reconciliation design. Do not mark the recovery completed before provider success. For ambiguous provider timeouts, reconcile provider state before deciding whether to retry.
+- Add integration tests that submit two simultaneous verification requests and two simultaneous password-update requests against isolated test accounts; exactly one request may consume the code/grant. Repeat across separate application instances.
