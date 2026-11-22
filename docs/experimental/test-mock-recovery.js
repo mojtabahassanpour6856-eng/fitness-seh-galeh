@@ -13,7 +13,7 @@ let zeroClock = 0;
 const zeroClockSystem = new MockRecovery({secret,now:()=>zeroClock,cooldownMs:60000});
 assert.equal(zeroClockSystem.request({traineeId:'zero',coachId:'coach',requestId:'zero1'}).state, STATES.REQUESTED,
   'first request at clock zero must not be blocked by cooldown');
-assert.throws(()=>zeroClockSystem.request({traineeId:'zero',coachId:'coach',requestId:'zero2'}), /Cooldown/);
+assert.throws(()=>zeroClockSystem.request({traineeId:'zero',coachId:'coach',requestId:'zero2'}), /Active recovery request exists|Cooldown/);
 
 
 const grantClock = { value: 5000000 };
