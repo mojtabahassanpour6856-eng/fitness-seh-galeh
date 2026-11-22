@@ -63,6 +63,42 @@ async function main() {
     'this fixture intentionally documents that the current pending/approved-only index permits a new pending row during processing');
   console.log('KNOWN GAP REPRODUCED: partial unique index permits a second pending row while an earlier row is processing');
 
+  // Proposed guard: include processing in the active-flow uniqueness boundary.
+  await pool.query(`
+    CREATE TABLE recovery_requests_guard_ci (
+      id bigserial PRIMARY KEY,
+      trainee_id text NOT NULL,
+      status text NOT NULL
+    )
+  `);
+  await pool.query(`
+    CREATE UNIQUE INDEX recovery_active_guard_ci
+    ON recovery_requests_guard_ci (trainee_id)
+    WHERE status IN ('pending', 'approved', 'processing')
+  `);
+  await pool.query(
+    "INSERT INTO recovery_requests_guard_ci (trainee_id,status) VALUES ('guarded-trainee','approved')"
+  );
+  await pool.query(
+    "UPDATE recovery_requests_guard_ci SET status='processing' WHERE trainee_id='guarded-trainee'"
+  );
+  await assert.rejects(
+    pool.query("INSERT INTO recovery_requests_guard_ci (trainee_id,status) VALUES ('guarded-trainee','pending')"),
+    error => error && error.code === '23505',
+    'the proposed index must reject a second active flow while the first is processing'
+  );
+  const guardedCount = await pool.query(
+    "SELECT count(*)::int AS n FROM recovery_requests_guard_ci WHERE trainee_id='guarded-trainee'"
+  );
+  assert.equal(guardedCount.rows[0].n, 1);
+  await pool.query(
+    "UPDATE recovery_requests_guard_ci SET status='completed' WHERE trainee_id='guarded-trainee'"
+  );
+  await pool.query(
+    "INSERT INTO recovery_requests_guard_ci (trainee_id,status) VALUES ('guarded-trainee','pending')"
+  );
+  console.log('PASS: proposed three-state unique index blocks parallel flow during processing and permits a new flow after completion');
+
   // Atomic attempt increments under contention; cap must not be exceeded.
   const attemptsRow = await pool.query(
     "INSERT INTO recovery_requests_ci (trainee_id,status,attempts) VALUES ('attempt-race','approved',0) RETURNING id"
