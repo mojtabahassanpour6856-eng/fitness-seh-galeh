@@ -230,6 +230,6 @@ Follow-up run `45047406596`:
 - HTTP smoke static contract suite: **success**.
 - Authorization/abuse suite: **success**.
 - New candidate primitive suite: **success**.
-- Disposable PostgreSQL concurrency job was still **in progress** at the time of this report update; do not count the full workflow as passed until that job completes.
+- Disposable PostgreSQL concurrency job: **success**. The complete workflow run `45047406596` finished with conclusion **success** (both jobs successful).
 
 These are isolated CI checks only. The candidate module is not an Edge Function and does not implement database RPCs, JWT middleware, real Auth, SMS, or persistence. The live Test/Production functions and schemas remain untouched; production release remains **NOT READY**.
