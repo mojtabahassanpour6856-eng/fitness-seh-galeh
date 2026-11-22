@@ -76,6 +76,23 @@ assert.throws(()=>cancelled.cancel({requestId:'rc',traineeId:'wrong'}),/ownershi
 assert.equal(cancelled.cancel({requestId:'rc',traineeId:'tc'}).state,STATES.CANCELLED);
 assert.throws(()=>cancelled.approve({requestId:'rc',authenticatedCoachId:'cc'}),/Invalid state/);
 assert.equal(cancelled.request({traineeId:'tc',coachId:'cc',requestId:'rc2'}).state,STATES.REQUESTED);
+// Simulated delivery failure: code must not be stored or accepted, and approval can be retried.
+let deliveries = 0;
+const failDelivery = new MockRecovery({secret,now:()=>now,cooldownMs:0,delivery:()=>{ deliveries++; return {ok:false}; }});
+failDelivery.request({traineeId:'tf',coachId:'cf',requestId:'rf'});
+const failed = failDelivery.approve({requestId:'rf',authenticatedCoachId:'cf'});
+assert.equal(failed.delivery,'FAILED');
+assert.equal(failed.retryable,true);
+assert.equal(failDelivery.requests.get('rf').state,STATES.APPROVED);
+assert.equal(failDelivery.requests.get('rf').codeDigest,null);
+assert.equal(failDelivery.mockMessages.length,0);
+assert.throws(()=>failDelivery.verify({requestId:'rf',traineeId:'tf',code:'0000'}),/Invalid state/);
+failDelivery.delivery = () => ({ok:true});
+const retryDelivery = failDelivery.approve({requestId:'rf',authenticatedCoachId:'cf'});
+assert.equal(retryDelivery.delivery,'MOCK_ONLY');
+assert.equal(failDelivery.requests.get('rf').state,STATES.CODE_ISSUED);
+assert.equal(failDelivery.mockMessages.length,1);
+assert.equal(deliveries,1, 'failed attempt was simulated once');
 const cooldown=sys();
 cooldown.request({traineeId:'t5',coachId:'c5',requestId:'r5'});
 assert.throws(()=>cooldown.request({traineeId:'t5',coachId:'c5',requestId:'r6'}),/Cooldown/);
