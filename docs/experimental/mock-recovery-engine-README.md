@@ -43,3 +43,7 @@ See `recovery-privacy-acceptance.md` for the public response contract, server-si
 
 ## Expiry enforcement on every pending-state action
 The fixture now calls `sweepExpired()` before trainee cancellation and coach rejection as well as request creation, coach approval, and code verification. This prevents a stale `REQUESTED` item from being cancelled/rejected as if it were still live after its TTL. Tests cover both terminal-action paths. The fixture still performs opportunistic cleanup only; production must check expiry atomically inside every state-changing transaction and run scheduled cleanup.
+
+
+## Verification lockout cleanup
+When the configured failed-code attempt limit is reached, the fixture now transitions to `EXPIRED` and immediately clears both the stored code digest and expiry timestamp. Tests assert this cleanup for repeated wrong codes. This is a mock-state hygiene guarantee only; production must make lockout and digest cleanup atomic in persistent storage.
