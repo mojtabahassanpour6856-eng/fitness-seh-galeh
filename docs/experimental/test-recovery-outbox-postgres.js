@@ -221,8 +221,6 @@ async function main(){
 
  // End-to-end exercise: real PostgreSQL RPCs + production Worker module + fake SMS provider.
  const {webcrypto}=require('node:crypto');
- const {encryptRecoveryDeliveryCode}=await import('./recovery-delivery-payload-crypto.mjs');
- const {digestRecoveryCode}=await import('./recovery-candidate-core.mjs');
  const {createRecoveryCandidateHandler}=await import('./recovery-candidate-handler.mjs');
  const {FakeRecoverySmsProvider,processOneRecoveryOutboxItem}=await import('./recovery-outbox-worker-mock.mjs');
  const e2eTrainee='20000000-0000-4000-8000-000000000078';
