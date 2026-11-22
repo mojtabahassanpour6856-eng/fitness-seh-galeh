@@ -203,10 +203,16 @@ class MockRecovery {
       return { requestId, operationId, state: r.state, authOutcome: 'SUCCEEDED' };
     }
     if (status === 'NOT_APPLIED') {
-      r.state = STATES.VERIFIED;
       r.resetOperationId = null;
       r.resetReconciledAt = this.now();
       r.authOperations.set(operationId, { outcome: 'NOT_APPLIED', at: this.now() });
+      if (!r.grantExpiresAt || this.now() >= r.grantExpiresAt) {
+        r.state = STATES.EXPIRED;
+        r.expiredAt = this.now();
+        r.grantExpiresAt = null;
+        return { requestId, operationId, state: r.state, authOutcome: 'NOT_APPLIED', retryableWithNewOperationId: false };
+      }
+      r.state = STATES.VERIFIED;
       return { requestId, operationId, state: r.state, authOutcome: 'NOT_APPLIED', retryableWithNewOperationId: true };
     }
     return { requestId, operationId, state: r.state, authOutcome: 'UNKNOWN', retryable: false };
