@@ -20,6 +20,11 @@ Design only. No production UI, auth-provider calls, database writes, SMS sends, 
 - Once acted on, disable action buttons and refresh state from authoritative server. Repeated clicks must be idempotent.
 - Never allow coach to search or reset accounts outside their own roster.
 
+## Code validity policy
+- The requested recovery code validity window is **24 hours from issuance**, not 15 minutes.
+- Expiry is calculated by the server and displayed using server-provided remaining time; client clock is not authoritative.
+- A code is single-use, attempt-limited, and invalidated when a newer code is issued. 24-hour validity does not remove cooldown, attempt limits, or approval requirements.
+
 ## Security and abuse protections
 - Generic request response to prevent account enumeration.
 - Server-side rate limits per account, IP/device signal where privacy policy permits, and global service limits.
