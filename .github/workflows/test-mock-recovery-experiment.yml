@@ -20,6 +20,7 @@ on:
       - 'docs/experimental/test-recovery-edge-adapter-contract.js'
       - 'docs/experimental/test-recovery-handler-sql-contract.js'
       - 'docs/experimental/migrations/20261122_recovery_atomic_rpc_candidate.sql'
+      - 'docs/experimental/migrations/20261122_dispose_expired_legacy_approved_request.sql'
       - 'docs/experimental/test-recovery-atomic-rpc-candidate.js'
       - 'docs/experimental/postgres-concurrency-test.js'
       - 'docs/experimental/migrations/20261122_include_processing_in_active_recovery_unique_index.sql'
