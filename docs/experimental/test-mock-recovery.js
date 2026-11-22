@@ -42,7 +42,7 @@ assert.equal(beforeExpiry.verify({requestId:'r7',traineeId:'t7',code:beforeCode}
 const exactExpiry = boundarySystem();
 exactExpiry.request({traineeId:'t8',coachId:'c8',requestId:'r8'});
 const exactExpiryMeta = exactExpiry.approve({requestId:'r8',authenticatedCoachId:'c8'});
-const exactCode = exactExpiry.mockMessages[1].body.slice(-4);
+const exactCode = exactExpiry.mockMessages[0].body.slice(-4);
 boundaryNow = exactExpiryMeta.expiresAt;
 assert.throws(() => exactExpiry.verify({requestId:'r8',traineeId:'t8',code:exactCode}), /expired/i);
 assert.equal(exactExpiry.requests.get('r8').state, STATES.EXPIRED);
