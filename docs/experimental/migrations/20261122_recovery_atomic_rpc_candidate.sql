@@ -72,7 +72,7 @@ DECLARE
   v_actor_role text;
   v_current_coach uuid;
   v_approval_status text;
-  v_phone text;
+  v_archived_at timestamptz;
 BEGIN
   IF p_decision IS NULL OR p_decision NOT IN ('approve','reject') THEN
     RETURN jsonb_build_object('ok', false, 'reason', 'invalid_decision');
@@ -97,14 +97,14 @@ BEGIN
     RETURN jsonb_build_object('ok', false, 'reason', 'not_available');
   END IF;
 
-  SELECT t.coach_user_id, t.approval_status, t.phone_normalized
-    INTO v_current_coach, v_approval_status, v_phone
+  SELECT t.coach_user_id, t.approval_status, t.archived_at
+    INTO v_current_coach, v_approval_status, v_archived_at
   FROM public.trainees AS t
   WHERE t.id = v_trainee_id
   FOR UPDATE;
 
   IF NOT FOUND OR v_current_coach IS DISTINCT FROM p_actor_user_id
-     OR v_approval_status <> 'active' THEN
+     OR v_approval_status <> 'active' OR v_archived_at IS NOT NULL THEN
     RETURN jsonb_build_object('ok', false, 'reason', 'not_authorized');
   END IF;
 
@@ -134,7 +134,7 @@ BEGIN
       updated_at = now()
   WHERE id = p_request_id AND status = 'pending';
 
-  RETURN jsonb_build_object('ok', true, 'status', 'approved', 'phone_normalized', v_phone);
+  RETURN jsonb_build_object('ok', true, 'status', 'approved');
 END;
 $$;
 
@@ -198,6 +198,7 @@ DECLARE
   v_phone text;
   v_trainee_phone text;
   v_approval_status text;
+  v_archived_at timestamptz;
 BEGIN
   IF p_code_digest IS NULL OR p_code_digest !~ '^[a-f0-9]{64}$'
      OR p_operation_id IS NULL THEN
@@ -213,13 +214,13 @@ BEGIN
     RETURN jsonb_build_object('claimed', false);
   END IF;
 
-  SELECT t.auth_user_id, t.phone_normalized, t.approval_status
-    INTO v_auth_user_id, v_trainee_phone, v_approval_status
+  SELECT t.auth_user_id, t.phone_normalized, t.approval_status, t.archived_at
+    INTO v_auth_user_id, v_trainee_phone, v_approval_status, v_archived_at
   FROM public.trainees AS t
   WHERE t.id = v_trainee_id
   FOR UPDATE;
 
-  IF NOT FOUND OR v_auth_user_id IS NULL OR v_approval_status <> 'active' THEN
+  IF NOT FOUND OR v_auth_user_id IS NULL OR v_approval_status <> 'active' OR v_archived_at IS NOT NULL THEN
     RETURN jsonb_build_object('claimed', false);
   END IF;
 
