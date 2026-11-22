@@ -8,6 +8,7 @@ const migration = await readFile(new URL('./migrations/20261122_recovery_atomic_
 const outboxMigration = await readFile(new URL('./migrations/20261122_recovery_outbox_worker_candidate.sql', base), 'utf8');
 const cleanup = await readFile(new URL('./migrations/20261122_dispose_expired_legacy_approved_request.sql', base), 'utf8');
 const core = await readFile(new URL('./recovery-candidate-core.mjs', base), 'utf8');
+const encryptedMigration = await readFile(new URL('./migrations/20261122_recovery_encrypted_delivery_payload_candidate.sql', base), 'utf8');
 
 const wrappers = [
   'recovery_submit_request',
@@ -42,7 +43,17 @@ assert.match(handler, /profiles/);
 assert.match(handler, /select\('role'\)/);
 assert.match(handler, /trainees!inner\(full_name,coach_user_id\)/);
 assert.match(handler, /delivery_status: 'queued'/);
+assert.match(handler, /recovery_coach_review_encrypted/);
+assert.match(handler, /encryptRecoveryDeliveryCode/);
+assert.match(handler, /RECOVERY_DELIVERY_KEY_VERSION/);
+assert.match(encryptedMigration, /delivery_payload jsonb/);
+assert.match(encryptedMigration, /p_delivery_operation_id uuid/);
+assert.match(encryptedMigration, /NEW\.delivery_payload IS NOT NULL/);
+assert.match(encryptedMigration, /delivery_payload := NULL/);
+assert.match(core, /RECOVERY_DELIVERY_KEYS/);
+assert.match(core, /RECOVERY_DELIVERY_KEY_VERSION/);
 assert.doesNotMatch(handler, /recovery_begin_delivery|recovery_finish_delivery|deliveryAdapter/);
+assert.doesNotMatch(handler, /'recovery_coach_review', \{/g, 'approve must never use legacy plaintext-capable approval RPC');
 assert.match(migration, /t\.approval_status = 'active'/);
 assert.match(migration, /t\.archived_at IS NULL/);
 assert.match(migration, /GRANT EXECUTE ON FUNCTION public\.recovery_submit_request\(text\) TO service_role/);
