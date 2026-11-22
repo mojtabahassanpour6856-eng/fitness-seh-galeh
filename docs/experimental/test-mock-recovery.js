@@ -72,7 +72,7 @@ rejectedRetry.reject({requestId:'r9',authenticatedCoachId:'c9'});
 assert.equal(rejectedRetry.request({traineeId:'t9',coachId:'c9',requestId:'r10'}).state,STATES.REQUESTED);
 const cancelled = new MockRecovery({secret,now:()=>now,cooldownMs:0});
 cancelled.request({traineeId:'tc',coachId:'cc',requestId:'rc'});
-assert.throws(()=>cancelled.cancel({requestId:'rc',traineeId:'wrong}),/ownership/);
+assert.throws(()=>cancelled.cancel({requestId:'rc',traineeId:'wrong'}),/ownership/);
 assert.equal(cancelled.cancel({requestId:'rc',traineeId:'tc'}).state,STATES.CANCELLED);
 assert.throws(()=>cancelled.approve({requestId:'rc',authenticatedCoachId:'cc'}),/Invalid state/);
 assert.equal(cancelled.request({traineeId:'tc',coachId:'cc',requestId:'rc2'}).state,STATES.REQUESTED);
