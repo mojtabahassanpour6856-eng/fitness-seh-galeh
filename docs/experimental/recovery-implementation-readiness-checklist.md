@@ -42,3 +42,22 @@ Status: investigation checklist. No production code, database, auth provider, SM
 
 ## Release boundary
 No merge to main, deployment, schema migration, Auth setting change, real SMS, or use of trainee accounts is authorized by this experimental work. Production release requires a separate explicit approval after all test gates pass.
+
+
+## Password update outcome handling — experimental design added
+
+- [x] Separate OTP verification from confirmed password mutation in the mock state machine.
+- [x] Disable direct `complete()` so it cannot mark a request completed without confirmed Auth success.
+- [x] Model definite Auth rejection without consuming the reset grant or completing recovery.
+- [x] Model ambiguous Auth timeout as `RESET_UNKNOWN`; prohibit blind duplicate submission.
+- [x] Model reconciliation outcomes: `SUCCEEDED`, `NOT_APPLIED`, and still `UNKNOWN/PENDING`.
+- [x] Add same-operation idempotency and new-operation retry after authoritative non-application.
+- [x] Add trainee-scoped status retrieval to model recovery after page close/network loss.
+- [x] Explicitly mark session revocation as not modeled/unverified.
+- [ ] Execute the updated Node.js test suite and inspect its actual output.
+- [ ] Confirm the GitHub Actions run for the latest branch commit is completed and passing.
+- [ ] Inspect the real project's Auth SDK/API version and provider-supported password update and session revocation behavior.
+- [ ] Build durable, transactional operation ledger and provider reconciliation only in a separately authorized isolated integration environment.
+- [ ] Test real provider failure, post-commit timeout, old-password rejection, new-password login, multi-session behavior, and concurrent duplicate submissions using disposable test accounts only.
+
+These checked items mean code/documentation was added, not that tests passed or production behavior was verified.
