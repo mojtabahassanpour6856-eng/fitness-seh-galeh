@@ -16,7 +16,7 @@ ALTER TABLE public.trainee_password_recovery_requests
     delivery_payload IS NULL OR (
       jsonb_typeof(delivery_payload) = 'object'
       AND delivery_payload ?& ARRAY['v','alg','kid','iv','ct']
-      AND jsonb_object_length(delivery_payload) = 5
+      AND jsonb_array_length(jsonb_path_query_array(delivery_payload, '$.*')) = 5
       AND delivery_payload->>'v' = '1'
       AND delivery_payload->>'alg' = 'A256GCM'
       AND delivery_payload->>'kid' ~ '^[A-Za-z0-9_-]{1,32}$'
@@ -31,7 +31,7 @@ ALTER TABLE public.trainee_password_recovery_outbox
     delivery_payload IS NULL OR (
       jsonb_typeof(delivery_payload) = 'object'
       AND delivery_payload ?& ARRAY['v','alg','kid','iv','ct']
-      AND jsonb_object_length(delivery_payload) = 5
+      AND jsonb_array_length(jsonb_path_query_array(delivery_payload, '$.*')) = 5
       AND delivery_payload->>'v' = '1'
       AND delivery_payload->>'alg' = 'A256GCM'
       AND delivery_payload->>'kid' ~ '^[A-Za-z0-9_-]{1,32}$'
@@ -101,7 +101,7 @@ BEGIN
      OR p_delivery_payload IS NULL
      OR jsonb_typeof(p_delivery_payload) <> 'object'
      OR NOT (p_delivery_payload ?& ARRAY['v','alg','kid','iv','ct'])
-     OR jsonb_object_length(p_delivery_payload) <> 5
+     OR jsonb_array_length(jsonb_path_query_array(p_delivery_payload, '$.*')) <> 5
      OR p_delivery_payload->>'v' <> '1'
      OR p_delivery_payload->>'alg' <> 'A256GCM'
      OR p_delivery_payload->>'kid' !~ '^[A-Za-z0-9_-]{1,32}$'
