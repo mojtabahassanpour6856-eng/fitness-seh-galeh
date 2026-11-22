@@ -35,6 +35,9 @@ exp.approve({requestId:'r3',authenticatedCoachId:'c3'});
 now+=24 * 60 * 60_000;
 assert.throws(() => exp.verify({requestId:'r3',traineeId:'t3',code:exp.mockMessages[0].body.slice(-4)}),/expired/i);
 assert.equal(exp.requests.get('r3').state,STATES.EXPIRED);
+assert.throws(()=>exp.request({traineeId:'t3',coachId:'c3',requestId:'r3b'}),/Cooldown/);
+ow += 60000;
+assert.equal(exp.request({traineeId:'t3',coachId:'c3',requestId:'r3b'}).state,STATES.REQUESTED);
 // Expiry boundary: valid just before 24 hours, invalid exactly at 24 hours.
 let boundaryNow = 2000000;
 const boundarySystem = () => new MockRecovery({ secret, now: () => boundaryNow, maxAttempts: 3, cooldownMs: 0 });
@@ -62,6 +65,11 @@ assert.throws(() => rejected.reject({requestId:'r6',authenticatedCoachId:'wrong'
 rejected.reject({requestId:'r6',authenticatedCoachId:'c6'});
 assert.equal(rejected.requests.get('r6').state,STATES.REJECTED);
 assert.throws(() => rejected.approve({requestId:'r6',authenticatedCoachId:'c6'}),/Invalid state/);
+// Rejected request should permit a fresh request after cooldown; fixture uses no cooldown.
+const rejectedRetry = new MockRecovery({secret,now:()=>now,cooldownMs:0});
+rejectedRetry.request({traineeId:'t9',coachId:'c9',requestId:'r9'});
+rejectedRetry.reject({requestId:'r9',authenticatedCoachId:'c9'});
+assert.equal(rejectedRetry.request({traineeId:'t9',coachId:'c9',requestId:'r10'}).state,STATES.REQUESTED);
 const cooldown=sys();
 cooldown.request({traineeId:'t5',coachId:'c5',requestId:'r5'});
 assert.throws(()=>cooldown.request({traineeId:'t5',coachId:'c5',requestId:'r6'}),/Cooldown/);
