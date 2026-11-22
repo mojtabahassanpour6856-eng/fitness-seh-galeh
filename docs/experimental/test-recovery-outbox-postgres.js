@@ -17,6 +17,8 @@ async function main(){
  assert.match(beginFn,/RAISE EXCEPTION 'outbox send-start state changed'/,'begin-send must rollback both row updates if Outbox update fails');
  assert.match(finishFn,/RAISE EXCEPTION 'outbox completion state changed'/,'finish must rollback both row updates if Outbox update fails');
  await pool.query(migration);
+ const encryptedMigration=fs.readFileSync('docs/experimental/migrations/20261122_recovery_encrypted_delivery_payload_candidate.sql','utf8');
+ await pool.query(encryptedMigration);
 
  // The real coach-review RPC must atomically create exactly one Outbox row.
  const reviewRequest='30000000-0000-4000-8000-000000000005';
