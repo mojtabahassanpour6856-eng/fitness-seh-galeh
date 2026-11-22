@@ -13,6 +13,8 @@ on:
       - 'docs/experimental/test-recovery-authorization-abuse.js'
       - 'docs/experimental/recovery-candidate-core.mjs'
       - 'docs/experimental/test-recovery-candidate-core.js'
+      - 'docs/experimental/migrations/20261122_recovery_atomic_rpc_candidate.sql'
+      - 'docs/experimental/test-recovery-atomic-rpc-candidate.js'
       - 'docs/experimental/postgres-concurrency-test.js'
       - 'docs/experimental/migrations/20261122_include_processing_in_active_recovery_unique_index.sql'
       - '.github/workflows/test-mock-recovery-experiment.yml'
@@ -44,6 +46,8 @@ jobs:
         run: node docs/experimental/test-recovery-authorization-abuse.js
       - name: Run candidate security primitive tests (isolated only)
         run: node docs/experimental/test-recovery-candidate-core.js
+      - name: Run atomic recovery RPC candidate tests (disposable PostgreSQL only)
+        run: node docs/experimental/test-recovery-atomic-rpc-candidate.js
 
   postgres-concurrency-tests:
     runs-on: ubuntu-latest
