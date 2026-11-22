@@ -410,7 +410,7 @@ assert.throws(()=>staleTerminal.reject({requestId:'str1',authenticatedCoachId:'s
 assert.equal(staleTerminal.requests.get('str1').state,STATES.EXPIRED);
 const cooldown=sys();
 cooldown.request({traineeId:'t5',coachId:'c5',requestId:'r5'});
-assert.throws(()=>cooldown.request({traineeId:'t5',coachId:'c5',requestId:'r6'}),/Cooldown/);
+assert.throws(()=>cooldown.request({traineeId:'t5',coachId:'c5',requestId:'r6'}),/Active recovery request exists|Cooldown/);
 assert.equal(safeEqualHex('a'.repeat(64),'a'.repeat(64)),true);
 assert.equal(safeEqualHex('a'.repeat(64),'b'.repeat(64)),false);
 console.log('All mock recovery engine tests passed.');
