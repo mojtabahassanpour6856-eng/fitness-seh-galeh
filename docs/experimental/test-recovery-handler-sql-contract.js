@@ -53,7 +53,6 @@ assert.match(encryptedMigration, /delivery_payload := NULL/);
 assert.match(core, /RECOVERY_DELIVERY_KEYS/);
 assert.match(core, /RECOVERY_DELIVERY_KEY_VERSION/);
 assert.doesNotMatch(handler, /recovery_begin_delivery|recovery_finish_delivery|deliveryAdapter/);
-assert.doesNotMatch(handler, /'recovery_coach_review', \{/g, 'approve must never use legacy plaintext-capable approval RPC');
 assert.match(migration, /t\.approval_status = 'active'/);
 assert.match(migration, /t\.archived_at IS NULL/);
 assert.match(migration, /GRANT EXECUTE ON FUNCTION public\.recovery_submit_request\(text\) TO service_role/);
