@@ -63,4 +63,28 @@ await assert.rejects(
   processOneRecoveryOutboxItem({admin:makeAdmin(),workerId,deliveryKeys,cryptoImpl:webcrypto,provider:{send:async()=>({accepted:true})}}),
   /REAL_PROVIDER_DISABLED_IN_EXPERIMENT/
 );
+
+const missingPayloadAdmin=makeAdmin({fetchPayload:false});
+const noPayloadProvider=new FakeRecoverySmsProvider();
+assert.deepEqual(await processOneRecoveryOutboxItem({admin:missingPayloadAdmin,workerId,deliveryKeys,cryptoImpl:webcrypto,provider:noPayloadProvider}),{status:'unknown'});
+assert.equal(noPayloadProvider.calls.length,0);
+assert.equal(missingPayloadAdmin.calls.at(-1).args.p_safe_error_code,'payload_unavailable_after_send_start');
+
+const lostLeaseAdmin=makeAdmin();
+lostLeaseAdmin.rpc=async(name,args)=>{
+  lostLeaseAdmin.calls.push({name,args});
+  if(name==='recovery_outbox_claim') return {data:[{outbox_id:'6ba7b813-9dad-41d1-80b4-00c04fd430c8',lease_generation:4,provider_idempotency_key:'idem'}]};
+  if(name==='recovery_outbox_heartbeat') return {data:false};
+  return {data:true};
+};
+const lostLeaseProvider=new FakeRecoverySmsProvider();
+assert.deepEqual(await processOneRecoveryOutboxItem({admin:lostLeaseAdmin,workerId,deliveryKeys,cryptoImpl:webcrypto,provider:lostLeaseProvider}),{status:'lease_lost'});
+assert.equal(lostLeaseProvider.calls.length,0);
+assert.equal(lostLeaseAdmin.calls.some(x=>x.name==='recovery_outbox_begin_send'),false);
+
+const malformedAdmin=makeAdmin();
+const malformedProvider=new FakeRecoverySmsProvider([{kind:'malformed'}]);
+assert.deepEqual(await processOneRecoveryOutboxItem({admin:malformedAdmin,workerId,deliveryKeys,cryptoImpl:webcrypto,provider:malformedProvider}),{status:'unknown'});
+assert.equal(malformedAdmin.calls.at(-1).args.p_outcome,'unknown');
+
 console.log('PASS: fake-only worker success, timeout-to-unknown/no-resend, trainee recheck, and real-provider rejection.');
