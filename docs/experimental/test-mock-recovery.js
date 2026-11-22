@@ -124,6 +124,23 @@ assert.equal(callbackThrows.approve({requestId:'rx',authenticatedCoachId:'cx'}).
 assert.equal(callbackThrows.requests.get('rx').state,STATES.APPROVED);
 assert.equal(callbackThrows.approve({requestId:'rx',authenticatedCoachId:'cx'}).delivery,'MOCK_ONLY');
 assert.equal(callbackThrows.requests.get('rx').state,STATES.CODE_ISSUED);
+// Stale REQUESTED requests expire and do not permanently block a fresh recovery.
+let staleNow = 5000000;
+const staleRequests = new MockRecovery({secret,now:()=>staleNow,cooldownMs:0,requestTTLms:1000});
+staleRequests.request({traineeId:'ts',coachId:'cs',requestId:'rs'});
+staleNow += 1000;
+assert.equal(staleRequests.sweepExpired(),1);
+assert.equal(staleRequests.requests.get('rs').state,STATES.EXPIRED);
+assert.equal(staleRequests.request({traineeId:'ts',coachId:'cs',requestId:'rs2'}).state,STATES.REQUESTED);
+// APPROVED after delivery failure also expires and permits a new request.
+let staleApprovedNow = 7000000;
+const staleApproved = new MockRecovery({secret,now:()=>staleApprovedNow,cooldownMs:0,requestTTLms:1000,delivery:()=>({ok:false})});
+staleApproved.request({traineeId:'ta',coachId:'ca',requestId:'ra'});
+staleApproved.approve({requestId:'ra',authenticatedCoachId:'ca'});
+staleApprovedNow += 1000;
+assert.equal(staleApproved.sweepExpired(),1);
+assert.equal(staleApproved.requests.get('ra').state,STATES.EXPIRED);
+assert.equal(staleApproved.request({traineeId:'ta',coachId:'ca',requestId:'ra2'}).state,STATES.REQUESTED);
 const cooldown=sys();
 cooldown.request({traineeId:'t5',coachId:'c5',requestId:'r5'});
 assert.throws(()=>cooldown.request({traineeId:'t5',coachId:'c5',requestId:'r6'}),/Cooldown/);
