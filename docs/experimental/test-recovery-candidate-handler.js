@@ -188,4 +188,48 @@ async function body(response) { return await response.json(); }
   assert.equal(f.calls.filter(x => x.type === 'auth_update').length, 1);
   console.log('PASS: ambiguous Auth timeout is persisted as unknown without retry.');
 }
+
+{
+  const f = fixture({ rate: false });
+  const r = await f.handler(request({ action: 'request', phone: '09123456789' }));
+  assert.equal(r.status, 429);
+  assert.equal(f.calls.some(x => x.name === 'recovery_submit_request'), false,
+    'rate-limited requests must not create recovery rows');
+  console.log('PASS: exhausted request rate limit blocks submission before database request creation.');
+}
+{
+  const f = fixture({
+    matches: [{ id: UUID, phone_normalized: '+989123456789', hmac_key_version: 'k1' }],
+    claim: { claimed: true, operation_id: OP, auth_user_id: AUTH_USER },
+    beginAuth: false
+  });
+  const r = await f.handler(request({ action: 'reset', phone: '09123456789', code: '0007', new_password: 'StrongPass!234' }));
+  assert.equal(r.status, 409);
+  assert.equal(f.calls.some(x => x.type === 'auth_update'), false,
+    'Auth must never be called unless the durable begin transition succeeds');
+  console.log('PASS: failed durable Auth begin transition prevents any Auth password update.');
+}
+{
+  const f = fixture({
+    matches: [{ id: UUID, phone_normalized: '+989123456789', hmac_key_version: 'k1' }],
+    claim: { claimed: false }
+  });
+  const r = await f.handler(request({ action: 'reset', phone: '09123456789', code: '9999', new_password: 'StrongPass!234' }));
+  assert.equal(r.status, 400);
+  assert.equal(f.calls.some(x => x.name === 'recovery_record_wrong_attempt'), true);
+  assert.equal(f.calls.some(x => x.type === 'auth_update'), false);
+  console.log('PASS: rejected reset code records a failed attempt and never calls Auth.');
+}
+{
+  const f = fixture({
+    matches: [{ id: UUID, phone_normalized: '+989123456789', hmac_key_version: 'k1' }],
+    claim: { claimed: true, operation_id: OP, auth_user_id: AUTH_USER },
+    deps: { admin: { auth: { admin: { updateUserById: async () => { throw new Error('mock transport disconnect'); } } } } }
+  });
+  const r = await f.handler(request({ action: 'reset', phone: '09123456789', code: '0007', new_password: 'StrongPass!234' }));
+  assert.equal(r.status, 503);
+  assert.equal(f.calls.find(x => x.name === 'recovery_finish_auth_update').args.p_outcome, 'unknown');
+  console.log('PASS: thrown Auth transport error is fail-closed as unknown and is not retried.');
+}
+
 console.log('All dependency-injected recovery handler candidate tests passed.');
