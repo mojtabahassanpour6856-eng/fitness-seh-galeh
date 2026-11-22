@@ -169,3 +169,30 @@ This is an in-memory mock hardening only. It does not alter the deployed Edge Fu
 Engine change commit: `e798c40227b7f444757fc10edf9a2c7528bf040e`.
 Regression test commit: `c26850fa2cf3da17223216d0d55985b547646b1d`.
 CI execution for these latest commits remains unverified through the available status lookup.
+
+
+## Live Edge Function reassignment and delivery-path review (read-only, 2026-11-22)
+
+Read the active `trainee-password-recovery` Edge Function in both Supabase projects; no invocation or write was made.
+
+- Test project `udptdznbvewkublvzmtm`: active version 10, source SHA `f9bbda8b8d0f38d266fe009a0492ca5008f7f1fc4bd531bf60f70ec302331678`.
+- Production project `qfakyudgidsumeuoqoot`: active version 9, source SHA `993d0c3a3a7aa2e2083b80131753c7b25c7180768cd87e9ba0ad180cb5ca18ae`.
+
+### Reassignment checks found
+- Coach `list` query is scoped by `trainees.coach_user_id = authenticated coach user id`.
+- Coach `review` fetches the linked trainee and checks current `coach_user_id` against the authenticated coach before approval/rejection.
+- However, the subsequent UPDATE is conditional on request ID and pending status, not on the current trainee-to-coach assignment in the same atomic database operation. A reassignment between the ownership read and UPDATE can create a time-of-check/time-of-use race. Re-checking in application code alone does not close that race; the final write must be bound to current assignment atomically (for example through a carefully reviewed database-side condition/transaction or an RPC with trusted actor identity).
+- The coach list query returns only pending requests, so approved/processing/ambiguous requests are not surfaced for operational recovery.
+
+### Release-blocking differences and remaining issues
+- Both active versions still use wildcard CORS and `verify_jwt=false`; the function performs its own coach Bearer-token validation for coach actions, while public request/reset actions are intentionally unauthenticated. Runtime authorization and CORS behavior remain untested.
+- Public request response is not uniform: unknown/ineligible accounts, existing open requests, and newly inserted requests receive different messages and/or HTTP 200 vs 201. Account/request-state enumeration remains possible.
+- New-request duplicate lookup includes only pending/approved and omits processing.
+- The reset path still uses plain SHA-256 for code digests, modulo-based code generation, and a non-atomic read-then-write wrong-attempt counter.
+- If Auth password update returns an error, the handler reopens the same code by changing processing back to approved. The error outcome may be ambiguous; this can permit replay after Auth may already have changed the password. This is a P0 blocker.
+- Completion-marker failure after Auth success leaves a processing row; there is no durable operation identity or authoritative reconciliation.
+- Test version attempts Mediana SMS delivery after approval; Production version returns the plaintext recovery code in the authenticated coach response instead. These are materially different delivery behaviors. Neither path is approved for release: Mediana remains unavailable/restricted for this project, and delivering the code to the coach is not the intended trainee-direct delivery flow.
+- Production version and Test version both remain active at their existing versions; no function was deployed or invoked.
+
+### Release distance estimate
+The project is still **NOT READY FOR PRODUCTION**. Remaining gates are not just cosmetic: they include a redesigned fail-closed Auth operation/reconciliation flow, atomic assignment-safe coach review, uniform public responses, active-state uniqueness including processing, safe code generation/HMAC, atomic attempt accounting, approved delivery provider, CORS allowlist, isolated real HTTP/Auth tests, session invalidation verification, logging/monitoring, and a reviewed rollback/reconciliation plan. A calendar estimate is not reliable until the chosen delivery provider and Test Auth environment are available and the candidate implementation is agreed.
