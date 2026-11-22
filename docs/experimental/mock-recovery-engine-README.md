@@ -13,3 +13,7 @@ This is a local in-memory state-machine fixture, **not a password reset implemen
 The experimental default validity window is 24 hours (86400000 ms), matching the requested policy. This is only a fixture setting; production expiry must be enforced server-side.
 
 The next gate is reviewing the implementation and fixing/expanding tests before building any UI or production integration.
+
+
+## Pending-request cancellation
+The mock supports trainee cancellation only while a request is still `REQUESTED`. Ownership is checked against the trainee ID supplied to the fixture; in production this identity must come from the authenticated session, not client input. Cancellation does not send SMS and cannot cancel a code already issued. The fixture has no real delivery retry logic or provider acknowledgement.
