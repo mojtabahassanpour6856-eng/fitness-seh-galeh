@@ -39,7 +39,7 @@ function fixture(overrides = {}) {
     }},
     claim: { claimed: false },
     beginAuth: true, finishAuth: true,
-    updateError: null,
+    updateError: null, updateThrows: false,
     ...overrides
   };
   const admin = {
@@ -79,6 +79,7 @@ function fixture(overrides = {}) {
     }),
     auth: { admin: { updateUserById: async (id, payload) => {
       calls.push({ type: 'auth_update', id, payload });
+      if (state.updateThrows) throw new Error('MOCK_AUTH_TRANSPORT_DISCONNECT');
       return { error: state.updateError };
     }}}
   };
@@ -224,7 +225,7 @@ async function body(response) { return await response.json(); }
   const f = fixture({
     matches: [{ id: UUID, phone_normalized: '+989123456789', hmac_key_version: 'k1' }],
     claim: { claimed: true, operation_id: OP, auth_user_id: AUTH_USER },
-    deps: { admin: { auth: { admin: { updateUserById: async () => { throw new Error('mock transport disconnect'); } } } } }
+    updateThrows: true
   });
   const r = await f.handler(request({ action: 'reset', phone: '09123456789', code: '0007', new_password: 'StrongPass!234' }));
   assert.equal(r.status, 503);
