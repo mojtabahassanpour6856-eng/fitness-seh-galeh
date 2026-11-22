@@ -130,7 +130,7 @@ END $$;
 -- after confirmed non-delivery therefore creates a distinct Outbox item.
 CREATE OR REPLACE FUNCTION recovery_private.enqueue_approved_recovery_delivery()
 RETURNS trigger LANGUAGE plpgsql SECURITY DEFINER SET search_path = ''
-AS $
+AS $outbox_trigger$
 DECLARE v_outbox_operation uuid;
 BEGIN
   IF NEW.status='approved' AND NEW.delivery_outcome='pending'
@@ -154,7 +154,7 @@ BEGIN
     END IF;
   END IF;
   RETURN NEW;
-END $;
+END $outbox_trigger$;
 
 DROP TRIGGER IF EXISTS trainee_recovery_enqueue_outbox ON public.trainee_password_recovery_requests;
 CREATE TRIGGER trainee_recovery_enqueue_outbox
