@@ -223,6 +223,7 @@ async function main(){
  const {webcrypto}=require('node:crypto');
  const {encryptRecoveryDeliveryCode}=await import('./recovery-delivery-payload-crypto.mjs');
  const {digestRecoveryCode}=await import('./recovery-candidate-core.mjs');
+ const {createRecoveryCandidateHandler}=await import('./recovery-candidate-handler.mjs');
  const {FakeRecoverySmsProvider,processOneRecoveryOutboxItem}=await import('./recovery-outbox-worker-mock.mjs');
  const e2eTrainee='20000000-0000-4000-8000-000000000078';
  const e2ePhone='+989123450003';
@@ -291,23 +292,50 @@ async function main(){
  assert.equal(e2eState.rows[0].request_payload,null);
  assert.equal(e2eState.rows[0].outbox_payload,null);
  console.log('PASS: end-to-end real PostgreSQL request + coach approval + encrypted Worker + fake provider + terminal payload cleanup');
- // Continue through reset-code redemption and a mocked Auth update; no real Auth account is mutated.
+ // Exercise the actual HTTP reset handler against disposable PostgreSQL; only Auth is mocked.
  const authOperation='70000000-0000-4000-8000-000000000777';
- const resetClaim=await asService(
-   'SELECT public.recovery_claim_reset($1,$2,$3) AS result',
-   [e2eRequestId,e2eCodeDigest,authOperation]
- );
- assert.equal(resetClaim.rows[0].result.claimed,true,JSON.stringify(resetClaim.rows[0].result));
- const authStarted=await asService(
-   'SELECT public.recovery_begin_auth_update($1,$2) AS ok',[e2eRequestId,authOperation]
- );
- assert.equal(authStarted.rows[0].ok,true);
- // This represents a successful Auth adapter response in the disposable test only.
- const authFinished=await asService(
-   'SELECT public.recovery_finish_auth_update($1,$2,$3,$4) AS ok',
-   [e2eRequestId,authOperation,'completed',null]
- );
- assert.equal(authFinished.rows[0].ok,true);
+ const authUpdates=[];
+ const resetAdmin={
+   async rpc(name,args){
+     const calls={
+       recovery_claim_reset:['SELECT public.recovery_claim_reset($1,$2,$3) AS result',[args.p_request_id,args.p_code_digest,args.p_operation_id],'json'],
+       recovery_record_wrong_attempt:['SELECT public.recovery_record_wrong_attempt($1,$2,$3) AS result',[args.p_request_id,args.p_submitted_digest,args.p_max_attempts],'json'],
+       recovery_begin_auth_update:['SELECT public.recovery_begin_auth_update($1,$2) AS ok',[args.p_request_id,args.p_operation_id],'scalar'],
+       recovery_finish_auth_update:['SELECT public.recovery_finish_auth_update($1,$2,$3,$4) AS ok',[args.p_request_id,args.p_operation_id,args.p_outcome,args.p_safe_error_code],'scalar']
+     };
+     const call=calls[name];if(!call)return {data:null,error:new Error('RPC_NOT_ALLOWED:'+name)};
+     try{const result=await asService(call[0],call[1]);return {data:call[2]==='json'?result.rows[0]?.result:result.rows[0]?.ok??false,error:null};}
+     catch(error){return {data:null,error};}
+   },
+   from(table){
+     if(table!=='trainee_password_recovery_requests')throw new Error('TABLE_NOT_ALLOWED');
+     const filters=[];
+     const q={select(){return q;},eq(column,value){filters.push([column,value]);return q;},limit(){return q;},
+       then(resolve,reject){
+         const allowed=['phone_normalized','status','delivery_outcome'];
+         if(filters.some(([key])=>!allowed.includes(key)))return Promise.reject(new Error('FILTER_NOT_ALLOWED')).then(resolve,reject);
+         const where=filters.map(([key],i)=>key+'=$'+(i+1)).join(' AND ');
+         return pool.query('SELECT id,phone_normalized,hmac_key_version FROM public.trainee_password_recovery_requests WHERE '+where,filters.map(x=>x[1]))
+           .then(result=>resolve({data:result.rows,error:null}),reject);
+       }};
+     return q;
+   },
+   auth:{admin:{updateUserById:async(id,payload)=>{authUpdates.push({id,payload});return {data:{user:{id}},error:null};}}}
+ };
+ const resetHandler=createRecoveryCandidateHandler({
+   env:{RECOVERY_HMAC_KEYS:JSON.stringify({k1:e2eHmacKey}),RECOVERY_HMAC_KEY_VERSION:'k1',
+     RECOVERY_DELIVERY_KEYS:JSON.stringify(e2eKeys),RECOVERY_DELIVERY_KEY_VERSION:'d1',
+     RECOVERY_ALLOWED_ORIGINS:'https://app.example.test'},
+   admin:resetAdmin,createUserClient:()=>{throw new Error('not used for reset')},
+   now:()=>Date.now(),randomUUID:()=>authOperation,crypto:webcrypto
+ });
+ const resetResponse=await resetHandler(new Request('https://candidate.invalid',{method:'POST',
+   headers:{origin:'https://app.example.test','content-type':'application/json'},
+   body:JSON.stringify({action:'reset',phone:e2ePhone,code:'4826',new_password:'MockOnlyPass!123'})}));
+ assert.equal(resetResponse.status,200,'HTTP reset handler must complete real PostgreSQL state transitions');
+ assert.equal(authUpdates.length,1,'exactly one mocked Auth update must occur');
+ assert.equal(authUpdates[0].id,'10000000-0000-4000-8000-000000000003');
+ assert.equal(authUpdates[0].payload.password,'MockOnlyPass!123');
  const fullyCompleted=await pool.query(
    'SELECT status,delivery_outcome,auth_outcome,token_hash,token_expires_at FROM public.trainee_password_recovery_requests WHERE id=$1',
    [e2eRequestId]
@@ -317,7 +345,7 @@ async function main(){
  assert.equal(fullyCompleted.rows[0].auth_outcome,'completed');
  assert.equal(fullyCompleted.rows[0].token_hash,null);
  assert.equal(fullyCompleted.rows[0].token_expires_at,null);
- console.log('PASS: full disposable lifecycle from request submission through mock delivery, redemption, and mocked Auth completion');
+ console.log('PASS: HTTP reset handler + real disposable PostgreSQL claim/begin/finish RPCs + one mocked Auth update');
 
  console.log('All disposable PostgreSQL Outbox/Worker integration checks passed.');
 }
