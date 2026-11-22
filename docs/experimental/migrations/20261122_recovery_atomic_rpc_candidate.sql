@@ -116,9 +116,7 @@ BEGIN
         request_count = CASE
           WHEN limits.window_started_at <= v_now - make_interval(secs => p_window_seconds)
             THEN 1
-          WHEN limits.request_count < p_max_requests
-            THEN limits.request_count + 1
-          ELSE limits.request_count END,
+          ELSE least(limits.request_count + 1, p_max_requests + 1) END,
         updated_at = v_now
   RETURNING request_count <= p_max_requests
     AND window_started_at >= v_now - make_interval(secs => p_window_seconds)
