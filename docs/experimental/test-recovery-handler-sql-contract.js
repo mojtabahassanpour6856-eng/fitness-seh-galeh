@@ -45,7 +45,7 @@ assert.match(handler, /trainees!inner\(full_name,coach_user_id\)/);
 assert.match(handler, /delivery_status: 'queued'/);
 assert.match(handler, /recovery_coach_review_encrypted/);
 assert.match(handler, /encryptRecoveryDeliveryCode/);
-assert.match(handler, /RECOVERY_DELIVERY_KEY_VERSION/);
+assert.match(core, /RECOVERY_DELIVERY_KEY_VERSION/);
 assert.match(encryptedMigration, /delivery_payload jsonb/);
 assert.match(encryptedMigration, /p_delivery_operation_id uuid/);
 assert.match(encryptedMigration, /NEW\.delivery_payload IS NOT NULL/);
