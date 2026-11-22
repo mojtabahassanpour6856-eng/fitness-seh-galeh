@@ -192,7 +192,10 @@ export function createRecoveryCandidateHandler(deps) {
           return json(publicResetFailure(), 400, corsOrigin);
 
         const request = matches[0];
-        const digest = digestRecoveryCode(code, secrets.hmac, request.hmac_key_version || secrets.keyVersion);
+        const storedKeyVersion = request.hmac_key_version || secrets.keyVersion;
+        if (!Object.hasOwn(secrets.hmacKeys, storedKeyVersion))
+          return json(publicResetFailure(), 400, corsOrigin);
+        const digest = digestRecoveryCode(code, secrets.hmacKeys[storedKeyVersion], storedKeyVersion);
         const operationId = (deps.randomUUID || randomUUID)();
         const claim = await rpc(deps.admin, 'recovery_claim_reset', {
           p_request_id: request.id, p_code_digest: digest, p_operation_id: operationId
