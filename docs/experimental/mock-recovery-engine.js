@@ -32,12 +32,13 @@ function safeEqualHex(a, b) {
 }
 
 class MockRecovery {
-  constructor({ secret, now = () => Date.now(), codeTTLms = 24 * 60 * 60_000, maxAttempts = 5, cooldownMs = 60_000 } = {}) {
+  constructor({ secret, now = () => Date.now(), codeTTLms = 24 * 60 * 60_000, maxAttempts = 5, cooldownMs = 60_000, delivery = () => ({ ok: true }) } = {}) {
     this.secret = secret;
     this.now = now;
     this.codeTTLms = codeTTLms;
     this.maxAttempts = maxAttempts;
     this.cooldownMs = cooldownMs;
+    this.delivery = delivery;
     this.requests = new Map();
     this.lastRequestAt = new Map();
     this.mockMessages = [];
@@ -74,8 +75,18 @@ class MockRecovery {
     if (r.state !== STATES.REQUESTED) throw new Error('Invalid state');
     r.state = STATES.APPROVED; r.approvedAt = this.now();
     const code = generateCode();
+    const outcome = this.delivery({ requestId, traineeId: r.traineeId, code });
+    if (!outcome || outcome.ok !== true) {
+      r.state = STATES.APPROVED;
+      r.deliveryStatus = 'FAILED';
+      r.deliveryFailedAt = this.now();
+      r.codeDigest = null;
+      r.expiresAt = null;
+      return { requestId, state: r.state, delivery: 'FAILED', retryable: true };
+    }
     r.codeDigest = digestCode(code, this.secret);
     r.expiresAt = this.now() + this.codeTTLms;
+    r.deliveryStatus = 'MOCK_SENT';
     r.state = STATES.CODE_ISSUED;
     this.mockMessages.push({ type: 'MOCK_SMS', requestId, traineeId: r.traineeId, body: 'Your test recovery code is: ' + code });
     return { requestId, state: r.state, expiresAt: r.expiresAt, delivery: 'MOCK_ONLY' };
