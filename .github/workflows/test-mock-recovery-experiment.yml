@@ -8,6 +8,7 @@ on:
       - 'docs/experimental/mock-recovery-engine.js'
       - 'docs/experimental/test-mock-recovery.js'
       - 'docs/experimental/postgres-concurrency-test.js'
+      - 'docs/experimental/migrations/20261122_include_processing_in_active_recovery_unique_index.sql'
       - '.github/workflows/test-mock-recovery-experiment.yml'
   workflow_dispatch:
 
