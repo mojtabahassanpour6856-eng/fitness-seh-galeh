@@ -274,3 +274,20 @@ Workflow run `45050755303` completed **success** on commit `5b40c5c46bcf41e38fa5
 - Deno type-check of the non-deployable Edge adapter.
 
 This verifies source-level compatibility and compilation under Deno 2, not live Supabase deployment or PostgREST runtime behavior.
+
+
+## Versioned HMAC key rotation hardening and Test legacy-row disposition (2026-11-22)
+
+A further review found that the first candidate stored a `hmac_key_version` on each request but only configured one `RECOVERY_HMAC_SECRET`. That did not provide actual key rotation: older requests could not reliably be verified after replacing the single secret.
+
+The candidate now requires `RECOVERY_HMAC_KEYS` as a JSON map of version -> secret, validates every key (minimum 32 bytes), and requires `RECOVERY_HMAC_KEY_VERSION` to exist in that map. New codes use the active key; reset looks up the exact historical key version stored on the request. If that key is absent, reset fails closed before claiming the request, consuming an attempt, or calling Auth. Tests cover old-key success and missing-key fail-closed behavior.
+
+Read-only inspection of Supabase Test confirmed:
+- `consume_registration_rate_limit(text, integer, integer) RETURNS boolean` exactly matches the candidate handler's named arguments.
+- The candidate's referenced tables/fields exist in Test (`profiles.role`, `trainees.coach_user_id/approval_status/archived_at/auth_user_id/phone_normalized`).
+- Recovery table has one `approved` row, created 2026-11-16, whose token is already expired; it has a token hash and linked trainee is still active/non-archived. No PII, IDs, phone numbers, or hashes are recorded here.
+- Current Test state constraint permits transition to `expired` only with token hash and expiry cleared. Existing unique index currently covers pending/approved; candidate migration expands it to include processing.
+
+Prepared, but did NOT execute, `migrations/20261122_dispose_expired_legacy_approved_request.sql`. It is tightly guarded: exactly one expired approved row, zero live approved rows, zero processing rows; then only that recovery-request row is moved to expired and its code hash/expiry cleared. It does not touch trainee rows, Auth users/passwords, sessions, or phone data. It still requires explicit approval before execution in Test.
+
+The candidate remains non-deployable and no database writes, migration, function deploy, password reset, or SMS occurred in this review.
