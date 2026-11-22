@@ -205,3 +205,31 @@ The project is still **NOT READY FOR PRODUCTION**. Remaining gates are not just 
 - The implementation contract now records the required RPC/transaction authorization shape, required schema additions, and test-only delivery adapter boundary.
 - No candidate Edge Function source has been deployed or substituted for the live function. No Test/Production migration, password update, trainee mutation, or SMS was performed.
 - The report and contract are design artifacts only. They do not count as a live integration test or a completed fix.
+
+
+## Candidate security primitives and CI regression (2026-11-22)
+
+Added isolated, non-deployable candidate module:
+- `docs/experimental/recovery-candidate-core.mjs`
+- `docs/experimental/test-recovery-candidate-core.js`
+
+Covered behaviors:
+- unbiased four-digit generation by rejection sampling;
+- HMAC-SHA-256 with key-version domain separation and fail-closed secret validation;
+- constant-time digest comparison;
+- Iranian mobile normalization;
+- exact-origin allowlist matching;
+- identical generic public request acceptance response;
+- fail-closed classification of ambiguous Auth outcomes as `auth_update_unknown`.
+
+The candidate test is now part of the experiment workflow. First run `45047322945` exposed an existing appended Mock regression test typo: two code-extraction regexes were double-escaped, so the suite stopped after its earlier assertions. Corrected both test expressions in commit `6e395b93a373261302e9384b24047e8ac29071cb`.
+
+Follow-up run `45047406596`:
+- Mock recovery suite: **success**.
+- Existing crypto boundary suite: **success**.
+- HTTP smoke static contract suite: **success**.
+- Authorization/abuse suite: **success**.
+- New candidate primitive suite: **success**.
+- Disposable PostgreSQL concurrency job was still **in progress** at the time of this report update; do not count the full workflow as passed until that job completes.
+
+These are isolated CI checks only. The candidate module is not an Edge Function and does not implement database RPCs, JWT middleware, real Auth, SMS, or persistence. The live Test/Production functions and schemas remain untouched; production release remains **NOT READY**.
