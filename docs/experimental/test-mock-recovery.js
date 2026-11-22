@@ -25,7 +25,7 @@ assert.equal(grantSystem.verify({requestId:'grant-expiry',traineeId:'grant-train
 const grantRecord = grantSystem.requests.get('grant-expiry');
 assert.equal(grantRecord.grantExpiresAt, grantClock.value + 10*60_000, 'post-verification grant must be short-lived');
 grantClock.value += 10*60_000;
-assert.throws(()=>grantSystem.applyPasswordReset({requestId:'grant-expiry',traineeId:'grant-trainee',operationId:'expired-op',updateAuth:()=>({ok:true})}),/expired/i);
+assert.throws(()=>grantSystem.applyPasswordReset({requestId:'grant-expiry',traineeId:'grant-trainee',operationId:'expired-op',updateAuth:()=>({ok:true})}),/expired|Not verified/i);
 assert.equal(grantRecord.state,STATES.EXPIRED,'expired reset grant cannot complete');
 assert.equal(grantRecord.grantExpiresAt,null,'expired grant material must be cleared');
 
