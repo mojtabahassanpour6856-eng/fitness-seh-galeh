@@ -264,7 +264,7 @@ class MockRecovery {
     const now = this.now();
     let expiredCount = 0;
     for (const r of this.requests.values()) {
-      if ([STATES.REQUESTED, STATES.APPROVED, STATES.DELIVERY_PENDING, STATES.DELIVERY_UNKNOWN].includes(r.state) && now - r.createdAt >= this.requestTTLms) {
+      if ([STATES.REQUESTED, STATES.APPROVED, STATES.DELIVERY_PENDING].includes(r.state) && now - r.createdAt >= this.requestTTLms) {
         r.state = STATES.EXPIRED;
         r.expiredAt = now;
         r.codeDigest = null;
