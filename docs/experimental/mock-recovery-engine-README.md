@@ -82,3 +82,16 @@ The fixture exposes `getForCoach` and `getForTrainee` read helpers. Both require
 
 ## Replay checks and concurrency boundary
 Regression tests verify that a code cannot be accepted twice, a completed recovery cannot be completed again, and cancellation is a terminal transition. These are sequential state-machine checks only. Because this fixture is synchronous and in-memory, it cannot establish race safety across concurrent requests or multiple server instances. Production must use transactional conditional updates/row locks and integration tests that issue simultaneous requests against separate application instances.
+
+
+## Password update and ambiguous Auth outcomes (mock-only)
+
+The former direct `complete()` shortcut is disabled. A recovery can enter `COMPLETED` only after `applyPasswordReset()` receives an explicit confirmed-success result from its mock Auth adapter. The adapter receives only request/trainee/operation identifiers in this fixture; it never receives a plaintext password.
+
+- Confirmed provider rejection (`{ok:false}`) returns the request to `VERIFIED`; it does not consume the reset grant or mark completion. A later attempt must use a new operation ID.
+- A thrown error is treated as ambiguous, not as failure: state becomes `RESET_UNKNOWN`. Repeating the same operation ID returns the recorded outcome without invoking Auth again.
+- `reconcilePasswordReset()` models querying an authoritative provider operation/status record. `SUCCEEDED` completes; `NOT_APPLIED` returns to `VERIFIED` so a new operation ID may be used; `PENDING` or lookup failure stays unknown and blocks retries.
+- The same trainee can query their scoped status after a client closes or disconnects. The in-memory fixture only models this; production requires durable operation records.
+- The short reset grant expires while still verified. An unknown operation must not be declared failed merely because the client timed out; production must reconcile with Auth before any retry. If the provider cannot establish the outcome, fail closed and require a documented support/recovery path rather than risking a second password mutation.
+
+This fixture does not model actual password policy, password payload handling, provider APIs, refresh-token/session revocation, or cross-system atomicity. After confirmed success, session revocation is explicitly marked `NOT_MODELED`; never claim old sessions are revoked until verified against the actual Auth provider. Production should use provider-supported operation idempotency or a durable server-side operation ledger/outbox and a reconciliation path. Do not infer success from a client response, local timeout, or UI state.
