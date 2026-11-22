@@ -119,6 +119,7 @@ async function main() {
   assert.deepEqual(acl.rows[0],{service_usage:true,anon_usage:false,service_execute:true,anon_execute:false,service_request_execute:true,anon_request_execute:false});
   console.log('PASS: recovery RPC schema and execute privileges are restricted to service_role');
 
+  let r;
   const submits=await Promise.all(Array.from({length:8},()=>callAsService(
     'SELECT recovery_private.submit_recovery_request($1) AS inserted',['+989123450000']
   )));
@@ -131,7 +132,7 @@ async function main() {
   assert.equal(r.rows[0].inserted,false,'unknown phone must not create a request');
   console.log('PASS: concurrent request submissions create one row; ambiguous/unknown phones create none');
 
-  let r=await callAsService(
+  r=await callAsService(
     'SELECT recovery_private.coach_review_recovery_request($1,$2,$3,$4,$5,$6) AS result',
     [req1,coach2,'approve',digest,new Date(Date.now()+15*60_000).toISOString(),'k1']
   );
