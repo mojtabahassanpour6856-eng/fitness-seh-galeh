@@ -86,7 +86,7 @@ RETURNS boolean
 LANGUAGE plpgsql
 SECURITY DEFINER
 SET search_path = ''
-AS $
+AS $$
 DECLARE
   v_match_count integer;
   v_trainee_id uuid;
@@ -133,7 +133,7 @@ BEGIN
   GET DIAGNOSTICS v_inserted = ROW_COUNT;
   RETURN v_inserted = 1;
 END;
-$;
+$$;
 
 CREATE OR REPLACE FUNCTION recovery_private.coach_review_recovery_request(
   p_request_id uuid,
