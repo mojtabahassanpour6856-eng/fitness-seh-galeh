@@ -48,7 +48,7 @@ async function main() {
     CREATE TABLE public.profiles(id uuid primary key, role text);
     CREATE TABLE public.trainees(
       id uuid primary key, coach_user_id uuid, auth_user_id uuid,
-      approval_status text not null, phone_normalized text
+      approval_status text not null, phone_normalized text, archived_at timestamptz
     );
     CREATE TABLE public.trainee_password_recovery_requests(
       id uuid primary key, trainee_id uuid not null references public.trainees(id),
@@ -129,7 +129,8 @@ async function main() {
     [req2,coach2,'approve',digest,new Date(Date.now()+15*60_000).toISOString(),'k1']
   );
   assert.equal(r.rows[0].result.ok,true);
-  assert.equal(r.rows[0].result.phone_normalized,'+989123456789');
+  assert.equal(r.rows[0].result.status,'approved');
+  assert.equal(Object.hasOwn(r.rows[0].result,'phone_normalized'),false);
 
   const attempts=await Promise.all(Array.from({length:9},()=>callAsService(
     'SELECT recovery_private.record_recovery_wrong_attempt($1,$2,5) AS result',[req2,digest2]
