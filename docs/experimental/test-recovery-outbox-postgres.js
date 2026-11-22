@@ -5,6 +5,14 @@ const {Pool}=require('pg');
 const pool=new Pool({host:process.env.PGHOST||'127.0.0.1',port:Number(process.env.PGPORT||5432),user:process.env.PGUSER||'postgres',password:process.env.PGPASSWORD||'postgres',database:process.env.PGDATABASE||'recovery_ci',max:8});
 const workerA='50000000-0000-4000-8000-000000000001';
 const workerB='50000000-0000-4000-8000-000000000002';
+let testOperationCounter=100;
+function reviewArgs(requestId,coach,hashChar) {
+ const suffix=String(testOperationCounter++).padStart(12,'0');
+ const operationId='60000000-0000-4000-8000-'+suffix;
+ const payload={v:1,alg:'A256GCM',kid:'d1',iv:'AAAAAAAAAAAAAAAA',ct:'AAAAAAAAAAAAAAAAAAAAAAAAAAA='};
+ return [requestId,coach,'approve',hashChar.repeat(64),new Date(Date.now()+10*60_000).toISOString(),'k1',operationId,payload];
+}
+
 async function asService(sql,args=[]){
  const c=await pool.connect();
  try{await c.query('BEGIN');await c.query('SET LOCAL ROLE service_role');const r=await c.query(sql,args);await c.query('COMMIT');return r;}
@@ -30,8 +38,8 @@ async function main(){
    await tx.query('BEGIN');
    await tx.query('SET LOCAL ROLE service_role');
    const rolled=await tx.query(
-     'SELECT public.recovery_coach_review($1,$2,$3,$4,$5,$6) AS result',
-     [reviewRequest,coach,'approve','c'.repeat(64),new Date(Date.now()+10*60_000).toISOString(),'k1']
+     'SELECT public.recovery_coach_review_encrypted($1,$2,$3,$4,$5,$6,$7,$8) AS result',
+     reviewArgs(reviewRequest,coach,'c')
    );
    assert.equal(rolled.rows[0].result.ok,true);
    const inside=await tx.query('SELECT count(*)::int AS n FROM public.trainee_password_recovery_outbox WHERE recovery_request_id=$1',[reviewRequest]);
@@ -44,8 +52,8 @@ async function main(){
  let noOutbox=await pool.query('SELECT count(*)::int AS n FROM public.trainee_password_recovery_outbox WHERE recovery_request_id=$1',[reviewRequest]);
  assert.equal(noOutbox.rows[0].n,0,'rollback must remove the outbox insert with the approval');
  const approved=await asService(
-   'SELECT public.recovery_coach_review($1,$2,$3,$4,$5,$6) AS result',
-   [reviewRequest,coach,'approve','c'.repeat(64),new Date(Date.now()+10*60_000).toISOString(),'k1']
+   'SELECT public.recovery_coach_review_encrypted($1,$2,$3,$4,$5,$6,$7,$8) AS result',
+   reviewArgs(reviewRequest,coach,'c')
  );
  assert.equal(approved.rows[0].result.ok,true);
  const deliveryOp=approved.rows[0].result.delivery_operation_id;
@@ -54,8 +62,8 @@ async function main(){
  assert.equal(linked.rows[0].delivery_operation_id,deliveryOp);
  assert.equal(linked.rows[0].provider_idempotency_key,'trainee-recovery:'+deliveryOp);
  const duplicateReview=await asService(
-   'SELECT public.recovery_coach_review($1,$2,$3,$4,$5,$6) AS result',
-   [reviewRequest,coach,'approve','c'.repeat(64),new Date(Date.now()+10*60_000).toISOString(),'k1']
+   'SELECT public.recovery_coach_review_encrypted($1,$2,$3,$4,$5,$6,$7,$8) AS result',
+   reviewArgs(reviewRequest,coach,'c')
  );
  assert.equal(duplicateReview.rows[0].result.ok,false);
  assert.equal((await pool.query('SELECT count(*)::int AS n FROM public.trainee_password_recovery_outbox WHERE recovery_request_id=$1',[reviewRequest])).rows[0].n,1);
@@ -108,8 +116,8 @@ async function main(){
  await pool.query(`INSERT INTO public.trainee_password_recovery_requests(id,trainee_id,phone_normalized,status)
    VALUES ($1,'20000000-0000-4000-8000-000000000007','+989123450002','pending')`,[secondRequest]);
  const secondApproval=await asService(
-   'SELECT public.recovery_coach_review($1,$2,$3,$4,$5,$6) AS result',
-   [secondRequest,coach,'approve','d'.repeat(64),new Date(Date.now()+10*60_000).toISOString(),'k1']
+   'SELECT public.recovery_coach_review_encrypted($1,$2,$3,$4,$5,$6,$7,$8) AS result',
+   reviewArgs(secondRequest,coach,'d')
  );
  assert.equal(secondApproval.rows[0].result.ok,true);
  const secondOutbox=await pool.query('SELECT id FROM public.trainee_password_recovery_outbox WHERE recovery_request_id=$1',[secondRequest]);
@@ -153,8 +161,8 @@ async function main(){
        token_hash=NULL,token_expires_at=NULL,reviewed_at=NULL,reviewed_by=NULL,
        token_attempts=0,updated_at=now() WHERE id=$1`,[secondRequest]);
  const failApproval=await asService(
-   'SELECT public.recovery_coach_review($1,$2,$3,$4,$5,$6) AS result',
-   [secondRequest,coach,'approve','e'.repeat(64),new Date(Date.now()+10*60_000).toISOString(),'k1']
+   'SELECT public.recovery_coach_review_encrypted($1,$2,$3,$4,$5,$6,$7,$8) AS result',
+   reviewArgs(secondRequest,coach,'e')
  );
  assert.equal(failApproval.rows[0].result.ok,true);
  const failLease=await asService("SELECT * FROM recovery_private.claim_recovery_outbox($1,30)",[workerA]);
@@ -174,8 +182,8 @@ async function main(){
 
  // A fresh approval operation can be attempted; ambiguous delivery must remain unknown.
  const unknownApproval=await asService(
-   'SELECT public.recovery_coach_review($1,$2,$3,$4,$5,$6) AS result',
-   [secondRequest,coach,'approve','f'.repeat(64),new Date(Date.now()+10*60_000).toISOString(),'k1']
+   'SELECT public.recovery_coach_review_encrypted($1,$2,$3,$4,$5,$6,$7,$8) AS result',
+   reviewArgs(secondRequest,coach,'f')
  );
  assert.equal(unknownApproval.rows[0].result.ok,true);
  const unknownLease=await asService("SELECT * FROM recovery_private.claim_recovery_outbox($1,30)",[workerB]);
