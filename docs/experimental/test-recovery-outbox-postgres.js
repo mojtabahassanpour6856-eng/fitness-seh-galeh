@@ -129,6 +129,52 @@ async function main(){
  const outboxSent=await pool.query("SELECT status FROM public.trainee_password_recovery_outbox WHERE id=$1",[l.outbox_id]);
  assert.equal(outboxSent.rows[0].status,'sent');
  console.log('PASS: live lease heartbeat and atomic one-time successful completion');
+
+ // Reuse the synthetic fixture with a fresh operation to exercise definite failure
+ // and ambiguous provider outcome without creating another auth identity.
+ await pool.query(`UPDATE public.trainee_password_recovery_requests
+   SET status='pending',delivery_outcome=NULL,delivery_operation_id=NULL,
+       token_hash=NULL,token_expires_at=NULL,reviewed_at=NULL,reviewed_by=NULL,
+       token_attempts=0,updated_at=now() WHERE id=$1`,[secondRequest]);
+ const failApproval=await asService(
+   'SELECT public.recovery_coach_review($1,$2,$3,$4,$5,$6) AS result',
+   [secondRequest,coach,'approve','e'.repeat(64),new Date(Date.now()+10*60_000).toISOString(),'k1']
+ );
+ assert.equal(failApproval.rows[0].result.ok,true);
+ const failLease=await asService("SELECT * FROM recovery_private.claim_recovery_outbox($1,30)",[workerA]);
+ assert.equal(failLease.rowCount,1);
+ const fl=failLease.rows[0];
+ assert.equal(await asService("SELECT recovery_private.begin_recovery_outbox_send($1,$2,$3) AS ok",[fl.outbox_id,workerA,fl.lease_generation]).then(r=>r.rows[0].ok),true);
+ assert.equal(await asService("SELECT recovery_private.finish_recovery_outbox($1,$2,$3,'failed',NULL,'provider_rejected') AS ok",[fl.outbox_id,workerA,fl.lease_generation]).then(r=>r.rows[0].ok),true);
+ const failedRequest=await pool.query("SELECT status,delivery_outcome,token_hash,token_expires_at FROM public.trainee_password_recovery_requests WHERE id=$1",[secondRequest]);
+ assert.equal(failedRequest.rows[0].status,'pending');
+ assert.equal(failedRequest.rows[0].delivery_outcome,'confirmed_failure');
+ assert.equal(failedRequest.rows[0].token_hash,null);
+ assert.equal(failedRequest.rows[0].token_expires_at,null);
+ const failedOutbox=await pool.query("SELECT status,last_safe_error_code FROM public.trainee_password_recovery_outbox WHERE id=$1",[fl.outbox_id]);
+ assert.equal(failedOutbox.rows[0].status,'failed');
+ assert.equal(failedOutbox.rows[0].last_safe_error_code,'provider_rejected');
+ console.log('PASS: definite delivery failure atomically clears token and returns request for coach review');
+
+ // A fresh approval operation can be attempted; ambiguous delivery must remain unknown.
+ const unknownApproval=await asService(
+   'SELECT public.recovery_coach_review($1,$2,$3,$4,$5,$6) AS result',
+   [secondRequest,coach,'approve','f'.repeat(64),new Date(Date.now()+10*60_000).toISOString(),'k1']
+ );
+ assert.equal(unknownApproval.rows[0].result.ok,true);
+ const unknownLease=await asService("SELECT * FROM recovery_private.claim_recovery_outbox($1,30)",[workerB]);
+ assert.equal(unknownLease.rowCount,1);
+ const ul=unknownLease.rows[0];
+ assert.equal(await asService("SELECT recovery_private.begin_recovery_outbox_send($1,$2,$3) AS ok",[ul.outbox_id,workerB,ul.lease_generation]).then(r=>r.rows[0].ok),true);
+ assert.equal(await asService("SELECT recovery_private.finish_recovery_outbox($1,$2,$3,'unknown',NULL,'provider_timeout') AS ok",[ul.outbox_id,workerB,ul.lease_generation]).then(r=>r.rows[0].ok),true);
+ const ambiguousRequest=await pool.query("SELECT status,delivery_outcome FROM public.trainee_password_recovery_requests WHERE id=$1",[secondRequest]);
+ assert.equal(ambiguousRequest.rows[0].status,'approved');
+ assert.equal(ambiguousRequest.rows[0].delivery_outcome,'unknown');
+ const ambiguousOutbox=await pool.query("SELECT status FROM public.trainee_password_recovery_outbox WHERE id=$1",[ul.outbox_id]);
+ assert.equal(ambiguousOutbox.rows[0].status,'unknown');
+ assert.equal((await asService("SELECT * FROM recovery_private.claim_recovery_outbox($1,30)",[workerA])).rowCount,0,
+   'ambiguous provider result must never be automatically resent');
+ console.log('PASS: ambiguous delivery outcome stays unknown and is never automatically retried');
  console.log('All disposable PostgreSQL Outbox/Worker integration checks passed.');
 }
 main().catch(e=>{console.error(e);process.exitCode=1;}).finally(()=>pool.end());
