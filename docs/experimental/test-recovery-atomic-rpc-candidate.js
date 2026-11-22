@@ -111,29 +111,31 @@ async function main() {
     SELECT
       has_schema_privilege('service_role','recovery_private','USAGE') AS service_usage,
       has_schema_privilege('anon','recovery_private','USAGE') AS anon_usage,
-      has_function_privilege('service_role','recovery_private.claim_recovery_reset(uuid,text,uuid)','EXECUTE') AS service_execute,
-      has_function_privilege('anon','recovery_private.claim_recovery_reset(uuid,text,uuid)','EXECUTE') AS anon_execute,
-      has_function_privilege('service_role','recovery_private.submit_recovery_request(text)','EXECUTE') AS service_request_execute,
-      has_function_privilege('anon','recovery_private.submit_recovery_request(text)','EXECUTE') AS anon_request_execute
+      has_function_privilege('service_role','public.recovery_claim_reset(uuid,text,uuid)','EXECUTE') AS service_execute,
+      has_function_privilege('anon','public.recovery_claim_reset(uuid,text,uuid)','EXECUTE') AS anon_execute,
+      has_function_privilege('service_role','public.recovery_submit_request(text)','EXECUTE') AS service_request_execute,
+      has_function_privilege('anon','public.recovery_submit_request(text)','EXECUTE') AS anon_request_execute,
+      has_function_privilege('service_role','public.recovery_submit_request(text)','EXECUTE') AS public_service_request_execute,
+      has_function_privilege('anon','public.recovery_coach_review(uuid,uuid,text,text,timestamptz,text)','EXECUTE') AS anon_public_review_execute
   `);
-  assert.deepEqual(acl.rows[0],{service_usage:true,anon_usage:false,service_execute:true,anon_execute:false,service_request_execute:true,anon_request_execute:false});
+  assert.deepEqual(acl.rows[0],{service_usage:true,anon_usage:false,service_execute:true,anon_execute:false,service_request_execute:true,anon_request_execute:false,public_service_request_execute:true,anon_public_review_execute:false});
   console.log('PASS: recovery RPC schema and execute privileges are restricted to service_role');
 
   let r;
   const submits=await Promise.all(Array.from({length:8},()=>callAsService(
-    'SELECT recovery_private.submit_recovery_request($1) AS inserted',['+989123450000']
+    'SELECT public.recovery_submit_request($1) AS inserted',['+989123450000']
   )));
   assert.equal(submits.filter(x=>x.rows[0].inserted===true).length,1);
   let submitted=await pool.query("SELECT count(*)::int AS n FROM public.trainee_password_recovery_requests WHERE trainee_id=$1 AND status='pending'",[trainee5]);
   assert.equal(submitted.rows[0].n,1);
-  r=await callAsService('SELECT recovery_private.submit_recovery_request($1) AS inserted',['+989123456789']);
+  r=await callAsService('SELECT public.recovery_submit_request($1) AS inserted',['+989123456789']);
   assert.equal(r.rows[0].inserted,false,'ambiguous duplicate phone records must not select an account');
-  r=await callAsService('SELECT recovery_private.submit_recovery_request($1) AS inserted',['+989999999999']);
+  r=await callAsService('SELECT public.recovery_submit_request($1) AS inserted',['+989999999999']);
   assert.equal(r.rows[0].inserted,false,'unknown phone must not create a request');
   console.log('PASS: concurrent request submissions create one row; ambiguous/unknown phones create none');
 
   r=await callAsService(
-    'SELECT recovery_private.coach_review_recovery_request($1,$2,$3,$4,$5,$6) AS result',
+    'SELECT public.recovery_coach_review($1,$2,$3,$4,$5,$6) AS result',
     [req1,coach2,'approve',digest,new Date(Date.now()+15*60_000).toISOString(),'k1']
   );
   assert.equal(r.rows[0].result.ok,false);
@@ -147,7 +149,7 @@ async function main() {
     await reassign.query('BEGIN');
     await reassign.query('UPDATE public.trainees SET coach_user_id=$1 WHERE id=$2',[coach2,trainee2]);
     const pending=callAsService(
-      'SELECT recovery_private.coach_review_recovery_request($1,$2,$3,$4,$5,$6) AS result',
+      'SELECT public.recovery_coach_review($1,$2,$3,$4,$5,$6) AS result',
       [req2,coach1,'approve',digest,new Date(Date.now()+15*60_000).toISOString(),'k1']
     );
     await pause(120);
@@ -159,20 +161,20 @@ async function main() {
   console.log('PASS: reassignment wins the row-lock race; former coach cannot approve');
 
   r=await callAsService(
-    'SELECT recovery_private.coach_review_recovery_request($1,$2,$3,$4,$5,$6) AS result',
+    'SELECT public.recovery_coach_review($1,$2,$3,$4,$5,$6) AS result',
     [req2,coach2,'approve',digest,new Date(Date.now()+15*60_000).toISOString(),'k1']
   );
   assert.equal(r.rows[0].result.ok,true);
   assert.equal(r.rows[0].result.status,'approved');
   assert.equal(Object.hasOwn(r.rows[0].result,'phone_normalized'),false);
   const deliveryOp2=r.rows[0].result.delivery_operation_id;
-  r=await callAsService('SELECT recovery_private.begin_recovery_delivery($1,$2) AS started',[req2,deliveryOp2]);
+  r=await callAsService('SELECT public.recovery_begin_delivery($1,$2) AS started',[req2,deliveryOp2]);
   assert.equal(r.rows[0].started,true);
-  r=await callAsService('SELECT recovery_private.finish_recovery_delivery($1,$2,$3) AS changed',[req2,deliveryOp2,'sent']);
+  r=await callAsService('SELECT public.recovery_finish_delivery($1,$2,$3) AS changed',[req2,deliveryOp2,'sent']);
   assert.equal(r.rows[0].changed,true);
 
   const attempts=await Promise.all(Array.from({length:9},()=>callAsService(
-    'SELECT recovery_private.record_recovery_wrong_attempt($1,$2,5) AS result',[req2,digest2]
+    'SELECT public.recovery_record_wrong_attempt($1,$2,5) AS result',[req2,digest2]
   )));
   assert.equal(attempts.filter(x=>x.rows[0].result.incremented).length,5);
   state=await pool.query('SELECT status,token_attempts,token_hash,token_expires_at FROM public.trainee_password_recovery_requests WHERE id=$1',[req2]);
@@ -184,25 +186,25 @@ async function main() {
 
   // Approve the third request and verify only one simultaneous claim wins.
   r=await callAsService(
-    'SELECT recovery_private.coach_review_recovery_request($1,$2,$3,$4,$5,$6) AS result',
+    'SELECT public.recovery_coach_review($1,$2,$3,$4,$5,$6) AS result',
     [req3,coach2,'approve',digest,new Date(Date.now()+15*60_000).toISOString(),'k1']
   );
   assert.equal(r.rows[0].result.ok,true);
   const deliveryOp3=r.rows[0].result.delivery_operation_id;
-  r=await callAsService('SELECT recovery_private.begin_recovery_delivery($1,$2) AS started',[req3,deliveryOp3]);
+  r=await callAsService('SELECT public.recovery_begin_delivery($1,$2) AS started',[req3,deliveryOp3]);
   assert.equal(r.rows[0].started,true);
-  r=await callAsService('SELECT recovery_private.begin_recovery_delivery($1,$2) AS started',[req3,deliveryOp3]);
+  r=await callAsService('SELECT public.recovery_begin_delivery($1,$2) AS started',[req3,deliveryOp3]);
   assert.equal(r.rows[0].started,false);
-  r=await callAsService('SELECT recovery_private.finish_recovery_delivery($1,$2,$3) AS changed',[req3,deliveryOp3,'unknown']);
+  r=await callAsService('SELECT public.recovery_finish_delivery($1,$2,$3) AS changed',[req3,deliveryOp3,'unknown']);
   assert.equal(r.rows[0].changed,true);
-  let blocked=await callAsService('SELECT recovery_private.claim_recovery_reset($1,$2,$3) AS result',[req3,digest,'40000000-0000-4000-8000-000000000009']);
+  let blocked=await callAsService('SELECT public.recovery_claim_reset($1,$2,$3) AS result',[req3,digest,'40000000-0000-4000-8000-000000000009']);
   assert.equal(blocked.rows[0].result.claimed,false,'unknown SMS delivery must not permit code redemption');
-  r=await callAsService('SELECT recovery_private.finish_recovery_delivery($1,$2,$3) AS changed',[req3,deliveryOp3,'sent']);
+  r=await callAsService('SELECT public.recovery_finish_delivery($1,$2,$3) AS changed',[req3,deliveryOp3,'sent']);
   assert.equal(r.rows[0].changed,true,'authoritative delivery reconciliation may mark sent');
   const opA='40000000-0000-4000-8000-000000000001';
   const opB='40000000-0000-4000-8000-000000000002';
   const claims=await Promise.all([opA,opB].map(op=>callAsService(
-    'SELECT recovery_private.claim_recovery_reset($1,$2,$3) AS result',[req3,digest,op]
+    'SELECT public.recovery_claim_reset($1,$2,$3) AS result',[req3,digest,op]
   )));
   assert.equal(claims.filter(x=>x.rows[0].result.claimed).length,1);
   const winner=claims.find(x=>x.rows[0].result.claimed).rows[0].result;
@@ -216,16 +218,16 @@ async function main() {
   console.log('PASS: one reset claim wins; processing remains covered by the active-request unique index');
 
   r=await callAsService(
-    'SELECT recovery_private.begin_recovery_auth_update($1,$2) AS started',[req3,winner.operation_id]
+    'SELECT public.recovery_begin_auth_update($1,$2) AS started',[req3,winner.operation_id]
   );
   assert.equal(r.rows[0].started,true);
   r=await callAsService(
-    'SELECT recovery_private.begin_recovery_auth_update($1,$2) AS started',[req3,winner.operation_id]
+    'SELECT public.recovery_begin_auth_update($1,$2) AS started',[req3,winner.operation_id]
   );
   assert.equal(r.rows[0].started,false);
 
   r=await callAsService(
-    'SELECT recovery_private.finish_recovery_auth_update($1,$2,$3,$4) AS changed',
+    'SELECT public.recovery_finish_auth_update($1,$2,$3,$4) AS changed',
     [req3,winner.operation_id,'unknown','network_timeout']
   );
   assert.equal(r.rows[0].changed,true);
@@ -234,7 +236,7 @@ async function main() {
 
   // Only an authoritative reconciliation result may unlock the ambiguous operation.
   r=await callAsService(
-    'SELECT recovery_private.finish_recovery_auth_update($1,$2,$3,$4) AS changed',
+    'SELECT public.recovery_finish_auth_update($1,$2,$3,$4) AS changed',
     [req3,winner.operation_id,'confirmed_no_change','auth_confirmed_unchanged']
   );
   assert.equal(r.rows[0].changed,true);
@@ -242,11 +244,11 @@ async function main() {
   assert.deepEqual(state.rows[0],{status:'approved',auth_outcome:'confirmed_no_change'});
 
   const opC='40000000-0000-4000-8000-000000000003';
-  r=await callAsService('SELECT recovery_private.claim_recovery_reset($1,$2,$3) AS result',[req3,digest,opC]);
+  r=await callAsService('SELECT public.recovery_claim_reset($1,$2,$3) AS result',[req3,digest,opC]);
   assert.equal(r.rows[0].result.claimed,true);
-  await callAsService('SELECT recovery_private.begin_recovery_auth_update($1,$2)',[req3,opC]);
+  await callAsService('SELECT public.recovery_begin_auth_update($1,$2)',[req3,opC]);
   r=await callAsService(
-    'SELECT recovery_private.finish_recovery_auth_update($1,$2,$3,$4) AS changed',
+    'SELECT public.recovery_finish_auth_update($1,$2,$3,$4) AS changed',
     [req3,opC,'completed',null]
   );
   assert.equal(r.rows[0].changed,true);
@@ -255,12 +257,12 @@ async function main() {
   console.log('PASS: Auth ambiguity remains locked; authoritative no-change can reopen; confirmed success consumes code');
 
   // A provider-confirmed non-delivery safely invalidates that code and returns to coach review.
-  r=await callAsService('SELECT recovery_private.coach_review_recovery_request($1,$2,$3,$4,$5,$6) AS result',
+  r=await callAsService('SELECT public.recovery_coach_review($1,$2,$3,$4,$5,$6) AS result',
     [req1,coach1,'approve',digest,new Date(Date.now()+15*60_000).toISOString(),'k1']);
   assert.equal(r.rows[0].result.ok,true);
   const deliveryOp1=r.rows[0].result.delivery_operation_id;
-  await callAsService('SELECT recovery_private.begin_recovery_delivery($1,$2)',[req1,deliveryOp1]);
-  r=await callAsService('SELECT recovery_private.finish_recovery_delivery($1,$2,$3) AS changed',[req1,deliveryOp1,'confirmed_failure']);
+  await callAsService('SELECT public.recovery_begin_delivery($1,$2)',[req1,deliveryOp1]);
+  r=await callAsService('SELECT public.recovery_finish_delivery($1,$2,$3) AS changed',[req1,deliveryOp1,'confirmed_failure']);
   assert.equal(r.rows[0].changed,true);
   state=await pool.query('SELECT status,token_hash,token_expires_at,delivery_outcome FROM public.trainee_password_recovery_requests WHERE id=$1',[req1]);
   assert.deepEqual(state.rows[0],{status:'pending',token_hash:null,token_expires_at:null,delivery_outcome:'confirmed_failure'});
@@ -268,12 +270,12 @@ async function main() {
 
   // Null decisions and invalid Auth outcomes must not silently fall through.
   const nullDecision=await callAsService(
-    'SELECT recovery_private.coach_review_recovery_request($1,$2,$3,$4,$5,$6) AS result',
+    'SELECT public.recovery_coach_review($1,$2,$3,$4,$5,$6) AS result',
     [req1,coach1,null,digest,new Date(Date.now()+15*60_000).toISOString(),'k1']
   );
   assert.equal(nullDecision.rows[0].result.ok,false);
   await assert.rejects(callAsService(
-    'SELECT recovery_private.finish_recovery_auth_update($1,$2,$3,$4)',
+    'SELECT public.recovery_finish_auth_update($1,$2,$3,$4)',
     [req3,opC,null,null]
   ));
   console.log('PASS: null/invalid state transitions fail closed');
