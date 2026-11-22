@@ -262,3 +262,12 @@ The migration also refuses to proceed if any legacy request is already `approved
 Workflow run `45048230786` completed **success**. Both jobs passed, including the disposable PostgreSQL candidate suite. The job checked out commit `11e099c25cbb9cccffafdf410c088e1e5d1496ad` and reported successful checks for migration preflight, restricted privileges, coach reassignment locking, atomic five-attempt limit, delivery unknown lockout/reconciliation, single reset claim, Auth unknown lockout/reconciliation, and confirmed completion.
 
 **Release remains NOT READY.** Real Edge Function implementation, real Test Auth account/password reset, HTTP/auth middleware, actual provider integration and provider idempotency/timeout semantics, session behavior, logging/monitoring, and rollback/reconciliation remain untested. No Supabase Test/Production schema or function was changed; no real password or SMS was touched.
+
+
+## Atomic request-submission RPC added (verification pending)
+
+Added `recovery_private.submit_recovery_request(text)` to the experimental SQL draft. It refuses invalid, unknown, inactive, archived, or ambiguous duplicate phone matches; inserts at most one active pending request under the partial unique index; and returns only a boolean to the server-side caller. The intended public HTTP response remains generic and identical regardless of account eligibility. A concurrent-submission regression was added to the disposable PostgreSQL suite.
+
+The latest workflow's Mock job is successful; the PostgreSQL job is still running at the time of this report update. Therefore this request-RPC addition is **not yet marked verified**. Previous atomic RPC/delivery/Auth candidate suite run `45048230786` passed before this request-submission function was added.
+
+Production release remains **NOT READY**. No Supabase project was modified, and no real SMS or password change occurred.
