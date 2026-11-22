@@ -140,14 +140,24 @@ AS $wrap$ SELECT recovery_private.coach_review_recovery_request_encrypted(
 CREATE OR REPLACE FUNCTION recovery_private.enqueue_approved_recovery_delivery()
 RETURNS trigger LANGUAGE plpgsql SECURITY DEFINER SET search_path = ''
 AS $outbox_trigger$
-DECLARE v_outbox_operation uuid;
+DECLARE v_outbox_operation uuid; v_should_enqueue boolean := false;
 BEGIN
-  IF NEW.status='approved' AND NEW.delivery_outcome='pending'
-     AND NEW.delivery_operation_id IS NOT NULL
-     AND NEW.delivery_payload IS NOT NULL
-     AND (TG_OP='INSERT' OR OLD.status IS DISTINCT FROM NEW.status
-          OR OLD.delivery_outcome IS DISTINCT FROM NEW.delivery_outcome
-          OR OLD.delivery_operation_id IS DISTINCT FROM NEW.delivery_operation_id) THEN
+  IF TG_OP='INSERT' THEN
+    v_should_enqueue := NEW.status='approved'
+      AND NEW.delivery_outcome='pending'
+      AND NEW.delivery_operation_id IS NOT NULL
+      AND NEW.delivery_payload IS NOT NULL;
+  ELSE
+    v_should_enqueue := NEW.status='approved'
+      AND NEW.delivery_outcome='pending'
+      AND NEW.delivery_operation_id IS NOT NULL
+      AND NEW.delivery_payload IS NOT NULL
+      AND (OLD.status IS DISTINCT FROM NEW.status
+        OR OLD.delivery_outcome IS DISTINCT FROM NEW.delivery_outcome
+        OR OLD.delivery_operation_id IS DISTINCT FROM NEW.delivery_operation_id
+        OR OLD.delivery_payload IS DISTINCT FROM NEW.delivery_payload);
+  END IF;
+  IF v_should_enqueue THEN
     INSERT INTO public.trainee_password_recovery_outbox
       (recovery_request_id,delivery_operation_id,provider_idempotency_key,delivery_payload)
     VALUES
@@ -155,7 +165,8 @@ BEGIN
     ON CONFLICT (delivery_operation_id) DO NOTHING;
     SELECT o.delivery_operation_id INTO v_outbox_operation
     FROM public.trainee_password_recovery_outbox o
-    WHERE o.recovery_request_id=NEW.id AND o.delivery_operation_id=NEW.delivery_operation_id
+    WHERE o.recovery_request_id=NEW.id
+      AND o.delivery_operation_id=NEW.delivery_operation_id
       AND o.delivery_payload=NEW.delivery_payload;
     IF v_outbox_operation IS NULL THEN
       RAISE EXCEPTION 'encrypted recovery outbox enqueue invariant failed';
@@ -164,7 +175,6 @@ BEGIN
   RETURN NEW;
 END $outbox_trigger$;
 
--- Clear ciphertext from both records on every terminal delivery outcome.
 CREATE OR REPLACE FUNCTION recovery_private.clear_terminal_recovery_payload()
 RETURNS trigger LANGUAGE plpgsql SECURITY DEFINER SET search_path = ''
 AS $clear_payload$
