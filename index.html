@@ -9725,6 +9725,7 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
 
 
 
+<script src="./health-upload-cleanup.js"></script>
 <!-- TRAINEE HEALTH REPORT + LAB UPLOAD -->
 <script id="TRAINEE_HEALTH_REPORT_V1">
 (function(){
@@ -9784,15 +9785,16 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
       if(!user)throw new Error('نشست حساب شاگرد معتبر نیست.');
       const clean=uploadFile.name.replace(/[^a-zA-Z0-9._-]/g,'_').slice(-80)||'lab-report';
       path=user.id+'/'+c.id+'/health_'+Date.now()+'_'+clean;
-      const {error:uploadError}=await AUTH_SUPABASE.storage.from('trainee-health-reports').upload(path,uploadFile,{upsert:false,contentType:uploadFile.type});
-      if(uploadError)throw uploadError;
       const note='HEALTH_REPORT_FILE::'+JSON.stringify({path,name:file.name,type:file.type,note:$('healthFileNote')?.value.trim()||''});
-      try{
-        await sbWrite('/trainee_injuries','POST',{trainee_id:c.id,problem_type:'آزمایش یا مدرک پزشکی',body_area:'فایل ارسالی شاگرد',severity:'ارسال‌شده توسط شاگرد',record_date:typeof today==='function'?today():new Date().toISOString().slice(0,10),movement_limit:note,coach_note:null});
-      }catch(dbError){
-        try{await AUTH_SUPABASE.storage.from('trainee-health-reports').remove([path]);}catch(_){}
-        throw dbError;
-      }
+      await window.sehHealthUploadCleanup.uploadAndInsertHealthReport({
+        upload:()=>AUTH_SUPABASE.storage.from('trainee-health-reports').upload(path,uploadFile,{upsert:false,contentType:uploadFile.type}),
+        insert:()=>sbWrite('/trainee_injuries','POST',{trainee_id:c.id,problem_type:'آزمایش یا مدرک پزشکی',body_area:'فایل ارسالی شاگرد',severity:'ارسال‌شده توسط شاگرد',record_date:typeof today==='function'?today():new Date().toISOString().slice(0,10),movement_limit:note,coach_note:null}),
+        remove:()=>AUTH_SUPABASE.storage.from('trainee-health-reports').remove([path]),
+        onCleanupFailure:event=>{
+          const code=String(event.error?.statusCode||event.error?.code||'unknown').slice(0,40);
+          console.error('[health-upload-cleanup] Storage cleanup failed after database insert failure.',{kind:event.kind,code});
+        }
+      });
       $('healthReportFile').value='';if($('healthFileNote'))$('healthFileNote').value='';
       if($('traineeHealthReportStatus'))$('traineeHealthReportStatus').textContent='فایل آپلود شد و برای مربی ارسال شد.';
       alert('فایل با موفقیت برای مربی ارسال شد.');
