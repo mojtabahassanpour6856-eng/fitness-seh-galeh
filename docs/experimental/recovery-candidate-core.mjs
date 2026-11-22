@@ -81,18 +81,29 @@ export function classifyAuthUpdateOutcome(outcome) {
 }
 
 export function assertRecoverySecrets(env) {
-  const hmac = env?.RECOVERY_HMAC_SECRET;
   const keyVersion = env?.RECOVERY_HMAC_KEY_VERSION;
   const origins = String(env?.RECOVERY_ALLOWED_ORIGINS ?? '')
     .split(',').map(x => x.trim()).filter(Boolean);
-  if (typeof hmac !== 'string' || encoder.encode(hmac).length < 32) {
-    throw new Error('RECOVERY_HMAC_SECRET must contain at least 32 bytes');
+  let parsed;
+  try { parsed = JSON.parse(env?.RECOVERY_HMAC_KEYS ?? ''); }
+  catch { throw new Error('RECOVERY_HMAC_KEYS must be a valid JSON key map'); }
+  if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
+    throw new Error('RECOVERY_HMAC_KEYS must be a JSON object');
   }
-  if (!keyVersion || !/^[a-zA-Z0-9_-]{1,32}$/.test(keyVersion)) {
-    throw new Error('RECOVERY_HMAC_KEY_VERSION is required');
+  const hmacKeys = Object.create(null);
+  for (const [version, secret] of Object.entries(parsed)) {
+    if (!/^[a-zA-Z0-9_-]{1,32}$/.test(version) ||
+        typeof secret !== 'string' || encoder.encode(secret).length < 32) {
+      throw new Error('Every recovery HMAC key must have a valid version and at least 32 bytes');
+    }
+    hmacKeys[version] = secret;
+  }
+  if (!keyVersion || !/^[a-zA-Z0-9_-]{1,32}$/.test(keyVersion) ||
+      !Object.hasOwn(hmacKeys, keyVersion)) {
+    throw new Error('RECOVERY_HMAC_KEY_VERSION must identify a configured key');
   }
   if (!origins.length || origins.some(x => !/^https:\/\//.test(x))) {
     throw new Error('RECOVERY_ALLOWED_ORIGINS must contain explicit HTTPS origins');
   }
-  return Object.freeze({ hmac, keyVersion, origins });
+  return Object.freeze({ hmacKeys: Object.freeze(hmacKeys), hmac: hmacKeys[keyVersion], keyVersion, origins });
 }
