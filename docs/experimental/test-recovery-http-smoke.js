@@ -1,23 +1,27 @@
 'use strict';
 
-// Safe HTTP smoke checks only. This script sends OPTIONS and GET requests;
-// it never submits a recovery request, approves/rejects a request, or resets a password.
-// Run only against the isolated Supabase Test function:
-// RECOVERY_TEST_FUNCTION_URL=https://<test-project-ref>.supabase.co/functions/v1/trainee-password-recovery node docs/experimental/test-recovery-http-smoke.js
+// Non-mutating HTTP smoke checks. Sends OPTIONS and GET only; never sends recovery POSTs.
+// RECOVERY_TEST_FUNCTION_URL=https://<test-ref>.supabase.co/functions/v1/trainee-password-recovery
+// RECOVERY_ALLOWED_ORIGIN=https://<actual-test-app-origin>
+// node docs/experimental/test-recovery-http-smoke.js
 
 const baseUrl = process.env.RECOVERY_TEST_FUNCTION_URL;
-if (!baseUrl) {
-  console.error('Set RECOVERY_TEST_FUNCTION_URL to the isolated Test function URL.');
+const allowedOrigin = process.env.RECOVERY_ALLOWED_ORIGIN;
+if (!baseUrl || !allowedOrigin) {
+  console.error('Set RECOVERY_TEST_FUNCTION_URL and RECOVERY_ALLOWED_ORIGIN for the isolated Test deployment.');
   process.exit(2);
 }
 const url = new URL(baseUrl);
 if (!url.hostname.endsWith('.supabase.co') || !url.pathname.endsWith('/functions/v1/trainee-password-recovery')) {
   throw new Error('Refusing to run: URL must target the expected Supabase Edge Function path.');
 }
+const approved = new URL(allowedOrigin);
+if (!/^https?:$/.test(approved.protocol) || approved.origin !== allowedOrigin) {
+  throw new Error('RECOVERY_ALLOWED_ORIGIN must be a single normalized http(s) origin.');
+}
 
-async function main() {
-  const origin = 'https://recovery-smoke.invalid';
-  const preflight = await fetch(url, {
+async function preflight(origin) {
+  return fetch(url, {
     method: 'OPTIONS',
     headers: {
       Origin: origin,
@@ -25,35 +29,40 @@ async function main() {
       'Access-Control-Request-Headers': 'authorization, apikey, content-type'
     }
   });
-  const allowOrigin = preflight.headers.get('access-control-allow-origin');
-  const allowMethods = (preflight.headers.get('access-control-allow-methods') || '').toUpperCase();
-  const allowHeaders = (preflight.headers.get('access-control-allow-headers') || '').toLowerCase();
+}
 
-  if (preflight.status < 200 || preflight.status >= 300) {
-    throw new Error(`OPTIONS preflight returned HTTP ${preflight.status}`);
+async function main() {
+  const allowed = await preflight(approved.origin);
+  const allowedHeader = allowed.headers.get('access-control-allow-origin');
+  const methods = (allowed.headers.get('access-control-allow-methods') || '').toUpperCase();
+  const headers = (allowed.headers.get('access-control-allow-headers') || '').toLowerCase();
+  if (allowed.status < 200 || allowed.status >= 300) {
+    throw new Error(`Allowed-origin OPTIONS returned HTTP ${allowed.status}`);
   }
-  if (allowOrigin === '*') {
-    throw new Error('FAIL: wildcard CORS is still enabled; configure an explicit app-origin allowlist.');
+  if (allowedHeader !== approved.origin) {
+    throw new Error(`Expected exact configured allow-origin ${approved.origin}; received ${String(allowedHeader)}`);
   }
-  if (allowOrigin !== origin) {
-    throw new Error(`FAIL: expected explicit CORS echo for test Origin; received ${String(allowOrigin)}`);
-  }
-  if (!allowMethods.includes('POST')) {
-    throw new Error('FAIL: CORS preflight does not allow POST.');
-  }
-  for (const header of ['authorization', 'apikey', 'content-type']) {
-    if (!allowHeaders.includes(header)) throw new Error(`FAIL: CORS preflight omits required header ${header}`);
+  if (!methods.includes('POST')) throw new Error('CORS preflight does not allow POST.');
+  for (const name of ['authorization', 'apikey', 'content-type']) {
+    if (!headers.includes(name)) throw new Error(`CORS preflight omits required header ${name}`);
   }
 
-  // GET is intentionally used as a non-mutating method rejection probe.
-  const methodProbe = await fetch(url, { method: 'GET', headers: { Origin: origin } });
+  const forbiddenOrigin = 'https://not-allowlisted.invalid';
+  const forbidden = await preflight(forbiddenOrigin);
+  const forbiddenHeader = forbidden.headers.get('access-control-allow-origin');
+  if (forbiddenHeader === '*' || forbiddenHeader === forbiddenOrigin) {
+    throw new Error('FAIL: an unapproved Origin was granted CORS access.');
+  }
+
+  const methodProbe = await fetch(url, { method: 'GET', headers: { Origin: approved.origin } });
   if (methodProbe.status !== 405) {
     throw new Error(`Expected GET to be rejected with 405, received ${methodProbe.status}`);
   }
 
-  console.log('PASS: OPTIONS preflight accepted with explicit CORS allowlist.');
-  console.log('PASS: GET method rejected with HTTP 405.');
-  console.log('Safety: no POST action was sent; no database row, password, or SMS was touched.');
+  console.log('PASS: configured app origin receives the exact CORS allow-origin.');
+  console.log('PASS: unapproved origin is not granted CORS access.');
+  console.log('PASS: GET is rejected with HTTP 405.');
+  console.log('Safety: no POST action was sent; no recovery row, password, or SMS was touched.');
 }
 
 main().catch(error => {
