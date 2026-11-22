@@ -112,6 +112,32 @@ assert.throws(()=>scopedReads.getForTrainee({requestId:'owner-read',authenticate
 assert.throws(()=>scopedReads.getForTrainee({requestId:'missing-read',authenticatedTraineeId:'owner-trainee'}),e=>e.message==='Recovery request unavailable',
   'wrong trainee and unknown request must have identical generic denial');
 
+
+const transitionIsolation = new MockRecovery({secret,now:()=>now,cooldownMs:0});
+transitionIsolation.request({traineeId:'iso-trainee',coachId:'iso-coach',requestId:'iso-request'});
+assert.throws(()=>transitionIsolation.approveForAuthenticatedCoach({requestId:'iso-request',authenticatedCoachId:'other-coach'}),
+  e=>e.message==='Recovery request unavailable');
+assert.throws(()=>transitionIsolation.approveForAuthenticatedCoach({requestId:'missing-iso',authenticatedCoachId:'iso-coach'}),
+  e=>e.message==='Recovery request unavailable');
+assert.throws(()=>transitionIsolation.cancelForAuthenticatedTrainee({requestId:'iso-request',authenticatedTraineeId:'other-trainee'}),
+  e=>e.message==='Recovery request unavailable');
+assert.throws(()=>transitionIsolation.cancelForAuthenticatedTrainee({requestId:'missing-iso',authenticatedTraineeId:'iso-trainee'}),
+  e=>e.message==='Recovery request unavailable');
+assert.equal(transitionIsolation.requests.get('iso-request').state,STATES.REQUESTED,
+  'unauthorized transition attempts must not mutate request state');
+transitionIsolation.approveForAuthenticatedCoach({requestId:'iso-request',authenticatedCoachId:'iso-coach'});
+const isoCode=transitionIsolation.mockMessages.at(-1).body.match(/(\\d{4})$/)[1];
+assert.throws(()=>transitionIsolation.verifyForAuthenticatedTrainee({requestId:'iso-request',authenticatedTraineeId:'other-trainee',code:isoCode}),
+  e=>e.message==='Recovery request unavailable');
+assert.throws(()=>transitionIsolation.verifyForAuthenticatedTrainee({requestId:'missing-iso',authenticatedTraineeId:'iso-trainee',code:isoCode}),
+  e=>e.message==='Recovery request unavailable');
+assert.equal(transitionIsolation.verifyForAuthenticatedTrainee({requestId:'iso-request',authenticatedTraineeId:'iso-trainee',code:isoCode}).state,STATES.VERIFIED);
+assert.throws(()=>transitionIsolation.completeForAuthenticatedTrainee({requestId:'iso-request',authenticatedTraineeId:'other-trainee'}),
+  e=>e.message==='Recovery request unavailable');
+assert.throws(()=>transitionIsolation.completeForAuthenticatedTrainee({requestId:'missing-iso',authenticatedTraineeId:'iso-trainee'}),
+  e=>e.message==='Recovery request unavailable');
+assert.equal(transitionIsolation.completeForAuthenticatedTrainee({requestId:'iso-request',authenticatedTraineeId:'iso-trainee'}).state,STATES.COMPLETED);
+
 const s = sys();
 assert.equal(s.request({traineeId:'t1',coachId:'c1',requestId:'r1'}).state, STATES.REQUESTED);
 const firstRequestSnapshot = s.requests.get('r1');
