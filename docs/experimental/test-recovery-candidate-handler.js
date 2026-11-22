@@ -139,6 +139,17 @@ async function body(response) { return await response.json(); }
   console.log('PASS: delivery uses the verified database phone, and the code is never returned to the coach.');
 }
 {
+  const f = fixture({ finishDelivery: false });
+  f.handler = createRecoveryCandidateHandler({
+    ...f.deps,
+    deliveryAdapter: async () => ({ kind: 'confirmed_sent' })
+  });
+  const r = await f.handler(request({ action: 'review', request_id: UUID, decision: 'approve' }, { authorization: 'Bearer test' }));
+  assert.equal(r.status, 503);
+  assert.equal((await body(r)).success, false);
+  console.log('PASS: provider acceptance is not reported as success unless the durable delivery state is confirmed.');
+}
+{
   const f = fixture();
   const r = await f.handler(request({ action: 'reset', phone: '09123456789', code: '0007', new_password: 'StrongPass!234' }));
   assert.equal(r.status, 400);
