@@ -78,6 +78,23 @@ assignedForReject = 'coach-B';
 assert.throws(()=>reassignmentReject.reject({requestId:'move-reject-request',authenticatedCoachId:'coach-A'}),/assignment changed/i);
 assert.equal(reassignmentReject.requests.get('move-reject-request').state,STATES.STALE_ASSIGNMENT);
 
+
+const trustedAssignments = new Map([['trusted-trainee','trusted-coach']]);
+const trustedRequestSystem = new MockRecovery({secret,now:()=>now,cooldownMs:0,
+  getCurrentCoachId:(traineeId)=>trustedAssignments.get(traineeId) || null});
+const trustedRequest = trustedRequestSystem.requestForAuthenticatedTrainee({
+  authenticatedTraineeId:'trusted-trainee',
+  requestId:'trusted-request',
+  traineeId:'attacker-controlled-trainee',
+  coachId:'attacker-controlled-coach',
+  destinationPhone:'+00000000000'
+});
+assert.equal(trustedRequest.traineeId,'trusted-trainee','client-supplied trainee ID must be ignored');
+assert.equal(trustedRequest.coachId,'trusted-coach','client-supplied coach ID must be ignored');
+assert.throws(()=>trustedRequestSystem.requestForAuthenticatedTrainee({
+  authenticatedTraineeId:'unknown-trainee',requestId:'unknown-request'
+}),/unavailable/i,'unknown identity must fail closed without account details');
+
 const s = sys();
 assert.equal(s.request({traineeId:'t1',coachId:'c1',requestId:'r1'}).state, STATES.REQUESTED);
 const firstRequestSnapshot = s.requests.get('r1');
