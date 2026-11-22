@@ -159,3 +159,13 @@ Added the suite to the experiment workflow and path filters. The new workflow ex
 Test file commit: `aa6ec9349d6f11f6592a40fb1fdefedff7b18a4c`.
 Workflow update commit: `3fd444ba7ce7139f4d76a16a535bd2150b69d8a7`.
 No Supabase endpoint, database, Auth user, password, SMS provider, or Production resource was accessed or changed.
+
+
+## Reassignment read-access recheck added (2026-11-22)
+A focused review found that the in-memory `getForCoach` read helper checked the request's stored coach ID but did not re-check the trainee's current coach assignment. The experimental helper now also compares the trusted current-assignment resolver with the request's coach before returning a snapshot. A regression case verifies that after reassignment the former coach cannot read the old request and the newly assigned coach cannot inherit that old request; a fresh request must be started under the new assignment.
+
+This is an in-memory mock hardening only. It does not alter the deployed Edge Function, database queries, RLS, or live authorization. Production must independently enforce current assignment at the server/query boundary on every read and transition.
+
+Engine change commit: `e798c40227b7f444757fc10edf9a2c7528bf040e`.
+Regression test commit: `c26850fa2cf3da17223216d0d55985b547646b1d`.
+CI execution for these latest commits remains unverified through the available status lookup.
