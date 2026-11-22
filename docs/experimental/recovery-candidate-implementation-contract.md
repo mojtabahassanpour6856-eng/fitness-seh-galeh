@@ -199,3 +199,38 @@ The latest disposable PostgreSQL test run also proves the preflight guard, one-a
 Added `recovery_private.submit_recovery_request(text)` to the experimental SQL draft. It accepts only a normalized Iranian mobile, requires exactly one active non-archived trainee with an Auth user, refuses ambiguous duplicate phone records, locks the trainee row, and inserts one pending request with conflict handling against the active-request partial unique index. It returns only an internal boolean and is intended for the Edge Function's service-role client after rate limiting. The public handler must return the same generic 202 response for eligible, ineligible, duplicate, and unknown accounts.
 
 The disposable test covers eight concurrent submissions for one synthetic account (exactly one row), ambiguous duplicate numbers, unknown numbers, and the function privilege boundary. Workflow run `45048555639` completed successfully; its PostgreSQL job checked out commit `d9c3a7b545607cd5300410b2acb19d2e1c292226` and confirmed exactly one request row under concurrency.
+
+
+## Latest full disposable test evidence (2026-11-22)
+
+Workflow run `45048555639` completed **success**. Both jobs passed:
+- mock/crypto/authorization/abuse and HTTP-smoke non-mutation checks;
+- disposable PostgreSQL concurrency suite;
+- migration refusal when legacy approved/processing rows exist;
+- private schema/function grants restricted to `service_role`;
+- eight concurrent request submissions produce exactly one pending request; unknown and ambiguous phone records create none;
+- coach reassignment/approval locking;
+- atomic five-attempt wrong-code cap;
+- one delivery attempt, unknown-delivery redemption lockout, and authoritative reconciliation;
+- one reset claim winner;
+- Auth ambiguity remains locked until authoritative reconciliation;
+- confirmed delivery failure safely clears code and returns the request to pending;
+- invalid state transitions fail closed.
+
+The PostgreSQL job checked out exact commit `d9c3a7b545607cd5300410b2acb19d2e1c292226`. This verifies candidate SQL behavior on disposable PostgreSQL 16 only; it is not a Supabase Test or production integration test.
+
+## Edge Function adapter boundary
+
+The next implementation artifact must be a separately named, non-deployable candidate file in this experiment branch. It must:
+- use `auth.getUser()` to derive coach identity; never trust actor/trainee IDs supplied by the client;
+- apply rate limiting before calling `submit_recovery_request`;
+- normalize phone input server-side and always return the same public HTTP status/body for known, unknown, inactive, duplicate, and already-open accounts;
+- use `coach_review_recovery_request` for atomic current-assignment authorization and state change;
+- generate a rejection-sampled 4-digit code and HMAC-SHA-256 digest with a versioned secret; never return the code to the coach or logs;
+- use the registered phone resolved by the database, not a client-supplied recipient;
+- call `begin_recovery_delivery` before one provider attempt and `finish_recovery_delivery` with sent/confirmed_failure/unknown; never blindly retry unknown provider outcomes;
+- verify HMAC and call `record_recovery_wrong_attempt` for wrong codes;
+- use `claim_recovery_reset`, then `begin_recovery_auth_update`, then exactly one Auth update attempt, and record completed/confirmed_no_change/unknown through `finish_recovery_auth_update`;
+- fail closed if a DB RPC or Auth result is ambiguous.
+
+No provider adapter is selected yet. The current Mediana restriction remains in force; therefore the candidate must keep delivery disabled unless a provider is explicitly configured and approved. Do not deploy or run against either Supabase project as part of candidate authoring.
