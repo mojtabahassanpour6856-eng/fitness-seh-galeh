@@ -11,6 +11,9 @@ assert.equal(retryCode, '0001');
 const s = sys();
 assert.equal(s.request({traineeId:'t1',coachId:'c1',requestId:'r1'}).state, STATES.REQUESTED);
 assert.equal(s.request({traineeId:'t1',coachId:'c1',requestId:'r1'}).requestId, 'r1');
+const exposedRequest = s.request({traineeId:'t1',coachId:'c1',requestId:'r1'});
+exposedRequest.state = STATES.COMPLETED;
+assert.equal(s.requests.get('r1').state, STATES.REQUESTED, 'returned request must not expose mutable internal state');
 assert.throws(() => s.request({traineeId:'t1',coachId:'c1',requestId:'r1b'}),/Active recovery request exists/);
 assert.throws(() => s.request({traineeId:'attacker',coachId:'other',requestId:'r1'}), /Idempotency key conflict/);
 assert.throws(() => s.approve({requestId:'r1',authenticatedCoachId:'c2'}), /ownership/);
@@ -115,6 +118,7 @@ reentrantSystem.request({traineeId:'tr',coachId:'cr',requestId:'rr'});
 assert.equal(reentrantSystem.approve({requestId:'rr',authenticatedCoachId:'cr'}).state,STATES.CODE_ISSUED);
 assert.match(nestedApprovalError,/Invalid state/);
 assert.equal(reentrantSystem.mockMessages.length,1);
+assert.throws(() => reentrantSystem.request({traineeId:'tr',coachId:'cr',requestId:'rr2'}), /Active recovery request exists/, 'DELIVERY_PENDING must block parallel requests');
 // Thrown delivery callback must not leave the request permanently pending.
 let throwOnce = true;
 const callbackThrows = new MockRecovery({secret,now:()=>now,cooldownMs:0,delivery:()=>{
