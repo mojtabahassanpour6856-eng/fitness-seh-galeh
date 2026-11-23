@@ -341,3 +341,34 @@ Before Test migration/endpoint work:
 2. Then review and explicitly approve the candidate schema migration.
 3. Only after migration should we run PostgREST RPC integration checks and isolated Test Auth account tests.
 No Production changes are authorized by these steps.
+
+## Follow-up verification and registration-limiter collision fix (2026-11-23)
+
+The latest pre-fix CI run 45110566616 completed successfully on commit d0102f7f0e44e8ce1b064dd1c16d992f4dfbfba8: mock/handler tests, Deno type-check, disposable PostgreSQL candidate integration/concurrency tests, and disposable local Supabase Auth integration all passed. This is CI-only evidence; it does not establish that the candidate has been applied to Supabase Test or that a real Test Edge Function request flow works.
+
+A fresh read-only inspection of Supabase Test (udptdznbvewkublvzmtm) confirmed:
+- The recovery table still has only the legacy columns; candidate operation/delivery/Auth metadata columns are not installed.
+- Current recovery request snapshot: one expired row, with its token hash and expiry cleared; zero approved or processing rows. This is an observation only. No database write was made in this session, and the cause/time of that state transition is not established.
+- The active Test Edge Function remains version 10; the candidate is not deployed.
+- No Supabase development branches currently exist for this project.
+
+### New P0 migration collision found and fixed in the experiment branch
+
+Reviewing the exact candidate SQL against the live Test schema exposed a serious name collision: Test already has public.consume_registration_rate_limit(text,integer,integer), used by the registration flow. The candidate migration had proposed CREATE OR REPLACE FUNCTION with that same signature, which would replace the registration limiter with recovery-specific behavior and could break or weaken registration rate limiting.
+
+Fixed on the experiment branch only:
+- Renamed the candidate RPC to public.recovery_consume_request_rate_limit.
+- Updated the recovery handler to call only the dedicated recovery RPC.
+- Updated disposable PostgreSQL tests and added a regression fixture that creates a pre-existing registration limiter and asserts the recovery migration leaves its definition unchanged.
+- Added static contract assertions forbidding the old colliding function name in the recovery migration/handler.
+
+Commits:
+- b91df1478271780a15b9af707048f0ad9f6896fc — SQL RPC rename.
+- 761368cf28bd255e5b6b852ec829c189c260888f — handler alignment.
+- c9215a05d801ce048e08f8b01a12a442ee84f53c — SQL integration test rename.
+- 3c560f8a3ee38dafd98c72fbe0d942106b1ed120 — static regression guard.
+- 0c252c101826ef30e38c77aaf63dc53558e1fa42 — PostgreSQL regression preserving registration limiter.
+
+The new CI run for these latest commits must finish successfully before proceeding. The candidate migration is still not applied to Test or Production, and no live Edge Function, Auth user, password, SMS provider, trainee record, or production resource was changed.
+
+**Release remains NOT READY.** Next gate: confirm the new disposable PostgreSQL run passes the registration-limiter preservation test, then continue with read-only PostgREST/API compatibility checks and plan an explicitly approved, isolated Test migration only after the candidate migration has been reviewed in full.
