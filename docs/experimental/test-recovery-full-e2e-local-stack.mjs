@@ -66,7 +66,18 @@ async function main(){
   'docs/experimental/migrations/20261122_recovery_atomic_rpc_candidate.sql',
   'docs/experimental/migrations/20261122_recovery_outbox_worker_candidate.sql',
   'docs/experimental/migrations/20261122_recovery_encrypted_delivery_payload_candidate.sql'
- ]) await pool.query(fs.readFileSync(path,'utf8'));
+ ]) {
+  const sql = fs.readFileSync(path,'utf8');
+  try {
+    await pool.query(sql);
+  } catch (error) {
+    const position = Number(error.position || 0);
+    console.error('Recovery migration failed:', path);
+    console.error('PostgreSQL error:', error.code, error.message, 'position:', error.position);
+    if (position > 0) console.error('SQL context:', sql.slice(Math.max(0, position - 180), Math.min(sql.length, position + 180)));
+    throw error;
+  }
+ }
  await pool.query("NOTIFY pgrst, 'reload schema'");
  const coach=expectNoError(await admin.auth.admin.createUser({email:coachEmail,password:oldPassword,email_confirm:true}),'create coach');
  coachId=coach.user.id;
