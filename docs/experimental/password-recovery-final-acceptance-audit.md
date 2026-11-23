@@ -127,3 +127,22 @@ No existing base-schema migration for the recovery candidate was found under `su
 Run `45118731576` (#326) completed successfully on branch commit `0ebe8b73973738bcf18e29143f2519a0d61dca51`. All four existing jobs passed. The local Auth job still explicitly starts an Auth-only disposable stack; no unified lifecycle E2E was added by this run.
 
 PR #260 remains open and Draft. The E2E, provider, old-JWT, and staging/operational gates remain open. **NOT APPROVED FOR RELEASE.**
+
+## Bounded access-token lifetime decision review — 2026-11-23
+
+Official Supabase session documentation was reviewed against the local Auth/PostgREST observation:
+
+- Supabase access tokens are self-contained JWTs. Global sign-out/password change revokes refresh/session state, but already-issued access JWTs remain usable by APIs that validate signature/expiry locally until `exp`.
+- Supabase documents JWT expiry as configurable, with a general recommendation of 1 hour for most applications; it advises not going below 5 minutes because of clock skew, refresh traffic, and long-running requests.
+- Supabase also documents checking the JWT `session_id` against `auth.sessions` for endpoints that require stronger immediate revocation guarantees. This is a targeted authorization check, not a reason to weaken RLS or blindly query session state for every ordinary read.
+
+Repository inspection found no tracked `supabase/config.toml` in this experiment branch. The current CI creates a temporary project with `supabase init` in `/tmp`, so its default Auth configuration is not an explicit, versioned candidate policy.
+
+Decision for this stage:
+1. Do not change hosted Auth settings or production JWT lifetime.
+2. Do not claim that password reset instantly invalidates all access JWTs.
+3. For general app traffic, use bounded JWT expiry as the baseline; test a 15-minute (900-second) candidate in disposable local Auth first, including refresh behavior, long-running requests, clock-skew tolerance, and mobile reconnect/offline behavior. This is a proposed test value, not an approved production setting. Supabase's documented 5-minute lower guidance remains a hard floor for any candidate.
+4. For truly sensitive operations that require immediate revocation, evaluate a narrow server-side `session_id`/active-session check against Auth session state (or an equivalent trusted revocation/version mechanism), with explicit performance and failure-mode tests. Do not weaken RLS, and do not add a broad per-query DB dependency without measurement.
+5. A disposable proof must show: newly issued JWT contains the expected bounded `exp`; after password change/global sign-out, refresh fails; PostgREST accepts the old JWT only until expiry and rejects it afterwards; a newly refreshed/reauthenticated session works; and ordinary app refresh flows remain stable.
+
+This resolves the architectural direction but does not close the JWT gate: the expiry value and any sensitive-route session check still require executable disposable tests and a staging decision. Sources reviewed: Supabase User Sessions, Signing Out, and CLI `auth.jwt_expiry` documentation.
