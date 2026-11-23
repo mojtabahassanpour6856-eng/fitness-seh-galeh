@@ -127,6 +127,7 @@ export function createRecoveryCandidateHandler(deps) {
         if (action === 'list') {
           const { data, error } = await deps.admin.from('trainee_password_recovery_requests')
             .select('id,trainee_id,status,requested_at,reviewed_at,delivery_outcome,auth_outcome,trainees!inner(full_name,coach_user_id)')
+            .eq('request_coach_user_id', user.id)
             .eq('trainees.coach_user_id', user.id)
             .in('status', ['pending', 'approved', 'processing'])
             .order('requested_at', { ascending: true }).limit(50);
