@@ -649,3 +649,17 @@ The candidate migration's deliberate preflight rejection of legacy `approved`/`p
 The current separate jobs do not share a database or Auth service. No full-E2E runner was created or executed in this audit. No hosted credentials or data were accessed. This is a compatibility/design inventory only.
 
 Release remains **NOT READY**.
+
+
+## 24-hour recovery-code policy alignment and CI run #320 (2026-11-23)
+
+The candidate implementation had an unintended policy mismatch: the HTTP handler generated a 15-minute expiry while the SQL approval RPCs capped expiry at 20 minutes, despite the documented recovery-code policy being 24 hours. This is now aligned on the isolated experiment branch:
+
+- `docs/experimental/recovery-candidate-handler.mjs` generates an expiry exactly 24 hours after issuance.
+- `20261122_recovery_atomic_rpc_candidate.sql` rejects expiry values beyond 24 hours.
+- `20261122_recovery_encrypted_delivery_payload_candidate.sql` applies the same 24-hour maximum to encrypted approval.
+- `test-recovery-candidate-handler.js` asserts the exact 24-hour timestamp.
+
+CI run #320 completed successfully on commit `78055425856e38703ad5dddccff5740a644f7564`: all four jobs passed (mock recovery tests, Deno candidate check, disposable PostgreSQL concurrency/Outbox tests, and disposable local Auth/PostgREST session probe). The Auth probe confirmed old password rejection, new password acceptance, refresh-token revocation, and Auth `getUser` rejection. It also reconfirmed that a still-unexpired old access JWT remains accepted by local PostgREST after password update and global sign-out. Therefore this does not establish immediate API-session revocation.
+
+This CI success validates the isolated candidate checks only. It does not constitute the complete HTTP-to-worker-to-Auth recovery E2E flow, does not validate a real SMS provider, and does not authorize migration/deployment to hosted Test or Production. The full E2E and the bounded-JWT or server-side session/version-check architecture decision remain open. No hosted Supabase project, real trainee data, live Auth account, or SMS provider was used. Release remains **NOT READY FOR PRODUCTION**.
