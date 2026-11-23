@@ -134,7 +134,7 @@ BEGIN
     AND EXISTS (
       SELECT 1 FROM public.trainees t
       WHERE t.id=r.trainee_id
-        AND t.coach_user_id IS NOT DISTINCT FROM r.reviewed_by
+        AND r.reviewed_by IS NOT NULL AND t.coach_user_id = r.reviewed_by
         AND t.approval_status='active' AND t.archived_at IS NULL
     );
   IF NOT FOUND THEN RETURN false; END IF;
