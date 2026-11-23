@@ -677,3 +677,27 @@ Two viable directions require separate review:
 Do not combine these approaches or change hosted Auth settings as an experiment without an explicit architecture decision and isolated Test plan. The current candidate has neither mitigation implemented; this remains a release blocker. The first validation should inventory the app's current JWT lifetime and refresh behavior, then map all protected data surfaces and RLS policies before choosing. Preserve the existing old-JWT probe as a regression test: after the selected mitigation is implemented, test both Auth and actual PostgREST access with the old JWT.
 
 No code, RLS policy, hosted Auth setting, migration, or user session was changed for this decision note. Release remains **NOT READY FOR PRODUCTION**.
+
+
+## CI run #322 and existing application authorization patterns (2026-11-23)
+
+GitHub Actions run `45116693142` / run #322 completed successfully on commit `d60221548ed4e9b8f3b0ad0d5d1ff078b1f0fe1b`. All four jobs passed: mock recovery tests, Deno candidate check, disposable local Auth/PostgREST probe, and disposable PostgreSQL concurrency/Outbox tests. This is still the same set of separate CI jobs; it is not the missing one-stack full recovery E2E.
+
+A read-only inspection of existing `main` authorization code found useful patterns but does not establish a complete RLS inventory:
+
+- `supabase/migrations/202611130001_atomic_trainee_progress_rpc.sql` defines a `SECURITY INVOKER` RPC, explicitly requires non-null `auth.uid()`, rejects coach-role use for a trainee-only action, and verifies the active trainee owns the exact row through `trainees.auth_user_id = auth.uid()`.
+- `supabase/migrations/202610220001_save_trainee_workout_plan_atomic.sql` defines a `SECURITY DEFINER` coach operation but explicitly requires authentication, coach role, and `private.can_access_trainee(v_trainee_id)`; it revokes execute from PUBLIC and anon and grants only authenticated.
+- `supabase/migrations/202611030001_save_coach_nutrition_builder_atomic.sql` similarly checks authenticated coach role and per-trainee access, and restricts function execution grants. It preserves previous nutrition plans as inactive history rather than deleting them.
+- `supabase/migrations/202611140001_tighten_trainee_health_report_storage_reads.sql` shows a storage-object RLS policy tied to `auth.uid()`, active trainee state, and current coach/trainee ownership.
+- Existing main-branch tests `tests/auth-session-lifecycle-watchdog.test.mjs` and `tests/auth-recovery-paths-integration.test.mjs` cover client-side session restoration/single-flight behavior. They do not prove immediate PostgREST JWT revocation and must not be treated as a server-side mitigation.
+
+Implication for the recovery design: a session-version claim/check cannot be declared complete merely by adding a check to the recovery endpoint. It would need a verified inventory of all authenticated data access surfaces and policies, including direct PostgREST tables/views/RPCs and Storage policies, plus tests proving old-token denial without breaking legitimate coach/trainee access. The inspected examples are evidence of existing ownership checks, not proof that every surface is covered. No production code, RLS policy, Auth configuration, hosted project, or trainee data was changed in this audit.
+
+### Current release blockers
+
+1. Choose and validate the old-JWT residual-access policy (bounded JWT lifetime or complete server-side session/version enforcement).
+2. Build and pass the single-stack disposable full HTTP recovery E2E; the current four CI jobs remain separate.
+3. Complete the base-schema fixture compatibility and cleanup proof for that E2E.
+4. Only then proceed to reviewed provider integration, staging validation, operational monitoring/secret rotation, and explicit release approval.
+
+Release remains **NOT READY FOR PRODUCTION**.
