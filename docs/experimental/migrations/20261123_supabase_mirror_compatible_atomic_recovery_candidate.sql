@@ -69,6 +69,7 @@ ALTER TABLE public.trainee_password_recovery_requests
   ADD COLUMN IF NOT EXISTS auth_last_error_code text,
   ADD COLUMN IF NOT EXISTS hmac_key_version text,
   ADD COLUMN IF NOT EXISTS delivery_operation_id uuid,
+  ADD COLUMN IF NOT EXISTS delivery_payload jsonb,
   ADD COLUMN IF NOT EXISTS delivery_outcome text,
   ADD COLUMN IF NOT EXISTS delivery_attempted_at timestamptz;
 
