@@ -30,6 +30,25 @@ BEGIN
 END
 $guard$;
 
+-- Bind every request to the coach who owned the trainee at submission time.
+ALTER TABLE public.trainee_password_recovery_requests
+  ADD COLUMN IF NOT EXISTS request_coach_user_id uuid REFERENCES public.profiles(id);
+
+-- Backfill legacy pending requests from the current assignment. Ambiguous or orphaned
+-- requests are rejected rather than silently becoming actionable by a different coach.
+UPDATE public.trainee_password_recovery_requests r
+SET request_coach_user_id = t.coach_user_id
+FROM public.trainees t
+WHERE t.id = r.trainee_id AND r.request_coach_user_id IS NULL;
+
+UPDATE public.trainee_password_recovery_requests
+SET status = 'expired', token_hash = NULL, token_expires_at = NULL,
+    updated_at = now()
+WHERE request_coach_user_id IS NULL AND status IN ('pending','approved','processing');
+
+ALTER TABLE public.trainee_password_recovery_requests
+  ALTER COLUMN request_coach_user_id SET NOT NULL;
+
 ALTER TABLE public.trainee_password_recovery_requests
   ADD COLUMN IF NOT EXISTS operation_id uuid,
   ADD COLUMN IF NOT EXISTS processing_started_at timestamptz,
@@ -171,8 +190,14 @@ BEGIN
   END IF;
 
   INSERT INTO public.trainee_password_recovery_requests
-    (trainee_id, phone_normalized, status)
-  VALUES (v_trainee_id, p_phone_normalized, 'pending')
+    (trainee_id, phone_normalized, status, request_coach_user_id)
+  SELECT t.id, p_phone_normalized, 'pending', t.coach_user_id
+  FROM public.trainees t
+  WHERE t.id = v_trainee_id
+    AND t.approval_status = 'active'
+    AND t.auth_user_id IS NOT NULL
+    AND t.archived_at IS NULL
+  FOR UPDATE
   ON CONFLICT (trainee_id)
     WHERE status IN ('pending','approved','processing')
   DO NOTHING;
@@ -221,6 +246,7 @@ BEGIN
     INTO v_trainee_id, v_status
   FROM public.trainee_password_recovery_requests AS r
   WHERE r.id = p_request_id
+    AND r.request_coach_user_id = p_actor_user_id
   FOR UPDATE;
 
   IF NOT FOUND OR v_status <> 'pending' THEN
