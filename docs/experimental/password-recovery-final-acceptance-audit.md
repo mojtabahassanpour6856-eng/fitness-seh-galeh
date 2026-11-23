@@ -87,3 +87,16 @@ Latest reviewed branch head before this note: `e31743a5df11b389488727930963eba84
 - Only after those pass, request separate explicit approval for Production migration, provider credentials/live SMS, deployment, and merge.
 
 **Final decision: NOT APPROVED FOR RELEASE.** A production-ready package cannot truthfully be declared while delivery is disabled, old JWT residual access is unresolved, and full E2E/staging acceptance is absent. No Production or Supabase hosted setting/data was changed by this update.
+
+## CI verification refresh — 2026-11-23 (run #324)
+
+The current branch head `75c07269452a2dc18786965566cf3a368e12c61b` triggered GitHub Actions run `45117908781` (#324) via the Draft PR. The run completed with conclusion `success`; all four jobs and their listed steps completed successfully:
+
+- `mock-recovery-tests`
+- `deno-edge-candidate-check`
+- `postgres-concurrency-tests`
+- `supabase-local-auth-integration`
+
+This confirms the current branch's existing mock/crypto/handler/authorization checks, disposable PostgreSQL concurrency and PostgREST contracts, Deno type-check, and isolated local Auth probe. It does **not** add a unified request-to-redemption E2E job: the four jobs remain separate, and the local Auth job explicitly starts the disposable Auth stack only. The PostgREST old-access-JWT observation remains unresolved.
+
+No application code, migration, main branch, hosted Supabase project, Auth account, or SMS provider was changed or exercised by this verification. PR #260 remains open and Draft. **Release decision remains NOT APPROVED.**
