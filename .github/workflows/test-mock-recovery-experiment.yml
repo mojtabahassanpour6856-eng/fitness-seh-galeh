@@ -30,6 +30,7 @@ on:
       - 'docs/experimental/test-recovery-handler-sql-contract.js'
       - 'docs/experimental/test-recovery-auth-admin-sdk-contract.mjs'
       - 'docs/experimental/test-recovery-auth-local-stack.mjs'
+      - 'docs/experimental/test-recovery-auth-local-stack.mjs'
       - 'docs/experimental/migrations/20261122_recovery_atomic_rpc_candidate.sql'
       - 'docs/experimental/migrations/20261122_dispose_expired_legacy_approved_request.sql'
       - 'docs/experimental/test-recovery-atomic-rpc-candidate.js'
