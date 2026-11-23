@@ -1,0 +1,463 @@
+'use strict';
+const assert=require('node:assert/strict');
+const fs=require('node:fs');
+const {Pool}=require('pg');
+const pool=new Pool({host:process.env.PGHOST||'127.0.0.1',port:Number(process.env.PGPORT||5432),user:process.env.PGUSER||'postgres',password:process.env.PGPASSWORD||'postgres',database:process.env.PGDATABASE||'recovery_ci',max:8});
+const workerA='50000000-0000-4000-8000-000000000001';
+const workerB='50000000-0000-4000-8000-000000000002';
+let testOperationCounter=100;
+function reviewArgs(requestId,coach,hashChar) {
+ const suffix=String(testOperationCounter++).padStart(12,'0');
+ const operationId='60000000-0000-4000-8000-'+suffix;
+ const payload={v:1,alg:'A256GCM',kid:'d1',iv:'AAAAAAAAAAAAAAAA',ct:'AAAAAAAAAAAAAAAAAAAAAAAAAAA='};
+ return [requestId,coach,'approve',hashChar.repeat(64),new Date(Date.now()+10*60_000).toISOString(),'k1',operationId,payload];
+}
+
+async function asService(sql,args=[]){
+ const c=await pool.connect();
+ try{await c.query('BEGIN');await c.query('SET LOCAL ROLE service_role');const r=await c.query(sql,args);await c.query('COMMIT');return r;}
+ catch(e){await c.query('ROLLBACK');throw e;}finally{c.release();}
+}
+async function main(){
+ const migration=fs.readFileSync('docs/experimental/migrations/20261122_recovery_outbox_worker_candidate.sql','utf8');
+ const beginFn=migration.slice(migration.indexOf('CREATE OR REPLACE FUNCTION recovery_private.begin_recovery_outbox_send'),migration.indexOf('CREATE OR REPLACE FUNCTION recovery_private.finish_recovery_outbox'));
+ const finishFn=migration.slice(migration.indexOf('CREATE OR REPLACE FUNCTION recovery_private.finish_recovery_outbox'),migration.indexOf('CREATE OR REPLACE FUNCTION recovery_private.reconcile_expired_recovery_outbox'));
+ assert.match(beginFn,/RAISE EXCEPTION 'outbox send-start state changed'/,'begin-send must rollback both row updates if Outbox update fails');
+ assert.match(finishFn,/RAISE EXCEPTION 'outbox completion state changed'/,'finish must rollback both row updates if Outbox update fails');
+ await pool.query(migration);
+ const encryptedMigration=fs.readFileSync('docs/experimental/migrations/20261122_recovery_encrypted_delivery_payload_candidate.sql','utf8');
+ await pool.query(encryptedMigration);
+
+ // The real coach-review RPC must atomically create exactly one Outbox row.
+ const reviewRequest='30000000-0000-4000-8000-000000000005';
+ const coach='10000000-0000-4000-8000-000000000002';
+ const initialRequest=await pool.query('SELECT status,delivery_operation_id FROM public.trainee_password_recovery_requests WHERE id=$1',[reviewRequest]);
+ const initialDeliveryOperationId=initialRequest.rows[0].delivery_operation_id;
+ const tx=await pool.connect();
+ try {
+   await tx.query('BEGIN');
+   await tx.query('SET LOCAL ROLE service_role');
+   const rolled=await tx.query(
+     'SELECT public.recovery_coach_review_encrypted($1,$2,$3,$4,$5,$6,$7,$8) AS result',
+     reviewArgs(reviewRequest,coach,'c')
+   );
+   assert.equal(rolled.rows[0].result.ok,true,JSON.stringify(rolled.rows[0].result));
+   const inside=await tx.query('SELECT count(*)::int AS n FROM public.trainee_password_recovery_outbox WHERE recovery_request_id=$1',[reviewRequest]);
+   assert.equal(inside.rows[0].n,1,'Outbox row must exist inside the approval transaction');
+   await tx.query('ROLLBACK');
+ } finally { tx.release(); }
+ let rolledBack=await pool.query('SELECT status,delivery_operation_id FROM public.trainee_password_recovery_requests WHERE id=$1',[reviewRequest]);
+ assert.equal(rolledBack.rows[0].status,'pending');
+ assert.equal(rolledBack.rows[0].delivery_operation_id,initialDeliveryOperationId,'rollback must restore the exact pre-approval request state');
+ let noOutbox=await pool.query('SELECT count(*)::int AS n FROM public.trainee_password_recovery_outbox WHERE recovery_request_id=$1',[reviewRequest]);
+ assert.equal(noOutbox.rows[0].n,0,'rollback must remove the outbox insert with the approval');
+ const approved=await asService(
+   'SELECT public.recovery_coach_review_encrypted($1,$2,$3,$4,$5,$6,$7,$8) AS result',
+   reviewArgs(reviewRequest,coach,'c')
+ );
+ assert.equal(approved.rows[0].result.ok,true);
+ const deliveryOp=approved.rows[0].result.delivery_operation_id;
+ const linked=await pool.query('SELECT recovery_request_id,delivery_operation_id,provider_idempotency_key,status FROM public.trainee_password_recovery_outbox WHERE recovery_request_id=$1',[reviewRequest]);
+ assert.equal(linked.rows.length,1);
+ assert.equal(linked.rows[0].delivery_operation_id,deliveryOp);
+ assert.equal(linked.rows[0].provider_idempotency_key,'trainee-recovery:'+deliveryOp);
+ const duplicateReview=await asService(
+   'SELECT public.recovery_coach_review_encrypted($1,$2,$3,$4,$5,$6,$7,$8) AS result',
+   reviewArgs(reviewRequest,coach,'c')
+ );
+ assert.equal(duplicateReview.rows[0].result.ok,false);
+ assert.equal((await pool.query('SELECT count(*)::int AS n FROM public.trainee_password_recovery_outbox WHERE recovery_request_id=$1',[reviewRequest])).rows[0].n,1);
+ console.log('PASS: coach approval atomically enqueues one Outbox row; rollback and duplicate approval are safe');
+
+ const reqA=reviewRequest;
+ const firstOutbox=await pool.query('SELECT id FROM public.trainee_password_recovery_outbox WHERE recovery_request_id=$1',[reqA]);
+ assert.equal(firstOutbox.rows.length,1);
+ const ids=[firstOutbox.rows[0].id];
+ // Two independent PostgreSQL sessions race to claim one pending row.
+ const race=await Promise.all([workerA,workerB].map(w=>asService(
+ "SELECT * FROM recovery_private.claim_recovery_outbox($1,30)",[w]
+ )));
+ assert.equal(race.reduce((n,r)=>n+r.rowCount,0),1,'only one worker may claim the same Outbox item');
+ const lease=race.find(r=>r.rowCount===1).rows[0];
+ assert.equal(Number(lease.lease_generation),1);
+ assert.equal((await asService("SELECT * FROM public.recovery_outbox_fetch_payload($1,$2,$3)",[lease.outbox_id,workerA,lease.lease_generation])).rowCount,0,'ciphertext must not be fetchable before durable send-start');
+ console.log('PASS: two independent sessions; exactly one atomic Outbox claim');
+ // Before send-start, expired lease may be reclaimed with a higher generation.
+ await pool.query("UPDATE public.trainee_password_recovery_outbox SET locked_until=now()-interval '1 second' WHERE id=$1",[lease.outbox_id]);
+ const reclaim=await asService("SELECT * FROM recovery_private.claim_recovery_outbox($1,30)",[workerB]);
+ assert.equal(reclaim.rowCount,1);
+ const newer=reclaim.rows[0];
+ assert.equal(Number(newer.lease_generation),2);
+ assert.equal((await asService("SELECT * FROM public.recovery_outbox_fetch_payload($1,$2,$3)",[lease.outbox_id,workerB,lease.lease_generation])).rowCount,0,'stale generation cannot fetch after lease reclaim');
+ assert.equal(await asService("SELECT recovery_private.heartbeat_recovery_outbox($1,$2,$3,30) AS ok",[lease.outbox_id,workerA,lease.lease_generation]).then(r=>r.rows[0].ok),false);
+ assert.equal(await asService("SELECT recovery_private.begin_recovery_outbox_send($1,$2,$3) AS ok",[lease.outbox_id,workerA,lease.lease_generation]).then(r=>r.rows[0].ok),false);
+ assert.equal(await asService("SELECT recovery_private.begin_recovery_outbox_send($1,$2,$3) AS ok",[lease.outbox_id,workerB,newer.lease_generation]).then(r=>r.rows[0].ok),true);
+ const attempting=await pool.query("SELECT delivery_outcome FROM public.trainee_password_recovery_requests WHERE id=$1",[lease.recovery_request_id]);
+ assert.equal(attempting.rows[0].delivery_outcome,'attempting','send-start and request state must commit atomically');
+ assert.equal(await asService("SELECT recovery_private.finish_recovery_outbox($1,$2,$3,'sent','stale-id',NULL) AS ok",[lease.outbox_id,workerA,lease.lease_generation]).then(r=>r.rows[0].ok),false);
+ console.log('PASS: lease generation fences stale heartbeat, send-start, and completion');
+ // Once send-start is durable, an expired lease must not be claimed by another worker.
+ await pool.query("UPDATE public.trainee_password_recovery_outbox SET locked_until=now()-interval '1 second' WHERE id=$1",[lease.outbox_id]);
+ assert.equal(await asService("SELECT recovery_private.finish_recovery_outbox($1,$2,$3,'sent','late-before-reconcile',NULL) AS ok",[lease.outbox_id,workerB,newer.lease_generation]).then(r=>r.rows[0].ok),false,'expired lease owner cannot finalize even before reconciliation');
+ const blocked=await asService("SELECT * FROM recovery_private.claim_recovery_outbox($1,30)",[workerA]);
+ assert.equal(blocked.rowCount,0,'send-started message must not be automatically re-claimed');
+ const reconciled=await asService("SELECT recovery_private.reconcile_expired_recovery_outbox() AS n");
+ assert.ok(Number(reconciled.rows[0].n)>=1);
+ const row=await pool.query("SELECT status,attempt_count,lease_generation FROM public.trainee_password_recovery_outbox WHERE id=$1",[lease.outbox_id]);
+ assert.equal(row.rows[0].status,'unknown');
+ assert.equal(row.rows[0].attempt_count,1);
+ const requestUnknown=await pool.query("SELECT delivery_outcome FROM public.trainee_password_recovery_requests WHERE id=$1",[lease.recovery_request_id]);
+ assert.equal(requestUnknown.rows[0].delivery_outcome,'unknown','expired send lease must reconcile both records to unknown');
+ assert.equal(await asService("SELECT recovery_private.finish_recovery_outbox($1,$2,$3,'sent','late',NULL) AS ok",[lease.outbox_id,workerB,newer.lease_generation]).then(r=>r.rows[0].ok),false);
+ console.log('PASS: expired lease after durable send-start becomes unknown; no second claim or stale finalization');
+ // Create the second approved request only now, so the concurrent claim race above
+ // has exactly one eligible Outbox row (two workers competing for that same row).
+ const secondRequest='90000000-0000-4000-8000-000000000006';
+ await pool.query(`INSERT INTO public.trainees(id,coach_user_id,auth_user_id,approval_status,phone_normalized)
+   VALUES ('90000000-0000-4000-8000-000000000007',$1,'10000000-0000-4000-8000-000000000003','active','+989123450002')`,[coach]);
+ await pool.query(`INSERT INTO public.trainee_password_recovery_requests(id,trainee_id,phone_normalized,status,request_coach_user_id)
+   VALUES ($1,'90000000-0000-4000-8000-000000000007','+989123450002','pending',$2)`,[secondRequest,coach]);
+ const secondApproval=await asService(
+   'SELECT public.recovery_coach_review_encrypted($1,$2,$3,$4,$5,$6,$7,$8) AS result',
+   reviewArgs(secondRequest,coach,'d')
+ );
+ assert.equal(secondApproval.rows[0].result.ok,true);
+ const secondOutbox=await pool.query('SELECT id FROM public.trainee_password_recovery_outbox WHERE recovery_request_id=$1',[secondRequest]);
+ assert.equal(secondOutbox.rows.length,1);
+ const secondOutboxId=secondOutbox.rows[0].id;
+ // Non-service roles cannot execute privileged RPCs or read the table.
+ const acl=await pool.query(`SELECT
+   has_function_privilege('anon','recovery_private.claim_recovery_outbox(uuid,integer)','EXECUTE') AS anon_private_claim,
+   has_function_privilege('authenticated','recovery_private.finish_recovery_outbox(uuid,uuid,bigint,text,text,text)','EXECUTE') AS auth_private_finish,
+   has_function_privilege('anon','public.recovery_outbox_claim(uuid,integer)','EXECUTE') AS anon_public_claim,
+   has_function_privilege('authenticated','public.recovery_outbox_finish(uuid,uuid,bigint,text,text,text)','EXECUTE') AS auth_public_finish,
+   has_function_privilege('service_role','public.recovery_outbox_claim(uuid,integer)','EXECUTE') AS service_public_claim,
+   has_table_privilege('anon','public.trainee_password_recovery_outbox','SELECT') AS anon_read,
+   has_table_privilege('service_role','public.trainee_password_recovery_outbox','INSERT') AS service_direct_insert,
+   has_table_privilege('service_role','public.trainee_password_recovery_outbox','UPDATE') AS service_direct_update,
+   has_table_privilege('service_role','public.trainee_password_recovery_requests','UPDATE') AS service_request_direct_update,
+   has_function_privilege('anon','public.recovery_outbox_fetch_payload(uuid,uuid,bigint)','EXECUTE') AS anon_payload_fetch,
+   has_function_privilege('service_role','public.recovery_outbox_fetch_payload(uuid,uuid,bigint)','EXECUTE') AS service_payload_fetch`);
+ assert.deepEqual(acl.rows[0],{
+   anon_private_claim:false,auth_private_finish:false,anon_public_claim:false,
+   auth_public_finish:false,service_public_claim:true,anon_read:false,service_direct_insert:false,service_direct_update:false,
+   service_request_direct_update:false,anon_payload_fetch:false,service_payload_fetch:true
+ });
+ console.log('PASS: anonymous/authenticated roles cannot execute worker RPCs or read Outbox');
+ // Add a second independent pending item only after the first item has been fenced and reconciled.
+ // Second synthetic item: heartbeat extends a live lease and accepted send finalizes once.
+ const live=await asService("SELECT * FROM recovery_private.claim_recovery_outbox($1,30)",[workerA]);
+ assert.equal(live.rowCount,1);
+ const l=live.rows[0];
+ assert.equal(l.outbox_id,secondOutboxId,'the second approved request must supply the next pending Outbox item');
+ assert.equal(await asService("SELECT recovery_private.heartbeat_recovery_outbox($1,$2,$3,45) AS ok",[l.outbox_id,workerA,l.lease_generation]).then(r=>r.rows[0].ok),true);
+ assert.equal(await asService("SELECT recovery_private.begin_recovery_outbox_send($1,$2,$3) AS ok",[l.outbox_id,workerA,l.lease_generation]).then(r=>r.rows[0].ok),true);
+ const fetchedPayload=await asService("SELECT * FROM public.recovery_outbox_fetch_payload($1,$2,$3)",[l.outbox_id,workerA,l.lease_generation]);
+ assert.equal(fetchedPayload.rowCount,1,'only the live send-start owner may fetch ciphertext');
+ assert.deepEqual(fetchedPayload.rows[0].delivery_payload,{v:1,alg:'A256GCM',kid:'d1',iv:'AAAAAAAAAAAAAAAA',ct:'AAAAAAAAAAAAAAAAAAAAAAAAAAA='});
+ assert.equal((await asService("SELECT * FROM public.recovery_outbox_fetch_payload($1,$2,$3)",[l.outbox_id,workerB,l.lease_generation])).rowCount,0,'wrong owner cannot fetch ciphertext');
+ assert.equal(await asService("SELECT recovery_private.finish_recovery_outbox($1,$2,$3,'sent','mock-provider-id',NULL) AS ok",[l.outbox_id,workerA,l.lease_generation]).then(r=>r.rows[0].ok),true);
+ assert.equal(await asService("SELECT recovery_private.finish_recovery_outbox($1,$2,$3,'sent','duplicate',NULL) AS ok",[l.outbox_id,workerA,l.lease_generation]).then(r=>r.rows[0].ok),false);
+ const delivered=await pool.query("SELECT delivery_outcome,status FROM public.trainee_password_recovery_requests WHERE id=$1",[secondRequest]);
+ assert.equal(delivered.rows[0].delivery_outcome,'sent');
+ assert.equal(delivered.rows[0].status,'approved');
+ const outboxSent=await pool.query("SELECT status FROM public.trainee_password_recovery_outbox WHERE id=$1",[l.outbox_id]);
+ assert.equal(outboxSent.rows[0].status,'sent');
+ const clearedSent=await pool.query('SELECT delivery_payload FROM public.trainee_password_recovery_requests WHERE id=$1',[secondRequest]);
+ const clearedOutbox=await pool.query('SELECT delivery_payload FROM public.trainee_password_recovery_outbox WHERE id=$1',[l.outbox_id]);
+ assert.equal(clearedSent.rows[0].delivery_payload,null,'request ciphertext must clear on sent');
+ assert.equal(clearedOutbox.rows[0].delivery_payload,null,'Outbox ciphertext must clear on sent');
+ console.log('PASS: live lease heartbeat and atomic one-time successful completion');
+
+ // Reuse the synthetic fixture with a fresh operation to exercise definite failure
+ // and ambiguous provider outcome without creating another auth identity.
+ await pool.query(`UPDATE public.trainee_password_recovery_requests
+   SET status='pending',delivery_outcome=NULL,delivery_operation_id=NULL,
+       token_hash=NULL,token_expires_at=NULL,reviewed_at=NULL,reviewed_by=NULL,
+       token_attempts=0,updated_at=now() WHERE id=$1`,[secondRequest]);
+ const failApproval=await asService(
+   'SELECT public.recovery_coach_review_encrypted($1,$2,$3,$4,$5,$6,$7,$8) AS result',
+   reviewArgs(secondRequest,coach,'e')
+ );
+ assert.equal(failApproval.rows[0].result.ok,true);
+ const failLease=await asService("SELECT * FROM recovery_private.claim_recovery_outbox($1,30)",[workerA]);
+ assert.equal(failLease.rowCount,1);
+ const fl=failLease.rows[0];
+ assert.equal(await asService("SELECT recovery_private.begin_recovery_outbox_send($1,$2,$3) AS ok",[fl.outbox_id,workerA,fl.lease_generation]).then(r=>r.rows[0].ok),true);
+ assert.equal(await asService("SELECT recovery_private.finish_recovery_outbox($1,$2,$3,'failed',NULL,'provider_rejected') AS ok",[fl.outbox_id,workerA,fl.lease_generation]).then(r=>r.rows[0].ok),true);
+ const failedRequest=await pool.query("SELECT status,delivery_outcome,token_hash,token_expires_at FROM public.trainee_password_recovery_requests WHERE id=$1",[secondRequest]);
+ assert.equal(failedRequest.rows[0].status,'pending');
+ assert.equal(failedRequest.rows[0].delivery_outcome,'confirmed_failure');
+ assert.equal(failedRequest.rows[0].token_hash,null);
+ assert.equal(failedRequest.rows[0].token_expires_at,null);
+ const failedOutbox=await pool.query("SELECT status,last_safe_error_code FROM public.trainee_password_recovery_outbox WHERE id=$1",[fl.outbox_id]);
+ assert.equal(failedOutbox.rows[0].status,'failed');
+ assert.equal(failedOutbox.rows[0].last_safe_error_code,'provider_rejected');
+ assert.equal((await pool.query('SELECT delivery_payload FROM public.trainee_password_recovery_requests WHERE id=$1',[secondRequest])).rows[0].delivery_payload,null);
+ assert.equal((await pool.query('SELECT delivery_payload FROM public.trainee_password_recovery_outbox WHERE id=$1',[fl.outbox_id])).rows[0].delivery_payload,null);
+ console.log('PASS: definite delivery failure atomically clears token and returns request for coach review');
+
+ // A fresh approval operation can be attempted; ambiguous delivery must remain unknown.
+ const unknownApproval=await asService(
+   'SELECT public.recovery_coach_review_encrypted($1,$2,$3,$4,$5,$6,$7,$8) AS result',
+   reviewArgs(secondRequest,coach,'f')
+ );
+ assert.equal(unknownApproval.rows[0].result.ok,true);
+ const unknownLease=await asService("SELECT * FROM recovery_private.claim_recovery_outbox($1,30)",[workerB]);
+ assert.equal(unknownLease.rowCount,1);
+ const ul=unknownLease.rows[0];
+ assert.equal(await asService("SELECT recovery_private.begin_recovery_outbox_send($1,$2,$3) AS ok",[ul.outbox_id,workerB,ul.lease_generation]).then(r=>r.rows[0].ok),true);
+ assert.equal(await asService("SELECT recovery_private.finish_recovery_outbox($1,$2,$3,'unknown',NULL,'provider_timeout') AS ok",[ul.outbox_id,workerB,ul.lease_generation]).then(r=>r.rows[0].ok),true);
+ const ambiguousRequest=await pool.query("SELECT status,delivery_outcome FROM public.trainee_password_recovery_requests WHERE id=$1",[secondRequest]);
+ assert.equal(ambiguousRequest.rows[0].status,'approved');
+ assert.equal(ambiguousRequest.rows[0].delivery_outcome,'unknown');
+ const ambiguousOutbox=await pool.query("SELECT status FROM public.trainee_password_recovery_outbox WHERE id=$1",[ul.outbox_id]);
+ assert.equal(ambiguousOutbox.rows[0].status,'unknown');
+ assert.equal((await pool.query('SELECT delivery_payload FROM public.trainee_password_recovery_requests WHERE id=$1',[secondRequest])).rows[0].delivery_payload,null);
+ assert.equal((await pool.query('SELECT delivery_payload FROM public.trainee_password_recovery_outbox WHERE id=$1',[ul.outbox_id])).rows[0].delivery_payload,null);
+ assert.equal((await asService("SELECT * FROM recovery_private.claim_recovery_outbox($1,30)",[workerA])).rowCount,0,
+   'ambiguous provider result must never be automatically resent');
+ console.log('PASS: ambiguous delivery outcome stays unknown and is never automatically retried');
+
+ // A trainee reassigned after approval must not receive the former coach's code.
+ const otherCoach='10000000-0000-4000-8000-000000000001';
+ await pool.query(`UPDATE public.trainee_password_recovery_requests
+   SET status='pending',delivery_outcome=NULL,delivery_operation_id=NULL,
+       token_hash=NULL,token_expires_at=NULL,reviewed_at=NULL,reviewed_by=NULL,
+       token_attempts=0,delivery_payload=NULL,updated_at=now() WHERE id=$1`,[secondRequest]);
+ await pool.query(`UPDATE public.trainees SET coach_user_id=$1
+   WHERE id='90000000-0000-4000-8000-000000000007'`,[coach]);
+ const reassignmentApproval=await asService(
+   'SELECT public.recovery_coach_review_encrypted($1,$2,$3,$4,$5,$6,$7,$8) AS result',
+   reviewArgs(secondRequest,coach,'a')
+ );
+ assert.equal(reassignmentApproval.rows[0].result.ok,true);
+ await pool.query(`UPDATE public.trainees SET coach_user_id=$1
+   WHERE id='90000000-0000-4000-8000-000000000007'`,[otherCoach]);
+ const reassignedClaim=await asService(
+   'SELECT * FROM recovery_private.claim_recovery_outbox($1,30)',[workerA]
+ );
+ assert.equal(reassignedClaim.rowCount,0,'claim must refuse an approval whose trainee has moved to another coach');
+ await pool.query(`UPDATE public.trainees SET coach_user_id=$1
+   WHERE id='90000000-0000-4000-8000-000000000007'`,[coach]);
+ const dispatchLease=await asService(
+   'SELECT * FROM recovery_private.claim_recovery_outbox($1,30)',[workerA]
+ );
+ assert.equal(dispatchLease.rowCount,1);
+ const dl=dispatchLease.rows[0];
+ await pool.query(`UPDATE public.trainees SET coach_user_id=$1
+   WHERE id='90000000-0000-4000-8000-000000000007'`,[otherCoach]);
+ assert.equal(await asService(
+   'SELECT recovery_private.begin_recovery_outbox_send($1,$2,$3) AS ok',
+   [dl.outbox_id,workerA,dl.lease_generation]
+ ).then(r=>r.rows[0].ok),false,'send-start must re-check ownership and block a stale coach approval');
+ const reassignedRequest=await pool.query(
+   'SELECT status,delivery_outcome,token_hash,token_expires_at FROM public.trainee_password_recovery_requests WHERE id=$1',
+   [secondRequest]
+ );
+ assert.deepEqual(reassignedRequest.rows[0],{
+   status:'expired',delivery_outcome:'confirmed_failure',token_hash:null,token_expires_at:null
+ });
+ const reassignedOutbox=await pool.query(
+   'SELECT status,last_safe_error_code,lock_owner,locked_until FROM public.trainee_password_recovery_outbox WHERE id=$1',
+   [dl.outbox_id]
+ );
+ assert.equal(reassignedOutbox.rows[0].status,'failed');
+ assert.equal(reassignedOutbox.rows[0].last_safe_error_code,'coach_assignment_changed');
+ assert.equal(reassignedOutbox.rows[0].lock_owner,null);
+ assert.equal(reassignedOutbox.rows[0].locked_until,null);
+ console.log('PASS: coach reassignment after approval blocks claim and send-start; code is invalidated');
+
+ // If reassignment occurs after send-start, the encrypted payload must still not be released.
+ await pool.query(`UPDATE public.trainee_password_recovery_requests
+   SET status='pending',delivery_outcome=NULL,delivery_operation_id=NULL,
+       token_hash=NULL,token_expires_at=NULL,reviewed_at=NULL,reviewed_by=NULL,
+       token_attempts=0,delivery_payload=NULL,updated_at=now() WHERE id=$1`,[secondRequest]);
+ await pool.query(`UPDATE public.trainees SET coach_user_id=$1
+   WHERE id='90000000-0000-4000-8000-000000000007'`,[coach]);
+ const lateReassignmentApproval=await asService(
+   'SELECT public.recovery_coach_review_encrypted($1,$2,$3,$4,$5,$6,$7,$8) AS result',
+   reviewArgs(secondRequest,coach,'b')
+ );
+ assert.equal(lateReassignmentApproval.rows[0].result.ok,true);
+ const lateLease=await asService(
+   'SELECT * FROM recovery_private.claim_recovery_outbox($1,30)',[workerA]
+ );
+ assert.equal(lateLease.rowCount,1);
+ const ll=lateLease.rows[0];
+ assert.equal(await asService(
+   'SELECT recovery_private.begin_recovery_outbox_send($1,$2,$3) AS ok',
+   [ll.outbox_id,workerA,ll.lease_generation]
+ ).then(r=>r.rows[0].ok),true);
+ await pool.query(`UPDATE public.trainees SET coach_user_id=$1
+   WHERE id='90000000-0000-4000-8000-000000000007'`,[otherCoach]);
+ assert.equal((await asService(
+   'SELECT * FROM public.recovery_outbox_fetch_payload($1,$2,$3)',
+   [ll.outbox_id,workerA,ll.lease_generation]
+ )).rowCount,0,'payload fetch must re-check coach ownership after send-start');
+ assert.equal(await asService(
+   "SELECT public.recovery_outbox_finish($1,$2,$3,'unknown',NULL,'coach_assignment_changed_after_send_start') AS ok",
+   [ll.outbox_id,workerA,ll.lease_generation]
+ ).then(r=>r.rows[0].ok),true);
+ console.log('PASS: coach reassignment after send-start blocks encrypted payload retrieval');
+
+ // End-to-end exercise: real PostgreSQL RPCs + production Worker module + fake SMS provider.
+ const {webcrypto}=require('node:crypto');
+ const {createRecoveryCandidateHandler}=await import('./recovery-candidate-handler.mjs');
+ const {FakeRecoverySmsProvider,processOneRecoveryOutboxItem}=await import('./recovery-outbox-worker-mock.mjs');
+ const e2eTrainee='20000000-0000-4000-8000-000000000078';
+ const e2ePhone='+989123450003';
+ await pool.query(`INSERT INTO public.trainees(id,coach_user_id,auth_user_id,approval_status,phone_normalized,archived_at)
+   VALUES ($1,$2,'10000000-0000-4000-8000-000000000003','active',$3,NULL)`,[e2eTrainee,coach,e2ePhone]);
+ const e2eOperation='60000000-0000-4000-8000-000000000777';
+ const e2eHmacKey='disposable-test-hmac-key-with-more-than-thirty-two-bytes';
+ const e2eWorker='50000000-0000-4000-8000-000000000077';
+ const e2eKey=webcrypto.getRandomValues(new Uint8Array(32));
+ const e2eKeyBase64=Buffer.from(e2eKey).toString('base64');
+ const e2eKeys={d1:e2eKeyBase64};
+ const httpAdmin={
+   async rpc(name,args){
+     const calls={
+       recovery_consume_request_rate_limit:['SELECT public.recovery_consume_request_rate_limit($1,$2,$3) AS result',[args.p_key_hash,args.p_window_seconds,args.p_max_requests]],
+       recovery_submit_request:['SELECT public.recovery_submit_request($1) AS result',[args.p_phone_normalized]],
+       recovery_coach_review_encrypted:['SELECT public.recovery_coach_review_encrypted($1,$2,$3,$4,$5,$6,$7,$8) AS result',
+         [args.p_request_id,args.p_actor_user_id,args.p_decision,args.p_token_hash,args.p_token_expires_at,args.p_hmac_key_version,args.p_delivery_operation_id,args.p_delivery_payload]]
+     };
+     const call=calls[name];if(!call)return {data:null,error:new Error('RPC_NOT_ALLOWED:'+name)};
+     try{const result=await asService(call[0],call[1]);return {data:result.rows[0]?.result??false,error:null};}
+     catch(error){return {data:null,error};}
+   },
+   from(table){
+     if(table!=='profiles')throw new Error('TABLE_NOT_ALLOWED:'+table);
+     let profileId;
+     const q={select(columns){assert.equal(columns,'role');return q;},eq(column,value){assert.equal(column,'id');profileId=value;return q;},
+       async maybeSingle(){assert.equal(profileId,coach);return {data:{role:'coach'},error:null};}};
+     return q;
+   }
+ };
+ const e2eHandler=createRecoveryCandidateHandler({
+   env:{RECOVERY_HMAC_KEYS:JSON.stringify({k1:e2eHmacKey}),RECOVERY_HMAC_KEY_VERSION:'k1',
+     RECOVERY_DELIVERY_KEYS:JSON.stringify(e2eKeys),RECOVERY_DELIVERY_KEY_VERSION:'d1',
+     RECOVERY_ALLOWED_ORIGINS:'https://app.example.test'},
+   admin:httpAdmin,
+   createUserClient:()=>({auth:{getUser:async()=>({data:{user:{id:coach}},error:null})}}),
+   randomBytes:()=>Buffer.from([0x12,0xe6]),randomUUID:()=>e2eOperation,
+   now:()=>Date.now(),crypto:webcrypto
+ });
+ const requestResponse=await e2eHandler(new Request('https://candidate.invalid',{method:'POST',
+   headers:{origin:'https://app.example.test','content-type':'application/json'},
+   body:JSON.stringify({action:'request',phone:e2ePhone})}));
+ assert.equal(requestResponse.status,202,'HTTP trainee request must be accepted generically');
+ const submittedRequest=await pool.query('SELECT id FROM public.trainee_password_recovery_requests WHERE trainee_id=$1 AND status=$2',[e2eTrainee,'pending']);
+ assert.equal(submittedRequest.rows.length,1);
+ const e2eRequestId=submittedRequest.rows[0].id;
+ const reviewResponse=await e2eHandler(new Request('https://candidate.invalid',{method:'POST',
+   headers:{origin:'https://app.example.test',authorization:'Bearer mock-coach-session','content-type':'application/json'},
+   body:JSON.stringify({action:'review',request_id:e2eRequestId,decision:'approve'})}));
+ assert.equal(reviewResponse.status,202,'authenticated coach HTTP review must enqueue delivery');
+ const reviewBody=await reviewResponse.json();
+ assert.equal(reviewBody.delivery_status,'queued');
+ assert.match(reviewBody.message,/هنوز ارسال پیامک تأیید نشده است/);
+ const duplicateReviewResponse=await e2eHandler(new Request('https://candidate.invalid',{method:'POST',
+   headers:{origin:'https://app.example.test',authorization:'Bearer mock-coach-session','content-type':'application/json'},
+   body:JSON.stringify({action:'review',request_id:e2eRequestId,decision:'approve'})}));
+ assert.equal(duplicateReviewResponse.status,409,'duplicate HTTP approval must be rejected');
+ const e2eApproved=await pool.query('SELECT delivery_operation_id,token_hash FROM public.trainee_password_recovery_requests WHERE id=$1',[e2eRequestId]);
+ assert.equal(e2eApproved.rows[0].delivery_operation_id,e2eOperation);
+ assert.match(e2eApproved.rows[0].token_hash,/^[a-f0-9]{64}$/);
+ const e2eProvider=new FakeRecoverySmsProvider([{kind:'accepted',messageId:'e2e-provider-accepted'}]);
+ const e2eAdmin={
+   async rpc(name,args){
+     const calls={
+       recovery_outbox_claim:['SELECT * FROM public.recovery_outbox_claim($1,$2)',[args.p_worker_id,args.p_lease_seconds],'rows'],
+       recovery_outbox_heartbeat:['SELECT public.recovery_outbox_heartbeat($1,$2,$3,$4) AS ok',[args.p_outbox_id,args.p_worker_id,args.p_generation,args.p_lease_seconds],'scalar'],
+       recovery_outbox_begin_send:['SELECT public.recovery_outbox_begin_send($1,$2,$3) AS ok',[args.p_outbox_id,args.p_worker_id,args.p_generation],'scalar'],
+       recovery_outbox_fetch_payload:['SELECT * FROM public.recovery_outbox_fetch_payload($1,$2,$3)',[args.p_outbox_id,args.p_worker_id,args.p_generation],'rows'],
+       recovery_outbox_finish:['SELECT public.recovery_outbox_finish($1,$2,$3,$4,$5,$6) AS ok',[args.p_outbox_id,args.p_worker_id,args.p_generation,args.p_outcome,args.p_provider_message_id,args.p_safe_error_code],'scalar']
+     };
+     const call=calls[name];if(!call)return {data:null,error:new Error('RPC_NOT_ALLOWED')};
+     try{const result=await asService(call[0],call[1]);return {data:call[2]==='rows'?result.rows:result.rows[0]?.ok??false,error:null};}
+     catch(error){return {data:null,error};}
+   },
+   from(table){
+     if(!['trainee_password_recovery_requests','trainees'].includes(table))throw new Error('TABLE_NOT_ALLOWED');
+     let rowId;
+     return {select(){return this;},eq(column,value){if(column!=='id')throw new Error('FILTER_NOT_ALLOWED');rowId=value;return this;},
+       async maybeSingle(){try{const result=await pool.query('SELECT * FROM public.'+table+' WHERE id=$1',[rowId]);return {data:result.rows[0]||null,error:null};}
+       catch(error){return {data:null,error};}}};
+   }
+ };
+ const e2eResult=await processOneRecoveryOutboxItem({admin:e2eAdmin,workerId:e2eWorker,deliveryKeys:e2eKeys,cryptoImpl:webcrypto,provider:e2eProvider});
+ assert.deepEqual(e2eResult,{status:'sent'});
+ assert.equal(e2eProvider.calls.length,1);
+ assert.equal(e2eProvider.calls[0].code,'4838');
+ assert.equal(e2eProvider.calls[0].phone,e2ePhone);
+ assert.equal(e2eProvider.calls[0].idempotencyKey,'trainee-recovery:'+e2eOperation);
+ const e2eState=await pool.query(`SELECT r.delivery_outcome,o.status,r.delivery_payload AS request_payload,
+   o.delivery_payload AS outbox_payload FROM public.trainee_password_recovery_requests r
+   JOIN public.trainee_password_recovery_outbox o ON o.recovery_request_id=r.id
+   WHERE r.id=$1 AND o.delivery_operation_id=$2`,[e2eRequestId,e2eOperation]);
+ assert.equal(e2eState.rows.length,1);
+ assert.equal(e2eState.rows[0].delivery_outcome,'sent');
+ assert.equal(e2eState.rows[0].status,'sent');
+ assert.equal(e2eState.rows[0].request_payload,null);
+ assert.equal(e2eState.rows[0].outbox_payload,null);
+ console.log('PASS: HTTP request + authenticated HTTP coach approval + real PostgreSQL + encrypted Worker + fake provider + terminal payload cleanup');
+ // Exercise the actual HTTP reset handler against disposable PostgreSQL; only Auth is mocked.
+ const authOperation='70000000-0000-4000-8000-000000000777';
+ const authUpdates=[];
+ const resetAdmin={
+   async rpc(name,args){
+     const calls={
+       recovery_claim_reset:['SELECT public.recovery_claim_reset($1,$2,$3) AS result',[args.p_request_id,args.p_code_digest,args.p_operation_id],'json'],
+       recovery_record_wrong_attempt:['SELECT public.recovery_record_wrong_attempt($1,$2) AS result',[args.p_request_id,args.p_submitted_digest],'json'],
+       recovery_begin_auth_update:['SELECT public.recovery_begin_auth_update($1,$2) AS ok',[args.p_request_id,args.p_operation_id],'scalar'],
+       recovery_finish_auth_update:['SELECT public.recovery_finish_auth_update($1,$2,$3,$4) AS ok',[args.p_request_id,args.p_operation_id,args.p_outcome,args.p_safe_error_code],'scalar']
+     };
+     const call=calls[name];if(!call)return {data:null,error:new Error('RPC_NOT_ALLOWED:'+name)};
+     try{const result=await asService(call[0],call[1]);return {data:call[2]==='json'?result.rows[0]?.result:result.rows[0]?.ok??false,error:null};}
+     catch(error){return {data:null,error};}
+   },
+   from(table){
+     if(table!=='trainee_password_recovery_requests')throw new Error('TABLE_NOT_ALLOWED');
+     const filters=[];
+     const q={select(){return q;},eq(column,value){filters.push([column,value]);return q;},limit(){return q;},
+       then(resolve,reject){
+         const allowed=['phone_normalized','status','delivery_outcome'];
+         if(filters.some(([key])=>!allowed.includes(key)))return Promise.reject(new Error('FILTER_NOT_ALLOWED')).then(resolve,reject);
+         const where=filters.map(([key],i)=>key+'=$'+(i+1)).join(' AND ');
+         return pool.query('SELECT id,phone_normalized,hmac_key_version FROM public.trainee_password_recovery_requests WHERE '+where,filters.map(x=>x[1]))
+           .then(result=>resolve({data:result.rows,error:null}),reject);
+       }};
+     return q;
+   },
+   auth:{admin:{updateUserById:async(id,payload)=>{authUpdates.push({id,payload});return {data:{user:{id}},error:null};}}}
+ };
+ const resetHandler=createRecoveryCandidateHandler({
+   env:{RECOVERY_HMAC_KEYS:JSON.stringify({k1:e2eHmacKey}),RECOVERY_HMAC_KEY_VERSION:'k1',
+     RECOVERY_DELIVERY_KEYS:JSON.stringify(e2eKeys),RECOVERY_DELIVERY_KEY_VERSION:'d1',
+     RECOVERY_ALLOWED_ORIGINS:'https://app.example.test'},
+   admin:resetAdmin,createUserClient:()=>{throw new Error('not used for reset')},
+   now:()=>Date.now(),randomUUID:()=>authOperation,crypto:webcrypto
+ });
+ const resetResponse=await resetHandler(new Request('https://candidate.invalid',{method:'POST',
+   headers:{origin:'https://app.example.test','content-type':'application/json'},
+   body:JSON.stringify({action:'reset',phone:e2ePhone,code:'4838',new_password:'MockOnlyPass!123'})}));
+ assert.equal(resetResponse.status,200,'HTTP reset handler must complete real PostgreSQL state transitions');
+ assert.equal(authUpdates.length,1,'exactly one mocked Auth update must occur');
+ assert.equal(authUpdates[0].id,'10000000-0000-4000-8000-000000000003');
+ assert.equal(authUpdates[0].payload.password,'MockOnlyPass!123');
+ const fullyCompleted=await pool.query(
+   'SELECT status,delivery_outcome,auth_outcome,token_hash,token_expires_at FROM public.trainee_password_recovery_requests WHERE id=$1',
+   [e2eRequestId]
+ );
+ assert.equal(fullyCompleted.rows[0].status,'completed');
+ assert.equal(fullyCompleted.rows[0].delivery_outcome,'sent');
+ assert.equal(fullyCompleted.rows[0].auth_outcome,'completed');
+ assert.equal(fullyCompleted.rows[0].token_hash,null);
+ assert.equal(fullyCompleted.rows[0].token_expires_at,null);
+ console.log('PASS: HTTP reset handler + real disposable PostgreSQL claim/begin/finish RPCs + one mocked Auth update');
+
+ console.log('All disposable PostgreSQL Outbox/Worker integration checks passed.');
+}
+main().catch(e=>{console.error(e);process.exitCode=1;}).finally(()=>pool.end());

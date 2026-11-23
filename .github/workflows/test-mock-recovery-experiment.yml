@@ -1,0 +1,318 @@
+name: Experimental password recovery mock and PostgreSQL tests
+# Disposable PostgreSQL suite also checks PostgREST-safe service-role-only RPC wrappers with named SQL dollar tags.
+
+on:
+  push:
+    branches:
+      - experiment/trainee-password-recovery-mock-20261122
+    paths:
+      - 'docs/experimental/mock-recovery-engine.js'
+      - 'docs/experimental/recovery-outbox-worker-model.js'
+      - 'docs/experimental/recovery-outbox-worker-mock.mjs'
+      - 'docs/experimental/test-recovery-outbox-worker-mock.mjs'
+      - 'docs/experimental/test-recovery-outbox-worker-model.js'
+      - 'docs/experimental/migrations/20261122_recovery_outbox_worker_candidate.sql'
+      - 'docs/experimental/migrations/20261122_recovery_encrypted_delivery_payload_candidate.sql'
+      - 'docs/experimental/test-recovery-outbox-postgres.js'
+      - 'docs/experimental/test-mock-recovery.js'
+      - 'docs/experimental/test-recovery-crypto.js'
+      - 'docs/experimental/test-recovery-http-smoke.js'
+      - 'docs/experimental/test-recovery-http-smoke-contract.js'
+      - 'docs/experimental/test-recovery-authorization-abuse.js'
+      - 'docs/experimental/recovery-candidate-core.mjs'
+      - 'docs/experimental/test-recovery-candidate-core.js'
+      - 'docs/experimental/recovery-delivery-payload-crypto.mjs'
+      - 'docs/experimental/test-recovery-delivery-payload-crypto.mjs'
+      - 'docs/experimental/recovery-candidate-handler.mjs'
+      - 'docs/experimental/test-recovery-candidate-handler.js'
+      - 'docs/experimental/trainee-password-recovery-edge-candidate.ts'
+      - 'docs/experimental/test-recovery-edge-adapter-contract.js'
+      - 'docs/experimental/test-recovery-handler-sql-contract.js'
+      - 'docs/experimental/test-recovery-auth-admin-sdk-contract.mjs'
+      - 'docs/experimental/test-recovery-auth-local-stack.mjs'
+      - 'docs/experimental/test-recovery-full-e2e-local-stack.mjs'
+      - 'docs/experimental/test-recovery-auth-local-stack.mjs'
+      - 'docs/experimental/migrations/20261122_recovery_atomic_rpc_candidate.sql'
+      - 'docs/experimental/migrations/20261123_supabase_mirror_compatible_atomic_recovery_candidate.sql'
+      - 'docs/experimental/migrations/20261122_dispose_expired_legacy_approved_request.sql'
+      - 'docs/experimental/test-recovery-atomic-rpc-candidate.js'
+      - 'docs/experimental/test-recovery-postgrest-contract.mjs'
+      - 'docs/experimental/test-recovery-postgrest-outbox-contract.mjs'
+      - 'docs/experimental/test-recovery-supabase-shaped-migrations.mjs'
+      - 'docs/experimental/postgres-concurrency-test.js'
+      - 'docs/experimental/migrations/20261122_include_processing_in_active_recovery_unique_index.sql'
+      - '.github/workflows/test-mock-recovery-experiment.yml'
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  mock-recovery-tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout isolated experiment branch
+        uses: actions/checkout@v4
+        with:
+          ref: experiment/trainee-password-recovery-mock-20261122
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install pinned Supabase Auth SDK for isolated contract check
+        run: npm install --no-save @supabase/supabase-js@2.119.0 pg
+      - name: Verify Auth Admin password-update SDK contract (intercepted network only)
+        run: node docs/experimental/test-recovery-auth-admin-sdk-contract.mjs
+      - name: Run isolated mock recovery tests
+        run: node docs/experimental/test-mock-recovery.js
+      - name: Run fenced Outbox/Worker model tests (no provider or database)
+        run: node docs/experimental/test-recovery-outbox-worker-model.js
+      - name: Run fake-provider-only encrypted Outbox worker tests
+        run: node docs/experimental/test-recovery-outbox-worker-mock.mjs
+      - name: Run focused cryptographic boundary tests
+        run: node docs/experimental/test-recovery-crypto.js
+      - name: Verify live HTTP smoke harness cannot mutate recovery state
+        run: node docs/experimental/test-recovery-http-smoke-contract.js
+      - name: Run focused authorization and abuse regressions
+        run: node docs/experimental/test-recovery-authorization-abuse.js
+      - name: Run candidate security primitive tests (isolated only)
+        run: node docs/experimental/test-recovery-candidate-core.js
+      - name: Run dependency-injected recovery handler candidate tests (isolated only)
+        run: node docs/experimental/test-recovery-candidate-handler.js
+      - name: Test encrypted recovery delivery payload envelope (no provider or secrets)
+        run: node docs/experimental/test-recovery-delivery-payload-crypto.mjs
+      - name: Verify Edge adapter remains non-deployable and provider-disabled
+        run: node docs/experimental/test-recovery-edge-adapter-contract.js
+      - name: Verify handler and candidate migration contract alignment
+        run: node docs/experimental/test-recovery-handler-sql-contract.js
+
+  deno-edge-candidate-check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout isolated experiment branch
+        uses: actions/checkout@v4
+        with:
+          ref: experiment/trainee-password-recovery-mock-20261122
+      - name: Set up Deno
+        uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+      - name: Type-check non-deployable Edge adapter candidate
+        run: deno check docs/experimental/trainee-password-recovery-edge-candidate.ts
+
+
+  supabase-local-auth-integration:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - name: Checkout isolated experiment branch
+        uses: actions/checkout@v4
+        with:
+          ref: experiment/trainee-password-recovery-mock-20261122
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install pinned Supabase JS SDK and PostgreSQL driver for local Auth/PostgREST probe
+        run: npm install --no-save @supabase/supabase-js@2.119.0 pg
+      - name: Set up pinned Supabase CLI
+        uses: supabase/setup-cli@v3
+        with:
+          version: 3.2.0
+      - name: Initialize isolated local Supabase project (no remote linking)
+        run: |
+          mkdir -p /tmp/recovery-auth-local
+          cd /tmp/recovery-auth-local
+          supabase init
+      - name: Set disposable Auth JWT lifetime to 1 minute
+        run: |
+          cd /tmp/recovery-auth-local
+          node --input-type=module <<'NODE'
+          import fs from 'node:fs';
+          const path = 'supabase/config.toml';
+          const lines = fs.readFileSync(path, 'utf8').split(/\r?\n/);
+          const authStart = lines.findIndex(line => line.trim() === '[auth]');
+          if (authStart < 0) throw new Error('Generated Supabase config has no [auth] section');
+          let authEnd = lines.findIndex((line, index) => index > authStart && /^\s*\[/.test(line));
+          if (authEnd < 0) authEnd = lines.length;
+          const expiryLine = lines.findIndex((line, index) => index > authStart && index < authEnd && /^\s*jwt_expiry\s*=/.test(line));
+          if (expiryLine >= 0) lines[expiryLine] = 'jwt_expiry = 60';
+          else lines.splice(authEnd, 0, 'jwt_expiry = 60');
+          fs.writeFileSync(path, lines.join('\n'));
+          const verify = lines.slice(authStart, authEnd + (expiryLine < 0 ? 1 : 0));
+          if (!verify.some(line => line.trim() === 'jwt_expiry = 60')) throw new Error('Could not enforce 60-second local JWT expiry');
+          console.log('Disposable local Auth JWT expiry configured to 60 seconds.');
+          NODE
+      - name: Start disposable local Auth stack only
+        run: |
+          cd /tmp/recovery-auth-local
+          if ! supabase start -x studio,realtime,storage-api,imgproxy,edge-runtime,logflare,vector,postgres-meta,supavisor,mailpit > /tmp/recovery-auth-supabase-start.log 2>&1; then
+            echo "Disposable local Auth stack failed to start; startup output is intentionally redacted."
+            exit 1
+          fi
+          echo "Disposable local Auth stack started; startup output redacted."
+      - name: Export loopback-only local Auth credentials
+        shell: bash
+        run: |
+          cd /tmp/recovery-auth-local
+          eval "$(supabase status -o env)"
+          case "$API_URL" in http://127.0.0.1:*|http://localhost:*) ;; *) echo "Refusing non-local Auth URL"; exit 1 ;; esac
+          echo "SUPABASE_URL=$API_URL" >> "$GITHUB_ENV"
+          echo "SUPABASE_ANON_KEY=$ANON_KEY" >> "$GITHUB_ENV"
+          echo "SUPABASE_SERVICE_ROLE_KEY=$SERVICE_ROLE_KEY" >> "$GITHUB_ENV"
+          case "$DB_URL" in postgresql://*127.0.0.1*|postgresql://*localhost*) ;; *) echo "Refusing non-local database URL"; exit 1 ;; esac
+          echo "SUPABASE_DB_URL=$DB_URL" >> "$GITHUB_ENV"
+      - name: Test password update and session revocation against disposable Auth
+        run: node docs/experimental/test-recovery-auth-local-stack.mjs
+      - name: Stop disposable local Supabase stack
+        if: always()
+        run: |
+          cd /tmp/recovery-auth-local
+          supabase stop --no-backup
+
+  postgres-concurrency-tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: recovery_ci
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d recovery_ci"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+      postgrest:
+        image: postgrest/postgrest:v12.2.3
+        env:
+          PGRST_DB_URI: postgres://postgres:postgres@postgres:5432/recovery_ci
+          PGRST_DB_SCHEMAS: public
+          PGRST_DB_ANON_ROLE: anon
+          PGRST_JWT_SECRET: disposable-ci-only-postgrest-secret-32-bytes-min
+          PGRST_SERVER_PORT: 3000
+        ports:
+          - 3000:3000
+        # Readiness is checked by the loopback-only contract test with bounded retries.
+    steps:
+      - name: Checkout isolated experiment branch
+        uses: actions/checkout@v4
+        with:
+          ref: experiment/trainee-password-recovery-mock-20261122
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install PostgreSQL client driver
+        run: npm install --no-save pg
+      - name: Run two-session PostgreSQL concurrency checks
+        env:
+          PGHOST: 127.0.0.1
+          PGPORT: 5432
+          PGUSER: postgres
+          PGPASSWORD: postgres
+          PGDATABASE: recovery_ci
+        run: node docs/experimental/postgres-concurrency-test.js
+      - name: Run atomic recovery RPC candidate tests (disposable PostgreSQL only)
+        env:
+          PGHOST: 127.0.0.1
+          PGPORT: 5432
+          PGUSER: postgres
+          PGPASSWORD: postgres
+          PGDATABASE: recovery_ci
+        run: node docs/experimental/test-recovery-atomic-rpc-candidate.js
+      - name: Run PostgREST schema-cache, named-argument, and role contract checks
+        env:
+          PGHOST: 127.0.0.1
+          PGPORT: 5432
+          PGUSER: postgres
+          PGPASSWORD: postgres
+          PGDATABASE: recovery_ci
+          PGRST_URL: http://127.0.0.1:3000
+          PGRST_JWT_SECRET: disposable-ci-only-postgrest-secret-32-bytes-min
+        run: node docs/experimental/test-recovery-postgrest-contract.mjs
+      - name: Run fenced Outbox/Worker PostgreSQL integration tests (disposable only)
+        env:
+          PGHOST: 127.0.0.1
+          PGPORT: 5432
+          PGUSER: postgres
+          PGPASSWORD: postgres
+          PGDATABASE: recovery_ci
+        run: node docs/experimental/test-recovery-outbox-postgres.js
+      - name: Run PostgREST Outbox and encrypted-review RPC contract checks
+        env:
+          PGHOST: 127.0.0.1
+          PGPORT: 5432
+          PGUSER: postgres
+          PGPASSWORD: postgres
+          PGDATABASE: recovery_ci
+          PGRST_URL: http://127.0.0.1:3000
+          PGRST_JWT_SECRET: disposable-ci-only-postgrest-secret-32-bytes-min
+        run: node docs/experimental/test-recovery-postgrest-outbox-contract.mjs
+      - name: Run ordered Supabase-shaped recovery migrations from a clean mirror-like schema
+        env:
+          PGHOST: 127.0.0.1
+          PGPORT: 5432
+          PGUSER: postgres
+          PGPASSWORD: postgres
+          PGDATABASE: recovery_ci
+        run: node docs/experimental/test-recovery-supabase-shaped-migrations.mjs
+
+  supabase-local-recovery-e2e:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - name: Checkout isolated experiment branch
+        uses: actions/checkout@v4
+        with:
+          ref: experiment/trainee-password-recovery-mock-20261122
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install pinned Supabase SDK and PostgreSQL driver
+        run: npm install --no-save @supabase/supabase-js@2.119.0 pg
+      - name: Set up pinned Supabase CLI
+        uses: supabase/setup-cli@v3
+        with:
+          version: 3.2.0
+      - name: Initialize disposable full local Supabase stack
+        run: |
+          mkdir -p /tmp/recovery-full-e2e
+          cd /tmp/recovery-full-e2e
+          supabase init
+      - name: Start local Auth, Postgres, and PostgREST only
+        run: |
+          cd /tmp/recovery-full-e2e
+          if ! supabase start -x studio,realtime,storage-api,imgproxy,edge-runtime,logflare,vector,postgres-meta,supavisor,mailpit > /tmp/recovery-full-e2e-start.log 2>&1; then
+            echo "Disposable local stack failed to start; startup output is intentionally redacted."
+            exit 1
+          fi
+          echo "Disposable local stack started; startup output redacted."
+      - name: Export loopback-only local credentials
+        shell: bash
+        run: |
+          cd /tmp/recovery-full-e2e
+          eval "$(supabase status -o env)"
+          case "$API_URL" in http://127.0.0.1:*|http://localhost:*) ;; *) echo "Refusing non-local API URL"; exit 1 ;; esac
+          echo "SUPABASE_URL=$API_URL" >> "$GITHUB_ENV"
+          echo "SUPABASE_ANON_KEY=$ANON_KEY" >> "$GITHUB_ENV"
+          echo "SUPABASE_SERVICE_ROLE_KEY=$SERVICE_ROLE_KEY" >> "$GITHUB_ENV"
+          case "$DB_URL" in postgresql://*127.0.0.1*|postgresql://*localhost*) ;; *) echo "Refusing non-local database URL"; exit 1 ;; esac
+          echo "SUPABASE_DB_URL=$DB_URL" >> "$GITHUB_ENV"
+      - name: Run unified disposable password recovery E2E
+        run: node docs/experimental/test-recovery-full-e2e-local-stack.mjs
+      - name: Stop disposable local Supabase stack
+        if: always()
+        run: |
+          cd /tmp/recovery-full-e2e
+          supabase stop --no-backup

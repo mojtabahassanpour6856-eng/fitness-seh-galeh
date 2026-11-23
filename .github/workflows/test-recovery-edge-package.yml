@@ -1,0 +1,37 @@
+name: Password recovery deployable-package candidate checks
+on:
+  push:
+    branches:
+      - experiment/trainee-password-recovery-mock-20261122
+    paths:
+      - 'supabase/functions/trainee-password-recovery/**'
+      - 'docs/experimental/test-recovery-edge-package-contract.mjs'
+      - 'docs/experimental/test-recovery-mirror-preflight-contract.mjs'
+      - 'docs/experimental/migrations/20261123_supabase_mirror_compatible_atomic_recovery_candidate.sql'
+      - 'vendor/SUPABASE-SDK-VERSION.txt'
+      - '.github/workflows/test-recovery-edge-package.yml'
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  edge-package-check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: experiment/trainee-password-recovery-mock-20261122
+      - uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Check packaged module graph and fail-closed provider boundary
+        run: node docs/experimental/test-recovery-edge-package-contract.mjs
+      - name: Check hosted-mirror migration safety preconditions
+        run: node docs/experimental/test-recovery-mirror-preflight-contract.mjs
+      - name: Type-check actual deployment-shaped entrypoint
+        run: deno check supabase/functions/trainee-password-recovery/index.ts
