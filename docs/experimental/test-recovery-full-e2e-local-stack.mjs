@@ -127,7 +127,7 @@ async function main(){
  assert.equal(state.rows[0].auth_outcome,'completed');
  assert.equal(state.rows[0].token_hash,null,'consumed HMAC token must be cleared');
  assert.equal(state.rows[0].delivery_payload,null,'request ciphertext must be cleared');
- const outbox=await pool.query('SELECT status,delivery_payload FROM public.trainee_password_recovery_outbox WHERE recovery_request_id=$1',[requestId]);
+ const outbox=await pool.query('SELECT status,delivery_payload FROM public.trainee_password_recovery_outbox WHERE recovery_request_id=$1',[recoveryRequestId]);
  assert.equal(outbox.rows[0].status,'sent');
  assert.equal(outbox.rows[0].delivery_payload,null,'Outbox ciphertext must be cleared after delivery');
  console.log('PASS: one disposable Supabase stack completed trainee request → real coach Auth/list/approval → encrypted Outbox → FakeRecoverySmsProvider → HTTP code redemption → local Auth password update.');
