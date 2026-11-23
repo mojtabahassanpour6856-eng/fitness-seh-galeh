@@ -251,7 +251,7 @@ BEGIN
      OR p_hmac_key_version !~ '^[A-Za-z0-9_-]{1,32}$'
      OR p_token_expires_at IS NULL
      OR p_token_expires_at <= now()
-     OR p_token_expires_at > now() + interval '20 minutes' THEN
+     OR p_token_expires_at > now() + interval '24 hours' THEN
     RETURN jsonb_build_object('ok', false, 'reason', 'invalid_token_material');
   END IF;
 
