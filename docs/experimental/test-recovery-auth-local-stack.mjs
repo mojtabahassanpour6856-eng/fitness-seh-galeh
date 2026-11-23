@@ -76,6 +76,11 @@ async function assertPostgrestRlsDenies(accessToken, label) {
   assert.deepEqual(JSON.parse(body), [], `${label}: revoked session must not see protected rows`);
 }
 
+async function restoreBaselineJwtExpiryPolicy() {
+  await pool.query('DROP POLICY ' + policyName + ' ON public.' + tableName);
+  await pool.query('CREATE POLICY ' + policyName + ' ON public.' + tableName + ' FOR SELECT TO authenticated USING (auth.uid() = owner_id)');
+}
+
 async function assertPostgrestRejectsExpiredJwt(accessToken, label) {
   const payload = JSON.parse(Buffer.from(accessToken.split('.')[1], 'base64url').toString('utf8'));
   assert.ok(Number.isInteger(payload.exp), `${label}: JWT exp claim must be an integer`);
@@ -207,6 +212,7 @@ try {
   // additionally checks auth.sessions and therefore denies it after sign-out.
   await assertPostgrestRlsDenies(sessionC.data.session.access_token,
     'revoked session under the sensitive-operation session policy');
+  await restoreBaselineJwtExpiryPolicy();
   await assertPostgrestRejectsExpiredJwt(sessionC.data.session.access_token,
     'same old JWT after its actual 900-second expiry');
 
