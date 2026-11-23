@@ -614,3 +614,38 @@ This run closes the previously pending CI confirmation for the local PostgREST o
 No hosted Supabase project, Production database, real trainee record, deployed Edge Function, hosted Auth user, or real SMS provider was accessed or changed in run #309.
 
 Release remains **NOT READY**.
+
+
+## Full-E2E fixture compatibility audit (2026-11-23)
+
+A read-only inspection of the atomic migration test fixture, Outbox integration test, HTTP handler, and fake worker identified the minimum integration fixture and the remaining wiring work.
+
+### Disposable base-schema requirements
+
+The current atomic RPC test fixture creates only synthetic rows and the following base columns before applying the atomic migration:
+- `profiles(id uuid primary key, role text)`;
+- `trainees(id, coach_user_id, auth_user_id, approval_status, phone_normalized, archived_at)`;
+- `trainee_password_recovery_requests` with its existing state, token, timestamp, and foreign-key columns.
+
+The HTTP handler and worker require additional fields/relations not present in that minimal SQL fixture:
+- `profiles` must map the actual local Auth coach UUID to `role='coach'`;
+- `trainees` must include `full_name` for the coach list relation, plus the coach/Auth user IDs, normalized phone, active/archived state;
+- the request table must support the handler's selected fields (`requested_at`, `reviewed_at`, `delivery_outcome`, `auth_outcome`) and the migration-added token/operation fields;
+- the local Auth trainee UUID must match `trainees.auth_user_id`;
+- the Outbox base table must exist before the Outbox migration and include the fields that migration alters/uses.
+
+The candidate migration's deliberate preflight rejection of legacy `approved`/`processing` rows must be preserved. The E2E fixture must start with no legacy open/approved requests, apply the atomic migration, then Outbox migration, then encrypted-payload migration in that exact order. The existing Outbox PostgreSQL test already validates atomic encrypted approval→Outbox enqueue and fake worker lease/send lifecycle, but currently it does so in its separate disposable PostgreSQL job.
+
+### Runtime wiring still required for one-stack E2E
+
+- Start one local Supabase stack and use its loopback API URL, anon key, service-role key, and local DB URL only.
+- Create disposable coach and trainee Auth users; insert matching synthetic `profiles` and `trainees` rows with `full_name`.
+- Construct the candidate handler with the local Supabase JS admin client and a bearer-forwarding user client; expose it only through a loopback HTTP bridge.
+- Submit and list/review through HTTP, then call `processOneRecoveryOutboxItem` with the same admin client, configured test-only decryption key, worker UUID, and an instance of `FakeRecoverySmsProvider`.
+- Capture the fake provider's four-digit code in memory inside the test process only; redeem through the HTTP handler; verify local Auth password change and final SQL state.
+- Retain a pre-recovery access/refresh session and test Auth and PostgREST behavior separately. The already-confirmed old-JWT observation must be asserted/documented, not misreported as immediate global API revocation.
+- Clean all fixture rows and Auth users in `finally`, and stop the local stack even if setup or assertions fail.
+
+The current separate jobs do not share a database or Auth service. No full-E2E runner was created or executed in this audit. No hosted credentials or data were accessed. This is a compatibility/design inventory only.
+
+Release remains **NOT READY**.
