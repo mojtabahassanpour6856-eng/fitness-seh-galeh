@@ -98,6 +98,7 @@ export async function processOneRecoveryOutboxItem({
       trainee.approval_status === 'active' &&
       trainee.archived_at == null &&
       trainee.phone_normalized === request.phone_normalized &&
+      typeof request.reviewed_by === 'string' && request.reviewed_by.length > 0 &&
       trainee.coach_user_id === request.reviewed_by &&
       request.status === 'approved' &&
       request.delivery_outcome === 'attempting' &&
