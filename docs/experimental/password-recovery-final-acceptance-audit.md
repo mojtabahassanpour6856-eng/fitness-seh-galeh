@@ -162,3 +162,26 @@ GitHub Actions run #333 (`45119214105`) completed successfully on branch head `e
 Clarification: the local Supabase command excludes auxiliary services (Studio, Realtime, Storage, Edge Runtime, etc.) but keeps the disposable Postgres and PostgREST services alongside Auth for this probe. It still does not run the complete recovery HTTP handler → coach approval → Outbox worker → redemption lifecycle against that same stack; unified recovery E2E remains open.
 
 No production or hosted Auth setting was changed. No real trainee account, password, or SMS provider was used. **JWT gate remains open pending expiry-boundary/PostgREST rejection testing and a separate sensitive-operation revocation decision.**
+## Targeted session_id/RLS revocation proof — 2026-11-23 (CI #336)
+
+The disposable local Auth/PostgREST probe now tests the documented targeted session-control pattern on a synthetic protected table:
+
+- It reads the session_id UUID from the signed access-token claims.
+- It creates a uniquely named, non-exposed private schema and a SECURITY DEFINER SQL helper with an empty search_path.
+- The helper checks that the matching auth.sessions row belongs to auth.uid() and is still within not_after (when set).
+- Execute/usage grants are limited to authenticated; the synthetic RLS policy requires both row ownership and an active session.
+- Before global sign-out, the still-valid token can read the synthetic row. After global sign-out, Auth rejects the token and the same unexpired JWT receives an empty result under the session-aware policy.
+- The test drops its synthetic table and private schema and deletes the disposable Auth user in cleanup.
+
+GitHub Actions run #336 (45119868125) completed successfully on commit 4fd4fd1dc884173a908c1cc29e2ea779b1441b78; all four jobs passed. The Auth job explicitly logged that the active session was allowed before sign-out and denied after sign-out, despite the JWT remaining unexpired.
+
+This is a proof of a narrow RLS/session-check pattern in the local disposable stack, not an app-wide implementation or approval to add the check to every endpoint. Any production adoption must be limited to sensitive operations, review query cost/failure behavior, and verify the relevant coach/trainee authorization policies remain intact.
+
+Still open:
+1. Test PostgREST rejection of the same old token after its actual 900-second expiry; current test asserts the 900-second exp - iat claim but does not wait for expiry.
+2. Decide whether 900 seconds is acceptable for real mobile/offline/reconnect behavior; it remains a candidate, not a production setting.
+3. Implement and run the unified recovery HTTP → coach approval → fake Outbox delivery → redeem → local Auth password update E2E on one disposable stack.
+4. Select and stage-test a real SMS provider adapter; no provider is currently enabled.
+5. Complete staging security, observability, rollback, and operational acceptance.
+
+No hosted Auth setting, production DB, main branch, real account, or live SMS was touched. PR #260 remains open and Draft. NOT APPROVED FOR RELEASE.
