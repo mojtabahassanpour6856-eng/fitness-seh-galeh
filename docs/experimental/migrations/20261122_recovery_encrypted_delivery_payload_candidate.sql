@@ -72,7 +72,9 @@ BEGIN
   END IF;
   SELECT r.trainee_id,r.status INTO v_trainee_id,v_status
   FROM public.trainee_password_recovery_requests r
-  WHERE r.id=p_request_id FOR UPDATE;
+  WHERE r.id=p_request_id
+    AND r.request_coach_user_id=p_actor_user_id
+  FOR UPDATE;
   IF NOT FOUND OR v_status <> 'pending' THEN
     RETURN jsonb_build_object('ok', false, 'reason', 'not_available');
   END IF;
