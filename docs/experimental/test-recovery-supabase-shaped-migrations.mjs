@@ -43,7 +43,7 @@ async function setup(){
       requested_at timestamptz NOT NULL DEFAULT now(), reviewed_at timestamptz,
       reviewed_by uuid REFERENCES public.profiles(id), token_hash text,
       token_expires_at timestamptz, token_attempts smallint NOT NULL DEFAULT 0,
-      completed_at timestamptz, updated_at timestamptz NOT NULL DEFAULT now(),
+      completed_at timestamptz, updated_at timestamptz NOT NULL DEFAULT now(),\n      -- Explicit audited historical ownership fixture; migration must never infer this from current trainee assignment.\n      request_coach_user_id uuid,
       CONSTRAINT recovery_state_check CHECK (
         ((status IN ('pending','rejected')) AND token_hash IS NULL AND token_expires_at IS NULL)
         OR ((status IN ('approved','processing')) AND token_hash IS NOT NULL AND token_expires_at IS NOT NULL)
@@ -61,8 +61,8 @@ async function setup(){
     INSERT INTO public.profiles(id,role) VALUES ('${coach}','coach');
     INSERT INTO public.trainees(id,coach_user_id,auth_user_id,approval_status,phone_normalized)
       VALUES ('${trainee}','${coach}','40000000-0000-4000-8000-000000000001','active','+989123456789');
-    INSERT INTO public.trainee_password_recovery_requests(id,trainee_id,phone_normalized,status)
-      VALUES ('${request}','${trainee}','+989123456789','expired');
+    INSERT INTO public.trainee_password_recovery_requests(id,trainee_id,phone_normalized,status,request_coach_user_id)
+      VALUES ('${request}','${trainee}','+989123456789','expired','${coach}');
   `);
 }
 
@@ -76,7 +76,7 @@ async function main(){
     for(const name of ['request_coach_user_id','delivery_payload','delivery_outcome','operation_id','auth_outcome'])
       assert(cols.rows.some(r=>r.column_name===name),`atomic migration must add ${name}`);
     const coachBinding=await pool.query('SELECT request_coach_user_id FROM public.trainee_password_recovery_requests WHERE id=$1',[request]);
-    assert.equal(coachBinding.rows[0].request_coach_user_id,coach,'terminal history must backfill coach binding');
+    assert.equal(coachBinding.rows[0].request_coach_user_id,coach,'migration must preserve independently audited historical coach binding');
 
     await pool.query(outbox);
     console.log('PASS: Outbox migration applies after Supabase-shaped atomic migration');
