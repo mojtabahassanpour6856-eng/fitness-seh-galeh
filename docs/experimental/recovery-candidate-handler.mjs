@@ -157,7 +157,7 @@ export function createRecoveryCandidateHandler(deps) {
           ? await rpc(deps.admin, 'recovery_coach_review_encrypted', {
               p_request_id: requestId, p_actor_user_id: user.id, p_decision: decision,
               p_token_hash: keyHash,
-              p_token_expires_at: new Date(now() + 15 * 60 * 1000).toISOString(),
+              p_token_expires_at: new Date(now() + 24 * 60 * 60 * 1000).toISOString(),
               p_hmac_key_version: secrets.keyVersion,
               p_delivery_operation_id: operationId,
               p_delivery_payload: encryptedPayload
