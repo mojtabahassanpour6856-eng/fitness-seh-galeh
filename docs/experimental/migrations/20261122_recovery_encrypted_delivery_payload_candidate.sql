@@ -214,7 +214,7 @@ AS $fetch_payload$
    AND r.delivery_operation_id=o.delivery_operation_id
   JOIN public.trainees t
     ON t.id=r.trainee_id
-   AND t.coach_user_id IS NOT DISTINCT FROM r.reviewed_by
+   AND r.reviewed_by IS NOT NULL AND t.coach_user_id = r.reviewed_by
    AND t.approval_status='active'
    AND t.archived_at IS NULL
   WHERE o.id=p_outbox_id AND o.status='processing'
