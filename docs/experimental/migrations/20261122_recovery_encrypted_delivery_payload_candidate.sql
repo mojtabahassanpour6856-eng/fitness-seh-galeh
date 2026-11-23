@@ -96,7 +96,7 @@ BEGIN
   IF p_token_hash IS NULL OR p_token_hash !~ '^[a-f0-9]{64}$'
      OR p_hmac_key_version IS NULL OR p_hmac_key_version !~ '^[A-Za-z0-9_-]{1,32}$'
      OR p_token_expires_at IS NULL OR p_token_expires_at <= now()
-     OR p_token_expires_at > now()+interval '20 minutes'
+     OR p_token_expires_at > now()+interval '24 hours'
      OR p_delivery_operation_id IS NULL
      OR p_delivery_payload IS NULL
      OR jsonb_typeof(p_delivery_payload) <> 'object'
