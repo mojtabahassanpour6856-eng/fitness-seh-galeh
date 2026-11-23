@@ -33,6 +33,7 @@ on:
       - 'docs/experimental/test-recovery-full-e2e-local-stack.mjs'
       - 'docs/experimental/test-recovery-auth-local-stack.mjs'
       - 'docs/experimental/migrations/20261122_recovery_atomic_rpc_candidate.sql'
+      - 'docs/experimental/migrations/20261123_supabase_mirror_compatible_atomic_recovery_candidate.sql'
       - 'docs/experimental/migrations/20261122_dispose_expired_legacy_approved_request.sql'
       - 'docs/experimental/test-recovery-atomic-rpc-candidate.js'
       - 'docs/experimental/test-recovery-postgrest-contract.mjs'
