@@ -213,7 +213,7 @@ async function main() {
     await reassign.query('COMMIT');
     r=await pending;
     assert.equal(r.rows[0].result.ok,false);
-    assert.equal(r.rows[0].result.reason,'not_available', 'former coach cannot act after reassignment');
+    assert.equal(r.rows[0].result.reason,'not_authorized', 'former coach is denied after reassignment');
   } finally { try { await reassign.query('ROLLBACK'); } catch {} reassign.release(); }
   r=await callAsService(
     'SELECT public.recovery_coach_review($1,$2,$3,$4,$5,$6) AS result',
