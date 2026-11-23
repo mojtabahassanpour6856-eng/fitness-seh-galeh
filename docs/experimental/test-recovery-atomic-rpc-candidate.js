@@ -122,36 +122,36 @@ async function main() {
       has_function_privilege('anon','public.recovery_submit_request(text)','EXECUTE') AS anon_request_execute,
       has_function_privilege('service_role','public.recovery_submit_request(text)','EXECUTE') AS public_service_request_execute,
       has_function_privilege('anon','public.recovery_coach_review(uuid,uuid,text,text,timestamptz,text)','EXECUTE') AS anon_public_review_execute,
-       has_function_privilege('service_role','public.consume_registration_rate_limit(text,integer,integer)','EXECUTE') AS service_rate_execute,
-       has_function_privilege('anon','public.consume_registration_rate_limit(text,integer,integer)','EXECUTE') AS anon_rate_execute
+       has_function_privilege('service_role','public.recovery_consume_request_rate_limit(text,integer,integer)','EXECUTE') AS service_rate_execute,
+       has_function_privilege('anon','public.recovery_consume_request_rate_limit(text,integer,integer)','EXECUTE') AS anon_rate_execute
   `);
   assert.deepEqual(acl.rows[0],{service_usage:true,anon_usage:false,service_execute:true,anon_execute:false,service_request_execute:true,anon_request_execute:false,public_service_request_execute:true,anon_public_review_execute:false,service_rate_execute:true,anon_rate_execute:false});
   console.log('PASS: recovery RPC schema and execute privileges are restricted to service_role');
 
   const rateKey='a'.repeat(64);
-  const rateOne=await callAsService('SELECT public.consume_registration_rate_limit($1,3600,2) AS allowed',[rateKey]);
-  const rateTwo=await callAsService('SELECT public.consume_registration_rate_limit($1,3600,2) AS allowed',[rateKey]);
-  const rateThree=await callAsService('SELECT public.consume_registration_rate_limit($1,3600,2) AS allowed',[rateKey]);
+  const rateOne=await callAsService('SELECT public.recovery_consume_request_rate_limit($1,3600,2) AS allowed',[rateKey]);
+  const rateTwo=await callAsService('SELECT public.recovery_consume_request_rate_limit($1,3600,2) AS allowed',[rateKey]);
+  const rateThree=await callAsService('SELECT public.recovery_consume_request_rate_limit($1,3600,2) AS allowed',[rateKey]);
   assert.equal(rateOne.rows[0].allowed,true);
   assert.equal(rateTwo.rows[0].allowed,true);
   assert.equal(rateThree.rows[0].allowed,false,'third request must be blocked within the fixed window');
-  const badRate=await callAsService('SELECT public.consume_registration_rate_limit($1,3600,2) AS allowed',['not-a-hash']);
+  const badRate=await callAsService('SELECT public.recovery_consume_request_rate_limit($1,3600,2) AS allowed',['not-a-hash']);
   assert.equal(badRate.rows[0].allowed,false,'malformed pseudonymous key must fail closed');
   const anonClient=await pool.connect();
   try {
     await anonClient.query('SET ROLE anon');
-    await assert.rejects(anonClient.query('SELECT public.consume_registration_rate_limit($1,3600,2)',[rateKey]),/permission denied/);
+    await assert.rejects(anonClient.query('SELECT public.recovery_consume_request_rate_limit($1,3600,2)',[rateKey]),/permission denied/);
   } finally {
     await anonClient.query('RESET ROLE');
     anonClient.release();
   }
   const concurrentRate=await Promise.all(Array.from({length:10},()=>callAsService(
-    'SELECT public.consume_registration_rate_limit($1,3600,3) AS allowed',['b'.repeat(64)]
+    'SELECT public.recovery_consume_request_rate_limit($1,3600,3) AS allowed',['b'.repeat(64)]
   )));
   assert.equal(concurrentRate.filter(x=>x.rows[0].allowed===true).length,3,
     'concurrent requests must atomically admit exactly the configured maximum');
   await pool.query("UPDATE recovery_private.recovery_request_rate_limits SET window_started_at=now()-interval '2 seconds' WHERE key_hash=$1",['a'.repeat(64)]);
-  const afterWindow=await callAsService('SELECT public.consume_registration_rate_limit($1,1,2) AS allowed',['a'.repeat(64)]);
+  const afterWindow=await callAsService('SELECT public.recovery_consume_request_rate_limit($1,1,2) AS allowed',['a'.repeat(64)]);
   assert.equal(afterWindow.rows[0].allowed,true,'expired fixed window must reset the counter');
   const serviceTableClient=await pool.connect();
   try {
