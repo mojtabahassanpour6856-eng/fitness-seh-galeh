@@ -127,7 +127,7 @@ jobs:
           mkdir -p /tmp/recovery-auth-local
           cd /tmp/recovery-auth-local
           supabase init
-      - name: Set disposable Auth JWT lifetime to 15 minutes
+      - name: Set disposable Auth JWT lifetime to 1 minute
         run: |
           cd /tmp/recovery-auth-local
           node --input-type=module <<'NODE'
@@ -139,12 +139,12 @@ jobs:
           let authEnd = lines.findIndex((line, index) => index > authStart && /^\s*\[/.test(line));
           if (authEnd < 0) authEnd = lines.length;
           const expiryLine = lines.findIndex((line, index) => index > authStart && index < authEnd && /^\s*jwt_expiry\s*=/.test(line));
-          if (expiryLine >= 0) lines[expiryLine] = 'jwt_expiry = 900';
-          else lines.splice(authEnd, 0, 'jwt_expiry = 900');
+          if (expiryLine >= 0) lines[expiryLine] = 'jwt_expiry = 60';
+          else lines.splice(authEnd, 0, 'jwt_expiry = 60');
           fs.writeFileSync(path, lines.join('\n'));
           const verify = lines.slice(authStart, authEnd + (expiryLine < 0 ? 1 : 0));
-          if (!verify.some(line => line.trim() === 'jwt_expiry = 900')) throw new Error('Could not enforce 900-second local JWT expiry');
-          console.log('Disposable local Auth JWT expiry configured to 900 seconds.');
+          if (!verify.some(line => line.trim() === 'jwt_expiry = 60')) throw new Error('Could not enforce 60-second local JWT expiry');
+          console.log('Disposable local Auth JWT expiry configured to 60 seconds.');
           NODE
       - name: Start disposable local Auth stack only
         run: |
