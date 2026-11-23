@@ -200,3 +200,10 @@ Implementation requirements for the next isolated runner:
 - Keep all fixture credentials and key material generated per job, reject non-loopback URLs, prohibit real provider instances, and clean up both Auth users, fixture rows/schemas, server, and local stack in finally/always teardown.
 
 Existing coverage can be reused conceptually, but no shared runner has been created yet. The next implementation must preserve the separate existing suites and must not falsely count their combined green status as full E2E.
+## Actual JWT expiry-boundary test added — 2026-11-23
+
+The local Auth/PostgREST test now retains the exact access JWT used for the session-revocation probe, reads its signed exp claim, waits until exp + 2.5 seconds, and sends that same token to the disposable PostgREST endpoint. It requires HTTP 401 or 403 after actual expiry. This complements the existing assertion that exp - iat equals 900 seconds and the pre-expiry acceptance/session-aware RLS checks.
+
+The Auth integration job timeout is 25 minutes, sufficient for the 15-minute expiry wait plus setup and teardown. The workflow path filter now explicitly includes test-recovery-auth-local-stack.mjs so changes to this test cannot silently skip CI. Runs #340 and #341 were triggered by the test and workflow changes; their Auth jobs are still running at the time of this note. Actual expiry rejection is therefore implemented as an assertion but is NOT yet marked proven until a complete green run finishes.
+
+No hosted JWT setting or application runtime behavior was changed. The 900-second value remains local experimental configuration only.
