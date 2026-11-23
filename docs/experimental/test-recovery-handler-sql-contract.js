@@ -10,9 +10,9 @@ const cleanup = await readFile(new URL('./migrations/20261122_dispose_expired_le
 const core = await readFile(new URL('./recovery-candidate-core.mjs', base), 'utf8');
 const encryptedMigration = await readFile(new URL('./migrations/20261122_recovery_encrypted_delivery_payload_candidate.sql', base), 'utf8');
 
-assert.match(migration, /CREATE OR REPLACE FUNCTION public\\.recovery_consume_request_rate_limit\\s*\\(/);
-assert.match(migration, /GRANT EXECUTE ON FUNCTION public\\.recovery_consume_request_rate_limit\\(text,integer,integer\\) TO service_role/);
-assert.doesNotMatch(migration, /CREATE OR REPLACE FUNCTION public\\.consume_registration_rate_limit\\s*\\(/,
+assert.match(migration, /CREATE OR REPLACE FUNCTION public\.recovery_consume_request_rate_limit\s*\(/);
+assert.match(migration, /GRANT EXECUTE ON FUNCTION public\.recovery_consume_request_rate_limit\(text,integer,integer\) TO service_role/);
+assert.doesNotMatch(migration, /CREATE OR REPLACE FUNCTION public\.consume_registration_rate_limit\s*\(/,
   'recovery migration must never replace the existing registration limiter');
 assert.match(handler, /rpc\\('recovery_consume_request_rate_limit'/);
 assert.doesNotMatch(handler, /rpc\\('consume_registration_rate_limit'/,
