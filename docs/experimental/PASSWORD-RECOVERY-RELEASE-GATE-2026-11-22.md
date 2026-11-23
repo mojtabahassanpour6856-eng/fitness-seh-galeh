@@ -466,3 +466,10 @@ The disposable HTTP contract test now invokes all eight public recovery RPCs def
 Latest test-code commit: `96d1393de1d4390711e184a10182a52134f7169d`. The workflow path filter includes the contract test, so this push should schedule the disposable CI workflow. The available GitHub connector does not expose a repository-wide workflow-run listing/dispatch action here; do not infer a pass from the commit or from the earlier green run. Confirm the run in GitHub Actions before advancing.
 
 Release remains NOT READY.
+### Outbox and encrypted-review PostgREST coverage added (2026-11-23)
+
+Added a second disposable PostgREST contract test, deliberately ordered after the Outbox PostgreSQL integration test has applied both Outbox and encrypted-payload candidate migrations. It reloads PostgREST schema cache and verifies named-argument HTTP resolution plus `service_role` execution / `anon` denial for heartbeat, begin-send, finish, encrypted payload fetch, and encrypted coach review. All calls use synthetic non-existent IDs; it deliberately does not invoke Outbox claim, delivery send, or expiry reconciliation, avoiding mutation of fixture work.
+
+Workflow path filters and step ordering now include this second contract test. New commits: `cc7992363a416d0c6f75b9f3a22e51c42a18cb18` (test) and `d8544dde9894b054a0170a1e4a8f2dc1939834e1` (workflow). The new CI execution remains unverified; do not treat this addition as a passing test until the GitHub Actions run is inspected.
+
+Release remains NOT READY.
