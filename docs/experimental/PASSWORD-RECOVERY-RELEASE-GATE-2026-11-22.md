@@ -553,3 +553,18 @@ The test must refuse non-loopback Supabase URLs, reject any non-fake provider, a
 No E2E runner has been created or executed in this step. No Supabase hosted environment, database, Auth user, Edge Function, password, SMS provider, trainee record, or Production resource was accessed or changed.
 
 Release remains **NOT READY**.
+
+
+## Access-token revocation scope clarification (2026-11-23)
+
+A further security distinction is required before closing the session-invalidation gate. The local Auth test proves that the Auth service's `getUser` endpoint rejects the old access JWT after password update/global sign-out, and that old refresh tokens are rejected. It does **not** prove that every API which validates JWTs locally (notably PostgREST/RLS requests) immediately rejects that same still-unexpired JWT.
+
+The next integrated test must retain an old trainee access token, perform password recovery through the candidate HTTP handler, then issue a direct authenticated PostgREST read against a harmless synthetic RLS-protected fixture using that old token. It must separately verify:
+- Auth `getUser(oldAccessToken)` rejects;
+- refresh using the old refresh token rejects;
+- PostgREST behavior for the old access JWT is measured and asserted against the intended security policy;
+- a newly authenticated session with the new password succeeds.
+
+Do not describe access-session invalidation as globally complete based only on Auth `getUser`. If PostgREST continues accepting the old JWT until expiry, decide whether the product's security requirement is satisfied by bounded JWT lifetime or whether an additional server-side session/version check is required. Do not weaken RLS or add a broad database lookup without a design review.
+
+This is a test-plan clarification only. No code, migration, hosted Supabase setting, Auth user, trainee data, or Edge Function was changed. Release remains **NOT READY**.
