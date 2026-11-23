@@ -273,8 +273,7 @@ $$;
 
 CREATE OR REPLACE FUNCTION recovery_private.record_recovery_wrong_attempt(
   p_request_id uuid,
-  p_submitted_digest text,
-  p_max_attempts integer DEFAULT 5
+  p_submitted_digest text
 )
 RETURNS jsonb
 LANGUAGE plpgsql
@@ -285,22 +284,18 @@ DECLARE
   v_attempts smallint;
   v_status text;
 BEGIN
-  IF p_max_attempts < 1 OR p_max_attempts > 10 THEN
-    RAISE EXCEPTION 'Invalid attempt threshold';
-  END IF;
-
   UPDATE public.trainee_password_recovery_requests AS r
   SET token_attempts = r.token_attempts + 1,
-      status = CASE WHEN r.token_attempts + 1 >= p_max_attempts THEN 'expired' ELSE r.status END,
-      token_hash = CASE WHEN r.token_attempts + 1 >= p_max_attempts THEN NULL ELSE r.token_hash END,
-      token_expires_at = CASE WHEN r.token_attempts + 1 >= p_max_attempts THEN NULL ELSE r.token_expires_at END,
+      status = CASE WHEN r.token_attempts + 1 >= 5 THEN 'expired' ELSE r.status END,
+      token_hash = CASE WHEN r.token_attempts + 1 >= 5 THEN NULL ELSE r.token_hash END,
+      token_expires_at = CASE WHEN r.token_attempts + 1 >= 5 THEN NULL ELSE r.token_expires_at END,
       updated_at = now()
   WHERE r.id = p_request_id
     AND r.status = 'approved'
     AND r.token_hash IS NOT NULL
     AND r.token_hash IS DISTINCT FROM p_submitted_digest
     AND r.token_expires_at > now()
-    AND r.token_attempts < p_max_attempts
+    AND r.token_attempts < 5
   RETURNING r.token_attempts, r.status INTO v_attempts, v_status;
 
   IF NOT FOUND THEN
@@ -500,7 +495,7 @@ REVOKE ALL ON ALL FUNCTIONS IN SCHEMA recovery_private FROM PUBLIC, anon, authen
 GRANT EXECUTE ON FUNCTION recovery_private.consume_recovery_request_rate_limit(text,integer,integer) TO service_role;
 GRANT EXECUTE ON FUNCTION recovery_private.submit_recovery_request(text) TO service_role;
 GRANT EXECUTE ON FUNCTION recovery_private.coach_review_recovery_request(uuid,uuid,text,text,timestamptz,text) TO service_role;
-GRANT EXECUTE ON FUNCTION recovery_private.record_recovery_wrong_attempt(uuid,text,integer) TO service_role;
+GRANT EXECUTE ON FUNCTION recovery_private.record_recovery_wrong_attempt(uuid,text) TO service_role;
 GRANT EXECUTE ON FUNCTION recovery_private.begin_recovery_delivery(uuid,uuid) TO service_role;
 GRANT EXECUTE ON FUNCTION recovery_private.finish_recovery_delivery(uuid,uuid,text) TO service_role;
 GRANT EXECUTE ON FUNCTION recovery_private.claim_recovery_reset(uuid,text,uuid) TO service_role;
@@ -530,10 +525,10 @@ AS $wrap$ SELECT recovery_private.coach_review_recovery_request(
 ) $wrap$;
 
 CREATE OR REPLACE FUNCTION public.recovery_record_wrong_attempt(
-  p_request_id uuid,p_submitted_digest text,p_max_attempts integer
+  p_request_id uuid,p_submitted_digest text,5 integer
 )
 RETURNS jsonb LANGUAGE sql SET search_path = ''
-AS $wrap$ SELECT recovery_private.record_recovery_wrong_attempt(p_request_id,p_submitted_digest,p_max_attempts) $wrap$;
+AS $wrap$ SELECT recovery_private.record_recovery_wrong_attempt(p_request_id,p_submitted_digest,5) $wrap$;
 
 CREATE OR REPLACE FUNCTION public.recovery_begin_delivery(p_request_id uuid,p_delivery_operation_id uuid)
 RETURNS boolean LANGUAGE sql SET search_path = ''
@@ -567,7 +562,7 @@ REVOKE ALL ON FUNCTION public.consume_registration_rate_limit(text,integer,integ
 GRANT EXECUTE ON FUNCTION public.consume_registration_rate_limit(text,integer,integer) TO service_role;
 REVOKE ALL ON FUNCTION public.recovery_submit_request(text) FROM PUBLIC, anon, authenticated;
 REVOKE ALL ON FUNCTION public.recovery_coach_review(uuid,uuid,text,text,timestamptz,text) FROM PUBLIC, anon, authenticated;
-REVOKE ALL ON FUNCTION public.recovery_record_wrong_attempt(uuid,text,integer) FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION public.recovery_record_wrong_attempt(uuid,text) FROM PUBLIC, anon, authenticated;
 REVOKE ALL ON FUNCTION public.recovery_begin_delivery(uuid,uuid) FROM PUBLIC, anon, authenticated;
 REVOKE ALL ON FUNCTION public.recovery_finish_delivery(uuid,uuid,text) FROM PUBLIC, anon, authenticated;
 REVOKE ALL ON FUNCTION public.recovery_claim_reset(uuid,text,uuid) FROM PUBLIC, anon, authenticated;
