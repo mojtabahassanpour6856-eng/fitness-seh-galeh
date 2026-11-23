@@ -108,3 +108,22 @@ The documentation-only audit update at branch commit `8551e35125dcfdb3a44d6972e3
 This is a repeatability check of the existing separate suites, not the missing unified lifecycle E2E. In particular, the Auth integration still starts an Auth-only disposable Supabase stack; it does not run the recovery HTTP handler, Outbox worker, and Auth password update together against one shared stack/database.
 
 The unresolved PostgREST old-access-JWT behavior, absent SMS provider adapter, and staging/operational acceptance gates remain unchanged. No live endpoint, hosted project, main branch, production data, or SMS provider was accessed. PR #260 remains Draft. **NOT APPROVED FOR RELEASE.**
+
+## Full-E2E implementation preflight — 2026-11-23
+
+A read-only dependency review was performed before changing the workflow:
+
+- The current local Supabase integration starts an Auth-only stack and creates only a temporary JWT probe table; it does not initialize the recovery schema or run the HTTP handler/Outbox worker.
+- The PostgreSQL candidate tests create their own synthetic `profiles`, `trainees`, and `trainee_password_recovery_requests` base tables, then apply the three candidate migrations. That fixture is not currently reusable by the local Auth test.
+- The handler requires a real local Auth coach bearer token, a `profiles.role='coach'` row, and a trainee record linked to the coach. Its public request path calls the rate-limit and submit RPCs; approval uses the encrypted-review RPC and enqueues Outbox atomically.
+- The Worker requires the same database, service-role Supabase client, encrypted delivery keys, and the fake-only provider. Reset must then use the same handler and real disposable local Auth Admin password update.
+
+Therefore the missing E2E must be a new, single job—not a composition of the existing four jobs. Its runner needs to start the full disposable local Supabase stack (including Postgres and PostgREST), create Auth coach/trainee fixtures, create the minimal synthetic base schema with matching foreign-key relationships, apply the atomic/Outbox/encrypted candidate migrations in order, then run one loopback HTTP server around the dependency-injected handler. The test should request recovery as the trainee phone, authenticate the coach through local Auth, list and approve, process exactly one Outbox item with `FakeRecoverySmsProvider`, redeem the captured code over HTTP, and verify old-password rejection/new-password acceptance, wrong-code cap, expiry/replay behavior, and final request/Outbox state. Every resource must be synthetic and cleaned in `finally`; startup and teardown must be guarded, and all URLs must be loopback-only.
+
+No existing base-schema migration for the recovery candidate was found under `supabase/migrations`; the only recovery base-schema fixture located is embedded in the disposable PostgreSQL test. This is a concrete fixture-integration task, not evidence that the full E2E already exists.
+
+## CI verification refresh — 2026-11-23 (run #326)
+
+Run `45118731576` (#326) completed successfully on branch commit `0ebe8b73973738bcf18e29143f2519a0d61dca51`. All four existing jobs passed. The local Auth job still explicitly starts an Auth-only disposable stack; no unified lifecycle E2E was added by this run.
+
+PR #260 remains open and Draft. The E2E, provider, old-JWT, and staging/operational gates remain open. **NOT APPROVED FOR RELEASE.**
