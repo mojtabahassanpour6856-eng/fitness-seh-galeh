@@ -231,6 +231,66 @@ BEGIN
 END $$;
 
 
+
+-- Reconcile approved deliveries that became ineligible before send-start.
+-- Unlike claim(), this deliberately selects stale rows instead of silently
+-- filtering them out, so they cannot strand an open recovery request forever.
+CREATE OR REPLACE FUNCTION recovery_private.reconcile_invalid_pre_send_recovery_outbox()
+RETURNS integer LANGUAGE plpgsql SECURITY DEFINER SET search_path = ''
+AS $
+DECLARE v_row record;
+        v_invalid boolean;
+        v_count integer := 0;
+BEGIN
+  FOR v_row IN
+    SELECT o.id,o.recovery_request_id,o.delivery_operation_id
+    FROM public.trainee_password_recovery_outbox o
+    JOIN public.trainee_password_recovery_requests r
+      ON r.id=o.recovery_request_id
+    WHERE o.status IN ('pending','processing')
+      AND o.send_started_at IS NULL
+      AND r.status='approved'
+      AND r.delivery_outcome='pending'
+      AND r.delivery_operation_id=o.delivery_operation_id
+    ORDER BY o.created_at,o.id
+    FOR UPDATE OF o SKIP LOCKED
+  LOOP
+    -- Keep the same lock order as begin_send(): Outbox, then trainee.
+    SELECT (t.coach_user_id IS DISTINCT FROM r.reviewed_by
+         OR t.approval_status IS DISTINCT FROM 'active'
+         OR t.archived_at IS NOT NULL)
+      INTO v_invalid
+    FROM public.trainee_password_recovery_requests r
+    JOIN public.trainees t ON t.id=r.trainee_id
+    WHERE r.id=v_row.recovery_request_id
+      AND r.status='approved'
+      AND r.delivery_outcome='pending'
+      AND r.delivery_operation_id=v_row.delivery_operation_id
+    FOR SHARE OF t;
+
+    IF v_invalid IS TRUE THEN
+      UPDATE public.trainee_password_recovery_requests
+      SET status='expired',token_hash=NULL,token_expires_at=NULL,
+          delivery_outcome='confirmed_failure',updated_at=now()
+      WHERE id=v_row.recovery_request_id
+        AND status='approved' AND delivery_outcome='pending'
+        AND delivery_operation_id=v_row.delivery_operation_id;
+
+      IF FOUND THEN
+        UPDATE public.trainee_password_recovery_outbox
+        SET status='failed',lock_owner=NULL,locked_until=NULL,
+            delivery_payload=NULL,
+            last_safe_error_code='coach_assignment_changed_before_send',
+            updated_at=now()
+        WHERE id=v_row.id AND send_started_at IS NULL
+          AND status IN ('pending','processing');
+        IF FOUND THEN v_count := v_count + 1; END IF;
+      END IF;
+    END IF;
+  END LOOP;
+  RETURN v_count;
+END $;
+
 -- The approved request and its SMS outbox row are committed in the same transaction.
 -- Each approval has its own immutable delivery operation; a later coach re-approval
 -- after confirmed non-delivery therefore creates a distinct Outbox item.
@@ -302,6 +362,10 @@ AS $wrapper$ SELECT recovery_private.finish_recovery_outbox(
   p_outbox_id,p_worker_id,p_generation,p_outcome,p_provider_message_id,p_safe_error_code
 ) $wrapper$;
 
+CREATE OR REPLACE FUNCTION public.recovery_outbox_reconcile_invalid_pre_send()
+RETURNS integer LANGUAGE sql SECURITY DEFINER SET search_path = ''
+AS $wrapper$ SELECT recovery_private.reconcile_invalid_pre_send_recovery_outbox() $wrapper$;
+
 CREATE OR REPLACE FUNCTION public.recovery_outbox_reconcile_expired()
 RETURNS integer LANGUAGE sql SECURITY DEFINER SET search_path = ''
 AS $wrapper$ SELECT recovery_private.reconcile_expired_recovery_outbox() $wrapper$;
@@ -310,11 +374,13 @@ REVOKE ALL ON FUNCTION public.recovery_outbox_claim(uuid,integer) FROM PUBLIC,an
 REVOKE ALL ON FUNCTION public.recovery_outbox_heartbeat(uuid,uuid,bigint,integer) FROM PUBLIC,anon,authenticated;
 REVOKE ALL ON FUNCTION public.recovery_outbox_begin_send(uuid,uuid,bigint) FROM PUBLIC,anon,authenticated;
 REVOKE ALL ON FUNCTION public.recovery_outbox_finish(uuid,uuid,bigint,text,text,text) FROM PUBLIC,anon,authenticated;
+REVOKE ALL ON FUNCTION public.recovery_outbox_reconcile_invalid_pre_send() FROM PUBLIC,anon,authenticated;
 REVOKE ALL ON FUNCTION public.recovery_outbox_reconcile_expired() FROM PUBLIC,anon,authenticated;
 GRANT EXECUTE ON FUNCTION public.recovery_outbox_claim(uuid,integer) TO service_role;
 GRANT EXECUTE ON FUNCTION public.recovery_outbox_heartbeat(uuid,uuid,bigint,integer) TO service_role;
 GRANT EXECUTE ON FUNCTION public.recovery_outbox_begin_send(uuid,uuid,bigint) TO service_role;
 GRANT EXECUTE ON FUNCTION public.recovery_outbox_finish(uuid,uuid,bigint,text,text,text) TO service_role;
+GRANT EXECUTE ON FUNCTION public.recovery_outbox_reconcile_invalid_pre_send() TO service_role;
 GRANT EXECUTE ON FUNCTION public.recovery_outbox_reconcile_expired() TO service_role;
 
 REVOKE ALL ON public.trainee_password_recovery_outbox FROM PUBLIC,anon,authenticated;
@@ -323,10 +389,12 @@ REVOKE ALL ON FUNCTION recovery_private.claim_recovery_outbox(uuid,integer) FROM
 REVOKE ALL ON FUNCTION recovery_private.heartbeat_recovery_outbox(uuid,uuid,bigint,integer) FROM PUBLIC,anon,authenticated;
 REVOKE ALL ON FUNCTION recovery_private.begin_recovery_outbox_send(uuid,uuid,bigint) FROM PUBLIC,anon,authenticated;
 REVOKE ALL ON FUNCTION recovery_private.finish_recovery_outbox(uuid,uuid,bigint,text,text,text) FROM PUBLIC,anon,authenticated;
+REVOKE ALL ON FUNCTION recovery_private.reconcile_invalid_pre_send_recovery_outbox() FROM PUBLIC,anon,authenticated;
 REVOKE ALL ON FUNCTION recovery_private.reconcile_expired_recovery_outbox() FROM PUBLIC,anon,authenticated;
 GRANT EXECUTE ON FUNCTION recovery_private.claim_recovery_outbox(uuid,integer) TO service_role;
 GRANT EXECUTE ON FUNCTION recovery_private.heartbeat_recovery_outbox(uuid,uuid,bigint,integer) TO service_role;
 GRANT EXECUTE ON FUNCTION recovery_private.begin_recovery_outbox_send(uuid,uuid,bigint) TO service_role;
 GRANT EXECUTE ON FUNCTION recovery_private.finish_recovery_outbox(uuid,uuid,bigint,text,text,text) TO service_role;
+GRANT EXECUTE ON FUNCTION recovery_private.reconcile_invalid_pre_send_recovery_outbox() TO service_role;
 GRANT EXECUTE ON FUNCTION recovery_private.reconcile_expired_recovery_outbox() TO service_role;
 COMMIT;
