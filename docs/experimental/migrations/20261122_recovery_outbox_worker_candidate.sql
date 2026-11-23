@@ -47,10 +47,14 @@ BEGIN
   WHERE ((o.status = 'pending' AND o.next_attempt_at <= now())
       OR (o.status = 'processing' AND o.locked_until <= now() AND o.send_started_at IS NULL))
     AND EXISTS (
-      SELECT 1 FROM public.trainee_password_recovery_requests r
+      SELECT 1
+      FROM public.trainee_password_recovery_requests r
+      JOIN public.trainees t ON t.id=r.trainee_id
       WHERE r.id=o.recovery_request_id AND r.status='approved'
         AND r.delivery_outcome='pending'
         AND r.delivery_operation_id=o.delivery_operation_id
+        AND t.coach_user_id IS NOT DISTINCT FROM r.reviewed_by
+        AND t.approval_status='active' AND t.archived_at IS NULL
     )
   ORDER BY o.next_attempt_at, o.created_at
   FOR UPDATE SKIP LOCKED LIMIT 1;
@@ -83,6 +87,7 @@ CREATE OR REPLACE FUNCTION recovery_private.begin_recovery_outbox_send(
 ) RETURNS boolean LANGUAGE plpgsql SECURITY DEFINER SET search_path = ''
 AS $$
 DECLARE v_row public.trainee_password_recovery_outbox%ROWTYPE;
+        v_assignment_changed boolean;
 BEGIN
   SELECT * INTO v_row FROM public.trainee_password_recovery_outbox
   WHERE id=p_outbox_id AND status='processing' AND lock_owner=p_worker_id
@@ -90,11 +95,48 @@ BEGIN
     AND send_started_at IS NULL AND attempt_count<10
   FOR UPDATE;
   IF NOT FOUND THEN RETURN false; END IF;
-  UPDATE public.trainee_password_recovery_requests
+
+  -- Lock the trainee row while re-checking the current coach assignment.
+  -- This serializes the send-start transition against concurrent reassignment.
+  SELECT (t.coach_user_id IS DISTINCT FROM r.reviewed_by
+       OR t.approval_status IS DISTINCT FROM 'active'
+       OR t.archived_at IS NOT NULL)
+    INTO v_assignment_changed
+  FROM public.trainee_password_recovery_requests r
+  JOIN public.trainees t ON t.id=r.trainee_id
+  WHERE r.id=v_row.recovery_request_id
+    AND r.status='approved'
+    AND r.delivery_operation_id=v_row.delivery_operation_id
+    AND r.delivery_outcome='pending'
+  FOR SHARE OF t;
+
+  IF v_assignment_changed IS TRUE THEN
+    UPDATE public.trainee_password_recovery_requests
+    SET status='expired',token_hash=NULL,token_expires_at=NULL,
+        delivery_outcome='confirmed_failure',updated_at=now()
+    WHERE id=v_row.recovery_request_id AND status='approved'
+      AND delivery_operation_id=v_row.delivery_operation_id
+      AND delivery_outcome='pending';
+    UPDATE public.trainee_password_recovery_outbox
+    SET status='failed',lock_owner=NULL,locked_until=NULL,
+        last_safe_error_code='coach_assignment_changed',
+        delivery_payload=NULL,updated_at=now()
+    WHERE id=p_outbox_id AND status='processing' AND lock_owner=p_worker_id
+      AND lease_generation=p_generation AND send_started_at IS NULL;
+    RETURN false;
+  END IF;
+
+  UPDATE public.trainee_password_recovery_requests r
   SET delivery_outcome='attempting',delivery_attempted_at=now(),updated_at=now()
-  WHERE id=v_row.recovery_request_id AND status='approved'
-    AND delivery_operation_id=v_row.delivery_operation_id
-    AND delivery_outcome='pending';
+  WHERE r.id=v_row.recovery_request_id AND r.status='approved'
+    AND r.delivery_operation_id=v_row.delivery_operation_id
+    AND r.delivery_outcome='pending'
+    AND EXISTS (
+      SELECT 1 FROM public.trainees t
+      WHERE t.id=r.trainee_id
+        AND t.coach_user_id IS NOT DISTINCT FROM r.reviewed_by
+        AND t.approval_status='active' AND t.archived_at IS NULL
+    );
   IF NOT FOUND THEN RETURN false; END IF;
   UPDATE public.trainee_password_recovery_outbox
   SET send_started_at=now(),attempt_count=attempt_count+1,updated_at=now()
