@@ -185,3 +185,18 @@ Still open:
 5. Complete staging security, observability, rollback, and operational acceptance.
 
 No hosted Auth setting, production DB, main branch, real account, or live SMS was touched. PR #260 remains open and Draft. NOT APPROVED FOR RELEASE.
+## Unified E2E fixture preflight — 2026-11-23
+
+A closer read of the existing disposable PostgreSQL suite found a useful partial lifecycle test in test-recovery-outbox-postgres.js: it already drives the real candidate HTTP handler's request/review paths, executes the Outbox worker with FakeRecoverySmsProvider, checks encrypted payload clearing, and invokes the reset path. However, it injects a fake coach identity, hand-written admin RPC/query adapters, and a mocked Auth Admin password update. It does not use local Auth or PostgREST for that lifecycle, so it is not the required unified E2E.
+
+The base-schema fixture is in test-recovery-atomic-rpc-candidate.js, not in the Outbox test. It currently drops/recreates public profiles, trainees, and recovery requests, and seeds static synthetic IDs. It must not be run against the same database as another suite or copied as a destructive setup step into a persistent environment.
+
+Implementation requirements for the next isolated runner:
+- Start one fresh local Supabase project/stack and use its own Postgres, PostgREST, and Auth together.
+- Create two disposable Auth users (coach and trainee) through local Auth Admin, then create their matching profiles and one trainee row with coach_user_id, auth_user_id, active approval, normalized phone, and full_name (the HTTP coach-list query requires full_name).
+- Build the minimal recovery base schema in that empty disposable database, then apply the atomic RPC, Outbox worker, and encrypted payload candidate migrations in dependency order. Never run the existing DROP/CREATE fixture against a non-empty or hosted DB.
+- Replace the fake handler admin adapter with a real service-role supabase-js client; createUserClient must validate the actual coach bearer token against local Auth.
+- Run request over loopback HTTP; list and approve as the coach; process the queued item with FakeRecoverySmsProvider; capture the synthetic code only in test memory; redeem via HTTP; verify old password fails, new password succeeds, refresh/session revocation, replay rejection, and final request/Outbox states.
+- Keep all fixture credentials and key material generated per job, reject non-loopback URLs, prohibit real provider instances, and clean up both Auth users, fixture rows/schemas, server, and local stack in finally/always teardown.
+
+Existing coverage can be reused conceptually, but no shared runner has been created yet. The next implementation must preserve the separate existing suites and must not falsely count their combined green status as full E2E.
