@@ -30,6 +30,7 @@ on:
       - 'docs/experimental/test-recovery-handler-sql-contract.js'
       - 'docs/experimental/test-recovery-auth-admin-sdk-contract.mjs'
       - 'docs/experimental/test-recovery-auth-local-stack.mjs'
+      - 'docs/experimental/test-recovery-full-e2e-local-stack.mjs'
       - 'docs/experimental/test-recovery-auth-local-stack.mjs'
       - 'docs/experimental/migrations/20261122_recovery_atomic_rpc_candidate.sql'
       - 'docs/experimental/migrations/20261122_dispose_expired_legacy_approved_request.sql'
@@ -255,3 +256,53 @@ jobs:
           PGRST_URL: http://127.0.0.1:3000
           PGRST_JWT_SECRET: disposable-ci-only-postgrest-secret-32-bytes-min
         run: node docs/experimental/test-recovery-postgrest-outbox-contract.mjs
+
+  supabase-local-recovery-e2e:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - name: Checkout isolated experiment branch
+        uses: actions/checkout@v4
+        with:
+          ref: experiment/trainee-password-recovery-mock-20261122
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install pinned Supabase SDK and PostgreSQL driver
+        run: npm install --no-save @supabase/supabase-js@2.119.0 pg
+      - name: Set up pinned Supabase CLI
+        uses: supabase/setup-cli@v3
+        with:
+          version: 3.2.0
+      - name: Initialize disposable full local Supabase stack
+        run: |
+          mkdir -p /tmp/recovery-full-e2e
+          cd /tmp/recovery-full-e2e
+          supabase init
+      - name: Start local Auth, Postgres, and PostgREST only
+        run: |
+          cd /tmp/recovery-full-e2e
+          if ! supabase start -x studio,realtime,storage-api,imgproxy,edge-runtime,logflare,vector,postgres-meta,supavisor,mailpit > /tmp/recovery-full-e2e-start.log 2>&1; then
+            echo "Disposable local stack failed to start; startup output is intentionally redacted."
+            exit 1
+          fi
+          echo "Disposable local stack started; startup output redacted."
+      - name: Export loopback-only local credentials
+        shell: bash
+        run: |
+          cd /tmp/recovery-full-e2e
+          eval "$(supabase status -o env)"
+          case "$API_URL" in http://127.0.0.1:*|http://localhost:*) ;; *) echo "Refusing non-local API URL"; exit 1 ;; esac
+          echo "SUPABASE_URL=$API_URL" >> "$GITHUB_ENV"
+          echo "SUPABASE_ANON_KEY=$ANON_KEY" >> "$GITHUB_ENV"
+          echo "SUPABASE_SERVICE_ROLE_KEY=$SERVICE_ROLE_KEY" >> "$GITHUB_ENV"
+          case "$DB_URL" in postgresql://*127.0.0.1*|postgresql://*localhost*) ;; *) echo "Refusing non-local database URL"; exit 1 ;; esac
+          echo "SUPABASE_DB_URL=$DB_URL" >> "$GITHUB_ENV"
+      - name: Run unified disposable password recovery E2E
+        run: node docs/experimental/test-recovery-full-e2e-local-stack.mjs
+      - name: Stop disposable local Supabase stack
+        if: always()
+        run: |
+          cd /tmp/recovery-full-e2e
+          supabase stop --no-backup
