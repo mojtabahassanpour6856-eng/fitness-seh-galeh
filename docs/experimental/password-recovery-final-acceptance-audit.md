@@ -275,3 +275,36 @@ To identify the tables that require policy coverage, the main-branch frontend en
 ### Scope and caution
 
 This frontend inventory was read-only and repository-only. The deployed Pages entry point is not yet conclusively identified from this tree, and the live database schema has not been queried. No hosted database, Auth setting, policy, file, or user data was accessed or modified. Do not treat hidden UI, publishable-key secrecy, or these static table names as a substitute for RLS evidence.
+## Read-only live schema/RLS inventory — isolated Supabase mirror — 2026-11-23
+
+Using the existing isolated test project fitness-seh-galeh-test (ref udptdznbvewkublvzmtm, ACTIVE_HEALTHY, eu-west-1), a read-only catalog inventory was collected. No migration, DDL, DML, Auth change, Storage mutation, or deployment was performed. The query inspected catalog metadata only; no trainee record contents were selected.
+
+### RLS coverage snapshot
+
+- public schema: 58 ordinary tables; all 58 have RLS enabled. 57 have at least one policy. The sole public table with RLS enabled and no policy is exercises_duplicate_archive_20261023. It appears to be an archived duplicate table, but its grants and exposure still need verification before classifying it as harmless.
+- private schema: 1 table; RLS enabled and explicit deny policy for anon/authenticated.
+- storage schema: 10 internal tables; RLS enabled. Nine have no user-defined policies, consistent with internal Storage metadata tables; do not treat these nine as app bucket policy gaps without checking API exposure and grants.
+- workout_batch_test schema: 4 isolated test tables have RLS enabled but no policies. They are in a sandbox schema, but schema exposure and grants must be confirmed; no policy was added.
+- All public tables currently reported by the catalog have RLS enabled, but FORCE ROW LEVEL SECURITY is false for them. This is common for table owners and does not alone indicate an end-user bypass; role grants and execution context still need review.
+
+### Storage
+
+Both app buckets are private: payment-receipts (5 MiB limit) and trainee-health-reports (10 MiB limit). Catalog policies include own-trainee uploads, assigned-coach uploads for health reports, own-or-assigned-coach reads, and assigned-coach deletion. This is a static policy inspection only; cross-user object access and path-confusion cases have not yet been exercised.
+
+### High-priority advisor findings
+
+1. Supabase Security Advisor reports one authenticated SECURITY DEFINER function: public.save_coach_nutrition_builder_plan(p_payload jsonb). Its body checks auth.uid(), private.is_coach(), and private.can_access_trainee() before writing. It has a restricted search_path and is not executable by anon; authenticated execution appears intentional, but needs explicit adversarial tests and review of all nested helper permissions.
+2. A three-argument overload public.save_coach_nutrition_builder_plan(uuid,jsonb,jsonb) is SECURITY INVOKER and has EXECUTE for anon and authenticated. It forwards to the protected SECURITY DEFINER overload, whose auth/coach checks should reject anon; nevertheless the public anon grant is unnecessary for a coach-only operation and is a concrete hardening candidate. Do not change it without the user's approval and compatibility testing.
+3. Auth leaked-password protection is disabled in this mirror project's Auth configuration. This is an Auth configuration finding, not an RLS flaw. Enabling it requires a separate explicit decision and should be evaluated for login/password-change UX.
+4. The Advisor reports five RLS-enabled/no-policy tables: the archived duplicate table plus four workout_batch_test sandbox tables. The public archived table is the only one in public; check grants/exposure and whether it is retained before proposing a change.
+
+### Additional observations
+
+- The SECURITY DEFINER helper functions private.is_coach(), private.can_access_trainee(), private.can_claim_trainee(), and private.can_update_trainee() are not executable by anon; authenticated can execute the first three/four helpers as listed in the catalog. Their function bodies and effective grants still need a focused source review.
+- public.save_coach_nutrition_builder_plan(jsonb) is the only SECURITY DEFINER function flagged by the Advisor as executable by authenticated. Other listed SECURITY DEFINER functions have no anon/authenticated EXECUTE according to has_function_privilege in this project.
+- No public views were returned by pg_views in the inspected schemas. Materialized views, API-exposed schema configuration, sequence privileges, default privileges, and all function bodies/grants remain to be audited.
+- Security Advisor also surfaced leaked-password protection disabled; this is separate from RLS.
+
+### Scope boundary and release status
+
+This live inventory is from the isolated Supabase test mirror only, not Production. It confirms catalog state for this mirror at the time of inspection; it does not prove Production has identical schema or policies. No live user or trainee data was queried. No changes were made. Release remains NOT READY pending review of the public archive table, the coach nutrition RPC overload, API/schema exposure and grants, full helper/function bodies, view/sequence/default privileges, and synthetic cross-role access tests.
