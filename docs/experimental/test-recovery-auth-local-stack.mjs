@@ -24,6 +24,8 @@ const newPassword = 'New-Disposable-Password-456!';
 const suffix = randomUUID().replaceAll('-', '');
 const tableName = `recovery_jwt_probe_${suffix}`;
 const policyName = `recovery_jwt_probe_policy_${suffix}`;
+const privateSchema = `recovery_probe_private_${suffix}`;
+const sessionFunction = `${privateSchema}.session_is_active`;
 const probeId = randomUUID();
 const probeSecret = `synthetic-probe-${randomUUID()}`;
 let userId;
@@ -65,6 +67,45 @@ async function assertPostgrestStillAccepts(accessToken, label) {
   const rows = JSON.parse(body);
   assert.equal(rows.length, 1, `${label}: RLS should expose exactly the synthetic row to its owner`);
   assert.equal(rows[0].secret, probeSecret);
+}
+
+async function assertPostgrestRlsDenies(accessToken, label) {
+  const response = await readProbe(accessToken);
+  const body = await response.text();
+  assert.equal(response.status, 200, `${label}: RLS denial should not expose an API error`);
+  assert.deepEqual(JSON.parse(body), [], `${label}: revoked session must not see protected rows`);
+}
+
+async function installSensitiveSessionPolicy() {
+  await pool.query(`CREATE SCHEMA ${privateSchema}`);
+  await pool.query(`REVOKE ALL ON SCHEMA ${privateSchema} FROM PUBLIC`);
+  await pool.query(`GRANT USAGE ON SCHEMA ${privateSchema} TO authenticated`);
+  await pool.query(`
+    CREATE FUNCTION ${sessionFunction}()
+    RETURNS boolean
+    LANGUAGE sql
+    STABLE
+    SECURITY DEFINER
+    SET search_path = ''
+    AS $function$
+      SELECT EXISTS (
+        SELECT 1
+        FROM auth.sessions AS s
+        WHERE s.id = (auth.jwt() ->> 'session_id')::uuid
+          AND s.user_id = auth.uid()
+          AND (s.not_after IS NULL OR s.not_after > now())
+      )
+    $function$
+  `);
+  await pool.query(`REVOKE ALL ON FUNCTION ${sessionFunction}() FROM PUBLIC`);
+  await pool.query(`GRANT EXECUTE ON FUNCTION ${sessionFunction}() TO authenticated`);
+  await pool.query(`DROP POLICY ${policyName} ON public.${tableName}`);
+  await pool.query(`
+    CREATE POLICY ${policyName}
+    ON public.${tableName}
+    FOR SELECT TO authenticated
+    USING (auth.uid() = owner_id AND ${sessionFunction}())
+  `);
 }
 
 try {
@@ -132,6 +173,13 @@ try {
   const sessionD = await signIn(newPassword);
   assert.equal(sessionC.error, null);
   assert.equal(sessionD.error, null);
+  assert.ok(sessionC.data.session.access_token, 'sensitive route probe requires an access JWT');
+  const sessionCClaims = JSON.parse(Buffer.from(sessionC.data.session.access_token.split('.')[1], 'base64url').toString('utf8'));
+  assert.match(sessionCClaims.session_id || '', /^[0-9a-f-]{36}$/i, 'JWT must contain the Supabase session_id UUID');
+  await installSensitiveSessionPolicy();
+  await assertPostgrestStillAccepts(sessionC.data.session.access_token,
+    'active session under the sensitive-operation session policy');
+
   const revoked = await admin.auth.admin.signOut(sessionC.data.session.access_token, 'global');
   assert.equal(revoked.error, null, 'global server-side sign-out must succeed');
 
@@ -143,17 +191,21 @@ try {
   const globalSignOutLeftOldAccessAccepted = !oldAccessAfterGlobalSignOut.error;
   assert.equal(globalSignOutLeftOldAccessAccepted, false,
     'global sign-out must reject old access JWTs in the disposable Auth stack');
-  await assertPostgrestStillAccepts(sessionC.data.session.access_token,
-    'pre-global-sign-out access JWT');
+  // Baseline RLS still accepts this signed JWT until exp; the sensitive policy
+  // additionally checks auth.sessions and therefore denies it after sign-out.
+  await assertPostgrestRlsDenies(sessionC.data.session.access_token,
+    'revoked session under the sensitive-operation session policy');
 
   console.log('PASS: disposable local Auth password update, old/new password behavior, refresh revocation, and Auth getUser rejection.');
-  console.log('OBSERVATION: PostgREST continued accepting the still-unexpired old access JWT after password update and global sign-out.');
-  console.log('SECURITY NOTE: Auth-side revocation is not immediate revocation at locally validating PostgREST APIs; JWT expiry or an additional server-side session check is required for that guarantee.');
+  console.log('PASS: targeted RLS session_id check denied the still-unexpired JWT after global sign-out while allowing it before sign-out.');
+  console.log('OBSERVATION: baseline PostgREST/RLS without a session lookup still accepts a signed old JWT until exp; the session-aware policy closes that window for the protected probe route only.');
+  console.log('SECURITY NOTE: session_id validation is a targeted sensitive-operation control; ordinary RLS behavior and bounded JWT expiry remain separate controls.');
 } finally {
   try {
     if (probeTableCreated) {
       await pool.query(`DROP TABLE IF EXISTS public.${tableName}`);
     }
+    await pool.query(`DROP SCHEMA IF EXISTS ${privateSchema} CASCADE`);
   } finally {
     await pool.end();
     if (userId) {
