@@ -29,5 +29,5 @@ jobs:
           node-version: 22
       - name: Check packaged module graph and fail-closed provider boundary
         run: node docs/experimental/test-recovery-edge-package-contract.mjs
-      - name: Type-check actual deployment-shaped entrypoint
+      - name: Check hosted-mirror migration safety preconditions\n        run: node docs/experimental/test-recovery-mirror-preflight-contract.mjs\n      - name: Type-check actual deployment-shaped entrypoint
         run: deno check supabase/functions/trainee-password-recovery/index.ts
