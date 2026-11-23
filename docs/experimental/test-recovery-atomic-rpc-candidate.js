@@ -343,7 +343,13 @@ async function main() {
   assert.equal(r.rows[0].changed,true);
   state=await pool.query('SELECT status,token_hash,token_expires_at,auth_outcome FROM public.trainee_password_recovery_requests WHERE id=$1',[req1]);
   assert.deepEqual(state.rows[0],{status:'completed',token_hash:null,token_expires_at:null,auth_outcome:'completed'});
-  console.log('PASS: known no-change can reopen only from an active attempt; confirmed success consumes code');
+  const replay=await callAsService(
+    'SELECT public.recovery_claim_reset($1,$2,$3) AS result',
+    [req1,digest,'40000000-0000-4000-8000-000000000005']
+  );
+  assert.equal(replay.rows[0].result.claimed,false,
+    'a successfully consumed recovery code must never be reusable');
+  console.log('PASS: known no-change can reopen only from an active attempt; confirmed success consumes code and rejects replay');
 
   // A provider-confirmed non-delivery safely invalidates that code and returns to coach review.
   r=await callAsService('SELECT public.recovery_coach_review($1,$2,$3,$4,$5,$6) AS result',
