@@ -378,13 +378,16 @@ DECLARE
   v_trainee_phone text;
   v_approval_status text;
   v_archived_at timestamptz;
+  v_reviewed_by uuid;
+  v_current_coach uuid;
 BEGIN
   IF p_code_digest IS NULL OR p_code_digest !~ '^[a-f0-9]{64}$'
      OR p_operation_id IS NULL THEN
     RETURN jsonb_build_object('claimed', false);
   END IF;
 
-  SELECT r.trainee_id INTO v_trainee_id
+  SELECT r.trainee_id, r.reviewed_by
+    INTO v_trainee_id, v_reviewed_by
   FROM public.trainee_password_recovery_requests AS r
   WHERE r.id = p_request_id
   FOR UPDATE;
@@ -393,13 +396,21 @@ BEGIN
     RETURN jsonb_build_object('claimed', false);
   END IF;
 
-  SELECT t.auth_user_id, t.phone_normalized, t.approval_status, t.archived_at
-    INTO v_auth_user_id, v_trainee_phone, v_approval_status, v_archived_at
+  SELECT t.auth_user_id, t.phone_normalized, t.approval_status, t.archived_at, t.coach_user_id
+    INTO v_auth_user_id, v_trainee_phone, v_approval_status, v_archived_at, v_current_coach
   FROM public.trainees AS t
   WHERE t.id = v_trainee_id
   FOR UPDATE;
 
   IF NOT FOUND OR v_auth_user_id IS NULL OR v_approval_status <> 'active' OR v_archived_at IS NOT NULL THEN
+    RETURN jsonb_build_object('claimed', false);
+  END IF;
+
+  -- A code approved by a former coach must not remain redeemable after reassignment.
+  IF v_current_coach IS DISTINCT FROM v_reviewed_by THEN
+    UPDATE public.trainee_password_recovery_requests
+    SET status='expired',token_hash=NULL,token_expires_at=NULL,updated_at=now()
+    WHERE id=p_request_id AND status='approved';
     RETURN jsonb_build_object('claimed', false);
   END IF;
 
