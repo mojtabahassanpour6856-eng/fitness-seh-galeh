@@ -382,3 +382,17 @@ Run 45111044645 exposed two test-fixture issues after the isolated RPC rename:
 Run 45111142831 (commit 189c6b74c50e489b03175925d60fdd8dcf57be44) confirms Deno type-check passed, but the mock job still fails at the stale handler assertion. PostgreSQL and disposable local Auth jobs were still running at the time of this note; no final success is claimed.
 
 Do not revert the dedicated recovery RPC name to satisfy the stale test: doing so would reintroduce the production registration-limiter collision. The test must be corrected to assert the new dedicated RPC name. The recovery migration remains unapplied to Test and Production.
+
+## Atomic SQL regression passes; remaining consumer mocks still use old RPC name (2026-11-23)
+
+Run 45111142831 checked commit 189c6b74c50e489b03175925d60fdd8dcf57be44. Results:
+- Disposable PostgreSQL two-session concurrency checks: PASS.
+- Atomic recovery RPC candidate suite, including the registration-limiter preservation regression: PASS.
+- Deno Edge adapter type-check: PASS.
+- Mock handler suite: FAIL only at the request-rate-limiter call assertion because its mock still expects consume_registration_rate_limit instead of recovery_consume_request_rate_limit.
+- Outbox PostgreSQL end-to-end test: FAIL because its injected HTTP admin stub still maps the old consume_registration_rate_limit RPC. The candidate handler correctly calls the dedicated recovery RPC, so the test stub never submits the request.
+- Disposable local Auth integration was still running when this note was recorded; no final result is claimed.
+
+These failures identify two stale test doubles, not a failure in the renamed SQL RPC. Both consumer fixtures must be updated to map recovery_consume_request_rate_limit to public.recovery_consume_request_rate_limit before the full workflow can pass. Do not restore the old colliding function name.
+
+Release remains NOT READY. No Test/Production schema or Edge Function has been changed.
