@@ -76,6 +76,18 @@ async function assertPostgrestRlsDenies(accessToken, label) {
   assert.deepEqual(JSON.parse(body), [], `${label}: revoked session must not see protected rows`);
 }
 
+async function assertPostgrestRejectsExpiredJwt(accessToken, label) {
+  const payload = JSON.parse(Buffer.from(accessToken.split('.')[1], 'base64url').toString('utf8'));
+  assert.ok(Number.isInteger(payload.exp), `${label}: JWT exp claim must be an integer`);
+  const waitMs = Math.max(0, payload.exp * 1000 - Date.now() + 2500);
+  console.log(`Waiting ${Math.ceil(waitMs / 1000)} seconds for the same signed JWT to expire before the PostgREST rejection check.`);
+  if (waitMs > 0) await new Promise(resolve => setTimeout(resolve, waitMs));
+  const response = await readProbe(accessToken);
+  const body = await response.text();
+  assert.ok([401, 403].includes(response.status),
+    `${label}: PostgREST must reject the expired JWT; got ${response.status}: ${body}`);
+}
+
 async function installSensitiveSessionPolicy() {
   await pool.query(`CREATE SCHEMA ${privateSchema}`);
   await pool.query(`REVOKE ALL ON SCHEMA ${privateSchema} FROM PUBLIC`);
@@ -195,7 +207,10 @@ try {
   // additionally checks auth.sessions and therefore denies it after sign-out.
   await assertPostgrestRlsDenies(sessionC.data.session.access_token,
     'revoked session under the sensitive-operation session policy');
+  await assertPostgrestRejectsExpiredJwt(sessionC.data.session.access_token,
+    'same old JWT after its actual 900-second expiry');
 
+  console.log('PASS: PostgREST rejected the exact same signed JWT after its actual 900-second expiry.');
   console.log('PASS: disposable local Auth password update, old/new password behavior, refresh revocation, and Auth getUser rejection.');
   console.log('PASS: targeted RLS session_id check denied the still-unexpired JWT after global sign-out while allowing it before sign-out.');
   console.log('OBSERVATION: baseline PostgREST/RLS without a session lookup still accepts a signed old JWT until exp; the session-aware policy closes that window for the protected probe route only.');
