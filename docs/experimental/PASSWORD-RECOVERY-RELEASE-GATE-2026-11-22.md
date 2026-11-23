@@ -815,3 +815,15 @@ A static, read-only review of the two remaining disposable migration drafts foun
 The next Supabase-shaped rewrites must be tested as one ordered migration set against a disposable database built from the exact mirror baseline, with the worker and approval entry points disabled during schema transition. Required order remains atomic schema/RPC → Outbox schema/functions → encrypted payload/trigger replacement. No mirror migration should run until this full sequence, post-migration invariants, rollback, and the exact-commit CI all pass.
 
 **No live changes:** no mirror/Production SQL, Edge Function deployment, Auth update, password change, SMS, or trainee-row mutation occurred. Release remains **NOT READY**.
+
+
+## 2026-11-23 follow-up: migration dependency hardening (still NOT READY)
+
+Two fail-closed edits were committed on the experiment branch after reviewing the three Supabase-shaped candidates:
+
+- Atomic candidate now creates `delivery_payload jsonb` on the recovery request table before the Outbox phase. Commit: `c43067d67038c3f9af92f385bab3b7678a741378`.
+- Outbox candidate now creates its own `delivery_payload jsonb` column in the Outbox table, so `begin_recovery_outbox_send` no longer references a column that exists only after the next migration. Its enqueue trigger now raises an exception if an approved request has no encrypted payload. Commit: `e5614bb8f0280f52650e783ea29ab2b2fd82d21a`.
+
+This closes the previously identified schema-ordering failure and prevents the intermediate Outbox-only phase from silently enqueuing an approved request without ciphertext. The encrypted-payload migration still needs a full consistency review and executable adversarial tests. In particular, verify the JSON shape constraint behavior for JSON null/malformed values, trigger cleanup across every terminal state, and exact Deno/SQL envelope agreement.
+
+No migration was run against the mirror or production. No function was deployed and no SMS was sent. The branch edits have not yet passed CI as a combined migration set. Release remains blocked pending disposable Supabase migration/E2E tests, a fresh green CI run on the final commit, provider validation, deployable Edge Function packaging, and resolution of the recovery-code expiry requirement.
