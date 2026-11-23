@@ -412,3 +412,19 @@ Latest observed CI run: 45111382201, head SHA 92c04a5469201e07fbe480ae637d9f324a
 Important: the run was created while the branch was receiving adjacent test-only commits; re-check the branch head and require a fresh all-green workflow on the final branch SHA before any Test migration. No remote Supabase database, Edge Function, Auth account, password, trainee record, or provider was changed.
 
 Release remains NOT READY.
+## Full candidate CI green; disposable Auth session semantics recorded (2026-11-23)
+
+Run 45111441369 completed with conclusion SUCCESS on commit 254c8c0f2522a48e4ab11dad10c9c1237160c6b9. All four jobs passed:
+- mock-recovery-tests: PASS.
+- postgres-concurrency-tests: PASS, including atomic RPC and registration-limiter preservation regression.
+- deno-edge-candidate-check: PASS.
+- supabase-local-auth-integration: PASS.
+
+The disposable local Auth test created and deleted only its synthetic local user. It verified old-password rejection, new-password login, and global sign-out revoking other refresh tokens. Observed on the pinned local Auth version: password update alone revoked existing refresh tokens; old access JWT was rejected by Auth getUser after password update; old access JWT was also rejected after global sign-out. These observations are local disposable Auth evidence, not yet a live Supabase Test end-to-end recovery test.
+
+### Read-only Supabase Test schema/API preflight
+Read-only SQL against project udptdznbvewkublvzmtm reconfirmed that the existing public.consume_registration_rate_limit(text, integer, integer) is present, SECURITY DEFINER, executable by service_role, and not executable by anon or authenticated. The dedicated recovery_consume_request_rate_limit and candidate recovery RPCs are not installed. The recovery table still has only its legacy columns. No write, migration, cleanup, RPC mutation, Auth operation, or Edge deployment was performed.
+
+Because the candidate RPCs/schema are intentionally not installed, a live PostgREST invocation of the new RPCs cannot yet be tested. That compatibility check belongs after a separately approved, isolated Test migration and must use only synthetic test data.
+
+All automated candidate CI gates are green on the recorded commit, but the overall release remains NOT READY. Remaining gates include migration review and explicit approval, any required guarded cleanup approval, controlled Test migration, PostgREST RPC/schema-cache verification, and a complete synthetic Test recovery flow including coach authorization, delivery adapter, code replay/expiry/attempt limits, Auth password update, and session invalidation. Production remains out of scope.
