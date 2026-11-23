@@ -396,3 +396,19 @@ Run 45111142831 checked commit 189c6b74c50e489b03175925d60fdd8dcf57be44. Results
 These failures identify two stale test doubles, not a failure in the renamed SQL RPC. Both consumer fixtures must be updated to map recovery_consume_request_rate_limit to public.recovery_consume_request_rate_limit before the full workflow can pass. Do not restore the old colliding function name.
 
 Release remains NOT READY. No Test/Production schema or Edge Function has been changed.
+## Consumer test doubles aligned; latest CI partially green (2026-11-23)
+
+Updated the remaining stale rate-limiter references in the handler and Outbox PostgreSQL test doubles so they now call recovery_consume_request_rate_limit, which maps to public.recovery_consume_request_rate_limit. The SQL RPC name remains isolated and the existing registration limiter is not restored or overwritten.
+
+Also corrected malformed over-escaped regular-expression literals in the static migration/handler contract test.
+
+Latest observed CI run: 45111382201, head SHA 92c04a5469201e07fbe480ae637d9f324aeb97b3:
+- Mock recovery tests: PASS.
+- Deno Edge candidate type-check: PASS.
+- Disposable PostgreSQL suite: still running at last check; atomic recovery RPC candidate test had started.
+- Disposable local Supabase Auth integration: still running while starting the local Auth stack.
+- Overall workflow: IN PROGRESS; no final green result claimed.
+
+Important: the run was created while the branch was receiving adjacent test-only commits; re-check the branch head and require a fresh all-green workflow on the final branch SHA before any Test migration. No remote Supabase database, Edge Function, Auth account, password, trainee record, or provider was changed.
+
+Release remains NOT READY.
