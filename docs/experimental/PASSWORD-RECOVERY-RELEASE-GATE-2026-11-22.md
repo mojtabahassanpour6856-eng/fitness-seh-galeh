@@ -583,3 +583,34 @@ Extended `docs/experimental/test-recovery-auth-local-stack.mjs` to distinguish A
 Workflow run `45115327425` / run #306 was triggered on commit `5e13780c59a3c3d6692aeb89e470cc0b785fd2d0`. At the latest observation, mock tests, Deno type-check, and PostgreSQL/PostgREST contract tests had passed; the disposable local Auth/PostgREST integration job was still running. Therefore the new old-JWT probe is **not yet CI-verified**.
 
 This test is a focused session-semantics probe, not the complete password-recovery E2E flow. It does not touch hosted Supabase, real trainee data, Production, or a live SMS provider. Release remains **NOT READY**.
+
+
+## Latest CI confirmation: Auth + PostgREST old-JWT probe (2026-11-23)
+
+GitHub Actions run `45115491530` / run #309 completed with overall conclusion **SUCCESS** on exact branch head `e94de6d33bb02d4be44412b84687c6162032b2a3`.
+
+All four jobs passed:
+- `mock-recovery-tests`
+- `deno-edge-candidate-check`
+- `postgres-concurrency-tests`
+- `supabase-local-auth-integration`
+
+The local Auth/PostgREST job log explicitly confirms:
+- disposable local Auth password update, old/new password behavior, refresh-token revocation, and Auth `getUser` rejection all passed;
+- the old still-unexpired access JWT continued to be accepted by local PostgREST after password update and global sign-out;
+- the test reported the security distinction: Auth-side revocation is not immediate revocation at locally validating PostgREST APIs; JWT expiry or an additional server-side session check is required for that guarantee.
+
+The PostgreSQL job also completed successfully, including the atomic RPC, schema-cache/named-argument/role checks, Outbox/Worker integration, and encrypted-review PostgREST contract steps. The permission-denied SQL log entries are expected negative-role probes (for example, `anon` attempting service-role-only RPCs), not evidence of a failing job; the job conclusion is SUCCESS.
+
+This run closes the previously pending CI confirmation for the local PostgREST old-JWT behavior. It does **not** resolve the architectural decision about acceptable old-token lifetime, nor does it exercise the full recovery handler + coach approval + fake delivery + redemption + real local Auth update as one connected transaction.
+
+### Remaining blockers — unchanged
+
+1. Decide and document the security policy for still-unexpired access JWTs at PostgREST: bounded JWT lifetime versus a reviewed server-side session/version check. Do not weaken RLS.
+2. Build and pass the single-stack disposable full HTTP recovery E2E described above, using only synthetic coach/trainee identities and the fake-only provider.
+3. Reconcile the disposable base-schema fixture with all three candidate migrations before attempting that E2E.
+4. Only after those gates: review provider integration (Mediana remains disabled/unconfigured), operational controls, secret rotation, monitoring, staging migration plan, and explicit release approval.
+
+No hosted Supabase project, Production database, real trainee record, deployed Edge Function, hosted Auth user, or real SMS provider was accessed or changed in run #309.
+
+Release remains **NOT READY**.
