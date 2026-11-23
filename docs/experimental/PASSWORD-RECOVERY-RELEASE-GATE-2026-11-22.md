@@ -730,3 +730,28 @@ Release remains **NOT READY FOR PRODUCTION**.
 - The actual Supabase Auth update's behavior under transport ambiguity and refresh-token/session revocation still needs a mirror-only end-to-end verification. The local Auth test is useful but does not prove remote project configuration behavior.
 
 **Decision:** no deployment or SQL mutation authorized by this audit. The next engineering deliverable is a separate Supabase migration candidate and a deployable Edge Function/worker pair, with provider delivery kept disabled until its provider and credentials are explicitly validated. Existing live function remains untouched during preparation.
+
+
+## Live-function and mirror-schema deep inspection — 2026-11-23
+
+### Exact mirror facts re-queried (read-only)
+- Mirror project `udptdznbvewkublvzmtm` currently has only the legacy recovery columns: `id, trainee_id, phone_normalized, status, requested_at, reviewed_at, reviewed_by, token_hash, token_expires_at, token_attempts, completed_at, updated_at`.
+- No Outbox table exists yet. None of the candidate state/operation/encryption columns are present.
+- The live unique partial index still covers only `pending` and `approved`, not `processing`.
+- The only recovery-table RLS policy is an explicit deny for `anon` and `authenticated`; this is compatible with service-role-only access, but candidate table grants and default privileges still require explicit review.
+- The information_schema trigger inventory returned no table triggers on the current recovery request table or Outbox table (the latter does not exist).
+
+### Exact active Edge Function findings
+- Active function: `trainee-password-recovery`, version 10, `verify_jwt=false`, Supabase JS 2.57.0.
+- It directly inserts, selects, and updates recovery rows rather than using atomic RPC transitions or a transactional Outbox.
+- The public handler allows wildcard CORS (`Access-Control-Allow-Origin: *`). Authorization is checked for coach actions via `auth.getUser()` and a server-side `profiles.role='coach'` lookup; request ownership is separately checked against the linked trainee.
+- Coach approval commits the approved row before calling Mediana. On timeout/error, it resets the row to pending. A provider timeout can be ambiguous, so this can permit a duplicate SMS after a message was accepted but the response was lost.
+- Password reset claims the row by direct conditional update, then calls `auth.admin.updateUserById`. Any returned Auth error is treated as definite and the request is restored to approved; this does not distinguish a confirmed non-application from a transport/ambiguous outcome.
+- The code uses a 4-digit code and a 15-minute expiry. The earlier implementation checklist records a requested 24-hour lifetime as a requirement to review explicitly; the deployed 15-minute value is therefore a product-policy mismatch that must be resolved before release, not silently carried forward.
+- The active implementation uses SHA-256 for the code hash rather than a keyed HMAC; because a four-digit code has only 10,000 possibilities, an unkeyed database hash is susceptible to offline enumeration after a data exposure.
+
+### Candidate packaging blocker
+- `docs/experimental/trainee-password-recovery-edge-candidate.ts` imports `./recovery-candidate-handler.mjs`, but the handler and crypto modules are currently stored under `docs/experimental`, not in a deployable `supabase/functions/trainee-password-recovery/` bundle. The adapter is therefore not deployable as-is; the final Edge Function must vendor/copy the required modules into its function directory and pass Deno type-check + local Supabase integration tests from that exact deployable layout.
+- The candidate intentionally has no SMS adapter, which is correct for safety. The worker currently rejects any provider other than its fake provider. A production adapter must remain disabled until a provider's current API, idempotency semantics, accepted/failed response contract, and credentials are verified.
+
+**Decision remains NOT READY.** This pass was read-only against the mirror and active function. No SQL, function, Auth setting, SMS, or trainee account was changed.
