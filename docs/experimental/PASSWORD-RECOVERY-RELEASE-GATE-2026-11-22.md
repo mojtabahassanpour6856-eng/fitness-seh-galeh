@@ -447,3 +447,15 @@ Latest complete candidate CI: run 45112328318, commit a3e305aa6b2533ed36915a4347
 Migration sequencing note: the atomic RPC candidate already rebuilds the active-request unique index to include processing. The standalone include-processing index draft is redundant and must not be applied as a separate extra step. Candidate order for isolated staging review is atomic RPC/schema, Outbox worker, then encrypted delivery payload. This sequence has not been applied to Supabase Test.
 
 Release remains NOT READY. Still required: a disposable Supabase staging project matching the real schema/roles/extensions; approved migration execution; PostgREST/schema-cache RPC verification; isolated Edge deployment with non-production secrets; real SMS provider adapter validation (Mediana remains disabled/unconfigured); synthetic coach/trainee end-to-end HTTP recovery; operational reconciliation/alerts/secret rotation/log review; and explicit approval before merge or production activity.
+## Disposable PostgREST contract harness added (2026-11-23)
+
+Added a CI-only PostgREST service alongside the disposable PostgreSQL concurrency job and a loopback-only contract test. The test runs immediately after the atomic candidate migration test and before the Outbox suite:
+- Requests a schema-cache reload through `NOTIFY pgrst, 'reload schema'` after the candidate RPCs have been created.
+- Calls `public.recovery_consume_request_rate_limit` over actual HTTP `/rpc/...` using the exact named arguments expected by PostgREST.
+- Signs short-lived HS256 JWTs with a disposable CI-only secret; no Supabase project keys or production secrets are used.
+- Confirms `service_role` can invoke the RPC, `anon` receives 401/403, and the SQL rate-limit result is preserved across HTTP.
+- Restricts the harness URL to `127.0.0.1`; it cannot target a hosted Supabase endpoint.
+
+This is a first real PostgREST transport/schema-cache/role-contract gate, not yet the complete PostgREST test of every recovery RPC or the hosted Supabase API gateway. It is not evidence of a live Test recovery flow. The new CI run must pass on the final branch head before the harness is considered validated. No remote database, Auth user, Edge Function, SMS provider, or production resource was changed.
+
+Release remains NOT READY.
