@@ -106,6 +106,36 @@ function request(body, { origin = 'https://app.example.test', authorization = ''
 async function body(response) { return await response.json(); }
 
 {
+  const f = fixture();
+  const oversized = new Uint8Array(8193).fill(0x20);
+  const streamed = new Request('https://candidate.invalid/', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: new ReadableStream({
+      start(controller) { controller.enqueue(oversized); controller.close(); }
+    }),
+    duplex: 'half'
+  });
+  assert.equal(streamed.headers.has('content-length'), false,
+    'test must exercise a streamed request with no Content-Length');
+  const r = await f.handler(streamed);
+  assert.equal(r.status, 413, 'streamed body above 8 KiB must be rejected');
+  assert.equal(f.calls.length, 0, 'oversized body must not reach RPC/Auth');
+  console.log('PASS: streamed body over 8 KiB is rejected before JSON parsing even without Content-Length.');
+}
+{
+  const f = fixture();
+  const r = await f.handler(new Request('https://candidate.invalid/', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json', 'content-length': '8193' },
+    body: JSON.stringify({ action: 'request', phone: '09123456789' })
+  }));
+  assert.equal(r.status, 413, 'declared body length above 8 KiB must be rejected');
+  assert.equal(f.calls.length, 0, 'declared oversized request must not reach RPC/Auth');
+  console.log('PASS: declared Content-Length above 8 KiB is rejected before reading/parsing.');
+}
+
+{
   const a = fixture({ submit: false });
   const b = fixture({ submit: true });
   const ra = await a.handler(request({ action: 'request', phone: '09123456789' }));
