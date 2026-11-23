@@ -568,3 +568,18 @@ The next integrated test must retain an old trainee access token, perform passwo
 Do not describe access-session invalidation as globally complete based only on Auth `getUser`. If PostgREST continues accepting the old JWT until expiry, decide whether the product's security requirement is satisfied by bounded JWT lifetime or whether an additional server-side session/version check is required. Do not weaken RLS or add a broad database lookup without a design review.
 
 This is a test-plan clarification only. No code, migration, hosted Supabase setting, Auth user, trainee data, or Edge Function was changed. Release remains **NOT READY**.
+
+
+## Local PostgREST old-access-JWT probe added (2026-11-23)
+
+Extended `docs/experimental/test-recovery-auth-local-stack.mjs` to distinguish Auth revocation from API-side JWT validation:
+- The test creates a uniquely named, synthetic RLS-protected probe table in the disposable local Supabase database.
+- A disposable Auth user owns exactly one synthetic row; the RLS policy uses `auth.uid() = owner_id`.
+- It retains an access JWT issued before password change, changes the password through local Auth Admin, then probes the row through the actual local PostgREST endpoint using the old JWT.
+- It separately probes with a new-password session and after global sign-out.
+- The test requires the old still-unexpired JWT to remain accepted by PostgREST in this local stack, documenting the distinction from Auth `getUser`; the fixture table and Auth user are cleaned up in `finally`.
+- The script refuses hosted API and database URLs and requires loopback-only local credentials. No hosted secrets are read.
+
+Workflow run `45115327425` / run #306 was triggered on commit `5e13780c59a3c3d6692aeb89e470cc0b785fd2d0`. At the latest observation, mock tests, Deno type-check, and PostgreSQL/PostgREST contract tests had passed; the disposable local Auth/PostgREST integration job was still running. Therefore the new old-JWT probe is **not yet CI-verified**.
+
+This test is a focused session-semantics probe, not the complete password-recovery E2E flow. It does not touch hosted Supabase, real trainee data, Production, or a live SMS provider. Release remains **NOT READY**.
