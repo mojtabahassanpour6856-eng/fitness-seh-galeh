@@ -505,7 +505,7 @@ GRANT EXECUTE ON FUNCTION recovery_private.finish_recovery_auth_update(uuid,uuid
 
 -- PostgREST exposes public by default. Keep recovery_private unexposed and
 -- provide narrowly granted public RPC wrappers for the service-role Edge client.
-CREATE OR REPLACE FUNCTION public.consume_registration_rate_limit(
+CREATE OR REPLACE FUNCTION public.recovery_consume_request_rate_limit(
   p_key_hash text, p_window_seconds integer, p_max_requests integer
 )
 RETURNS boolean LANGUAGE sql SECURITY DEFINER SET search_path = ''
@@ -558,8 +558,8 @@ AS $wrap$ SELECT recovery_private.finish_recovery_auth_update(
   p_request_id,p_operation_id,p_outcome,p_safe_error_code
 ) $wrap$;
 
-REVOKE ALL ON FUNCTION public.consume_registration_rate_limit(text,integer,integer) FROM PUBLIC, anon, authenticated;
-GRANT EXECUTE ON FUNCTION public.consume_registration_rate_limit(text,integer,integer) TO service_role;
+REVOKE ALL ON FUNCTION public.recovery_consume_request_rate_limit(text,integer,integer) FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.recovery_consume_request_rate_limit(text,integer,integer) TO service_role;
 REVOKE ALL ON FUNCTION public.recovery_submit_request(text) FROM PUBLIC, anon, authenticated;
 REVOKE ALL ON FUNCTION public.recovery_coach_review(uuid,uuid,text,text,timestamptz,text) FROM PUBLIC, anon, authenticated;
 REVOKE ALL ON FUNCTION public.recovery_record_wrong_attempt(uuid,text) FROM PUBLIC, anon, authenticated;
