@@ -755,3 +755,28 @@ Release remains **NOT READY FOR PRODUCTION**.
 - The candidate intentionally has no SMS adapter, which is correct for safety. The worker currently rejects any provider other than its fake provider. A production adapter must remain disabled until a provider's current API, idempotency semantics, accepted/failed response contract, and credentials are verified.
 
 **Decision remains NOT READY.** This pass was read-only against the mirror and active function. No SQL, function, Auth setting, SMS, or trainee account was changed.
+
+
+## Exact mirror constraint, privilege, and historical-row audit — 2026-11-23
+
+A further read-only audit was performed against the Supabase mirror. No schema or row was changed.
+
+- `profiles` contains only `id, role, full_name, phone, profile_image, created_at`; `role` is nullable and defaults to `trainee`. The migration must not assume a richer profile schema.
+- The recovery request table has a state CHECK requiring pending/rejected rows to have NULL token hash and expiry; approved/processing rows require both; completed/expired are terminal states with no additional token-null requirement.
+- The request table enforces Iranian normalized phone format (+989 plus nine digits), token attempts 0–10, a trainee FK with ON DELETE CASCADE, and a reviewed-by FK to auth.users.
+- Existing recovery indexes are the primary key, reviewed_by FK index, status/requested_at index, and a unique partial index on trainee_id for only pending and approved. The latter still excludes processing.
+- Table grants returned only postgres and service_role; no anon or authenticated table privileges were present. RLS independently denies all direct access for both public roles.
+- The mirror currently contains one historical recovery row: status expired, requested 2026-11-16, with token expiry cleared. It is terminal and does not block an active-request preflight. No active pending, approved, or processing row was returned.
+- The profiles RLS policy allows authenticated users to select only their own profile row. The recovery table policy remains deny-all for anon/authenticated.
+- list_migrations shows existing mirror migrations through 20261115144902; no password-recovery candidate migration has been applied.
+
+### Migration design implications
+
+1. Preserve the existing state CHECK semantics or replace them only with a reviewed equivalent that handles durable delivery/auth outcomes. Do not make the historical expired row invalid.
+2. Preserve phone-format and attempt-count invariants; do not weaken or drop them as a shortcut.
+3. Explicitly grant only minimum service-role execution and table privileges needed by the Edge Function/worker. Do not grant direct recovery-table access to anon/authenticated.
+4. Review the existing trainee-to-recovery ON DELETE CASCADE before changing it; this work must not delete trainee or recovery history.
+5. Match the exact existing partial-index name and definition, and account for processing without silently dropping historical rows.
+6. Do not apply a candidate migration until rewritten for hosted Supabase compatibility, exercised against this exact base schema in disposable integration, and backed by a verified mirror backup/rollback plan.
+
+**Release remains NOT READY.** This audit was read-only; no migration, function deployment, Auth change, SMS, password change, or trainee-data mutation occurred.
