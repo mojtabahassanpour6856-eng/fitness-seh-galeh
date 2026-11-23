@@ -268,6 +268,39 @@ async function main(){
  assert.equal(reassignedOutbox.rows[0].locked_until,null);
  console.log('PASS: coach reassignment after approval blocks claim and send-start; code is invalidated');
 
+ // If reassignment occurs after send-start, the encrypted payload must still not be released.
+ await pool.query(`UPDATE public.trainee_password_recovery_requests
+   SET status='pending',delivery_outcome=NULL,delivery_operation_id=NULL,
+       token_hash=NULL,token_expires_at=NULL,reviewed_at=NULL,reviewed_by=NULL,
+       token_attempts=0,delivery_payload=NULL,updated_at=now() WHERE id=$1`,[secondRequest]);
+ await pool.query(`UPDATE public.trainees SET coach_user_id=$1
+   WHERE id='20000000-0000-4000-8000-000000000007'`,[coach]);
+ const lateReassignmentApproval=await asService(
+   'SELECT public.recovery_coach_review_encrypted($1,$2,$3,$4,$5,$6,$7,$8) AS result',
+   reviewArgs(secondRequest,coach,'b')
+ );
+ assert.equal(lateReassignmentApproval.rows[0].result.ok,true);
+ const lateLease=await asService(
+   'SELECT * FROM recovery_private.claim_recovery_outbox($1,30)',[workerA]
+ );
+ assert.equal(lateLease.rowCount,1);
+ const ll=lateLease.rows[0];
+ assert.equal(await asService(
+   'SELECT recovery_private.begin_recovery_outbox_send($1,$2,$3) AS ok',
+   [ll.outbox_id,workerA,ll.lease_generation]
+ ).then(r=>r.rows[0].ok),true);
+ await pool.query(`UPDATE public.trainees SET coach_user_id=$1
+   WHERE id='20000000-0000-4000-8000-000000000007'`,[otherCoach]);
+ assert.equal((await asService(
+   'SELECT * FROM public.recovery_outbox_fetch_payload($1,$2,$3)',
+   [ll.outbox_id,workerA,ll.lease_generation]
+ )).rowCount,0,'payload fetch must re-check coach ownership after send-start');
+ assert.equal(await asService(
+   "SELECT public.recovery_outbox_finish($1,$2,$3,'unknown',NULL,'coach_assignment_changed_after_send_start') AS ok",
+   [ll.outbox_id,workerA,ll.lease_generation]
+ ).then(r=>r.rows[0].ok),true);
+ console.log('PASS: coach reassignment after send-start blocks encrypted payload retrieval');
+
  // End-to-end exercise: real PostgreSQL RPCs + production Worker module + fake SMS provider.
  const {webcrypto}=require('node:crypto');
  const {createRecoveryCandidateHandler}=await import('./recovery-candidate-handler.mjs');
