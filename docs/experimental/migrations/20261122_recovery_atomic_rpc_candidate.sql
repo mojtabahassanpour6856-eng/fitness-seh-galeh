@@ -197,7 +197,6 @@ BEGIN
     AND t.approval_status = 'active'
     AND t.auth_user_id IS NOT NULL
     AND t.archived_at IS NULL
-  FOR UPDATE
   ON CONFLICT (trainee_id)
     WHERE status IN ('pending','approved','processing')
   DO NOTHING;
