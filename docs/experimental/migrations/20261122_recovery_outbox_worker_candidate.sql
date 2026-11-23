@@ -237,7 +237,7 @@ END $$;
 -- filtering them out, so they cannot strand an open recovery request forever.
 CREATE OR REPLACE FUNCTION recovery_private.reconcile_invalid_pre_send_recovery_outbox()
 RETURNS integer LANGUAGE plpgsql SECURITY DEFINER SET search_path = ''
-AS $
+AS $reconcile$
 DECLARE v_row record;
         v_invalid boolean;
         v_count integer := 0;
@@ -289,7 +289,7 @@ BEGIN
     END IF;
   END LOOP;
   RETURN v_count;
-END $;
+END $reconcile$;
 
 -- The approved request and its SMS outbox row are committed in the same transaction.
 -- Each approval has its own immutable delivery operation; a later coach re-approval
