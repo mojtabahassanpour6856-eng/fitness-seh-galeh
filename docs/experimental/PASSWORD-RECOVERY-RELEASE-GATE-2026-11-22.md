@@ -663,3 +663,17 @@ The candidate implementation had an unintended policy mismatch: the HTTP handler
 CI run #320 completed successfully on commit `78055425856e38703ad5dddccff5740a644f7564`: all four jobs passed (mock recovery tests, Deno candidate check, disposable PostgreSQL concurrency/Outbox tests, and disposable local Auth/PostgREST session probe). The Auth probe confirmed old password rejection, new password acceptance, refresh-token revocation, and Auth `getUser` rejection. It also reconfirmed that a still-unexpired old access JWT remains accepted by local PostgREST after password update and global sign-out. Therefore this does not establish immediate API-session revocation.
 
 This CI success validates the isolated candidate checks only. It does not constitute the complete HTTP-to-worker-to-Auth recovery E2E flow, does not validate a real SMS provider, and does not authorize migration/deployment to hosted Test or Production. The full E2E and the bounded-JWT or server-side session/version-check architecture decision remain open. No hosted Supabase project, real trainee data, live Auth account, or SMS provider was used. Release remains **NOT READY FOR PRODUCTION**.
+
+
+## Old access-JWT mitigation decision note (2026-11-23)
+
+The local Auth/PostgREST probe proves that password update and Auth global sign-out revoke refresh-token use and cause Auth `getUser` to reject the old access token, but do not invalidate an already-issued, still-unexpired JWT at PostgREST. The release design must explicitly choose the API-side residual-access guarantee; do not claim immediate global logout from Auth revocation alone.
+
+Two viable directions require separate review:
+
+1. **Bounded access-token lifetime.** Configure and verify a suitably short JWT lifetime for the Auth project, while ensuring supported clients refresh normally. This bounds the residual API access window to the remaining JWT lifetime, but it is not instantaneous revocation and affects every user/session in the project, not only password recovery. Before adoption, verify the actual hosted Auth configuration capability, minimum/maximum values, refresh behavior on Android/iOS/web, clock-skew handling, and user impact in an isolated Test environment.
+2. **Server-side session/version enforcement in RLS.** Issue a signed session/version claim and compare it against a server-side per-user version during authorization, incrementing that version during recovery. This can provide prompt API-side invalidation, but requires a carefully reviewed access-token hook/claim lifecycle and consistent enforcement across every sensitive table, view, RPC, and storage policy. A missed policy or stale claim design would create a security gap. It must not be implemented as a broad weakening or bypass of RLS.
+
+Do not combine these approaches or change hosted Auth settings as an experiment without an explicit architecture decision and isolated Test plan. The current candidate has neither mitigation implemented; this remains a release blocker. The first validation should inventory the app's current JWT lifetime and refresh behavior, then map all protected data surfaces and RLS policies before choosing. Preserve the existing old-JWT probe as a regression test: after the selected mitigation is implemented, test both Auth and actual PostgREST access with the old JWT.
+
+No code, RLS policy, hosted Auth setting, migration, or user session was changed for this decision note. Release remains **NOT READY FOR PRODUCTION**.
