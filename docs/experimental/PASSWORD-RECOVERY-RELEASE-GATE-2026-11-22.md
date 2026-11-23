@@ -428,3 +428,22 @@ Read-only SQL against project udptdznbvewkublvzmtm reconfirmed that the existing
 Because the candidate RPCs/schema are intentionally not installed, a live PostgREST invocation of the new RPCs cannot yet be tested. That compatibility check belongs after a separately approved, isolated Test migration and must use only synthetic test data.
 
 All automated candidate CI gates are green on the recorded commit, but the overall release remains NOT READY. Remaining gates include migration review and explicit approval, any required guarded cleanup approval, controlled Test migration, PostgREST RPC/schema-cache verification, and a complete synthetic Test recovery flow including coach authorization, delivery adapter, code replay/expiry/attempt limits, Auth password update, and session invalidation. Production remains out of scope.
+## Coach-reassignment dispatch/redemption guard and latest green CI (2026-11-23)
+
+Read-only inspection of the current Supabase Test schema confirmed that the existing recovery table has RLS enabled, its current partial unique index covers pending/approved but not processing, and its state/attempt constraints must be preserved. No schema, policy, data, Auth user, or Edge Function was changed by this inspection.
+
+A further security gap was found in the candidate flow: a trainee could be reassigned after a coach approved recovery but before SMS dispatch or code redemption. The experimental branch now rechecks that the current trainee coach is the same non-null coach recorded as reviewer:
+- Outbox claim excludes requests whose trainee is reassigned, inactive, or archived.
+- Send-start locks and rechecks the trainee row; if the assignment changed before send-start, it expires the request, invalidates the code, and fails the Outbox item without sending.
+- Encrypted payload retrieval independently rechecks current coach ownership.
+- The Worker performs a final ownership check immediately before calling the fake provider.
+- Reset claim expires and invalidates a code approved by a former coach.
+- Disposable PostgreSQL and Worker tests cover reassignment before claim, between claim and send-start, after send-start before payload retrieval, and after delivery before redemption.
+
+Test fixture cleanup was added so the reassignment test does not contaminate the following Outbox suite.
+
+Latest complete candidate CI: run 45112328318, commit a3e305aa6b2533ed36915a434765f9e74569aa9f — SUCCESS. All four jobs passed: mock-recovery-tests, postgres-concurrency-tests, deno-edge-candidate-check, and supabase-local-auth-integration. The PostgreSQL suite includes the new reassignment cases; the local Auth suite remains disposable/loopback-only.
+
+Migration sequencing note: the atomic RPC candidate already rebuilds the active-request unique index to include processing. The standalone include-processing index draft is redundant and must not be applied as a separate extra step. Candidate order for isolated staging review is atomic RPC/schema, Outbox worker, then encrypted delivery payload. This sequence has not been applied to Supabase Test.
+
+Release remains NOT READY. Still required: a disposable Supabase staging project matching the real schema/roles/extensions; approved migration execution; PostgREST/schema-cache RPC verification; isolated Edge deployment with non-production secrets; real SMS provider adapter validation (Mediana remains disabled/unconfigured); synthetic coach/trainee end-to-end HTTP recovery; operational reconciliation/alerts/secret rotation/log review; and explicit approval before merge or production activity.
