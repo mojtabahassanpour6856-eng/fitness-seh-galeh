@@ -102,6 +102,8 @@ async function main(){
       await assert.rejects(pool.query('UPDATE public.trainee_password_recovery_requests SET delivery_payload=$2 WHERE id=$1',[request,JSON.stringify(bad)]),
         undefined,'malformed envelope must not be accepted by the database constraint');
     }
+    // Convert the seeded terminal-history row into a fresh pending request for the approval path.
+    await pool.query("UPDATE public.trainee_password_recovery_requests SET status='pending', updated_at=now() WHERE id=$1",[request]);
     // Valid encrypted envelope approval must atomically enqueue exactly one matching Outbox row.
     const op='50000000-0000-4000-8000-000000000002';
     const approved=await pool.query(
