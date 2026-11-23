@@ -53,6 +53,10 @@ try {
   const passwordChangeRevokedExistingRefresh = Boolean(refreshAfterPasswordChange.error);
   const oldAccessAfterPasswordChange = await admin.auth.getUser(sessionA.data.session.access_token);
   const passwordChangeLeftOldAccessAccepted = !oldAccessAfterPasswordChange.error;
+  assert.equal(passwordChangeRevokedExistingRefresh, true,
+    'password update must revoke previously issued refresh tokens');
+  assert.equal(passwordChangeLeftOldAccessAccepted, false,
+    'old access JWT must be rejected by Auth getUser after password update');
 
   const sessionC = await signIn(newPassword);
   const sessionD = await signIn(newPassword);
@@ -67,6 +71,8 @@ try {
   assert.ok(refreshAfterGlobalSignOut.error, 'global sign-out must revoke other sessions refresh tokens');
   const oldAccessAfterGlobalSignOut = await admin.auth.getUser(sessionC.data.session.access_token);
   const globalSignOutLeftOldAccessAccepted = !oldAccessAfterGlobalSignOut.error;
+  assert.equal(globalSignOutLeftOldAccessAccepted, false,
+    'global sign-out must reject old access JWTs in the disposable Auth stack');
 
   console.log('PASS: disposable local Auth user; admin password update; old-password rejection; new-password login; global sign-out revokes other refresh tokens.');
   console.log(`OBSERVATION: password update alone revoked existing refresh tokens: ${passwordChangeRevokedExistingRefresh ? 'yes' : 'no'}.`);
