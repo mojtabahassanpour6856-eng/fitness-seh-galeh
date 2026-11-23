@@ -156,6 +156,7 @@ AS $$
 DECLARE
   v_match_count integer;
   v_trainee_id uuid;
+  v_request_coach_id uuid;
   v_inserted integer;
 BEGIN
   IF p_phone_normalized IS NULL OR
@@ -177,7 +178,7 @@ BEGIN
     RETURN false;
   END IF;
 
-  SELECT t.id INTO v_trainee_id
+  SELECT t.id, t.coach_user_id INTO v_trainee_id, v_request_coach_id
   FROM public.trainees AS t
   WHERE t.phone_normalized = p_phone_normalized
     AND t.approval_status = 'active'
@@ -185,9 +186,17 @@ BEGIN
     AND t.archived_at IS NULL
   FOR UPDATE;
 
-  IF NOT FOUND THEN
+  IF NOT FOUND OR v_request_coach_id IS NULL THEN
     RETURN false;
   END IF;
+
+  -- A trainee who changed coaches must start a fresh request. Retire stale
+  -- pending requests before the unique-open-request insert below.
+  UPDATE public.trainee_password_recovery_requests
+  SET status = 'expired', updated_at = now()
+  WHERE trainee_id = v_trainee_id
+    AND request_coach_user_id IS DISTINCT FROM v_request_coach_id
+    AND status = 'pending';
 
   INSERT INTO public.trainee_password_recovery_requests
     (trainee_id, phone_normalized, status, request_coach_user_id)
