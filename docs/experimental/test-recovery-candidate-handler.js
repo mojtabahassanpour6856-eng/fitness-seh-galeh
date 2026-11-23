@@ -45,7 +45,7 @@ function fixture(overrides = {}) {
   const admin = {
     rpc: async (name, args) => {
       calls.push({ type: 'rpc', name, args });
-      if (name === 'consume_registration_rate_limit') return { data: state.rate, error: state.rateError || null };
+      if (name === 'recovery_consume_request_rate_limit') return { data: state.rate, error: state.rateError || null };
       const map = {
         recovery_submit_request: state.submit,
         recovery_coach_review: state.reviewed,
@@ -142,7 +142,7 @@ async function body(response) { return await response.json(); }
   const rb = await b.handler(request({ action: 'request', phone: '09123456789' }));
   assert.equal(ra.status, 202); assert.equal(rb.status, 202);
   assert.deepEqual(await body(ra), await body(rb));
-  assert.equal(a.calls.findIndex(x => x.name === 'consume_registration_rate_limit') <
+  assert.equal(a.calls.findIndex(x => x.name === 'recovery_consume_request_rate_limit') <
     a.calls.findIndex(x => x.name === 'recovery_submit_request'), true);
   assert.equal(b.calls.find(x => x.name === 'recovery_submit_request').args.p_phone_normalized, '+989123456789');
   console.log('PASS: public request response is identical regardless of internal account eligibility result.');
