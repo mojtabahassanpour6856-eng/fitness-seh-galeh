@@ -34,6 +34,7 @@ on:
       - 'docs/experimental/migrations/20261122_dispose_expired_legacy_approved_request.sql'
       - 'docs/experimental/test-recovery-atomic-rpc-candidate.js'
       - 'docs/experimental/test-recovery-postgrest-contract.mjs'
+      - 'docs/experimental/test-recovery-postgrest-outbox-contract.mjs'
       - 'docs/experimental/postgres-concurrency-test.js'
       - 'docs/experimental/migrations/20261122_include_processing_in_active_recovery_unique_index.sql'
       - '.github/workflows/test-mock-recovery-experiment.yml'
@@ -222,3 +223,13 @@ jobs:
           PGPASSWORD: postgres
           PGDATABASE: recovery_ci
         run: node docs/experimental/test-recovery-outbox-postgres.js
+      - name: Run PostgREST Outbox and encrypted-review RPC contract checks
+        env:
+          PGHOST: 127.0.0.1
+          PGPORT: 5432
+          PGUSER: postgres
+          PGPASSWORD: postgres
+          PGDATABASE: recovery_ci
+          PGRST_URL: http://127.0.0.1:3000
+          PGRST_JWT_SECRET: disposable-ci-only-postgrest-secret-32-bytes-min
+        run: node docs/experimental/test-recovery-postgrest-outbox-contract.mjs
