@@ -33,6 +33,7 @@ on:
       - 'docs/experimental/migrations/20261122_recovery_atomic_rpc_candidate.sql'
       - 'docs/experimental/migrations/20261122_dispose_expired_legacy_approved_request.sql'
       - 'docs/experimental/test-recovery-atomic-rpc-candidate.js'
+      - 'docs/experimental/test-recovery-postgrest-contract.mjs'
       - 'docs/experimental/postgres-concurrency-test.js'
       - 'docs/experimental/migrations/20261122_include_processing_in_active_recovery_unique_index.sql'
       - '.github/workflows/test-mock-recovery-experiment.yml'
@@ -165,6 +166,21 @@ jobs:
           --health-interval 5s
           --health-timeout 5s
           --health-retries 10
+      postgrest:
+        image: postgrest/postgrest:v12.2.3
+        env:
+          PGRST_DB_URI: postgres://postgres:postgres@postgres:5432/recovery_ci
+          PGRST_DB_SCHEMAS: public
+          PGRST_DB_ANON_ROLE: anon
+          PGRST_JWT_SECRET: disposable-ci-only-postgrest-secret-32-bytes-min
+          PGRST_SERVER_PORT: 3000
+        ports:
+          - 3000:3000
+        options: >-
+          --health-cmd "wget --no-verbose --tries=1 --spider http://127.0.0.1:3000/ || exit 1"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
     steps:
       - name: Checkout isolated experiment branch
         uses: actions/checkout@v4
@@ -192,6 +208,16 @@ jobs:
           PGPASSWORD: postgres
           PGDATABASE: recovery_ci
         run: node docs/experimental/test-recovery-atomic-rpc-candidate.js
+      - name: Run PostgREST schema-cache, named-argument, and role contract checks
+        env:
+          PGHOST: 127.0.0.1
+          PGPORT: 5432
+          PGUSER: postgres
+          PGPASSWORD: postgres
+          PGDATABASE: recovery_ci
+          PGRST_URL: http://127.0.0.1:3000
+          PGRST_JWT_SECRET: disposable-ci-only-postgrest-secret-32-bytes-min
+        run: node docs/experimental/test-recovery-postgrest-contract.mjs
       - name: Run fenced Outbox/Worker PostgreSQL integration tests (disposable only)
         env:
           PGHOST: 127.0.0.1
