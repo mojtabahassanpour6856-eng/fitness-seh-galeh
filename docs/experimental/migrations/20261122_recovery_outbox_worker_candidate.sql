@@ -53,7 +53,7 @@ BEGIN
       WHERE r.id=o.recovery_request_id AND r.status='approved'
         AND r.delivery_outcome='pending'
         AND r.delivery_operation_id=o.delivery_operation_id
-        AND t.coach_user_id IS NOT DISTINCT FROM r.reviewed_by
+        AND r.reviewed_by IS NOT NULL AND t.coach_user_id = r.reviewed_by
         AND t.approval_status='active' AND t.archived_at IS NULL
     )
   ORDER BY o.next_attempt_at, o.created_at
