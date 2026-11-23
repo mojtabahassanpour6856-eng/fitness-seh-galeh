@@ -38,14 +38,10 @@ $guard$;
 ALTER TABLE public.trainee_password_recovery_requests
   ADD COLUMN IF NOT EXISTS request_coach_user_id uuid REFERENCES public.profiles(id);
 
--- Backfill only terminal historical rows. Never reassign or expire an active request
--- as a migration side effect; the preflight above requires a manual disposition.
-UPDATE public.trainee_password_recovery_requests r
-SET request_coach_user_id = t.coach_user_id
-FROM public.trainees t
-WHERE t.id = r.trainee_id AND r.request_coach_user_id IS NULL
-  AND r.status IN ('rejected','completed','expired');
-
+-- The current trainee.coach_user_id is NOT proof of who owned the trainee
+-- when a historical recovery request was submitted. Never infer historical authority.
+-- Require an independently verified request-time mapping or an explicit disposition
+-- before staging; do not silently bind old requests to the trainee's current coach.
 DO $backfill_guard$
 BEGIN
   IF EXISTS (
@@ -53,7 +49,7 @@ BEGIN
     WHERE request_coach_user_id IS NULL
   ) THEN
     RAISE EXCEPTION
-      'Cannot safely backfill request-time coach binding for historical rows; manual disposition required';
+      'Historical recovery rows lack verified request-time coach binding; provide an audited mapping/disposition before migration';
   END IF;
 END
 $backfill_guard$;
