@@ -49,6 +49,10 @@ async function main() {
       IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname='service_role') THEN CREATE ROLE service_role BYPASSRLS; END IF;
     END $$;
     DROP SCHEMA IF EXISTS recovery_private CASCADE;
+    DROP FUNCTION IF EXISTS public.consume_registration_rate_limit(text,integer,integer);
+    CREATE FUNCTION public.consume_registration_rate_limit(
+      p_key_hash text, p_window_seconds integer DEFAULT 3600, p_max_requests integer DEFAULT 5
+    ) RETURNS boolean LANGUAGE sql AS $ SELECT false $;
     DROP TABLE IF EXISTS public.trainee_password_recovery_requests CASCADE;
     DROP TABLE IF EXISTS public.trainees CASCADE;
     DROP TABLE IF EXISTS public.profiles CASCADE;
@@ -111,6 +115,15 @@ async function main() {
   await pool.query('DELETE FROM public.trainee_password_recovery_requests WHERE id=$1',[req4]);
   await pool.query(migration);
   console.log('PASS: candidate migration refuses to silently strand legacy approved/processing requests');
+
+  const registrationLimiter=await pool.query(`
+    SELECT pg_get_functiondef('public.consume_registration_rate_limit(text,integer,integer)'::regprocedure) AS definition
+  `);
+  assert.match(registrationLimiter.rows[0].definition,/SELECT false/,
+    'recovery migration must preserve the pre-existing registration rate limiter');
+  assert.doesNotMatch(registrationLimiter.rows[0].definition,/recovery_private/,
+    'registration limiter must not be rebound to recovery state');
+  console.log('PASS: recovery migration leaves the existing registration limiter unchanged');
 
   const acl=await pool.query(`
     SELECT
