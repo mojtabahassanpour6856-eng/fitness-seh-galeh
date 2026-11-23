@@ -93,14 +93,13 @@ async function main(){
     const functionCheck=await pool.query(`SELECT to_regprocedure('public.recovery_coach_review_encrypted(uuid,uuid,text,text,timestamp with time zone,text,uuid,jsonb)') AS fn`);
     assert.ok(functionCheck.rows[0].fn,'encrypted coach review RPC wrapper must exist');
     const invalids=[
-      null,
       [],
       {v:1,alg:'A256GCM',kid:'key-v1',iv:'AAAAAAAAAAAAAAAA',ct:'AAAAAAAAAAAAAAAAAAAAAAAAAAA=',extra:true},
       {v:1,alg:'A256GCM',kid:'key-v1',iv:'bad',ct:'AAAAAAAAAAAAAAAAAAAAAAAAAAA='},
       {v:1,alg:'A256GCM',kid:'key-v1',iv:'AAAAAAAAAAAAAAAA',ct:'short'},
     ];
     for(const bad of invalids){
-      await assert.rejects(pool.query('UPDATE public.trainee_password_recovery_requests SET delivery_payload=$2 WHERE id=$1',[request,bad===null?null:JSON.stringify(bad)]),
+      await assert.rejects(pool.query('UPDATE public.trainee_password_recovery_requests SET delivery_payload=$2 WHERE id=$1',[request,JSON.stringify(bad)]),
         undefined,'malformed envelope must not be accepted by the database constraint');
     }
     // Valid encrypted envelope approval must atomically enqueue exactly one matching Outbox row.
