@@ -115,8 +115,8 @@ async function main(){
  const secondRequest='30000000-0000-4000-8000-000000000006';
  await pool.query(`INSERT INTO public.trainees(id,coach_user_id,auth_user_id,approval_status,phone_normalized)
    VALUES ('20000000-0000-4000-8000-000000000007',$1,'10000000-0000-4000-8000-000000000003','active','+989123450002')`,[coach]);
- await pool.query(`INSERT INTO public.trainee_password_recovery_requests(id,trainee_id,phone_normalized,status)
-   VALUES ($1,'20000000-0000-4000-8000-000000000007','+989123450002','pending')`,[secondRequest]);
+ await pool.query(`INSERT INTO public.trainee_password_recovery_requests(id,trainee_id,phone_normalized,status,request_coach_user_id)
+   VALUES ($1,'20000000-0000-4000-8000-000000000007','+989123450002','pending',$2)`,[secondRequest,coach]);
  const secondApproval=await asService(
    'SELECT public.recovery_coach_review_encrypted($1,$2,$3,$4,$5,$6,$7,$8) AS result',
    reviewArgs(secondRequest,coach,'d')
