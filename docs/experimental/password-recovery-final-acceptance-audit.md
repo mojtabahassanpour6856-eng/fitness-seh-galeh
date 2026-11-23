@@ -227,3 +227,28 @@ Remaining release blockers:
 4. Complete staging security, monitoring, secret rotation, rollback/reconciliation rehearsal, and explicit release approval.
 
 CI run `45125079476` is a successful candidate test run, **not production release approval**. PR #260 remains open and Draft. Release remains **NOT READY FOR PRODUCTION**.
+
+## Main-branch application RLS inventory — partial repository audit — 2026-11-23
+
+Read-only review of the complete Git tree on main (101 tracked paths) found 10 Supabase migration files, one Edge Function, and no checked-in base schema/dump or general-purpose RLS baseline migration. All 10 migration files were opened; relevant policy/function definitions in the nine security/data migrations were inspected. The CERELAC migration is an intentionally non-automatic reference-data INSERT and does not define access controls.
+
+### Findings visible in the checked-in migrations
+
+- trainee_push_subscriptions: RLS is enabled; authenticated CRUD grants are constrained by four trainee-owner policies joining trainees.auth_user_id to auth.uid(). The policies are ownership-based and do not independently check JWT exp or an active Auth session row.
+- trainee_body_analysis_publications: RLS is enabled; table access is revoked from anon/public; authenticated receives SELECT/INSERT and later DELETE. Coach policies require coach role, matching coach_user_id, and current trainee assignment. Trainee SELECT delegates to private.can_access_trainee. No trainee write policy is created.
+- trainee-health-reports Storage read policy: restricts to active trainee and exact folder identity, with own-trainee or assigned-coach checks. Coach DELETE policy is limited to the assigned trainee's published folder. The report migration only appends text/html to the existing bucket MIME allow-list; it does not define the bucket's full policy set.
+- Workout and nutrition atomic RPCs use SECURITY DEFINER for coach writes, check authenticated identity, coach role, and private.can_access_trainee, and revoke PUBLIC/anon execution while granting authenticated execution. Experimental workout RPCs follow similar checks. These functions still depend on correctness and security configuration of private helper functions and underlying grants.
+- record_trainee_progress is SECURITY INVOKER, rejects coach callers, and checks that the caller is the active trainee owning the exact trainee row. It relies on underlying table RLS/grants.
+- send-coach-chat-push uses a service-role admin client after validating the caller with Auth and checking that the authenticated user is the trainee's assigned coach before reading subscriptions and sending pushes. Because service role bypasses RLS, the function's explicit authorization check is security-critical.
+
+### Material gaps / not yet verified
+
+1. The repository does not contain the complete foundational schema or all historical migrations. Base RLS policies for core tables such as trainees, weight_logs, body_analyses, nutrition_plans, workout tables, foods, and private helper functions private.is_coach() / private.can_access_trainee() cannot be established from this repository snapshot.
+2. The full Storage policy set, bucket configuration, and policies for existing archived PDF/report objects are not reconstructible from additive migrations alone.
+3. A complete inventory of public views, materialized views, exposed RPCs, table grants, default privileges, or direct client PostgREST access cannot be claimed from this partial migration history.
+4. The ownership-only policies noted above do not themselves enforce JWT expiry or Auth session revocation. The local synthetic proof described earlier demonstrates one possible targeted predicate, not app-wide coverage.
+5. Runtime verification against hosted Supabase was deliberately not performed. No SQL was run against either hosted project and no policy, grant, Auth setting, storage object, or user data was changed.
+
+### Audit status
+
+This is a first-pass inventory of checked-in additive migrations, not a complete RLS/security sign-off. Production release remains NOT READY. Next required evidence is the actual schema/policy/grant inventory from a disposable or explicitly approved staging database, including pg_policies, table/sequence/function privileges, views and Storage policies, followed by per-surface ownership and session/expiry tests. Do not infer missing policies from absence in this repository, and do not apply policy changes based on this partial review.
