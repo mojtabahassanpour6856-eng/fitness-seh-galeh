@@ -236,7 +236,7 @@ async function main(){
  const httpAdmin={
    async rpc(name,args){
      const calls={
-       consume_registration_rate_limit:['SELECT public.consume_registration_rate_limit($1,$2,$3) AS result',[args.p_key_hash,args.p_window_seconds,args.p_max_requests]],
+       recovery_consume_request_rate_limit:['SELECT public.recovery_consume_request_rate_limit($1,$2,$3) AS result',[args.p_key_hash,args.p_window_seconds,args.p_max_requests]],
        recovery_submit_request:['SELECT public.recovery_submit_request($1) AS result',[args.p_phone_normalized]],
        recovery_coach_review_encrypted:['SELECT public.recovery_coach_review_encrypted($1,$2,$3,$4,$5,$6,$7,$8) AS result',
          [args.p_request_id,args.p_actor_user_id,args.p_decision,args.p_token_hash,args.p_token_expires_at,args.p_hmac_key_version,args.p_delivery_operation_id,args.p_delivery_payload]]
