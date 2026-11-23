@@ -252,3 +252,26 @@ Read-only review of the complete Git tree on main (101 tracked paths) found 10 S
 ### Audit status
 
 This is a first-pass inventory of checked-in additive migrations, not a complete RLS/security sign-off. Production release remains NOT READY. Next required evidence is the actual schema/policy/grant inventory from a disposable or explicitly approved staging database, including pg_policies, table/sequence/function privileges, views and Storage policies, followed by per-surface ownership and session/expiry tests. Do not infer missing policies from absence in this repository, and do not apply policy changes based on this partial review.
+## Frontend Data API surface inventory — static pass — 2026-11-23
+
+To identify the tables that require policy coverage, the main-branch frontend entry candidates index-1.html, index-2.html, and fitness_seh_galeh_FINAL_CLEAN2.html were scanned for REST paths and Supabase client calls. index.html itself is empty in this repository snapshot. The two larger index candidates share a broad direct-REST access pattern. The static scan identified these 24 distinct table names (including one naming variant): activity_logs, body_analyses, challenge_participants, challenges, exercises, fasting_logs, foods, nutrition_meal_foods, nutrition_meals, nutrition_plans, profiles, trainee_food_logs, trainee_goals, trainee_injuries, trainee_membership, trainee_memberships, trainee_notes, trainee_payments, trainee_supplements, trainee_workout_exercises, trainee_workout_plans, trainees, trainer_exercises, water_logs, weight_logs. This is a candidate inventory, not proof every table is deployed or exposed.
+
+### Frontend authentication and authorization observations
+
+- The browser bundle contains a Supabase publishable key, which is expected to be public and is not a service-role secret. A fetch wrapper adds the current user's access token to REST calls when a session exists, but falls back to the publishable key as Bearer token when there is no session. Therefore unauthenticated/anon requests are possible by design and must be denied or safely restricted by database grants and RLS for every sensitive table.
+- The UI hides navigation elements based on profile.role, but client-side visibility is not an authorization boundary. All trainee/coach separation must be enforced server-side by RLS, RPC authorization, and Storage policies.
+- The app directly reads/writes several tables through PostgREST (including foods, trainees, nutrition_plans, nutrition_meals, nutrition_meal_foods, activity_logs, water_logs, weight_logs, body_analyses, workout tables, and trainee_* tables). The full list above must be reconciled against live pg_policies and grants; it must not be assumed that the additive migrations provide coverage for these legacy tables.
+- index-2.html includes both trainee_membership and trainee_memberships in the static string inventory. This variant needs to be reconciled against the actual deployed schema and runtime requests before any policy conclusion.
+- Separate modules also access trainee_body_analysis_publications, trainee_health_reports Storage, the Top Genesis archive table/bucket (constants are defined separately), and coach_nutrition_templates.
+
+### Priority for the next audit pass
+
+1. Reconcile the 24 candidate table names plus the separate report/archive/template surfaces against the actual schema and Data API exposure settings.
+2. For every exposed table, capture relrowsecurity/relforcerowsecurity, grants, and pg_policies for anon/authenticated; identify tables with grants but no RLS, RLS with no policy, and UPDATE policies lacking paired WITH CHECK.
+3. Enumerate public views and functions, including SECURITY DEFINER functions and EXECUTE grants; inspect private helper definitions and search_path safety.
+4. Enumerate all Storage buckets and policies, then test exact coach/trainee folder ownership and deletion boundaries.
+5. Exercise anon, coach A, coach B, trainee A, and trainee B synthetic identities against representative read/write paths. Do not use real trainee identities or production data.
+
+### Scope and caution
+
+This frontend inventory was read-only and repository-only. The deployed Pages entry point is not yet conclusively identified from this tree, and the live database schema has not been queried. No hosted database, Auth setting, policy, file, or user data was accessed or modified. Do not treat hidden UI, publishable-key secrecy, or these static table names as a substitute for RLS evidence.
