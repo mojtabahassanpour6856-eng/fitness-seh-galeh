@@ -29,6 +29,19 @@ const probeSecret = `synthetic-probe-${randomUUID()}`;
 let userId;
 let probeTableCreated = false;
 
+function jwtLifetimeSeconds(accessToken) {
+  const parts = String(accessToken || '').split('.');
+  assert.equal(parts.length, 3, 'Auth access token must be a JWT');
+  const payload = JSON.parse(Buffer.from(parts[1], 'base64url').toString('utf8'));
+  assert.ok(Number.isInteger(payload.iat) && Number.isInteger(payload.exp), 'JWT must contain integer iat/exp claims');
+  return payload.exp - payload.iat;
+}
+function assertCandidateJwtLifetime(session, label) {
+  assert.ok(session?.access_token, `${label}: access token is required`);
+  assert.equal(jwtLifetimeSeconds(session.access_token), 900,
+    `${label}: disposable Auth JWT must expire exactly 900 seconds after issuance`);
+}
+
 async function signIn(password) {
   const client = makeAnon();
   const result = await client.auth.signInWithPassword({ email, password });
@@ -75,6 +88,16 @@ try {
   assert.equal(sessionA.error, null);
   assert.equal(sessionB.error, null);
   assert.ok(sessionA.data.session?.refresh_token && sessionB.data.session?.refresh_token);
+  assertCandidateJwtLifetime(sessionA.data.session, 'first disposable Auth session');
+  assertCandidateJwtLifetime(sessionB.data.session, 'second disposable Auth session');
+
+  const refreshProbe = await signIn(oldPassword);
+  assert.equal(refreshProbe.error, null);
+  const refreshedProbe = await refreshProbe.client.auth.refreshSession({
+    refresh_token: refreshProbe.data.session.refresh_token
+  });
+  assert.equal(refreshedProbe.error, null, 'refresh before password change must remain functional');
+  assertCandidateJwtLifetime(refreshedProbe.data.session, 'refreshed disposable Auth session');
 
   const changed = await admin.auth.admin.updateUserById(userId, { password: newPassword });
   assert.equal(changed.error, null, 'Auth Admin password update must succeed');
@@ -85,6 +108,7 @@ try {
   const newLogin = await signIn(newPassword);
   assert.equal(newLogin.error, null, 'new password must authenticate');
   assert.equal(newLogin.data.user.id, userId);
+  assertCandidateJwtLifetime(newLogin.data.session, 'new-password disposable Auth session');
 
   const refreshAfterPasswordChange = await sessionB.client.auth.refreshSession({
     refresh_token: sessionB.data.session.refresh_token
