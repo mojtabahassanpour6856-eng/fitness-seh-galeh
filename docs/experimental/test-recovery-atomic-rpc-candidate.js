@@ -394,6 +394,11 @@ async function main() {
     'a code approved by the former coach must not be redeemable after reassignment');
   state=await pool.query('SELECT status,token_hash,token_expires_at FROM public.trainee_password_recovery_requests WHERE id=$1',[req5]);
   assert.deepEqual(state.rows[0],{status:'expired',token_hash:null,token_expires_at:null});
+  // Restore disposable fixture state so the following Outbox suite starts from its expected pending request.
+  await pool.query('UPDATE public.trainees SET coach_user_id=$1 WHERE id=$2',[coach2,'20000000-0000-4000-8000-000000000006']);
+  await pool.query(`UPDATE public.trainee_password_recovery_requests
+    SET status='pending',token_hash=NULL,token_expires_at=NULL,reviewed_at=NULL,reviewed_by=NULL,
+        updated_at=now() WHERE id=$1`,[req5]);
   console.log('PASS: coach reassignment after delivery invalidates the outstanding recovery code');
 
   // Null decisions and invalid Auth outcomes must not silently fall through.
