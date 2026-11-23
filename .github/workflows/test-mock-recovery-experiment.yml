@@ -114,8 +114,8 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 22
-      - name: Install pinned Supabase JS SDK
-        run: npm install --no-save @supabase/supabase-js@2.119.0
+      - name: Install pinned Supabase JS SDK and PostgreSQL driver for local Auth/PostgREST probe
+        run: npm install --no-save @supabase/supabase-js@2.119.0 pg
       - name: Set up pinned Supabase CLI
         uses: supabase/setup-cli@v3
         with:
