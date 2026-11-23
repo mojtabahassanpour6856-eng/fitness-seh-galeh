@@ -65,3 +65,25 @@ The following release gates remain open and require a separately approved stagin
 6. Obtain explicit approval before any production migration, deployment, real SMS, or main-branch merge.
 
 A successful CI run is not evidence that production infrastructure, provider behavior, or real-user UX has been validated. Do not merge this Draft PR or deploy this candidate until the gates above are completed and approved.
+
+
+## Updated release decision — 2026-11-23 (CI #322)
+
+Latest reviewed branch head before this note: `e31743a5df11b389488727930963eba84e222874`. GitHub Actions run #322 (`45116693142`) completed successfully on its tested code/documentation parent `d60221548ed4e9b8f3b0ad0d5d1ff078b1f0fe1b`; all four jobs passed. This confirms the existing isolated unit, SQL/PostgreSQL concurrency, PostgREST contract, Deno type-check, and disposable local Auth probes. It does **not** constitute a single-stack end-to-end recovery run or staging acceptance.
+
+### Release-blocking facts re-confirmed
+
+1. The Edge adapter remains in `docs/experimental`, not `supabase/functions`, and deliberately has no `deliveryAdapter`. Coach approval therefore cannot deliver a code. There is no selected, configured, or tested SMS provider. The previously deployed Test function's Mediana path is not an acceptable substitute while Mediana is unavailable/restricted.
+2. Existing local Auth tests show refresh-token revocation and Auth `getUser` rejection after password change/global sign-out, but PostgREST still accepts an unexpired old JWT. No bounded JWT lifetime or server-side session/version enforcement has been implemented.
+3. The requested single-stack E2E (one disposable Supabase stack/database running trainee request → authenticated coach approval → fake Outbox delivery → HTTP redemption → Auth password update → old/new password and replay assertions) is not present. Current CI jobs are separate.
+4. No staging migration/deployment, real test-account end-to-end flow, real provider delivery, provider idempotency/reconciliation, mobile/desktop UX acceptance, operational alerts, or rollback rehearsal has been completed.
+5. PR #260 remains **open and Draft**. It must not be merged or marked ready for release.
+
+### Fastest safe path to a releasable candidate
+
+- First, choose the SMS provider and verify delivery/idempotency/receipt semantics in an isolated staging account. Do not re-enable Mediana by assumption.
+- In parallel, choose the explicit old-access-token guarantee and implement/test it without weakening RLS.
+- Complete the single-stack disposable E2E and then run staging-only migrations, Edge deployment, dedicated test coach/trainee flow, security/log review, and rollback/reconciliation rehearsal.
+- Only after those pass, request separate explicit approval for Production migration, provider credentials/live SMS, deployment, and merge.
+
+**Final decision: NOT APPROVED FOR RELEASE.** A production-ready package cannot truthfully be declared while delivery is disabled, old JWT residual access is unresolved, and full E2E/staging acceptance is absent. No Production or Supabase hosted setting/data was changed by this update.
