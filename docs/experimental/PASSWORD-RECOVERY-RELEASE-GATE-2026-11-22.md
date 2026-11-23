@@ -780,3 +780,23 @@ A further read-only audit was performed against the Supabase mirror. No schema o
 6. Do not apply a candidate migration until rewritten for hosted Supabase compatibility, exercised against this exact base schema in disposable integration, and backed by a verified mirror backup/rollback plan.
 
 **Release remains NOT READY.** This audit was read-only; no migration, function deployment, Auth change, SMS, password change, or trainee-data mutation occurred.
+
+
+## Supabase-shaped atomic migration rewrite — 2026-11-23
+
+Created a separate Supabase-shaped candidate at `docs/experimental/migrations/20261123_supabase_mirror_compatible_atomic_recovery_candidate.sql` (commit `6840824d32cb2f1daa068b17a2cd78ade90ac192`). This is a candidate artifact only; it was not applied to the mirror.
+
+Changes from the disposable-PostgreSQL draft:
+- Added bounded transaction-local `lock_timeout` (3 seconds) and `statement_timeout` (60 seconds).
+- Replaced the previous implicit expiry/backfill of legacy pending rows with a fail-closed preflight: any pending/approved/processing row stops migration and requires explicit disposition.
+- Backfills only terminal historical rows from the linked trainee's current coach, then aborts if any request still lacks a coach binding. It does not silently assign an active request to a new coach or alter its status.
+- Leaves the existing phone, token-attempt, and state CHECK constraints intact; the new state/outcome columns are additive and the unique active-request index includes processing.
+- The mirror's one historical expired row was checked against its linked trainee: a current coach exists, so the terminal-row backfill has a known source on the inspected snapshot. This remains a preflight fact, not a guarantee about a later database state.
+
+Important remaining validation:
+- The rewritten SQL has not yet been executed against disposable Supabase-shaped PostgreSQL; no SQL parser/integration result is claimed.
+- The Outbox and encrypted-payload migrations still need the same Supabase-specific rewrite/review and exact-schema test.
+- The deployable Edge Function/worker packaging, full one-stack HTTP/Auth E2E, provider adapter and session/JWT mitigation remain blockers.
+- The original three `docs/experimental` SQL files remain unchanged and explicitly disposable-only.
+
+No hosted schema/function/Auth/SMS operation occurred. Mirror and Production remain unchanged. Release remains **NOT READY**.
