@@ -473,3 +473,12 @@ Added a second disposable PostgREST contract test, deliberately ordered after th
 Workflow path filters and step ordering now include this second contract test. New commits: `cc7992363a416d0c6f75b9f3a22e51c42a18cb18` (test) and `d8544dde9894b054a0170a1e4a8f2dc1939834e1` (workflow). The new CI execution remains unverified; do not treat this addition as a passing test until the GitHub Actions run is inspected.
 
 Release remains NOT READY.
+### CI observation for the expanded PostgREST suite (2026-11-23)
+
+GitHub Actions run `45113828197` (run #294) was found for the workflow-triggering code push. At the latest inspection:
+- `mock-recovery-tests`: success.
+- `deno-edge-candidate-check`: success.
+- `postgres-concurrency-tests`: success, including atomic RPC candidate tests, the first PostgREST schema-cache/RPC contract test, Outbox/Worker PostgreSQL integration, and the second PostgREST Outbox/encrypted-review contract test.
+- `supabase-local-auth-integration`: still in progress at disposable local Auth stack startup; no final result yet.
+
+Therefore the new PostgREST HTTP tests are now confirmed green in disposable CI, but the overall workflow is not yet complete. Do not treat this as full release approval. No hosted Supabase project or real SMS provider was used.
