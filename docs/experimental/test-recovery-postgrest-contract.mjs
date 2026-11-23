@@ -99,7 +99,36 @@ try {
   assert.equal(await secondServiceResponse.text(), 'false',
     'the PostgREST invocation must preserve the SQL rate-limit result');
 
-  console.log('PASS: real PostgREST schema cache resolves recovery RPC named arguments; service_role can execute; anon is denied; SQL result is preserved.');
+  // Exercise every remaining public recovery RPC over HTTP using non-existent synthetic IDs.
+  // These calls must resolve their exact PostgREST parameter names but cannot mutate a real request.
+  const missingId = 'ffffffff-ffff-4fff-8fff-ffffffffffff';
+  const missingOperation = 'eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee';
+  const recoveryRpcContracts = [
+    ['recovery_coach_review', { p_request_id: missingId, p_actor_user_id: missingId, p_decision: 'approve', p_token_hash: 'a'.repeat(64), p_token_expires_at: new Date(Date.now() + 60000).toISOString(), p_hmac_key_version: 'ci' }],
+    ['recovery_record_wrong_attempt', { p_request_id: missingId, p_submitted_digest: 'b'.repeat(64) }],
+    ['recovery_begin_delivery', { p_request_id: missingId, p_delivery_operation_id: missingOperation }],
+    ['recovery_finish_delivery', { p_request_id: missingId, p_delivery_operation_id: missingOperation, p_outcome: 'unknown' }],
+    ['recovery_claim_reset', { p_request_id: missingId, p_code_digest: 'c'.repeat(64), p_operation_id: missingOperation }],
+    ['recovery_begin_auth_update', { p_request_id: missingId, p_operation_id: missingOperation }],
+    ['recovery_finish_auth_update', { p_request_id: missingId, p_operation_id: missingOperation, p_outcome: 'unknown', p_safe_error_code: null }]
+  ];
+  for (const [rpc, args] of recoveryRpcContracts) {
+    const response = await fetch(baseUrl + '/rpc/' + rpc, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + serviceToken },
+      body: JSON.stringify(args)
+    });
+    const body = await response.text();
+    assert.equal(response.status, 200, rpc + ' must resolve through PostgREST with its named arguments; got ' + response.status + ': ' + body);
+    const denied = await fetch(baseUrl + '/rpc/' + rpc, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + anonToken },
+      body: JSON.stringify(args)
+    });
+    const deniedBody = await denied.text();
+    assert.ok([401, 403].includes(denied.status), rpc + ' must deny anon; got ' + denied.status + ': ' + deniedBody);
+  }
+  console.log('PASS: PostgREST resolves all eight public recovery RPCs by named arguments; service_role can execute; anon is denied; rate-limit result is preserved.');
 } finally {
   await pool.end();
 }
