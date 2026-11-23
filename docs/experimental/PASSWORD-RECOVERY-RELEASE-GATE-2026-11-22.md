@@ -459,3 +459,10 @@ Added a CI-only PostgREST service alongside the disposable PostgreSQL concurrenc
 This is a first real PostgREST transport/schema-cache/role-contract gate, not yet the complete PostgREST test of every recovery RPC or the hosted Supabase API gateway. It is not evidence of a live Test recovery flow. The new CI run must pass on the final branch head before the harness is considered validated. No remote database, Auth user, Edge Function, SMS provider, or production resource was changed.
 
 Release remains NOT READY.
+### Expanded PostgREST RPC surface coverage (2026-11-23)
+
+The disposable HTTP contract test now invokes all eight public recovery RPCs defined by the atomic candidate migration using exact named JSON arguments. Seven state-transition RPCs are called only with synthetic, non-existent UUIDs; the rate-limit RPC uses a disposable hash. Each RPC is also called as `anon` and must deny execution with HTTP 401/403. This validates the HTTP/PostgREST name-resolution and role boundary for the complete public atomic RPC surface without touching a real recovery request.
+
+Latest test-code commit: `96d1393de1d4390711e184a10182a52134f7169d`. The workflow path filter includes the contract test, so this push should schedule the disposable CI workflow. The available GitHub connector does not expose a repository-wide workflow-run listing/dispatch action here; do not infer a pass from the commit or from the earlier green run. Confirm the run in GitHub Actions before advancing.
+
+Release remains NOT READY.
