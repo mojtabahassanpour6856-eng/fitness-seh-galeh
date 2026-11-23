@@ -504,3 +504,13 @@ Reviewing the local Auth test source after run #294 exposed a test-strength gap:
 Before treating session invalidation as a locked CI invariant, convert both post-password-update observations into explicit assertions. Keep the existing global sign-out assertions. This is test-only hardening; it does not require or authorize any hosted Auth change.
 
 Also keep the larger end-to-end gate open: the handler, PostgREST RPCs, Outbox fake provider, and disposable Auth have passed component-level tests, but have not yet been exercised as one connected HTTP recovery transaction against the candidate schema and Auth stack.
+### Auth session-revocation assertions strengthened (2026-11-23)
+
+Updated `docs/experimental/test-recovery-auth-local-stack.mjs` in commit `3de356ecffef8029434c3d62618eb144d4f8b5d2`.
+
+The local Auth integration test now fails unless all three conditions hold:
+- Password update revokes a previously issued refresh token.
+- Auth `getUser` rejects the old access JWT after password update.
+- Global sign-out rejects the old access JWT as well as revoking other refresh tokens.
+
+The workflow path filter already includes this test file, so the branch push should schedule the full disposable CI workflow. The new commit's run result has not yet been independently retrieved; treat this hardening as pending CI confirmation, not as a passing test. No hosted Supabase resources were changed.
