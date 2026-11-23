@@ -14,8 +14,8 @@ assert.match(migration, /CREATE OR REPLACE FUNCTION public\.recovery_consume_req
 assert.match(migration, /GRANT EXECUTE ON FUNCTION public\.recovery_consume_request_rate_limit\(text,integer,integer\) TO service_role/);
 assert.doesNotMatch(migration, /CREATE OR REPLACE FUNCTION public\.consume_registration_rate_limit\s*\(/,
   'recovery migration must never replace the existing registration limiter');
-assert.match(handler, /rpc\\('recovery_consume_request_rate_limit'/);
-assert.doesNotMatch(handler, /rpc\\('consume_registration_rate_limit'/,
+assert.match(handler, /rpc\('recovery_consume_request_rate_limit'/);
+assert.doesNotMatch(handler, /rpc\('consume_registration_rate_limit'/,
   'recovery handler must use its dedicated limiter');
 
 const wrappers = [
