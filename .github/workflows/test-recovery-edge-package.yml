@@ -6,6 +6,8 @@ on:
     paths:
       - 'supabase/functions/trainee-password-recovery/**'
       - 'docs/experimental/test-recovery-edge-package-contract.mjs'
+      - 'docs/experimental/test-recovery-mirror-preflight-contract.mjs'
+      - 'docs/experimental/migrations/20261123_supabase_mirror_compatible_atomic_recovery_candidate.sql'
       - 'vendor/SUPABASE-SDK-VERSION.txt'
       - '.github/workflows/test-recovery-edge-package.yml'
   pull_request:
