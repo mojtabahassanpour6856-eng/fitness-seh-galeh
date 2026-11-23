@@ -40,8 +40,8 @@ function jwtLifetimeSeconds(accessToken) {
 }
 function assertCandidateJwtLifetime(session, label) {
   assert.ok(session?.access_token, `${label}: access token is required`);
-  assert.equal(jwtLifetimeSeconds(session.access_token), 900,
-    `${label}: disposable Auth JWT must expire exactly 900 seconds after issuance`);
+  assert.equal(jwtLifetimeSeconds(session.access_token), 60,
+    `${label}: disposable Auth JWT must expire exactly 60 seconds after issuance`);
 }
 
 async function signIn(password) {
@@ -211,9 +211,9 @@ try {
   await assertPostgrestStillAccepts(sessionE.data.session.access_token,
     'fresh active session under the sensitive-operation session and expiry policy');
   await assertPostgrestRlsDeniesExpiredJwt(sessionE.data.session.access_token,
-    'same active-session JWT after its actual 900-second expiry');
+    'same active-session JWT after its actual 60-second expiry');
 
-  console.log('PASS: targeted RLS denied the same signed JWT after its actual 900-second expiry while the Auth session remained active.');
+  console.log('PASS: targeted RLS denied the same signed JWT after its actual 60-second expiry while the Auth session remained active.');
   console.log('PASS: disposable local Auth password update, old/new password behavior, refresh revocation, and Auth getUser rejection.');
   console.log('PASS: targeted RLS session_id check denied the still-unexpired JWT after global sign-out while allowing it before sign-out.');
   console.log('OBSERVATION: the local Supabase API gateway/PostgREST path returned the expired signed JWT as HTTP 200 under baseline ownership-only RLS; expiry enforcement must therefore be explicit in policies protecting sensitive operations.');
