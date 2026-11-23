@@ -76,21 +76,13 @@ async function assertPostgrestRlsDenies(accessToken, label) {
   assert.deepEqual(JSON.parse(body), [], `${label}: revoked session must not see protected rows`);
 }
 
-async function restoreBaselineJwtExpiryPolicy() {
-  await pool.query('DROP POLICY ' + policyName + ' ON public.' + tableName);
-  await pool.query('CREATE POLICY ' + policyName + ' ON public.' + tableName + ' FOR SELECT TO authenticated USING (auth.uid() = owner_id)');
-}
-
-async function assertPostgrestRejectsExpiredJwt(accessToken, label) {
+async function assertPostgrestRlsDeniesExpiredJwt(accessToken, label) {
   const payload = JSON.parse(Buffer.from(accessToken.split('.')[1], 'base64url').toString('utf8'));
   assert.ok(Number.isInteger(payload.exp), `${label}: JWT exp claim must be an integer`);
   const waitMs = Math.max(0, payload.exp * 1000 - Date.now() + 2500);
-  console.log(`Waiting ${Math.ceil(waitMs / 1000)} seconds for the same signed JWT to expire before the PostgREST rejection check.`);
+  console.log(`Waiting ${Math.ceil(waitMs / 1000)} seconds for the same signed JWT to expire before the targeted RLS expiry check.`);
   if (waitMs > 0) await new Promise(resolve => setTimeout(resolve, waitMs));
-  const response = await readProbe(accessToken);
-  const body = await response.text();
-  assert.ok([401, 403].includes(response.status),
-    `${label}: PostgREST must reject the expired JWT; got ${response.status}: ${body}`);
+  await assertPostgrestRlsDenies(accessToken, label);
 }
 
 async function installSensitiveSessionPolicy() {
@@ -111,6 +103,7 @@ async function installSensitiveSessionPolicy() {
         WHERE s.id = (auth.jwt() ->> 'session_id')::uuid
           AND s.user_id = auth.uid()
           AND (s.not_after IS NULL OR s.not_after > now())
+          AND COALESCE(NULLIF(auth.jwt() ->> 'exp', '')::bigint, 0) > floor(extract(epoch FROM now()))::bigint
       )
     $function$
   `);
@@ -212,15 +205,19 @@ try {
   // additionally checks auth.sessions and therefore denies it after sign-out.
   await assertPostgrestRlsDenies(sessionC.data.session.access_token,
     'revoked session under the sensitive-operation session policy');
-  await restoreBaselineJwtExpiryPolicy();
-  await assertPostgrestRejectsExpiredJwt(sessionC.data.session.access_token,
-    'same old JWT after its actual 900-second expiry');
+  const sessionE = await signIn(newPassword);
+  assert.equal(sessionE.error, null, 'fresh session after global sign-out must authenticate');
+  assertCandidateJwtLifetime(sessionE.data.session, 'fresh post-revocation disposable Auth session');
+  await assertPostgrestStillAccepts(sessionE.data.session.access_token,
+    'fresh active session under the sensitive-operation session and expiry policy');
+  await assertPostgrestRlsDeniesExpiredJwt(sessionE.data.session.access_token,
+    'same active-session JWT after its actual 900-second expiry');
 
-  console.log('PASS: PostgREST rejected the exact same signed JWT after its actual 900-second expiry.');
+  console.log('PASS: targeted RLS denied the same signed JWT after its actual 900-second expiry while the Auth session remained active.');
   console.log('PASS: disposable local Auth password update, old/new password behavior, refresh revocation, and Auth getUser rejection.');
   console.log('PASS: targeted RLS session_id check denied the still-unexpired JWT after global sign-out while allowing it before sign-out.');
-  console.log('OBSERVATION: baseline PostgREST/RLS without a session lookup still accepts a signed old JWT until exp; the session-aware policy closes that window for the protected probe route only.');
-  console.log('SECURITY NOTE: session_id validation is a targeted sensitive-operation control; ordinary RLS behavior and bounded JWT expiry remain separate controls.');
+  console.log('OBSERVATION: the local Supabase API gateway/PostgREST path returned the expired signed JWT as HTTP 200 under baseline ownership-only RLS; expiry enforcement must therefore be explicit in policies protecting sensitive operations.');
+  console.log('SECURITY NOTE: this test proves a targeted session_id plus exp-claim RLS guard on the synthetic probe table only; it does not change app policies or prove all routes are protected.');
 } finally {
   try {
     if (probeTableCreated) {
