@@ -207,3 +207,23 @@ The local Auth/PostgREST test now retains the exact access JWT used for the sess
 The Auth integration job timeout is 25 minutes, sufficient for the 15-minute expiry wait plus setup and teardown. The workflow path filter now explicitly includes test-recovery-auth-local-stack.mjs so changes to this test cannot silently skip CI. Runs #340 and #341 were triggered by the test and workflow changes; their Auth jobs are still running at the time of this note. Actual expiry rejection is therefore implemented as an assertion but is NOT yet marked proven until a complete green run finishes.
 
 No hosted JWT setting or application runtime behavior was changed. The 900-second value remains local experimental configuration only.
+
+## Actual JWT expiry result — 2026-11-23 (CI run 45125079476)
+
+The corrected disposable Auth/PostgREST integration test completed successfully on commit `934f7b6a1917c235ea4d1c2d7075908e1d74fb29`:
+
+- The test configured only its disposable local Auth stack with a 900-second JWT lifetime and verified the issued token's `exp - iat` claim.
+- It retained the exact access JWT from an active synthetic session, waited approximately 903 seconds until after its signed expiry, and verified the targeted session-aware RLS policy denied access to the synthetic protected row.
+- The earlier run demonstrated that the same expired JWT could still receive HTTP 200 under baseline ownership-only RLS in this local setup. The corrected test therefore adds an explicit JWT `exp` comparison to the synthetic session-aware policy, in addition to checking `auth.sessions`.
+- The same job also passed the password-update, old/new password, refresh-token revocation, Auth `getUser` rejection, and global-sign-out session checks.
+- All five jobs in run `45125079476` passed, including the unified disposable local recovery E2E, PostgreSQL concurrency/Outbox tests, mock recovery tests, Deno candidate check, and Auth integration test.
+
+**Scope limitation:** this proves the explicit `exp` + `session_id` predicate only on a synthetic disposable table and local stack. It does not mean application RLS policies have been updated, that every app table/RPC/Storage surface is covered, or that 900 seconds has been approved for real mobile sessions. No hosted Supabase project, main branch, mirror branch, production data, real user, or SMS provider was changed.
+
+Remaining release blockers:
+1. Inventory and review all application data surfaces and RLS/Storage/RPC policies; decide where targeted session and expiry enforcement is required.
+2. Validate JWT lifetime and refresh behavior for real Android/iOS/web clients in an isolated staging environment before choosing a production value.
+3. Select and stage-test a real SMS provider alternative; Mediana remains excluded and no provider is enabled.
+4. Complete staging security, monitoring, secret rotation, rollback/reconciliation rehearsal, and explicit release approval.
+
+CI run `45125079476` is a successful candidate test run, **not production release approval**. PR #260 remains open and Draft. Release remains **NOT READY FOR PRODUCTION**.
