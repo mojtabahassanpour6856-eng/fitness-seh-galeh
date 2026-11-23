@@ -10,7 +10,7 @@ const key=Buffer.alloc(32,9).toString('base64');
 const deliveryKeys={d1:key};
 const envelope=await encryptRecoveryDeliveryCode({code:'0427',key,keyVersion:'d1',requestId,operationId,cryptoImpl:webcrypto});
 
-function makeAdmin({targetValid=true,fetchPayload=true,archived=false}={}) {
+function makeAdmin({targetValid=true,fetchPayload=true,archived=false,coachMismatch=false}={}) {
   const calls=[];
   const lease={outbox_id:'6ba7b813-9dad-41d1-80b4-00c04fd430c8',recovery_request_id:requestId,
     lease_generation:4,provider_idempotency_key:'trainee-recovery:'+operationId};
@@ -29,8 +29,8 @@ function makeAdmin({targetValid=true,fetchPayload=true,archived=false}={}) {
     },
     from(table) {
       return {select(){return this;},eq(){return this;},async maybeSingle(){
-        if(table==='trainee_password_recovery_requests') return {data:{id:requestId,trainee_id:'trainee-1',phone_normalized:'+989123456789',status:'approved',delivery_outcome:'attempting',delivery_operation_id:operationId}};
-        return {data:targetValid?{id:'trainee-1',phone_normalized:'+989123456789',approval_status:'active',archived_at:archived?'2026-01-01T00:00:00Z':null}:{id:'trainee-1',phone_normalized:'+989000000000',approval_status:'active',archived_at:null}};
+        if(table==='trainee_password_recovery_requests') return {data:{id:requestId,trainee_id:'trainee-1',phone_normalized:'+989123456789',status:'approved',delivery_outcome:'attempting',delivery_operation_id:operationId,reviewed_by:'coach-1'}};
+        return {data:targetValid?{id:'trainee-1',phone_normalized:'+989123456789',approval_status:'active',archived_at:archived?'2026-01-01T00:00:00Z':null,coach_user_id:coachMismatch?'coach-2':'coach-1'}:{id:'trainee-1',phone_normalized:'+989000000000',approval_status:'active',archived_at:null}};
       }};
     }
   };
@@ -74,6 +74,11 @@ const archivedAdmin=makeAdmin({archived:true});
 const archivedProvider=new FakeRecoverySmsProvider();
 assert.deepEqual(await processOneRecoveryOutboxItem({admin:archivedAdmin,workerId,deliveryKeys,cryptoImpl:webcrypto,provider:archivedProvider}),{status:'failed'});
 assert.equal(archivedProvider.calls.length,0,'archived trainee must not receive recovery SMS');
+
+const reassignedAdmin=makeAdmin({coachMismatch:true});
+const reassignedProvider=new FakeRecoverySmsProvider();
+assert.deepEqual(await processOneRecoveryOutboxItem({admin:reassignedAdmin,workerId,deliveryKeys,cryptoImpl:webcrypto,provider:reassignedProvider}),{status:'failed'});
+assert.equal(reassignedProvider.calls.length,0,'trainee reassigned after approval must not receive the former coach recovery code');
 
 const ambiguousCommitAdmin=makeAdmin();
 let finishCalls=0;
