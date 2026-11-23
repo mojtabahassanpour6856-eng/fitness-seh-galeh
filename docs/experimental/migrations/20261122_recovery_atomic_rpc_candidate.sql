@@ -407,7 +407,7 @@ BEGIN
   END IF;
 
   -- A code approved by a former coach must not remain redeemable after reassignment.
-  IF v_current_coach IS DISTINCT FROM v_reviewed_by THEN
+  IF v_reviewed_by IS NULL OR v_current_coach IS DISTINCT FROM v_reviewed_by THEN
     UPDATE public.trainee_password_recovery_requests
     SET status='expired',token_hash=NULL,token_expires_at=NULL,updated_at=now()
     WHERE id=p_request_id AND status='approved';
