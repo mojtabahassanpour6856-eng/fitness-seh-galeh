@@ -571,7 +571,7 @@ REVOKE ALL ON FUNCTION public.recovery_finish_auth_update(uuid,uuid,text,text) F
 
 GRANT EXECUTE ON FUNCTION public.recovery_submit_request(text) TO service_role;
 GRANT EXECUTE ON FUNCTION public.recovery_coach_review(uuid,uuid,text,text,timestamptz,text) TO service_role;
-GRANT EXECUTE ON FUNCTION public.recovery_record_wrong_attempt(uuid,text,integer) TO service_role;
+GRANT EXECUTE ON FUNCTION public.recovery_record_wrong_attempt(uuid,text) TO service_role;
 GRANT EXECUTE ON FUNCTION public.recovery_begin_delivery(uuid,uuid) TO service_role;
 GRANT EXECUTE ON FUNCTION public.recovery_finish_delivery(uuid,uuid,text) TO service_role;
 GRANT EXECUTE ON FUNCTION public.recovery_claim_reset(uuid,text,uuid) TO service_role;
