@@ -112,11 +112,11 @@ async function main(){
  console.log('PASS: expired lease after durable send-start becomes unknown; no second claim or stale finalization');
  // Create the second approved request only now, so the concurrent claim race above
  // has exactly one eligible Outbox row (two workers competing for that same row).
- const secondRequest='30000000-0000-4000-8000-000000000006';
+ const secondRequest='90000000-0000-4000-8000-000000000006';
  await pool.query(`INSERT INTO public.trainees(id,coach_user_id,auth_user_id,approval_status,phone_normalized)
-   VALUES ('20000000-0000-4000-8000-000000000007',$1,'10000000-0000-4000-8000-000000000003','active','+989123450002')`,[coach]);
+   VALUES ('90000000-0000-4000-8000-000000000007',$1,'10000000-0000-4000-8000-000000000003','active','+989123450002')`,[coach]);
  await pool.query(`INSERT INTO public.trainee_password_recovery_requests(id,trainee_id,phone_normalized,status,request_coach_user_id)
-   VALUES ($1,'20000000-0000-4000-8000-000000000007','+989123450002','pending',$2)`,[secondRequest,coach]);
+   VALUES ($1,'90000000-0000-4000-8000-000000000007','+989123450002','pending',$2)`,[secondRequest,coach]);
  const secondApproval=await asService(
    'SELECT public.recovery_coach_review_encrypted($1,$2,$3,$4,$5,$6,$7,$8) AS result',
    reviewArgs(secondRequest,coach,'d')
@@ -226,27 +226,27 @@ async function main(){
        token_hash=NULL,token_expires_at=NULL,reviewed_at=NULL,reviewed_by=NULL,
        token_attempts=0,delivery_payload=NULL,updated_at=now() WHERE id=$1`,[secondRequest]);
  await pool.query(`UPDATE public.trainees SET coach_user_id=$1
-   WHERE id='20000000-0000-4000-8000-000000000007'`,[coach]);
+   WHERE id='90000000-0000-4000-8000-000000000007'`,[coach]);
  const reassignmentApproval=await asService(
    'SELECT public.recovery_coach_review_encrypted($1,$2,$3,$4,$5,$6,$7,$8) AS result',
    reviewArgs(secondRequest,coach,'a')
  );
  assert.equal(reassignmentApproval.rows[0].result.ok,true);
  await pool.query(`UPDATE public.trainees SET coach_user_id=$1
-   WHERE id='20000000-0000-4000-8000-000000000007'`,[otherCoach]);
+   WHERE id='90000000-0000-4000-8000-000000000007'`,[otherCoach]);
  const reassignedClaim=await asService(
    'SELECT * FROM recovery_private.claim_recovery_outbox($1,30)',[workerA]
  );
  assert.equal(reassignedClaim.rowCount,0,'claim must refuse an approval whose trainee has moved to another coach');
  await pool.query(`UPDATE public.trainees SET coach_user_id=$1
-   WHERE id='20000000-0000-4000-8000-000000000007'`,[coach]);
+   WHERE id='90000000-0000-4000-8000-000000000007'`,[coach]);
  const dispatchLease=await asService(
    'SELECT * FROM recovery_private.claim_recovery_outbox($1,30)',[workerA]
  );
  assert.equal(dispatchLease.rowCount,1);
  const dl=dispatchLease.rows[0];
  await pool.query(`UPDATE public.trainees SET coach_user_id=$1
-   WHERE id='20000000-0000-4000-8000-000000000007'`,[otherCoach]);
+   WHERE id='90000000-0000-4000-8000-000000000007'`,[otherCoach]);
  assert.equal(await asService(
    'SELECT recovery_private.begin_recovery_outbox_send($1,$2,$3) AS ok',
    [dl.outbox_id,workerA,dl.lease_generation]
@@ -274,7 +274,7 @@ async function main(){
        token_hash=NULL,token_expires_at=NULL,reviewed_at=NULL,reviewed_by=NULL,
        token_attempts=0,delivery_payload=NULL,updated_at=now() WHERE id=$1`,[secondRequest]);
  await pool.query(`UPDATE public.trainees SET coach_user_id=$1
-   WHERE id='20000000-0000-4000-8000-000000000007'`,[coach]);
+   WHERE id='90000000-0000-4000-8000-000000000007'`,[coach]);
  const lateReassignmentApproval=await asService(
    'SELECT public.recovery_coach_review_encrypted($1,$2,$3,$4,$5,$6,$7,$8) AS result',
    reviewArgs(secondRequest,coach,'b')
@@ -290,7 +290,7 @@ async function main(){
    [ll.outbox_id,workerA,ll.lease_generation]
  ).then(r=>r.rows[0].ok),true);
  await pool.query(`UPDATE public.trainees SET coach_user_id=$1
-   WHERE id='20000000-0000-4000-8000-000000000007'`,[otherCoach]);
+   WHERE id='90000000-0000-4000-8000-000000000007'`,[otherCoach]);
  assert.equal((await asService(
    'SELECT * FROM public.recovery_outbox_fetch_payload($1,$2,$3)',
    [ll.outbox_id,workerA,ll.lease_generation]
