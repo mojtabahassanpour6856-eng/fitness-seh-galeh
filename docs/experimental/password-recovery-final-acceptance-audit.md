@@ -100,3 +100,11 @@ The current branch head `75c07269452a2dc18786965566cf3a368e12c61b` triggered Git
 This confirms the current branch's existing mock/crypto/handler/authorization checks, disposable PostgreSQL concurrency and PostgREST contracts, Deno type-check, and isolated local Auth probe. It does **not** add a unified request-to-redemption E2E job: the four jobs remain separate, and the local Auth job explicitly starts the disposable Auth stack only. The PostgREST old-access-JWT observation remains unresolved.
 
 No application code, migration, main branch, hosted Supabase project, Auth account, or SMS provider was changed or exercised by this verification. PR #260 remains open and Draft. **Release decision remains NOT APPROVED.**
+
+## CI verification refresh — 2026-11-23 (run #325)
+
+The documentation-only audit update at branch commit `8551e35125dcfdb3a44d6972e396401249a186de` triggered run `45118331680` (#325). GitHub Actions reports `success` for all four jobs: mock recovery tests, Deno candidate type-check, disposable PostgreSQL/PostgREST contracts, and disposable local Auth integration. All listed steps completed successfully, including container shutdown.
+
+This is a repeatability check of the existing separate suites, not the missing unified lifecycle E2E. In particular, the Auth integration still starts an Auth-only disposable Supabase stack; it does not run the recovery HTTP handler, Outbox worker, and Auth password update together against one shared stack/database.
+
+The unresolved PostgREST old-access-JWT behavior, absent SMS provider adapter, and staging/operational acceptance gates remain unchanged. No live endpoint, hosted project, main branch, production data, or SMS provider was accessed. PR #260 remains Draft. **NOT APPROVED FOR RELEASE.**
