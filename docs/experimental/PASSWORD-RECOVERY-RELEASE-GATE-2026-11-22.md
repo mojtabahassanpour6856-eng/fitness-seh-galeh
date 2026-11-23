@@ -497,3 +497,10 @@ The disposable local Auth job log confirms:
 This is a strong positive result for the tested local Supabase Auth version. The current handler's password-update call is therefore supported by this disposable Auth behavior, but the full recovery HTTP handler has not yet been exercised end-to-end against a database with the candidate migrations and real PostgREST/Auth wiring. That remains a separate release gate.
 
 No hosted Supabase project, production account, live Edge Function, or real SMS provider was used. Release remains NOT READY.
+### Follow-up hardening identified after green CI
+
+Reviewing the local Auth test source after run #294 exposed a test-strength gap: the script prints the observed result for refresh-token revocation and old access-JWT rejection immediately after password update, but those two observations are not currently asserted as test failures. The run log showed the desired values (`refresh revoked: yes`; old access JWT accepted: no), so the observed behavior is positive, but a future regression could still leave the job green if those observations change.
+
+Before treating session invalidation as a locked CI invariant, convert both post-password-update observations into explicit assertions. Keep the existing global sign-out assertions. This is test-only hardening; it does not require or authorize any hosted Auth change.
+
+Also keep the larger end-to-end gate open: the handler, PostgREST RPCs, Outbox fake provider, and disposable Auth have passed component-level tests, but have not yet been exercised as one connected HTTP recovery transaction against the candidate schema and Auth stack.
