@@ -514,3 +514,42 @@ The local Auth integration test now fails unless all three conditions hold:
 - Global sign-out rejects the old access JWT as well as revoking other refresh tokens.
 
 The workflow path filter already includes this test file, so the branch push should schedule the full disposable CI workflow. The new commit's run result has not yet been independently retrieved; treat this hardening as pending CI confirmation, not as a passing test. No hosted Supabase resources were changed.
+
+## Auth revocation assertions: CI confirmed (2026-11-23)
+
+The two commits that strengthened the local Auth session-revocation assertions have now been independently checked through GitHub Actions:
+- Commit `3de356ecffef8029434c3d62618eb144d4f8b5d2`: run `45114205047`, run #300, completed SUCCESS.
+- Commit `f5847aa324190135c9728352c8f9d3ddd10df57b`: run `45114240905`, run #301, completed SUCCESS.
+
+The run #301 local Auth job log explicitly shows:
+- password update revoked the old refresh token;
+- Auth `getUser` rejected the old access JWT after password update;
+- global sign-out rejected the old access JWT;
+- the disposable local Auth test user was cleaned up.
+
+This closes the previously pending CI confirmation for the session-revocation assertions. It does not close the full recovery E2E gate.
+
+## Full E2E implementation audit (2026-11-23)
+
+Reviewed the current candidate HTTP handler, Edge adapter, fake-provider worker, candidate SQL fixtures, and CI workflow. The integration boundary is now explicit:
+- `recovery-candidate-handler.mjs` is dependency-injected and can be exercised as an HTTP handler, but its current tests inject a mocked admin/Auth surface.
+- `recovery-outbox-worker-mock.mjs` uses the real candidate RPC contract but deliberately accepts only `FakeRecoverySmsProvider`; it is not connected to the handler test fixture.
+- The disposable PostgreSQL + PostgREST job and the disposable local Auth job are separate CI jobs with separate databases/stacks. Their green results cannot be combined into evidence of one end-to-end transaction.
+- `trainee-password-recovery-edge-candidate.ts` is deliberately under `docs/experimental`, not `supabase/functions`, and has no provider sender. It must remain non-deployable during this phase.
+
+### Required next implementation slice
+
+Build one dedicated disposable integration job that starts a single local Supabase stack (Auth + Postgres + PostgREST), seeds only synthetic `profiles`, `trainees`, and recovery fixtures, applies the three candidate migrations to that disposable database, and exposes the candidate handler through a loopback-only HTTP server. The test should then:
+1. create disposable coach and trainee Auth users and bind their IDs to the synthetic profile/trainee rows;
+2. submit the request through HTTP and verify the generic public response;
+3. authenticate as the coach, list the request, and approve it through HTTP;
+4. run the existing fake-only Outbox worker against the same local database and capture the delivered code only inside the test process;
+5. redeem that code through the HTTP handler and let the real local Auth Admin API update the trainee password;
+6. verify old-password rejection, new-password success, old refresh/access session rejection, code replay rejection, and final database states;
+7. delete synthetic Auth users and all fixture rows in guaranteed cleanup, and stop the local stack even on failure.
+
+The test must refuse non-loopback Supabase URLs, reject any non-fake provider, and never read hosted project secrets. Before coding the runner, the base schema fixture must be reconciled with the candidate migrations so the test exercises the exact RPC/table names without copying production data.
+
+No E2E runner has been created or executed in this step. No Supabase hosted environment, database, Auth user, Edge Function, password, SMS provider, trainee record, or Production resource was accessed or changed.
+
+Release remains **NOT READY**.
