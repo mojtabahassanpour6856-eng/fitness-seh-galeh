@@ -65,6 +65,7 @@ async function main() {
     CREATE TABLE public.trainee_password_recovery_requests(
       id uuid primary key DEFAULT gen_random_uuid(), trainee_id uuid not null references public.trainees(id),
       phone_normalized text not null, status text not null,
+      request_coach_user_id uuid references public.profiles(id),
       requested_at timestamptz not null default now(),
       reviewed_at timestamptz, reviewed_by uuid references public.profiles(id),
       token_hash text, token_expires_at timestamptz,
@@ -93,15 +94,15 @@ async function main() {
       ('20000000-0000-4000-8000-000000000004','10000000-0000-4000-8000-000000000002','10000000-0000-4000-8000-000000000003','active','+989123456789'),
       ('20000000-0000-4000-8000-000000000005','10000000-0000-4000-8000-000000000002','10000000-0000-4000-8000-000000000003','active','+989123450000'),
        ('20000000-0000-4000-8000-000000000006','10000000-0000-4000-8000-000000000002','10000000-0000-4000-8000-000000000003','active','+989123450001');
-    INSERT INTO public.trainee_password_recovery_requests(id,trainee_id,phone_normalized,status)
+    INSERT INTO public.trainee_password_recovery_requests(id,trainee_id,phone_normalized,status,request_coach_user_id)
     VALUES
-      ('30000000-0000-4000-8000-000000000001','20000000-0000-4000-8000-000000000001','+989123456789','pending'),
-      ('30000000-0000-4000-8000-000000000002','20000000-0000-4000-8000-000000000002','+989123456789','pending'),
-      ('30000000-0000-4000-8000-000000000003','20000000-0000-4000-8000-000000000003','+989123456789','pending');
-    INSERT INTO public.trainee_password_recovery_requests(id,trainee_id,phone_normalized,status,token_hash,token_expires_at)
-    VALUES ('30000000-0000-4000-8000-000000000004','20000000-0000-4000-8000-000000000004','+989123456789','approved',repeat('a',64),now()+interval '15 minutes');
-    INSERT INTO public.trainee_password_recovery_requests(id,trainee_id,phone_normalized,status)
-    VALUES ('30000000-0000-4000-8000-000000000005','20000000-0000-4000-8000-000000000006','+989123450001','pending');
+      ('30000000-0000-4000-8000-000000000001','20000000-0000-4000-8000-000000000001','+989123456789','pending','10000000-0000-4000-8000-000000000001'),
+      ('30000000-0000-4000-8000-000000000002','20000000-0000-4000-8000-000000000002','+989123456789','pending','10000000-0000-4000-8000-000000000001'),
+      ('30000000-0000-4000-8000-000000000003','20000000-0000-4000-8000-000000000003','+989123456789','pending','10000000-0000-4000-8000-000000000002');
+    INSERT INTO public.trainee_password_recovery_requests(id,trainee_id,phone_normalized,status,token_hash,token_expires_at,request_coach_user_id)
+    VALUES ('30000000-0000-4000-8000-000000000004','20000000-0000-4000-8000-000000000004','+989123456789','approved',repeat('a',64),now()+interval '15 minutes','10000000-0000-4000-8000-000000000002');
+    INSERT INTO public.trainee_password_recovery_requests(id,trainee_id,phone_normalized,status,request_coach_user_id)
+    VALUES ('30000000-0000-4000-8000-000000000005','20000000-0000-4000-8000-000000000006','+989123450001','pending','10000000-0000-4000-8000-000000000002');
   `);
 
   const migration=fs.readFileSync('docs/experimental/migrations/20261122_recovery_atomic_rpc_candidate.sql','utf8');
