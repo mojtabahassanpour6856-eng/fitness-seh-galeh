@@ -125,6 +125,30 @@ jobs:
           mkdir -p /tmp/recovery-auth-local
           cd /tmp/recovery-auth-local
           supabase init
+      - name: Set disposable Auth JWT lifetime to 15 minutes
+        run: |
+          cd /tmp/recovery-auth-local
+          node --input-type=module <<'NODE'
+          import fs from 'node:fs';
+          const path = 'supabase/config.toml';
+          let config = fs.readFileSync(path, 'utf8');
+          const authHeader = /^\\[auth\\]\\s*$/m;
+          const match = authHeader.exec(config);
+          if (!match) throw new Error('Generated Supabase config has no [auth] section');
+          const start = match.index + match[0].length;
+          const next = config.slice(start).search(/^\\[/m);
+          const end = next < 0 ? config.length : start + next;
+          let section = config.slice(start, end);
+          if (/^jwt_expiry\\s*=/m.test(section)) {
+            section = section.replace(/^jwt_expiry\\s*=.*$/m, 'jwt_expiry = 900');
+          } else {
+            section = '\\njwt_expiry = 900\\n' + section;
+          }
+          config = config.slice(0, start) + section + config.slice(end);
+          fs.writeFileSync(path, config);
+          if (!/^jwt_expiry\\s*=\\s*900\\s*$/m.test(section)) throw new Error('Could not enforce 900-second local JWT expiry');
+          console.log('Disposable local Auth JWT expiry configured to 900 seconds.');
+          NODE
       - name: Start disposable local Auth stack only
         run: |
           cd /tmp/recovery-auth-local
