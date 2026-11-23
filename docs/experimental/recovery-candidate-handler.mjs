@@ -110,7 +110,7 @@ export function createRecoveryCandidateHandler(deps) {
       if (action === 'request') {
         const phone = normalizeIranMobile(body?.phone);
         if (!phone) return json({ success: false, message: 'شماره موبایل معتبر نیست.' }, 400, corsOrigin);
-        const { data: allowed, error: rateError } = await deps.admin.rpc('consume_registration_rate_limit', {
+        const { data: allowed, error: rateError } = await deps.admin.rpc('recovery_consume_request_rate_limit', {
           p_key_hash: rateKey(phone), p_window_seconds: 3600, p_max_requests: 5
         });
         if (rateError) return json(genericRequest.body, genericRequest.status, corsOrigin);
