@@ -482,3 +482,18 @@ GitHub Actions run `45113828197` (run #294) was found for the workflow-triggerin
 - `supabase-local-auth-integration`: still in progress at disposable local Auth stack startup; no final result yet.
 
 Therefore the new PostgREST HTTP tests are now confirmed green in disposable CI, but the overall workflow is not yet complete. Do not treat this as full release approval. No hosted Supabase project or real SMS provider was used.
+### Final result for PostgREST + local Auth run (2026-11-23, supersedes the in-progress snapshot above)
+
+GitHub Actions run `45113828197` / run #294 is now COMPLETED with overall conclusion `success`. All four jobs passed: `mock-recovery-tests`, `deno-edge-candidate-check`, `postgres-concurrency-tests`, and `supabase-local-auth-integration`.
+
+The disposable local Auth job log confirms:
+- Auth Admin password update succeeded for a disposable synthetic user.
+- Login with the old password was rejected; login with the new password succeeded.
+- Password update alone revoked previously issued refresh tokens (`yes`).
+- The old access JWT was rejected by Auth `getUser` after password update (`no` longer accepted).
+- Global sign-out also revoked other refresh tokens and the old access JWT was no longer accepted.
+- The local Auth stack was stopped and the synthetic Auth user was deleted in `finally` cleanup.
+
+This is a strong positive result for the tested local Supabase Auth version. The current handler's password-update call is therefore supported by this disposable Auth behavior, but the full recovery HTTP handler has not yet been exercised end-to-end against a database with the candidate migrations and real PostgREST/Auth wiring. That remains a separate release gate.
+
+No hosted Supabase project, production account, live Edge Function, or real SMS provider was used. Release remains NOT READY.
