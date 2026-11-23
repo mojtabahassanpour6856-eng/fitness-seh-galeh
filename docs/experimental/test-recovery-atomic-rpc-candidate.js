@@ -376,6 +376,26 @@ async function main() {
   assert.deepEqual(state.rows[0],{status:'pending',token_hash:null,token_expires_at:null,delivery_outcome:'confirmed_failure'});
   console.log('PASS: confirmed delivery failure clears code and returns request to pending safely');
 
+  // A code delivered under the former coach must be invalidated after reassignment.
+  r=await callAsService('SELECT public.recovery_coach_review($1,$2,$3,$4,$5,$6) AS result',
+    [req5,coach2,'approve',digest,new Date(Date.now()+15*60_000).toISOString(),'k1']);
+  assert.equal(r.rows[0].result.ok,true);
+  const reassignedDeliveryOp=r.rows[0].result.delivery_operation_id;
+  await callAsService('SELECT public.recovery_begin_delivery($1,$2)',[req5,reassignedDeliveryOp]);
+  r=await callAsService('SELECT public.recovery_finish_delivery($1,$2,$3) AS changed',
+    [req5,reassignedDeliveryOp,'sent']);
+  assert.equal(r.rows[0].changed,true);
+  await pool.query('UPDATE public.trainees SET coach_user_id=$1 WHERE id=$2',[coach1,trainee5]);
+  const reassignedClaim=await callAsService(
+    'SELECT public.recovery_claim_reset($1,$2,$3) AS result',
+    [req5,digest,'40000000-0000-4000-8000-000000000006']
+  );
+  assert.equal(reassignedClaim.rows[0].result.claimed,false,
+    'a code approved by the former coach must not be redeemable after reassignment');
+  state=await pool.query('SELECT status,token_hash,token_expires_at FROM public.trainee_password_recovery_requests WHERE id=$1',[req5]);
+  assert.deepEqual(state.rows[0],{status:'expired',token_hash:null,token_expires_at:null});
+  console.log('PASS: coach reassignment after delivery invalidates the outstanding recovery code');
+
   // Null decisions and invalid Auth outcomes must not silently fall through.
   const nullDecision=await callAsService(
     'SELECT public.recovery_coach_review($1,$2,$3,$4,$5,$6) AS result',
