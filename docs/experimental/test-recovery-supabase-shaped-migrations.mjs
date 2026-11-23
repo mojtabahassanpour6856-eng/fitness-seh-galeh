@@ -120,6 +120,32 @@ async function main(){
       'repeated same-state updates must not duplicate Outbox rows');
     console.log('PASS: encrypted approval atomically enqueues one ciphertext row; duplicate update is idempotent');
 
+    // Reassignment after approval but before worker claim must not strand the
+    // approved request. Reconciliation expires it, clears both ciphertext copies,
+    // and releases the one-open-request constraint for a fresh request.
+    const secondCoach='10000000-0000-4000-8000-000000000002';
+    await pool.query("INSERT INTO public.profiles(id,role) VALUES($1,'coach')",[secondCoach]);
+    await pool.query('UPDATE public.trainees SET coach_user_id=$2 WHERE id=$1',[trainee,secondCoach]);
+    const reconciled=await pool.query('SELECT public.recovery_outbox_reconcile_invalid_pre_send() AS n');
+    assert.equal(reconciled.rows[0].n,1,'stale pre-send delivery must be reconciled exactly once');
+    const staleRequest=await pool.query('SELECT status,delivery_outcome,delivery_payload FROM public.trainee_password_recovery_requests WHERE id=$1',[request]);
+    assert.equal(staleRequest.rows[0].status,'expired');
+    assert.equal(staleRequest.rows[0].delivery_outcome,'confirmed_failure');
+    assert.equal(staleRequest.rows[0].delivery_payload,null,'request ciphertext must be erased');
+    const staleOutbox=await pool.query('SELECT status,delivery_payload,lock_owner,locked_until,last_safe_error_code FROM public.trainee_password_recovery_outbox WHERE recovery_request_id=$1',[request]);
+    assert.equal(staleOutbox.rows[0].status,'failed');
+    assert.equal(staleOutbox.rows[0].delivery_payload,null,'Outbox ciphertext must be erased');
+    assert.equal(staleOutbox.rows[0].lock_owner,null);
+    assert.equal(staleOutbox.rows[0].locked_until,null);
+    assert.equal(staleOutbox.rows[0].last_safe_error_code,'coach_assignment_changed_before_send');
+    const freshRequest='30000000-0000-4000-8000-000000000002';
+    await pool.query('INSERT INTO public.trainee_password_recovery_requests(id,trainee_id,phone_normalized,status,request_coach_user_id) VALUES($1,$2,$3,$4,$5)',
+      [freshRequest,trainee,'+989123456789','pending',secondCoach]);
+    assert.equal((await pool.query("SELECT count(*)::int n FROM public.trainee_password_recovery_requests WHERE trainee_id=$1 AND status IN ('pending','approved')",[trainee])).rows[0].n,1,
+      'a new request must be insertable after stale approval is reconciled');
+    console.log('PASS: coach reassignment before claim reconciles stale approval, erases ciphertext, and permits re-request');
+
+
     // Terminal request outcomes and Outbox outcomes must erase ciphertext.
     for(const [outcome,status] of [['sent','sent'],['confirmed_failure','failed'],['unknown','unknown']]){
       const id='60000000-0000-4000-8000-'+String(['sent','confirmed_failure','unknown'].indexOf(outcome)+1).padStart(12,'0');
