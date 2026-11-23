@@ -525,10 +525,10 @@ AS $wrap$ SELECT recovery_private.coach_review_recovery_request(
 ) $wrap$;
 
 CREATE OR REPLACE FUNCTION public.recovery_record_wrong_attempt(
-  p_request_id uuid,p_submitted_digest text,5 integer
+  p_request_id uuid,p_submitted_digest text
 )
 RETURNS jsonb LANGUAGE sql SET search_path = ''
-AS $wrap$ SELECT recovery_private.record_recovery_wrong_attempt(p_request_id,p_submitted_digest,5) $wrap$;
+AS $wrap$ SELECT recovery_private.record_recovery_wrong_attempt(p_request_id,p_submitted_digest) $wrap$;
 
 CREATE OR REPLACE FUNCTION public.recovery_begin_delivery(p_request_id uuid,p_delivery_operation_id uuid)
 RETURNS boolean LANGUAGE sql SET search_path = ''
