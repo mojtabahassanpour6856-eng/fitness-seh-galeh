@@ -279,8 +279,8 @@ async function main() {
   r=await callAsService('SELECT public.recovery_begin_delivery($1,$2) AS started',[req3,deliveryOp3]);
   assert.equal(r.rows[0].started,false);
   // A distinct request proves an unknown delivery cannot be overwritten by a retry.
-  await pool.query(`INSERT INTO public.trainee_password_recovery_requests(id,trainee_id,phone_normalized,status)
-    VALUES ($1,$2,'+989123456789','pending')`,[req4,trainee4]);
+  await pool.query(`INSERT INTO public.trainee_password_recovery_requests(id,trainee_id,phone_normalized,status,request_coach_user_id)
+    VALUES ($1,$2,'+989123456789','pending',$3)`,[req4,trainee4,coach2]);
   r=await callAsService(
     'SELECT public.recovery_coach_review($1,$2,$3,$4,$5,$6) AS result',
     [req4,coach2,'approve',digest,new Date(Date.now()+15*60_000).toISOString(),'k1']
@@ -305,8 +305,8 @@ async function main() {
   const winner=claims.find(x=>x.rows[0].result.claimed).rows[0].result;
   assert.equal(winner.auth_user_id,'10000000-0000-4000-8000-000000000003');
   await assert.rejects(
-    pool.query(`INSERT INTO public.trainee_password_recovery_requests(id,trainee_id,phone_normalized,status)
-      VALUES ('30000000-0000-4000-8000-000000000004',$1,'+989123456789','pending')`,[trainee3]),
+    pool.query(`INSERT INTO public.trainee_password_recovery_requests(id,trainee_id,phone_normalized,status,request_coach_user_id)
+      VALUES ('30000000-0000-4000-8000-000000000004',$1,'+989123456789','pending',$2)`,[trainee3,coach2]),
     e=>e && e.code==='23505'
   );
   console.log('PASS: delivery is single-attempt; unknown delivery blocks redemption until authoritative sent reconciliation');
