@@ -60,7 +60,7 @@ jobs:
         with:
           node-version: 22
       - name: Install pinned Supabase Auth SDK for isolated contract check
-        run: npm install --no-save @supabase/supabase-js@2.119.0
+        run: npm install --no-save @supabase/supabase-js@2.119.0 pg
       - name: Verify Auth Admin password-update SDK contract (intercepted network only)
         run: node docs/experimental/test-recovery-auth-admin-sdk-contract.mjs
       - name: Run isolated mock recovery tests
@@ -142,6 +142,8 @@ jobs:
           echo "SUPABASE_URL=$API_URL" >> "$GITHUB_ENV"
           echo "SUPABASE_ANON_KEY=$ANON_KEY" >> "$GITHUB_ENV"
           echo "SUPABASE_SERVICE_ROLE_KEY=$SERVICE_ROLE_KEY" >> "$GITHUB_ENV"
+          case "$DB_URL" in postgresql://*127.0.0.1*|postgresql://*localhost*) ;; *) echo "Refusing non-local database URL"; exit 1 ;; esac
+          echo "SUPABASE_DB_URL=$DB_URL" >> "$GITHUB_ENV"
       - name: Test password update and session revocation against disposable Auth
         run: node docs/experimental/test-recovery-auth-local-stack.mjs
       - name: Stop disposable local Supabase stack
