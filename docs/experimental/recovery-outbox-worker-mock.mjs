@@ -83,7 +83,7 @@ export async function processOneRecoveryOutboxItem({
     });
 
     const requestResult = await admin.from('trainee_password_recovery_requests')
-      .select('id,trainee_id,phone_normalized,status,delivery_outcome,delivery_operation_id')
+      .select('id,trainee_id,phone_normalized,status,delivery_outcome,delivery_operation_id,reviewed_by')
       .eq('id', payload.recovery_request_id).maybeSingle();
     if (requestResult?.error || !requestResult?.data) {
       await finish(admin, fencedLease, 'failed', null, 'recovery_request_unavailable');
@@ -91,13 +91,14 @@ export async function processOneRecoveryOutboxItem({
     }
     const request = requestResult.data;
     const traineeResult = await admin.from('trainees')
-      .select('id,phone_normalized,approval_status,archived_at')
+      .select('id,phone_normalized,approval_status,archived_at,coach_user_id')
       .eq('id', request.trainee_id).maybeSingle();
     const trainee = traineeResult?.data;
     const validTarget = !traineeResult?.error && trainee &&
       trainee.approval_status === 'active' &&
       trainee.archived_at == null &&
       trainee.phone_normalized === request.phone_normalized &&
+      trainee.coach_user_id === request.reviewed_by &&
       request.status === 'approved' &&
       request.delivery_outcome === 'attempting' &&
       request.delivery_operation_id === payload.delivery_operation_id;
