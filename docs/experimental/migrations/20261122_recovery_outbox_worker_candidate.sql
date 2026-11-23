@@ -271,7 +271,7 @@ BEGIN
     IF v_invalid IS TRUE THEN
       UPDATE public.trainee_password_recovery_requests
       SET status='expired',token_hash=NULL,token_expires_at=NULL,
-          delivery_outcome='confirmed_failure',updated_at=now()
+          delivery_payload=NULL,delivery_outcome='confirmed_failure',updated_at=now()
       WHERE id=v_row.recovery_request_id
         AND status='approved' AND delivery_outcome='pending'
         AND delivery_operation_id=v_row.delivery_operation_id;
