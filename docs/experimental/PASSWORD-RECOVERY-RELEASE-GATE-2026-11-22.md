@@ -372,3 +372,13 @@ Commits:
 The new CI run for these latest commits must finish successfully before proceeding. The candidate migration is still not applied to Test or Production, and no live Edge Function, Auth user, password, SMS provider, trainee record, or production resource was changed.
 
 **Release remains NOT READY.** Next gate: confirm the new disposable PostgreSQL run passes the registration-limiter preservation test, then continue with read-only PostgREST/API compatibility checks and plan an explicitly approved, isolated Test migration only after the candidate migration has been reviewed in full.
+
+## Regression run after limiter rename — follow-up still required (2026-11-23)
+
+Run 45111044645 exposed two test-fixture issues after the isolated RPC rename:
+- The handler unit test still expects the old RPC name consume_registration_rate_limit. The candidate handler correctly calls recovery_consume_request_rate_limit; the test assertion is stale and must be aligned before the mock job can pass.
+- The disposable PostgreSQL fixture's new pre-existing registration limiter function used malformed dollar quoting. Corrected the fixture to use a standard SQL string literal in commit 189c6b74c50e489b03175925d60fdd8dcf57be44.
+
+Run 45111142831 (commit 189c6b74c50e489b03175925d60fdd8dcf57be44) confirms Deno type-check passed, but the mock job still fails at the stale handler assertion. PostgreSQL and disposable local Auth jobs were still running at the time of this note; no final success is claimed.
+
+Do not revert the dedicated recovery RPC name to satisfy the stale test: doing so would reintroduce the production registration-limiter collision. The test must be corrected to assert the new dedicated RPC name. The recovery migration remains unapplied to Test and Production.
