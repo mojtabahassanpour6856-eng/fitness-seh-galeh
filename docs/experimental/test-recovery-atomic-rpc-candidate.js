@@ -52,7 +52,7 @@ async function main() {
     DROP FUNCTION IF EXISTS public.consume_registration_rate_limit(text,integer,integer);
     CREATE FUNCTION public.consume_registration_rate_limit(
       p_key_hash text, p_window_seconds integer DEFAULT 3600, p_max_requests integer DEFAULT 5
-    ) RETURNS boolean LANGUAGE sql AS $ SELECT false $;
+    ) RETURNS boolean LANGUAGE sql AS 'SELECT false';
     DROP TABLE IF EXISTS public.trainee_password_recovery_requests CASCADE;
     DROP TABLE IF EXISTS public.trainees CASCADE;
     DROP TABLE IF EXISTS public.profiles CASCADE;
