@@ -308,3 +308,35 @@ Both app buckets are private: payment-receipts (5 MiB limit) and trainee-health-
 ### Scope boundary and release status
 
 This live inventory is from the isolated Supabase test mirror only, not Production. It confirms catalog state for this mirror at the time of inspection; it does not prove Production has identical schema or policies. No live user or trainee data was queried. No changes were made. Release remains NOT READY pending review of the public archive table, the coach nutrition RPC overload, API/schema exposure and grants, full helper/function bodies, view/sequence/default privileges, and synthetic cross-role access tests.
+## Follow-up: helper bodies, ACLs, and policy logic — 2026-11-23
+
+Read-only inspection continued against the same isolated mirror project. No data rows were selected or modified.
+
+### Helper review
+
+- private.can_access_trainee(uuid) returns true only when the target trainee is active and owned by the current auth user, or when coach_user_id equals auth.uid(). This supports the intended trainee/assigned-coach boundary. It is SECURITY DEFINER, STABLE, with a pinned search_path; anon cannot execute it.
+- private.is_coach() checks profiles.id=auth.uid() and role='coach'. SECURITY DEFINER, STABLE, pinned search_path; anon cannot execute.
+- private.can_update_trainee(uuid) permits the assigned coach or the trainee's own auth_user_id. The surrounding trainees UPDATE policy additionally constrains the resulting coach_user_id/auth_user_id values. Needs adversarial tests for attempts to change ownership/control columns.
+- private.can_claim_trainee(uuid) requires auth_user_id IS NULL, active approval, and normalized phone equality with auth.jwt()->>'phone'. This is a sensitive account-claim path; verify phone verification/claim behavior and ensure the JWT phone claim is verified before relying on it.
+
+### RPC/function ACL findings
+
+- The three-argument overload public.save_coach_nutrition_builder_plan(uuid,jsonb,jsonb) has EXECUTE for anon and authenticated, while the one-argument SECURITY DEFINER implementation is not executable by anon. The wrapper is SECURITY INVOKER, so current ACLs should prevent anon from invoking the protected implementation; the anon grant is still unnecessary and should be removed after app compatibility review.
+- public.submit_trainee_registration_request(...) contains a hard-coded shared value check `p_initial_password <> '12345'`. Current catalog privilege checks report neither anon nor authenticated can EXECUTE this function, so it is not presently an exposed callable route through those roles. Still, a fixed shared registration secret is weak and should not be used as an authorization factor. Trace frontend callers and historical grants before any change; do not assume it is exploitable based on source alone.
+- public.consume_registration_rate_limit(...) is SECURITY DEFINER with empty search_path; anon/authenticated do not have EXECUTE. Its key hash is validated as 64 lowercase hex characters, with bounded window and request parameters.
+- public.calculate_food_substitute_amount(...) is executable by anon and authenticated, but it only reads food calorie values and computes a numeric conversion. Its anon execution appears low sensitivity; confirm the referenced foods table remains safe for anon via table grants/RLS (catalog reports no anon table privileges).
+- SECURITY DEFINER helper bodies inspected use pinned search_path settings. The review is not yet exhaustive for every SECURITY DEFINER routine or trigger function.
+
+### ACL and schema exposure snapshot
+
+- public schema USAGE is granted to anon and authenticated; private schema USAGE is denied to anon and allowed to authenticated. workout_batch_test schema USAGE is denied to both roles.
+- Catalog privilege checks show no anon SELECT/INSERT/UPDATE/DELETE on public tables. Authenticated table grants are present only where expected for the app; RLS policies constrain row access. Sensitive deny-all tables also have no authenticated table privileges.
+- The four workout_batch_test tables have no anon/authenticated schema USAGE and no table privileges for either role; the no-policy state is therefore not directly exposed to these roles through the inspected schema grants.
+- Public profiles SELECT policy is self-only (`id = auth.uid()`). Public trainees SELECT uses private.can_access_trainee; nutrition plans and child rows require coach role for writes and trainee/assigned-coach access for reads.
+
+### Important caveats / remaining tests
+
+- These catalog checks do not replace actual PostgREST requests made as anon, coach A, coach B, and trainee A/B. In particular, cross-coach denial, trainee self-access, unauthorized field mutation, and RPC overload behavior still need end-to-end synthetic identities.
+- The `submit_trainee_registration_request` hard-coded `12345` check is a design concern even though current EXECUTE ACLs deny both API roles; determine whether the deployed frontend still calls it and whether it is a dead legacy function.
+- No attempt was made to impersonate real users, insert synthetic rows into the hosted mirror, call live Auth, or alter policies. Do not claim cross-account isolation has been dynamically proven from this inspection.
+- Release remains blocked pending synthetic cross-role API tests, a complete routine/trigger inventory, confirmation of deployed frontend call paths, and explicit disposition of the unnecessary anon RPC grant and fixed registration secret.
