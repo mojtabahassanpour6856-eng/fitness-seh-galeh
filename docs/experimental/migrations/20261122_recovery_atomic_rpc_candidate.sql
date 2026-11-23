@@ -233,7 +233,7 @@ RETURNS jsonb
 LANGUAGE plpgsql
 SECURITY DEFINER
 SET search_path = ''
-AS $$
+AS $coach_review$
 DECLARE
   v_trainee_id uuid;
   v_status text;
@@ -309,8 +309,7 @@ BEGIN
 
   RETURN jsonb_build_object('ok', true, 'status', 'approved', 'delivery_operation_id', v_delivery_operation_id);
 END;
-$$;
-
+$coach_review$;
 CREATE OR REPLACE FUNCTION recovery_private.record_recovery_wrong_attempt(
   p_request_id uuid,
   p_submitted_digest text
