@@ -146,3 +146,19 @@ Decision for this stage:
 5. A disposable proof must show: newly issued JWT contains the expected bounded `exp`; after password change/global sign-out, refresh fails; PostgREST accepts the old JWT only until expiry and rejects it afterwards; a newly refreshed/reauthenticated session works; and ordinary app refresh flows remain stable.
 
 This resolves the architectural direction but does not close the JWT gate: the expiry value and any sensitive-route session check still require executable disposable tests and a staging decision. Sources reviewed: Supabase User Sessions, Signing Out, and CLI `auth.jwt_expiry` documentation.
+
+## Disposable 15-minute JWT configuration probe — 2026-11-23 (CI #333)
+
+The experimental Auth integration was extended without changing any hosted settings:
+
+- The CI creates a fresh, unlinked project under `/tmp` and explicitly sets local `[auth].jwt_expiry = 900` before starting Supabase.
+- The test decodes access-token claims and requires `exp - iat = 900` seconds for initial sessions and a newly authenticated session.
+- A refresh performed before password change must succeed and the refreshed token must retain the 900-second lifetime.
+- Password update must reject the old password, accept the new password, and revoke existing refresh tokens; Auth `getUser` rejects the old access JWT.
+- The PostgREST probe continues to demonstrate the important residual behavior: it accepts the still-unexpired signed old JWT after password change/global sign-out. This is expected for local signature/expiry validation and is not evidence of immediate access-token revocation.
+
+GitHub Actions run #333 (`45119214105`) completed successfully on branch head `e8cefa3db97e2376eb027617490c6ea278895259`; all four jobs passed, including the new 900-second claim assertions and the disposable local Auth/PostgREST probe. The test does **not** wait 15 minutes to observe actual expiry rejection, nor does it yet prove PostgREST rejects that same old JWT after expiry. Those remain explicit follow-up assertions. The session-id check for sensitive endpoints also remains design-only.
+
+Clarification: the local Supabase command excludes auxiliary services (Studio, Realtime, Storage, Edge Runtime, etc.) but keeps the disposable Postgres and PostgREST services alongside Auth for this probe. It still does not run the complete recovery HTTP handler → coach approval → Outbox worker → redemption lifecycle against that same stack; unified recovery E2E remains open.
+
+No production or hosted Auth setting was changed. No real trainee account, password, or SMS provider was used. **JWT gate remains open pending expiry-boundary/PostgREST rejection testing and a separate sensitive-operation revocation decision.**
