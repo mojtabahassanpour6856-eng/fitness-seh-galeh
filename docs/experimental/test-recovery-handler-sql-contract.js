@@ -58,6 +58,12 @@ assert.match(encryptedMigration, /IF TG_TABLE_NAME='trainee_password_recovery_re
 assert.match(encryptedMigration, /ELSIF TG_TABLE_NAME='trainee_password_recovery_outbox' THEN\s+IF NEW\.status/);
 assert.match(encryptedMigration, /delivery_payload jsonb/);
 assert.match(encryptedMigration, /p_delivery_operation_id uuid/);
+const encryptedCoachReview = encryptedMigration
+  .split('CREATE OR REPLACE FUNCTION recovery_private.coach_review_recovery_request_encrypted')[1]
+  .split('CREATE OR REPLACE FUNCTION public.recovery_coach_review_encrypted')[0];
+assert.match(encryptedCoachReview, /r\.request_coach_user_id\s*=\s*p_actor_user_id/,
+  'encrypted approval must preserve the coach bound to the original trainee request');
+
 assert.match(encryptedMigration, /NEW\.delivery_payload IS NOT NULL/);
 assert.match(encryptedMigration, /delivery_payload := NULL/);
 assert.match(encryptedMigration, /recovery_outbox_fetch_payload/);
