@@ -25,6 +25,7 @@ const req2='30000000-0000-4000-8000-000000000002';
 const req3='30000000-0000-4000-8000-000000000003';
 const req4='30000000-0000-4000-8000-000000000004';
 const req5='30000000-0000-4000-8000-000000000005';
+const req6='30000000-0000-4000-8000-000000000006';
 const digest='a'.repeat(64);
 const digest2='b'.repeat(64);
 
@@ -195,7 +196,7 @@ async function main() {
     [req1,coach2,'approve',digest,new Date(Date.now()+15*60_000).toISOString(),'k1']
   );
   assert.equal(r.rows[0].result.ok,false);
-  assert.equal(r.rows[0].result.reason,'not_authorized');
+  assert.equal(r.rows[0].result.reason,'not_available', 'request bound to another coach is concealed');
   let state=await pool.query('SELECT status FROM public.trainee_password_recovery_requests WHERE id=$1',[req1]);
   assert.equal(state.rows[0].status,'pending');
 
@@ -212,40 +213,53 @@ async function main() {
     await reassign.query('COMMIT');
     r=await pending;
     assert.equal(r.rows[0].result.ok,false);
-    assert.equal(r.rows[0].result.reason,'not_authorized');
+    assert.equal(r.rows[0].result.reason,'not_available', 'former coach cannot act after reassignment');
   } finally { try { await reassign.query('ROLLBACK'); } catch {} reassign.release(); }
-  console.log('PASS: reassignment wins the row-lock race; former coach cannot approve');
-
   r=await callAsService(
     'SELECT public.recovery_coach_review($1,$2,$3,$4,$5,$6) AS result',
     [req2,coach2,'approve',digest,new Date(Date.now()+15*60_000).toISOString(),'k1']
+  );
+  assert.equal(r.rows[0].result.ok,false, 'new coach cannot approve stale request');
+  assert.equal(r.rows[0].result.reason,'not_available');
+  state=await pool.query('SELECT status FROM public.trainee_password_recovery_requests WHERE id=$1',[req2]);
+  assert.equal(state.rows[0].status,'pending', 'unauthorized review must not mutate request');
+  await pool.query("UPDATE public.trainee_password_recovery_requests SET status='expired' WHERE id=$1",[req2]);
+  await pool.query(
+    'INSERT INTO public.trainee_password_recovery_requests(id,trainee_id,phone_normalized,status,request_coach_user_id) VALUES ($1,$2,$3,$4,$5)',
+    [req6,trainee2,'+989123456789','pending',coach2]
+  );
+  console.log('PASS: stale request is denied to both coaches; fresh request is bound to new coach');
+
+  r=await callAsService(
+    'SELECT public.recovery_coach_review($1,$2,$3,$4,$5,$6) AS result',
+    [req6,coach2,'approve',digest,new Date(Date.now()+15*60_000).toISOString(),'k1']
   );
   assert.equal(r.rows[0].result.ok,true);
   assert.equal(r.rows[0].result.status,'approved');
   assert.equal(Object.hasOwn(r.rows[0].result,'phone_normalized'),false);
   const deliveryOp2=r.rows[0].result.delivery_operation_id;
-  r=await callAsService('SELECT public.recovery_begin_delivery($1,$2) AS started',[req2,deliveryOp2]);
+  r=await callAsService('SELECT public.recovery_begin_delivery($1,$2) AS started',[req6,deliveryOp2]);
   assert.equal(r.rows[0].started,true);
-  r=await callAsService('SELECT public.recovery_finish_delivery($1,$2,$3) AS changed',[req2,deliveryOp2,'sent']);
+  r=await callAsService('SELECT public.recovery_finish_delivery($1,$2,$3) AS changed',[req6,deliveryOp2,'sent']);
   assert.equal(r.rows[0].changed,true);
 
   const attempts=await Promise.all(Array.from({length:9},()=>callAsService(
-    'SELECT public.recovery_record_wrong_attempt($1,$2) AS result',[req2,digest2]
+    'SELECT public.recovery_record_wrong_attempt($1,$2) AS result',[req6,digest2]
   )));
   assert.equal(attempts.filter(x=>x.rows[0].result.incremented).length,5);
 
   // The RPC has no caller-controlled maximum-attempt parameter: an attempted
   // third argument must fail at function resolution, not alter the SQL policy.
   await assert.rejects(callAsService(
-    'SELECT public.recovery_record_wrong_attempt($1,$2,$3) AS result',[req2,digest2,1]
+    'SELECT public.recovery_record_wrong_attempt($1,$2,$3) AS result',[req6,digest2,1]
   ), /does not exist/i);
 
   // A sixth wrong attempt must be rejected without incrementing or changing state.
   r=await callAsService(
-    'SELECT public.recovery_record_wrong_attempt($1,$2) AS result',[req2,digest2]
+    'SELECT public.recovery_record_wrong_attempt($1,$2) AS result',[req6,digest2]
   );
   assert.equal(r.rows[0].result.incremented,false,'sixth wrong attempt must be rejected');
-  state=await pool.query('SELECT status,token_attempts,token_hash,token_expires_at FROM public.trainee_password_recovery_requests WHERE id=$1',[req2]);
+  state=await pool.query('SELECT status,token_attempts,token_hash,token_expires_at FROM public.trainee_password_recovery_requests WHERE id=$1',[req6]);
   assert.equal(state.rows[0].status,'expired');
   assert.equal(state.rows[0].token_attempts,5);
   assert.equal(state.rows[0].token_hash,null);
