@@ -385,7 +385,7 @@ async function main() {
   r=await callAsService('SELECT public.recovery_finish_delivery($1,$2,$3) AS changed',
     [req5,reassignedDeliveryOp,'sent']);
   assert.equal(r.rows[0].changed,true);
-  await pool.query('UPDATE public.trainees SET coach_user_id=$1 WHERE id=$2',[coach1,trainee5]);
+  await pool.query('UPDATE public.trainees SET coach_user_id=$1 WHERE id=$2',[coach1,'20000000-0000-4000-8000-000000000006']);
   const reassignedClaim=await callAsService(
     'SELECT public.recovery_claim_reset($1,$2,$3) AS result',
     [req5,digest,'40000000-0000-4000-8000-000000000006']
