@@ -1,37 +1,53 @@
-# Recovery Outbox encrypted delivery payload — required design gate
+# Recovery Outbox encrypted delivery payload — implementation status and release gate
 
-Status: design required; no Worker sender may be implemented or deployed until this gate is closed.
+Last reviewed: 2026-11-23
 
-## Why the current Outbox is not yet sendable
+Status: the encrypted-payload and fake-only Worker candidates now exist and are covered by isolated CI. This document supersedes the earlier design-only status below. It does NOT approve deployment, real SMS, or migration execution.
 
-The coach-review HTTP handler generates a four-digit code in memory and passes only its HMAC digest to `recovery_coach_review`. The atomic approval trigger creates an Outbox row containing request/operation identifiers and a provider idempotency key, but it does not contain the plaintext code or a recoverable encrypted payload. The HMAC digest is intentionally one-way and cannot be used to reconstruct the code.
+## Implemented in the experimental branch
 
-Therefore, a Worker that reads the current Outbox cannot send the approved code. Do not add a Worker that invents a new code, sends a different code, or stores plaintext in the database.
+- Coach review candidate accepts a caller-generated delivery operation UUID and AES-256-GCM envelope.
+- The envelope is bound to recovery request ID and delivery operation ID as authenticated additional data.
+- The encrypted envelope is copied to the Outbox in the approval transaction; plaintext code is not stored.
+- A service-role-only RPC fetches the payload for the current fenced lease.
+- The experimental Worker rechecks request/trainee status, phone equality, archive status, and coach assignment before provider invocation.
+- The Worker only accepts FakeRecoverySmsProvider. Any other provider is rejected with REAL_PROVIDER_DISABLED_IN_EXPERIMENT.
+- Timeout, malformed provider result, decryption failure after durable send-start, and unconfirmed completion are treated as ambiguous; the Worker does not blindly resend.
+- The isolated CI workflow runs the fake-only Worker tests and disposable PostgreSQL/PostgREST Outbox contract tests.
 
-## Required design
+## Remaining provider integration gate
 
-1. Generate the code once in the coach-review handler.
-2. Encrypt the code before the approval RPC using authenticated encryption (AES-256-GCM) with a dedicated 256-bit delivery-payload key. The encryption key must be distinct from all recovery HMAC keys and Supabase service-role credentials.
-3. Use a fresh cryptographically random 96-bit nonce for every encryption. Persist a versioned envelope containing algorithm, key version, nonce, and ciphertext+tag. Bind the request ID and delivery operation ID as authenticated additional data (AAD) so ciphertext cannot be transplanted between requests or operations.
-4. Extend the coach-review RPC with a caller-generated operation UUID and the encrypted envelope. In one transaction, validate the actor/trainee assignment, store only the HMAC digest plus encrypted envelope and key version, mark the request approved, and create the Outbox row by trigger.
-5. The Outbox row must copy the encrypted envelope and key version in the same transaction. It must never store plaintext code.
-6. Worker retrieves the encrypted envelope through a service-role-only RPC, validates operation/request binding, decrypts with the dedicated key, rechecks recipient phone equality and active/non-archived trainee status, then invokes the provider with the stable Outbox idempotency key.
-7. On terminal `sent`, `failed`, or `unknown`, clear encrypted payload material atomically with request/outbox finalization. Preserve the HMAC digest only while it is needed for code redemption. On expired/unknown states, never auto-resend.
-8. Never log phone, code, ciphertext, encryption key, service-role key, or provider credentials. Provider responses are reduced to a bounded message ID and allowlisted safe error code.
+No real provider adapter is implemented or enabled in this branch. The deploy-shaped Edge Function deliberately has no deliveryAdapter. Do not add provider credentials or enable a provider as part of this experiment.
 
-## Required tests before Worker implementation
+Before a real adapter can be proposed, obtain and review the current official provider API contract and verify all of the following with documented evidence:
 
-- AES-GCM round trip and tamper detection.
-- Wrong request ID / operation ID AAD rejection.
-- Nonce uniqueness and strict envelope parser limits.
-- Missing/retired key version fails closed without calling provider.
-- Ciphertext copied to another request or operation fails authentication.
-- Transaction rollback leaves neither approved request nor Outbox payload.
-- Duplicate coach approval cannot create another payload or Outbox operation.
-- Outbox claim never exposes payload to anon/authenticated.
-- Provider acceptance followed by Worker crash becomes unknown and is not resent.
-- All terminal outcomes clear encrypted payload from both request and Outbox.
+1. Authentication method and secret handling.
+2. Exact request schema, recipient normalization, template/pattern identifier, and variable mapping.
+3. Exact success and rejection response schemas, including whether a provider message ID is returned.
+4. Whether the provider supports an idempotency key, and its scope and retention period.
+5. Whether provider status can be queried after a timeout or connection loss.
+6. Which errors prove non-acceptance versus leave acceptance ambiguous.
+7. Rate limits, retry-after behavior, delivery restrictions, and operational monitoring.
+8. A sandbox/test credential or provider-supported non-delivery mode. Never use a real trainee phone for contract testing.
 
-## Release gate
+If the provider has no idempotency or status lookup, the system must retain fail-closed handling for ambiguous outcomes and must not claim exactly-once delivery.
 
-This file is a blocker, not a production implementation. Keep the Edge adapter under `docs/experimental`, keep provider delivery disabled, and do not run migrations against the live Supabase project until the encrypted-payload protocol and its disposable-PostgreSQL tests pass.
+## Release blockers unrelated to provider adapter
+
+- Historical mirror recovery row still needs an audited disposition/request-time coach mapping. Do not infer the historical coach from the current trainee assignment.
+- A verified full backup and restore rehearsal are still outstanding.
+- The candidate migration sequence and currently deployed Edge Function have not been applied or replaced on the mirror.
+- Live mirror compatibility, provider behavior, and real Auth password mutation have not been validated end-to-end.
+
+## Safety boundary
+
+- Keep PR #260 Draft and unmerged.
+- Do not run any candidate migration against mirror or production.
+- Do not deploy the candidate Edge Function.
+- Do not configure real SMS credentials or send real SMS.
+- Do not modify trainee records, passwords, or existing Auth settings.
+- Continue only with isolated branch code, synthetic fixtures, and disposable CI infrastructure.
+
+## Earlier design rationale
+
+The original design-only note correctly identified that an HMAC digest cannot reconstruct the one-time code and that a Worker must never invent a replacement code or store plaintext. The encrypted envelope + Outbox + fake-only Worker implementation now addresses that design gap in the isolated candidate. The real-provider integration and release gates above remain open.
