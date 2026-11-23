@@ -714,3 +714,19 @@ Release remains **NOT READY FOR PRODUCTION**.
 - No remote SQL, migration, Edge Function deployment, SMS, password change, or production operation was performed.
 
 **Release decision remains: NOT READY.** Next gate is a Supabase-compatible, backwards-reviewed migration plus a deployable Edge Function/worker pair, tested together against the mirror's actual schema and Auth behavior. Only after that should the mirror receive a coordinated, reversible rollout.
+
+
+## Candidate integration audit — 2026-11-23 (follow-up)
+
+### RPC and schema contract cross-check
+- Static cross-check confirms every RPC name called by the candidate HTTP handler is defined by the candidate SQL set: `recovery_consume_request_rate_limit`, `recovery_submit_request`, `recovery_coach_review_encrypted`, `recovery_coach_review`, `recovery_claim_reset`, `recovery_record_wrong_attempt`, `recovery_begin_auth_update`, and `recovery_finish_auth_update`.
+- The worker RPC family is also present in the outbox migration: claim, heartbeat, begin-send, finish, reconcile, and encrypted-payload fetch.
+- The encrypted migration replaces the enqueue trigger function created by the outbox migration and copies the encrypted envelope transactionally. This is internally coherent in the candidate set, but it still needs execution against a Supabase-shaped disposable schema with the exact deployed extensions, roles, grants, and PostgREST exposure configuration.
+
+### Remaining implementation blockers
+- The current mirror request table does not yet have candidate columns such as `request_coach_user_id`, `delivery_outcome`, `delivery_operation_id`, `auth_outcome`, and encrypted payload metadata. The current index still excludes `processing`.
+- The active mirror Edge Function is still the legacy direct-write/direct-Mediana implementation. The candidate handler is deliberately not installed in `supabase/functions`, and the worker only accepts its fake provider. There is therefore no production-capable delivery adapter or validated provider response/idempotency contract yet.
+- The candidate SQL files explicitly prohibit direct Supabase deployment. Merely removing those header comments or replaying them in the mirror would be unsafe; the migration must be rewritten as a Supabase migration with explicit preflight assertions, bounded lock strategy, grants/default privileges, rollback plan, and an exact compatibility check against the live table/function definitions.
+- The actual Supabase Auth update's behavior under transport ambiguity and refresh-token/session revocation still needs a mirror-only end-to-end verification. The local Auth test is useful but does not prove remote project configuration behavior.
+
+**Decision:** no deployment or SQL mutation authorized by this audit. The next engineering deliverable is a separate Supabase migration candidate and a deployable Edge Function/worker pair, with provider delivery kept disabled until its provider and credentials are explicitly validated. Existing live function remains untouched during preparation.
