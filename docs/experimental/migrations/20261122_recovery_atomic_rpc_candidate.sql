@@ -34,8 +34,14 @@ $guard$;
 ALTER TABLE public.trainee_password_recovery_requests
   ADD COLUMN IF NOT EXISTS request_coach_user_id uuid REFERENCES public.profiles(id);
 
--- Backfill legacy pending requests from the current assignment. Ambiguous or orphaned
--- requests are rejected rather than silently becoming actionable by a different coach.
+-- Legacy pending requests have no trustworthy request-time owner. Expire them
+-- rather than assigning them to whichever coach happens to own the trainee now.
+UPDATE public.trainee_password_recovery_requests
+SET status = 'expired', token_hash = NULL, token_expires_at = NULL,
+    updated_at = now()
+WHERE request_coach_user_id IS NULL AND status = 'pending';
+
+-- Backfill only terminal historical rows; they are not actionable.
 UPDATE public.trainee_password_recovery_requests r
 SET request_coach_user_id = t.coach_user_id
 FROM public.trainees t
