@@ -164,6 +164,8 @@ async function body(response) { return await response.json(); }
   const approvalCall = f.calls.find(x => x.name === 'recovery_coach_review_encrypted');
   assert.ok(approvalCall, 'approval must use encrypted-payload RPC');
   assert.equal(approvalCall.args.p_delivery_operation_id, OP);
+  assert.equal(approvalCall.args.p_token_expires_at, new Date(1790000000000 + 24 * 60 * 60 * 1000).toISOString(),
+    'approved recovery code must expire exactly 24 hours after issuance');
   assert.deepEqual(Object.keys(approvalCall.args.p_delivery_payload).sort(), ['alg','ct','iv','kid','v']);
   assert.equal(approvalCall.args.p_delivery_payload.alg, 'A256GCM');
   assert.equal(approvalCall.args.p_delivery_payload.kid, 'd1');
