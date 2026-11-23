@@ -28,7 +28,7 @@ const env={
  RECOVERY_DELIVERY_KEYS:JSON.stringify({k1:deliveryKey}),RECOVERY_DELIVERY_KEY_VERSION:'k1',
  RECOVERY_ALLOWED_ORIGINS:'https://fitness-seh-galeh.invalid'
 };
-let coachId,traineeAuthId,server;
+let coachId,traineeAuthId,traineeId,recoveryRequestId,server;
 const provider=new FakeRecoverySmsProvider([{kind:'accepted',messageId:'e2e-fake-sms-accepted'}]);
 const expectNoError=(r,label)=>{assert.equal(r.error,null,label);return r.data;};
 async function post(base,body,token){
@@ -72,7 +72,7 @@ async function main(){
  coachId=coach.user.id;
  const trainee=expectNoError(await admin.auth.admin.createUser({email:traineeEmail,password:oldPassword,email_confirm:true}),'create trainee');
  traineeAuthId=trainee.user.id;
- const traineeId=randomUUID();
+ traineeId=randomUUID();
  await pool.query('INSERT INTO public.profiles(id,role) VALUES($1,\'coach\')',[coachId]);
  await pool.query(`INSERT INTO public.trainees(id,coach_user_id,auth_user_id,approval_status,phone_normalized,full_name)
  VALUES($1,$2,$3,'active',$4,'Disposable E2E Trainee')`,[traineeId,coachId,traineeAuthId,phone]);
@@ -100,8 +100,8 @@ async function main(){
  const listed=await post(base,{action:'list'},coachToken);
  assert.equal(listed.status,200,'real local Auth coach must list assigned trainee request');
  assert.equal(listed.body.requests.length,1);
- const requestId=listed.body.requests[0].id;
- const approved=await post(base,{action:'review',request_id:requestId,decision:'approve'},coachToken);
+ recoveryRequestId=listed.body.requests[0].id;
+ const approved=await post(base,{action:'review',request_id:recoveryRequestId,decision:'approve'},coachToken);
  assert.equal(approved.status,202,'coach approval should enqueue encrypted delivery');
  assert.equal(approved.body.delivery_status,'queued');
  const processed=await processOneRecoveryOutboxItem({admin,workerId:randomUUID(),deliveryKeys:{k1:deliveryKey},provider});
@@ -120,7 +120,7 @@ async function main(){
  const replay=await post(base,{action:'reset',phone,code,new_password:'Another-Password-789!'});
  assert.equal(replay.status,400,'replayed code must be rejected');
  const state=await pool.query(`SELECT status,delivery_outcome,auth_outcome,token_hash,delivery_payload
- FROM public.trainee_password_recovery_requests WHERE id=$1`,[requestId]);
+ FROM public.trainee_password_recovery_requests WHERE id=$1`,[recoveryRequestId]);
  assert.equal(state.rowCount,1);
  assert.equal(state.rows[0].status,'completed');
  assert.equal(state.rows[0].delivery_outcome,'sent');
@@ -136,7 +136,17 @@ async function main(){
 try{await main();}
 finally{
  if(server) await new Promise(resolve=>server.close(resolve));
- try{if(coachId) await admin.auth.admin.deleteUser(coachId);}catch{}
+ // Remove every synthetic database fixture before deleting its Auth identities.
+ // The disposable local stack is the only permitted target for this cleanup.
+ try{
+  if(recoveryRequestId){
+   await pool.query('DELETE FROM public.trainee_password_recovery_outbox WHERE recovery_request_id=$1',[recoveryRequestId]);
+   await pool.query('DELETE FROM public.trainee_password_recovery_requests WHERE id=$1',[recoveryRequestId]);
+  }
+ }catch{}
+ try{if(traineeId) await pool.query('DELETE FROM public.trainees WHERE id=$1',[traineeId]);}catch{}
+ try{if(coachId) await pool.query('DELETE FROM public.profiles WHERE id=$1',[coachId]);}catch{}
  try{if(traineeAuthId) await admin.auth.admin.deleteUser(traineeAuthId);}catch{}
+ try{if(coachId) await admin.auth.admin.deleteUser(coachId);}catch{}
  await pool.end();
 }
