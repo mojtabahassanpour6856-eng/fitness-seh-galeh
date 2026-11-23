@@ -800,3 +800,18 @@ Important remaining validation:
 - The original three `docs/experimental` SQL files remain unchanged and explicitly disposable-only.
 
 No hosted schema/function/Auth/SMS operation occurred. Mirror and Production remain unchanged. Release remains **NOT READY**.
+
+
+## Outbox/encrypted-payload migration dependency review — 2026-11-23
+
+A static, read-only review of the two remaining disposable migration drafts found additional deployment-order and runtime-validation blockers. No SQL was executed and no Supabase project was changed.
+
+1. **Outbox function references a column introduced only by the following migration.** The Outbox draft's `begin_recovery_outbox_send` writes `delivery_payload=NULL`, while the Outbox table does not define that column until the encrypted-payload migration. PostgreSQL may defer PL/pgSQL statement planning until first execution, but the function is not safe to invoke in the interval between these migrations. The Supabase-shaped rewrite must either make the schema dependency explicit before function creation or make the sequence an indivisible, verified deployment unit with the worker and approval path disabled throughout.
+2. **Approval/enqueue transition must be coordinated across versions.** The Outbox draft installs an enqueue trigger before the encrypted draft replaces it with a payload-aware version. An approval transition during that interval can create an Outbox row without ciphertext; the later trigger replacement does not retroactively repair that row. A coordinated rollout must prevent all approval/worker activity during the migration window and include a post-migration invariant check proving every eligible approved delivery has exactly one matching Outbox operation and payload.
+3. **Payload cleanup is tied to outcome/status updates.** The encrypted draft clears request ciphertext when `delivery_outcome` becomes sent/confirmed_failure/unknown and clears Outbox ciphertext when status becomes sent/failed/unknown. This is a useful minimization control, but the disposable tests must prove cleanup on every terminal path, including reassignment, reconciliation after lease expiry, provider-confirmed failure, and transaction rollback.
+4. **The exact envelope CHECK needs adversarial SQL tests.** It checks five required keys and counts JSON object values, then validates version/algorithm/key ID/base64 shapes. Tests must cover non-object JSON, missing/extra keys, JSON nulls, malformed base64, oversized values, and valid AES-GCM envelopes. The Edge crypto encoder/decoder and SQL constraints must agree byte-for-byte.
+5. **The Outbox transaction/concurrency contract is not yet proven end-to-end.** Test concurrent claimers, lease expiry before send, lease expiry after send-start, stale worker completion, reassignment racing with send-start, duplicate approval, provider timeout/unknown, and atomic request+Outbox completion. Verify no plaintext code is stored or logged and that an unknown provider outcome never gets blindly retried.
+
+The next Supabase-shaped rewrites must be tested as one ordered migration set against a disposable database built from the exact mirror baseline, with the worker and approval entry points disabled during schema transition. Required order remains atomic schema/RPC → Outbox schema/functions → encrypted payload/trigger replacement. No mirror migration should run until this full sequence, post-migration invariants, rollback, and the exact-commit CI all pass.
+
+**No live changes:** no mirror/Production SQL, Edge Function deployment, Auth update, password change, SMS, or trainee-row mutation occurred. Release remains **NOT READY**.
