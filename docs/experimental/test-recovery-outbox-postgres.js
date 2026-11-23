@@ -219,6 +219,55 @@ async function main(){
    'ambiguous provider result must never be automatically resent');
  console.log('PASS: ambiguous delivery outcome stays unknown and is never automatically retried');
 
+ // A trainee reassigned after approval must not receive the former coach's code.
+ const otherCoach='10000000-0000-4000-8000-000000000001';
+ await pool.query(`UPDATE public.trainee_password_recovery_requests
+   SET status='pending',delivery_outcome=NULL,delivery_operation_id=NULL,
+       token_hash=NULL,token_expires_at=NULL,reviewed_at=NULL,reviewed_by=NULL,
+       token_attempts=0,delivery_payload=NULL,updated_at=now() WHERE id=$1`,[secondRequest]);
+ await pool.query(`UPDATE public.trainees SET coach_user_id=$1
+   WHERE id='20000000-0000-4000-8000-000000000007'`,[coach]);
+ const reassignmentApproval=await asService(
+   'SELECT public.recovery_coach_review_encrypted($1,$2,$3,$4,$5,$6,$7,$8) AS result',
+   reviewArgs(secondRequest,coach,'a')
+ );
+ assert.equal(reassignmentApproval.rows[0].result.ok,true);
+ await pool.query(`UPDATE public.trainees SET coach_user_id=$1
+   WHERE id='20000000-0000-4000-8000-000000000007'`,[otherCoach]);
+ const reassignedClaim=await asService(
+   'SELECT * FROM recovery_private.claim_recovery_outbox($1,30)',[workerA]
+ );
+ assert.equal(reassignedClaim.rowCount,0,'claim must refuse an approval whose trainee has moved to another coach');
+ await pool.query(`UPDATE public.trainees SET coach_user_id=$1
+   WHERE id='20000000-0000-4000-8000-000000000007'`,[coach]);
+ const dispatchLease=await asService(
+   'SELECT * FROM recovery_private.claim_recovery_outbox($1,30)',[workerA]
+ );
+ assert.equal(dispatchLease.rowCount,1);
+ const dl=dispatchLease.rows[0];
+ await pool.query(`UPDATE public.trainees SET coach_user_id=$1
+   WHERE id='20000000-0000-4000-8000-000000000007'`,[otherCoach]);
+ assert.equal(await asService(
+   'SELECT recovery_private.begin_recovery_outbox_send($1,$2,$3) AS ok',
+   [dl.outbox_id,workerA,dl.lease_generation]
+ ).then(r=>r.rows[0].ok),false,'send-start must re-check ownership and block a stale coach approval');
+ const reassignedRequest=await pool.query(
+   'SELECT status,delivery_outcome,token_hash,token_expires_at FROM public.trainee_password_recovery_requests WHERE id=$1',
+   [secondRequest]
+ );
+ assert.deepEqual(reassignedRequest.rows[0],{
+   status:'expired',delivery_outcome:'confirmed_failure',token_hash:null,token_expires_at:null
+ });
+ const reassignedOutbox=await pool.query(
+   'SELECT status,last_safe_error_code,lock_owner,locked_until FROM public.trainee_password_recovery_outbox WHERE id=$1',
+   [dl.outbox_id]
+ );
+ assert.equal(reassignedOutbox.rows[0].status,'failed');
+ assert.equal(reassignedOutbox.rows[0].last_safe_error_code,'coach_assignment_changed');
+ assert.equal(reassignedOutbox.rows[0].lock_owner,null);
+ assert.equal(reassignedOutbox.rows[0].locked_until,null);
+ console.log('PASS: coach reassignment after approval blocks claim and send-start; code is invalidated');
+
  // End-to-end exercise: real PostgreSQL RPCs + production Worker module + fake SMS provider.
  const {webcrypto}=require('node:crypto');
  const {createRecoveryCandidateHandler}=await import('./recovery-candidate-handler.mjs');
@@ -328,7 +377,7 @@ async function main(){
    async rpc(name,args){
      const calls={
        recovery_claim_reset:['SELECT public.recovery_claim_reset($1,$2,$3) AS result',[args.p_request_id,args.p_code_digest,args.p_operation_id],'json'],
-       recovery_record_wrong_attempt:['SELECT public.recovery_record_wrong_attempt($1,$2,$3) AS result',[args.p_request_id,args.p_submitted_digest,args.p_max_attempts],'json'],
+       recovery_record_wrong_attempt:['SELECT public.recovery_record_wrong_attempt($1,$2) AS result',[args.p_request_id,args.p_submitted_digest],'json'],
        recovery_begin_auth_update:['SELECT public.recovery_begin_auth_update($1,$2) AS ok',[args.p_request_id,args.p_operation_id],'scalar'],
        recovery_finish_auth_update:['SELECT public.recovery_finish_auth_update($1,$2,$3,$4) AS ok',[args.p_request_id,args.p_operation_id,args.p_outcome,args.p_safe_error_code],'scalar']
      };
