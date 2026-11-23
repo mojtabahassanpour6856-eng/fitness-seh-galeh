@@ -29,6 +29,34 @@ function rateKey(phone) {
   return createHash('sha256').update('trainee-password-recovery-rate:v1:').update(phone).digest('hex');
 }
 function getHeader(req, name) { return req.headers.get(name) || ''; }
+
+// Bound both declared and streamed request sizes before JSON parsing.
+async function readBoundedJson(req, maxBytes = 8192) {
+  const declared = Number(req.headers.get('content-length') || 0);
+  if (declared > maxBytes) throw new Error('REQUEST_TOO_LARGE');
+  if (!req.body) throw new Error('EMPTY_BODY');
+  const reader = req.body.getReader();
+  const chunks = [];
+  let total = 0;
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      total += value.byteLength;
+      if (total > maxBytes) {
+        await reader.cancel();
+        throw new Error('REQUEST_TOO_LARGE');
+      }
+      chunks.push(value);
+    }
+  } finally {
+    reader.releaseLock();
+  }
+  const bytes = new Uint8Array(total);
+  let offset = 0;
+  for (const chunk of chunks) { bytes.set(chunk, offset); offset += chunk.byteLength; }
+  return JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(bytes));
+}
 function isUuid(value) { return typeof value === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value); }
 function normalizeCode(value) {
   return String(value ?? '').trim()
