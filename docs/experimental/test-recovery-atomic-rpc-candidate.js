@@ -217,9 +217,21 @@ async function main() {
   assert.equal(r.rows[0].changed,true);
 
   const attempts=await Promise.all(Array.from({length:9},()=>callAsService(
-    'SELECT public.recovery_record_wrong_attempt($1,$2,5) AS result',[req2,digest2]
+    'SELECT public.recovery_record_wrong_attempt($1,$2) AS result',[req2,digest2]
   )));
   assert.equal(attempts.filter(x=>x.rows[0].result.incremented).length,5);
+
+  // The RPC has no caller-controlled maximum-attempt parameter: an attempted
+  // third argument must fail at function resolution, not alter the SQL policy.
+  await assert.rejects(callAsService(
+    'SELECT public.recovery_record_wrong_attempt($1,$2,$3) AS result',[req2,digest2,1]
+  ), /function public\\.recovery_record_wrong_attempt\\(.*\\) does not exist|function public\\.recovery_record_wrong_attempt does not exist/i);
+
+  // A sixth wrong attempt must be rejected without incrementing or changing state.
+  r=await callAsService(
+    'SELECT public.recovery_record_wrong_attempt($1,$2) AS result',[req2,digest2]
+  );
+  assert.equal(r.rows[0].result.incremented,false,'sixth wrong attempt must be rejected');
   state=await pool.query('SELECT status,token_attempts,token_hash,token_expires_at FROM public.trainee_password_recovery_requests WHERE id=$1',[req2]);
   assert.equal(state.rows[0].status,'expired');
   assert.equal(state.rows[0].token_attempts,5);
