@@ -103,7 +103,7 @@ export function createRecoveryCandidateHandler(deps) {
     if (req.method !== 'POST') return json({ success: false, message: 'فقط POST مجاز است.' }, 405, corsOrigin);
 
     let body;
-    try { body = await req.json(); } catch { return json({ success: false }, 400, corsOrigin); }
+    try { body = await readBoundedJson(req); } catch { return json({ success: false, message: 'درخواست نامعتبر یا بیش از حد بزرگ است.' }, 413, corsOrigin); }
     const action = String(body?.action || '');
 
     try {
@@ -205,7 +205,7 @@ export function createRecoveryCandidateHandler(deps) {
         });
         if (!claim?.claimed) {
           await rpc(deps.admin, 'recovery_record_wrong_attempt', {
-            p_request_id: request.id, p_submitted_digest: digest, p_max_attempts: 5
+            p_request_id: request.id, p_submitted_digest: digest
           });
           return json(publicResetFailure(), 400, corsOrigin);
         }
