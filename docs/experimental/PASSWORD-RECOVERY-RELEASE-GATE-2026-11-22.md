@@ -701,3 +701,16 @@ Implication for the recovery design: a session-version claim/check cannot be dec
 4. Only then proceed to reviewed provider integration, staging validation, operational monitoring/secret rotation, and explicit release approval.
 
 Release remains **NOT READY FOR PRODUCTION**.
+
+
+## Follow-up verification — 2026-11-23
+
+- Latest push CI run `45158409464` on commit `cd7f34d26e98ac5491d09a3bb7c0f3143a866470` completed successfully: all five jobs passed (mock/crypto/authorization tests, disposable PostgreSQL concurrency and PostgREST contracts, local Supabase Auth integration, local full recovery E2E, and Deno type-check of the non-deployable adapter).
+- The E2E assertion regression was fixed: the outbox assertion now uses the captured `recoveryRequestId` rather than the undefined `requestId`. The test's finally cleanup remains in place.
+- The latest CI is isolated evidence only. It does not validate deployment against the remote mirror's active Edge Function or its actual Auth/SMS provider.
+- Read-only mirror audit on 2026-11-23 confirms the project is healthy (PostgreSQL 17.11), the recovery table has RLS enabled and a deny policy for anon/authenticated, and its unique partial index still covers only `pending` and `approved` (not `processing`).
+- The mirror's active `trainee-password-recovery` Edge Function remains version 10 with `verify_jwt=false` and still performs direct table updates and direct Mediana pattern-SMS delivery. It is not compatible with the candidate RPC/outbox/encrypted-payload architecture. Do not apply candidate migrations before replacing and validating this handler as one coordinated release.
+- Security advisors on the mirror currently report: one authenticated-executable SECURITY DEFINER function (`public.save_coach_nutrition_builder_plan`), leaked-password protection disabled, and five RLS-enabled/no-policy findings on test/archive tables. These are separate existing findings and should be triaged; no changes were made as part of this recovery work.
+- No remote SQL, migration, Edge Function deployment, SMS, password change, or production operation was performed.
+
+**Release decision remains: NOT READY.** Next gate is a Supabase-compatible, backwards-reviewed migration plus a deployable Edge Function/worker pair, tested together against the mirror's actual schema and Auth behavior. Only after that should the mirror receive a coordinated, reversible rollout.
