@@ -15,6 +15,7 @@ CREATE TABLE IF NOT EXISTS public.trainee_password_recovery_outbox (
   lease_generation bigint NOT NULL DEFAULT 0 CHECK (lease_generation >= 0),
   send_started_at timestamptz,
   provider_idempotency_key text NOT NULL UNIQUE,
+  delivery_payload jsonb,
   provider_message_id text,
   last_safe_error_code text,
   created_at timestamptz NOT NULL DEFAULT now(),
@@ -238,6 +239,12 @@ RETURNS trigger LANGUAGE plpgsql SECURITY DEFINER SET search_path = ''
 AS $outbox_trigger$
 DECLARE v_outbox_operation uuid;
 BEGIN
+  -- Fail closed until the encrypted approval RPC is installed. This prevents
+  -- an approved request from creating an Outbox item without its ciphertext.
+  IF NEW.status='approved' AND NEW.delivery_outcome='pending'
+     AND NEW.delivery_operation_id IS NOT NULL AND NEW.delivery_payload IS NULL THEN
+    RAISE EXCEPTION 'encrypted recovery delivery payload is required before enqueue';
+  END IF;
   IF NEW.status='approved' AND NEW.delivery_outcome='pending'
      AND NEW.delivery_operation_id IS NOT NULL
      AND (TG_OP='INSERT' OR OLD.status IS DISTINCT FROM NEW.status
