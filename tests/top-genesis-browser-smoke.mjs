@@ -292,6 +292,10 @@ try {
     "Quality-review selectors must not appear in exported report pages.");
   assert.equal(await page.locator(".report-page #coachApprove").count(), 0,
     "The internal approval checkbox must not appear in student report pages.");
+  assert.equal(await page.locator("#studentQualitySummary.report-page").count(), 1,
+    "The student report must contain a read-only scan-quality summary page.");
+  assert.equal(await page.locator("#studentQualitySummary [data-quality-result]").count(), 5,
+    "All five manual scan-quality checks must have student-visible results.");
   assert.equal(await page.locator("#studentTrainingNotes").count(), 1);
   assert.equal(await page.locator("#studentNutritionNotes").count(), 1);
   assert.equal(await page.locator("#pngReport").isDisabled(), true,
@@ -300,6 +304,14 @@ try {
     item.value = "ok";
     item.dispatchEvent(new Event("change", { bubbles: true }));
   }));
+  assert.match(await page.locator("#studentQualitySummary").innerText(), /قابل قبول در بررسی دستی مربی/,
+    "Manual quality approvals must be reflected in the student-facing report.");
+  await page.locator('[data-review="background"]').selectOption("partial");
+  assert.match(await page.locator("#studentQualitySummary").innerText(), /محدودیت دارد/,
+    "A partial quality result must be disclosed in the student report.");
+  assert.match(await page.locator("#studentQualityNote").innerText(), /پس‌زمینه/,
+    "The report must identify which scan-quality item has a limitation.");
+  await page.locator('[data-review="background"]').selectOption("ok");
   await page.locator("#trainingNotes").fill("برنامه تمرینی پس از بررسی سابقه و هدف شاگرد تنظیم شود.");
   await page.locator("#nutritionNotes").fill("توصیه تغذیه‌ای پس از بررسی هدف و فعالیت شاگرد تکمیل شود.");
   assert.match(await page.locator("#studentTrainingNotes").innerText(), /بررسی سابقه و هدف شاگرد/);
