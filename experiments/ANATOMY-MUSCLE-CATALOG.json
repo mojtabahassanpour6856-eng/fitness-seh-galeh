@@ -1,0 +1,853 @@
+{
+  "schema_version": "0.1.0",
+  "generated_at": "2026-11-27",
+  "source_file": "experiments/anatomy-smart-prototype.html",
+  "source_blob_sha": "92d5255b2436f9c6a1aa4a112d49ef17c3d2af18",
+  "purpose": "Inventory of existing prototype SVG groups and IDs. Not an anatomically validated atlas.",
+  "global_rules": {
+    "no_invented_geometry": true,
+    "no_exercise_bank_mutation": true,
+    "paired_selection_default": "planned_not_implemented",
+    "enable_pairing_only_after_geometry_review": true
+  },
+  "groups": [
+    {
+      "group_id": "trapezius",
+      "source_group_key": "TRAPEZIUS",
+      "name_fa": "ذوزنقه‌ای",
+      "name_latin": "Trapezius",
+      "layer": "superficial",
+      "geometry_status": "present_unreviewed",
+      "anatomical_validation_status": "unreviewed",
+      "pairing_status": "blocked_pending_geometry_audit",
+      "paired_selection_enabled": false,
+      "exercise_mapping_status": "not_connected",
+      "geometry_by_view": {
+        "male-front": [
+          {
+            "index": 0,
+            "id": "TRAPEZIUS_LEFT"
+          },
+          {
+            "index": 1,
+            "id": "TRAPEZIUS_RIGHT"
+          }
+        ],
+        "male-back": [
+          {
+            "index": 0,
+            "id": "TRAPEZIUS_LEFT"
+          },
+          {
+            "index": 1,
+            "id": "TRAPEZIUS_RIGHT"
+          },
+          {
+            "index": 11,
+            "id": "TRAPEZIUS_LEFT"
+          },
+          {
+            "index": 12,
+            "id": "TRAPEZIUS_RIGHT"
+          }
+        ],
+        "female-front": [
+          {
+            "index": 0,
+            "id": "TRAPEZIUS_RIGHT"
+          },
+          {
+            "index": 1,
+            "id": "TRAPEZIUS_LEFT"
+          }
+        ],
+        "female-back": [
+          {
+            "index": 0,
+            "id": "TRAPEZIUS_RIGHT"
+          },
+          {
+            "index": 1,
+            "id": "TRAPEZIUS_LEFT"
+          },
+          {
+            "index": 2,
+            "id": "TRAPEZIUS_RIGHT"
+          },
+          {
+            "index": 3,
+            "id": "TRAPEZIUS_LEFT"
+          }
+        ]
+      }
+    },
+    {
+      "group_id": "chest",
+      "source_group_key": "CHEST",
+      "name_fa": "سینه‌ای بزرگ",
+      "name_latin": "Pectoralis major",
+      "layer": "superficial",
+      "geometry_status": "present_unreviewed",
+      "anatomical_validation_status": "unreviewed",
+      "pairing_status": "candidate_pending_anatomical_review",
+      "paired_selection_enabled": false,
+      "exercise_mapping_status": "not_connected",
+      "geometry_by_view": {
+        "male-front": [
+          {
+            "index": 2,
+            "id": "CHEST_LEFT"
+          },
+          {
+            "index": 3,
+            "id": "CHEST_RIGHT"
+          }
+        ],
+        "female-front": [
+          {
+            "index": 2,
+            "id": "CHEST_RIGHT"
+          },
+          {
+            "index": 12,
+            "id": "CHEST_LEFT"
+          }
+        ]
+      }
+    },
+    {
+      "group_id": "shoulders_front",
+      "source_group_key": "SHOULDERS_FRONT",
+      "name_fa": "دلتوئید قدامی",
+      "name_latin": "Anterior deltoid",
+      "layer": "superficial",
+      "geometry_status": "present_unreviewed",
+      "anatomical_validation_status": "unreviewed",
+      "pairing_status": "candidate_pending_anatomical_review",
+      "paired_selection_enabled": false,
+      "exercise_mapping_status": "not_connected",
+      "geometry_by_view": {
+        "male-front": [
+          {
+            "index": 4,
+            "id": "SHOULDER_FRONT_RIGHT"
+          },
+          {
+            "index": 9,
+            "id": "SHOULDER_FRONT_LEFT"
+          }
+        ],
+        "female-front": [
+          {
+            "index": 3,
+            "id": "SHOULDER_FRONT_RIGHT"
+          },
+          {
+            "index": 13,
+            "id": "SHOULDER_FRONT_LEFT"
+          }
+        ]
+      }
+    },
+    {
+      "group_id": "shoulders_side",
+      "source_group_key": "SHOULDERS_SIDE",
+      "name_fa": "دلتوئید میانی",
+      "name_latin": "Lateral deltoid",
+      "layer": "superficial",
+      "geometry_status": "present_unreviewed",
+      "anatomical_validation_status": "unreviewed",
+      "pairing_status": "candidate_pending_anatomical_review",
+      "paired_selection_enabled": false,
+      "exercise_mapping_status": "not_connected",
+      "geometry_by_view": {
+        "male-front": [
+          {
+            "index": 5,
+            "id": "SHOULDER_SIDE_RIGHT"
+          },
+          {
+            "index": 10,
+            "id": "SHOULDER_SIDE_LEFT"
+          }
+        ],
+        "male-back": [
+          {
+            "index": 3,
+            "id": "SHOULDER_SIDE_LEFT"
+          },
+          {
+            "index": 5,
+            "id": "SHOULDER_SIDE_RIGHT"
+          }
+        ],
+        "female-front": [
+          {
+            "index": 4,
+            "id": "SHOULDER_SIDE_RIGHT"
+          },
+          {
+            "index": 14,
+            "id": "SHOULDER_SIDE_LEFT"
+          }
+        ],
+        "female-back": [
+          {
+            "index": 5,
+            "id": "SHOULDER_SIDE_RIGHT"
+          },
+          {
+            "index": 6,
+            "id": "SHOULDER_SIDE_LEFT"
+          }
+        ]
+      }
+    },
+    {
+      "group_id": "shoulders_rear",
+      "source_group_key": "SHOULDERS_REAR",
+      "name_fa": "دلتوئید خلفی",
+      "name_latin": "Posterior deltoid",
+      "layer": "superficial",
+      "geometry_status": "present_unreviewed",
+      "anatomical_validation_status": "unreviewed",
+      "pairing_status": "candidate_pending_anatomical_review",
+      "paired_selection_enabled": false,
+      "exercise_mapping_status": "not_connected",
+      "geometry_by_view": {
+        "male-back": [
+          {
+            "index": 2,
+            "id": "SHOULDER_REAR_LEFT"
+          },
+          {
+            "index": 4,
+            "id": "SHOULDER_REAR_RIGHT"
+          }
+        ],
+        "female-back": [
+          {
+            "index": 4,
+            "id": "SHOULDER_REAR_RIGHT"
+          },
+          {
+            "index": 7,
+            "id": "SHOULDER_REAR_LEFT"
+          }
+        ]
+      }
+    },
+    {
+      "group_id": "biceps",
+      "source_group_key": "BICEPS",
+      "name_fa": "دوسربازویی",
+      "name_latin": "Biceps brachii",
+      "layer": "superficial",
+      "geometry_status": "present_unreviewed",
+      "anatomical_validation_status": "unreviewed",
+      "pairing_status": "candidate_pending_anatomical_review",
+      "paired_selection_enabled": false,
+      "exercise_mapping_status": "not_connected",
+      "geometry_by_view": {
+        "male-front": [
+          {
+            "index": 6,
+            "id": "BICEPS_RIGHT"
+          },
+          {
+            "index": 11,
+            "id": "BICEPS_LEFT"
+          }
+        ],
+        "female-front": [
+          {
+            "index": 6,
+            "id": "BICEPS_RIGHT"
+          },
+          {
+            "index": 15,
+            "id": "BICEPS_LEFT"
+          }
+        ]
+      }
+    },
+    {
+      "group_id": "triceps",
+      "source_group_key": "TRICEPS",
+      "name_fa": "سه‌سربازویی",
+      "name_latin": "Triceps brachii",
+      "layer": "superficial",
+      "geometry_status": "present_unreviewed",
+      "anatomical_validation_status": "unreviewed",
+      "pairing_status": "candidate_pending_anatomical_review",
+      "paired_selection_enabled": false,
+      "exercise_mapping_status": "not_connected",
+      "geometry_by_view": {
+        "male-front": [
+          {
+            "index": 7,
+            "id": "TRICEPS_RIGHT"
+          },
+          {
+            "index": 12,
+            "id": "TRICEPS_LEFT"
+          }
+        ],
+        "male-back": [
+          {
+            "index": 6,
+            "id": "TRICEPS_RIGHT"
+          },
+          {
+            "index": 8,
+            "id": "TRICEPS_LEFT"
+          }
+        ],
+        "female-front": [
+          {
+            "index": 5,
+            "id": "TRICEPS_RIGHT"
+          },
+          {
+            "index": 16,
+            "id": "TRICEPS_LEFT"
+          }
+        ],
+        "female-back": [
+          {
+            "index": 27,
+            "id": "TRICEPS_LEFT"
+          },
+          {
+            "index": 28,
+            "id": "TRICEPS_RIGHT"
+          }
+        ]
+      }
+    },
+    {
+      "group_id": "forearms",
+      "source_group_key": "FOREARMS",
+      "name_fa": "عضلات ساعد",
+      "name_latin": "Forearm muscle group",
+      "layer": "superficial",
+      "geometry_status": "present_unreviewed",
+      "anatomical_validation_status": "unreviewed",
+      "pairing_status": "candidate_pending_anatomical_review",
+      "paired_selection_enabled": false,
+      "exercise_mapping_status": "not_connected",
+      "geometry_by_view": {
+        "male-front": [
+          {
+            "index": 8,
+            "id": "FOREARM_RIGHT"
+          },
+          {
+            "index": 13,
+            "id": "FOREARM_LEFT"
+          }
+        ],
+        "male-back": [
+          {
+            "index": 7,
+            "id": "FOREARM_RIGHT"
+          },
+          {
+            "index": 9,
+            "id": "FOREARM_LEFT"
+          }
+        ],
+        "female-front": [
+          {
+            "index": 7,
+            "id": "FOREARM_RIGHT"
+          },
+          {
+            "index": 17,
+            "id": "FOREARM_LEFT"
+          }
+        ],
+        "female-back": [
+          {
+            "index": 26,
+            "id": "FOREARM_LEFT"
+          },
+          {
+            "index": 29,
+            "id": "FOREARM_RIGHT"
+          }
+        ]
+      }
+    },
+    {
+      "group_id": "obliques",
+      "source_group_key": "OBLIQUES",
+      "name_fa": "مایل شکمی",
+      "name_latin": "Abdominal obliques",
+      "layer": "superficial",
+      "geometry_status": "present_unreviewed",
+      "anatomical_validation_status": "unreviewed",
+      "pairing_status": "candidate_pending_anatomical_review",
+      "paired_selection_enabled": false,
+      "exercise_mapping_status": "not_connected",
+      "geometry_by_view": {
+        "male-front": [
+          {
+            "index": 14,
+            "id": "OBLIQUE_RIGHT"
+          },
+          {
+            "index": 17,
+            "id": "OBLIQUE_LEFT"
+          }
+        ],
+        "male-back": [
+          {
+            "index": 18,
+            "id": "OBLIQUE_LEFT"
+          },
+          {
+            "index": 19,
+            "id": "OBLIQUE_RIGHT"
+          }
+        ],
+        "female-front": [
+          {
+            "index": 8,
+            "id": "OBLIQUE_RIGHT"
+          },
+          {
+            "index": 11,
+            "id": "OBLIQUE_LEFT"
+          }
+        ],
+        "female-back": [
+          {
+            "index": 16,
+            "id": "OBLIQUE_RIGHT"
+          },
+          {
+            "index": 17,
+            "id": "OBLIQUE_LEFT"
+          }
+        ]
+      }
+    },
+    {
+      "group_id": "core",
+      "source_group_key": "CORE",
+      "name_fa": "راست شکمی / میان‌تنه",
+      "name_latin": "Rectus abdominis / Core",
+      "layer": "superficial",
+      "geometry_status": "present_unreviewed",
+      "anatomical_validation_status": "unreviewed",
+      "pairing_status": "candidate_pending_anatomical_review",
+      "paired_selection_enabled": false,
+      "exercise_mapping_status": "not_connected",
+      "geometry_by_view": {
+        "male-front": [
+          {
+            "index": 15,
+            "id": "CORE_RIGHT"
+          },
+          {
+            "index": 16,
+            "id": "CORE_LEFT"
+          }
+        ],
+        "female-front": [
+          {
+            "index": 9,
+            "id": "CORE_RIGHT"
+          },
+          {
+            "index": 10,
+            "id": "CORE_LEFT"
+          }
+        ]
+      }
+    },
+    {
+      "group_id": "abductors",
+      "source_group_key": "ABDUCTORS",
+      "name_fa": "دورکننده‌های ران",
+      "name_latin": "Hip abductors",
+      "layer": "superficial",
+      "geometry_status": "present_unreviewed",
+      "anatomical_validation_status": "unreviewed",
+      "pairing_status": "candidate_pending_anatomical_review",
+      "paired_selection_enabled": false,
+      "exercise_mapping_status": "not_connected",
+      "geometry_by_view": {
+        "male-front": [
+          {
+            "index": 18,
+            "id": "ABDUCTOR_LEFT"
+          },
+          {
+            "index": 21,
+            "id": "ABDUCTOR_RIGHT"
+          }
+        ],
+        "male-back": [
+          {
+            "index": 22,
+            "id": "ABDUCTOR_LEFT"
+          },
+          {
+            "index": 23,
+            "id": "ABDUCTOR_RIGHT"
+          }
+        ],
+        "female-front": [
+          {
+            "index": 20,
+            "id": "ABDUCTOR_LEFT"
+          },
+          {
+            "index": 21,
+            "id": "ABDUCTOR_RIGHT"
+          }
+        ],
+        "female-back": [
+          {
+            "index": 19,
+            "id": "ABDUCTOR_LEFT"
+          },
+          {
+            "index": 20,
+            "id": "ABDUCTOR_RIGHT"
+          }
+        ]
+      }
+    },
+    {
+      "group_id": "quads",
+      "source_group_key": "QUADS",
+      "name_fa": "چهارسر ران",
+      "name_latin": "Quadriceps femoris",
+      "layer": "superficial",
+      "geometry_status": "present_unreviewed",
+      "anatomical_validation_status": "unreviewed",
+      "pairing_status": "blocked_pending_geometry_audit",
+      "paired_selection_enabled": false,
+      "exercise_mapping_status": "not_connected",
+      "geometry_by_view": {
+        "male-front": [
+          {
+            "index": 19,
+            "id": "QUADRICEPS_LEFT"
+          },
+          {
+            "index": 20,
+            "id": "QUADRICEPS_RIGHT"
+          },
+          {
+            "index": 22,
+            "id": null
+          },
+          {
+            "index": 23,
+            "id": null
+          }
+        ],
+        "female-front": [
+          {
+            "index": 19,
+            "id": "QUADRICEPS_LEFT"
+          },
+          {
+            "index": 23,
+            "id": "QUADRICEPS_RIGHT"
+          },
+          {
+            "index": 26,
+            "id": "QUADRICEPS_LEFT"
+          },
+          {
+            "index": 27,
+            "id": "QUADRICEPS_RIGHT"
+          }
+        ]
+      }
+    },
+    {
+      "group_id": "calves",
+      "source_group_key": "CALVES",
+      "name_fa": "عضلات ساق",
+      "name_latin": "Calf muscle group",
+      "layer": "superficial",
+      "geometry_status": "present_unreviewed",
+      "anatomical_validation_status": "unreviewed",
+      "pairing_status": "candidate_pending_anatomical_review",
+      "paired_selection_enabled": false,
+      "exercise_mapping_status": "not_connected",
+      "geometry_by_view": {
+        "male-front": [
+          {
+            "index": 24,
+            "id": "CALVES_LEFT"
+          },
+          {
+            "index": 25,
+            "id": "CALVES_RIGHT"
+          }
+        ],
+        "male-back": [
+          {
+            "index": 28,
+            "id": "CALVES_LEFT"
+          },
+          {
+            "index": 29,
+            "id": "CALVES_RIGHT"
+          }
+        ],
+        "female-front": [
+          {
+            "index": 24,
+            "id": "CALVES_LEFT"
+          },
+          {
+            "index": 25,
+            "id": "CALVES_RIGHT"
+          }
+        ],
+        "female-back": [
+          {
+            "index": 22,
+            "id": "CALVES_LEFT"
+          },
+          {
+            "index": 23,
+            "id": "CALVES_RIGHT"
+          }
+        ]
+      }
+    },
+    {
+      "group_id": "adductors",
+      "source_group_key": "ADDUCTORS",
+      "name_fa": "نزدیک‌کننده‌های ران",
+      "name_latin": "Hip adductors",
+      "layer": "superficial",
+      "geometry_status": "present_unreviewed",
+      "anatomical_validation_status": "unreviewed",
+      "pairing_status": "candidate_pending_anatomical_review",
+      "paired_selection_enabled": false,
+      "exercise_mapping_status": "not_connected",
+      "geometry_by_view": {
+        "male-front": [
+          {
+            "index": 26,
+            "id": "ADDUCTOR_LEFT"
+          },
+          {
+            "index": 27,
+            "id": "ADDUCTOR_RIGHT"
+          }
+        ],
+        "male-back": [
+          {
+            "index": 24,
+            "id": "ADDUCTOR_LEFT"
+          },
+          {
+            "index": 25,
+            "id": "ADDUCTOR_RIGHT"
+          }
+        ],
+        "female-front": [
+          {
+            "index": 18,
+            "id": "ADDUCTOR_LEFT"
+          },
+          {
+            "index": 22,
+            "id": "ADDUCTOR_RIGHT"
+          }
+        ],
+        "female-back": [
+          {
+            "index": 24,
+            "id": "ADDUCTOR_LEFT"
+          },
+          {
+            "index": 25,
+            "id": "ADDUCTOR_RIGHT"
+          }
+        ]
+      }
+    },
+    {
+      "group_id": "rhomboids",
+      "source_group_key": "RHOMBOIDS",
+      "name_fa": "لوزی‌شکل",
+      "name_latin": "Rhomboids",
+      "layer": "superficial",
+      "geometry_status": "present_unreviewed",
+      "anatomical_validation_status": "unreviewed",
+      "pairing_status": "candidate_pending_anatomical_review",
+      "paired_selection_enabled": false,
+      "exercise_mapping_status": "not_connected",
+      "geometry_by_view": {
+        "male-back": [
+          {
+            "index": 10,
+            "id": "RHOMBOID_LEFT"
+          },
+          {
+            "index": 13,
+            "id": "RHOMBOID_RIGHT"
+          }
+        ],
+        "female-back": [
+          {
+            "index": 8,
+            "id": "RHOMBOID_LEFT"
+          },
+          {
+            "index": 10,
+            "id": "RHOMBOID_RIGHT"
+          }
+        ]
+      }
+    },
+    {
+      "group_id": "lats",
+      "source_group_key": "LATS",
+      "name_fa": "پشتی بزرگ",
+      "name_latin": "Latissimus dorsi",
+      "layer": "superficial",
+      "geometry_status": "present_unreviewed",
+      "anatomical_validation_status": "unreviewed",
+      "pairing_status": "candidate_pending_anatomical_review",
+      "paired_selection_enabled": false,
+      "exercise_mapping_status": "not_connected",
+      "geometry_by_view": {
+        "male-back": [
+          {
+            "index": 14,
+            "id": "LATISSIMUS_LEFT"
+          },
+          {
+            "index": 15,
+            "id": "LATISSIMUS_RIGHT"
+          }
+        ],
+        "female-back": [
+          {
+            "index": 9,
+            "id": "LATISSIMUS_LEFT"
+          },
+          {
+            "index": 11,
+            "id": "LATISSIMUS_RIGHT"
+          }
+        ]
+      }
+    },
+    {
+      "group_id": "back_lower",
+      "source_group_key": "BACK_LOWER",
+      "name_fa": "راست‌کننده‌های کمری / پایین‌کمر",
+      "name_latin": "Lumbar erector spinae",
+      "layer": "superficial",
+      "geometry_status": "present_unreviewed",
+      "anatomical_validation_status": "unreviewed",
+      "pairing_status": "candidate_pending_anatomical_review",
+      "paired_selection_enabled": false,
+      "exercise_mapping_status": "not_connected",
+      "geometry_by_view": {
+        "male-back": [
+          {
+            "index": 16,
+            "id": "LOWER_BACK_LEFT"
+          },
+          {
+            "index": 17,
+            "id": "LOWER_BACK_RIGHT"
+          }
+        ],
+        "female-back": [
+          {
+            "index": 12,
+            "id": "LOWER_BACK_LEFT"
+          },
+          {
+            "index": 13,
+            "id": "LOWER_BACK_RIGHT"
+          }
+        ]
+      }
+    },
+    {
+      "group_id": "glutes",
+      "source_group_key": "GLUTES",
+      "name_fa": "سرینی",
+      "name_latin": "Gluteal muscle group",
+      "layer": "superficial",
+      "geometry_status": "present_unreviewed",
+      "anatomical_validation_status": "unreviewed",
+      "pairing_status": "candidate_pending_anatomical_review",
+      "paired_selection_enabled": false,
+      "exercise_mapping_status": "not_connected",
+      "geometry_by_view": {
+        "male-back": [
+          {
+            "index": 20,
+            "id": "GLUTEUS_LEFT"
+          },
+          {
+            "index": 21,
+            "id": "GLUTEUS_RIGHT"
+          }
+        ],
+        "female-back": [
+          {
+            "index": 14,
+            "id": "GLUTEUS_LEFT"
+          },
+          {
+            "index": 15,
+            "id": "GLUTEUS_RIGHT"
+          }
+        ]
+      }
+    },
+    {
+      "group_id": "hamstrings",
+      "source_group_key": "HAMSTRINGS",
+      "name_fa": "همسترینگ",
+      "name_latin": "Hamstrings",
+      "layer": "superficial",
+      "geometry_status": "present_unreviewed",
+      "anatomical_validation_status": "unreviewed",
+      "pairing_status": "candidate_pending_anatomical_review",
+      "paired_selection_enabled": false,
+      "exercise_mapping_status": "not_connected",
+      "geometry_by_view": {
+        "male-back": [
+          {
+            "index": 26,
+            "id": "HAMSTRINGS_LEFT"
+          },
+          {
+            "index": 27,
+            "id": "HAMSTRINGS_RIGHT"
+          }
+        ],
+        "female-back": [
+          {
+            "index": 18,
+            "id": "HAMSTRINGS_LEFT"
+          },
+          {
+            "index": 21,
+            "id": "HAMSTRINGS_RIGHT"
+          }
+        ]
+      }
+    }
+  ]
+}
