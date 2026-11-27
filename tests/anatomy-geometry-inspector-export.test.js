@@ -12,6 +12,12 @@ assert.match(html,/id="exportCsv"/,'CSV export control must exist');
 assert.match(html,/id="exportSvg"/,'vector SVG image export control must exist');
 assert.match(html,/id="exportReport"/,'printable geometry review report control must exist');
 assert.match(script,/function selectedPathRecords\(\)/,'exports must be built from selected paths only');
+assert.match(script,/function sampleFilledArea\(path,bbox,grid\)/,'filled path area sampling helper must exist');
+assert.match(script,/function estimateSvgFillOverlap\(pathA,pathB,bboxA,bboxB,grid=36\)/,'sample-based filled path overlap estimator must exist');
+assert.match(script,/isPointInFill/,'filled path overlap must use SVG fill hit testing');
+assert.match(script,/unsupported_coordinate_space/,'overlap estimator must fail closed for unsupported coordinate spaces');
+assert.match(script,/fill_overlap_area_estimate/,'pairwise output must expose estimated filled overlap area');
+assert.match(script,/نمونه‌برداری ۳۶×۳۶/,'UI must label the filled overlap as a sampling estimate');
 assert.match(script,/function pairwiseBBoxDiagnostics\(records\)/,'pairwise bounding-box diagnostics must be available');
 assert.match(script,/bbox_intersection_area/,'pairwise analysis must calculate bounding-box intersection area');
 assert.match(script,/bbox_intersection_ratio/,'pairwise analysis must calculate normalized bounding-box intersection ratio');
@@ -31,6 +37,18 @@ assert.equal(separated.bbox_intersection_area,0,'separated BBoxes must have zero
 assert.equal(separated.gap_x,2,'separated BBoxes must report horizontal gap');
 assert.equal(separated.gap_y,4,'separated BBoxes must report vertical gap');
 assert.equal(pairwise(Array.from({length:6},(_,i)=>({bbox:{x:i,y:i,width:10,height:10}}))).length,15,'six selected paths must produce at most fifteen unique pairs');
+const overlapSource=script.match(/function estimateSvgFillOverlap\(pathA,pathB,bboxA,bboxB,grid=36\)\{[\s\S]*?\n\}/)?.[0];
+assert.ok(overlapSource,'sample-based SVG fill overlap function must be extractable');
+const estimator=vm.runInNewContext(overlapSource+'; estimateSvgFillOverlap');
+const svgRoot={};
+const rectPath=(x1,y1,x2,y2)=>({parentNode:svgRoot,hasAttribute:()=>false,isPointInFill:({x,y})=>x>=x1&&x<=x2&&y>=y1&&y<=y2});
+const approx=estimator(rectPath(0,0,10,10),rectPath(5,0,15,10),{x:0,y:0,width:10,height:10},{x:5,y:0,width:10,height:10},20);
+assert.equal(approx.status,'estimated','supported paths must return an estimated overlap status');
+assert.equal(approx.area,50,'rectangular sample test must estimate the exact 50-unit overlap');
+assert.equal(approx.ratio,0.5,'overlap ratio must be normalized by the smaller estimated fill area');
+const unsupported=estimator({}, {}, {x:0,y:0,width:1,height:1},{x:0,y:0,width:1,height:1},8);
+assert.equal(unsupported.status,'unsupported','missing isPointInFill must fail closed');
+
 
 assert.match(script,/path_d:target\.getAttribute\('d'\)/,'export must preserve raw SVG path data');
 assert.match(script,/function exportSelected\(format\)/,'JSON and CSV export handler must exist');
