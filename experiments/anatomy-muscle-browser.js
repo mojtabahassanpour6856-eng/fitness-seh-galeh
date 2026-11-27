@@ -78,6 +78,13 @@ fetch(catalogUrl).then(response=>{if(!response.ok)throw new Error('HTTP '+respon
    assertSmoke(!!selectedRow&&selectedRow.getAttribute('aria-pressed')==='true',combo+' list row must expose selected state after redraw');
    selectedRow.click();
    assertSmoke(!selectedMap()[key],combo+' second list click must clear selection');
+   const svgPath=document.querySelector('#bodySvg .muscle[data-key="'+CSS.escape(key)+'"]');
+   svgPath.dispatchEvent(new MouseEvent('click',{bubbles:true,cancelable:true}));
+   assertSmoke(!!selectedMap()[key],combo+' SVG click must update shared selection state');
+   const imageSyncedRow=list.querySelector('[data-muscle-key="'+CSS.escape(key)+'"]');
+   assertSmoke(!!imageSyncedRow&&imageSyncedRow.getAttribute('aria-pressed')==='true',combo+' SVG click must synchronize selected state in the muscle list');
+   imageSyncedRow.click();
+   assertSmoke(!selectedMap()[key],combo+' list must clear image-originated selection');
   }
   const first=catalog.groups.find(g=>(g.geometry_by_view['male-front']||[]).length);
   search.value=first.name_fa;search.dispatchEvent(new Event('input',{bubbles:true}));
