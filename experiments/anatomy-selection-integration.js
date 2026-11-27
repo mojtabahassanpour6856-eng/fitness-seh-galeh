@@ -148,6 +148,10 @@ Promise.all([fetch(mapUrl).then(r=>{if(!r.ok)throw new Error('mapping '+r.status
  if(new URLSearchParams(location.search).has('smoke')){
   const assertSmoke=(ok,message)=>{if(!ok)throw new Error('Interaction smoke: '+message)};
   const combos=['male-front','male-back','female-front','female-back'];
+  const firstSafeMuscle=()=>[...document.querySelectorAll('#bodySvg .muscle')].find(el=>{
+   const path=currentPaths().find((p,i)=>keyFor(p,i)===el.dataset.key);
+   return !!path&&!!path.id&&currentPaths().filter(p=>p.group===path.group&&p.id===path.id).length===1;
+  });
   for(const combo of combos){
    const [sex,view]=combo.split('-');
    const sexNode=document.getElementById('sex'),viewNode=document.getElementById('view');
@@ -161,7 +165,7 @@ Promise.all([fetch(mapUrl).then(r=>{if(!r.ok)throw new Error('mapping '+r.status
    const renderedKeys=[...document.querySelectorAll('#bodySvg .muscle')].map(el=>el.dataset.key);
    assertSmoke(new Set(renderedKeys).size===expected,combo+' rendered data keys must be unique');
    assertSmoke(renderedKeys.every((key,i)=>key===keyFor(DATA[combo].muscles[i],i)),combo+' rendered keys must match stable source geometry keys');
-   const target=document.querySelector('#bodySvg .muscle');
+   const target=firstSafeMuscle();
    assertSmoke(!!target,combo+' has a selectable muscle');
    const key=target.dataset.key;
    target.dispatchEvent(new MouseEvent('click',{bubbles:true,cancelable:true}));
@@ -178,8 +182,8 @@ Promise.all([fetch(mapUrl).then(r=>{if(!r.ok)throw new Error('mapping '+r.status
   const sexNode=document.getElementById('sex'),viewNode=document.getElementById('view');
   sexNode.value='male';sexNode.dispatchEvent(new Event('change',{bubbles:true}));
   viewNode.value='front';viewNode.dispatchEvent(new Event('change',{bubbles:true}));
-  const key=document.querySelector('#bodySvg .muscle').dataset.key;
-  document.querySelector('#bodySvg .muscle').dispatchEvent(new KeyboardEvent('keydown',{key:'Enter',bubbles:true,cancelable:true}));
+  const key=firstSafeMuscle().dataset.key;
+  firstSafeMuscle().dispatchEvent(new KeyboardEvent('keydown',{key:'Enter',bubbles:true,cancelable:true}));
   assertSmoke(!!selectedMap()[key],'keyboard Enter selects muscle');
   assertSmoke(document.querySelector('#bodySvg .muscle[data-key="'+CSS.escape(key)+'"]').classList.contains('primary'),'keyboard selection paints primary color');
   document.querySelector('[data-role="secondary"]').click();
@@ -198,12 +202,12 @@ Promise.all([fetch(mapUrl).then(r=>{if(!r.ok)throw new Error('mapping '+r.status
   document.getElementById('clear').click();
   assertSmoke(Object.keys(selectedMap()).length===0,'clear button resets current view');
   viewNode.value='back';viewNode.dispatchEvent(new Event('change',{bubbles:true}));
-  const backKey=document.querySelector('#bodySvg .muscle').dataset.key;
+  const backKey=firstSafeMuscle().dataset.key;
   document.querySelector('#bodySvg .muscle').dispatchEvent(new MouseEvent('click',{bubbles:true,cancelable:true}));
   assertSmoke(!!selectedMap()[backKey],'selection is stored for the back view');
   viewNode.value='front';viewNode.dispatchEvent(new Event('change',{bubbles:true}));
   document.querySelector('#bodySvg .muscle').dispatchEvent(new MouseEvent('click',{bubbles:true,cancelable:true}));
-  const frontKey=document.querySelector('#bodySvg .muscle').dataset.key;
+  const frontKey=firstSafeMuscle().dataset.key;
   document.getElementById('clear').click();
   assertSmoke(Object.keys(selectedMap()).length===0,'clear button resets only current view');
   viewNode.value='back';viewNode.dispatchEvent(new Event('change',{bubbles:true}));
