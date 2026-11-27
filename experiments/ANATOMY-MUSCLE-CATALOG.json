@@ -79,6 +79,36 @@
             "id": "TRAPEZIUS_LEFT"
           }
         ]
+      },
+      "side_geometry_audit": {
+        "male-front": {
+          "path_count": 2,
+          "left_path_count": 1,
+          "right_path_count": 1,
+          "unclassified_path_count": 0,
+          "unique_pair_candidate": true
+        },
+        "male-back": {
+          "path_count": 4,
+          "left_path_count": 2,
+          "right_path_count": 2,
+          "unclassified_path_count": 0,
+          "unique_pair_candidate": false
+        },
+        "female-front": {
+          "path_count": 2,
+          "left_path_count": 1,
+          "right_path_count": 1,
+          "unclassified_path_count": 0,
+          "unique_pair_candidate": true
+        },
+        "female-back": {
+          "path_count": 4,
+          "left_path_count": 2,
+          "right_path_count": 2,
+          "unclassified_path_count": 0,
+          "unique_pair_candidate": false
+        }
       }
     },
     {
@@ -113,6 +143,22 @@
             "id": "CHEST_LEFT"
           }
         ]
+      },
+      "side_geometry_audit": {
+        "male-front": {
+          "path_count": 2,
+          "left_path_count": 1,
+          "right_path_count": 1,
+          "unclassified_path_count": 0,
+          "unique_pair_candidate": true
+        },
+        "female-front": {
+          "path_count": 2,
+          "left_path_count": 1,
+          "right_path_count": 1,
+          "unclassified_path_count": 0,
+          "unique_pair_candidate": true
+        }
       }
     },
     {
@@ -147,6 +193,22 @@
             "id": "SHOULDER_FRONT_LEFT"
           }
         ]
+      },
+      "side_geometry_audit": {
+        "male-front": {
+          "path_count": 2,
+          "left_path_count": 1,
+          "right_path_count": 1,
+          "unclassified_path_count": 0,
+          "unique_pair_candidate": true
+        },
+        "female-front": {
+          "path_count": 2,
+          "left_path_count": 1,
+          "right_path_count": 1,
+          "unclassified_path_count": 0,
+          "unique_pair_candidate": true
+        }
       }
     },
     {
@@ -201,6 +263,36 @@
             "id": "SHOULDER_SIDE_LEFT"
           }
         ]
+      },
+      "side_geometry_audit": {
+        "male-front": {
+          "path_count": 2,
+          "left_path_count": 1,
+          "right_path_count": 1,
+          "unclassified_path_count": 0,
+          "unique_pair_candidate": true
+        },
+        "male-back": {
+          "path_count": 2,
+          "left_path_count": 1,
+          "right_path_count": 1,
+          "unclassified_path_count": 0,
+          "unique_pair_candidate": true
+        },
+        "female-front": {
+          "path_count": 2,
+          "left_path_count": 1,
+          "right_path_count": 1,
+          "unclassified_path_count": 0,
+          "unique_pair_candidate": true
+        },
+        "female-back": {
+          "path_count": 2,
+          "left_path_count": 1,
+          "right_path_count": 1,
+          "unclassified_path_count": 0,
+          "unique_pair_candidate": true
+        }
       }
     },
     {
@@ -235,6 +327,22 @@
             "id": "SHOULDER_REAR_LEFT"
           }
         ]
+      },
+      "side_geometry_audit": {
+        "male-back": {
+          "path_count": 2,
+          "left_path_count": 1,
+          "right_path_count": 1,
+          "unclassified_path_count": 0,
+          "unique_pair_candidate": true
+        },
+        "female-back": {
+          "path_count": 2,
+          "left_path_count": 1,
+          "right_path_count": 1,
+          "unclassified_path_count": 0,
+          "unique_pair_candidate": true
+        }
       }
     },
     {
@@ -269,6 +377,22 @@
             "id": "BICEPS_LEFT"
           }
         ]
+      },
+      "side_geometry_audit": {
+        "male-front": {
+          "path_count": 2,
+          "left_path_count": 1,
+          "right_path_count": 1,
+          "unclassified_path_count": 0,
+          "unique_pair_candidate": true
+        },
+        "female-front": {
+          "path_count": 2,
+          "left_path_count": 1,
+          "right_path_count": 1,
+          "unclassified_path_count": 0,
+          "unique_pair_candidate": true
+        }
       }
     },
     {
@@ -323,6 +447,36 @@
             "id": "TRICEPS_RIGHT"
           }
         ]
+      },
+      "side_geometry_audit": {
+        "male-front": {
+          "path_count": 2,
+          "left_path_count": 1,
+          "right_path_count": 1,
+          "unclassified_path_count": 0,
+          "unique_pair_candidate": true
+        },
+        "male-back": {
+          "path_count": 2,
+          "left_path_count": 1,
+          "right_path_count": 1,
+          "unclassified_path_count": 0,
+          "unique_pair_candidate": true
+        },
+        "female-front": {
+          "path_count": 2,
+          "left_path_count": 1,
+          "right_path_count": 1,
+          "unclassified_path_count": 0,
+          "unique_pair_candidate": true
+        },
+        "female-back": {
+          "path_count": 2,
+          "left_path_count": 1,
+          "right_path_count": 1,
+          "unclassified_path_count": 0,
+          "unique_pair_candidate": true
+        }
       }
     },
     {
@@ -377,6 +531,36 @@
             "id": "FOREARM_RIGHT"
           }
         ]
+      },
+      "side_geometry_audit": {
+        "male-front": {
+          "path_count": 2,
+          "left_path_count": 1,
+          "right_path_count": 1,
+          "unclassified_path_count": 0,
+          "unique_pair_candidate": true
+        },
+        "male-back": {
+          "path_count": 2,
+          "left_path_count": 1,
+          "right_path_count": 1,
+          "unclassified_path_count": 0,
+          "unique_pair_candidate": true
+        },
+        "female-front": {
+          "path_count": 2,
+          "left_path_count": 1,
+          "right_path_count": 1,
+          "unclassified_path_count": 0,
+          "unique_pair_candidate": true
+        },
+        "female-back": {
+          "path_count": 2,
+          "left_path_count": 1,
+          "right_path_count": 1,
+          "unclassified_path_count": 0,
+          "unique_pair_candidate": true
+        }
       }
     },
     {
@@ -431,6 +615,36 @@
             "id": "OBLIQUE_LEFT"
           }
         ]
+      },
+      "side_geometry_audit": {
+        "male-front": {
+          "path_count": 2,
+          "left_path_count": 1,
+          "right_path_count": 1,
+          "unclassified_path_count": 0,
+          "unique_pair_candidate": true
+        },
+        "male-back": {
+          "path_count": 2,
+          "left_path_count": 1,
+          "right_path_count": 1,
+          "unclassified_path_count": 0,
+          "unique_pair_candidate": true
+        },
+        "female-front": {
+          "path_count": 2,
+          "left_path_count": 1,
+          "right_path_count": 1,
+          "unclassified_path_count": 0,
+          "unique_pair_candidate": true
+        },
+        "female-back": {
+          "path_count": 2,
+          "left_path_count": 1,
+          "right_path_count": 1,
+          "unclassified_path_count": 0,
+          "unique_pair_candidate": true
+        }
       }
     },
     {
@@ -465,6 +679,22 @@
             "id": "CORE_LEFT"
           }
         ]
+      },
+      "side_geometry_audit": {
+        "male-front": {
+          "path_count": 2,
+          "left_path_count": 1,
+          "right_path_count": 1,
+          "unclassified_path_count": 0,
+          "unique_pair_candidate": true
+        },
+        "female-front": {
+          "path_count": 2,
+          "left_path_count": 1,
+          "right_path_count": 1,
+          "unclassified_path_count": 0,
+          "unique_pair_candidate": true
+        }
       }
     },
     {
@@ -519,6 +749,36 @@
             "id": "ABDUCTOR_RIGHT"
           }
         ]
+      },
+      "side_geometry_audit": {
+        "male-front": {
+          "path_count": 2,
+          "left_path_count": 1,
+          "right_path_count": 1,
+          "unclassified_path_count": 0,
+          "unique_pair_candidate": true
+        },
+        "male-back": {
+          "path_count": 2,
+          "left_path_count": 1,
+          "right_path_count": 1,
+          "unclassified_path_count": 0,
+          "unique_pair_candidate": true
+        },
+        "female-front": {
+          "path_count": 2,
+          "left_path_count": 1,
+          "right_path_count": 1,
+          "unclassified_path_count": 0,
+          "unique_pair_candidate": true
+        },
+        "female-back": {
+          "path_count": 2,
+          "left_path_count": 1,
+          "right_path_count": 1,
+          "unclassified_path_count": 0,
+          "unique_pair_candidate": true
+        }
       }
     },
     {
@@ -569,6 +829,22 @@
             "id": "QUADRICEPS_RIGHT"
           }
         ]
+      },
+      "side_geometry_audit": {
+        "male-front": {
+          "path_count": 4,
+          "left_path_count": 1,
+          "right_path_count": 1,
+          "unclassified_path_count": 2,
+          "unique_pair_candidate": false
+        },
+        "female-front": {
+          "path_count": 4,
+          "left_path_count": 2,
+          "right_path_count": 2,
+          "unclassified_path_count": 0,
+          "unique_pair_candidate": false
+        }
       }
     },
     {
@@ -623,6 +899,36 @@
             "id": "CALVES_RIGHT"
           }
         ]
+      },
+      "side_geometry_audit": {
+        "male-front": {
+          "path_count": 2,
+          "left_path_count": 1,
+          "right_path_count": 1,
+          "unclassified_path_count": 0,
+          "unique_pair_candidate": true
+        },
+        "male-back": {
+          "path_count": 2,
+          "left_path_count": 1,
+          "right_path_count": 1,
+          "unclassified_path_count": 0,
+          "unique_pair_candidate": true
+        },
+        "female-front": {
+          "path_count": 2,
+          "left_path_count": 1,
+          "right_path_count": 1,
+          "unclassified_path_count": 0,
+          "unique_pair_candidate": true
+        },
+        "female-back": {
+          "path_count": 2,
+          "left_path_count": 1,
+          "right_path_count": 1,
+          "unclassified_path_count": 0,
+          "unique_pair_candidate": true
+        }
       }
     },
     {
@@ -677,6 +983,36 @@
             "id": "ADDUCTOR_RIGHT"
           }
         ]
+      },
+      "side_geometry_audit": {
+        "male-front": {
+          "path_count": 2,
+          "left_path_count": 1,
+          "right_path_count": 1,
+          "unclassified_path_count": 0,
+          "unique_pair_candidate": true
+        },
+        "male-back": {
+          "path_count": 2,
+          "left_path_count": 1,
+          "right_path_count": 1,
+          "unclassified_path_count": 0,
+          "unique_pair_candidate": true
+        },
+        "female-front": {
+          "path_count": 2,
+          "left_path_count": 1,
+          "right_path_count": 1,
+          "unclassified_path_count": 0,
+          "unique_pair_candidate": true
+        },
+        "female-back": {
+          "path_count": 2,
+          "left_path_count": 1,
+          "right_path_count": 1,
+          "unclassified_path_count": 0,
+          "unique_pair_candidate": true
+        }
       }
     },
     {
@@ -711,6 +1047,22 @@
             "id": "RHOMBOID_RIGHT"
           }
         ]
+      },
+      "side_geometry_audit": {
+        "male-back": {
+          "path_count": 2,
+          "left_path_count": 1,
+          "right_path_count": 1,
+          "unclassified_path_count": 0,
+          "unique_pair_candidate": true
+        },
+        "female-back": {
+          "path_count": 2,
+          "left_path_count": 1,
+          "right_path_count": 1,
+          "unclassified_path_count": 0,
+          "unique_pair_candidate": true
+        }
       }
     },
     {
@@ -745,6 +1097,22 @@
             "id": "LATISSIMUS_RIGHT"
           }
         ]
+      },
+      "side_geometry_audit": {
+        "male-back": {
+          "path_count": 2,
+          "left_path_count": 1,
+          "right_path_count": 1,
+          "unclassified_path_count": 0,
+          "unique_pair_candidate": true
+        },
+        "female-back": {
+          "path_count": 2,
+          "left_path_count": 1,
+          "right_path_count": 1,
+          "unclassified_path_count": 0,
+          "unique_pair_candidate": true
+        }
       }
     },
     {
@@ -779,6 +1147,22 @@
             "id": "LOWER_BACK_RIGHT"
           }
         ]
+      },
+      "side_geometry_audit": {
+        "male-back": {
+          "path_count": 2,
+          "left_path_count": 1,
+          "right_path_count": 1,
+          "unclassified_path_count": 0,
+          "unique_pair_candidate": true
+        },
+        "female-back": {
+          "path_count": 2,
+          "left_path_count": 1,
+          "right_path_count": 1,
+          "unclassified_path_count": 0,
+          "unique_pair_candidate": true
+        }
       }
     },
     {
@@ -813,6 +1197,22 @@
             "id": "GLUTEUS_RIGHT"
           }
         ]
+      },
+      "side_geometry_audit": {
+        "male-back": {
+          "path_count": 2,
+          "left_path_count": 1,
+          "right_path_count": 1,
+          "unclassified_path_count": 0,
+          "unique_pair_candidate": true
+        },
+        "female-back": {
+          "path_count": 2,
+          "left_path_count": 1,
+          "right_path_count": 1,
+          "unclassified_path_count": 0,
+          "unique_pair_candidate": true
+        }
       }
     },
     {
@@ -847,6 +1247,22 @@
             "id": "HAMSTRINGS_RIGHT"
           }
         ]
+      },
+      "side_geometry_audit": {
+        "male-back": {
+          "path_count": 2,
+          "left_path_count": 1,
+          "right_path_count": 1,
+          "unclassified_path_count": 0,
+          "unique_pair_candidate": true
+        },
+        "female-back": {
+          "path_count": 2,
+          "left_path_count": 1,
+          "right_path_count": 1,
+          "unclassified_path_count": 0,
+          "unique_pair_candidate": true
+        }
       }
     }
   ]
