@@ -45,6 +45,7 @@ function selectedPairs(){
  return [...groups.values()];
 }
 function groupLabel(group){return LABELS[group]||group}
+function escapeHtml(value){return String(value==null?'':value).replace(/[&<>"']/g,function(c){return c==='&'?'&amp;':c==='<'?'&lt;':c==='>'?'&gt;':c==='"'?'&quot;':'&#39;';})}
 function renderSelected(){
  const groups=selectedPairs();
  count.textContent=groups.length.toLocaleString('fa-IR')+' گروه عضلانی انتخاب‌شده';
@@ -54,7 +55,8 @@ function renderSelected(){
   const paired=pair.ok&&pair.items.every(y=>Object.entries(selectedMap()).some(([k])=>k===keyFor(y.p,y.i)));
   const roleColor=x.role==='secondary'?'#3389b7':'#d94b45';
   const tag=paired?'دوطرفه':(x.indices.length>1?'چند قطعه':'یک سمت / قطعه');
-  return '<div class="item"><span>'+groupLabel(x.group)+' <small class="badge">'+tag+'</small></span><span><i class="dot" style="background:'+roleColor+'"></i><button type="button" data-remove-group="'+x.group+'">×</button></span></div>';
+  const warning=pairWarnings.get(x.group);
+  return '<div class="item"><span>'+escapeHtml(groupLabel(x.group))+' <small class="badge">'+tag+'</small>'+(warning?'<small class="info">'+escapeHtml(warning)+'</small>':'')+'</span><span><i class="dot" style="background:'+roleColor+'"></i><button type="button" data-remove-group="'+escapeHtml(x.group)+'">×</button></span></div>';
  }).join('');
  selected.querySelectorAll('[data-remove-group]').forEach(b=>b.addEventListener('click',()=>{
   const g=b.dataset.removeGroup;
@@ -64,7 +66,8 @@ function renderSelected(){
  renderExercises();
 }
 function handlePath(el){
- const paths=currentPaths(),i=Number([...svg.children].filter(n=>n.classList.contains('muscle')).indexOf(el));
+ const paths=currentPaths(),key=el.dataset.key;
+ const i=paths.findIndex((p,index)=>keyFor(p,index)===key);
  const path=paths[i];
  if(!path)return;
  const pair=pairFor(path);
@@ -96,7 +99,7 @@ function renderExercises(){
  const rows=[...byId.values()];
  help.textContent='نتایج از فهرست حرکاتی می‌آیند که اپِ میزبان به‌صورت مجاز تحویل داده است؛ هیچ رکوردی در بانک تغییر نمی‌کند.';
  if(!rows.length){box.innerHTML='<div class="empty">برای عضلات انتخاب‌شده، حرکت منطبق پیدا نشد.</div>';return}
- box.innerHTML=rows.map(x=>'<div class="item"><span>'+String(x.exercise.name||'حرکت بدون نام').replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]))+' <small class="badge">'+(x.match_type==='exact_group'?'تطبیق دقیق':'تطبیق ناحیه‌ای / عملکردی')+'</small></span><span class="info">#'+x.exercise.id+'</span></div>').join('');
+ box.innerHTML=rows.map(x=>'<div class="item"><span>'+String(x.exercise.name||'حرکت بدون نام').replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]))+' <small class="badge">'+(x.match_type==='exact_group'?'تطبیق دقیق':'تطبیق ناحیه‌ای / عملکردی')+'</small></span><span class="info">#'+escapeHtml(x.exercise.id)+'</span></div>').join('');
 }
 document.getElementById('broadMatches').addEventListener('change',renderExercises);
 window.SehAnatomyExerciseIntegration=Object.freeze({
