@@ -141,7 +141,8 @@
       "anatomy_group_ids": [],
       "mapping": "unmapped",
       "confidence": "none",
-      "note": "Needs rotator-cuff geometry; do not map to deltoid."
+      "note": "Needs rotator-cuff geometry; do not map to deltoid.",
+      "unmapped_reason": "برای این برچسب به گروه‌های اختصاصی روتاتورکاف (به‌ویژه infraspinatus و teres minor) نیاز است؛ کاتالوگ فعلی چنین هندسه‌ای ندارد و نگاشت به دلتوئید خلفی دقیق نیست."
     },
     {
       "source_label": "جلو بازو",
@@ -226,37 +227,43 @@
       "source_label": "تحرک ستون فقرات",
       "anatomy_group_ids": [],
       "mapping": "unmapped",
-      "confidence": "none"
+      "confidence": "none",
+      "unmapped_reason": "هدف حرکتی چندبخشی است و عضله هدف یکتایی را مشخص نمی‌کند؛ تا زمان تفکیک عضلات راست‌کننده ستون فقرات و گروه‌های عمقی نگاشت نمی‌شود."
     },
     {
       "source_label": "تحرک ستون فقرات سینه‌ای",
       "anatomy_group_ids": [],
       "mapping": "unmapped",
-      "confidence": "none"
+      "confidence": "none",
+      "unmapped_reason": "هدف حرکتی ناحیه‌ای است و به عضلات متعدد قفسه سینه و پشت مربوط می‌شود؛ نگاشت به یک گروه سطحی گمراه‌کننده خواهد بود."
     },
     {
       "source_label": "آگاهی وضعیتی گردن",
       "anatomy_group_ids": [],
       "mapping": "unmapped",
-      "confidence": "none"
+      "confidence": "none",
+      "unmapped_reason": "هدف آموزشی/حسی است، نه عضله مشخص؛ عضلات عمقی گردن در کاتالوگ فعلی هندسه ندارند."
     },
     {
       "source_label": "تحرک گردن",
       "anatomy_group_ids": [],
       "mapping": "unmapped",
-      "confidence": "none"
+      "confidence": "none",
+      "unmapped_reason": "حرکت چندجهتی گردن است و بدون تفکیک عضلات سطحی و عمقی گردن نباید به یک گروه موجود نگاشت شود."
     },
     {
       "source_label": "کنترل وضعیت سر و گردن",
       "anatomy_group_ids": [],
       "mapping": "unmapped",
-      "confidence": "none"
+      "confidence": "none",
+      "unmapped_reason": "هدف عملکردی چندعضله‌ای است؛ گروه‌های deep neck flexors و extensors در مدل فعلی وجود ندارند."
     },
     {
       "source_label": "تحمل فعالیت عمومی",
       "anatomy_group_ids": [],
       "mapping": "unmapped",
-      "confidence": "none"
+      "confidence": "none",
+      "unmapped_reason": "شاخص ظرفیت عمومی فعالیت است و عضله هدف مشخصی ندارد."
     },
     {
       "source_label": "قدرت عملکردی پا و کنترل زانو",
@@ -303,14 +310,16 @@
       "anatomy_group_ids": [],
       "mapping": "unmapped",
       "confidence": "none",
-      "note": "Generic training category, not an anatomical target."
+      "note": "Generic training category, not an anatomical target.",
+      "unmapped_reason": "برچسب کلی نوع برنامه است و گروه عضلانی مشخص نمی‌کند."
     },
     {
       "source_label": "کاردیو",
       "anatomy_group_ids": [],
       "mapping": "unmapped",
       "confidence": "none",
-      "note": "Not a muscle target."
+      "note": "Not a muscle target.",
+      "unmapped_reason": "نوع فعالیت/هدف تمرینی است، نه عضله هدف؛ از فیلتر عضلات حذف می‌ماند."
     }
   ]
 }
