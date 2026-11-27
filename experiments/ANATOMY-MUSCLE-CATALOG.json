@@ -2,7 +2,7 @@
   "schema_version": "0.1.0",
   "generated_at": "2026-11-27",
   "source_file": "experiments/anatomy-smart-prototype.html",
-  "source_blob_sha": "eea35fdad216ecbe0da2d9ade3c181d8a0b32ac7",
+  "source_blob_sha": "b4380de3e663fc63005b8bd9061b5d71d025c504",
   "purpose": "Inventory of existing prototype SVG groups and IDs. Not an anatomically validated atlas.",
   "global_rules": {
     "no_invented_geometry": true,
@@ -1385,13 +1385,13 @@
   ],
   "source_verification": {
     "verified_at": "2026-11-27",
-    "source_blob_sha": "eea35fdad216ecbe0da2d9ade3c181d8a0b32ac7",
+    "source_blob_sha": "b4380de3e663fc63005b8bd9061b5d71d025c504",
     "inventory_path_count": 116,
     "catalog_entry_count": 116,
     "catalog_index_id_group_consistency": "passed",
     "browser_visual_validation": "not_run",
     "anatomical_geometry_validation": "not_run",
-    "note": "Stable dual-hash geometry-derived selection keys are recorded per catalog path. Runtime rendering fails closed on any duplicate key. This avoids duplicate legacy SVG IDs and array-index identity drift. Browser visual and anatomical geometry validation remain not_run.",
+    "note": "Catalog fingerprint refreshed after adding the catalog-driven muscle browser script reference. The geometry inventory and 116 path identities are unchanged. Browser interaction smoke is now included in the experiment workflow; anatomical geometry review remains a separate required gate.",
     "path_identity": "dual_32bit_geometry_fingerprint_with_runtime_collision_guard",
     "path_identity_collisions": "none_in_current_four_view_inventory"
   }
