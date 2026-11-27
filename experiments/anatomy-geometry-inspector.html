@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>بازرس هندسه مسیرهای آناتومی | فیتنس سه‌قلعه</title>
+<style>
+:root{color-scheme:light;--ink:#463c2c;--gold:#b58a43;--paper:#f7f1e4;--line:#e4d8c2}
+*{box-sizing:border-box}body{margin:0;background:var(--paper);color:var(--ink);font-family:Tahoma,Arial,sans-serif}
+header{padding:18px 22px;background:#fff;border-bottom:1px solid var(--line)}h1{font-size:20px;margin:0 0 6px}.sub{font-size:12px;color:#786e5e}
+main{max-width:1500px;margin:auto;padding:16px;display:grid;grid-template-columns:minmax(320px,430px) minmax(0,1fr);gap:14px}
+.card{background:#fff;border:1px solid var(--line);border-radius:14px;padding:14px;min-width:0}
+.toolbar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:12px}
+select,input,button{font:inherit;border:1px solid var(--line);border-radius:8px;padding:9px;background:#fff;color:var(--ink)}
+button{cursor:pointer}button.active{background:#f2e4c8;border-color:var(--gold)}
+.list{max-height:68vh;overflow:auto;display:grid;gap:6px}
+.item{display:flex;justify-content:space-between;align-items:center;gap:8px;text-align:right;width:100%;font-size:12px}
+.item small{color:#817563;direction:ltr}
+.item.active{background:#f6e8cd;border-color:var(--gold)}
+.meta{font-size:12px;line-height:1.9;background:#fbf8f1;border-radius:8px;padding:10px;margin-top:10px;overflow-wrap:anywhere}
+iframe{width:100%;height:min(78vh,1000px);border:0;border-radius:10px;background:#fff}
+.notice{font-size:12px;line-height:1.9;color:#766a57;margin-top:10px}
+@media(max-width:850px){main{grid-template-columns:1fr}.list{max-height:38vh}iframe{height:65vh}}
+</style>
+</head>
+<body>
+<header><h1>بازرس هندسه مسیرهای آناتومی</h1><div class="sub">ابزار بازبینی ساختاری مسیرها؛ بدون تغییر هندسه، شناسه یا اطلاعات شاگردان</div></header>
+<main>
+<section class="card">
+<div class="toolbar">
+<label>مدل <select id="sex"><option value="male">آقا</option><option value="female">خانم</option></select></label>
+<label>نما <select id="view"><option value="front">جلو</option><option value="back">پشت</option></select></label>
+</div>
+<div class="toolbar">
+<label>گروه <select id="group"><option value="">همه عضلات</option></select></label>
+<input id="search" type="search" placeholder="جست‌وجوی نام یا شناسه" aria-label="جست‌وجوی مسیر">
+</div>
+<div class="toolbar">
+<button id="dim" class="active" type="button">کم‌رنگ‌کردن همسایه‌ها</button>
+<button id="reset" type="button">نمایش همه مسیرها</button>
+</div>
+<div id="list" class="list"><div class="notice">در حال بارگذاری مدل…</div></div>
+<div id="meta" class="meta">برای بررسی، یک مسیر از فهرست انتخاب کن.</div>
+<p class="notice">این ابزار مسیرهای موجود را جداگانه برجسته می‌کند تا بازبینی مرزها آسان‌تر شود. نام گروه و شناسه قدیمی، به‌تنهایی اثبات‌کننده هویت دقیق آناتومیک نیستند.</p>
+</section>
+<section class="card">
+<div class="sub" id="frameTitle">پیش‌نمایش تعاملی بدن</div>
+<iframe id="preview" title="پیش‌نمایش آناتومی" src="./anatomy-smart-prototype.html?geometry-inspector=1"></iframe>
+</section>
+</main>
+<script>
+const frame=document.getElementById('preview'),list=document.getElementById('list'),meta=document.getElementById('meta');
+const sex=document.getElementById('sex'),view=document.getElementById('view'),group=document.getElementById('group'),search=document.getElementById('search');
+let activeKey='',dim=true;
+function doc(){return frame.contentDocument}
+function controls(){const d=doc();if(!d||!d.getElementById('bodySvg'))return false;d.getElementById('sex').value=sex.value;d.getElementById('view').value=view.value;d.getElementById('sex').dispatchEvent(new Event('change',{bubbles:true}));d.getElementById('view').dispatchEvent(new Event('change',{bubbles:true}));return true}
+function paths(){return [...doc().querySelectorAll('#bodySvg .muscle')]}
+function restore(){for(const p of paths()){p.style.opacity='';p.style.stroke='';p.style.strokeWidth='';p.style.filter=''}}
+function select(key){activeKey=key;const all=paths();restore();const target=all.find(p=>p.dataset.key===key);if(!target)return;
+if(dim)for(const p of all)if(p!==target)p.style.opacity='.16';
+target.style.opacity='1';target.style.stroke='#19130b';target.style.strokeWidth='8';target.style.filter='drop-shadow(0 0 5px #fff)';
+const index=all.indexOf(target);
+meta.innerHTML='<b>جزئیات مسیر انتخاب‌شده</b><br>مدل/نما: '+sex.value+' / '+view.value+'<br>اندیس مسیر در این نما: '+index+'<br>گروه: '+target.dataset.group+'<br>شناسه قدیمی SVG: '+(target.dataset.id||'ندارد')+'<br>کلید هندسی پایدار: <span dir="ltr">'+key+'</span>';
+renderList();}
+function renderList(){const all=paths(),q=search.value.trim().toLowerCase(),g=group.value;list.innerHTML='';
+all.forEach((p,i)=>{const label=(p.getAttribute('aria-label')||p.dataset.group||'').toLowerCase();const identity=(p.dataset.id||'').toLowerCase();if(g&&p.dataset.group!==g)return;if(q&&!label.includes(q)&&!identity.includes(q)&&!p.dataset.key.toLowerCase().includes(q))return;
+const b=document.createElement('button');b.type='button';b.className='item'+(p.dataset.key===activeKey?' active':'');const name=document.createElement('span');name.textContent=(p.getAttribute('aria-label')||p.dataset.group)+' · '+p.dataset.group;const small=document.createElement('small');small.textContent='#'+i+' · '+(p.dataset.id||'no-id');b.append(name,small);b.addEventListener('click',()=>select(p.dataset.key));list.appendChild(b);});
+if(!list.children.length)list.innerHTML='<div class="notice">مسیر منطبق پیدا نشد.</div>';}
+function refresh(){if(!controls())return;activeKey='';restore();const groups=[...new Set(paths().map(p=>p.dataset.group))].sort();group.innerHTML='<option value="">همه عضلات</option>';groups.forEach(g=>{const o=document.createElement('option');o.value=g;o.textContent=g;group.appendChild(o)});meta.textContent='برای بررسی، یک مسیر از فهرست انتخاب کن.';renderList();document.getElementById('frameTitle').textContent='پیش‌نمایش '+(sex.value==='male'?'آقا':'خانم')+' · '+(view.value==='front'?'نمای جلو':'نمای پشت');}
+frame.addEventListener('load',()=>setTimeout(refresh,500));
+sex.addEventListener('change',refresh);view.addEventListener('change',refresh);group.addEventListener('change',renderList);search.addEventListener('input',renderList);
+document.getElementById('dim').addEventListener('click',e=>{dim=!dim;e.currentTarget.classList.toggle('active',dim);if(activeKey)select(activeKey)});
+document.getElementById('reset').addEventListener('click',()=>{activeKey='';restore();meta.textContent='برای بررسی، یک مسیر از فهرست انتخاب کن.';renderList()});
+</script>
+</body></html>
