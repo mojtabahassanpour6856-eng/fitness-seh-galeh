@@ -8,7 +8,7 @@ const browser=document.createElement('section');
 browser.className='card';
 browser.id='muscleBrowser';
 browser.style.marginBottom='14px';
-browser.innerHTML='<h2>فهرست عضلات</h2><p class="info">هر ردیف دقیقاً به یک مسیر هندسی موجود در نمای انتخاب‌شده وصل است. انتخاب از فهرست و تصویر با هم همگام می‌شود.</p><input id="muscleSearch" type="search" placeholder="جست‌وجوی فارسی یا لاتین عضله…" aria-label="جست‌وجوی عضلات" style="width:100%;padding:10px 12px;border:1px solid #ddc995;border-radius:10px;font:inherit;background:#fff"><div id="muscleBrowserList" class="list" aria-live="polite"><div class="empty">در حال بارگذاری فهرست عضلات…</div></div><p class="info" id="muscleBrowserCount"></p>';
+browser.innerHTML='<h2>فهرست عضلات</h2><p class="info">هر ردیف دقیقاً به یک مسیر هندسی موجود در نمای انتخاب‌شده وصل است. انتخاب از فهرست و تصویر با هم همگام می‌شود.</p><p class="info" role="note" style="padding:8px 10px;background:#fff5df;border-right:3px solid #98752d;border-radius:8px">توجه علمی: انتخاب‌پذیری فنی به معنی تأیید نهایی مرز آناتومیک نیست؛ تمام گروه‌ها هنوز در انتظار بازبینی علمی هستند. مسیرهای مبهم یا دارای شناسه تکراری مسدود شده‌اند.</p><input id="muscleSearch" type="search" placeholder="جست‌وجوی فارسی یا لاتین عضله…" aria-label="جست‌وجوی عضلات" style="width:100%;padding:10px 12px;border:1px solid #ddc995;border-radius:10px;font:inherit;background:#fff"><div id="muscleBrowserList" class="list" aria-live="polite"><div class="empty">در حال بارگذاری فهرست عضلات…</div></div><p class="info" id="muscleBrowserCount"></p>';
 aside.insertBefore(browser,selectedHeading);
 let catalog=null;
 const list=browser.querySelector('#muscleBrowserList');
