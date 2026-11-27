@@ -73,7 +73,12 @@ const title=document.getElementById("figureTitle");
 const selected=document.getElementById("selected");
 const count=document.getElementById("count");
 const esc=s=>String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
-function keyFor(m,index){return (m.id||m.group)+"__"+index}
+function keyFor(m,index){
+ const source=String(m.group||"MUSCLE")+"|"+String(m.d||"");
+ let hash=2166136261;
+ for(let i=0;i<source.length;i++)hash=Math.imul(hash^source.charCodeAt(i),16777619);
+ return String(m.group||"MUSCLE")+"__"+(hash>>>0).toString(36);
+}
 function draw(){
  const d=DATA[state.sex+"-"+state.view];
  title.textContent="نمای "+(state.view==="front"?"جلوی":"پشتی")+" بدن "+(state.sex==="male"?"آقا":"خانم");
