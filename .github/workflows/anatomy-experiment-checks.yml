@@ -11,6 +11,7 @@ on:
       - 'experiments/ANATOMY-*.md'
       - 'experiments/anatomy-smart-prototype.html'
       - 'experiments/anatomy-preview-capture.html'
+      - 'experiments/anatomy-preview-gallery.html'
       - 'experiments/anatomy-geometry-inspector.html'
       - 'tests/anatomy-*.test.js'
       - '.github/workflows/anatomy-experiment-checks.yml'
@@ -65,6 +66,8 @@ jobs:
             "$CHROME_PATH" --headless --no-sandbox --disable-gpu --hide-scrollbars --window-size=1440,1800 --virtual-time-budget=7000 --screenshot="/tmp/anatomy-${view}.png" "http://127.0.0.1:8765/anatomy-preview-capture.html?view=${view}"
             test -s "/tmp/anatomy-${view}.png"
           done
+          "$CHROME_PATH" --headless --no-sandbox --disable-gpu --hide-scrollbars --window-size=1800,2600 --virtual-time-budget=18000 --screenshot=/tmp/anatomy-preview-gallery.png "http://127.0.0.1:8765/anatomy-preview-gallery.html"
+          test -s /tmp/anatomy-preview-gallery.png
           "$CHROME_PATH" --headless --no-sandbox --disable-gpu --hide-scrollbars --window-size=1600,1200 --virtual-time-budget=9000 --screenshot=/tmp/anatomy-geometry-inspector.png "http://127.0.0.1:8765/anatomy-geometry-inspector.html?sex=male&view=front"
           test -s /tmp/anatomy-geometry-inspector.png
           "$CHROME_PATH" --headless --no-sandbox --disable-gpu --virtual-time-budget=7000 --dump-dom "http://127.0.0.1:8765/anatomy-smart-prototype.html?smoke=1" >/tmp/anatomy-dom.html
@@ -84,5 +87,6 @@ jobs:
             /tmp/anatomy-female-back.png
             /tmp/anatomy-dom.html
             /tmp/anatomy-geometry-inspector.png
+            /tmp/anatomy-preview-gallery.png
           if-no-files-found: error
           retention-days: 3
