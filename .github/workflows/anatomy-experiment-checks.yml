@@ -67,6 +67,9 @@ jobs:
             "$CHROME_PATH" --headless --no-sandbox --disable-gpu --hide-scrollbars --window-size=1440,1800 --virtual-time-budget=7000 --screenshot="/tmp/anatomy-${view}.png" "http://127.0.0.1:8765/anatomy-preview-capture.html?view=${view}"
             test -s "/tmp/anatomy-${view}.png"
           done
+          "$CHROME_PATH" --headless --no-sandbox --disable-gpu --virtual-time-budget=18000 --dump-dom "http://127.0.0.1:8765/anatomy-preview-gallery.html" >/tmp/anatomy-gallery-dom.html
+          grep -q 'data-gallery-ready="true"' /tmp/anatomy-gallery-dom.html
+          grep -q 'data-loaded-views="male-front,male-back,female-front,female-back"' /tmp/anatomy-gallery-dom.html
           "$CHROME_PATH" --headless --no-sandbox --disable-gpu --hide-scrollbars --window-size=1800,2600 --virtual-time-budget=18000 --screenshot=/tmp/anatomy-preview-gallery.png "http://127.0.0.1:8765/anatomy-preview-gallery.html"
           test -s /tmp/anatomy-preview-gallery.png
           "$CHROME_PATH" --headless --no-sandbox --disable-gpu --hide-scrollbars --window-size=1600,1200 --virtual-time-budget=9000 --screenshot=/tmp/anatomy-geometry-inspector.png "http://127.0.0.1:8765/anatomy-geometry-inspector.html?sex=male&view=front"
