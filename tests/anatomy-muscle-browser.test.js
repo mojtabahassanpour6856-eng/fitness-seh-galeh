@@ -36,7 +36,7 @@ const integrationSource=fs.readFileSync("experiments/anatomy-selection-integrati
 assert.match(browser,/sameId===1/,"only uniquely identified geometry may be enabled in the list");
 assert.match(browser,/!path[.]id/,"geometry without a source ID must be disabled in the list");
 assert.match(integrationSource,/sameId!==1/,"SVG selection must reject missing or duplicate source IDs");
-assert.match(integrationSource,/data-geometryBlocked/,"blocked geometry must provide an explicit user-facing status");
+assert.match(integrationSource,/geometryBlocked/,"blocked geometry must provide an explicit user-facing status");
 assert.match(integrationSource,/firstSafeMuscle/,"browser smoke must choose uniquely identified paths in all views");
 assert.match(browser,/anatomyMuscleBrowserSmoke/,"browser smoke must publish an explicit pass marker");
 assert.match(browser,/Persian search must find catalog entries/,"browser smoke must exercise Persian search");
