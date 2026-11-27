@@ -35,4 +35,13 @@ assert.match(script,/ذخیره PDF/,'report must offer browser print-to-PDF');
 assert.match(script,/text\/html;charset=utf-8/,'report must download as UTF-8 HTML');
 assert.match(script,/تأیید مرزها و نام‌گذاری آناتومیک نیازمند مرجع معتبر/,'report must state the anatomy validation limitation');
 
+assert.match(html,/id="multiMode"/,'same-group multi-path review control must exist');
+assert.match(script,/let activeKey='',compareKey='',compareMode=false,multiReview=false,reviewKeys=\[\]/,'multi-path review state must be explicit');
+assert.match(script,/target\.dataset\.group!==currentGroup/,'multi-path mode must reject mixed muscle groups');
+assert.match(script,/reviewKeys\.length>=6/,'multi-path mode must enforce a bounded six-path report');
+assert.match(script,/const keys=multiReview\?reviewKeys:/,'exports and selection records must include every selected review path');
+assert.match(script,/palette=\['#19130b','#7650a5','#167c80','#b56b22','#315f9b','#a13c54'\]/,'multi-path export must visually distinguish up to six paths');
+assert.match(script,/repeat\('+Math\.min\(2,records\.length\)\+/,'multi-path report must use a readable two-column detail layout');
+assert.match(script,/رنگ‌ها فقط برای تشخیص مسیرها هستند/,'multi-path mode must explain that colors are identifiers, not anatomy labels');
+
 console.log('PASS: inspector inline JavaScript syntax and selected-path JSON/CSV export safeguards.');
