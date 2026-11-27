@@ -58,41 +58,54 @@ fetch(catalogUrl).then(response=>{if(!response.ok)throw new Error('HTTP '+respon
  catalog=data;
  render();
  if(new URLSearchParams(location.search).has('smoke')){
-  const assertSmoke=(ok,message)=>{if(!ok)throw new Error('Muscle browser smoke: '+message)};
-  const combos=['male-front','male-back','female-front','female-back'];
-  for(const combo of combos){
-   const [sex,view]=combo.split('-');
-   const sexNode=document.getElementById('sex'),viewNode=document.getElementById('view');
-   sexNode.value=sex;sexNode.dispatchEvent(new Event('change',{bubbles:true}));
-   viewNode.value=view;viewNode.dispatchEvent(new Event('change',{bubbles:true}));
-   const expected=catalog.groups.reduce((sum,g)=>sum+((g.geometry_by_view&&g.geometry_by_view[combo])||[]).length,0);
-   assertSmoke(list.querySelectorAll('[data-muscle-key]').length===expected,combo+' list must include every catalogued geometry path');
-   const target=list.querySelector('[data-muscle-key]');
-   assertSmoke(!!target,combo+' must expose selectable catalog rows');
-   const key=target.dataset.muscleKey;
-   target.click();
-   assertSmoke(!!selectedMap()[key],combo+' list click must update shared selection state');
-   const painted=document.querySelector('#bodySvg .muscle[data-key="'+CSS.escape(key)+'"]');
-   assertSmoke(!!painted&&painted.classList.contains('primary'),combo+' list click must paint exactly the linked SVG path');
-   const selectedRow=list.querySelector('[data-muscle-key="'+CSS.escape(key)+'"]');
-   assertSmoke(!!selectedRow&&selectedRow.getAttribute('aria-pressed')==='true',combo+' list row must expose selected state after redraw');
-   selectedRow.click();
-   assertSmoke(!selectedMap()[key],combo+' second list click must clear selection');
-   const svgPath=document.querySelector('#bodySvg .muscle[data-key="'+CSS.escape(key)+'"]');
-   svgPath.dispatchEvent(new MouseEvent('click',{bubbles:true,cancelable:true}));
-   assertSmoke(!!selectedMap()[key],combo+' SVG click must update shared selection state');
-   const imageSyncedRow=list.querySelector('[data-muscle-key="'+CSS.escape(key)+'"]');
-   assertSmoke(!!imageSyncedRow&&imageSyncedRow.getAttribute('aria-pressed')==='true',combo+' SVG click must synchronize selected state in the muscle list');
-   imageSyncedRow.click();
-   assertSmoke(!selectedMap()[key],combo+' list must clear image-originated selection');
-  }
-  const first=catalog.groups.find(g=>(g.geometry_by_view['male-front']||[]).length);
-  search.value=first.name_fa;search.dispatchEvent(new Event('input',{bubbles:true}));
-  assertSmoke(list.querySelectorAll('[data-muscle-key]').length>0,'Persian search must find catalog entries');
-  search.value=first.name_latin;search.dispatchEvent(new Event('input',{bubbles:true}));
-  assertSmoke(list.querySelectorAll('[data-muscle-key]').length>0,'Latin search must find catalog entries');
-  search.value='';search.dispatchEvent(new Event('input',{bubbles:true}));
-  const passed=document.createElement('meta');passed.id='anatomyMuscleBrowserSmoke';passed.dataset.result='pass';passed.dataset.views=combos.join(',');document.head.appendChild(passed);
+  let integrationWait=0;
+  const runSmoke=()=>{
+   if(!document.getElementById('anatomyInteractionSmoke')){
+    if(++integrationWait>80){list.innerHTML='<div class="empty">تست تعاملی پایه آناتومی پیش از تست فهرست تکمیل نشد.</div>';return}
+    setTimeout(runSmoke,50);return;
+   }
+   try{
+    const assertSmoke=(ok,message)=>{if(!ok)throw new Error('Muscle browser smoke: '+message)};
+    const combos=['male-front','male-back','female-front','female-back'];
+    for(const combo of combos){
+     const [sex,view]=combo.split('-');
+     const sexNode=document.getElementById('sex'),viewNode=document.getElementById('view');
+     sexNode.value=sex;sexNode.dispatchEvent(new Event('change',{bubbles:true}));
+     viewNode.value=view;viewNode.dispatchEvent(new Event('change',{bubbles:true}));
+     const expected=catalog.groups.reduce((sum,g)=>sum+((g.geometry_by_view&&g.geometry_by_view[combo])||[]).length,0);
+     assertSmoke(list.querySelectorAll('[data-muscle-key]').length===expected,combo+' list must include every catalogued geometry path');
+     const target=list.querySelector('[data-muscle-key]');
+     assertSmoke(!!target,combo+' must expose selectable catalog rows');
+     const key=target.dataset.muscleKey;
+     target.click();
+     assertSmoke(!!selectedMap()[key],combo+' list click must update shared selection state');
+     const painted=document.querySelector('#bodySvg .muscle[data-key="'+CSS.escape(key)+'"]');
+     assertSmoke(!!painted&&painted.classList.contains('primary'),combo+' list click must paint exactly the linked SVG path');
+     const selectedRow=list.querySelector('[data-muscle-key="'+CSS.escape(key)+'"]');
+     assertSmoke(!!selectedRow&&selectedRow.getAttribute('aria-pressed')==='true',combo+' list row must expose selected state after redraw');
+     selectedRow.click();
+     assertSmoke(!selectedMap()[key],combo+' second list click must clear selection');
+     const svgPath=document.querySelector('#bodySvg .muscle[data-key="'+CSS.escape(key)+'"]');
+     svgPath.dispatchEvent(new MouseEvent('click',{bubbles:true,cancelable:true}));
+     assertSmoke(!!selectedMap()[key],combo+' SVG click must update shared selection state');
+     const imageSyncedRow=list.querySelector('[data-muscle-key="'+CSS.escape(key)+'"]');
+     assertSmoke(!!imageSyncedRow&&imageSyncedRow.getAttribute('aria-pressed')==='true',combo+' SVG click must synchronize selected state in the muscle list');
+     imageSyncedRow.click();
+     assertSmoke(!selectedMap()[key],combo+' list must clear image-originated selection');
+    }
+    const first=catalog.groups.find(g=>(g.geometry_by_view['male-front']||[]).length);
+    search.value=first.name_fa;search.dispatchEvent(new Event('input',{bubbles:true}));
+    assertSmoke(list.querySelectorAll('[data-muscle-key]').length>0,'Persian search must find catalog entries');
+    search.value=first.name_latin;search.dispatchEvent(new Event('input',{bubbles:true}));
+    assertSmoke(list.querySelectorAll('[data-muscle-key]').length>0,'Latin search must find catalog entries');
+    search.value='';search.dispatchEvent(new Event('input',{bubbles:true}));
+    const passed=document.createElement('meta');passed.id='anatomyMuscleBrowserSmoke';passed.dataset.result='pass';passed.dataset.views=combos.join(',');document.head.appendChild(passed);
+   }catch(error){
+    const failed=document.createElement('meta');failed.id='anatomyMuscleBrowserSmoke';failed.dataset.result='fail';failed.dataset.error=error.message;document.head.appendChild(failed);
+    list.innerHTML='<div class="empty">'+esc(error.message)+'</div>';
+   }
+  };
+  runSmoke();
  }
 })
 .catch(error=>{
