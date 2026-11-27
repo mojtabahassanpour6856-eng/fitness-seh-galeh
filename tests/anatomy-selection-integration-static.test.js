@@ -25,6 +25,12 @@ assert.match(html,/anatomy-selection-integration\.js/,'prototype must load selec
 assert.match(adapter,/role:null/,'main/assisting role must remain unset until sourced');
 
 assert.match(controller,/keyFor\(p,index\)===key/,'SVG path lookup must use stable data-key, not child order');
+
+assert.match(html,/function keyFor\(m,index\)[\s\S]*?Math\.imul/,'SVG path identity must be derived from geometry, not array position');
+assert.doesNotMatch(html,/return \(m\.id\|\|m\.group\)\+"__"\+index/,'legacy ID-plus-index identity must not return');
+assert.match(controller,/geometry-derived path keys must be unique/,'browser smoke must guard unique geometry keys');
+assert.match(controller,/rendered keys must match stable source geometry keys/,'browser smoke must guard rendered/source key parity');
+
 assert.match(controller,/function escapeHtml/,'dynamic labels and exercise identifiers must be HTML-escaped');
 assert.match(controller,/const countNode=document\.getElementById\('count'\)/,'controller must use explicit count DOM reference');
 assert.match(controller,/selectedNode\.innerHTML/,'controller must use explicit selected-list DOM reference');
