@@ -14,7 +14,7 @@ for (const view of views) {
 }
 assert.equal((gallery.match(/<iframe\b/g) || []).length, 4, "gallery must contain exactly four view frames");
 assert.match(gallery, /@media\(max-width:850px\)/, "gallery must be responsive");
-assert.match(gallery, /مرزبندی یا صحت آناتومیک نیست/, "gallery must state anatomical limitation");
+assert.match(gallery, /تأییدکننده صحت آناتومیک نیست/, "gallery must state anatomical limitation");
 assert.match(capture, /getElementById\("sex"\)/, "capture page must set body model");
 assert.match(capture, /getElementById\("view"\)/, "capture page must set view");
 assert.match(capture, /dispatchEvent\(new Event\("change"/, "capture page must trigger prototype redraw");
