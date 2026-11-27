@@ -8,6 +8,8 @@ assert.doesNotMatch(controller,/pairing_status==='candidate_pending_anatomical_r
 assert.match(controller,/left\.length===1&&right\.length===1/,'both side geometries must be unique');
 assert.match(controller,/setExercises\(rows\)/,'host app must explicitly supply authenticated trainer exercises');
 assert.match(controller,/clearExercises\(\)/,'host app must be able to clear exercise data on logout');
+assert.match(controller,/getSelectionSnapshot\(\)/,'host app can read selected muscle groups with their explicit primary/secondary roles');
+assert.match(controller,/role:x\.role/,'selection snapshot must preserve the actual selected role');
 assert.doesNotMatch(controller,/supabase|service_role|anon_key/i,'prototype must not embed backend credentials or fetch database directly');
 assert.match(html,/anatomy-exercise-adapter\.js/,'prototype must load exercise adapter');
 assert.match(html,/anatomy-selection-integration\.js/,'prototype must load selection controller');
