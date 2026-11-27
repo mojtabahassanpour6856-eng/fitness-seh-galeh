@@ -9,6 +9,7 @@ status.id='pairStatus';
 status.textContent='در حال بارگذاری اطلاعات اتصال عضلات…';
 const aside=document.querySelector('.layout aside');
 const selectedNode=document.getElementById('selected');
+const countNode=document.getElementById('count');
 selectedNode.insertAdjacentElement('afterend',status);
 const exerciseCard=document.createElement('section');
 exerciseCard.className='card';
@@ -48,8 +49,8 @@ function groupLabel(group){return LABELS[group]||group}
 function escapeHtml(value){return String(value==null?'':value).replace(/[&<>"']/g,function(c){return c==='&'?'&amp;':c==='<'?'&lt;':c==='>'?'&gt;':c==='"'?'&quot;':'&#39;';})}
 function renderSelected(){
  const groups=selectedPairs();
- count.textContent=groups.length.toLocaleString('fa-IR')+' گروه عضلانی انتخاب‌شده';
- if(!groups.length){selected.innerHTML='<div class="empty">هنوز عضله‌ای انتخاب نشده است.</div>';renderExercises();return}
+ countNode.textContent=groups.length.toLocaleString('fa-IR')+' گروه عضلانی انتخاب‌شده';
+ if(!groups.length){selectedNode.innerHTML='<div class="empty">هنوز عضله‌ای انتخاب نشده است.</div>';renderExercises();return}
  selected.innerHTML=groups.map(x=>{
   const d=currentPaths(),pair=pairFor(d[x.indices[0]]);
   const paired=pair.ok&&pair.items.every(y=>Object.entries(selectedMap()).some(([k])=>k===keyFor(y.p,y.i)));
@@ -58,7 +59,7 @@ function renderSelected(){
   const warning=pairWarnings.get(x.group);
   return '<div class="item"><span>'+escapeHtml(groupLabel(x.group))+' <small class="badge">'+tag+'</small>'+(warning?'<small class="info">'+escapeHtml(warning)+'</small>':'')+'</span><span><i class="dot" style="background:'+roleColor+'"></i><button type="button" data-remove-group="'+escapeHtml(x.group)+'">×</button></span></div>';
  }).join('');
- selected.querySelectorAll('[data-remove-group]').forEach(b=>b.addEventListener('click',()=>{
+ selectedNode.querySelectorAll('[data-remove-group]').forEach(b=>b.addEventListener('click',()=>{
   const g=b.dataset.removeGroup;
   currentPaths().forEach((p,i)=>{if(p.group===g)delete selectedMap()[keyFor(p,i)]});
   draw();
