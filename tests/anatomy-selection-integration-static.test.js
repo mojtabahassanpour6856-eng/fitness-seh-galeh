@@ -13,3 +13,6 @@ assert.match(html,/anatomy-exercise-adapter\.js/,'prototype must load exercise a
 assert.match(html,/anatomy-selection-integration\.js/,'prototype must load selection controller');
 assert.match(adapter,/role:null/,'main/assisting role must remain unset until sourced');
 console.log('PASS: paired-selection safety gate, authenticated host handoff, no direct DB credentials, and script wiring.');
+
+assert.match(controller,/keyFor\(p,index\)===key/,'SVG path lookup must use stable data-key, not child order');
+assert.match(controller,/function escapeHtml/,'dynamic labels and exercise identifiers must be HTML-escaped');
