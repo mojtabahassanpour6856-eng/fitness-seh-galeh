@@ -74,8 +74,9 @@ fetch(catalogUrl).then(response=>{if(!response.ok)throw new Error('HTTP '+respon
    assertSmoke(!!selectedMap()[key],combo+' list click must update shared selection state');
    const painted=document.querySelector('#bodySvg .muscle[data-key="'+CSS.escape(key)+'"]');
    assertSmoke(!!painted&&painted.classList.contains('primary'),combo+' list click must paint exactly the linked SVG path');
-   assertSmoke(target.getAttribute('aria-pressed')==='true',combo+' list row must expose selected state');
-   target.click();
+   const selectedRow=list.querySelector('[data-muscle-key="'+CSS.escape(key)+'"]');
+   assertSmoke(!!selectedRow&&selectedRow.getAttribute('aria-pressed')==='true',combo+' list row must expose selected state after redraw');
+   selectedRow.click();
    assertSmoke(!selectedMap()[key],combo+' second list click must clear selection');
   }
   const first=catalog.groups.find(g=>(g.geometry_by_view['male-front']||[]).length);
