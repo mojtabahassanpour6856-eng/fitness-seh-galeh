@@ -12,6 +12,7 @@ on:
       - 'experiments/anatomy-smart-prototype.html'
       - 'experiments/anatomy-preview-capture.html'
       - 'experiments/anatomy-preview-gallery.html'
+      - 'experiments/anatomy-deltoid-path-review.html'
       - 'experiments/anatomy-geometry-inspector.html'
       - 'tests/anatomy-*.test.js'
       - '.github/workflows/anatomy-experiment-checks.yml'
@@ -82,6 +83,11 @@ jobs:
           grep -q 'data-loaded-views="male-front,male-back,female-front,female-back"' /tmp/anatomy-gallery-dom.html
           "$CHROME_PATH" --headless --no-sandbox --disable-gpu --hide-scrollbars --window-size=1800,2600 --virtual-time-budget=18000 --screenshot=/tmp/anatomy-preview-gallery.png "http://127.0.0.1:8765/anatomy-preview-gallery.html"
           test -s /tmp/anatomy-preview-gallery.png
+          "$CHROME_PATH" --headless --no-sandbox --disable-gpu --virtual-time-budget=18000 --dump-dom "http://127.0.0.1:8765/anatomy-deltoid-path-review.html" >/tmp/anatomy-deltoid-review-dom.html
+          grep -q 'data-review-ready="true"' /tmp/anatomy-deltoid-review-dom.html
+          grep -q 'data-loaded-views="male-front,male-back,female-front,female-back"' /tmp/anatomy-deltoid-review-dom.html
+          "$CHROME_PATH" --headless --no-sandbox --disable-gpu --hide-scrollbars --window-size=1800,2600 --virtual-time-budget=18000 --screenshot=/tmp/anatomy-deltoid-review.png "http://127.0.0.1:8765/anatomy-deltoid-path-review.html"
+          test -s /tmp/anatomy-deltoid-review.png
           for model in male female; do
             for direction in front back; do
               case "$direction" in
@@ -121,6 +127,8 @@ jobs:
             /tmp/anatomy-inspector-*-front-dom.html
             /tmp/anatomy-inspector-*-back-dom.html
             /tmp/anatomy-preview-gallery.png
+            /tmp/anatomy-deltoid-review.png
+            /tmp/anatomy-deltoid-review-dom.html
             /tmp/anatomy-male-front-dom.html
             /tmp/anatomy-male-back-dom.html
             /tmp/anatomy-female-front-dom.html
