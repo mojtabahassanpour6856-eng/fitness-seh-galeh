@@ -15,16 +15,16 @@ const rows=[
  {id:16,name:'بدون هدف',target_muscle:null,category:'سینه'}
 ];
 const chest=adapter.filterExercises(rows,['chest']);
-assert.deepEqual(chest.map(x=>x.exercise.id),[11]);
+assert.deepEqual(Array.from(chest, x=>x.exercise.id),[11]);
 assert.equal(chest[0].match_type,'broad_region');
 const back=adapter.filterExercises(rows,['lats']);
-assert.deepEqual(back.map(x=>x.exercise.id),[12]);
+assert.deepEqual(Array.from(back, x=>x.exercise.id),[12]);
 assert.equal(back[0].match_type,'multi_group_region');
 const quads=adapter.filterExercises(rows,['quads']);
-assert.deepEqual(quads.map(x=>x.exercise.id),[14]);
-assert.deepEqual(adapter.filterExercises(rows,['quads'],{strictOnly:true}).map(x=>x.exercise.id),[14]);
-assert.deepEqual(adapter.filterExercises(rows,['shoulders_rear'],{strictOnly:true}),[]);
-assert.deepEqual(adapter.filterExercises(rows,[]),[]);
+assert.deepEqual(Array.from(quads, x=>x.exercise.id),[14]);
+assert.deepEqual(Array.from(adapter.filterExercises(rows,['quads'],{strictOnly:true}), x=>x.exercise.id),[14]);
+assert.deepEqual(Array.from(adapter.filterExercises(rows,['shoulders_rear'],{strictOnly:true})),[]);
+assert.deepEqual(Array.from(adapter.filterExercises(rows,[])),[]);
 assert.equal(rows[0].name,'پرس سینه','source exercise rows must not be mutated');
 assert.equal(chest[0].role,null,'primary/secondary role must never be guessed');
 console.log('PASS: exact label matching, broad-region classification, unmapped exclusion, strict mode, empty selection, and immutable source rows.');
