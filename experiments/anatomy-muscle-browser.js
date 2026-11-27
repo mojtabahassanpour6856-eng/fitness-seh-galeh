@@ -21,12 +21,17 @@ function entries(){
  const view=currentView(),out=[];
  catalog.groups.forEach(group=>{
   const paths=group.geometry_by_view&&group.geometry_by_view[view]||[];
-  paths.forEach((path,index)=>out.push({
-   group,path,index,total:paths.length,
-   key:path.selection_key,
-   label:group.name_fa+(paths.length>1?' · مسیر '+(index+1):''),
-   search:[group.name_fa,group.name_latin,group.group_id,group.source_group_key,path.id].join(' ').toLocaleLowerCase()
-  }));
+  paths.forEach((path,index)=>{
+   const sameId=path.id?paths.filter(candidate=>candidate.id===path.id).length:0;
+   const selectable=!!path.id&&sameId===1;
+   out.push({
+    group,path,index,total:paths.length,selectable,
+    reviewReason:!path.id?'مسیر در منبع شناسه ندارد.':sameId>1?'شناسه این مسیر در همین نما تکراری است.':'',
+    key:path.selection_key,
+    label:group.name_fa+(paths.length>1?' · مسیر '+(index+1):''),
+    search:[group.name_fa,group.name_latin,group.group_id,group.source_group_key,path.id].join(' ').toLocaleLowerCase()
+   });
+  });
  });
  return out;
 }
@@ -37,7 +42,7 @@ function render(){
  if(!rows.length){list.innerHTML='<div class="empty">عضله‌ای با این جست‌وجو در نمای فعلی پیدا نشد.</div>';count.textContent='';return}
  list.innerHTML=rows.map(x=>{
   const role=selectedMap()[x.key]||'';
-  return '<button type="button" class="item muscle-browser-item" data-muscle-key="'+esc(x.key)+'" aria-pressed="'+(!!role)+'" style="width:100%;text-align:right;color:inherit;cursor:pointer;background:'+(role?'#f4e9cc':'#fff')+';border-color:'+(role?'#98752d':'#e6dcc3')+'"><span><strong>'+esc(x.label)+'</strong><br><small class="info">'+esc(x.group.name_latin)+(x.path.id?' · '+esc(x.path.id):'')+'</small></span><span class="badge">'+(role==='primary'?'اصلی':role==='secondary'?'کمکی':'انتخاب')+'</span></button>';
+  return '<button type="button" class="item muscle-browser-item" data-muscle-key="'+esc(x.key)+'" aria-pressed="'+(!!role)+'" '+(x.selectable?'':'disabled title="'+esc(x.reviewReason)+'"')+' style="width:100%;text-align:right;color:inherit;cursor:'+(x.selectable?'pointer':'not-allowed')+';opacity:'+(x.selectable?'1':'.58')+';background:'+(role?'#f4e9cc':'#fff')+';border-color:'+(role?'#98752d':'#e6dcc3')+'"><span><strong>'+esc(x.label)+'</strong><br><small class="info">'+esc(x.group.name_latin)+(x.path.id?' · '+esc(x.path.id):'')+(x.selectable?'':' · نیازمند بازبینی هندسه')+'</small></span><span class="badge">'+(x.selectable?(role==='primary'?'اصلی':role==='secondary'?'کمکی':'انتخاب'):'بررسی لازم')+'</span></button>';
  }).join('');
  list.querySelectorAll('[data-muscle-key]').forEach(button=>button.addEventListener('click',()=>{
   const key=button.dataset.muscleKey;
@@ -45,7 +50,8 @@ function render(){
   else selectedMap()[key]=state.role;
   draw();
  }));
- count.textContent='نمایش '+rows.length.toLocaleString('fa-IR')+' از '+all.length.toLocaleString('fa-IR')+' مسیر عضلانی در این نما · '+catalog.groups.length.toLocaleString('fa-IR')+' گروه در کاتالوگ';
+ const selectable=rows.filter(x=>x.selectable).length;
+ count.textContent='قابل انتخاب '+selectable.toLocaleString('fa-IR')+' · نیازمند بازبینی '+(rows.length-selectable).toLocaleString('fa-IR')+' · از '+all.length.toLocaleString('fa-IR')+' مسیر در این نما';
 }
 search.addEventListener('input',render);
 const originalDraw=draw;
@@ -74,7 +80,7 @@ fetch(catalogUrl).then(response=>{if(!response.ok)throw new Error('HTTP '+respon
      viewNode.value=view;viewNode.dispatchEvent(new Event('change',{bubbles:true}));
      const expected=catalog.groups.reduce((sum,g)=>sum+((g.geometry_by_view&&g.geometry_by_view[combo])||[]).length,0);
      assertSmoke(list.querySelectorAll('[data-muscle-key]').length===expected,combo+' list must include every catalogued geometry path');
-     const target=list.querySelector('[data-muscle-key]');
+     const target=list.querySelector('[data-muscle-key]:not(:disabled)');
      assertSmoke(!!target,combo+' must expose selectable catalog rows');
      const key=target.dataset.muscleKey;
      target.click();
