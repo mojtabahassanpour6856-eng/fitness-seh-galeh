@@ -32,7 +32,9 @@ assert.match(capture, /catch\(error\)\{fail\(/, "capture page must report runtim
 assert.match(capture, /dispatchEvent\(new Event\("change"/, "capture page must trigger prototype redraw");
 assert.match(workflow, /Capture real anatomy preview/, "workflow must run browser capture");
 assert.match(workflow, /data-inspector-ready="true"/, "workflow must require geometry inspector readiness");
-assert.match(workflow, /data-path-count="28"/, "workflow must verify the inspector loaded the expected path list");
+assert.match(workflow, /inspector_expected=28[\s\S]*inspector_expected=30/, "workflow must check expected inspector path counts for front and back views");
+assert.match(workflow, /data-path-count=/, "workflow must verify the inspector loaded its expected path list");
+assert.match(workflow, /for model in male female[\s\S]*for direction in front back/, "workflow must inspect all four model and view combinations");
 assert.match(workflow, /data-capture-ready="true"/, "workflow must wait for rendered paths before each view screenshot");
 assert.match(workflow, /data-gallery-ready="true"/, "workflow must wait for all four views before gallery screenshot");
 assert.match(workflow, /data-loaded-views="male-front,male-back,female-front,female-back"/, "workflow must verify the exact four gallery views");
