@@ -15,6 +15,10 @@ const inspector=fs.readFileSync('experiments/anatomy-geometry-inspector.html','u
 assert.match(inspector,/contentDocument|contentWindow/,'geometry inspector must inspect the same-origin prototype frame');
 assert.match(inspector,/dataset\.key/,'geometry inspector must highlight the selected stable path identity');
 assert.match(inspector,/dataset\.group/,'geometry inspector must expose the source muscle group');
+assert.match(inspector,/getBBox\(\)/,'geometry inspector must report rendered SVG path bounds');
+assert.match(inspector,/getTotalLength\(\)/,'geometry inspector must report rendered SVG path length');
+assert.match(inspector,/نمایش داده خام مسیر SVG/,'geometry inspector must expose read-only source path data for audit');
+assert.match(inspector,/area\.readOnly=true/,'raw SVG path data must remain read-only');
 assert.match(inspector,/ کم‌رنگ‌کردن همسایه‌ها|کم‌رنگ‌کردن همسایه‌ها/,'geometry inspector must support isolating one path from neighboring geometry');
 assert.match(inspector,/initialView\.get\('sex'\)/,'geometry inspector must open in a requested sex model');
 assert.match(inspector,/initialView\.get\('view'\)/,'geometry inspector must open in a requested body view');
