@@ -12,7 +12,7 @@ assert.match(controller,/getSelectionSnapshot\(\)/,'host app can read selected m
 
 const capturePage=fs.readFileSync('experiments/anatomy-preview-capture.html','utf8');
 const workflow=fs.readFileSync('.github/workflows/anatomy-experiment-checks.yml','utf8');
-assert.ok(capturePage.includes('^(male|female)-(front|back)
+assert.ok(capturePage.includes("^(male|female)-(front|back)$"),'capture page must validate all four view combinations');
 for(const view of ['male-front','male-back','female-front','female-back']){
  assert.ok(workflow.includes('/tmp/anatomy-'+view+'.png'),'workflow must capture '+view);
 }
