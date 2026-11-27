@@ -70,7 +70,7 @@ const title=document.getElementById("figureTitle");
 const selected=document.getElementById("selected");
 const count=document.getElementById("count");
 const esc=s=>String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
-function keyFor(m,index){return m.id||m.group+"_"+index}
+function keyFor(m,index){return (m.id||m.group)+"__"+index}
 function draw(){
  const d=DATA[state.sex+"-"+state.view];
  title.textContent="نمای "+(state.view==="front"?"جلوی":"پشتی")+" بدن "+(state.sex==="male"?"آقا":"خانم");
@@ -94,9 +94,10 @@ function renderSelected(){
  if(!entries.length){selected.innerHTML='<div class="empty">هنوز عضله‌ای انتخاب نشده است.</div>';return}
  const d=DATA[state.sex+"-"+state.view];
  selected.innerHTML=entries.map(([key,role])=>{
-  const m=d.muscles.find((x,i)=>keyFor(x,i)===key);
-  if(!m)return "";
-  return '<div class="item"><span>'+esc(LABELS[m.group]||m.group)+' <small>('+esc(m.id||key)+')</small></span><span><i class="dot" style="background:'+(role==="primary"?"#d94b45":"#3389b7")+'"></i><button data-remove="'+esc(key)+'" aria-label="حذف انتخاب">×</button></span></div>';
+  const index=d.muscles.findIndex((x,i)=>keyFor(x,i)===key);
+  if(index<0)return "";
+  const m=d.muscles[index];
+  return '<div class="item"><span>'+esc(LABELS[m.group]||m.group)+' <small>(بخش '+(index+1)+' · '+esc(m.id||m.group)+')</small></span><span><i class="dot" style="background:'+(role==="primary"?"#d94b45":"#3389b7")+'"></i><button data-remove="'+esc(key)+'" aria-label="حذف انتخاب">×</button></span></div>';
  }).join("");
  selected.querySelectorAll("[data-remove]").forEach(b=>b.addEventListener("click",()=>{delete state.selected[b.dataset.remove];draw()}));
 }
