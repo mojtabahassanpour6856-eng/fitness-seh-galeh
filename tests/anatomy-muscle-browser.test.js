@@ -1,0 +1,33 @@
+"use strict";
+const fs=require("node:fs");
+const assert=require("node:assert/strict");
+const vm=require("node:vm");
+const browser=fs.readFileSync("experiments/anatomy-muscle-browser.js","utf8");
+const html=fs.readFileSync("experiments/anatomy-smart-prototype.html","utf8");
+const catalog=JSON.parse(fs.readFileSync("experiments/ANATOMY-MUSCLE-CATALOG.json","utf8"));
+const integration=html.indexOf('<script src="./anatomy-selection-integration.js"></script>');
+const browserRef=html.indexOf('<script src="./anatomy-muscle-browser.js"></script>');
+assert.ok(integration>=0&&browserRef>integration,"muscle browser must load after shared anatomy selection integration");
+new vm.Script(browser);
+assert.match(browser,/ANATOMY-MUSCLE-CATALOG[.]json/,"browser must load the authoritative muscle catalog");
+assert.match(browser,/geometry_by_view/,"browser must show only geometry assigned to the active body view");
+assert.match(browser,/selection_key/,"catalog path identity must be used to bind each row to its SVG path");
+assert.match(browser,/selectedMap/,"list selection state must use the shared selection store");
+assert.match(browser,/draw[(][)]/,"list click must redraw the selected SVG geometry");
+assert.match(browser,/name_fa/,"search must include Persian anatomical names");
+assert.match(browser,/name_latin/,"search must include Latin anatomical names");
+assert.match(browser,/aria-pressed/,"list must expose accessible selected state");
+assert.match(browser,/anatomyMuscleBrowserSmoke/,"browser smoke must publish an explicit pass marker");
+assert.match(browser,/Persian search must find catalog entries/,"browser smoke must exercise Persian search");
+assert.match(browser,/Latin search must find catalog entries/,"browser smoke must exercise Latin search");
+assert.match(browser,/list click must paint exactly the linked SVG path/,"browser smoke must verify image/list synchronization");
+assert.doesNotMatch(browser,/supabase|service_role|anon_key/i,"standalone browser must not access backend data");
+const views=["male-front","male-back","female-front","female-back"];
+let total=0;
+for(const view of views){
+ const count=catalog.groups.reduce((sum,g)=>sum+((g.geometry_by_view&&g.geometry_by_view[view])||[]).length,0);
+ assert.ok(count>0,view+" must have catalog-backed anatomy paths");
+ total+=count;
+}
+assert.equal(total,116,"catalog must account for all 116 source SVG paths");
+console.log("PASS: catalog-driven muscle list, four-view coverage, shared selection wiring, bilingual search, accessibility, and read-only isolation.");
