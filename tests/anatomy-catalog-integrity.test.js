@@ -13,6 +13,8 @@ const gitBlobSha = crypto.createHash('sha1')
   ]))
   .digest('hex');
 assert.equal(catalog.source_blob_sha, gitBlobSha, 'catalog source_blob_sha must match the prototype Git blob');
+assert.equal(catalog.source_verification.source_blob_sha, gitBlobSha,
+  'catalog source_verification.source_blob_sha must match the prototype Git blob');
 
 // DATA is a JSON-compatible literal embedded in the standalone prototype.
 const match = html.match(/const DATA=(\{[\s\S]*?\});\s*(?:const|let|function)\s/);
