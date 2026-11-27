@@ -9,6 +9,15 @@ assert.match(controller,/left\.length===1&&right\.length===1/,'both side geometr
 assert.match(controller,/setExercises\(rows\)/,'host app must explicitly supply authenticated trainer exercises');
 assert.match(controller,/clearExercises\(\)/,'host app must be able to clear exercise data on logout');
 assert.match(controller,/getSelectionSnapshot\(\)/,'host app can read selected muscle groups with their explicit primary/secondary roles');
+
+const capturePage=read('experiments/anatomy-preview-capture.html');
+const workflow=read('.github/workflows/anatomy-experiment-checks.yml');
+for(const view of ['male-front','male-back','female-front','female-back']){
+ assert.match(capturePage,new RegExp(view.split('-')[0]),'capture page must support sex selection');
+ assert.match(workflow,new RegExp('anatomy-'+view+'\\\\.png'),'workflow must capture '+view);
+}
+assert.match(capturePage,/contentDocument/,'capture page must select the view inside the same-origin prototype frame');
+
 assert.match(controller,/role:x\.role/,'selection snapshot must preserve the actual selected role');
 assert.doesNotMatch(controller,/supabase|service_role|anon_key/i,'prototype must not embed backend credentials or fetch database directly');
 assert.match(html,/anatomy-exercise-adapter\.js/,'prototype must load exercise adapter');
