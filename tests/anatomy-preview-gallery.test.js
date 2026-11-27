@@ -32,7 +32,7 @@ assert.match(capture, /dataset\.titleMatch/, "capture page must expose displayed
 assert.match(capture, /catch\(error\)\{fail\(/, "capture page must report runtime capture failures");
 assert.match(capture, /dispatchEvent\(new Event\("change"/, "capture page must trigger prototype redraw");
 assert.match(workflow, /Capture real anatomy preview/, "workflow must run browser capture");
-assert.match(workflow, /grep -o 'class="muscle ' \/tmp\/anatomy-dom\.html/, "workflow must count actual rendered SVG muscle paths");
+assert.match(workflow, /grep -q '<path class="muscle ' \/tmp\/anatomy-dom\.html/, "workflow must verify actual rendered SVG muscle paths");
 assert.doesNotMatch(workflow, /anatomySmoke|anatomyInteractionSmoke|anatomyMuscleBrowserSmoke/, "workflow must not depend on removed legacy smoke markers");
 assert.match(workflow, /data-inspector-ready="true"/, "workflow must require geometry inspector readiness");
 assert.match(workflow, /inspector_expected=28[\s\S]*inspector_expected=30/, "workflow must check expected inspector path counts for front and back views");
