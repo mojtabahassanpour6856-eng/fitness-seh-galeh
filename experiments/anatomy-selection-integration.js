@@ -28,7 +28,7 @@ function pairFor(path){
  const right=groupPaths.filter(x=>sideOf(x.p.id)==='RIGHT');
  const idsValid=left.length===1&&right.length===1;
  const meta=catalog&&catalog.groups.find(g=>g.source_group_key===path.group);
- const allowed=meta&&meta.pairing_status==='candidate_pending_anatomical_review';
+ const allowed=meta&&meta.pairing_status==='reviewed';
  if(!idsValid||!allowed)return {ok:false,reason:!allowed?'این گروه هنوز از ممیزی هندسه عبور نکرده است.':'هندسه هر دو سمت یکتا و کامل نیست.',items:[]};
  return {ok:true,items:[left[0],right[0]]};
 }
