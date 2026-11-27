@@ -59,6 +59,12 @@ jobs:
           done
           "$CHROME_PATH" --headless --no-sandbox --disable-gpu --hide-scrollbars --window-size=1440,1200 --virtual-time-budget=5000 --screenshot=/tmp/anatomy-preview.png http://127.0.0.1:8765/anatomy-smart-prototype.html
           test -s /tmp/anatomy-preview.png
+          "$CHROME_PATH" --headless --no-sandbox --disable-gpu --virtual-time-budget=7000 --dump-dom http://127.0.0.1:8765/anatomy-smart-prototype.html >/tmp/anatomy-dom.html
+          grep -q 'id="bodySvg"' /tmp/anatomy-dom.html
+          grep -q 'id="pairStatus"' /tmp/anatomy-dom.html
+          grep -q 'حرکات مرتبط از بانک مربی' /tmp/anatomy-dom.html
+          MUSCLE_COUNT=$(grep -o 'class="muscle ' /tmp/anatomy-dom.html | wc -l)
+          test "$MUSCLE_COUNT" -eq 116
       - name: Upload anatomy preview image
         uses: actions/upload-artifact@v4
         with:
