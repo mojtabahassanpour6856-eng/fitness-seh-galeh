@@ -18,12 +18,12 @@ assert.match(script,/isPointInFill/,'filled path overlap must use SVG fill hit t
 assert.match(script,/unsupported_coordinate_space/,'overlap estimator must fail closed for unsupported coordinate spaces');
 assert.match(script,/fill_overlap_area_estimate/,'pairwise output must expose estimated filled overlap area');
 assert.match(script,/نمونه‌برداری ۳۶×۳۶/,'UI must label the filled overlap as a sampling estimate');
-assert.match(script,/function pairwiseBBoxDiagnostics\(records\)/,'pairwise bounding-box diagnostics must be available');
+assert.match(script,/function pairwiseBBoxDiagnostics\(records,resolvePath\)/,'pairwise bounding-box diagnostics must be available');
 assert.match(script,/bbox_intersection_area/,'pairwise analysis must calculate bounding-box intersection area');
 assert.match(script,/bbox_intersection_ratio/,'pairwise analysis must calculate normalized bounding-box intersection ratio');
 assert.match(script,/center_distance/,'pairwise analysis must calculate bounding-box center distance');
-assert.match(script,/pairwise_bbox_diagnostics:pairwiseBBoxDiagnostics\(records\)/,'JSON export must include pairwise diagnostics');
-assert.match(script,/هم‌پوشانی جعبه‌ها به معنی تماس یا هم‌پوشانی واقعی سطح مسیرهای SVG نیست/,'UI must distinguish bounding-box overlap from actual SVG path overlap');
+assert.match(script,/pairwise_bbox_diagnostics:pairwiseBBoxDiagnostics\(records,key=>paths\(\)\.find\(path=>path\.dataset\.key===key\)\)/,'JSON export must include pairwise diagnostics');
+assert.match(script,/هم‌پوشانی BBox دقیقاً مربوط به مستطیل‌هاست/,'UI must distinguish bounding-box overlap from actual SVG path overlap');
 
 const pairwiseSource=script.match(/function pairwiseBBoxDiagnostics\\(records,resolvePath\\)\\{[\\s\\S]*?\\n\\}/)?.[0];
 assert.ok(pairwiseSource,'pairwise bounding-box calculation function must be extractable for numeric tests');
