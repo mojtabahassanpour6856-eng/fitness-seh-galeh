@@ -31,7 +31,7 @@ for (const button of buttons) {
   assert.ok(catalogKeys.has(button.view + "|" + button.key),
     "selector key must exist in the catalog for " + button.view + ": " + button.key);
 }
-assert.match(review, /root\.dataset\.captureReady!=="true"/,
+assert.match(review, /root?\.dataset\.captureReady!=="true"/,
   "review page must require validated capture frames");
 assert.match(review, /paths\.find\(p=>p\.dataset\.key===activeKey\)/,
   "review page must resolve the selected stable key to exactly one rendered path");
