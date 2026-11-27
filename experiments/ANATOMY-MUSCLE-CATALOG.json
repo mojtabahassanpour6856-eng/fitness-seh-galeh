@@ -2,7 +2,7 @@
   "schema_version": "0.1.0",
   "generated_at": "2026-11-27",
   "source_file": "experiments/anatomy-smart-prototype.html",
-  "source_blob_sha": "3238fd1353f5c192d71428192069ef22f7373217",
+  "source_blob_sha": "2daa10b80530a506453271c8e935918415297b1b",
   "purpose": "Inventory of existing prototype SVG groups and IDs. Not an anatomically validated atlas.",
   "global_rules": {
     "no_invented_geometry": true,
