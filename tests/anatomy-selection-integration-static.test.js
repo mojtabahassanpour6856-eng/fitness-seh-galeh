@@ -12,7 +12,7 @@ assert.match(controller,/getSelectionSnapshot\(\)/,'host app can read selected m
 
 const capturePage=fs.readFileSync('experiments/anatomy-preview-capture.html','utf8');
 const workflow=fs.readFileSync('.github/workflows/anatomy-experiment-checks.yml','utf8');
-assert.ok(capturePage.includes("^(male|female)-(front|back)$"),'capture page must validate all four view combinations');
+assert.ok(capturePage.includes('^(male|female)-(front|back)$'),'capture page must validate all four view combinations');
 for(const view of ['male-front','male-back','female-front','female-back']){
  assert.ok(workflow.includes('/tmp/anatomy-'+view+'.png'),'workflow must capture '+view);
 }
@@ -23,56 +23,22 @@ assert.doesNotMatch(controller,/supabase|service_role|anon_key/i,'prototype must
 assert.match(html,/anatomy-exercise-adapter\.js/,'prototype must load exercise adapter');
 assert.match(html,/anatomy-selection-integration\.js/,'prototype must load selection controller');
 assert.match(adapter,/role:null/,'main/assisting role must remain unset until sourced');
-console.log('PASS: paired-selection safety gate, authenticated host handoff, no direct DB credentials, and script wiring.');
 
 assert.match(controller,/keyFor\(p,index\)===key/,'SVG path lookup must use stable data-key, not child order');
 assert.match(controller,/function escapeHtml/,'dynamic labels and exercise identifiers must be HTML-escaped');
-
 assert.match(controller,/const countNode=document\.getElementById\('count'\)/,'controller must use explicit count DOM reference');
 assert.match(controller,/selectedNode\.innerHTML/,'controller must use explicit selected-list DOM reference');
 assert.doesNotMatch(controller,/(?<![A-Za-z])count\.textContent/,'controller must not rely on implicit window ID globals');
 assert.doesNotMatch(controller,/(?<![A-Za-z])selected\.innerHTML/,'controller must not rely on implicit window ID globals');
+
 assert.match(controller,/const combos=\['male-front','male-back','female-front','female-back'\]/,'browser smoke must cover all four sex/view combinations');
 assert.match(controller,/keyboard Enter selects muscle/,'browser smoke must validate keyboard selection');
 assert.match(controller,/secondary color updates/,'browser smoke must validate assisting-muscle color');
 assert.match(controller,/clear button resets current view/,'browser smoke must validate clear action');
-
 assert.match(controller,/click must not select adjacent muscles/,'browser smoke must ensure a tap affects only the targeted SVG path');
 assert.match(controller,/neighboring muscle color remains unchanged/,'browser smoke must ensure adjacent muscle colors remain unchanged');
 assert.match(controller,/role conversion must preserve a single selected path/,'browser smoke must validate role conversion without duplicate selection');
 assert.match(controller,/clearing front view must preserve back-view selection/,'browser smoke must validate selection isolation between views');
 assert.match(controller,/clear button resets only current view/,'browser smoke must validate view-scoped clear behavior');
 
-
-),'capture page must validate all four view combinations');
-for(const view of ['male-front','male-back','female-front','female-back']){
- assert.ok(workflow.includes('/tmp/anatomy-'+view+'.png'),'workflow must capture '+view);
-}
-assert.match(capturePage,/contentDocument/,'capture page must select the view inside the same-origin prototype frame');
-
-assert.match(controller,/role:x\.role/,'selection snapshot must preserve the actual selected role');
-assert.doesNotMatch(controller,/supabase|service_role|anon_key/i,'prototype must not embed backend credentials or fetch database directly');
-assert.match(html,/anatomy-exercise-adapter\.js/,'prototype must load exercise adapter');
-assert.match(html,/anatomy-selection-integration\.js/,'prototype must load selection controller');
-assert.match(adapter,/role:null/,'main/assisting role must remain unset until sourced');
-console.log('PASS: paired-selection safety gate, authenticated host handoff, no direct DB credentials, and script wiring.');
-
-assert.match(controller,/keyFor\(p,index\)===key/,'SVG path lookup must use stable data-key, not child order');
-assert.match(controller,/function escapeHtml/,'dynamic labels and exercise identifiers must be HTML-escaped');
-
-assert.match(controller,/const countNode=document\.getElementById\('count'\)/,'controller must use explicit count DOM reference');
-assert.match(controller,/selectedNode\.innerHTML/,'controller must use explicit selected-list DOM reference');
-assert.doesNotMatch(controller,/(?<![A-Za-z])count\.textContent/,'controller must not rely on implicit window ID globals');
-assert.doesNotMatch(controller,/(?<![A-Za-z])selected\.innerHTML/,'controller must not rely on implicit window ID globals');
-assert.match(controller,/const combos=\['male-front','male-back','female-front','female-back'\]/,'browser smoke must cover all four sex/view combinations');
-assert.match(controller,/keyboard Enter selects muscle/,'browser smoke must validate keyboard selection');
-assert.match(controller,/secondary color updates/,'browser smoke must validate assisting-muscle color');
-assert.match(controller,/clear button resets current view/,'browser smoke must validate clear action');
-
-assert.match(controller,/click must not select adjacent muscles/,'browser smoke must ensure a tap affects only the targeted SVG path');
-assert.match(controller,/neighboring muscle color remains unchanged/,'browser smoke must ensure adjacent muscle colors remain unchanged');
-assert.match(controller,/role conversion must preserve a single selected path/,'browser smoke must validate role conversion without duplicate selection');
-assert.match(controller,/clearing front view must preserve back-view selection/,'browser smoke must validate selection isolation between views');
-assert.match(controller,/clear button resets only current view/,'browser smoke must validate view-scoped clear behavior');
-
-
+console.log('PASS: anatomy selection safety gates, four-view capture, keyboard/touch smoke coverage, role snapshots, and secure host handoff.');
