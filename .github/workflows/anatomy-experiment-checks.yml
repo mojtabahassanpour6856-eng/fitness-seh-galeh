@@ -82,6 +82,10 @@ jobs:
           grep -q 'data-loaded-views="male-front,male-back,female-front,female-back"' /tmp/anatomy-gallery-dom.html
           "$CHROME_PATH" --headless --no-sandbox --disable-gpu --hide-scrollbars --window-size=1800,2600 --virtual-time-budget=18000 --screenshot=/tmp/anatomy-preview-gallery.png "http://127.0.0.1:8765/anatomy-preview-gallery.html"
           test -s /tmp/anatomy-preview-gallery.png
+          "$CHROME_PATH" --headless --no-sandbox --disable-gpu --virtual-time-budget=9000 --dump-dom "http://127.0.0.1:8765/anatomy-geometry-inspector.html?sex=male&view=front" >/tmp/anatomy-inspector-dom.html
+          grep -q 'data-inspector-ready="true"' /tmp/anatomy-inspector-dom.html
+          grep -q 'data-path-count="28"' /tmp/anatomy-inspector-dom.html
+          ! grep -q 'data-inspector-error="true"' /tmp/anatomy-inspector-dom.html
           "$CHROME_PATH" --headless --no-sandbox --disable-gpu --hide-scrollbars --window-size=1600,1200 --virtual-time-budget=9000 --screenshot=/tmp/anatomy-geometry-inspector.png "http://127.0.0.1:8765/anatomy-geometry-inspector.html?sex=male&view=front"
           test -s /tmp/anatomy-geometry-inspector.png
           "$CHROME_PATH" --headless --no-sandbox --disable-gpu --virtual-time-budget=7000 --dump-dom "http://127.0.0.1:8765/anatomy-smart-prototype.html?smoke=1" >/tmp/anatomy-dom.html
@@ -102,6 +106,7 @@ jobs:
             /tmp/anatomy-female-back.png
             /tmp/anatomy-dom.html
             /tmp/anatomy-geometry-inspector.png
+            /tmp/anatomy-inspector-dom.html
             /tmp/anatomy-preview-gallery.png
             /tmp/anatomy-male-front-dom.html
             /tmp/anatomy-male-back-dom.html
