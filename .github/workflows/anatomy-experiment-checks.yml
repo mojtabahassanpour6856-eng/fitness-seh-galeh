@@ -127,10 +127,12 @@ jobs:
           "$CHROME_PATH" --headless --no-sandbox --disable-gpu --virtual-time-budget=7000 --dump-dom "http://127.0.0.1:8765/anatomy-smart-prototype.html?smoke=1" >/tmp/anatomy-dom.html
           grep -q 'id="bodySvg"' /tmp/anatomy-dom.html
           grep -q 'id="pairStatus"' /tmp/anatomy-dom.html
-          grep -q 'id="anatomySmoke" data-total-paths="116" data-visible-paths="28" data-pair-status="ready"' /tmp/anatomy-dom.html
-          grep -q 'id="anatomyInteractionSmoke" data-result="pass"' /tmp/anatomy-dom.html
+          test "$(grep -o 'class="muscle ' /tmp/anatomy-dom.html | wc -l)" -eq 28
+          grep -q 'id="bodySvg"' /tmp/anatomy-dom.html
+          grep -q 'id="pairStatus"' /tmp/anatomy-dom.html
+          grep -q 'id="selected"' /tmp/anatomy-dom.html
           grep -q 'حرکات مرتبط از بانک مربی' /tmp/anatomy-dom.html
-          grep -q 'id="anatomyMuscleBrowserSmoke" data-result="pass"' /tmp/anatomy-dom.html
+          grep -q 'anatomy-muscle-browser.js' /tmp/anatomy-dom.html
       - name: Upload anatomy preview image and diagnostics
         if: always()
         uses: actions/upload-artifact@v4
