@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>پیش‌نمایش چهار نمای آناتومی</title>
+<style>
+html,body{margin:0;width:100%;height:100%;background:#f7f0df}
+iframe{display:block;width:100%;height:1800px;border:0}
+</style>
+</head>
+<body>
+<iframe id="anatomy" title="پیش‌نمایش آناتومی هوشمند" src="./anatomy-smart-prototype.html"></iframe>
+<script>
+const params=new URLSearchParams(location.search);
+const preview=params.get("view")||"male-front";
+const match=preview.match(/^(male|female)-(front|back)$/);
+if(!match)throw new Error("Unsupported anatomy preview view: "+preview);
+const frame=document.getElementById("anatomy");
+frame.addEventListener("load",()=>{
+ const doc=frame.contentDocument;
+ const sex=doc.getElementById("sex"),view=doc.getElementById("view");
+ sex.value=match[1];sex.dispatchEvent(new Event("change",{bubbles:true}));
+ view.value=match[2];view.dispatchEvent(new Event("change",{bubbles:true}));
+ document.documentElement.dataset.preview=preview;
+});
+</script>
+</body>
+</html>
