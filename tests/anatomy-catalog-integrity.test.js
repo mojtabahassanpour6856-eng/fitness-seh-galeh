@@ -23,12 +23,17 @@ const data = JSON.parse(match[1]);
 
 function geometrySelectionKey(path) {
   const source = String(path.group || 'MUSCLE') + '|' + String(path.d || '');
-  let hash = 2166136261;
-  for (let i = 0; i < source.length; i++) hash = Math.imul(hash ^ source.charCodeAt(i), 16777619);
-  return String(path.group || 'MUSCLE') + '__' + (hash >>> 0).toString(36);
+  let hashA = 2166136261, hashB = 0x9e3779b9;
+  for (let i = 0; i < source.length; i++) {
+    const code = source.charCodeAt(i);
+    hashA = Math.imul(hashA ^ code, 16777619);
+    hashB = Math.imul(hashB ^ code, 0x5bd1e995);
+    hashB ^= hashB >>> 13;
+  }
+  return String(path.group || 'MUSCLE') + '__' + (hashA >>> 0).toString(36) + '-' + (hashB >>> 0).toString(36);
 }
-assert.equal(catalog.global_rules.path_identity_scheme, 'group_plus_fnv1a_geometry_fingerprint',
-  'catalog must declare the stable geometry identity scheme');
+assert.equal(catalog.global_rules.path_identity_scheme, 'group_plus_dual32_geometry_fingerprint',
+  'catalog must declare the collision-resistant geometry identity scheme');
 
 
 const catalogByPath = new Map();
