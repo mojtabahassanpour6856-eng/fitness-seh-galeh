@@ -22,7 +22,7 @@ assert.deepEqual([...new Set(buttons.map(b => b.view))].sort(), [...expectedView
   "selectors must cover exactly the four canonical views");
 
 const catalogKeys = new Set();
-for (const muscle of catalog.muscles) {
+for (const muscle of catalog.groups) {
   for (const [view, paths] of Object.entries(muscle.geometry_by_view || {})) {
     for (const path of paths) catalogKeys.add(view + "|" + path.selection_key);
   }
