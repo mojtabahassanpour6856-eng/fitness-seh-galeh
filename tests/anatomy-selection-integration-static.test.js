@@ -19,7 +19,7 @@ assert.match(inspector,/getBBox\(\)/,'geometry inspector must report rendered SV
 assert.match(inspector,/getTotalLength\(\)/,'geometry inspector must report rendered SVG path length');
 assert.match(inspector,/نمایش داده خام مسیر SVG/,'geometry inspector must expose read-only source path data for audit');
 assert.match(inspector,/area\.readOnly=true/,'raw SVG path data must remain read-only');
-assert.match(inspector,/ کم‌رنگ‌کردن همسایه‌ها|کم‌رنگ‌کردن همسایه‌ها/,'geometry inspector must support isolating one path from neighboring geometry');
+assert.match(inspector,/کم‌رنگ‌کردن مسیرهای دیگر/,'geometry inspector must support isolating selected paths from other geometry');
 assert.match(inspector,/initialView\.get\('sex'\)/,'geometry inspector must open in a requested sex model');
 assert.match(inspector,/initialView\.get\('view'\)/,'geometry inspector must open in a requested body view');
 assert.match(inspector,/if\(!syncing\)refresh\(\)/,'geometry inspector must guard against recursive view synchronization');
