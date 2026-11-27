@@ -111,6 +111,14 @@ window.SehAnatomyExerciseIntegration=Object.freeze({
  },
  clearExercises(){exerciseRows=null;renderExercises()},
  getSelectedGroupIds(){return selectedPairs().map(x=>x.group.toLowerCase())},
+ getSelectionSnapshot(){
+  return selectedPairs().map(x=>({
+   group:x.group.toLowerCase(),
+   role:x.role,
+   indices:x.indices.slice(),
+   ids:x.ids.slice()
+  }));
+ },
  getPairStatus(){return pairState}
 });
 window.renderSelected=renderSelected;
@@ -160,6 +168,8 @@ Promise.all([fetch(mapUrl).then(r=>{if(!r.ok)throw new Error('mapping '+r.status
   document.querySelector('[data-role="secondary"]').click();
   document.querySelector('#bodySvg .muscle[data-key="'+CSS.escape(key)+'"]').dispatchEvent(new MouseEvent('click',{bubbles:true,cancelable:true}));
   assertSmoke(selectedMap()[key]==='secondary','role change updates selected muscle role');
+  const roleSnapshot=window.SehAnatomyExerciseIntegration.getSelectionSnapshot();
+  assertSmoke(roleSnapshot.length===1&&roleSnapshot[0].role==='secondary','selection snapshot preserves explicit primary/secondary role');
   assertSmoke(document.querySelector('#bodySvg .muscle[data-key="'+CSS.escape(key)+'"]').classList.contains('secondary'),'role change updates selected color');
   assertSmoke(Object.keys(selectedMap()).length===1,'role conversion must preserve a single selected path');
   document.querySelector('#bodySvg .muscle[data-key="'+CSS.escape(key)+'"]').dispatchEvent(new MouseEvent('click',{bubbles:true,cancelable:true}));
