@@ -145,6 +145,7 @@ Promise.all([fetch(mapUrl).then(r=>{if(!r.ok)throw new Error('mapping '+r.status
    const expected=DATA[combo].muscles.length;
    const sourceKeys=DATA[combo].muscles.map((m,i)=>keyFor(m,i));
    assertSmoke(new Set(sourceKeys).size===sourceKeys.length,combo+' geometry-derived path keys must be unique');
+   assertSmoke(sourceKeys.every((key,i)=>key===keyFor(DATA[combo].muscles[i],expected-i-1)),combo+' geometry identity must not depend on array position');
    assertSmoke(document.querySelectorAll('#bodySvg .muscle').length===expected,combo+' rendered path count');
    const renderedKeys=[...document.querySelectorAll('#bodySvg .muscle')].map(el=>el.dataset.key);
    assertSmoke(new Set(renderedKeys).size===expected,combo+' rendered data keys must be unique');
