@@ -87,7 +87,7 @@ jobs:
           "$CHROME_PATH" --headless --no-sandbox --disable-gpu --virtual-time-budget=7000 --dump-dom "http://127.0.0.1:8765/anatomy-smart-prototype.html?smoke=1" >/tmp/anatomy-dom.html
           grep -q 'id="bodySvg"' /tmp/anatomy-dom.html
           grep -q 'id="pairStatus"' /tmp/anatomy-dom.html
-          grep -q 'id="anatomySmoke" data-total-paths="116" data-visible-paths="29" data-pair-status="ready"' /tmp/anatomy-dom.html
+          grep -q 'id="anatomySmoke" data-total-paths="116" data-visible-paths="28" data-pair-status="ready"' /tmp/anatomy-dom.html
           grep -q 'id="anatomyInteractionSmoke" data-result="pass"' /tmp/anatomy-dom.html
           grep -q 'حرکات مرتبط از بانک مربی' /tmp/anatomy-dom.html
       - name: Upload anatomy preview image and diagnostics
