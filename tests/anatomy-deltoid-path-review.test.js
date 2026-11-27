@@ -32,7 +32,6 @@ for (const button of buttons) {
     "selector key must exist in the catalog for " + button.view + ": " + button.key);
 }
 assert.match(review, /captureReady!=="true"/, 'deltoid review must reject capture pages that are not validated');
-  "review page must require validated capture frames");
 assert.match(review, /paths\.find\(p=>p\.dataset\.key===activeKey\)/,
   "review page must resolve the selected stable key to exactly one rendered path");
 assert.match(review, /missing=buttons\.filter\(b=>!paths\.some\(p=>p\.dataset\.key===b\.dataset\.key\)\)/,
