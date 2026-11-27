@@ -1,0 +1,42 @@
+name: Anatomy experiment checks
+
+on:
+  push:
+    branches:
+      - experiment/anatomy-smart-rebuild-20261127
+    paths:
+      - 'experiments/anatomy-*.js'
+      - 'experiments/anatomy-*.json'
+      - 'experiments/anatomy-smart-prototype.html'
+      - 'tests/anatomy-*.test.js'
+      - '.github/workflows/anatomy-experiment-checks.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: anatomy-experiment-checks
+  cancel-in-progress: true
+
+jobs:
+  anatomy-integrity:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout experiment branch
+        uses: actions/checkout@v4
+        with:
+          ref: experiment/anatomy-smart-rebuild-20261127
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Check JavaScript syntax
+        run: |
+          node --check experiments/anatomy-exercise-adapter.js
+          node --check experiments/anatomy-selection-integration.js
+      - name: Run anatomy regression tests
+        run: |
+          node tests/anatomy-exercise-adapter.test.js
+          node tests/anatomy-selection-integration-static.test.js
+          node tests/anatomy-catalog-integrity.test.js
