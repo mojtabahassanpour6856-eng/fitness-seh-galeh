@@ -44,6 +44,7 @@ jobs:
           node tests/anatomy-exercise-adapter.test.js
           node tests/anatomy-selection-integration-static.test.js
           node tests/anatomy-catalog-integrity.test.js
+          node tests/anatomy-geometry-inspector-export.test.js
       - name: Install headless browser
         id: setup-chrome
         uses: browser-actions/setup-chrome@v1
