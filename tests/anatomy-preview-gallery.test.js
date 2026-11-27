@@ -19,6 +19,7 @@ assert.match(gallery, /مرزبندی یا صحت آناتومیک عضلات ن
 assert.match(capture, /getElementById\("sex"\)/, "capture page must set body model");
 assert.match(capture, /getElementById\("view"\)/, "capture page must set view");
 assert.match(inspector, /dataset\.inspectorReady=\x27true\x27/, "inspector must expose successful iframe readiness");
+assert.match(inspector, /height:min\(90vh,1250px\)/, "desktop inspector preview must be tall enough to show the full body");
 assert.match(inspector, /list\.dataset\.pathCount=String\(paths\(\)\.length\)/, "inspector must expose the loaded path count");
 assert.match(inspector, /dataset\.inspectorError=\x27true\x27/, "inspector must expose terminal iframe initialization failure");
 assert.match(inspector, /function refresh\(\)\{if\(!controls\(\)\)return;[\s\S]*?return true;\}/, "inspector refresh must signal successful iframe initialization to the retry loop");
