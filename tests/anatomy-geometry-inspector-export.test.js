@@ -39,7 +39,9 @@ assert.equal(separated.bbox_intersection_area,0,'separated BBoxes must have zero
 assert.equal(separated.gap_x,2,'separated BBoxes must report horizontal gap');
 assert.equal(separated.gap_y,4,'separated BBoxes must report vertical gap');
 assert.equal(pairwise(Array.from({length:6},(_,i)=>({bbox:{x:i,y:i,width:10,height:10}}))).length,15,'six selected paths must produce at most fifteen unique pairs');
-const overlapSource=script.match(/function estimateSvgFillOverlap\(pathA,pathB,bboxA,bboxB,grid=36\)\{[\s\S]*?\n\}/)?.[0];
+const overlapStart=script.indexOf('function sampleFilledArea(');
+const overlapEnd=script.indexOf('\nfunction pairwiseBBoxDiagnostics',overlapStart);
+const overlapSource=overlapStart>=0&&overlapEnd>overlapStart?script.slice(overlapStart,overlapEnd):null;
 assert.ok(overlapSource,'sample-based SVG fill overlap function must be extractable');
 const estimator=vm.runInNewContext(overlapSource+'; estimateSvgFillOverlap',{doc:()=>({getElementById:()=>svgRoot})});
 const svgRoot={};
