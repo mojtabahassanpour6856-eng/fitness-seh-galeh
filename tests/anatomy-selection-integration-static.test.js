@@ -1,0 +1,15 @@
+const fs=require('node:fs');
+const assert=require('node:assert/strict');
+const controller=fs.readFileSync('experiments/anatomy-selection-integration.js','utf8');
+const adapter=fs.readFileSync('experiments/anatomy-exercise-adapter.js','utf8');
+const html=fs.readFileSync('experiments/anatomy-smart-prototype.html','utf8');
+assert.match(controller,/pairing_status==='reviewed'/,'bilateral selection must require completed anatomy review');
+assert.doesNotMatch(controller,/pairing_status==='candidate_pending_anatomical_review'/,'candidate status must not enable bilateral selection');
+assert.match(controller,/left\.length===1&&right\.length===1/,'both side geometries must be unique');
+assert.match(controller,/setExercises\(rows\)/,'host app must explicitly supply authenticated trainer exercises');
+assert.match(controller,/clearExercises\(\)/,'host app must be able to clear exercise data on logout');
+assert.doesNotMatch(controller,/supabase|service_role|anon_key/i,'prototype must not embed backend credentials or fetch database directly');
+assert.match(html,/anatomy-exercise-adapter\.js/,'prototype must load exercise adapter');
+assert.match(html,/anatomy-selection-integration\.js/,'prototype must load selection controller');
+assert.match(adapter,/role:null/,'main/assisting role must remain unset until sourced');
+console.log('PASS: paired-selection safety gate, authenticated host handoff, no direct DB credentials, and script wiring.');
