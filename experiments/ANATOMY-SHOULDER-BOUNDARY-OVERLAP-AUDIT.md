@@ -3,7 +3,7 @@
 تاریخ: 2026-11-27  
 شاخه: `experiment/anatomy-smart-rebuild-20261127`  
 منبع: `experiments/anatomy-smart-prototype.html`  
-Blob SHA منبع: `eea35fdad216ecbe0da2d9ade3c181d8a0b32ac7`
+Blob SHA منبع: `b4380de3e663fc63005b8bd9061b5d71d025c504`
 
 ## هدف
 
@@ -50,3 +50,8 @@ Blob SHA منبع: `eea35fdad216ecbe0da2d9ade3c181d8a0b32ac7`
 
 
 یادداشت نسخه منبع: fingerprint به Blob SHA فعلی نمونه به‌روزرسانی شد. این تغییر فقط ارجاع به نسخه منبع را تازه می‌کند و به معنای بازبینی مجدد بصری یا تأیید آناتومیک نیست.
+
+
+## همگام‌سازی نهایی fingerprint منبع — 2026-11-27
+
+Blob SHA فایل فعلی `experiments/anatomy-smart-prototype.html` برابر `b4380de3e663fc63005b8bd9061b5d71d025c504` است. ارجاع نسخه در این گزارش با همین منبع همگام شد. این اصلاح فقط ردیابی نسخه را درست می‌کند؛ هیچ بررسی بصری تازه، تأیید علمی یا تغییر هندسه از آن نتیجه نمی‌شود.
