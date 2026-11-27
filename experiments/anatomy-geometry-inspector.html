@@ -120,7 +120,7 @@ downloadText('anatomy-path-review-'+stamp+'.json','application/json;charset=utf-
 const headers=['comparison_order','model','view','group','legacy_id','selection_key','path_index','length','bbox_x','bbox_y','bbox_width','bbox_height','fill','svg_view_box','path_d'];
 const cell=value=>{let v=value==null?'':typeof value==='object'?JSON.stringify(value):String(value);if(/^[=+@-]/.test(v))v="'"+v;return '"'+v.replace(/"/g,'""')+'"';};
 const rows=records.map(r=>[r.comparison_order,r.model,r.view,r.group,r.legacy_id,r.selection_key,r.path_index,r.length,r.bbox.x,r.bbox.y,r.bbox.width,r.bbox.height,r.fill,r.svg_view_box,r.path_d]);
-const csv='\\uFEFF'+[headers,...rows].map(row=>row.map(cell).join(',')).join('\\r\\n');
+const csv='\uFEFF'+[headers,...rows].map(row=>row.map(cell).join(',')).join('\r\n');
 downloadText('anatomy-path-review-'+stamp+'.csv','text/csv;charset=utf-8',csv);
 }
 }
