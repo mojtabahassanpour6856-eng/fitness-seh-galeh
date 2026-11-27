@@ -31,6 +31,7 @@ assert.match(html,/hashB=0x9e3779b9/,'path identity must use a second independen
 assert.match(html,/Duplicate anatomy geometry identity/,'rendering must fail closed on a geometry-key collision');
 assert.doesNotMatch(html,/return \(m\.id\|\|m\.group\)\+"__"\+index/,'legacy ID-plus-index identity must not return');
 assert.match(controller,/geometry-derived path keys must be unique/,'browser smoke must guard unique geometry keys');
+assert.match(controller,/geometry identity must not depend on array position/,'browser smoke must guard reorder-stable path identity');
 assert.match(controller,/rendered keys must match stable source geometry keys/,'browser smoke must guard rendered/source key parity');
 
 assert.match(controller,/function escapeHtml/,'dynamic labels and exercise identifiers must be HTML-escaped');
