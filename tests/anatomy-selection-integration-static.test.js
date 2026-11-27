@@ -26,3 +26,10 @@ assert.match(controller,/keyboard Enter selects muscle/,'browser smoke must vali
 assert.match(controller,/secondary color updates/,'browser smoke must validate assisting-muscle color');
 assert.match(controller,/clear button resets current view/,'browser smoke must validate clear action');
 
+assert.match(controller,/click must not select adjacent muscles/,'browser smoke must ensure a tap affects only the targeted SVG path');
+assert.match(controller,/neighboring muscle color remains unchanged/,'browser smoke must ensure adjacent muscle colors remain unchanged');
+assert.match(controller,/role conversion must preserve a single selected path/,'browser smoke must validate role conversion without duplicate selection');
+assert.match(controller,/clearing front view must preserve back-view selection/,'browser smoke must validate selection isolation between views');
+assert.match(controller,/clear button resets only current view/,'browser smoke must validate view-scoped clear behavior');
+
+
