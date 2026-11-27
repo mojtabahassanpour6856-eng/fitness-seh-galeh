@@ -6,6 +6,7 @@ const vm = require("node:vm");
 const gallery = fs.readFileSync("experiments/anatomy-preview-gallery.html", "utf8");
 const capture = fs.readFileSync("experiments/anatomy-preview-capture.html", "utf8");
 const workflow = fs.readFileSync(".github/workflows/anatomy-experiment-checks.yml", "utf8");
+const inspector = fs.readFileSync("experiments/anatomy-geometry-inspector.html", "utf8");
 
 const views = ["male-front", "male-back", "female-front", "female-back"];
 for (const view of views) {
@@ -17,6 +18,7 @@ assert.match(gallery, /@media\(max-width:850px\)/, "gallery must be responsive")
 assert.match(gallery, /مرزبندی یا صحت آناتومیک عضلات نیست/, "gallery must state anatomical limitation");
 assert.match(capture, /getElementById\("sex"\)/, "capture page must set body model");
 assert.match(capture, /getElementById\("view"\)/, "capture page must set view");
+assert.match(inspector, /function refresh\(\)\{if\(!controls\(\)\)return;[\s\S]*?return true;\}/, "inspector refresh must signal successful iframe initialization to the retry loop");
 assert.match(capture, /dataset\.pathCount/, "capture page must report rendered muscle path count");
 assert.match(capture, /"male-front":28,"male-back":30,"female-front":28,"female-back":30/, "capture page must enforce the audited path count for every view");
 assert.match(capture, /dataset\.expectedPathCount/, "capture page must expose the expected path count");
