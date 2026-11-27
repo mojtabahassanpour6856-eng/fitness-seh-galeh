@@ -6,7 +6,7 @@ const browser=fs.readFileSync("experiments/anatomy-muscle-browser.js","utf8");
 const html=fs.readFileSync("experiments/anatomy-smart-prototype.html","utf8");
 const catalog=JSON.parse(fs.readFileSync("experiments/ANATOMY-MUSCLE-CATALOG.json","utf8"));
 const source=fs.readFileSync("experiments/anatomy-smart-prototype.html","utf8");
-const dataMatch=source.match(/const DATA=(\\{[\\s\\S]*?\\});\\s*window\\.__ANATOMY_SOURCE_PATH_COUNT__/);
+const dataMatch=source.match(/const DATA=(\{[\s\S]*?\});\s*window\.__ANATOMY_SOURCE_PATH_COUNT__/);
 assert.ok(dataMatch,"prototype must expose the exact source DATA inventory");
 const sourceData=JSON.parse(dataMatch[1]);
 function sourceKey(path){
