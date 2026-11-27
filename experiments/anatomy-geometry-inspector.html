@@ -39,6 +39,8 @@ iframe{width:100%;height:min(78vh,1000px);border:0;border-radius:10px;background
 <button id="dim" class="active" type="button">کم‌رنگ‌کردن مسیرهای دیگر</button>
 <button id="compareMode" type="button">انتخاب مسیر دوم برای مقایسه</button>
 <button id="reset" type="button">پاک‌کردن انتخاب‌ها</button>
+<button id="exportJson" type="button">خروجی JSON</button>
+<button id="exportCsv" type="button">خروجی CSV</button>
 </div>
 <div id="list" class="list"><div class="notice">در حال بارگذاری مدل…</div></div>
 <div id="meta" class="meta">برای بررسی، یک مسیر انتخاب کن. برای مقایسه، دکمه «انتخاب مسیر دوم» را بزن و مسیر دیگری را انتخاب کن.</div>
@@ -83,6 +85,45 @@ card.append(grid);
 const details=document.createElement('details'),summary=document.createElement('summary'),area=document.createElement('textarea');details.className='path-data';summary.textContent='نمایش داده خام مسیر SVG (فقط خواندنی)';area.readOnly=true;area.spellcheck=false;area.value=target.getAttribute('d')||'';details.append(summary,area);card.append(details);
 return card;
 }
+function selectedPathRecords(){
+const all=paths(),keys=[activeKey,compareKey].filter(Boolean);
+return keys.map((key,position)=>{
+const target=all.find(p=>p.dataset.key===key);if(!target)return null;
+const box=target.getBBox(),length=target.getTotalLength(),svg=doc().getElementById('bodySvg');
+return {
+comparison_order:position+1,
+model:sex.value,view:view.value,
+group:target.dataset.group||null,
+legacy_id:target.dataset.id||null,
+selection_key:key,
+path_index:all.indexOf(target),
+length:Number.isFinite(length)?Number(length.toFixed(3)):null,
+bbox:{x:Number(box.x.toFixed(3)),y:Number(box.y.toFixed(3)),width:Number(box.width.toFixed(3)),height:Number(box.height.toFixed(3))},
+fill:getComputedStyle(target).fill,
+svg_view_box:svg.getAttribute('viewBox')||null,
+path_d:target.getAttribute('d')||''
+};
+}).filter(Boolean);
+}
+function downloadText(filename,mime,content){
+const blob=new Blob([content],{type:mime}),url=URL.createObjectURL(blob),a=document.createElement('a');
+a.href=url;a.download=filename;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);
+}
+function exportSelected(format){
+const records=selectedPathRecords();
+if(!records.length){meta.textContent='برای خروجی گرفتن، ابتدا حداقل یک مسیر را انتخاب کن.';return;}
+const stamp=new Date().toISOString().replace(/[:.]/g,'-');
+if(format==='json'){
+const payload={schema_version:1,created_at:new Date().toISOString(),source:'Fitness Seh Galeh anatomy geometry inspector',warning_fa:'این داده‌ها مشخصات هندسی مسیرهای SVG هستند و تأییدکننده هویت یا صحت آناتومیک نیستند.',records};
+downloadText('anatomy-path-review-'+stamp+'.json','application/json;charset=utf-8',JSON.stringify(payload,null,2));
+}else{
+const headers=['comparison_order','model','view','group','legacy_id','selection_key','path_index','length','bbox_x','bbox_y','bbox_width','bbox_height','fill','svg_view_box','path_d'];
+const cell=value=>{let v=value==null?'':typeof value==='object'?JSON.stringify(value):String(value);if(/^[=+@-]/.test(v))v="'"+v;return '"'+v.replace(/"/g,'""')+'"';};
+const rows=records.map(r=>[r.comparison_order,r.model,r.view,r.group,r.legacy_id,r.selection_key,r.path_index,r.length,r.bbox.x,r.bbox.y,r.bbox.width,r.bbox.height,r.fill,r.svg_view_box,r.path_d]);
+const csv='\\uFEFF'+[headers,...rows].map(row=>row.map(cell).join(',')).join('\\r\\n');
+downloadText('anatomy-path-review-'+stamp+'.csv','text/csv;charset=utf-8',csv);
+}
+}
 function renderDetails(){
 meta.replaceChildren();
 if(!activeKey){meta.textContent='برای بررسی، یک مسیر انتخاب کن. برای مقایسه، دکمه «انتخاب مسیر دوم» را بزن.';return;}
@@ -100,5 +141,7 @@ sex.addEventListener('change',()=>{if(!syncing)refresh()});view.addEventListener
 document.getElementById('dim').addEventListener('click',e=>{dim=!dim;e.currentTarget.classList.toggle('active',dim);if(activeKey){paintSelection();renderDetails();}});
 document.getElementById('compareMode').addEventListener('click',e=>{if(!activeKey){meta.textContent='ابتدا مسیر اول را انتخاب کن.';return;}compareMode=!compareMode;e.currentTarget.classList.toggle('active',compareMode);meta.textContent=compareMode?'حالا مسیر دوم را از فهرست انتخاب کن.':'حالت انتخاب مسیر دوم لغو شد.';});
 document.getElementById('reset').addEventListener('click',()=>{activeKey='';compareKey='';compareMode=false;document.getElementById('compareMode').classList.remove('active');restore();renderDetails();renderList()});
+document.getElementById('exportJson').addEventListener('click',()=>exportSelected('json'));
+document.getElementById('exportCsv').addEventListener('click',()=>exportSelected('csv'));
 </script>
 </body></html>
