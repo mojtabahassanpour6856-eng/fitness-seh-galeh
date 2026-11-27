@@ -10,6 +10,7 @@ on:
       - 'experiments/ANATOMY-*.json'
       - 'experiments/anatomy-smart-prototype.html'
       - 'experiments/anatomy-preview-capture.html'
+      - 'experiments/anatomy-geometry-inspector.html'
       - 'tests/anatomy-*.test.js'
       - '.github/workflows/anatomy-experiment-checks.yml'
   workflow_dispatch:
@@ -62,6 +63,8 @@ jobs:
             "$CHROME_PATH" --headless --no-sandbox --disable-gpu --hide-scrollbars --window-size=1440,1800 --virtual-time-budget=7000 --screenshot="/tmp/anatomy-${view}.png" "http://127.0.0.1:8765/anatomy-preview-capture.html?view=${view}"
             test -s "/tmp/anatomy-${view}.png"
           done
+          "$CHROME_PATH" --headless --no-sandbox --disable-gpu --hide-scrollbars --window-size=1600,1200 --virtual-time-budget=9000 --screenshot=/tmp/anatomy-geometry-inspector.png "http://127.0.0.1:8765/anatomy-geometry-inspector.html?sex=male&view=front"
+          test -s /tmp/anatomy-geometry-inspector.png
           "$CHROME_PATH" --headless --no-sandbox --disable-gpu --virtual-time-budget=7000 --dump-dom "http://127.0.0.1:8765/anatomy-smart-prototype.html?smoke=1" >/tmp/anatomy-dom.html
           grep -q 'id="bodySvg"' /tmp/anatomy-dom.html
           grep -q 'id="pairStatus"' /tmp/anatomy-dom.html
@@ -78,5 +81,6 @@ jobs:
             /tmp/anatomy-female-front.png
             /tmp/anatomy-female-back.png
             /tmp/anatomy-dom.html
+            /tmp/anatomy-geometry-inspector.png
           if-no-files-found: error
           retention-days: 3
