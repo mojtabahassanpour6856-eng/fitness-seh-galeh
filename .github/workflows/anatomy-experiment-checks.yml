@@ -9,6 +9,7 @@ on:
       - 'experiments/anatomy-*.json'
       - 'experiments/ANATOMY-*.json'
       - 'experiments/anatomy-smart-prototype.html'
+      - 'experiments/anatomy-preview-capture.html'
       - 'tests/anatomy-*.test.js'
       - '.github/workflows/anatomy-experiment-checks.yml'
   workflow_dispatch:
@@ -57,8 +58,10 @@ jobs:
             if curl -fsS http://127.0.0.1:8765/anatomy-smart-prototype.html >/dev/null; then break; fi
             sleep 1
           done
-          "$CHROME_PATH" --headless --no-sandbox --disable-gpu --hide-scrollbars --window-size=1440,1200 --virtual-time-budget=5000 --screenshot=/tmp/anatomy-preview.png http://127.0.0.1:8765/anatomy-smart-prototype.html
-          test -s /tmp/anatomy-preview.png
+          for view in male-front male-back female-front female-back; do
+            "$CHROME_PATH" --headless --no-sandbox --disable-gpu --hide-scrollbars --window-size=1440,1800 --virtual-time-budget=7000 --screenshot="/tmp/anatomy-${view}.png" "http://127.0.0.1:8765/anatomy-preview-capture.html?view=${view}"
+            test -s "/tmp/anatomy-${view}.png"
+          done
           "$CHROME_PATH" --headless --no-sandbox --disable-gpu --virtual-time-budget=7000 --dump-dom "http://127.0.0.1:8765/anatomy-smart-prototype.html?smoke=1" >/tmp/anatomy-dom.html
           grep -q 'id="bodySvg"' /tmp/anatomy-dom.html
           grep -q 'id="pairStatus"' /tmp/anatomy-dom.html
@@ -70,7 +73,10 @@ jobs:
         with:
           name: anatomy-preview
           path: |
-            /tmp/anatomy-preview.png
+            /tmp/anatomy-male-front.png
+            /tmp/anatomy-male-back.png
+            /tmp/anatomy-female-front.png
+            /tmp/anatomy-female-back.png
             /tmp/anatomy-dom.html
           if-no-files-found: error
           retention-days: 3
