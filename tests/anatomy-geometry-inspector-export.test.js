@@ -10,6 +10,7 @@ new vm.Script(script,{filename:'anatomy-geometry-inspector.inline.js'});
 assert.match(html,/id="exportJson"/,'JSON export control must exist');
 assert.match(html,/id="exportCsv"/,'CSV export control must exist');
 assert.match(html,/id="exportSvg"/,'vector SVG image export control must exist');
+assert.match(html,/id="exportReport"/,'printable geometry review report control must exist');
 assert.match(script,/function selectedPathRecords\(\)/,'exports must be built from selected paths only');
 assert.match(script,/path_d:target\.getAttribute\('d'\)/,'export must preserve raw SVG path data');
 assert.match(script,/function exportSelected\(format\)/,'JSON and CSV export handler must exist');
@@ -25,5 +26,13 @@ assert.match(script,/warning_fa:/,'JSON export must warn that geometry is not an
 assert.match(script,/تصویر برداری مسیرهای انتخاب‌شده/,'SVG image must include an anatomical-validation disclaimer');
 assert.match(script,/copy\.style\.setProperty\('opacity',selected\?'1':'.16'\)/,'SVG image must isolate selected paths visually');
 assert.match(script,/image\/svg\+xml/,'SVG image must download with the correct MIME type');
+assert.match(script,/function exportReviewReport\(\)/,'printable review report handler must exist');
+assert.match(script,/function escapeHtml\(value\)/,'report text must escape dynamic values');
+assert.match(script,/@page\{size:A4 landscape/,'report must be formatted for A4 landscape printing');
+assert.match(script,/svgMarkup/,'report must embed the selected-path vector illustration');
+assert.match(script,/ملاحظات بازبینی متخصص/,'report must provide a specialist review notes area');
+assert.match(script,/ذخیره PDF/,'report must offer browser print-to-PDF');
+assert.match(script,/text\/html;charset=utf-8/,'report must download as UTF-8 HTML');
+assert.match(script,/تأیید مرزها و نام‌گذاری آناتومیک نیازمند مرجع معتبر/,'report must state the anatomy validation limitation');
 
 console.log('PASS: inspector inline JavaScript syntax and selected-path JSON/CSV export safeguards.');
