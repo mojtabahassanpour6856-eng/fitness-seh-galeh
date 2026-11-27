@@ -38,6 +38,7 @@ iframe{width:100%;height:min(78vh,1000px);border:0;border-radius:10px;background
 <div class="toolbar">
 <button id="dim" class="active" type="button">کم‌رنگ‌کردن مسیرهای دیگر</button>
 <button id="compareMode" type="button">انتخاب مسیر دوم برای مقایسه</button>
+<button id="multiMode" type="button">بررسی چندمسیره یک گروه</button>
 <button id="reset" type="button">پاک‌کردن انتخاب‌ها</button>
 <button id="exportJson" type="button">خروجی JSON</button>
 <button id="exportCsv" type="button">خروجی CSV</button>
@@ -59,21 +60,23 @@ const sex=document.getElementById('sex'),view=document.getElementById('view'),gr
 const initialView=new URLSearchParams(location.search);
 if(['male','female'].includes(initialView.get('sex')))sex.value=initialView.get('sex');
 if(['front','back'].includes(initialView.get('view')))view.value=initialView.get('view');
-let activeKey='',compareKey='',compareMode=false,dim=true,syncing=false;
+let activeKey='',compareKey='',compareMode=false,multiReview=false,reviewKeys=[],dim=true,syncing=false;
 function doc(){return frame.contentDocument}
 function controls(){const d=doc();if(!d||!d.getElementById('bodySvg'))return false;const innerSex=d.getElementById('sex'),innerView=d.getElementById('view');syncing=true;try{if(innerSex.value!==sex.value){innerSex.value=sex.value;innerSex.dispatchEvent(new Event('change',{bubbles:true}));}if(innerView.value!==view.value){innerView.value=view.value;innerView.dispatchEvent(new Event('change',{bubbles:true}));}}finally{syncing=false;}if(!d.documentElement.dataset.inspectorSyncBound){innerSex.addEventListener('change',()=>{if(syncing)return;sex.value=innerSex.value;refresh()});innerView.addEventListener('change',()=>{if(syncing)return;view.value=innerView.value;refresh()});d.documentElement.dataset.inspectorSyncBound='1';}return true}
 function paths(){return [...doc().querySelectorAll('#bodySvg .muscle')]}
 function restore(){for(const p of paths()){p.style.opacity='';p.style.stroke='';p.style.strokeWidth='';p.style.filter=''}}
 function select(key){
-if(compareMode&&activeKey&&key!==activeKey){compareKey=key;compareMode=false;document.getElementById('compareMode').classList.remove('active');}
+const target=paths().find(p=>p.dataset.key===key);if(!target)return;
+if(multiReview){const existing=reviewKeys.indexOf(key);if(existing>=0)reviewKeys.splice(existing,1);else{const currentGroup=reviewKeys.length?paths().find(p=>p.dataset.key===reviewKeys[0])?.dataset.group:null;if(currentGroup&&target.dataset.group!==currentGroup){meta.textContent='برای جلوگیری از ترکیب گروه‌های متفاوت، فقط مسیرهای یک گروه را در این بررسی انتخاب کن.';return;}if(reviewKeys.length>=6){meta.textContent='در هر برگه حداکثر ۶ مسیر از یک گروه قابل انتخاب است؛ برای گروه بزرگ‌تر گزارش جداگانه بساز.';return;}reviewKeys.push(key);}activeKey=reviewKeys[0]||'';compareKey='';}
+else if(compareMode&&activeKey&&key!==activeKey){compareKey=key;compareMode=false;document.getElementById('compareMode').classList.remove('active');}
 else{activeKey=key;compareKey='';}
 paintSelection();renderDetails();renderList();
 }
 function paintSelection(){
 const all=paths();restore();
-const keys=[activeKey,compareKey].filter(Boolean);
+const keys=multiReview?reviewKeys:[activeKey,compareKey].filter(Boolean),colors=['#19130b','#7650a5','#167c80','#b56b22','#315f9b','#a13c54'];
 if(dim&&keys.length)for(const p of all)if(!keys.includes(p.dataset.key))p.style.opacity='.16';
-keys.forEach((key,i)=>{const p=all.find(x=>x.dataset.key===key);if(!p)return;p.style.opacity='1';p.style.stroke=i===0?'#19130b':'#7650a5';p.style.strokeWidth='8';p.style.filter='drop-shadow(0 0 5px #fff)';});
+keys.forEach((key,i)=>{const p=all.find(x=>x.dataset.key===key);if(!p)return;p.style.opacity='1';p.style.stroke=colors[i%colors.length];p.style.strokeWidth='8';p.style.filter='drop-shadow(0 0 5px #fff)';});
 }
 function pathCard(key,titleText){
 const all=paths(),target=all.find(p=>p.dataset.key===key);if(!target)return null;
@@ -88,7 +91,7 @@ const details=document.createElement('details'),summary=document.createElement('
 return card;
 }
 function selectedPathRecords(){
-const all=paths(),keys=[activeKey,compareKey].filter(Boolean);
+const all=paths(),keys=multiReview?reviewKeys:[activeKey,compareKey].filter(Boolean);
 return keys.map((key,position)=>{
 const target=all.find(p=>p.dataset.key===key);if(!target)return null;
 const box=target.getBBox(),length=target.getTotalLength(),svg=doc().getElementById('bodySvg');
@@ -170,9 +173,9 @@ if(!records.length){meta.textContent='برای تهیه گزارش، ابتدا 
 const source=doc().getElementById('bodySvg'),clone=source.cloneNode(true);
 clone.setAttribute('xmlns','http://www.w3.org/2000/svg');clone.setAttribute('width','900');clone.setAttribute('height','1200');clone.setAttribute('role','img');clone.setAttribute('aria-label','تصویر مسیرهای انتخاب‌شده برای بازبینی هندسی');
 const chosen=new Set(records.map(r=>r.selection_key)),sourceNodes=[...source.querySelectorAll('*')],cloneNodes=[...clone.querySelectorAll('*')];
-sourceNodes.forEach((node,index)=>{const copy=cloneNodes[index];if(!copy)return;const style=getComputedStyle(node);for(const prop of ['fill','stroke','stroke-width','stroke-linejoin','stroke-linecap','opacity','filter']){const value=style.getPropertyValue(prop);if(value)copy.style.setProperty(prop,value);}if(node.classList.contains('muscle')){const selected=chosen.has(node.dataset.key);copy.style.setProperty('opacity',selected?'1':'.16');if(selected){const order=records.findIndex(r=>r.selection_key===node.dataset.key);copy.style.setProperty('stroke',order===0?'#19130b':'#7650a5');copy.style.setProperty('stroke-width','7');copy.style.setProperty('filter','drop-shadow(0 0 4px #fff)');}}});
+sourceNodes.forEach((node,index)=>{const copy=cloneNodes[index];if(!copy)return;const style=getComputedStyle(node);for(const prop of ['fill','stroke','stroke-width','stroke-linejoin','stroke-linecap','opacity','filter']){const value=style.getPropertyValue(prop);if(value)copy.style.setProperty(prop,value);}if(node.classList.contains('muscle')){const selected=chosen.has(node.dataset.key);copy.style.setProperty('opacity',selected?'1':'.16');if(selected){const order=records.findIndex(r=>r.selection_key===node.dataset.key),palette=['#19130b','#7650a5','#167c80','#b56b22','#315f9b','#a13c54'];copy.style.setProperty('stroke',palette[order%palette.length]);copy.style.setProperty('stroke-width','7');copy.style.setProperty('filter','drop-shadow(0 0 4px #fff)');}}});
 const svgMarkup=new XMLSerializer().serializeToString(clone),model=sex.value==='male'?'آقا':'خانم',viewName=view.value==='front'?'جلو':'پشت',now=new Date(),stamp=now.toISOString().replace(/[:.]/g,'-'),date=now.toLocaleString('fa-IR');
-const rows=records.map((r,i)=>'<article class="path"><h3>مسیر '+(i+1)+'</h3><dl>'+
+const rows=records.map((r,i)=>'<article class="path"><h3>مسیر '+(i+1)+' · '+escapeHtml(r.group||'')+'</h3><dl>'+
 '<dt>گروه</dt><dd>'+escapeHtml(r.group||'نامشخص')+'</dd>'+
 '<dt>اندیس در نما</dt><dd>'+r.path_index+'</dd>'+
 '<dt>شناسه قدیمی</dt><dd>'+escapeHtml(r.legacy_id||'ندارد')+'</dd>'+
@@ -182,7 +185,7 @@ const rows=records.map((r,i)=>'<article class="path"><h3>مسیر '+(i+1)+'</h3>
 '<dt>عرض / ارتفاع</dt><dd>'+r.bbox.width+' / '+r.bbox.height+'</dd>'+
 '<dt>رنگ اصلی</dt><dd>'+escapeHtml(r.fill||'نامشخص')+'</dd></dl></article>').join('');
 const report='<!doctype html><html lang="fa" dir="rtl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>گزارش بازبینی هندسی مسیرهای عضلانی</title><style>'+
-'@page{size:A4 landscape;margin:9mm}*{box-sizing:border-box}body{margin:0;background:#f7f1e4;color:#463c2c;font-family:Tahoma,Arial,sans-serif}.page{background:#fff;min-height:190mm;padding:8mm;border:1px solid #e4d8c2}.head{display:flex;justify-content:space-between;align-items:center;border-bottom:2px solid #b58a43;padding-bottom:5mm;margin-bottom:5mm}.brand{font-size:12px;color:#8b6b35;font-weight:bold}.head h1{font-size:20px;margin:5px 0}.meta{font-size:11px;color:#776b59}.layout{display:grid;grid-template-columns:43% 57%;gap:7mm;direction:ltr}.visual,.details{direction:rtl;border:1px solid #e4d8c2;border-radius:10px;padding:4mm;min-width:0}.visual{display:flex;align-items:center;justify-content:center;background:#fbf8f1;max-height:142mm;overflow:hidden}.visual svg{width:100%;height:auto;max-height:137mm}.details h2{font-size:15px;margin:0 0 3mm}.paths{display:grid;grid-template-columns:repeat('+records.length+',minmax(0,1fr));gap:3mm}.path{border:1px solid #e8dcc7;border-radius:8px;padding:3mm;min-width:0}.path h3{margin:0 0 2mm;color:#8b6b35;font-size:12px}dl{display:grid;grid-template-columns:38% 62%;gap:1.5mm;margin:0;font-size:10px}dt{color:#786e5e}dd{margin:0;overflow-wrap:anywhere}.key{font:8px/1.5 monospace;direction:ltr;text-align:left}.note{margin-top:4mm;border:1px dashed #cbb68e;border-radius:8px;padding:3mm;font-size:10px;line-height:1.9}.blank{height:18mm;border-bottom:1px solid #d9cdb8;margin-top:2mm}.warning{margin-top:4mm;padding:3mm;background:#f8f0df;border-right:3px solid #b58a43;font-size:10px;line-height:1.9}.foot{margin-top:3mm;font-size:9px;color:#8b806f;display:flex;justify-content:space-between}.print{position:fixed;left:18px;top:18px;background:#b58a43;color:#fff;border:0;border-radius:8px;padding:10px 16px;cursor:pointer}@media print{body{background:#fff}.page{border:0;min-height:0;padding:0}.print{display:none}}@media screen{body{padding:18px}.page{max-width:1100px;margin:auto;box-shadow:0 4px 24px #0001}}'+
+'@page{size:A4 landscape;margin:9mm}*{box-sizing:border-box}body{margin:0;background:#f7f1e4;color:#463c2c;font-family:Tahoma,Arial,sans-serif}.page{background:#fff;min-height:190mm;padding:8mm;border:1px solid #e4d8c2}.head{display:flex;justify-content:space-between;align-items:center;border-bottom:2px solid #b58a43;padding-bottom:5mm;margin-bottom:5mm}.brand{font-size:12px;color:#8b6b35;font-weight:bold}.head h1{font-size:20px;margin:5px 0}.meta{font-size:11px;color:#776b59}.layout{display:grid;grid-template-columns:43% 57%;gap:7mm;direction:ltr}.visual,.details{direction:rtl;border:1px solid #e4d8c2;border-radius:10px;padding:4mm;min-width:0}.visual{display:flex;align-items:center;justify-content:center;background:#fbf8f1;max-height:142mm;overflow:hidden}.visual svg{width:100%;height:auto;max-height:137mm}.details h2{font-size:15px;margin:0 0 3mm}.paths{display:grid;grid-template-columns:repeat('+Math.min(2,records.length)+',minmax(0,1fr));gap:2mm}.path{border:1px solid #e8dcc7;border-radius:8px;padding:3mm;min-width:0}.path h3{margin:0 0 1mm;color:#8b6b35;font-size:10px}dl{display:grid;grid-template-columns:38% 62%;gap:1mm;margin:0;font-size:8px}dt{color:#786e5e}dd{margin:0;overflow-wrap:anywhere}.key{font:8px/1.5 monospace;direction:ltr;text-align:left}.note{margin-top:4mm;border:1px dashed #cbb68e;border-radius:8px;padding:3mm;font-size:10px;line-height:1.9}.blank{height:18mm;border-bottom:1px solid #d9cdb8;margin-top:2mm}.warning{margin-top:4mm;padding:3mm;background:#f8f0df;border-right:3px solid #b58a43;font-size:10px;line-height:1.9}.foot{margin-top:3mm;font-size:9px;color:#8b806f;display:flex;justify-content:space-between}.print{position:fixed;left:18px;top:18px;background:#b58a43;color:#fff;border:0;border-radius:8px;padding:10px 16px;cursor:pointer}@media print{body{background:#fff}.page{border:0;min-height:0;padding:0}.print{display:none}}@media screen{body{padding:18px}.page{max-width:1100px;margin:auto;box-shadow:0 4px 24px #0001}}'+
 '</style></head><body><button class="print" onclick="window.print()">چاپ / ذخیره PDF</button><main class="page">'+
 '<header class="head"><div><div class="brand">FITNESS SEH GALEH · فیتنس سه‌قلعه</div><h1>گزارش بازبینی هندسی مسیرهای عضلانی</h1><div class="meta">مدل: '+model+'　|　نما: '+viewName+'　|　تعداد مسیر انتخاب‌شده: '+records.length+'</div></div><div class="meta">تاریخ تهیه: '+date+'</div></header>'+
 '<section class="layout"><div class="visual">'+svgMarkup+'</div><div class="details"><h2>مشخصات مسیرهای انتخاب‌شده</h2><div class="paths">'+rows+'</div>'+
@@ -192,22 +195,22 @@ const report='<!doctype html><html lang="fa" dir="rtl"><head><meta charset="utf-
 downloadText('anatomy-review-sheet-'+sex.value+'-'+view.value+'-'+stamp+'.html','text/html;charset=utf-8',report);
 }
 function renderDetails(){
-meta.replaceChildren();
-if(!activeKey){meta.textContent='برای بررسی، یک مسیر انتخاب کن. برای مقایسه، دکمه «انتخاب مسیر دوم» را بزن.';return;}
-const note=document.createElement('div');note.textContent=compareKey?'دو مسیر انتخاب‌شده‌اند؛ مقادیر هندسی را کنار هم مقایسه کن. این مقایسه به‌تنهایی اعتبار آناتومیک را ثابت نمی‌کند.':'مسیر اول انتخاب شده است. برای افزودن مسیر دوم، دکمه مقایسه را بزن.';meta.append(note);
-const a=pathCard(activeKey,'مسیر اول');if(a)meta.append(a);
-if(compareKey){const b=pathCard(compareKey,'مسیر دوم');if(b)meta.append(b);}
+meta.replaceChildren();const keys=multiReview?reviewKeys:[activeKey,compareKey].filter(Boolean);
+if(!keys.length){meta.textContent='برای بررسی، یک مسیر انتخاب کن. برای مقایسه چند مسیر از یک گروه، حالت بررسی چندمسیره را فعال کن.';return;}
+const note=document.createElement('div');note.textContent=multiReview?'حالت چندمسیره: مسیرهای انتخاب‌شده همگی از یک گروه‌اند. رنگ‌ها فقط برای تشخیص مسیرها هستند و دسته‌بندی آناتومیک را نشان نمی‌دهند.':'مسیرهای انتخاب‌شده برای مقایسه هندسی؛ برجسته‌سازی به‌معنای تأیید آناتومیک نیست.';meta.append(note);
+keys.forEach((key,index)=>{const card=pathCard(key,'مسیر '+(index+1));if(card)meta.append(card);});
 }
 function renderList(){const all=paths(),q=search.value.trim().toLowerCase(),g=group.value;list.innerHTML='';
 all.forEach((p,i)=>{const label=(p.getAttribute('aria-label')||p.dataset.group||'').toLowerCase();const identity=(p.dataset.id||'').toLowerCase();if(g&&p.dataset.group!==g)return;if(q&&!label.includes(q)&&!identity.includes(q)&&!p.dataset.key.toLowerCase().includes(q))return;
-const b=document.createElement('button');b.type='button';b.className='item'+([activeKey,compareKey].includes(p.dataset.key)?' active':'');const name=document.createElement('span');name.textContent=(p.getAttribute('aria-label')||p.dataset.group)+' · '+p.dataset.group;const small=document.createElement('small');small.textContent='#'+i+' · '+(p.dataset.id||'no-id');b.append(name,small);b.addEventListener('click',()=>select(p.dataset.key));list.appendChild(b);});
+const b=document.createElement('button');b.type='button';b.className='item'+((multiReview?reviewKeys:[activeKey,compareKey]).includes(p.dataset.key)?' active':'');const name=document.createElement('span');name.textContent=(p.getAttribute('aria-label')||p.dataset.group)+' · '+p.dataset.group;const small=document.createElement('small');small.textContent='#'+i+' · '+(p.dataset.id||'no-id');b.append(name,small);b.addEventListener('click',()=>select(p.dataset.key));list.appendChild(b);});
 if(!list.children.length)list.innerHTML='<div class="notice">مسیر منطبق پیدا نشد.</div>';}
-function refresh(){if(!controls())return;activeKey='';compareKey='';compareMode=false;document.getElementById('compareMode').classList.remove('active');restore();const groups=[...new Set(paths().map(p=>p.dataset.group))].sort();group.innerHTML='<option value="">همه عضلات</option>';groups.forEach(g=>{const o=document.createElement('option');o.value=g;o.textContent=g;group.appendChild(o)});renderDetails();renderList();document.getElementById('frameTitle').textContent='پیش‌نمایش '+(sex.value==='male'?'آقا':'خانم')+' · '+(view.value==='front'?'نمای جلو':'نمای پشت');}
+function refresh(){if(!controls())return;activeKey='';compareKey='';compareMode=false;reviewKeys=[];document.getElementById('compareMode').classList.remove('active');document.getElementById('multiMode').classList.remove('active');restore();const groups=[...new Set(paths().map(p=>p.dataset.group))].sort();group.innerHTML='<option value="">همه عضلات</option>';groups.forEach(g=>{const o=document.createElement('option');o.value=g;o.textContent=g;group.appendChild(o)});renderDetails();renderList();document.getElementById('frameTitle').textContent='پیش‌نمایش '+(sex.value==='male'?'آقا':'خانم')+' · '+(view.value==='front'?'نمای جلو':'نمای پشت');}
 frame.addEventListener('load',()=>{if(!refresh()){list.innerHTML='<div class="notice">مدل آناتومی بارگذاری شد، اما اجزای مورد انتظار پیدا نشدند. فایل نمونه و مسیر iframe را بررسی کن.</div>';meta.textContent='خطا در اتصال به مدل نمونه.';}});
 sex.addEventListener('change',()=>{if(!syncing)refresh()});view.addEventListener('change',()=>{if(!syncing)refresh()});group.addEventListener('change',renderList);search.addEventListener('input',renderList);
 document.getElementById('dim').addEventListener('click',e=>{dim=!dim;e.currentTarget.classList.toggle('active',dim);if(activeKey){paintSelection();renderDetails();}});
 document.getElementById('compareMode').addEventListener('click',e=>{if(!activeKey){meta.textContent='ابتدا مسیر اول را انتخاب کن.';return;}compareMode=!compareMode;e.currentTarget.classList.toggle('active',compareMode);meta.textContent=compareMode?'حالا مسیر دوم را از فهرست انتخاب کن.':'حالت انتخاب مسیر دوم لغو شد.';});
-document.getElementById('reset').addEventListener('click',()=>{activeKey='';compareKey='';compareMode=false;document.getElementById('compareMode').classList.remove('active');restore();renderDetails();renderList()});
+document.getElementById('multiMode').addEventListener('click',e=>{multiReview=!multiReview;reviewKeys=[];activeKey='';compareKey='';compareMode=false;document.getElementById('compareMode').classList.remove('active');e.currentTarget.classList.toggle('active',multiReview);restore();renderDetails();renderList();meta.textContent=multiReview?'حالت چندمسیره فعال شد؛ مسیرها را فقط از یک گروه انتخاب کن (حداکثر ۶ مسیر).':'حالت چندمسیره غیرفعال شد؛ انتخاب‌های قبلی پاک شدند.';});
+document.getElementById('reset').addEventListener('click',()=>{activeKey='';compareKey='';reviewKeys=[];compareMode=false;document.getElementById('compareMode').classList.remove('active');restore();renderDetails();renderList()});
 document.getElementById('exportJson').addEventListener('click',()=>exportSelected('json'));
 document.getElementById('exportCsv').addEventListener('click',()=>exportSelected('csv'));
 document.getElementById('exportSvg').addEventListener('click',exportSelectedSvg);
