@@ -37,7 +37,7 @@ reviewPanels.forEach(panel=>{
  function apply(){
   if(!ready)return;
   try{
-   const doc=frame.contentDocument,svg=doc?.getElementById("bodySvg");
+   const doc=frame.contentDocument?.getElementById("anatomy")?.contentDocument,svg=doc?.getElementById("bodySvg");
    if(!svg)throw new Error("SVG در دسترس نیست");
    const paths=[...svg.querySelectorAll(".muscle")];
    const target=paths.find(p=>p.dataset.key===activeKey);
@@ -55,7 +55,7 @@ reviewPanels.forEach(panel=>{
  }
  frame.addEventListener("load",()=>{
   try{
-   const doc=frame.contentDocument,root=doc?.documentElement,svg=doc?.getElementById("bodySvg");
+   const captureDoc=frame.contentDocument,root=captureDoc?.documentElement,doc=captureDoc?.getElementById("anatomy")?.contentDocument,svg=doc?.getElementById("bodySvg");
    if(root?.dataset.captureReady!=="true")throw new Error(root?.dataset.captureError||"اعتبارسنجی چهار نما ناموفق");
    if(!svg)throw new Error("SVG در دسترس نیست");
    const paths=[...svg.querySelectorAll(".muscle")];
