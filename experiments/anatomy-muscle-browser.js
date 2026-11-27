@@ -24,7 +24,7 @@ function entries(){
   paths.forEach((path,index)=>out.push({
    group,path,index,total:paths.length,
    key:path.selection_key,
-   label:group.name_fa+(paths.length>1?' · قطعه '+(index+1):''),
+   label:group.name_fa+(paths.length>1?' · مسیر '+(index+1):''),
    search:[group.name_fa,group.name_latin,group.group_id,group.source_group_key,path.id].join(' ').toLocaleLowerCase()
   }));
  });
@@ -57,6 +57,35 @@ fetch(catalogUrl).then(response=>{if(!response.ok)throw new Error('HTTP '+respon
  if(!Array.isArray(data.groups))throw new Error('ساختار کاتالوگ معتبر نیست');
  catalog=data;
  render();
+ if(new URLSearchParams(location.search).has('smoke')){
+  const assertSmoke=(ok,message)=>{if(!ok)throw new Error('Muscle browser smoke: '+message)};
+  const combos=['male-front','male-back','female-front','female-back'];
+  for(const combo of combos){
+   const [sex,view]=combo.split('-');
+   const sexNode=document.getElementById('sex'),viewNode=document.getElementById('view');
+   sexNode.value=sex;sexNode.dispatchEvent(new Event('change',{bubbles:true}));
+   viewNode.value=view;viewNode.dispatchEvent(new Event('change',{bubbles:true}));
+   const expected=catalog.groups.reduce((sum,g)=>sum+((g.geometry_by_view&&g.geometry_by_view[combo])||[]).length,0);
+   assertSmoke(list.querySelectorAll('[data-muscle-key]').length===expected,combo+' list must include every catalogued geometry path');
+   const target=list.querySelector('[data-muscle-key]');
+   assertSmoke(!!target,combo+' must expose selectable catalog rows');
+   const key=target.dataset.muscleKey;
+   target.click();
+   assertSmoke(!!selectedMap()[key],combo+' list click must update shared selection state');
+   const painted=document.querySelector('#bodySvg .muscle[data-key="'+CSS.escape(key)+'"]');
+   assertSmoke(!!painted&&painted.classList.contains('primary'),combo+' list click must paint exactly the linked SVG path');
+   assertSmoke(target.getAttribute('aria-pressed')==='true',combo+' list row must expose selected state');
+   target.click();
+   assertSmoke(!selectedMap()[key],combo+' second list click must clear selection');
+  }
+  const first=catalog.groups.find(g=>(g.geometry_by_view['male-front']||[]).length);
+  search.value=first.name_fa;search.dispatchEvent(new Event('input',{bubbles:true}));
+  assertSmoke(list.querySelectorAll('[data-muscle-key]').length>0,'Persian search must find catalog entries');
+  search.value=first.name_latin;search.dispatchEvent(new Event('input',{bubbles:true}));
+  assertSmoke(list.querySelectorAll('[data-muscle-key]').length>0,'Latin search must find catalog entries');
+  search.value='';search.dispatchEvent(new Event('input',{bubbles:true}));
+  const passed=document.createElement('meta');passed.id='anatomyMuscleBrowserSmoke';passed.dataset.result='pass';passed.dataset.views=combos.join(',');document.head.appendChild(passed);
+ }
 })
 .catch(error=>{
  list.innerHTML='<div class="empty">فهرست عضلات بارگذاری نشد؛ نقشه تعاملی موجود بدون تغییر باقی مانده است. '+esc(error.message)+'</div>';
