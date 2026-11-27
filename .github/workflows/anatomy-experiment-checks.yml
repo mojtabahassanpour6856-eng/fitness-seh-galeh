@@ -49,6 +49,7 @@ jobs:
           node tests/anatomy-catalog-integrity.test.js
           node tests/anatomy-geometry-inspector-export.test.js
           node tests/anatomy-preview-gallery.test.js
+          node tests/anatomy-deltoid-path-review.test.js
           node tests/anatomy-muscle-browser.test.js
       - name: Install headless browser
         id: setup-chrome
