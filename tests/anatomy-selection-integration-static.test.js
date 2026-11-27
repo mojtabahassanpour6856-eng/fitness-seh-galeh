@@ -10,6 +10,16 @@ assert.match(controller,/setExercises\(rows\)/,'host app must explicitly supply 
 assert.match(controller,/clearExercises\(\)/,'host app must be able to clear exercise data on logout');
 assert.match(controller,/getSelectionSnapshot\(\)/,'host app can read selected muscle groups with their explicit primary/secondary roles');
 
+const inspector=fs.readFileSync('experiments/anatomy-geometry-inspector.html','utf8');
+assert.match(inspector,/contentDocument|contentWindow/,'geometry inspector must inspect the same-origin prototype frame');
+assert.match(inspector,/dataset\.key/,'geometry inspector must highlight the selected stable path identity');
+assert.match(inspector,/dataset\.group/,'geometry inspector must expose the source muscle group');
+assert.match(inspector,/ کم‌رنگ‌کردن همسایه‌ها|کم‌رنگ‌کردن همسایه‌ها/,'geometry inspector must support isolating one path from neighboring geometry');
+assert.match(inspector,/initialView\.get\('sex'\)/,'geometry inspector must open in a requested sex model');
+assert.match(inspector,/initialView\.get\('view'\)/,'geometry inspector must open in a requested body view');
+assert.match(inspector,/if\(!syncing\)refresh\(\)/,'geometry inspector must guard against recursive view synchronization');
+assert.match(workflow,/anatomy-geometry-inspector\.png/,'workflow must capture the geometry inspector preview');
+
 const capturePage=fs.readFileSync('experiments/anatomy-preview-capture.html','utf8');
 const workflow=fs.readFileSync('.github/workflows/anatomy-experiment-checks.yml','utf8');
 assert.ok(capturePage.includes('^(male|female)-(front|back)$'),'capture page must validate all four view combinations');
