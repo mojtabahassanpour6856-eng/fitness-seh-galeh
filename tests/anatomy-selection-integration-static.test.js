@@ -16,3 +16,8 @@ console.log('PASS: paired-selection safety gate, authenticated host handoff, no 
 
 assert.match(controller,/keyFor\(p,index\)===key/,'SVG path lookup must use stable data-key, not child order');
 assert.match(controller,/function escapeHtml/,'dynamic labels and exercise identifiers must be HTML-escaped');
+
+assert.match(controller,/const countNode=document\.getElementById\('count'\)/,'controller must use explicit count DOM reference');
+assert.match(controller,/selectedNode\.innerHTML/,'controller must use explicit selected-list DOM reference');
+assert.doesNotMatch(controller,/(?<![A-Za-z])count\.textContent/,'controller must not rely on implicit window ID globals');
+assert.doesNotMatch(controller,/(?<![A-Za-z])selected\.innerHTML/,'controller must not rely on implicit window ID globals');
