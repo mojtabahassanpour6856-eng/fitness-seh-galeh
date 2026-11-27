@@ -3,7 +3,7 @@
 تاریخ: 2026-11-27  
 شاخه: `experiment/anatomy-smart-rebuild-20261127`  
 فایل منبع: `experiments/anatomy-smart-prototype.html`  
-Blob SHA منبعِ ممیزی‌شده: `2daa10b80530a506453271c8e935918415297b1b`
+Blob SHA منبعِ ممیزی‌شده: `eea35fdad216ecbe0da2d9ade3c181d8a0b32ac7`
 
 ## روش
 ساختار داده SVG در چهار نمای male-front، male-back، female-front و female-back از نظر گروه، شناسه، پسوند چپ/راست، تعداد قطعات و شناسه‌های خالی/تکراری بررسی شد. این ممیزی ساختاری است و تأیید علمی مرزها نیست.
