@@ -110,6 +110,25 @@ path_d:target.getAttribute('d')||''
 };
 }).filter(Boolean);
 }
+function pairwiseBBoxDiagnostics(records){
+const pairs=[];
+for(let i=0;i<records.length;i++)for(let j=i+1;j<records.length;j++){
+const a=records[i].bbox,b=records[j].bbox;
+const overlapWidth=Math.max(0,Math.min(a.x+a.width,b.x+b.width)-Math.max(a.x,b.x));
+const overlapHeight=Math.max(0,Math.min(a.y+a.height,b.y+b.height)-Math.max(a.y,b.y));
+const area=overlapWidth*overlapHeight,areaA=a.width*a.height,areaB=b.width*b.height,smallerArea=Math.min(areaA,areaB);
+const gapX=Math.max(0,Math.max(a.x,b.x)-Math.min(a.x+a.width,b.x+b.width));
+const gapY=Math.max(0,Math.max(a.y,b.y)-Math.min(a.y+a.height,b.y+b.height));
+const dx=(a.x+a.width/2)-(b.x+b.width/2),dy=(a.y+a.height/2)-(b.y+b.height/2);
+pairs.push({path_a:i+1,path_b:j+1,overlap_width:Number(overlapWidth.toFixed(3)),overlap_height:Number(overlapHeight.toFixed(3)),bbox_intersection_area:Number(area.toFixed(3)),bbox_intersection_ratio:smallerArea>0?Number((area/smallerArea).toFixed(4)):null,gap_x:Number(gapX.toFixed(3)),gap_y:Number(gapY.toFixed(3)),center_distance:Number(Math.hypot(dx,dy).toFixed(3))});
+}
+return pairs;
+}
+function pairwiseDiagnosticsHtml(records){
+const pairs=pairwiseBBoxDiagnostics(records);if(!pairs.length)return '';
+const rows=pairs.map(p=>'<tr><td>'+p.path_a+' ↔ '+p.path_b+'</td><td>'+p.overlap_width+' × '+p.overlap_height+'</td><td>'+p.bbox_intersection_area+'</td><td>'+(p.bbox_intersection_ratio===null?'نامشخص':(p.bbox_intersection_ratio*100).toFixed(1)+'٪')+'</td><td>'+p.gap_x+' / '+p.gap_y+'</td><td>'+p.center_distance+'</td></tr>').join('');
+return '<section class="pairwise"><h3>مقایسه جعبه‌های محدوده مسیرها (Bounding Box)</h3><div class="pair-scroll"><table><thead><tr><th>جفت مسیر</th><th>هم‌پوشانی X × Y</th><th>مساحت اشتراک جعبه</th><th>نسبت به جعبه کوچک‌تر</th><th>فاصله X / Y</th><th>فاصله مرکزها</th></tr></thead><tbody>'+rows+'</tbody></table></div><p>هشدار: این اعداد فقط از جعبه‌های محیطی (BBox) محاسبه شده‌اند؛ هم‌پوشانی جعبه‌ها به معنی تماس یا هم‌پوشانی واقعی سطح مسیرهای SVG نیست. فاصله نیز فاصله جعبه‌هاست، نه فاصله آناتومیک عضلات.</p></section>';
+}
 function downloadText(filename,mime,content){
 const blob=new Blob([content],{type:mime}),url=URL.createObjectURL(blob),a=document.createElement('a');
 a.href=url;a.download=filename;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);
@@ -119,7 +138,7 @@ const records=selectedPathRecords();
 if(!records.length){meta.textContent='برای خروجی گرفتن، ابتدا حداقل یک مسیر را انتخاب کن.';return;}
 const stamp=new Date().toISOString().replace(/[:.]/g,'-');
 if(format==='json'){
-const payload={schema_version:1,created_at:new Date().toISOString(),source:'Fitness Seh Galeh anatomy geometry inspector',warning_fa:'این داده‌ها مشخصات هندسی مسیرهای SVG هستند و تأییدکننده هویت یا صحت آناتومیک نیستند.',records};
+const payload={schema_version:1,created_at:new Date().toISOString(),source:'Fitness Seh Galeh anatomy geometry inspector',warning_fa:'این داده‌ها مشخصات هندسی مسیرهای SVG هستند و تأییدکننده هویت یا صحت آناتومیک نیستند.',records,pairwise_bbox_diagnostics:pairwiseBBoxDiagnostics(records),pairwise_warning_fa:'مقایسه جعبه‌های محیطی است؛ نه محاسبه اشتراک واقعی سطح مسیرهای SVG.'};
 downloadText('anatomy-path-review-'+stamp+'.json','application/json;charset=utf-8',JSON.stringify(payload,null,2));
 }else{
 const headers=['comparison_order','model','view','group','legacy_id','selection_key','path_index','length','bbox_x','bbox_y','bbox_width','bbox_height','fill','svg_view_box','path_d'];
@@ -185,7 +204,7 @@ const rows=records.map((r,i)=>'<article class="path"><h3>مسیر '+(i+1)+' · '
 '<dt>عرض / ارتفاع</dt><dd>'+r.bbox.width+' / '+r.bbox.height+'</dd>'+
 '<dt>رنگ اصلی</dt><dd>'+escapeHtml(r.fill||'نامشخص')+'</dd></dl></article>').join('');
 const report='<!doctype html><html lang="fa" dir="rtl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>گزارش بازبینی هندسی مسیرهای عضلانی</title><style>'+
-'@page{size:A4 landscape;margin:9mm}*{box-sizing:border-box}body{margin:0;background:#f7f1e4;color:#463c2c;font-family:Tahoma,Arial,sans-serif}.page{background:#fff;min-height:190mm;padding:8mm;border:1px solid #e4d8c2}.head{display:flex;justify-content:space-between;align-items:center;border-bottom:2px solid #b58a43;padding-bottom:5mm;margin-bottom:5mm}.brand{font-size:12px;color:#8b6b35;font-weight:bold}.head h1{font-size:20px;margin:5px 0}.meta{font-size:11px;color:#776b59}.layout{display:grid;grid-template-columns:43% 57%;gap:7mm;direction:ltr}.visual,.details{direction:rtl;border:1px solid #e4d8c2;border-radius:10px;padding:4mm;min-width:0}.visual{display:flex;align-items:center;justify-content:center;background:#fbf8f1;max-height:142mm;overflow:hidden}.visual svg{width:100%;height:auto;max-height:137mm}.details h2{font-size:15px;margin:0 0 3mm}.paths{display:grid;grid-template-columns:repeat('+Math.min(2,records.length)+',minmax(0,1fr));gap:2mm}.path{border:1px solid #e8dcc7;border-radius:8px;padding:3mm;min-width:0}.path h3{margin:0 0 1mm;color:#8b6b35;font-size:10px}dl{display:grid;grid-template-columns:38% 62%;gap:1mm;margin:0;font-size:8px}dt{color:#786e5e}dd{margin:0;overflow-wrap:anywhere}.key{font:8px/1.5 monospace;direction:ltr;text-align:left}.note{margin-top:4mm;border:1px dashed #cbb68e;border-radius:8px;padding:3mm;font-size:10px;line-height:1.9}.blank{height:18mm;border-bottom:1px solid #d9cdb8;margin-top:2mm}.warning{margin-top:4mm;padding:3mm;background:#f8f0df;border-right:3px solid #b58a43;font-size:10px;line-height:1.9}.foot{margin-top:3mm;font-size:9px;color:#8b806f;display:flex;justify-content:space-between}.print{position:fixed;left:18px;top:18px;background:#b58a43;color:#fff;border:0;border-radius:8px;padding:10px 16px;cursor:pointer}@media print{body{background:#fff}.page{border:0;min-height:0;padding:0}.print{display:none}}@media screen{body{padding:18px}.page{max-width:1100px;margin:auto;box-shadow:0 4px 24px #0001}}'+
+'@page{size:A4 landscape;margin:9mm}*{box-sizing:border-box}body{margin:0;background:#f7f1e4;color:#463c2c;font-family:Tahoma,Arial,sans-serif}.page{background:#fff;min-height:190mm;padding:8mm;border:1px solid #e4d8c2}.head{display:flex;justify-content:space-between;align-items:center;border-bottom:2px solid #b58a43;padding-bottom:5mm;margin-bottom:5mm}.brand{font-size:12px;color:#8b6b35;font-weight:bold}.head h1{font-size:20px;margin:5px 0}.meta{font-size:11px;color:#776b59}.layout{display:grid;grid-template-columns:43% 57%;gap:7mm;direction:ltr}.visual,.details{direction:rtl;border:1px solid #e4d8c2;border-radius:10px;padding:4mm;min-width:0}.visual{display:flex;align-items:center;justify-content:center;background:#fbf8f1;max-height:142mm;overflow:hidden}.visual svg{width:100%;height:auto;max-height:137mm}.details h2{font-size:15px;margin:0 0 3mm}.paths{display:grid;grid-template-columns:repeat('+Math.min(2,records.length)+',minmax(0,1fr));gap:2mm}.path{border:1px solid #e8dcc7;border-radius:8px;padding:3mm;min-width:0}.path h3{margin:0 0 1mm;color:#8b6b35;font-size:10px}dl{display:grid;grid-template-columns:38% 62%;gap:1mm;margin:0;font-size:8px}dt{color:#786e5e}dd{margin:0;overflow-wrap:anywhere}.key{font:8px/1.5 monospace;direction:ltr;text-align:left}.note{margin-top:4mm;border:1px dashed #cbb68e;border-radius:8px;padding:3mm;font-size:10px;line-height:1.9}.blank{height:18mm;border-bottom:1px solid #d9cdb8;margin-top:2mm}.warning{margin-top:4mm;padding:3mm;background:#f8f0df;border-right:3px solid #b58a43;font-size:10px;line-height:1.9}.pairwise{margin-top:4mm;border:1px solid #e4d8c2;border-radius:8px;padding:3mm}.pairwise h3{font-size:10px;margin:0 0 2mm}.pairwise table{width:100%;border-collapse:collapse;font-size:8px}.pairwise th,.pairwise td{border:1px solid #e8dcc7;padding:1.5mm;text-align:center}.pairwise th{background:#f8f0df}.pairwise p{font-size:8px;line-height:1.7;margin:2mm 0 0}.pair-scroll{overflow-x:auto}.foot{margin-top:3mm;font-size:9px;color:#8b806f;display:flex;justify-content:space-between}.print{position:fixed;left:18px;top:18px;background:#b58a43;color:#fff;border:0;border-radius:8px;padding:10px 16px;cursor:pointer}@media print{body{background:#fff}.page{border:0;min-height:0;padding:0}.print{display:none}}@media screen{body{padding:18px}.page{max-width:1100px;margin:auto;box-shadow:0 4px 24px #0001}}'+
 '</style></head><body><button class="print" onclick="window.print()">چاپ / ذخیره PDF</button><main class="page">'+
 '<header class="head"><div><div class="brand">FITNESS SEH GALEH · فیتنس سه‌قلعه</div><h1>گزارش بازبینی هندسی مسیرهای عضلانی</h1><div class="meta">مدل: '+model+'　|　نما: '+viewName+'　|　تعداد مسیر انتخاب‌شده: '+records.length+'</div></div><div class="meta">تاریخ تهیه: '+date+'</div></header>'+
 '<section class="layout"><div class="visual">'+svgMarkup+'</div><div class="details"><h2>مشخصات مسیرهای انتخاب‌شده</h2><div class="paths">'+rows+'</div>'+
@@ -199,6 +218,7 @@ meta.replaceChildren();const keys=multiReview?reviewKeys:[activeKey,compareKey].
 if(!keys.length){meta.textContent='برای بررسی، یک مسیر انتخاب کن. برای مقایسه چند مسیر از یک گروه، حالت بررسی چندمسیره را فعال کن.';return;}
 const note=document.createElement('div');note.textContent=multiReview?'حالت چندمسیره: مسیرهای انتخاب‌شده همگی از یک گروه‌اند. رنگ‌ها فقط برای تشخیص مسیرها هستند و دسته‌بندی آناتومیک را نشان نمی‌دهند.':'مسیرهای انتخاب‌شده برای مقایسه هندسی؛ برجسته‌سازی به‌معنای تأیید آناتومیک نیست.';meta.append(note);
 keys.forEach((key,index)=>{const card=pathCard(key,'مسیر '+(index+1));if(card)meta.append(card);});
+const diagnostics=pairwiseDiagnosticsHtml(selectedPathRecords());if(diagnostics){const section=document.createElement('div');section.innerHTML=diagnostics;meta.append(section);}
 }
 function renderList(){const all=paths(),q=search.value.trim().toLowerCase(),g=group.value;list.innerHTML='';
 all.forEach((p,i)=>{const label=(p.getAttribute('aria-label')||p.dataset.group||'').toLowerCase();const identity=(p.dataset.id||'').toLowerCase();if(g&&p.dataset.group!==g)return;if(q&&!label.includes(q)&&!identity.includes(q)&&!p.dataset.key.toLowerCase().includes(q))return;
