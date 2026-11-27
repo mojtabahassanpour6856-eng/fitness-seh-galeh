@@ -9,9 +9,12 @@ new vm.Script(script,{filename:'anatomy-geometry-inspector.inline.js'});
 
 assert.match(html,/id="exportJson"/,'JSON export control must exist');
 assert.match(html,/id="exportCsv"/,'CSV export control must exist');
+assert.match(html,/id="exportSvg"/,'vector SVG image export control must exist');
 assert.match(script,/function selectedPathRecords\(\)/,'exports must be built from selected paths only');
 assert.match(script,/path_d:target\.getAttribute\('d'\)/,'export must preserve raw SVG path data');
 assert.match(script,/function exportSelected\(format\)/,'JSON and CSV export handler must exist');
+assert.match(script,/function exportSelectedSvg\(\)/,'selected-path vector image export must exist');
+assert.match(script,/new XMLSerializer\(\)\.serializeToString\(clone\)/,'SVG export must serialize a standalone vector image');
 assert.match(script,/JSON\.stringify\(payload,null,2\)/,'JSON export must be readable and structured');
 assert.match(script,/const csv='\\uFEFF'/,'CSV must start with a UTF-8 BOM');
 assert.match(script,/join\('\\r\\n'\)/,'CSV rows must use CRLF delimiters');
@@ -19,5 +22,8 @@ assert.match(script,/v\.replace\(/,'CSV cells must escape embedded quotes');
 assert.match(script,/URL\.revokeObjectURL\(url\)/,'temporary download URL must be revoked');
 assert.match(script,/if\(!records\.length\)/,'export must fail safely when no path is selected');
 assert.match(script,/warning_fa:/,'JSON export must warn that geometry is not anatomical validation');
+assert.match(script,/تصویر برداری مسیرهای انتخاب‌شده/,'SVG image must include an anatomical-validation disclaimer');
+assert.match(script,/copy\.style\.setProperty\('opacity',selected\?'1':'.16'\)/,'SVG image must isolate selected paths visually');
+assert.match(script,/image\/svg\+xml/,'SVG image must download with the correct MIME type');
 
 console.log('PASS: inspector inline JavaScript syntax and selected-path JSON/CSV export safeguards.');
