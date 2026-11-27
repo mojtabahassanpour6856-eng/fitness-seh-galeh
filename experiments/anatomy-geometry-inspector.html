@@ -41,6 +41,7 @@ iframe{width:100%;height:min(78vh,1000px);border:0;border-radius:10px;background
 <button id="reset" type="button">پاک‌کردن انتخاب‌ها</button>
 <button id="exportJson" type="button">خروجی JSON</button>
 <button id="exportCsv" type="button">خروجی CSV</button>
+<button id="exportSvg" type="button">خروجی تصویر SVG</button>
 </div>
 <div id="list" class="list"><div class="notice">در حال بارگذاری مدل…</div></div>
 <div id="meta" class="meta">برای بررسی، یک مسیر انتخاب کن. برای مقایسه، دکمه «انتخاب مسیر دوم» را بزن و مسیر دیگری را انتخاب کن.</div>
@@ -124,6 +125,43 @@ const csv='\uFEFF'+[headers,...rows].map(row=>row.map(cell).join(',')).join('\r\
 downloadText('anatomy-path-review-'+stamp+'.csv','text/csv;charset=utf-8',csv);
 }
 }
+function exportSelectedSvg(){
+const records=selectedPathRecords();
+if(!records.length){meta.textContent='برای خروجی تصویر، ابتدا حداقل یک مسیر را انتخاب کن.';return;}
+const source=doc().getElementById('bodySvg');
+const clone=source.cloneNode(true);
+clone.setAttribute('xmlns','http://www.w3.org/2000/svg');
+clone.setAttribute('width','1024');clone.setAttribute('height','1536');
+clone.setAttribute('role','img');
+clone.setAttribute('aria-label',(sex.value==='male'?'آقا':'خانم')+' · '+(view.value==='front'?'نمای جلو':'نمای پشت')+' · مسیرهای انتخاب‌شده');
+const chosen=new Set(records.map(r=>r.selection_key));
+const sourceNodes=[...source.querySelectorAll('*')],cloneNodes=[...clone.querySelectorAll('*')];
+sourceNodes.forEach((node,index)=>{
+const copy=cloneNodes[index];if(!copy)return;
+const style=getComputedStyle(node);
+for(const prop of ['fill','stroke','stroke-width','stroke-linejoin','stroke-linecap','opacity','filter']){
+const value=style.getPropertyValue(prop);if(value)copy.style.setProperty(prop,value);
+}
+if(node.classList.contains('muscle')){
+const selected=chosen.has(node.dataset.key);
+copy.style.setProperty('opacity',selected?'1':'.16');
+if(selected){
+const order=records.findIndex(r=>r.selection_key===node.dataset.key);
+copy.style.setProperty('stroke',order===0?'#19130b':'#7650a5');
+copy.style.setProperty('stroke-width','8');
+copy.style.setProperty('filter','drop-shadow(0 0 5px #fff)');
+}
+}
+});
+const title=doc().createElementNS('http://www.w3.org/2000/svg','title');
+title.textContent='بازبینی مسیرهای آناتومی · '+(sex.value==='male'?'آقا':'خانم')+' · '+(view.value==='front'?'جلو':'پشت');
+const desc=doc().createElementNS('http://www.w3.org/2000/svg','desc');
+desc.textContent='تصویر برداری مسیرهای انتخاب‌شده. این برجسته‌سازی هندسی به‌معنای تأیید هویت یا صحت آناتومیک نیست.';
+clone.insertBefore(desc,clone.firstChild);clone.insertBefore(title,desc);
+const serialized=new XMLSerializer().serializeToString(clone);
+const stamp=new Date().toISOString().replace(/[:.]/g,'-');
+downloadText('anatomy-path-review-'+sex.value+'-'+view.value+'-'+stamp+'.svg','image/svg+xml;charset=utf-8',serialized);
+}
 function renderDetails(){
 meta.replaceChildren();
 if(!activeKey){meta.textContent='برای بررسی، یک مسیر انتخاب کن. برای مقایسه، دکمه «انتخاب مسیر دوم» را بزن.';return;}
@@ -143,5 +181,6 @@ document.getElementById('compareMode').addEventListener('click',e=>{if(!activeKe
 document.getElementById('reset').addEventListener('click',()=>{activeKey='';compareKey='';compareMode=false;document.getElementById('compareMode').classList.remove('active');restore();renderDetails();renderList()});
 document.getElementById('exportJson').addEventListener('click',()=>exportSelected('json'));
 document.getElementById('exportCsv').addEventListener('click',()=>exportSelected('csv'));
+document.getElementById('exportSvg').addEventListener('click',exportSelectedSvg);
 </script>
 </body></html>
