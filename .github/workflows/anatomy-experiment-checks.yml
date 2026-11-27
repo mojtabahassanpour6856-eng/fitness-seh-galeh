@@ -64,8 +64,14 @@ jobs:
             sleep 1
           done
           for view in male-front male-back female-front female-back; do
+            case "$view" in
+              male-front|female-front) expected_paths=28 ;;
+              male-back|female-back) expected_paths=30 ;;
+            esac
             "$CHROME_PATH" --headless --no-sandbox --disable-gpu --virtual-time-budget=9000 --dump-dom "http://127.0.0.1:8765/anatomy-preview-capture.html?view=${view}" >"/tmp/anatomy-${view}-dom.html"
             grep -q 'data-capture-ready="true"' "/tmp/anatomy-${view}-dom.html"
+            grep -q "data-path-count=\"${expected_paths}\"" "/tmp/anatomy-${view}-dom.html"
+            grep -q "data-expected-path-count=\"${expected_paths}\"" "/tmp/anatomy-${view}-dom.html"
             "$CHROME_PATH" --headless --no-sandbox --disable-gpu --hide-scrollbars --window-size=1440,1800 --virtual-time-budget=7000 --screenshot="/tmp/anatomy-${view}.png" "http://127.0.0.1:8765/anatomy-preview-capture.html?view=${view}"
             test -s "/tmp/anatomy-${view}.png"
           done
