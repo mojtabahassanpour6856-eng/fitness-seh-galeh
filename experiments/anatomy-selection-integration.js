@@ -143,7 +143,12 @@ Promise.all([fetch(mapUrl).then(r=>{if(!r.ok)throw new Error('mapping '+r.status
    sexNode.value=sex;sexNode.dispatchEvent(new Event('change',{bubbles:true}));
    viewNode.value=view;viewNode.dispatchEvent(new Event('change',{bubbles:true}));
    const expected=DATA[combo].muscles.length;
+   const sourceKeys=DATA[combo].muscles.map((m,i)=>keyFor(m,i));
+   assertSmoke(new Set(sourceKeys).size===sourceKeys.length,combo+' geometry-derived path keys must be unique');
    assertSmoke(document.querySelectorAll('#bodySvg .muscle').length===expected,combo+' rendered path count');
+   const renderedKeys=[...document.querySelectorAll('#bodySvg .muscle')].map(el=>el.dataset.key);
+   assertSmoke(new Set(renderedKeys).size===expected,combo+' rendered data keys must be unique');
+   assertSmoke(renderedKeys.every((key,i)=>key===keyFor(DATA[combo].muscles[i],i)),combo+' rendered keys must match stable source geometry keys');
    const target=document.querySelector('#bodySvg .muscle');
    assertSmoke(!!target,combo+' has a selectable muscle');
    const key=target.dataset.key;
