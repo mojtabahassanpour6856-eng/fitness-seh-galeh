@@ -2,7 +2,7 @@
   "schema_version": "0.1.0",
   "generated_at": "2026-11-27",
   "source_file": "experiments/anatomy-smart-prototype.html",
-  "source_blob_sha": "92d5255b2436f9c6a1aa4a112d49ef17c3d2af18",
+  "source_blob_sha": "2110c819782fc87979d7856a7833024d9d11df59",
   "purpose": "Inventory of existing prototype SVG groups and IDs. Not an anatomically validated atlas.",
   "global_rules": {
     "no_invented_geometry": true,
@@ -1265,5 +1265,15 @@
         }
       }
     }
-  ]
+  ],
+  "source_verification": {
+    "verified_at": "2026-11-27",
+    "source_blob_sha": "2110c819782fc87979d7856a7833024d9d11df59",
+    "inventory_path_count": 116,
+    "catalog_entry_count": 116,
+    "catalog_index_id_group_consistency": "passed",
+    "browser_visual_validation": "not_run",
+    "anatomical_geometry_validation": "not_run",
+    "note": "The source hash was refreshed only after extracting all 116 paths from the current DATA object and checking every catalog index, ID, and group reference. This confirms catalog-to-source structural consistency, not visual or anatomical correctness."
+  }
 }
