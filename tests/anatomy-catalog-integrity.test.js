@@ -21,6 +21,16 @@ const match = html.match(/const DATA=(\{[\s\S]*?\});\s*(?:const|let|function)\s/
 assert.ok(match, 'prototype DATA object must be extractable');
 const data = JSON.parse(match[1]);
 
+function geometrySelectionKey(path) {
+  const source = String(path.group || 'MUSCLE') + '|' + String(path.d || '');
+  let hash = 2166136261;
+  for (let i = 0; i < source.length; i++) hash = Math.imul(hash ^ source.charCodeAt(i), 16777619);
+  return String(path.group || 'MUSCLE') + '__' + (hash >>> 0).toString(36);
+}
+assert.equal(catalog.global_rules.path_identity_scheme, 'group_plus_fnv1a_geometry_fingerprint',
+  'catalog must declare the stable geometry identity scheme');
+
+
 const catalogByPath = new Map();
 for (const group of catalog.groups) {
   for (const [view, entries] of Object.entries(group.geometry_by_view || {})) {
@@ -34,6 +44,9 @@ for (const group of catalog.groups) {
 
 let sourcePathCount = 0;
 for (const [view, model] of Object.entries(data)) {
+  const viewKeys = (model.muscles || []).map(geometrySelectionKey);
+  assert.equal(new Set(viewKeys).size, viewKeys.length,
+    'stable geometry selection keys must be unique within ' + view);
   for (const [index, path] of (model.muscles || []).entries()) {
     sourcePathCount++;
     const key = view + ':' + index;
@@ -41,6 +54,8 @@ for (const [view, model] of Object.entries(data)) {
     assert.ok(found, 'source SVG path missing from catalog: ' + key);
     assert.equal(found.entry.id || null, path.id || null, 'path ID mismatch: ' + key);
     assert.equal(found.group.source_group_key, path.group, 'path group mismatch: ' + key);
+    assert.equal(found.entry.selection_key, geometrySelectionKey(path),
+      'catalog stable geometry selection key mismatch: ' + key);
     catalogByPath.delete(key);
   }
 }
@@ -58,4 +73,4 @@ for (const group of catalog.groups) {
   }
 }
 
-console.log('PASS: Git blob fingerprint, all 116 source/catalog path references, and unreviewed pairing gates.');
+console.log('PASS: Git blob fingerprint, all 116 stable geometry identities, source/catalog references, and unreviewed pairing gates.');
