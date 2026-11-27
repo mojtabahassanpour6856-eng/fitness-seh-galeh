@@ -23,7 +23,7 @@ assert.match(script,/function applyRequestedGroupReview\(\)/,'inspector must sup
 assert.match(script,/params\.get\('group'\)/,'group review must be addressable by a URL query parameter');
 assert.match(script,/path\.dataset\.group===requested/,'automatic review must include only paths from the requested source group');
 assert.match(script,/targets\.length>6/,'automatic review must reject groups exceeding the six-path comparison limit');
-assert.match(script,/dataset\\.groupReviewReady='true'/,'automatic group review must expose a browser-verifiable readiness marker');
+assert.match(script,/dataset\.groupReviewReady='true'/,'automatic group review must expose a browser-verifiable readiness marker');
 assert.match(script,/reviewKeys=targets\.map\(path=>path\.dataset\.key\)/,'automatic group review must select every source path in the requested group');
 assert.match(script,/bbox_intersection_area/,'pairwise analysis must calculate bounding-box intersection area');
 assert.match(script,/bbox_intersection_ratio/,'pairwise analysis must calculate normalized bounding-box intersection ratio');
