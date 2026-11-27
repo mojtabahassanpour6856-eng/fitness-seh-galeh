@@ -2,13 +2,14 @@
   "schema_version": "0.1.0",
   "generated_at": "2026-11-27",
   "source_file": "experiments/anatomy-smart-prototype.html",
-  "source_blob_sha": "2daa10b80530a506453271c8e935918415297b1b",
+  "source_blob_sha": "9fb3ca1e0a6eaf6e756804a5de7b95180ddebbb6",
   "purpose": "Inventory of existing prototype SVG groups and IDs. Not an anatomically validated atlas.",
   "global_rules": {
     "no_invented_geometry": true,
     "no_exercise_bank_mutation": true,
     "paired_selection_default": "planned_not_implemented",
-    "enable_pairing_only_after_geometry_review": true
+    "enable_pairing_only_after_geometry_review": true,
+    "path_identity_scheme": "group_plus_fnv1a_geometry_fingerprint"
   },
   "groups": [
     {
@@ -26,57 +27,69 @@
         "male-front": [
           {
             "index": 0,
-            "id": "TRAPEZIUS_LEFT"
+            "id": "TRAPEZIUS_LEFT",
+            "selection_key": "TRAPEZIUS__514q25"
           },
           {
             "index": 1,
-            "id": "TRAPEZIUS_RIGHT"
+            "id": "TRAPEZIUS_RIGHT",
+            "selection_key": "TRAPEZIUS__dfd553"
           }
         ],
         "male-back": [
           {
             "index": 0,
-            "id": "TRAPEZIUS_LEFT"
+            "id": "TRAPEZIUS_LEFT",
+            "selection_key": "TRAPEZIUS__1og608w"
           },
           {
             "index": 1,
-            "id": "TRAPEZIUS_RIGHT"
+            "id": "TRAPEZIUS_RIGHT",
+            "selection_key": "TRAPEZIUS__mmwhfe"
           },
           {
             "index": 11,
-            "id": "TRAPEZIUS_LEFT"
+            "id": "TRAPEZIUS_LEFT",
+            "selection_key": "TRAPEZIUS__k54ylm"
           },
           {
             "index": 12,
-            "id": "TRAPEZIUS_RIGHT"
+            "id": "TRAPEZIUS_RIGHT",
+            "selection_key": "TRAPEZIUS__y9ou3s"
           }
         ],
         "female-front": [
           {
             "index": 0,
-            "id": "TRAPEZIUS_RIGHT"
+            "id": "TRAPEZIUS_RIGHT",
+            "selection_key": "TRAPEZIUS__l0i7ka"
           },
           {
             "index": 1,
-            "id": "TRAPEZIUS_LEFT"
+            "id": "TRAPEZIUS_LEFT",
+            "selection_key": "TRAPEZIUS__7w7i5y"
           }
         ],
         "female-back": [
           {
             "index": 0,
-            "id": "TRAPEZIUS_RIGHT"
+            "id": "TRAPEZIUS_RIGHT",
+            "selection_key": "TRAPEZIUS__1ndzohx"
           },
           {
             "index": 1,
-            "id": "TRAPEZIUS_LEFT"
+            "id": "TRAPEZIUS_LEFT",
+            "selection_key": "TRAPEZIUS__ynznm1"
           },
           {
             "index": 2,
-            "id": "TRAPEZIUS_RIGHT"
+            "id": "TRAPEZIUS_RIGHT",
+            "selection_key": "TRAPEZIUS__1rmdg1s"
           },
           {
             "index": 3,
-            "id": "TRAPEZIUS_LEFT"
+            "id": "TRAPEZIUS_LEFT",
+            "selection_key": "TRAPEZIUS__39krnl"
           }
         ]
       },
@@ -126,21 +139,25 @@
         "male-front": [
           {
             "index": 2,
-            "id": "CHEST_LEFT"
+            "id": "CHEST_LEFT",
+            "selection_key": "CHEST__bcrs7o"
           },
           {
             "index": 3,
-            "id": "CHEST_RIGHT"
+            "id": "CHEST_RIGHT",
+            "selection_key": "CHEST__5kozk"
           }
         ],
         "female-front": [
           {
             "index": 2,
-            "id": "CHEST_RIGHT"
+            "id": "CHEST_RIGHT",
+            "selection_key": "CHEST__htxboe"
           },
           {
             "index": 12,
-            "id": "CHEST_LEFT"
+            "id": "CHEST_LEFT",
+            "selection_key": "CHEST__obce9"
           }
         ]
       },
@@ -176,21 +193,25 @@
         "male-front": [
           {
             "index": 4,
-            "id": "SHOULDER_FRONT_RIGHT"
+            "id": "SHOULDER_FRONT_RIGHT",
+            "selection_key": "SHOULDERS_FRONT__8xmwd5"
           },
           {
             "index": 9,
-            "id": "SHOULDER_FRONT_LEFT"
+            "id": "SHOULDER_FRONT_LEFT",
+            "selection_key": "SHOULDERS_FRONT__j6llv9"
           }
         ],
         "female-front": [
           {
             "index": 3,
-            "id": "SHOULDER_FRONT_RIGHT"
+            "id": "SHOULDER_FRONT_RIGHT",
+            "selection_key": "SHOULDERS_FRONT__1pj66vq"
           },
           {
             "index": 13,
-            "id": "SHOULDER_FRONT_LEFT"
+            "id": "SHOULDER_FRONT_LEFT",
+            "selection_key": "SHOULDERS_FRONT__14ui2k4"
           }
         ]
       },
@@ -226,41 +247,49 @@
         "male-front": [
           {
             "index": 5,
-            "id": "SHOULDER_SIDE_RIGHT"
+            "id": "SHOULDER_SIDE_RIGHT",
+            "selection_key": "SHOULDERS_SIDE__6w2ck2"
           },
           {
             "index": 10,
-            "id": "SHOULDER_SIDE_LEFT"
+            "id": "SHOULDER_SIDE_LEFT",
+            "selection_key": "SHOULDERS_SIDE__1jru0rf"
           }
         ],
         "male-back": [
           {
             "index": 3,
-            "id": "SHOULDER_SIDE_LEFT"
+            "id": "SHOULDER_SIDE_LEFT",
+            "selection_key": "SHOULDERS_SIDE__1hg9g4g"
           },
           {
             "index": 5,
-            "id": "SHOULDER_SIDE_RIGHT"
+            "id": "SHOULDER_SIDE_RIGHT",
+            "selection_key": "SHOULDERS_SIDE__lb4kqm"
           }
         ],
         "female-front": [
           {
             "index": 4,
-            "id": "SHOULDER_SIDE_RIGHT"
+            "id": "SHOULDER_SIDE_RIGHT",
+            "selection_key": "SHOULDERS_SIDE__1uuswwa"
           },
           {
             "index": 14,
-            "id": "SHOULDER_SIDE_LEFT"
+            "id": "SHOULDER_SIDE_LEFT",
+            "selection_key": "SHOULDERS_SIDE__1m3n30o"
           }
         ],
         "female-back": [
           {
             "index": 5,
-            "id": "SHOULDER_SIDE_RIGHT"
+            "id": "SHOULDER_SIDE_RIGHT",
+            "selection_key": "SHOULDERS_SIDE__99toe7"
           },
           {
             "index": 6,
-            "id": "SHOULDER_SIDE_LEFT"
+            "id": "SHOULDER_SIDE_LEFT",
+            "selection_key": "SHOULDERS_SIDE__1f428k6"
           }
         ]
       },
@@ -310,21 +339,25 @@
         "male-back": [
           {
             "index": 2,
-            "id": "SHOULDER_REAR_LEFT"
+            "id": "SHOULDER_REAR_LEFT",
+            "selection_key": "SHOULDERS_REAR__17aujez"
           },
           {
             "index": 4,
-            "id": "SHOULDER_REAR_RIGHT"
+            "id": "SHOULDER_REAR_RIGHT",
+            "selection_key": "SHOULDERS_REAR__1c7enuk"
           }
         ],
         "female-back": [
           {
             "index": 4,
-            "id": "SHOULDER_REAR_RIGHT"
+            "id": "SHOULDER_REAR_RIGHT",
+            "selection_key": "SHOULDERS_REAR__yphqvw"
           },
           {
             "index": 7,
-            "id": "SHOULDER_REAR_LEFT"
+            "id": "SHOULDER_REAR_LEFT",
+            "selection_key": "SHOULDERS_REAR__1vjsov3"
           }
         ]
       },
@@ -360,21 +393,25 @@
         "male-front": [
           {
             "index": 6,
-            "id": "BICEPS_RIGHT"
+            "id": "BICEPS_RIGHT",
+            "selection_key": "BICEPS__1re4brn"
           },
           {
             "index": 11,
-            "id": "BICEPS_LEFT"
+            "id": "BICEPS_LEFT",
+            "selection_key": "BICEPS__voquju"
           }
         ],
         "female-front": [
           {
             "index": 6,
-            "id": "BICEPS_RIGHT"
+            "id": "BICEPS_RIGHT",
+            "selection_key": "BICEPS__kf91kv"
           },
           {
             "index": 15,
-            "id": "BICEPS_LEFT"
+            "id": "BICEPS_LEFT",
+            "selection_key": "BICEPS__ehq14h"
           }
         ]
       },
@@ -410,41 +447,49 @@
         "male-front": [
           {
             "index": 7,
-            "id": "TRICEPS_RIGHT"
+            "id": "TRICEPS_RIGHT",
+            "selection_key": "TRICEPS__1dfwdk0"
           },
           {
             "index": 12,
-            "id": "TRICEPS_LEFT"
+            "id": "TRICEPS_LEFT",
+            "selection_key": "TRICEPS__tardkr"
           }
         ],
         "male-back": [
           {
             "index": 6,
-            "id": "TRICEPS_RIGHT"
+            "id": "TRICEPS_RIGHT",
+            "selection_key": "TRICEPS__1q09s3q"
           },
           {
             "index": 8,
-            "id": "TRICEPS_LEFT"
+            "id": "TRICEPS_LEFT",
+            "selection_key": "TRICEPS__a166nl"
           }
         ],
         "female-front": [
           {
             "index": 5,
-            "id": "TRICEPS_RIGHT"
+            "id": "TRICEPS_RIGHT",
+            "selection_key": "TRICEPS__5tyg3m"
           },
           {
             "index": 16,
-            "id": "TRICEPS_LEFT"
+            "id": "TRICEPS_LEFT",
+            "selection_key": "TRICEPS__2ffu53"
           }
         ],
         "female-back": [
           {
             "index": 27,
-            "id": "TRICEPS_LEFT"
+            "id": "TRICEPS_LEFT",
+            "selection_key": "TRICEPS__1w5ufnd"
           },
           {
             "index": 28,
-            "id": "TRICEPS_RIGHT"
+            "id": "TRICEPS_RIGHT",
+            "selection_key": "TRICEPS__1v505vq"
           }
         ]
       },
@@ -494,41 +539,49 @@
         "male-front": [
           {
             "index": 8,
-            "id": "FOREARM_RIGHT"
+            "id": "FOREARM_RIGHT",
+            "selection_key": "FOREARMS__1813y7l"
           },
           {
             "index": 13,
-            "id": "FOREARM_LEFT"
+            "id": "FOREARM_LEFT",
+            "selection_key": "FOREARMS__ki2vbd"
           }
         ],
         "male-back": [
           {
             "index": 7,
-            "id": "FOREARM_RIGHT"
+            "id": "FOREARM_RIGHT",
+            "selection_key": "FOREARMS__1b5iozi"
           },
           {
             "index": 9,
-            "id": "FOREARM_LEFT"
+            "id": "FOREARM_LEFT",
+            "selection_key": "FOREARMS__e92mpd"
           }
         ],
         "female-front": [
           {
             "index": 7,
-            "id": "FOREARM_RIGHT"
+            "id": "FOREARM_RIGHT",
+            "selection_key": "FOREARMS__5x5990"
           },
           {
             "index": 17,
-            "id": "FOREARM_LEFT"
+            "id": "FOREARM_LEFT",
+            "selection_key": "FOREARMS__1xw7o5m"
           }
         ],
         "female-back": [
           {
             "index": 26,
-            "id": "FOREARM_LEFT"
+            "id": "FOREARM_LEFT",
+            "selection_key": "FOREARMS__ifeavt"
           },
           {
             "index": 29,
-            "id": "FOREARM_RIGHT"
+            "id": "FOREARM_RIGHT",
+            "selection_key": "FOREARMS__4sdfwc"
           }
         ]
       },
@@ -578,41 +631,49 @@
         "male-front": [
           {
             "index": 14,
-            "id": "OBLIQUE_RIGHT"
+            "id": "OBLIQUE_RIGHT",
+            "selection_key": "OBLIQUES__1c0e8tn"
           },
           {
             "index": 17,
-            "id": "OBLIQUE_LEFT"
+            "id": "OBLIQUE_LEFT",
+            "selection_key": "OBLIQUES__1pkfn5f"
           }
         ],
         "male-back": [
           {
             "index": 18,
-            "id": "OBLIQUE_LEFT"
+            "id": "OBLIQUE_LEFT",
+            "selection_key": "OBLIQUES__mirzin"
           },
           {
             "index": 19,
-            "id": "OBLIQUE_RIGHT"
+            "id": "OBLIQUE_RIGHT",
+            "selection_key": "OBLIQUES__ooxkyr"
           }
         ],
         "female-front": [
           {
             "index": 8,
-            "id": "OBLIQUE_RIGHT"
+            "id": "OBLIQUE_RIGHT",
+            "selection_key": "OBLIQUES__1i600co"
           },
           {
             "index": 11,
-            "id": "OBLIQUE_LEFT"
+            "id": "OBLIQUE_LEFT",
+            "selection_key": "OBLIQUES__1kr5jss"
           }
         ],
         "female-back": [
           {
             "index": 16,
-            "id": "OBLIQUE_RIGHT"
+            "id": "OBLIQUE_RIGHT",
+            "selection_key": "OBLIQUES__16to0eh"
           },
           {
             "index": 17,
-            "id": "OBLIQUE_LEFT"
+            "id": "OBLIQUE_LEFT",
+            "selection_key": "OBLIQUES__onpbh4"
           }
         ]
       },
@@ -662,21 +723,25 @@
         "male-front": [
           {
             "index": 15,
-            "id": "CORE_RIGHT"
+            "id": "CORE_RIGHT",
+            "selection_key": "CORE__1fb3h8o"
           },
           {
             "index": 16,
-            "id": "CORE_LEFT"
+            "id": "CORE_LEFT",
+            "selection_key": "CORE__1d216b0"
           }
         ],
         "female-front": [
           {
             "index": 9,
-            "id": "CORE_RIGHT"
+            "id": "CORE_RIGHT",
+            "selection_key": "CORE__128wiym"
           },
           {
             "index": 10,
-            "id": "CORE_LEFT"
+            "id": "CORE_LEFT",
+            "selection_key": "CORE__130cxqv"
           }
         ]
       },
@@ -712,41 +777,49 @@
         "male-front": [
           {
             "index": 18,
-            "id": "ABDUCTOR_LEFT"
+            "id": "ABDUCTOR_LEFT",
+            "selection_key": "ABDUCTORS__1gh5d8e"
           },
           {
             "index": 21,
-            "id": "ABDUCTOR_RIGHT"
+            "id": "ABDUCTOR_RIGHT",
+            "selection_key": "ABDUCTORS__a9zwuw"
           }
         ],
         "male-back": [
           {
             "index": 22,
-            "id": "ABDUCTOR_LEFT"
+            "id": "ABDUCTOR_LEFT",
+            "selection_key": "ABDUCTORS__p3drvb"
           },
           {
             "index": 23,
-            "id": "ABDUCTOR_RIGHT"
+            "id": "ABDUCTOR_RIGHT",
+            "selection_key": "ABDUCTORS__1ntjmd1"
           }
         ],
         "female-front": [
           {
             "index": 20,
-            "id": "ABDUCTOR_LEFT"
+            "id": "ABDUCTOR_LEFT",
+            "selection_key": "ABDUCTORS__1yr99lk"
           },
           {
             "index": 21,
-            "id": "ABDUCTOR_RIGHT"
+            "id": "ABDUCTOR_RIGHT",
+            "selection_key": "ABDUCTORS__32o9b4"
           }
         ],
         "female-back": [
           {
             "index": 19,
-            "id": "ABDUCTOR_LEFT"
+            "id": "ABDUCTOR_LEFT",
+            "selection_key": "ABDUCTORS__12gibaa"
           },
           {
             "index": 20,
-            "id": "ABDUCTOR_RIGHT"
+            "id": "ABDUCTOR_RIGHT",
+            "selection_key": "ABDUCTORS__13xkse0"
           }
         ]
       },
@@ -796,37 +869,45 @@
         "male-front": [
           {
             "index": 19,
-            "id": "QUADRICEPS_LEFT"
+            "id": "QUADRICEPS_LEFT",
+            "selection_key": "QUADS__7mql1n"
           },
           {
             "index": 20,
-            "id": "QUADRICEPS_RIGHT"
+            "id": "QUADRICEPS_RIGHT",
+            "selection_key": "QUADS__8w40wn"
           },
           {
             "index": 22,
-            "id": null
+            "id": null,
+            "selection_key": "QUADS__4vt60n"
           },
           {
             "index": 23,
-            "id": null
+            "id": null,
+            "selection_key": "QUADS__klu6cx"
           }
         ],
         "female-front": [
           {
             "index": 19,
-            "id": "QUADRICEPS_LEFT"
+            "id": "QUADRICEPS_LEFT",
+            "selection_key": "QUADS__1cogl4a"
           },
           {
             "index": 23,
-            "id": "QUADRICEPS_RIGHT"
+            "id": "QUADRICEPS_RIGHT",
+            "selection_key": "QUADS__3ubhw9"
           },
           {
             "index": 26,
-            "id": "QUADRICEPS_LEFT"
+            "id": "QUADRICEPS_LEFT",
+            "selection_key": "QUADS__5nmbt1"
           },
           {
             "index": 27,
-            "id": "QUADRICEPS_RIGHT"
+            "id": "QUADRICEPS_RIGHT",
+            "selection_key": "QUADS__1v7f5o6"
           }
         ]
       },
@@ -862,41 +943,49 @@
         "male-front": [
           {
             "index": 24,
-            "id": "CALVES_LEFT"
+            "id": "CALVES_LEFT",
+            "selection_key": "CALVES__16twjoy"
           },
           {
             "index": 25,
-            "id": "CALVES_RIGHT"
+            "id": "CALVES_RIGHT",
+            "selection_key": "CALVES__ui6eid"
           }
         ],
         "male-back": [
           {
             "index": 28,
-            "id": "CALVES_LEFT"
+            "id": "CALVES_LEFT",
+            "selection_key": "CALVES__7hx5j3"
           },
           {
             "index": 29,
-            "id": "CALVES_RIGHT"
+            "id": "CALVES_RIGHT",
+            "selection_key": "CALVES__16s58yv"
           }
         ],
         "female-front": [
           {
             "index": 24,
-            "id": "CALVES_LEFT"
+            "id": "CALVES_LEFT",
+            "selection_key": "CALVES__96yqhq"
           },
           {
             "index": 25,
-            "id": "CALVES_RIGHT"
+            "id": "CALVES_RIGHT",
+            "selection_key": "CALVES__1595din"
           }
         ],
         "female-back": [
           {
             "index": 22,
-            "id": "CALVES_LEFT"
+            "id": "CALVES_LEFT",
+            "selection_key": "CALVES__zhdq0n"
           },
           {
             "index": 23,
-            "id": "CALVES_RIGHT"
+            "id": "CALVES_RIGHT",
+            "selection_key": "CALVES__zx3gjk"
           }
         ]
       },
@@ -946,41 +1035,49 @@
         "male-front": [
           {
             "index": 26,
-            "id": "ADDUCTOR_LEFT"
+            "id": "ADDUCTOR_LEFT",
+            "selection_key": "ADDUCTORS__1f5xalm"
           },
           {
             "index": 27,
-            "id": "ADDUCTOR_RIGHT"
+            "id": "ADDUCTOR_RIGHT",
+            "selection_key": "ADDUCTORS__17qk8p4"
           }
         ],
         "male-back": [
           {
             "index": 24,
-            "id": "ADDUCTOR_LEFT"
+            "id": "ADDUCTOR_LEFT",
+            "selection_key": "ADDUCTORS__gqxh5a"
           },
           {
             "index": 25,
-            "id": "ADDUCTOR_RIGHT"
+            "id": "ADDUCTOR_RIGHT",
+            "selection_key": "ADDUCTORS__st7tyw"
           }
         ],
         "female-front": [
           {
             "index": 18,
-            "id": "ADDUCTOR_LEFT"
+            "id": "ADDUCTOR_LEFT",
+            "selection_key": "ADDUCTORS__phtkx9"
           },
           {
             "index": 22,
-            "id": "ADDUCTOR_RIGHT"
+            "id": "ADDUCTOR_RIGHT",
+            "selection_key": "ADDUCTORS__1gngszc"
           }
         ],
         "female-back": [
           {
             "index": 24,
-            "id": "ADDUCTOR_LEFT"
+            "id": "ADDUCTOR_LEFT",
+            "selection_key": "ADDUCTORS__2x6es7"
           },
           {
             "index": 25,
-            "id": "ADDUCTOR_RIGHT"
+            "id": "ADDUCTOR_RIGHT",
+            "selection_key": "ADDUCTORS__14wvxsx"
           }
         ]
       },
@@ -1030,21 +1127,25 @@
         "male-back": [
           {
             "index": 10,
-            "id": "RHOMBOID_LEFT"
+            "id": "RHOMBOID_LEFT",
+            "selection_key": "RHOMBOIDS__jwr8kw"
           },
           {
             "index": 13,
-            "id": "RHOMBOID_RIGHT"
+            "id": "RHOMBOID_RIGHT",
+            "selection_key": "RHOMBOIDS__1ox3rmc"
           }
         ],
         "female-back": [
           {
             "index": 8,
-            "id": "RHOMBOID_LEFT"
+            "id": "RHOMBOID_LEFT",
+            "selection_key": "RHOMBOIDS__1la9ndo"
           },
           {
             "index": 10,
-            "id": "RHOMBOID_RIGHT"
+            "id": "RHOMBOID_RIGHT",
+            "selection_key": "RHOMBOIDS__1c0ml8g"
           }
         ]
       },
@@ -1080,21 +1181,25 @@
         "male-back": [
           {
             "index": 14,
-            "id": "LATISSIMUS_LEFT"
+            "id": "LATISSIMUS_LEFT",
+            "selection_key": "LATS__1k7ie58"
           },
           {
             "index": 15,
-            "id": "LATISSIMUS_RIGHT"
+            "id": "LATISSIMUS_RIGHT",
+            "selection_key": "LATS__1d64abf"
           }
         ],
         "female-back": [
           {
             "index": 9,
-            "id": "LATISSIMUS_LEFT"
+            "id": "LATISSIMUS_LEFT",
+            "selection_key": "LATS__gdi44d"
           },
           {
             "index": 11,
-            "id": "LATISSIMUS_RIGHT"
+            "id": "LATISSIMUS_RIGHT",
+            "selection_key": "LATS__1jaftoi"
           }
         ]
       },
@@ -1130,21 +1235,25 @@
         "male-back": [
           {
             "index": 16,
-            "id": "LOWER_BACK_LEFT"
+            "id": "LOWER_BACK_LEFT",
+            "selection_key": "BACK_LOWER__17jikvt"
           },
           {
             "index": 17,
-            "id": "LOWER_BACK_RIGHT"
+            "id": "LOWER_BACK_RIGHT",
+            "selection_key": "BACK_LOWER__1y0lp2l"
           }
         ],
         "female-back": [
           {
             "index": 12,
-            "id": "LOWER_BACK_LEFT"
+            "id": "LOWER_BACK_LEFT",
+            "selection_key": "BACK_LOWER__19728sx"
           },
           {
             "index": 13,
-            "id": "LOWER_BACK_RIGHT"
+            "id": "LOWER_BACK_RIGHT",
+            "selection_key": "BACK_LOWER__iyig1r"
           }
         ]
       },
@@ -1180,21 +1289,25 @@
         "male-back": [
           {
             "index": 20,
-            "id": "GLUTEUS_LEFT"
+            "id": "GLUTEUS_LEFT",
+            "selection_key": "GLUTES__1badomy"
           },
           {
             "index": 21,
-            "id": "GLUTEUS_RIGHT"
+            "id": "GLUTEUS_RIGHT",
+            "selection_key": "GLUTES__d4mjdf"
           }
         ],
         "female-back": [
           {
             "index": 14,
-            "id": "GLUTEUS_LEFT"
+            "id": "GLUTEUS_LEFT",
+            "selection_key": "GLUTES__182d7gj"
           },
           {
             "index": 15,
-            "id": "GLUTEUS_RIGHT"
+            "id": "GLUTEUS_RIGHT",
+            "selection_key": "GLUTES__vjrqu8"
           }
         ]
       },
@@ -1230,21 +1343,25 @@
         "male-back": [
           {
             "index": 26,
-            "id": "HAMSTRINGS_LEFT"
+            "id": "HAMSTRINGS_LEFT",
+            "selection_key": "HAMSTRINGS__9ddhu7"
           },
           {
             "index": 27,
-            "id": "HAMSTRINGS_RIGHT"
+            "id": "HAMSTRINGS_RIGHT",
+            "selection_key": "HAMSTRINGS__a1ee4u"
           }
         ],
         "female-back": [
           {
             "index": 18,
-            "id": "HAMSTRINGS_LEFT"
+            "id": "HAMSTRINGS_LEFT",
+            "selection_key": "HAMSTRINGS__p0cliq"
           },
           {
             "index": 21,
-            "id": "HAMSTRINGS_RIGHT"
+            "id": "HAMSTRINGS_RIGHT",
+            "selection_key": "HAMSTRINGS__eogscx"
           }
         ]
       },
@@ -1268,12 +1385,14 @@
   ],
   "source_verification": {
     "verified_at": "2026-11-27",
-    "source_blob_sha": "2daa10b80530a506453271c8e935918415297b1b",
+    "source_blob_sha": "9fb3ca1e0a6eaf6e756804a5de7b95180ddebbb6",
     "inventory_path_count": 116,
     "catalog_entry_count": 116,
     "catalog_index_id_group_consistency": "passed",
     "browser_visual_validation": "not_run",
     "anatomical_geometry_validation": "not_run",
-    "note": "Nested and top-level source fingerprints are synchronized to the exact committed prototype blob. Inventory structure is checked by tests; browser visual and anatomical geometry validation remain not_run."
+    "note": "Stable geometry-derived selection keys are recorded per catalog path. This fixes duplicate legacy SVG IDs and avoids array-index identity drift. Browser visual and anatomical geometry validation remain not_run.",
+    "path_identity": "stable_geometry_fingerprint",
+    "path_identity_collisions": "none_in_current_four_view_inventory"
   }
 }
