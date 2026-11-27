@@ -50,7 +50,7 @@ iframe{width:100%;height:min(78vh,1000px);border:0;border-radius:10px;background
 <script>
 const frame=document.getElementById('preview'),list=document.getElementById('list'),meta=document.getElementById('meta');
 const sex=document.getElementById('sex'),view=document.getElementById('view'),group=document.getElementById('group'),search=document.getElementById('search');
-let activeKey='',dim=true;
+let activeKey='',dim=true,syncing=false;
 function doc(){return frame.contentDocument}
 function controls(){const d=doc();if(!d||!d.getElementById('bodySvg'))return false;d.getElementById('sex').value=sex.value;d.getElementById('view').value=view.value;d.getElementById('sex').dispatchEvent(new Event('change',{bubbles:true}));d.getElementById('view').dispatchEvent(new Event('change',{bubbles:true}));return true}
 function paths(){return [...doc().querySelectorAll('#bodySvg .muscle')]}
@@ -67,7 +67,7 @@ const b=document.createElement('button');b.type='button';b.className='item'+(p.d
 if(!list.children.length)list.innerHTML='<div class="notice">مسیر منطبق پیدا نشد.</div>';}
 function refresh(){if(!controls())return;activeKey='';restore();const groups=[...new Set(paths().map(p=>p.dataset.group))].sort();group.innerHTML='<option value="">همه عضلات</option>';groups.forEach(g=>{const o=document.createElement('option');o.value=g;o.textContent=g;group.appendChild(o)});meta.textContent='برای بررسی، یک مسیر از فهرست انتخاب کن.';renderList();document.getElementById('frameTitle').textContent='پیش‌نمایش '+(sex.value==='male'?'آقا':'خانم')+' · '+(view.value==='front'?'نمای جلو':'نمای پشت');}
 frame.addEventListener('load',()=>setTimeout(refresh,500));
-sex.addEventListener('change',refresh);view.addEventListener('change',refresh);group.addEventListener('change',renderList);search.addEventListener('input',renderList);
+sex.addEventListener('change',()=>{if(!syncing)refresh()});view.addEventListener('change',()=>{if(!syncing)refresh()});group.addEventListener('change',renderList);search.addEventListener('input',renderList);
 document.getElementById('dim').addEventListener('click',e=>{dim=!dim;e.currentTarget.classList.toggle('active',dim);if(activeKey)select(activeKey)});
 document.getElementById('reset').addEventListener('click',()=>{activeKey='';restore();meta.textContent='برای بررسی، یک مسیر از فهرست انتخاب کن.';renderList()});
 </script>
