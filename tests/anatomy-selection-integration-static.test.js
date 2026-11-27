@@ -27,6 +27,8 @@ assert.match(adapter,/role:null/,'main/assisting role must remain unset until so
 assert.match(controller,/keyFor\(p,index\)===key/,'SVG path lookup must use stable data-key, not child order');
 
 assert.match(html,/function keyFor\(m,index\)[\s\S]*?Math\.imul/,'SVG path identity must be derived from geometry, not array position');
+assert.match(html,/hashB=0x9e3779b9/,'path identity must use a second independent hash lane');
+assert.match(html,/Duplicate anatomy geometry identity/,'rendering must fail closed on a geometry-key collision');
 assert.doesNotMatch(html,/return \(m\.id\|\|m\.group\)\+"__"\+index/,'legacy ID-plus-index identity must not return');
 assert.match(controller,/geometry-derived path keys must be unique/,'browser smoke must guard unique geometry keys');
 assert.match(controller,/rendered keys must match stable source geometry keys/,'browser smoke must guard rendered/source key parity');
