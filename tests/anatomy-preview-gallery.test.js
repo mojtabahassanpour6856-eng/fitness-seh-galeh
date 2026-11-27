@@ -7,7 +7,6 @@ const gallery = fs.readFileSync("experiments/anatomy-preview-gallery.html", "utf
 const capture = fs.readFileSync("experiments/anatomy-preview-capture.html", "utf8");
 const workflow = fs.readFileSync(".github/workflows/anatomy-experiment-checks.yml", "utf8");
 const inspector = fs.readFileSync("experiments/anatomy-geometry-inspector.html", "utf8");
-const inspector = fs.readFileSync("experiments/anatomy-geometry-inspector.html", "utf8");
 
 const views = ["male-front", "male-back", "female-front", "female-back"];
 for (const view of views) {
