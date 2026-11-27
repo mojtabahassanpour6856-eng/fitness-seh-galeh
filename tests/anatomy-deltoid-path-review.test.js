@@ -32,6 +32,10 @@ for (const button of buttons) {
     "selector key must exist in the catalog for " + button.view + ": " + button.key);
 }
 assert.match(review, /captureReady!=="true"/, 'deltoid review must reject capture pages that are not validated');
+assert.match(review, /frame\.contentDocument\?\.getElementById\("anatomy"\)\?\.contentDocument/,
+  "review page must resolve the prototype SVG through the capture page nested iframe");
+assert.match(review, /captureDoc\?\.getElementById\("anatomy"\)\?\.contentDocument/,
+  "review readiness must validate the same nested prototype document used for highlighting");
 assert.match(review, /paths\.find\(p=>p\.dataset\.key===activeKey\)/,
   "review page must resolve the selected stable key to exactly one rendered path");
 assert.match(review, /missing=buttons\.filter\(b=>!paths\.some\(p=>p\.dataset\.key===b\.dataset\.key\)\)/,
