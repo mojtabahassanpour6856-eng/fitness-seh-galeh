@@ -21,8 +21,18 @@ iframe{width:100%;height:100%;border:0}
 <section class="panel"><h2>مدل خانم · پشت</h2><div class="tools"><button type="button" data-key="SHOULDERS_SIDE__99toe7-30atar" data-view="female-back" class="active">دلتوئید جانبی · راست</button><button type="button" data-key="SHOULDERS_SIDE__1f428k6-115m1l2" data-view="female-back" >دلتوئید جانبی · چپ</button><button type="button" data-key="SHOULDERS_REAR__yphqvw-12tv4rx" data-view="female-back" >دلتوئید خلفی · راست</button><button type="button" data-key="SHOULDERS_REAR__1vjsov3-19yw8j8" data-view="female-back" >دلتوئید خلفی · چپ</button></div><div class="stage"><iframe title="مدل خانم · پشت" src="./anatomy-preview-capture.html?view=female-back"></iframe></div><p class="status" aria-live="polite">در حال بارگذاری و اعتبارسنجی…</p></section></main>
 <div class="note"><strong>محدودیت مهم:</strong> برجسته‌سازی مسیر، تأیید آناتومیک نیست. رنگ قرمز صرفاً انتخاب مسیر است. این ابزار فقط برای مشاهده و مقایسه است و هیچ داده یا هندسه‌ای را تغییر نمی‌دهد. اگر مسیر مشکوک بود، پیش از هر اصلاح به مرجع معتبر و نظر متخصص نیاز است.</div>
 <script>
-document.querySelectorAll(".panel").forEach(panel=>{
+const reviewRoot=document.documentElement;
+const reviewPanels=[...document.querySelectorAll(".panel")];
+const loadedViews=new Set();
+function updateReviewReadiness(){
+ const order=["male-front","male-back","female-front","female-back"];
+ const loaded=order.filter(v=>loadedViews.has(v));
+ reviewRoot.dataset.loadedViews=loaded.join(",");
+ reviewRoot.dataset.reviewReady=String(loaded.length===4&&reviewPanels.every(p=>p.dataset.panelReady==="true"));
+}
+reviewPanels.forEach(panel=>{
  const frame=panel.querySelector("iframe"),status=panel.querySelector(".status"),buttons=[...panel.querySelectorAll("button")];
+ const view=buttons[0]?.dataset.view;
  let ready=false,activeKey=buttons[0]?.dataset.key;
  function apply(){
   if(!ready)return;
@@ -41,15 +51,20 @@ document.querySelectorAll(".panel").forEach(panel=>{
    });
    target.style.filter="drop-shadow(0 0 5px #d94b45)";
    status.textContent="مسیر فعال: "+target.dataset.id+" · "+activeKey+" · تعداد مسیرهای نمای حاضر: "+paths.length;
-  }catch(e){status.textContent="خطا در برجسته‌سازی: "+e.message}
+  }catch(e){status.textContent="خطا در برجسته‌سازی: "+e.message;panel.dataset.panelReady="false";updateReviewReadiness()}
  }
  frame.addEventListener("load",()=>{
   try{
-   const root=frame.contentDocument.documentElement;
-   if(root.dataset.captureReady!=="true")throw new Error(root.dataset.captureError||"اعتبارسنجی چهار نما ناموفق");
-   ready=true;apply();
-  }catch(e){status.textContent="بارگذاری ناموفق: "+e.message}
+   const doc=frame.contentDocument,root=doc?.documentElement,svg=doc?.getElementById("bodySvg");
+   if(root?.dataset.captureReady!=="true")throw new Error(root?.dataset.captureError||"اعتبارسنجی چهار نما ناموفق");
+   if(!svg)throw new Error("SVG در دسترس نیست");
+   const paths=[...svg.querySelectorAll(".muscle")];
+   const missing=buttons.filter(b=>!paths.some(p=>p.dataset.key===b.dataset.key));
+   if(missing.length)throw new Error("کلید مسیر ناموجود: "+missing.map(b=>b.dataset.key).join(", "));
+   ready=true;panel.dataset.panelReady="true";loadedViews.add(view);apply();updateReviewReadiness();
+  }catch(e){panel.dataset.panelReady="false";status.textContent="بارگذاری ناموفق: "+e.message;updateReviewReadiness()}
  });
+ frame.addEventListener("error",()=>{panel.dataset.panelReady="false";status.textContent="خطا در بارگذاری نمای بدن";updateReviewReadiness()});
  buttons.forEach(b=>b.addEventListener("click",()=>{
   activeKey=b.dataset.key;buttons.forEach(x=>x.classList.toggle("active",x===b));apply();
  }));
