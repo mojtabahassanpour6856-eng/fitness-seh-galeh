@@ -21,3 +21,8 @@ assert.match(controller,/const countNode=document\.getElementById\('count'\)/,'c
 assert.match(controller,/selectedNode\.innerHTML/,'controller must use explicit selected-list DOM reference');
 assert.doesNotMatch(controller,/(?<![A-Za-z])count\.textContent/,'controller must not rely on implicit window ID globals');
 assert.doesNotMatch(controller,/(?<![A-Za-z])selected\.innerHTML/,'controller must not rely on implicit window ID globals');
+assert.match(controller,/const combos=\['male-front','male-back','female-front','female-back'\]/,'browser smoke must cover all four sex/view combinations');
+assert.match(controller,/keyboard Enter selects muscle/,'browser smoke must validate keyboard selection');
+assert.match(controller,/secondary color updates/,'browser smoke must validate assisting-muscle color');
+assert.match(controller,/clear button resets current view/,'browser smoke must validate clear action');
+
