@@ -89,7 +89,7 @@
     {
       "source_label": "پا",
       "anatomy_group_ids": [
-        "quadriceps",
+        "quads",
         "hamstrings",
         "adductors",
         "abductors",
@@ -103,7 +103,7 @@
     {
       "source_label": "عضله چهارسر ران",
       "anatomy_group_ids": [
-        "quadriceps"
+        "quads"
       ],
       "mapping": "exact_group",
       "confidence": "high"
@@ -111,7 +111,7 @@
     {
       "source_label": "کنترل و تقویت چهارسر ران",
       "anatomy_group_ids": [
-        "quadriceps"
+        "quads"
       ],
       "mapping": "exact_group",
       "confidence": "high"
@@ -119,7 +119,7 @@
     {
       "source_label": "عضله چهارسر و خم‌کننده‌های ران",
       "anatomy_group_ids": [
-        "quadriceps",
+        "quads",
         "hamstrings"
       ],
       "mapping": "multi_group_region",
@@ -261,7 +261,7 @@
     {
       "source_label": "قدرت عملکردی پا و کنترل زانو",
       "anatomy_group_ids": [
-        "quadriceps",
+        "quads",
         "hamstrings",
         "glutes"
       ],
@@ -271,7 +271,7 @@
     {
       "source_label": "قدرت عملکردی پاها",
       "anatomy_group_ids": [
-        "quadriceps",
+        "quads",
         "hamstrings",
         "glutes",
         "calves"
