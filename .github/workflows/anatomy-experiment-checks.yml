@@ -104,6 +104,23 @@ jobs:
               test -s "/tmp/anatomy-inspector-${model}-${direction}.png"
             done
           done
+          # Focused multi-path review sheets for the four known ambiguous source groups.
+          while read -r model direction group expected; do
+            name="${model}-${direction}-${group,,}"
+            url="http://127.0.0.1:8765/anatomy-geometry-inspector.html?sex=${model}&view=${direction}&group=${group}"
+            "$CHROME_PATH" --headless --no-sandbox --disable-gpu --virtual-time-budget=12000 --dump-dom "$url" >"/tmp/anatomy-group-review-${name}-dom.html"
+            grep -q 'data-inspector-ready="true"' "/tmp/anatomy-group-review-${name}-dom.html"
+            grep -q 'data-group-review-ready="true"' "/tmp/anatomy-group-review-${name}-dom.html"
+            grep -q "data-group-review-group=\"${group}\"" "/tmp/anatomy-group-review-${name}-dom.html"
+            grep -q "data-group-review-count=\"${expected}\"" "/tmp/anatomy-group-review-${name}-dom.html"
+            "$CHROME_PATH" --headless --no-sandbox --disable-gpu --hide-scrollbars --window-size=1800,1900 --virtual-time-budget=12000 --screenshot="/tmp/anatomy-group-review-${name}.png" "$url"
+            test -s "/tmp/anatomy-group-review-${name}.png"
+          done <<'GROUP_REVIEWS'
+          male front QUADS 4
+          female front QUADS 4
+          male back TRAPEZIUS 4
+          female back TRAPEZIUS 4
+          GROUP_REVIEWS
           cp /tmp/anatomy-inspector-male-front.png /tmp/anatomy-geometry-inspector.png
           "$CHROME_PATH" --headless --no-sandbox --disable-gpu --virtual-time-budget=7000 --dump-dom "http://127.0.0.1:8765/anatomy-smart-prototype.html?smoke=1" >/tmp/anatomy-dom.html
           grep -q 'id="bodySvg"' /tmp/anatomy-dom.html
@@ -129,6 +146,8 @@ jobs:
             /tmp/anatomy-inspector-*-back.png
             /tmp/anatomy-inspector-*-front-dom.html
             /tmp/anatomy-inspector-*-back-dom.html
+            /tmp/anatomy-group-review-*.png
+            /tmp/anatomy-group-review-*-dom.html
             /tmp/anatomy-preview-gallery.png
             /tmp/anatomy-deltoid-review.png
             /tmp/anatomy-deltoid-review-dom.html
