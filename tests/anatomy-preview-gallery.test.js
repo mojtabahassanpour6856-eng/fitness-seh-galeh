@@ -18,7 +18,9 @@ assert.match(gallery, /مرزبندی یا صحت آناتومیک عضلات ن
 assert.match(capture, /getElementById\("sex"\)/, "capture page must set body model");
 assert.match(capture, /getElementById\("view"\)/, "capture page must set view");
 assert.match(capture, /dataset\.pathCount/, "capture page must report rendered muscle path count");
-assert.match(capture, /dataset\.captureReady=String\(paths>0\)/, "capture page must expose readiness only when paths render");
+assert.match(capture, /"male-front":28,"male-back":30,"female-front":28,"female-back":30/, "capture page must enforce the audited path count for every view");
+assert.match(capture, /dataset\.expectedPathCount/, "capture page must expose the expected path count");
+assert.match(capture, /dataset\.captureReady=String\(paths===expectedPaths\)/, "capture page must be ready only when the exact audited path count renders");
 assert.match(capture, /dispatchEvent\(new Event\("change"/, "capture page must trigger prototype redraw");
 assert.match(workflow, /Capture real anatomy preview/, "workflow must run browser capture");
 assert.match(workflow, /data-capture-ready="true"/, "workflow must wait for rendered paths before each view screenshot");
