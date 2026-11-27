@@ -7,6 +7,7 @@ on:
     paths:
       - 'experiments/anatomy-*.js'
       - 'experiments/anatomy-*.json'
+      - 'experiments/ANATOMY-*.json'
       - 'experiments/anatomy-smart-prototype.html'
       - 'tests/anatomy-*.test.js'
       - '.github/workflows/anatomy-experiment-checks.yml'
