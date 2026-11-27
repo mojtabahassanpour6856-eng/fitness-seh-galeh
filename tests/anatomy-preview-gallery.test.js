@@ -17,8 +17,13 @@ assert.match(gallery, /@media\(max-width:850px\)/, "gallery must be responsive")
 assert.match(gallery, /مرزبندی یا صحت آناتومیک عضلات نیست/, "gallery must state anatomical limitation");
 assert.match(capture, /getElementById\("sex"\)/, "capture page must set body model");
 assert.match(capture, /getElementById\("view"\)/, "capture page must set view");
+assert.match(capture, /dataset\.pathCount/, "capture page must report rendered muscle path count");
+assert.match(capture, /dataset\.captureReady=String\(paths>0\)/, "capture page must expose readiness only when paths render");
 assert.match(capture, /dispatchEvent\(new Event\("change"/, "capture page must trigger prototype redraw");
 assert.match(workflow, /Capture real anatomy preview/, "workflow must run browser capture");
+assert.match(workflow, /data-capture-ready="true"/, "workflow must wait for rendered paths before each view screenshot");
+assert.match(workflow, /data-gallery-ready="true"/, "workflow must wait for all four views before gallery screenshot");
+assert.match(workflow, /data-loaded-views="male-front,male-back,female-front,female-back"/, "workflow must verify the exact four gallery views");
 assert.match(workflow, /anatomy-preview-gallery\.png/, "workflow must capture and upload gallery");
 assert.match(workflow, /name: anatomy-preview/, "workflow must upload preview artifact");
 
