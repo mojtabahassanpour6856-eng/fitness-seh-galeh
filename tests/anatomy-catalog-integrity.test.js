@@ -17,7 +17,7 @@ assert.equal(catalog.source_verification.source_blob_sha, gitBlobSha,
   'catalog source_verification.source_blob_sha must match the prototype Git blob');
 
 // DATA is a JSON-compatible literal embedded in the standalone prototype.
-const match = html.match(/const DATA=(\{[\s\S]*?\});\s*(?:const|let|function)\s/);
+const match = html.match(/const DATA=(\{[\s\S]*?\});\s*window\.__ANATOMY_SOURCE_PATH_COUNT__=[^;]*;\s*const LABELS=/);
 assert.ok(match, 'prototype DATA object must be extractable');
 const data = JSON.parse(match[1]);
 
