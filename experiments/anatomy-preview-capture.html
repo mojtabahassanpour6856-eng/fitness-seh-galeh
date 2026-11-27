@@ -17,18 +17,33 @@ const preview=params.get("view")||"male-front";
 const match=preview.match(/^(male|female)-(front|back)$/);
 if(!match)throw new Error("Unsupported anatomy preview view: "+preview);
 const frame=document.getElementById("anatomy");
+const root=document.documentElement;
+const fail=reason=>{root.dataset.captureError=reason;root.dataset.captureReady="false";};
+frame.addEventListener("error",()=>fail("prototype-frame-load-failed"));
 frame.addEventListener("load",()=>{
- const doc=frame.contentDocument;
- const sex=doc.getElementById("sex"),view=doc.getElementById("view");
- sex.value=match[1];sex.dispatchEvent(new Event("change",{bubbles:true}));
- view.value=match[2];view.dispatchEvent(new Event("change",{bubbles:true}));
- const svg=doc.getElementById("bodySvg");
- const paths=svg?svg.querySelectorAll(".muscle").length:0;
- const expectedPaths={"male-front":28,"male-back":30,"female-front":28,"female-back":30}[preview];
- document.documentElement.dataset.preview=preview;
- document.documentElement.dataset.pathCount=String(paths);
- document.documentElement.dataset.expectedPathCount=String(expectedPaths);
- document.documentElement.dataset.captureReady=String(paths===expectedPaths);
+ try{
+  const doc=frame.contentDocument;
+  if(!doc)throw new Error("prototype-document-unavailable");
+  const sex=doc.getElementById("sex"),view=doc.getElementById("view");
+  if(!sex||!view)throw new Error("prototype-controls-missing");
+  sex.value=match[1];sex.dispatchEvent(new Event("change",{bubbles:true}));
+  view.value=match[2];view.dispatchEvent(new Event("change",{bubbles:true}));
+  const svg=doc.getElementById("bodySvg");
+  const paths=svg?svg.querySelectorAll(".muscle").length:0;
+  const expectedPaths={"male-front":28,"male-back":30,"female-front":28,"female-back":30}[preview];
+  const title=doc.getElementById("figureTitle");
+  const controlsMatch=sex.value===match[1]&&view.value===match[2];
+  const titleMatch=!!title&&title.textContent.includes(match[1]==="male"?"آقا":"خانم")&&title.textContent.includes(match[2]==="front"?"جلوی":"پشتی");
+  root.dataset.preview=preview;
+  root.dataset.sex=sex.value;
+  root.dataset.view=view.value;
+  root.dataset.titleMatch=String(titleMatch);
+  root.dataset.controlsMatch=String(controlsMatch);
+  root.dataset.pathCount=String(paths);
+  root.dataset.expectedPathCount=String(expectedPaths);
+  root.dataset.captureReady=String(paths===expectedPaths&&controlsMatch&&titleMatch);
+  if(root.dataset.captureReady!=="true")root.dataset.captureError="preview-validation-failed";
+ }catch(error){fail(String(error&&error.message||error));}
 });
 </script>
 </body>
