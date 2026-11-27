@@ -133,7 +133,8 @@ Promise.all([fetch(mapUrl).then(r=>{if(!r.ok)throw new Error('mapping '+r.status
  renderSelected();
  const totalPaths=window.__ANATOMY_SOURCE_PATH_COUNT__;
  const visiblePaths=document.querySelectorAll('#bodySvg .muscle').length;
- if(totalPaths!==116||visiblePaths!==28||!document.getElementById('pairStatus')||!document.querySelector('.layout aside section'))throw new Error('Anatomy DOM smoke validation failed');
+ const expectedVisiblePaths=DATA[state.sex+'-'+state.view].muscles.length;
+ if(totalPaths!==116||visiblePaths!==expectedVisiblePaths||!document.getElementById('pairStatus')||!document.querySelector('.layout aside section'))throw new Error('Anatomy DOM smoke validation failed');
  if(new URLSearchParams(location.search).has('smoke')){
   const assertSmoke=(ok,message)=>{if(!ok)throw new Error('Interaction smoke: '+message)};
   const combos=['male-front','male-back','female-front','female-back'];
