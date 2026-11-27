@@ -141,9 +141,12 @@ Promise.all([fetch(mapUrl).then(r=>{if(!r.ok)throw new Error('mapping '+r.status
    const key=target.dataset.key;
    target.dispatchEvent(new MouseEvent('click',{bubbles:true,cancelable:true}));
    assertSmoke(!!selectedMap()[key],combo+' click selects muscle');
+   assertSmoke(Object.keys(selectedMap()).length===1,combo+' click must not select adjacent muscles');
    assertSmoke(document.querySelector('[data-remove-group]')!==null,combo+' selection appears in list');
    const selectedPath=document.querySelector('#bodySvg .muscle[data-key="'+CSS.escape(key)+'"]');
    assertSmoke(!!selectedPath&&selectedPath.classList.contains('primary'),combo+' selected color updates');
+   const neighbor=document.querySelectorAll('#bodySvg .muscle')[1];
+   assertSmoke(!neighbor.classList.contains('primary')&&!neighbor.classList.contains('secondary'),combo+' neighboring muscle color remains unchanged');
    selectedPath.dispatchEvent(new MouseEvent('click',{bubbles:true,cancelable:true}));
    assertSmoke(!selectedMap()[key],combo+' second click clears selection');
   }
@@ -158,6 +161,7 @@ Promise.all([fetch(mapUrl).then(r=>{if(!r.ok)throw new Error('mapping '+r.status
   document.querySelector('#bodySvg .muscle[data-key="'+CSS.escape(key)+'"]').dispatchEvent(new MouseEvent('click',{bubbles:true,cancelable:true}));
   assertSmoke(selectedMap()[key]==='secondary','role change updates selected muscle role');
   assertSmoke(document.querySelector('#bodySvg .muscle[data-key="'+CSS.escape(key)+'"]').classList.contains('secondary'),'role change updates selected color');
+  assertSmoke(Object.keys(selectedMap()).length===1,'role conversion must preserve a single selected path');
   document.querySelector('#bodySvg .muscle[data-key="'+CSS.escape(key)+'"]').dispatchEvent(new MouseEvent('click',{bubbles:true,cancelable:true}));
   assertSmoke(!selectedMap()[key],'second secondary click clears selected muscle');
   document.querySelector('#bodySvg .muscle').dispatchEvent(new MouseEvent('click',{bubbles:true,cancelable:true}));
@@ -166,6 +170,17 @@ Promise.all([fetch(mapUrl).then(r=>{if(!r.ok)throw new Error('mapping '+r.status
   assertSmoke(document.querySelector('#bodySvg .muscle[data-key="'+CSS.escape(secondaryKey)+'"]').classList.contains('secondary'),'secondary color updates');
   document.getElementById('clear').click();
   assertSmoke(Object.keys(selectedMap()).length===0,'clear button resets current view');
+  viewNode.value='back';viewNode.dispatchEvent(new Event('change',{bubbles:true}));
+  const backKey=document.querySelector('#bodySvg .muscle').dataset.key;
+  document.querySelector('#bodySvg .muscle').dispatchEvent(new MouseEvent('click',{bubbles:true,cancelable:true}));
+  assertSmoke(!!selectedMap()[backKey],'selection is stored for the back view');
+  viewNode.value='front';viewNode.dispatchEvent(new Event('change',{bubbles:true}));
+  document.querySelector('#bodySvg .muscle').dispatchEvent(new MouseEvent('click',{bubbles:true,cancelable:true}));
+  const frontKey=document.querySelector('#bodySvg .muscle').dataset.key;
+  document.getElementById('clear').click();
+  assertSmoke(Object.keys(selectedMap()).length===0,'clear button resets only current view');
+  viewNode.value='back';viewNode.dispatchEvent(new Event('change',{bubbles:true}));
+  assertSmoke(!!selectedMap()[backKey],'clearing front view must preserve back-view selection');
   const passed=document.createElement('meta');passed.id='anatomyInteractionSmoke';passed.dataset.result='pass';passed.dataset.combinations=combos.join(',');document.head.appendChild(passed);
  }
  const smoke=document.createElement('meta');smoke.id='anatomySmoke';smoke.dataset.totalPaths=String(totalPaths);smoke.dataset.visiblePaths=String(visiblePaths);smoke.dataset.pairStatus=pairState;document.head.appendChild(smoke);
