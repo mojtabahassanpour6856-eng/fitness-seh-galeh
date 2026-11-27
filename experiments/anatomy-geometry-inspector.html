@@ -42,6 +42,7 @@ iframe{width:100%;height:min(78vh,1000px);border:0;border-radius:10px;background
 <button id="exportJson" type="button">خروجی JSON</button>
 <button id="exportCsv" type="button">خروجی CSV</button>
 <button id="exportSvg" type="button">خروجی تصویر SVG</button>
+<button id="exportReport" type="button">گزارش قابل چاپ</button>
 </div>
 <div id="list" class="list"><div class="notice">در حال بارگذاری مدل…</div></div>
 <div id="meta" class="meta">برای بررسی، یک مسیر انتخاب کن. برای مقایسه، دکمه «انتخاب مسیر دوم» را بزن و مسیر دیگری را انتخاب کن.</div>
@@ -162,6 +163,34 @@ const serialized=new XMLSerializer().serializeToString(clone);
 const stamp=new Date().toISOString().replace(/[:.]/g,'-');
 downloadText('anatomy-path-review-'+sex.value+'-'+view.value+'-'+stamp+'.svg','image/svg+xml;charset=utf-8',serialized);
 }
+function escapeHtml(value){return String(value??'').replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));}
+function exportReviewReport(){
+const records=selectedPathRecords();
+if(!records.length){meta.textContent='برای تهیه گزارش، ابتدا حداقل یک مسیر را انتخاب کن.';return;}
+const source=doc().getElementById('bodySvg'),clone=source.cloneNode(true);
+clone.setAttribute('xmlns','http://www.w3.org/2000/svg');clone.setAttribute('width','900');clone.setAttribute('height','1200');clone.setAttribute('role','img');clone.setAttribute('aria-label','تصویر مسیرهای انتخاب‌شده برای بازبینی هندسی');
+const chosen=new Set(records.map(r=>r.selection_key)),sourceNodes=[...source.querySelectorAll('*')],cloneNodes=[...clone.querySelectorAll('*')];
+sourceNodes.forEach((node,index)=>{const copy=cloneNodes[index];if(!copy)return;const style=getComputedStyle(node);for(const prop of ['fill','stroke','stroke-width','stroke-linejoin','stroke-linecap','opacity','filter']){const value=style.getPropertyValue(prop);if(value)copy.style.setProperty(prop,value);}if(node.classList.contains('muscle')){const selected=chosen.has(node.dataset.key);copy.style.setProperty('opacity',selected?'1':'.16');if(selected){const order=records.findIndex(r=>r.selection_key===node.dataset.key);copy.style.setProperty('stroke',order===0?'#19130b':'#7650a5');copy.style.setProperty('stroke-width','7');copy.style.setProperty('filter','drop-shadow(0 0 4px #fff)');}}});
+const svgMarkup=new XMLSerializer().serializeToString(clone),model=sex.value==='male'?'آقا':'خانم',viewName=view.value==='front'?'جلو':'پشت',now=new Date(),stamp=now.toISOString().replace(/[:.]/g,'-'),date=now.toLocaleString('fa-IR');
+const rows=records.map((r,i)=>'<article class="path"><h3>مسیر '+(i+1)+'</h3><dl>'+
+'<dt>گروه</dt><dd>'+escapeHtml(r.group||'نامشخص')+'</dd>'+
+'<dt>اندیس در نما</dt><dd>'+r.path_index+'</dd>'+
+'<dt>شناسه قدیمی</dt><dd>'+escapeHtml(r.legacy_id||'ندارد')+'</dd>'+
+'<dt>کلید پایدار</dt><dd class="key">'+escapeHtml(r.selection_key)+'</dd>'+
+'<dt>طول مسیر</dt><dd>'+(r.length??'نامشخص')+'</dd>'+
+'<dt>محدوده X / Y</dt><dd>'+r.bbox.x+' / '+r.bbox.y+'</dd>'+
+'<dt>عرض / ارتفاع</dt><dd>'+r.bbox.width+' / '+r.bbox.height+'</dd>'+
+'<dt>رنگ اصلی</dt><dd>'+escapeHtml(r.fill||'نامشخص')+'</dd></dl></article>').join('');
+const report='<!doctype html><html lang="fa" dir="rtl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>گزارش بازبینی هندسی مسیرهای عضلانی</title><style>'+
+'@page{size:A4 landscape;margin:9mm}*{box-sizing:border-box}body{margin:0;background:#f7f1e4;color:#463c2c;font-family:Tahoma,Arial,sans-serif}.page{background:#fff;min-height:190mm;padding:8mm;border:1px solid #e4d8c2}.head{display:flex;justify-content:space-between;align-items:center;border-bottom:2px solid #b58a43;padding-bottom:5mm;margin-bottom:5mm}.brand{font-size:12px;color:#8b6b35;font-weight:bold}.head h1{font-size:20px;margin:5px 0}.meta{font-size:11px;color:#776b59}.layout{display:grid;grid-template-columns:43% 57%;gap:7mm;direction:ltr}.visual,.details{direction:rtl;border:1px solid #e4d8c2;border-radius:10px;padding:4mm;min-width:0}.visual{display:flex;align-items:center;justify-content:center;background:#fbf8f1;max-height:142mm;overflow:hidden}.visual svg{width:100%;height:auto;max-height:137mm}.details h2{font-size:15px;margin:0 0 3mm}.paths{display:grid;grid-template-columns:repeat('+records.length+',minmax(0,1fr));gap:3mm}.path{border:1px solid #e8dcc7;border-radius:8px;padding:3mm;min-width:0}.path h3{margin:0 0 2mm;color:#8b6b35;font-size:12px}dl{display:grid;grid-template-columns:38% 62%;gap:1.5mm;margin:0;font-size:10px}dt{color:#786e5e}dd{margin:0;overflow-wrap:anywhere}.key{font:8px/1.5 monospace;direction:ltr;text-align:left}.note{margin-top:4mm;border:1px dashed #cbb68e;border-radius:8px;padding:3mm;font-size:10px;line-height:1.9}.blank{height:18mm;border-bottom:1px solid #d9cdb8;margin-top:2mm}.warning{margin-top:4mm;padding:3mm;background:#f8f0df;border-right:3px solid #b58a43;font-size:10px;line-height:1.9}.foot{margin-top:3mm;font-size:9px;color:#8b806f;display:flex;justify-content:space-between}.print{position:fixed;left:18px;top:18px;background:#b58a43;color:#fff;border:0;border-radius:8px;padding:10px 16px;cursor:pointer}@media print{body{background:#fff}.page{border:0;min-height:0;padding:0}.print{display:none}}@media screen{body{padding:18px}.page{max-width:1100px;margin:auto;box-shadow:0 4px 24px #0001}}'+
+'</style></head><body><button class="print" onclick="window.print()">چاپ / ذخیره PDF</button><main class="page">'+
+'<header class="head"><div><div class="brand">FITNESS SEH GALEH · فیتنس سه‌قلعه</div><h1>گزارش بازبینی هندسی مسیرهای عضلانی</h1><div class="meta">مدل: '+model+'　|　نما: '+viewName+'　|　تعداد مسیر انتخاب‌شده: '+records.length+'</div></div><div class="meta">تاریخ تهیه: '+date+'</div></header>'+
+'<section class="layout"><div class="visual">'+svgMarkup+'</div><div class="details"><h2>مشخصات مسیرهای انتخاب‌شده</h2><div class="paths">'+rows+'</div>'+
+'<div class="note"><strong>ملاحظات بازبینی متخصص</strong><div>۱. مرزهای قابل مشاهده و هم‌پوشانی‌ها:</div><div class="blank"></div><div>۲. اصلاحات یا منابع مرجع پیشنهادی:</div><div class="blank"></div></div>'+
+'<div class="warning">این گزارش صرفاً برای بازبینی هندسه SVG است؛ تأیید مرزها و نام‌گذاری آناتومیک نیازمند مرجع معتبر و بازبینی متخصص است. طول و محدوده‌ها مختصات هندسی فایل هستند و شاخص اندازه واقعی عضله محسوب نمی‌شوند.</div></div></section>'+
+'<footer class="foot"><span>ابزار بازبینی آزمایشی آناتومی · فیتنس سه‌قلعه</span><span>این گزارش جایگزین ارزیابی تخصصی آناتومی نیست.</span></footer></main></body></html>';
+downloadText('anatomy-review-sheet-'+sex.value+'-'+view.value+'-'+stamp+'.html','text/html;charset=utf-8',report);
+}
 function renderDetails(){
 meta.replaceChildren();
 if(!activeKey){meta.textContent='برای بررسی، یک مسیر انتخاب کن. برای مقایسه، دکمه «انتخاب مسیر دوم» را بزن.';return;}
@@ -182,5 +211,6 @@ document.getElementById('reset').addEventListener('click',()=>{activeKey='';comp
 document.getElementById('exportJson').addEventListener('click',()=>exportSelected('json'));
 document.getElementById('exportCsv').addEventListener('click',()=>exportSelected('csv'));
 document.getElementById('exportSvg').addEventListener('click',exportSelectedSvg);
+document.getElementById('exportReport').addEventListener('click',exportReviewReport);
 </script>
 </body></html>
