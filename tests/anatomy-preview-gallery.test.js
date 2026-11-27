@@ -7,6 +7,7 @@ const gallery = fs.readFileSync("experiments/anatomy-preview-gallery.html", "utf
 const capture = fs.readFileSync("experiments/anatomy-preview-capture.html", "utf8");
 const workflow = fs.readFileSync(".github/workflows/anatomy-experiment-checks.yml", "utf8");
 const inspector = fs.readFileSync("experiments/anatomy-geometry-inspector.html", "utf8");
+const inspector = fs.readFileSync("experiments/anatomy-geometry-inspector.html", "utf8");
 
 const views = ["male-front", "male-back", "female-front", "female-back"];
 for (const view of views) {
@@ -18,6 +19,9 @@ assert.match(gallery, /@media\(max-width:850px\)/, "gallery must be responsive")
 assert.match(gallery, /مرزبندی یا صحت آناتومیک عضلات نیست/, "gallery must state anatomical limitation");
 assert.match(capture, /getElementById\("sex"\)/, "capture page must set body model");
 assert.match(capture, /getElementById\("view"\)/, "capture page must set view");
+assert.match(inspector, /dataset\.inspectorReady=\x27true\x27/, "inspector must expose successful iframe readiness");
+assert.match(inspector, /list\.dataset\.pathCount=String\(paths\(\)\.length\)/, "inspector must expose the loaded path count");
+assert.match(inspector, /dataset\.inspectorError=\x27true\x27/, "inspector must expose terminal iframe initialization failure");
 assert.match(inspector, /function refresh\(\)\{if\(!controls\(\)\)return;[\s\S]*?return true;\}/, "inspector refresh must signal successful iframe initialization to the retry loop");
 assert.match(capture, /dataset\.pathCount/, "capture page must report rendered muscle path count");
 assert.match(capture, /"male-front":28,"male-back":30,"female-front":28,"female-back":30/, "capture page must enforce the audited path count for every view");
@@ -28,6 +32,8 @@ assert.match(capture, /dataset\.titleMatch/, "capture page must expose displayed
 assert.match(capture, /catch\(error\)\{fail\(/, "capture page must report runtime capture failures");
 assert.match(capture, /dispatchEvent\(new Event\("change"/, "capture page must trigger prototype redraw");
 assert.match(workflow, /Capture real anatomy preview/, "workflow must run browser capture");
+assert.match(workflow, /data-inspector-ready="true"/, "workflow must require geometry inspector readiness");
+assert.match(workflow, /data-path-count="28"/, "workflow must verify the inspector loaded the expected path list");
 assert.match(workflow, /data-capture-ready="true"/, "workflow must wait for rendered paths before each view screenshot");
 assert.match(workflow, /data-gallery-ready="true"/, "workflow must wait for all four views before gallery screenshot");
 assert.match(workflow, /data-loaded-views="male-front,male-back,female-front,female-back"/, "workflow must verify the exact four gallery views");
