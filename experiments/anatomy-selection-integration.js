@@ -51,7 +51,7 @@ function renderSelected(){
  const groups=selectedPairs();
  countNode.textContent=groups.length.toLocaleString('fa-IR')+' گروه عضلانی انتخاب‌شده';
  if(!groups.length){selectedNode.innerHTML='<div class="empty">هنوز عضله‌ای انتخاب نشده است.</div>';renderExercises();return}
- selected.innerHTML=groups.map(x=>{
+ selectedNode.innerHTML=groups.map(x=>{
   const d=currentPaths(),pair=pairFor(d[x.indices[0]]);
   const paired=pair.ok&&pair.items.every(y=>Object.entries(selectedMap()).some(([k])=>k===keyFor(y.p,y.i)));
   const roleColor=x.role==='secondary'?'#3389b7':'#d94b45';
