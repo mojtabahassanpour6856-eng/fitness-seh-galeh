@@ -36,11 +36,12 @@ iframe{width:100%;height:min(78vh,1000px);border:0;border-radius:10px;background
 <input id="search" type="search" placeholder="جست‌وجوی نام یا شناسه" aria-label="جست‌وجوی مسیر">
 </div>
 <div class="toolbar">
-<button id="dim" class="active" type="button">کم‌رنگ‌کردن همسایه‌ها</button>
-<button id="reset" type="button">نمایش همه مسیرها</button>
+<button id="dim" class="active" type="button">کم‌رنگ‌کردن مسیرهای دیگر</button>
+<button id="compareMode" type="button">انتخاب مسیر دوم برای مقایسه</button>
+<button id="reset" type="button">پاک‌کردن انتخاب‌ها</button>
 </div>
 <div id="list" class="list"><div class="notice">در حال بارگذاری مدل…</div></div>
-<div id="meta" class="meta">برای بررسی، یک مسیر از فهرست انتخاب کن.</div>
+<div id="meta" class="meta">برای بررسی، یک مسیر انتخاب کن. برای مقایسه، دکمه «انتخاب مسیر دوم» را بزن و مسیر دیگری را انتخاب کن.</div>
 <p class="notice">این ابزار مسیرهای موجود را جداگانه برجسته می‌کند تا بازبینی مرزها آسان‌تر شود. نام گروه و شناسه قدیمی، به‌تنهایی اثبات‌کننده هویت دقیق آناتومیک نیستند.</p>
 </section>
 <section class="card">
@@ -54,25 +55,50 @@ const sex=document.getElementById('sex'),view=document.getElementById('view'),gr
 const initialView=new URLSearchParams(location.search);
 if(['male','female'].includes(initialView.get('sex')))sex.value=initialView.get('sex');
 if(['front','back'].includes(initialView.get('view')))view.value=initialView.get('view');
-let activeKey='',dim=true,syncing=false;
+let activeKey='',compareKey='',compareMode=false,dim=true,syncing=false;
 function doc(){return frame.contentDocument}
 function controls(){const d=doc();if(!d||!d.getElementById('bodySvg'))return false;const innerSex=d.getElementById('sex'),innerView=d.getElementById('view');syncing=true;try{if(innerSex.value!==sex.value){innerSex.value=sex.value;innerSex.dispatchEvent(new Event('change',{bubbles:true}));}if(innerView.value!==view.value){innerView.value=view.value;innerView.dispatchEvent(new Event('change',{bubbles:true}));}}finally{syncing=false;}if(!d.documentElement.dataset.inspectorSyncBound){innerSex.addEventListener('change',()=>{if(syncing)return;sex.value=innerSex.value;refresh()});innerView.addEventListener('change',()=>{if(syncing)return;view.value=innerView.value;refresh()});d.documentElement.dataset.inspectorSyncBound='1';}return true}
 function paths(){return [...doc().querySelectorAll('#bodySvg .muscle')]}
 function restore(){for(const p of paths()){p.style.opacity='';p.style.stroke='';p.style.strokeWidth='';p.style.filter=''}}
-function select(key){activeKey=key;const all=paths();restore();const target=all.find(p=>p.dataset.key===key);if(!target)return;
-if(dim)for(const p of all)if(p!==target)p.style.opacity='.16';
-target.style.opacity='1';target.style.stroke='#19130b';target.style.strokeWidth='8';target.style.filter='drop-shadow(0 0 5px #fff)';
-const index=all.indexOf(target);
-const box=target.getBBox(),length=target.getTotalLength(),d=target.getAttribute('d')||'',svg=doc().getElementById('bodySvg'),viewBox=svg.getAttribute('viewBox')||'نامشخص';meta.replaceChildren();const title=document.createElement('b');title.textContent='جزئیات مسیر انتخاب‌شده';meta.append(title);const grid=document.createElement('div');grid.className='meta-grid';const fields=[['مدل / نما',(sex.value==='male'?'آقا':'خانم')+' / '+(view.value==='front'?'جلو':'پشت')],['اندیس در نما',String(index)],['گروه',target.dataset.group||'نامشخص'],['شناسه قدیمی',target.dataset.id||'ندارد'],['کلید پایدار',key],['طول تقریبی مسیر',Number.isFinite(length)?length.toFixed(1)+' واحد':'نامشخص'],['محدوده X / Y',box.x.toFixed(1)+' / '+box.y.toFixed(1)],['عرض / ارتفاع',box.width.toFixed(1)+' / '+box.height.toFixed(1)],['رنگ پرکننده',getComputedStyle(target).fill],['قاب SVG',viewBox]];for(const [label,value] of fields){const cell=document.createElement('div'),b=document.createElement('b'),span=document.createElement('span');cell.className='meta-cell';b.textContent=label;span.textContent=value;cell.append(b,span);grid.append(cell)}meta.append(grid);const details=document.createElement('details'),summary=document.createElement('summary'),area=document.createElement('textarea');details.className='path-data';summary.textContent='نمایش داده خام مسیر SVG (فقط خواندنی)';area.readOnly=true;area.spellcheck=false;area.value=d;details.append(summary,area);meta.append(details);
-renderList();}
+function select(key){
+if(compareMode&&activeKey&&key!==activeKey){compareKey=key;compareMode=false;document.getElementById('compareMode').classList.remove('active');}
+else{activeKey=key;compareKey='';}
+paintSelection();renderDetails();renderList();
+}
+function paintSelection(){
+const all=paths();restore();
+const keys=[activeKey,compareKey].filter(Boolean);
+if(dim&&keys.length)for(const p of all)if(!keys.includes(p.dataset.key))p.style.opacity='.16';
+keys.forEach((key,i)=>{const p=all.find(x=>x.dataset.key===key);if(!p)return;p.style.opacity='1';p.style.stroke=i===0?'#19130b':'#7650a5';p.style.strokeWidth='8';p.style.filter='drop-shadow(0 0 5px #fff)';});
+}
+function pathCard(key,titleText){
+const all=paths(),target=all.find(p=>p.dataset.key===key);if(!target)return null;
+const index=all.indexOf(target),box=target.getBBox(),length=target.getTotalLength(),svg=doc().getElementById('bodySvg'),viewBox=svg.getAttribute('viewBox')||'نامشخص';
+const card=document.createElement('section');card.className='meta';card.style.marginTop='8px';
+const title=document.createElement('b');title.textContent=titleText;card.append(title);
+const grid=document.createElement('div');grid.className='meta-grid';
+const fields=[['مدل / نما',(sex.value==='male'?'آقا':'خانم')+' / '+(view.value==='front'?'جلو':'پشت')],['اندیس در نما',String(index)],['گروه',target.dataset.group||'نامشخص'],['شناسه قدیمی',target.dataset.id||'ندارد'],['کلید پایدار',key],['طول تقریبی مسیر',Number.isFinite(length)?length.toFixed(1)+' واحد':'نامشخص'],['محدوده X / Y',box.x.toFixed(1)+' / '+box.y.toFixed(1)],['عرض / ارتفاع',box.width.toFixed(1)+' / '+box.height.toFixed(1)],['رنگ پرکننده',getComputedStyle(target).fill],['قاب SVG',viewBox]];
+for(const [label,value] of fields){const cell=document.createElement('div'),b=document.createElement('b'),span=document.createElement('span');cell.className='meta-cell';b.textContent=label;span.textContent=value;cell.append(b,span);grid.append(cell);}
+card.append(grid);
+const details=document.createElement('details'),summary=document.createElement('summary'),area=document.createElement('textarea');details.className='path-data';summary.textContent='نمایش داده خام مسیر SVG (فقط خواندنی)';area.readOnly=true;area.spellcheck=false;area.value=target.getAttribute('d')||'';details.append(summary,area);card.append(details);
+return card;
+}
+function renderDetails(){
+meta.replaceChildren();
+if(!activeKey){meta.textContent='برای بررسی، یک مسیر انتخاب کن. برای مقایسه، دکمه «انتخاب مسیر دوم» را بزن.';return;}
+const note=document.createElement('div');note.textContent=compareKey?'دو مسیر انتخاب‌شده‌اند؛ مقادیر هندسی را کنار هم مقایسه کن. این مقایسه به‌تنهایی اعتبار آناتومیک را ثابت نمی‌کند.':'مسیر اول انتخاب شده است. برای افزودن مسیر دوم، دکمه مقایسه را بزن.';meta.append(note);
+const a=pathCard(activeKey,'مسیر اول');if(a)meta.append(a);
+if(compareKey){const b=pathCard(compareKey,'مسیر دوم');if(b)meta.append(b);}
+}
 function renderList(){const all=paths(),q=search.value.trim().toLowerCase(),g=group.value;list.innerHTML='';
 all.forEach((p,i)=>{const label=(p.getAttribute('aria-label')||p.dataset.group||'').toLowerCase();const identity=(p.dataset.id||'').toLowerCase();if(g&&p.dataset.group!==g)return;if(q&&!label.includes(q)&&!identity.includes(q)&&!p.dataset.key.toLowerCase().includes(q))return;
-const b=document.createElement('button');b.type='button';b.className='item'+(p.dataset.key===activeKey?' active':'');const name=document.createElement('span');name.textContent=(p.getAttribute('aria-label')||p.dataset.group)+' · '+p.dataset.group;const small=document.createElement('small');small.textContent='#'+i+' · '+(p.dataset.id||'no-id');b.append(name,small);b.addEventListener('click',()=>select(p.dataset.key));list.appendChild(b);});
+const b=document.createElement('button');b.type='button';b.className='item'+([activeKey,compareKey].includes(p.dataset.key)?' active':'');const name=document.createElement('span');name.textContent=(p.getAttribute('aria-label')||p.dataset.group)+' · '+p.dataset.group;const small=document.createElement('small');small.textContent='#'+i+' · '+(p.dataset.id||'no-id');b.append(name,small);b.addEventListener('click',()=>select(p.dataset.key));list.appendChild(b);});
 if(!list.children.length)list.innerHTML='<div class="notice">مسیر منطبق پیدا نشد.</div>';}
-function refresh(){if(!controls())return;activeKey='';restore();const groups=[...new Set(paths().map(p=>p.dataset.group))].sort();group.innerHTML='<option value="">همه عضلات</option>';groups.forEach(g=>{const o=document.createElement('option');o.value=g;o.textContent=g;group.appendChild(o)});meta.textContent='برای بررسی، یک مسیر از فهرست انتخاب کن.';renderList();document.getElementById('frameTitle').textContent='پیش‌نمایش '+(sex.value==='male'?'آقا':'خانم')+' · '+(view.value==='front'?'نمای جلو':'نمای پشت');}
+function refresh(){if(!controls())return;activeKey='';compareKey='';compareMode=false;document.getElementById('compareMode').classList.remove('active');restore();const groups=[...new Set(paths().map(p=>p.dataset.group))].sort();group.innerHTML='<option value="">همه عضلات</option>';groups.forEach(g=>{const o=document.createElement('option');o.value=g;o.textContent=g;group.appendChild(o)});renderDetails();renderList();document.getElementById('frameTitle').textContent='پیش‌نمایش '+(sex.value==='male'?'آقا':'خانم')+' · '+(view.value==='front'?'نمای جلو':'نمای پشت');}
 frame.addEventListener('load',()=>{if(!refresh()){list.innerHTML='<div class="notice">مدل آناتومی بارگذاری شد، اما اجزای مورد انتظار پیدا نشدند. فایل نمونه و مسیر iframe را بررسی کن.</div>';meta.textContent='خطا در اتصال به مدل نمونه.';}});
 sex.addEventListener('change',()=>{if(!syncing)refresh()});view.addEventListener('change',()=>{if(!syncing)refresh()});group.addEventListener('change',renderList);search.addEventListener('input',renderList);
-document.getElementById('dim').addEventListener('click',e=>{dim=!dim;e.currentTarget.classList.toggle('active',dim);if(activeKey)select(activeKey)});
-document.getElementById('reset').addEventListener('click',()=>{activeKey='';restore();meta.textContent='برای بررسی، یک مسیر از فهرست انتخاب کن.';renderList()});
+document.getElementById('dim').addEventListener('click',e=>{dim=!dim;e.currentTarget.classList.toggle('active',dim);if(activeKey){paintSelection();renderDetails();}});
+document.getElementById('compareMode').addEventListener('click',e=>{if(!activeKey){meta.textContent='ابتدا مسیر اول را انتخاب کن.';return;}compareMode=!compareMode;e.currentTarget.classList.toggle('active',compareMode);meta.textContent=compareMode?'حالا مسیر دوم را از فهرست انتخاب کن.':'حالت انتخاب مسیر دوم لغو شد.';});
+document.getElementById('reset').addEventListener('click',()=>{activeKey='';compareKey='';compareMode=false;document.getElementById('compareMode').classList.remove('active');restore();renderDetails();renderList()});
 </script>
 </body></html>
