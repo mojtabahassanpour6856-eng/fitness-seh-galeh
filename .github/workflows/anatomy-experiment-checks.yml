@@ -40,3 +40,26 @@ jobs:
           node tests/anatomy-exercise-adapter.test.js
           node tests/anatomy-selection-integration-static.test.js
           node tests/anatomy-catalog-integrity.test.js
+      - name: Install headless browser
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y chromium-browser || sudo apt-get install -y chromium
+      - name: Capture real anatomy preview
+        run: |
+          python3 -m http.server 8765 --directory experiments >/tmp/anatomy-http.log 2>&1 &
+          SERVER_PID=$!
+          trap "kill $SERVER_PID" EXIT
+          for i in $(seq 1 20); do
+            if curl -fsS http://127.0.0.1:8765/anatomy-smart-prototype.html >/dev/null; then break; fi
+            sleep 1
+          done
+          BROWSER=$(command -v chromium || command -v chromium-browser)
+          "$BROWSER" --headless --no-sandbox --disable-gpu --hide-scrollbars --window-size=1440,1200 --virtual-time-budget=5000 --screenshot=/tmp/anatomy-preview.png http://127.0.0.1:8765/anatomy-smart-prototype.html
+          test -s /tmp/anatomy-preview.png
+      - name: Upload anatomy preview image
+        uses: actions/upload-artifact@v4
+        with:
+          name: anatomy-preview
+          path: /tmp/anatomy-preview.png
+          if-no-files-found: error
+          retention-days: 3
