@@ -22,7 +22,11 @@ frame.addEventListener("load",()=>{
  const sex=doc.getElementById("sex"),view=doc.getElementById("view");
  sex.value=match[1];sex.dispatchEvent(new Event("change",{bubbles:true}));
  view.value=match[2];view.dispatchEvent(new Event("change",{bubbles:true}));
+ const svg=doc.getElementById("bodySvg");
+ const paths=svg?svg.querySelectorAll(".muscle").length:0;
  document.documentElement.dataset.preview=preview;
+ document.documentElement.dataset.pathCount=String(paths);
+ document.documentElement.dataset.captureReady=String(paths>0);
 });
 </script>
 </body>
