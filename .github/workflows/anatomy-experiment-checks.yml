@@ -8,6 +8,7 @@ on:
       - 'experiments/anatomy-*.js'
       - 'experiments/anatomy-*.json'
       - 'experiments/ANATOMY-*.json'
+      - 'experiments/ANATOMY-*.md'
       - 'experiments/anatomy-smart-prototype.html'
       - 'experiments/anatomy-preview-capture.html'
       - 'experiments/anatomy-geometry-inspector.html'
