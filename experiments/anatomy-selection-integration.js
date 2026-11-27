@@ -117,7 +117,7 @@ Promise.all([fetch(mapUrl).then(r=>{if(!r.ok)throw new Error('mapping '+r.status
  if(!window.SehAnatomyExerciseAdapter)throw new Error('exercise adapter not loaded');
  exerciseAdapter=window.SehAnatomyExerciseAdapter.create(mapping);
  pairState='ready';
- status.textContent='انتخاب دوطرفه فقط وقتی فعال می‌شود که شناسه چپ و راست هر دو یکتا و حاضر باشند؛ گروه‌های مبهم یا ناقص به‌صورت خودکار جفت نمی‌شوند.';
+ status.textContent='انتخاب دوطرفه فقط پس از بازبینی هندسه، تأیید وضعیت reviewed و وجود شناسه یکتای چپ و راست فعال می‌شود؛ تا آن زمان انتخاب یک‌طرفه باقی می‌ماند.';
  renderSelected();
 })
 .catch(err=>{
