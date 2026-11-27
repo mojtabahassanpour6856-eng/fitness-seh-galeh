@@ -92,7 +92,7 @@ jobs:
               grep -q 'data-inspector-ready="true"' "/tmp/anatomy-inspector-${model}-${direction}-dom.html"
               grep -q "data-path-count=\"${inspector_expected}\"" "/tmp/anatomy-inspector-${model}-${direction}-dom.html"
               ! grep -q 'data-inspector-error="true"' "/tmp/anatomy-inspector-${model}-${direction}-dom.html"
-              "$CHROME_PATH" --headless --no-sandbox --disable-gpu --hide-scrollbars --window-size=1600,1200 --virtual-time-budget=9000 --screenshot="/tmp/anatomy-inspector-${model}-${direction}.png" "http://127.0.0.1:8765/anatomy-geometry-inspector.html?sex=${model}&view=${direction}"
+              "$CHROME_PATH" --headless --no-sandbox --disable-gpu --hide-scrollbars --window-size=1600,1600 --virtual-time-budget=9000 --screenshot="/tmp/anatomy-inspector-${model}-${direction}.png" "http://127.0.0.1:8765/anatomy-geometry-inspector.html?sex=${model}&view=${direction}"
               test -s "/tmp/anatomy-inspector-${model}-${direction}.png"
             done
           done
