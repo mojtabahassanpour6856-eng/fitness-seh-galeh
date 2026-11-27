@@ -1,0 +1,316 @@
+{
+  "schema_version": "0.1.0",
+  "source": {
+    "database_table": "public.trainer_exercises",
+    "columns_read_by_existing_planner": [
+      "id",
+      "name",
+      "target_muscle",
+      "category",
+      "equipment",
+      "coach_note"
+    ],
+    "ownership": "coach_user_id (RLS protected)",
+    "production_read_only_snapshot": {
+      "rows": 132,
+      "categories": 9,
+      "distinct_target_muscle_labels": 32,
+      "missing_target_muscle": 0
+    },
+    "exercise_master_table": {
+      "name": "public.exercises",
+      "rows": 312,
+      "columns": [
+        "id",
+        "name",
+        "category",
+        "muscle_group",
+        "equipment",
+        "instructions"
+      ]
+    }
+  },
+  "rules": {
+    "exact_label_matching_only": true,
+    "never_guess_from_exercise_name": true,
+    "never_rewrite_exercise_ids_or_rows": true,
+    "main_vs_assisting_role": "not represented in current trainer_exercises schema; must remain unset until coach-authored relation metadata exists",
+    "anatomy_selection_is_filter_not_mutation": true,
+    "unmapped_labels_remain_searchable": true
+  },
+  "labels": [
+    {
+      "source_label": "سینه",
+      "anatomy_group_ids": [
+        "chest"
+      ],
+      "mapping": "broad_region",
+      "confidence": "high"
+    },
+    {
+      "source_label": "انعطاف عضلات سینه",
+      "anatomy_group_ids": [
+        "chest"
+      ],
+      "mapping": "broad_region",
+      "confidence": "medium",
+      "note": "Corrective/mobility intent; not a specific head of pectoralis major."
+    },
+    {
+      "source_label": "پشت",
+      "anatomy_group_ids": [
+        "lats",
+        "rhomboids",
+        "back_lower",
+        "trapezius"
+      ],
+      "mapping": "multi_group_region",
+      "confidence": "medium",
+      "note": "Broad posterior torso label; must not claim every listed muscle is a primary target."
+    },
+    {
+      "source_label": "عضلات بین کتف‌ها",
+      "anatomy_group_ids": [
+        "rhomboids",
+        "trapezius"
+      ],
+      "mapping": "multi_group_region",
+      "confidence": "medium"
+    },
+    {
+      "source_label": "عضلات جمع‌کننده کتف",
+      "anatomy_group_ids": [
+        "rhomboids",
+        "trapezius"
+      ],
+      "mapping": "functional_group",
+      "confidence": "medium"
+    },
+    {
+      "source_label": "پا",
+      "anatomy_group_ids": [
+        "quadriceps",
+        "hamstrings",
+        "adductors",
+        "abductors",
+        "calves",
+        "glutes"
+      ],
+      "mapping": "multi_group_region",
+      "confidence": "low",
+      "note": "General lower-limb label; show as broad match only, never exact muscle match."
+    },
+    {
+      "source_label": "عضله چهارسر ران",
+      "anatomy_group_ids": [
+        "quadriceps"
+      ],
+      "mapping": "exact_group",
+      "confidence": "high"
+    },
+    {
+      "source_label": "کنترل و تقویت چهارسر ران",
+      "anatomy_group_ids": [
+        "quadriceps"
+      ],
+      "mapping": "exact_group",
+      "confidence": "high"
+    },
+    {
+      "source_label": "عضله چهارسر و خم‌کننده‌های ران",
+      "anatomy_group_ids": [
+        "quadriceps",
+        "hamstrings"
+      ],
+      "mapping": "multi_group_region",
+      "confidence": "medium"
+    },
+    {
+      "source_label": "سرشانه",
+      "anatomy_group_ids": [
+        "shoulders_front",
+        "shoulders_side",
+        "shoulders_rear"
+      ],
+      "mapping": "multi_group_region",
+      "confidence": "high",
+      "note": "Do not infer a specific deltoid head."
+    },
+    {
+      "source_label": "چرخاننده‌های خارجی شانه",
+      "anatomy_group_ids": [],
+      "mapping": "unmapped",
+      "confidence": "none",
+      "note": "Needs rotator-cuff geometry; do not map to deltoid."
+    },
+    {
+      "source_label": "جلو بازو",
+      "anatomy_group_ids": [
+        "biceps"
+      ],
+      "mapping": "exact_group",
+      "confidence": "high"
+    },
+    {
+      "source_label": "پشت بازو",
+      "anatomy_group_ids": [
+        "triceps"
+      ],
+      "mapping": "exact_group",
+      "confidence": "high"
+    },
+    {
+      "source_label": "شکم",
+      "anatomy_group_ids": [
+        "core",
+        "obliques"
+      ],
+      "mapping": "multi_group_region",
+      "confidence": "high"
+    },
+    {
+      "source_label": "عضلات مرکزی بدن",
+      "anatomy_group_ids": [
+        "core",
+        "obliques"
+      ],
+      "mapping": "functional_group",
+      "confidence": "medium"
+    },
+    {
+      "source_label": "عضلات مرکزی و کنترل تنه",
+      "anatomy_group_ids": [
+        "core",
+        "obliques",
+        "back_lower"
+      ],
+      "mapping": "functional_group",
+      "confidence": "medium"
+    },
+    {
+      "source_label": "فعال‌سازی عضلات مرکزی",
+      "anatomy_group_ids": [
+        "core",
+        "obliques"
+      ],
+      "mapping": "functional_group",
+      "confidence": "medium"
+    },
+    {
+      "source_label": "کنترل لگن و عضلات مرکزی",
+      "anatomy_group_ids": [
+        "core",
+        "obliques",
+        "glutes"
+      ],
+      "mapping": "functional_group",
+      "confidence": "medium"
+    },
+    {
+      "source_label": "عضلات باسن",
+      "anatomy_group_ids": [
+        "glutes"
+      ],
+      "mapping": "exact_group",
+      "confidence": "high"
+    },
+    {
+      "source_label": "عضلات باسن و کنترل لگن",
+      "anatomy_group_ids": [
+        "glutes"
+      ],
+      "mapping": "functional_group",
+      "confidence": "medium"
+    },
+    {
+      "source_label": "تحرک ستون فقرات",
+      "anatomy_group_ids": [],
+      "mapping": "unmapped",
+      "confidence": "none"
+    },
+    {
+      "source_label": "تحرک ستون فقرات سینه‌ای",
+      "anatomy_group_ids": [],
+      "mapping": "unmapped",
+      "confidence": "none"
+    },
+    {
+      "source_label": "آگاهی وضعیتی گردن",
+      "anatomy_group_ids": [],
+      "mapping": "unmapped",
+      "confidence": "none"
+    },
+    {
+      "source_label": "تحرک گردن",
+      "anatomy_group_ids": [],
+      "mapping": "unmapped",
+      "confidence": "none"
+    },
+    {
+      "source_label": "کنترل وضعیت سر و گردن",
+      "anatomy_group_ids": [],
+      "mapping": "unmapped",
+      "confidence": "none"
+    },
+    {
+      "source_label": "تحمل فعالیت عمومی",
+      "anatomy_group_ids": [],
+      "mapping": "unmapped",
+      "confidence": "none"
+    },
+    {
+      "source_label": "قدرت عملکردی پا و کنترل زانو",
+      "anatomy_group_ids": [
+        "quadriceps",
+        "hamstrings",
+        "glutes"
+      ],
+      "mapping": "functional_group",
+      "confidence": "low"
+    },
+    {
+      "source_label": "قدرت عملکردی پاها",
+      "anatomy_group_ids": [
+        "quadriceps",
+        "hamstrings",
+        "glutes",
+        "calves"
+      ],
+      "mapping": "functional_group",
+      "confidence": "low"
+    },
+    {
+      "source_label": "کنترل حرکتی کتف",
+      "anatomy_group_ids": [
+        "trapezius",
+        "rhomboids"
+      ],
+      "mapping": "functional_group",
+      "confidence": "medium"
+    },
+    {
+      "source_label": "کنترل کتف و بالاتنه",
+      "anatomy_group_ids": [
+        "trapezius",
+        "rhomboids",
+        "shoulders_rear"
+      ],
+      "mapping": "functional_group",
+      "confidence": "low"
+    },
+    {
+      "source_label": "اصلاحی",
+      "anatomy_group_ids": [],
+      "mapping": "unmapped",
+      "confidence": "none",
+      "note": "Generic training category, not an anatomical target."
+    },
+    {
+      "source_label": "کاردیو",
+      "anatomy_group_ids": [],
+      "mapping": "unmapped",
+      "confidence": "none",
+      "note": "Not a muscle target."
+    }
+  ]
+}
