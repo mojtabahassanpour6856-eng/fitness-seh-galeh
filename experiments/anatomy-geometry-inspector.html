@@ -110,7 +110,36 @@ path_d:target.getAttribute('d')||''
 };
 }).filter(Boolean);
 }
-function pairwiseBBoxDiagnostics(records){
+function sampleFilledArea(path,bbox,grid){
+if(!path||typeof path.isPointInFill!=='function')return null;
+let inside=0;
+for(let row=0;row<grid;row++)for(let col=0;col<grid;col++){
+const point={x:bbox.x+(col+.5)*bbox.width/grid,y:bbox.y+(row+.5)*bbox.height/grid};
+if(path.isPointInFill(point))inside++;
+}
+return {area:bbox.width*bbox.height*inside/(grid*grid),inside_samples:inside,total_samples:grid*grid};
+}
+function estimateSvgFillOverlap(pathA,pathB,bboxA,bboxB,grid=36){
+if(!pathA||!pathB||typeof pathA.isPointInFill!=='function'||typeof pathB.isPointInFill!=='function')return {status:'unsupported',area:null,ratio:null,samples:0,grid};
+try{
+const svg=doc().getElementById('bodySvg');
+if(pathA.parentNode!==svg||pathB.parentNode!==svg||pathA.hasAttribute('transform')||pathB.hasAttribute('transform'))return {status:'unsupported_coordinate_space',area:null,ratio:null,samples:0,grid};
+const areaA=sampleFilledArea(pathA,bboxA,grid),areaB=sampleFilledArea(pathB,bboxB,grid);
+if(!areaA||!areaB)return {status:'unsupported',area:null,ratio:null,samples:0,grid};
+const x1=Math.max(bboxA.x,bboxB.x),y1=Math.max(bboxA.y,bboxB.y);
+const x2=Math.min(bboxA.x+bboxA.width,bboxB.x+bboxB.width),y2=Math.min(bboxA.y+bboxA.height,bboxB.y+bboxB.height);
+if(x2<=x1||y2<=y1)return {status:'no_bbox_intersection',area:0,ratio:0,samples:grid*grid,grid};
+let both=0;
+for(let row=0;row<grid;row++)for(let col=0;col<grid;col++){
+const point={x:x1+(col+.5)*(x2-x1)/grid,y:y1+(row+.5)*(y2-y1)/grid};
+if(pathA.isPointInFill(point)&&pathB.isPointInFill(point))both++;
+}
+const estimatedArea=(x2-x1)*(y2-y1)*both/(grid*grid);
+const smallerFillArea=Math.min(areaA.area,areaB.area);
+return {status:'estimated',area:Number(estimatedArea.toFixed(3)),ratio:smallerFillArea>0?Number((estimatedArea/smallerFillArea).toFixed(4)):null,samples:grid*grid,inside_samples:both,grid,path_a_area_estimate:Number(areaA.area.toFixed(3)),path_b_area_estimate:Number(areaB.area.toFixed(3))};
+}catch(error){return {status:'unsupported_error',area:null,ratio:null,samples:0,grid};}
+}
+function pairwiseBBoxDiagnostics(records,resolvePath){
 const pairs=[];
 for(let i=0;i<records.length;i++)for(let j=i+1;j<records.length;j++){
 const a=records[i].bbox,b=records[j].bbox;
@@ -120,14 +149,16 @@ const area=overlapWidth*overlapHeight,areaA=a.width*a.height,areaB=b.width*b.hei
 const gapX=Math.max(0,Math.max(a.x,b.x)-Math.min(a.x+a.width,b.x+b.width));
 const gapY=Math.max(0,Math.max(a.y,b.y)-Math.min(a.y+a.height,b.y+b.height));
 const dx=(a.x+a.width/2)-(b.x+b.width/2),dy=(a.y+a.height/2)-(b.y+b.height/2);
-pairs.push({path_a:i+1,path_b:j+1,overlap_width:Number(overlapWidth.toFixed(3)),overlap_height:Number(overlapHeight.toFixed(3)),bbox_intersection_area:Number(area.toFixed(3)),bbox_intersection_ratio:smallerArea>0?Number((area/smallerArea).toFixed(4)):null,gap_x:Number(gapX.toFixed(3)),gap_y:Number(gapY.toFixed(3)),center_distance:Number(Math.hypot(dx,dy).toFixed(3))});
+const pathA=resolvePath?resolvePath(records[i].selection_key):null,pathB=resolvePath?resolvePath(records[j].selection_key):null;
+const fill=resolvePath?estimateSvgFillOverlap(pathA,pathB,a,b):{status:'not_requested',area:null,ratio:null,samples:0,grid:36};
+pairs.push({path_a:i+1,path_b:j+1,overlap_width:Number(overlapWidth.toFixed(3)),overlap_height:Number(overlapHeight.toFixed(3)),bbox_intersection_area:Number(area.toFixed(3)),bbox_intersection_ratio:smallerArea>0?Number((area/smallerArea).toFixed(4)):null,gap_x:Number(gapX.toFixed(3)),gap_y:Number(gapY.toFixed(3)),center_distance:Number(Math.hypot(dx,dy).toFixed(3)),fill_overlap_status:fill.status,fill_overlap_area_estimate:fill.area,fill_overlap_ratio_estimate:fill.ratio,fill_overlap_samples:fill.samples,fill_overlap_grid:fill.grid});
 }
 return pairs;
 }
 function pairwiseDiagnosticsHtml(records){
-const pairs=pairwiseBBoxDiagnostics(records);if(!pairs.length)return '';
-const rows=pairs.map(p=>'<tr><td>'+p.path_a+' ↔ '+p.path_b+'</td><td>'+p.overlap_width+' × '+p.overlap_height+'</td><td>'+p.bbox_intersection_area+'</td><td>'+(p.bbox_intersection_ratio===null?'نامشخص':(p.bbox_intersection_ratio*100).toFixed(1)+'٪')+'</td><td>'+p.gap_x+' / '+p.gap_y+'</td><td>'+p.center_distance+'</td></tr>').join('');
-return '<section class="pairwise"><h3>مقایسه جعبه‌های محدوده مسیرها (Bounding Box)</h3><div class="pair-scroll"><table><thead><tr><th>جفت مسیر</th><th>هم‌پوشانی X × Y</th><th>مساحت اشتراک جعبه</th><th>نسبت به جعبه کوچک‌تر</th><th>فاصله X / Y</th><th>فاصله مرکزها</th></tr></thead><tbody>'+rows+'</tbody></table></div><p>هشدار: این اعداد فقط از جعبه‌های محیطی (BBox) محاسبه شده‌اند؛ هم‌پوشانی جعبه‌ها به معنی تماس یا هم‌پوشانی واقعی سطح مسیرهای SVG نیست. فاصله نیز فاصله جعبه‌هاست، نه فاصله آناتومیک عضلات.</p></section>';
+const pairs=pairwiseBBoxDiagnostics(records,key=>paths().find(path=>path.dataset.key===key));if(!pairs.length)return '';
+const rows=pairs.map(p=>'<tr><td>'+p.path_a+' ↔ '+p.path_b+'</td><td>'+p.overlap_width+' × '+p.overlap_height+'</td><td>'+p.bbox_intersection_area+'</td><td>'+(p.bbox_intersection_ratio===null?'نامشخص':(p.bbox_intersection_ratio*100).toFixed(1)+'٪')+'</td><td>'+p.gap_x+' / '+p.gap_y+'</td><td>'+p.center_distance+'</td><td>'+(p.fill_overlap_area_estimate===null?'پشتیبانی‌نشده':p.fill_overlap_area_estimate)+'</td><td>'+(p.fill_overlap_ratio_estimate===null?'نامشخص':(p.fill_overlap_ratio_estimate*100).toFixed(1)+'٪')+'</td></tr>').join('');
+return '<section class="pairwise"><h3>مقایسه جعبه‌های محدوده مسیرها (Bounding Box)</h3><div class="pair-scroll"><table><thead><tr><th>جفت مسیر</th><th>هم‌پوشانی X × Y</th><th>مساحت اشتراک جعبه</th><th>نسبت به جعبه کوچک‌تر</th><th>فاصله X / Y</th><th>فاصله مرکزها</th><th>اشتراک تقریبی سطح پرشده</th><th>نسبت تقریبی سطح</th></tr></thead><tbody>'+rows+'</tbody></table></div><p>هشدار: هم‌پوشانی BBox دقیقاً مربوط به مستطیل‌هاست. ستون سطح پرشده فقط یک تخمین نمونه‌برداری ۳۶×۳۶ با isPointInFill است؛ ممکن است نواحی باریک یا کوچک را از دست بدهد و تأیید آناتومیک یا تقاطع دقیق هندسی نیست. در صورت پشتیبانی‌نشدن API یا دستگاه مختصات، نتیجه اعلام نمی‌شود.</p></section>';
 }
 function downloadText(filename,mime,content){
 const blob=new Blob([content],{type:mime}),url=URL.createObjectURL(blob),a=document.createElement('a');
@@ -138,7 +169,7 @@ const records=selectedPathRecords();
 if(!records.length){meta.textContent='برای خروجی گرفتن، ابتدا حداقل یک مسیر را انتخاب کن.';return;}
 const stamp=new Date().toISOString().replace(/[:.]/g,'-');
 if(format==='json'){
-const payload={schema_version:1,created_at:new Date().toISOString(),source:'Fitness Seh Galeh anatomy geometry inspector',warning_fa:'این داده‌ها مشخصات هندسی مسیرهای SVG هستند و تأییدکننده هویت یا صحت آناتومیک نیستند.',records,pairwise_bbox_diagnostics:pairwiseBBoxDiagnostics(records),pairwise_warning_fa:'مقایسه جعبه‌های محیطی است؛ نه محاسبه اشتراک واقعی سطح مسیرهای SVG.'};
+const payload={schema_version:1,created_at:new Date().toISOString(),source:'Fitness Seh Galeh anatomy geometry inspector',warning_fa:'این داده‌ها مشخصات هندسی مسیرهای SVG هستند و تأییدکننده هویت یا صحت آناتومیک نیستند.',records,pairwise_bbox_diagnostics:pairwiseBBoxDiagnostics(records,key=>paths().find(path=>path.dataset.key===key)),pairwise_warning_fa:'سطح پرشده فقط با نمونه‌برداری ۳۶×۳۶ تخمین زده شده و تقاطع دقیق یا تأیید آناتومیک نیست.'};
 downloadText('anatomy-path-review-'+stamp+'.json','application/json;charset=utf-8',JSON.stringify(payload,null,2));
 }else{
 const headers=['comparison_order','model','view','group','legacy_id','selection_key','path_index','length','bbox_x','bbox_y','bbox_width','bbox_height','fill','svg_view_box','path_d'];
