@@ -25,7 +25,7 @@ assert.match(script,/center_distance/,'pairwise analysis must calculate bounding
 assert.match(script,/pairwise_bbox_diagnostics:pairwiseBBoxDiagnostics\(records\)/,'JSON export must include pairwise diagnostics');
 assert.match(script,/هم‌پوشانی جعبه‌ها به معنی تماس یا هم‌پوشانی واقعی سطح مسیرهای SVG نیست/,'UI must distinguish bounding-box overlap from actual SVG path overlap');
 
-const pairwiseSource=script.match(/function pairwiseBBoxDiagnostics\\(records\\)\\{[\\s\\S]*?\\n\\}/)?.[0];
+const pairwiseSource=script.match(/function pairwiseBBoxDiagnostics\\(records,resolvePath\\)\\{[\\s\\S]*?\\n\\}/)?.[0];
 assert.ok(pairwiseSource,'pairwise bounding-box calculation function must be extractable for numeric tests');
 const pairwise=vm.runInNewContext(pairwiseSource+'; pairwiseBBoxDiagnostics');
 const overlapping=pairwise([{bbox:{x:0,y:0,width:10,height:10}},{bbox:{x:5,y:4,width:10,height:10}}])[0];
