@@ -41,6 +41,7 @@ jobs:
         run: |
           node --check experiments/anatomy-exercise-adapter.js
           node --check experiments/anatomy-selection-integration.js
+          node --check experiments/anatomy-muscle-browser.js
       - name: Run anatomy regression tests
         run: |
           node tests/anatomy-exercise-adapter.test.js
@@ -48,6 +49,7 @@ jobs:
           node tests/anatomy-catalog-integrity.test.js
           node tests/anatomy-geometry-inspector-export.test.js
           node tests/anatomy-preview-gallery.test.js
+          node tests/anatomy-muscle-browser.test.js
       - name: Install headless browser
         id: setup-chrome
         uses: browser-actions/setup-chrome@v1
@@ -109,6 +111,7 @@ jobs:
           grep -q 'id="anatomySmoke" data-total-paths="116" data-visible-paths="28" data-pair-status="ready"' /tmp/anatomy-dom.html
           grep -q 'id="anatomyInteractionSmoke" data-result="pass"' /tmp/anatomy-dom.html
           grep -q 'حرکات مرتبط از بانک مربی' /tmp/anatomy-dom.html
+          grep -q 'id="anatomyMuscleBrowserSmoke" data-result="pass"' /tmp/anatomy-dom.html
       - name: Upload anatomy preview image and diagnostics
         if: always()
         uses: actions/upload-artifact@v4
