@@ -156,8 +156,10 @@ Promise.all([fetch(mapUrl).then(r=>{if(!r.ok)throw new Error('mapping '+r.status
   assertSmoke(document.querySelector('#bodySvg .muscle[data-key="'+CSS.escape(key)+'"]').classList.contains('primary'),'keyboard selection paints primary color');
   document.querySelector('[data-role="secondary"]').click();
   document.querySelector('#bodySvg .muscle[data-key="'+CSS.escape(key)+'"]').dispatchEvent(new MouseEvent('click',{bubbles:true,cancelable:true}));
-  assertSmoke(!selectedMap()[key],'role change click toggles same selected muscle off');
-  document.querySelector('[data-role="secondary"]').click();
+  assertSmoke(selectedMap()[key]==='secondary','role change updates selected muscle role');
+  assertSmoke(document.querySelector('#bodySvg .muscle[data-key="'+CSS.escape(key)+'"]').classList.contains('secondary'),'role change updates selected color');
+  document.querySelector('#bodySvg .muscle[data-key="'+CSS.escape(key)+'"]').dispatchEvent(new MouseEvent('click',{bubbles:true,cancelable:true}));
+  assertSmoke(!selectedMap()[key],'second secondary click clears selected muscle');
   document.querySelector('#bodySvg .muscle').dispatchEvent(new MouseEvent('click',{bubbles:true,cancelable:true}));
   const secondaryKey=document.querySelector('#bodySvg .muscle').dataset.key;
   assertSmoke(selectedMap()[secondaryKey]==='secondary','secondary role is stored');
