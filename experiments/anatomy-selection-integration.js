@@ -71,6 +71,16 @@ function handlePath(el){
  const i=paths.findIndex((p,index)=>keyFor(p,index)===key);
  const path=paths[i];
  if(!path)return;
+ const sameId=path.id?paths.filter(candidate=>candidate.group===path.group&&candidate.id===path.id).length:0;
+ if(!path.id||sameId!==1){
+  const reason=!path.id?'این مسیر در فایل مرجع شناسه یکتا ندارد و تا بازبینی هندسی قابل انتخاب نیست.':'شناسه این مسیر در نمای فعلی تکراری است و تا تعیین تکلیف قطعات قابل انتخاب نیست.';
+  pairWarnings.set(path.group,reason);
+  status.textContent=reason;
+  status.dataset.geometryBlocked='true';
+  return;
+ }
+ status.textContent='مسیرهای مبهم یا دارای شناسه تکراری برای جلوگیری از انتخاب اشتباه مسدود هستند.';
+ delete status.dataset.geometryBlocked;
  const pair=pairFor(path);
  const targets=pair.ok?pair.items:[{p:path,i}];
  const current=selectedMap();
