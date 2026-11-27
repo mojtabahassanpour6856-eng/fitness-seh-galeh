@@ -19,6 +19,12 @@ assert.match(script,/unsupported_coordinate_space/,'overlap estimator must fail 
 assert.match(script,/fill_overlap_area_estimate/,'pairwise output must expose estimated filled overlap area');
 assert.match(script,/نمونه‌برداری ۳۶×۳۶/,'UI must label the filled overlap as a sampling estimate');
 assert.match(script,/function pairwiseBBoxDiagnostics\(records,resolvePath\)/,'pairwise bounding-box diagnostics must be available');
+assert.match(script,/function applyRequestedGroupReview\(\)/,'inspector must support direct same-group geometry review links');
+assert.match(script,/params\.get\('group'\)/,'group review must be addressable by a URL query parameter');
+assert.match(script,/path\.dataset\.group===requested/,'automatic review must include only paths from the requested source group');
+assert.match(script,/targets\.length>6/,'automatic review must reject groups exceeding the six-path comparison limit');
+assert.match(script,/data-group-review-ready/,'automatic group review must expose a browser-verifiable readiness marker');
+assert.match(script,/reviewKeys=targets\.map\(path=>path\.dataset\.key\)/,'automatic group review must select every source path in the requested group');
 assert.match(script,/bbox_intersection_area/,'pairwise analysis must calculate bounding-box intersection area');
 assert.match(script,/bbox_intersection_ratio/,'pairwise analysis must calculate normalized bounding-box intersection ratio');
 assert.match(script,/center_distance/,'pairwise analysis must calculate bounding-box center distance');
