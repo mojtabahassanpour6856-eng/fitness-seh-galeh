@@ -123,6 +123,10 @@ Promise.all([fetch(mapUrl).then(r=>{if(!r.ok)throw new Error('mapping '+r.status
  pairState='ready';
  status.textContent='انتخاب دوطرفه فقط پس از بازبینی هندسه، تأیید وضعیت reviewed و وجود شناسه یکتای چپ و راست فعال می‌شود؛ تا آن زمان انتخاب یک‌طرفه باقی می‌ماند.';
  renderSelected();
+ const totalPaths=window.__ANATOMY_SOURCE_PATH_COUNT__;
+ const visiblePaths=document.querySelectorAll('#bodySvg .muscle').length;
+ if(totalPaths!==116||visiblePaths!==29||!document.getElementById('pairStatus')||!document.querySelector('.layout aside section'))throw new Error('Anatomy DOM smoke validation failed');
+ const smoke=document.createElement('meta');smoke.id='anatomySmoke';smoke.dataset.totalPaths=String(totalPaths);smoke.dataset.visiblePaths=String(visiblePaths);smoke.dataset.pairStatus=pairState;document.head.appendChild(smoke);
 })
 .catch(err=>{
  pairState='error';
