@@ -32,6 +32,23 @@ iframe{display:block;width:100%;height:1180px;border:0;background:var(--paper)}
 <figure><figcaption>۳. نمای جلوی بدن خانم</figcaption><iframe title="نمای جلوی بدن خانم" loading="eager" src="./anatomy-preview-capture.html?view=female-front"></iframe></figure>
 <figure><figcaption>۴. نمای پشت بدن خانم</figcaption><iframe title="نمای پشت بدن خانم" loading="eager" src="./anatomy-preview-capture.html?view=female-back"></iframe></figure>
 </main>
+<script>
+(()=>{
+ const frames=[...document.querySelectorAll(".grid iframe")];
+ let settled=0;
+ const mark=()=>{
+  settled++;
+  if(settled!==frames.length)return;
+  const ready=frames.every(frame=>frame.contentDocument&&frame.contentDocument.documentElement.dataset.captureReady==="true");
+  document.documentElement.dataset.galleryReady=String(ready);
+  document.documentElement.dataset.loadedViews=frames.map(frame=>frame.contentDocument?.documentElement.dataset.preview||"missing").join(",");
+ };
+ frames.forEach(frame=>{
+  frame.addEventListener("load",mark,{once:true});
+  if(frame.contentDocument?.readyState==="complete"&&frame.contentDocument.documentElement.dataset.captureReady)mark();
+ });
+})();
+</script>
 <p class="note">توجه: این گالری برای بازبینی بصری نسخه آزمایشی است. نمایش مسیرها و رنگ‌ها به‌تنهایی تأییدکننده مرزبندی یا صحت آناتومیک عضلات نیست. گروه‌هایی که هندسه معتبر ندارند همچنان باید غیرفعال یا نیازمند بازبینی باقی بمانند.</p>
 </body>
 </html>
