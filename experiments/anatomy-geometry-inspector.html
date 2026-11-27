@@ -50,6 +50,9 @@ iframe{width:100%;height:min(78vh,1000px);border:0;border-radius:10px;background
 <script>
 const frame=document.getElementById('preview'),list=document.getElementById('list'),meta=document.getElementById('meta');
 const sex=document.getElementById('sex'),view=document.getElementById('view'),group=document.getElementById('group'),search=document.getElementById('search');
+const initialView=new URLSearchParams(location.search);
+if(['male','female'].includes(initialView.get('sex')))sex.value=initialView.get('sex');
+if(['front','back'].includes(initialView.get('view')))view.value=initialView.get('view');
 let activeKey='',dim=true,syncing=false;
 function doc(){return frame.contentDocument}
 function controls(){const d=doc();if(!d||!d.getElementById('bodySvg'))return false;d.getElementById('sex').value=sex.value;d.getElementById('view').value=view.value;d.getElementById('sex').dispatchEvent(new Event('change',{bubbles:true}));d.getElementById('view').dispatchEvent(new Event('change',{bubbles:true}));return true}
