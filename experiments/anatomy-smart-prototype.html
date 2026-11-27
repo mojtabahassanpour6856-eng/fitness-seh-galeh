@@ -75,17 +75,26 @@ const count=document.getElementById("count");
 const esc=s=>String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 function keyFor(m,index){
  const source=String(m.group||"MUSCLE")+"|"+String(m.d||"");
- let hash=2166136261;
- for(let i=0;i<source.length;i++)hash=Math.imul(hash^source.charCodeAt(i),16777619);
- return String(m.group||"MUSCLE")+"__"+(hash>>>0).toString(36);
+ let hashA=2166136261,hashB=0x9e3779b9;
+ for(let i=0;i<source.length;i++){
+  const code=source.charCodeAt(i);
+  hashA=Math.imul(hashA^code,16777619);
+  hashB=Math.imul(hashB^code,0x5bd1e995);
+  hashB^=hashB>>>13;
+ }
+ return String(m.group||"MUSCLE")+"__"+(hashA>>>0).toString(36)+"-"+(hashB>>>0).toString(36);
 }
 function draw(){
  const d=DATA[state.sex+"-"+state.view];
  title.textContent="نمای "+(state.view==="front"?"جلوی":"پشتی")+" بدن "+(state.sex==="male"?"آقا":"خانم");
  let out="";
  d.outline.forEach(p=>{out+='<path class="outline" d="'+p.d+'"></path>'});
+ const pathKeys=new Set();
  d.muscles.forEach((m,i)=>{
-  const key=keyFor(m,i),role=selectedMap()[key]||"";
+  const key=keyFor(m,i);
+  if(pathKeys.has(key))throw new Error("Duplicate anatomy geometry identity: "+key);
+  pathKeys.add(key);
+  const role=selectedMap()[key]||"";
   out+='<path class="muscle '+role+'" data-key="'+esc(key)+'" data-group="'+esc(m.group)+'" data-id="'+esc(m.id||key)+'" tabindex="0" role="button" aria-label="'+esc(LABELS[m.group]||m.group)+'" aria-pressed="'+(!!role)+'" d="'+m.d+'"></path>';
  });
  svg.innerHTML=out;
