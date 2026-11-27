@@ -3,7 +3,7 @@
 تاریخ: 2026-11-27  
 شاخه: `experiment/anatomy-smart-rebuild-20261127`  
 منبع: `experiments/anatomy-smart-prototype.html`  
-Blob SHA منبع: `2daa10b80530a506453271c8e935918415297b1b`
+Blob SHA منبع: `eea35fdad216ecbe0da2d9ade3c181d8a0b32ac7`
 
 ## هدف
 
