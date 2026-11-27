@@ -18,6 +18,20 @@ assert.match(script,/bbox_intersection_ratio/,'pairwise analysis must calculate 
 assert.match(script,/center_distance/,'pairwise analysis must calculate bounding-box center distance');
 assert.match(script,/pairwise_bbox_diagnostics:pairwiseBBoxDiagnostics\(records\)/,'JSON export must include pairwise diagnostics');
 assert.match(script,/هم‌پوشانی جعبه‌ها به معنی تماس یا هم‌پوشانی واقعی سطح مسیرهای SVG نیست/,'UI must distinguish bounding-box overlap from actual SVG path overlap');
+
+const pairwiseSource=script.match(/function pairwiseBBoxDiagnostics\\(records\\)\\{[\\s\\S]*?\\n\\}/)?.[0];
+assert.ok(pairwiseSource,'pairwise bounding-box calculation function must be extractable for numeric tests');
+const pairwise=vm.runInNewContext(pairwiseSource+'; pairwiseBBoxDiagnostics');
+const overlapping=pairwise([{bbox:{x:0,y:0,width:10,height:10}},{bbox:{x:5,y:4,width:10,height:10}}])[0];
+assert.equal(overlapping.bbox_intersection_area,30,'overlapping BBoxes must report rectangle intersection area');
+assert.equal(overlapping.bbox_intersection_ratio,0.3,'intersection ratio must use the smaller BBox area');
+assert.equal(overlapping.gap_x,0,'overlapping BBoxes must have no horizontal gap');
+const separated=pairwise([{bbox:{x:0,y:0,width:10,height:10}},{bbox:{x:12,y:14,width:10,height:10}}])[0];
+assert.equal(separated.bbox_intersection_area,0,'separated BBoxes must have zero intersection area');
+assert.equal(separated.gap_x,2,'separated BBoxes must report horizontal gap');
+assert.equal(separated.gap_y,4,'separated BBoxes must report vertical gap');
+assert.equal(pairwise(Array.from({length:6},(_,i)=>({bbox:{x:i,y:i,width:10,height:10}}))).length,15,'six selected paths must produce at most fifteen unique pairs');
+
 assert.match(script,/path_d:target\.getAttribute\('d'\)/,'export must preserve raw SVG path data');
 assert.match(script,/function exportSelected\(format\)/,'JSON and CSV export handler must exist');
 assert.match(script,/function exportSelectedSvg\(\)/,'selected-path vector image export must exist');
