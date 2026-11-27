@@ -33,7 +33,7 @@ assert.match(browser,/name_fa/,"search must include Persian anatomical names");
 assert.match(browser,/name_latin/,"search must include Latin anatomical names");
 assert.match(browser,/aria-pressed/,"list must expose accessible selected state");
 const integrationSource=fs.readFileSync("experiments/anatomy-selection-integration.js","utf8");
-assert.match(browser,/sameId>1/,"ambiguous duplicate-ID geometry must be disabled in the list");
+assert.match(browser,/sameId===1/,"only uniquely identified geometry may be enabled in the list");
 assert.match(browser,/!path[.]id/,"geometry without a source ID must be disabled in the list");
 assert.match(integrationSource,/sameId!==1/,"SVG selection must reject missing or duplicate source IDs");
 assert.match(integrationSource,/data-geometryBlocked/,"blocked geometry must provide an explicit user-facing status");
