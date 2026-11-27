@@ -10,11 +10,11 @@ assert.match(controller,/setExercises\(rows\)/,'host app must explicitly supply 
 assert.match(controller,/clearExercises\(\)/,'host app must be able to clear exercise data on logout');
 assert.match(controller,/getSelectionSnapshot\(\)/,'host app can read selected muscle groups with their explicit primary/secondary roles');
 
-const capturePage=read('experiments/anatomy-preview-capture.html');
-const workflow=read('.github/workflows/anatomy-experiment-checks.yml');
+const capturePage=fs.readFileSync('experiments/anatomy-preview-capture.html','utf8');
+const workflow=fs.readFileSync('.github/workflows/anatomy-experiment-checks.yml','utf8');
+assert.match(capturePage,/\(male\|female\)-\(front\|back\)/,'capture page must validate all four view combinations');
 for(const view of ['male-front','male-back','female-front','female-back']){
- assert.match(capturePage,new RegExp(view.split('-')[0]),'capture page must support sex selection');
- assert.match(workflow,new RegExp('anatomy-'+view+'\\\\.png'),'workflow must capture '+view);
+ assert.ok(workflow.includes('/tmp/anatomy-'+view+'.png'),'workflow must capture '+view);
 }
 assert.match(capturePage,/contentDocument/,'capture page must select the view inside the same-origin prototype frame');
 
