@@ -10,6 +10,7 @@ assert.match(controller,/setExercises\(rows\)/,'host app must explicitly supply 
 assert.match(controller,/clearExercises\(\)/,'host app must be able to clear exercise data on logout');
 assert.match(controller,/getSelectionSnapshot\(\)/,'host app can read selected muscle groups with their explicit primary/secondary roles');
 
+const workflow=fs.readFileSync('.github/workflows/anatomy-experiment-checks.yml','utf8');
 const inspector=fs.readFileSync('experiments/anatomy-geometry-inspector.html','utf8');
 assert.match(inspector,/contentDocument|contentWindow/,'geometry inspector must inspect the same-origin prototype frame');
 assert.match(inspector,/dataset\.key/,'geometry inspector must highlight the selected stable path identity');
@@ -21,7 +22,6 @@ assert.match(inspector,/if\(!syncing\)refresh\(\)/,'geometry inspector must guar
 assert.match(workflow,/anatomy-geometry-inspector\.png/,'workflow must capture the geometry inspector preview');
 
 const capturePage=fs.readFileSync('experiments/anatomy-preview-capture.html','utf8');
-const workflow=fs.readFileSync('.github/workflows/anatomy-experiment-checks.yml','utf8');
 assert.ok(capturePage.includes('^(male|female)-(front|back)$'),'capture page must validate all four view combinations');
 for(const view of ['male-front','male-back','female-front','female-back']){
  assert.ok(workflow.includes('/tmp/anatomy-'+view+'.png'),'workflow must capture '+view);
