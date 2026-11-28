@@ -60,7 +60,7 @@ reviewPanels.forEach(panel=>{
    if(root?.dataset.captureReady!=="true")throw new Error(root?.dataset.captureError||"اعتبارسنجی چهار نما ناموفق");
    if(!svg)throw new Error("SVG در دسترس نیست");
    const paths=[...svg.querySelectorAll(".muscle")];
-   const missing=buttons.filter(b=>!paths.some(p=>p.dataset.key===b.dataset.key));
+   const missing=buttons.filter(b=>b.dataset.key&&!paths.some(p=>p.dataset.key===b.dataset.key));
    if(missing.length)throw new Error("کلید مسیر ناموجود: "+missing.map(b=>b.dataset.key).join(", "));
    ready=true;panel.dataset.panelReady="true";loadedViews.add(view);buttons.forEach(b=>b.classList.toggle("active",showAll||b.dataset.key===activeKey));apply();updateReviewReadiness();
   }catch(e){panel.dataset.panelReady="false";status.textContent="بارگذاری ناموفق: "+e.message;updateReviewReadiness()}
