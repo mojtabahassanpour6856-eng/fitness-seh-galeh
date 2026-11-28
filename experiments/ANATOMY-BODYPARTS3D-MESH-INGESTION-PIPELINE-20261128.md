@@ -140,3 +140,23 @@ python experiments/tools/inspect_bodyparts3d_archive.py isa_BP3D_4.0_obj_99.zip 
 - ابزار در شاخه آزمایشی ثبت شده؛ اما چون آرشیو باینری رسمی ۱۳۶ مگابایتی و فایل metadata هنوز در محیط اجرا موجود نیستند، هیچ OBJ واقعی از نامزدهای پروژه شمارش یا رندر نشده است.
 - پیش‌نمایش سه‌بعدی جدید تا زمان دریافت و بررسی هندسه واقعی ساخته نمی‌شود؛ ساخت پیش‌نمایش نمایشی با مش فرضی، نتیجه گمراه‌کننده خواهد بود.
 - محدوده همچنان فقط `experiments/` است و نسخه اصلی، MuscleMap، بانک حرکات و اطلاعات شاگردان دست‌نخورده‌اند.
+
+
+## 2026-11-28 update — public manifest route and isolated browser lab
+
+The Human Atlas repository exposes a public, preprocessed BodyParts3D 4.0 manifest at `ashemag/human-atlas/public/models/atlas.json`. The manifest blob inspected for this audit is `0f81b5621479a0c0548f4683c316f33bd4d6545b`; the upstream revision used by the isolated lab is pinned to `1c38bf35c254a891200d3cedecfd57abebe83d8d`.
+
+Manifest facts:
+- 2,234 mesh records, 3,432 concepts, 15 binary chunks and 2,288,268 triangles.
+- Each part record contains element ID, concept ID, chunk number, byte offsets for positions/normals/indices, vertex/index counts and bounds.
+- Concepts can map to multiple elements; preserve the one-to-many mapping.
+- The upstream app stores coordinates as Float32, normals as normalized signed Int16, and indices as Uint32. Gzip chunks must be decoded only if the returned payload still has the gzip magic signature; browsers/hosts may transparently decompress HTTP responses.
+- The upstream reference is adult male only. Its current demo URL returned HTTP 503 during this investigation, so the demo is not treated as an accessible preview.
+
+New experiment artifacts:
+- `ANATOMY_BODYPARTS3D_TARGETED_MUSCLE_METADATA_AUDIT.json/.md`: name-based metadata inventory for relevant muscle targets.
+- `ANATOMY_BODYPARTS3D_TRAINING_TARGET_COVERAGE.json/.md`: per-target coverage and missing-name notes.
+- `anatomy-bodyparts3d-muscle-lab.html`: isolated browser viewer that fetches the pinned upstream manifest and loads only the chunks required for the chosen candidate muscle group. It includes byte-bound, vertex-index and finite-position checks before rendering.
+- `anatomy-expansion-stage-preview-v2.html`: includes the four-view MuscleMap gallery plus the separate muscle lab; no upstream assets are copied into production files.
+
+The lab is an experiment, not a verified geometry integration. It depends on browser access to `raw.githubusercontent.com` and jsDelivr (Three.js). A syntax check of the inline module passed, but live browser rendering, CORS availability on Iranian networks, and physical-device interaction have not yet been confirmed. Candidate meshes remain `candidate_geometry` until visual inspection confirms orientation, side, boundary, and anatomical plausibility. Do not use the male meshes on the female body views.
