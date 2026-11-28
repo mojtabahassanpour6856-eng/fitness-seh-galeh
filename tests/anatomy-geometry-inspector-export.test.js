@@ -15,7 +15,7 @@ assert.match(script,/function selectedPathRecords\(\)/,'exports must be built fr
 assert.match(script,/function createPathCrop\(target,bbox\)/,'each selected path must have a zoomed crop helper');
 assert.match(script,/setAttribute\('viewBox',\[x,y,width,height\]\.join\(' '\)\)/,'path crop must zoom to the target bounds with context padding');
 assert.match(script,/مسیر انتخاب‌شده با رنگ طلایی مشخص است/,'crop UI must explain target and neighboring path contrast');
-assert.match(html,/className='path-crop'/,'path details must render a contextual zoomed SVG crop');
+assert.match(script,/setAttribute\('class','path-crop'\)/,'path details must render a contextual zoomed SVG crop');
 assert.match(script,/function sampleFilledArea\(path,bbox,grid\)/,'filled path area sampling helper must exist');
 assert.match(script,/function estimateSvgFillOverlap\(pathA,pathB,bboxA,bboxB,grid=36\)/,'sample-based filled path overlap estimator must exist');
 assert.match(script,/isPointInFill/,'filled path overlap must use SVG fill hit testing');
