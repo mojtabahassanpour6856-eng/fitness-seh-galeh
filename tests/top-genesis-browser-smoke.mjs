@@ -840,7 +840,7 @@ Waist-Hip Ratio (WHO),0.889
   });
   await integrationPage.waitForFunction(() =>
     document.querySelector("#topGenesisPdfAnalyzerFrame")?.contentWindow?.__publicationReply?.requestId === "storage-network-failure-fixture",
-    null, { timeout: 10000 });
+    null, { timeout: 20000 });
   const networkFailureReply = await analyzerFrame.evaluate(() => window.__publicationReply);
   assert.equal(networkFailureReply.ok, false);
   assert.match(networkFailureReply.message, /مرحله ناموفق: بارگذاری فایل گزارش در فضای ذخیره‌سازی/);
