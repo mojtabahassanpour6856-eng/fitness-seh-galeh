@@ -18,7 +18,7 @@ import zipfile
 from collections import Counter
 from pathlib import Path
 
-ID_RE = re.compile(r"\b(?:FMA\d+|BP\d+)\b", re.IGNORECASE)
+ID_RE = re.compile(r"\b(?:FMA\d+|BP\d+|FJ\d+)\b", re.IGNORECASE)
 
 
 def sha256_stream(stream):
@@ -107,12 +107,19 @@ def main():
     ap.add_argument("archive", type=Path, help="Official isa_BP3D_4.0_obj_99.zip")
     ap.add_argument("--registry", type=Path,
                     default=Path("experiments/ANATOMY_BODYPARTS3D_4_CANDIDATES.json"))
+    ap.add_argument("--element-map", type=Path, help="Official isa_element_parts.txt (tab-separated)")
     ap.add_argument("--out", type=Path, default=Path("bodyparts3d-audit-output"))
     args = ap.parse_args()
     args.out.mkdir(parents=True, exist_ok=True)
 
     registry = json.loads(args.registry.read_text(encoding="utf-8"))
     candidates = registry["candidates"]
+    concept_to_elements = {}
+    if args.element_map:
+        for line in args.element_map.read_text(encoding="utf-8-sig").splitlines():
+            cols = line.split("\t")
+            if len(cols) >= 3 and cols[0].strip().upper().startswith("FMA"):
+                concept_to_elements.setdefault(cols[0].strip().upper(), set()).add(cols[2].strip().upper())
     with args.archive.open("rb") as f:
         archive_sha = sha256_stream(f)
 
@@ -136,14 +143,20 @@ def main():
             mesh["identifier_tokens"] = sorted(id_tokens)
             matches = []
             for c in candidates:
-                wanted = {c["fma"].upper(), c["representation"].upper()}
+                concepts = [c["fma"].upper()]
                 if c.get("paired_fma"):
-                    wanted.add(c["paired_fma"].upper())
+                    concepts.append(c["paired_fma"].upper())
+                wanted = {c["representation"].upper()}
                 if c.get("paired_representation"):
                     wanted.add(c["paired_representation"].upper())
-                hit = sorted(id_tokens & wanted)
+                element_ids = set()
+                for concept in concepts:
+                    element_ids.update(concept_to_elements.get(concept, set()))
+                hit = sorted(id_tokens & (wanted | set(concepts) | element_ids))
+                # If the OBJ filename itself is the FileID, exact path-token match is required.
                 if hit:
-                    matches.append({"candidate": c["name"], "matched_ids": hit})
+                    matches.append({"candidate": c["name"], "matched_ids": hit,
+                                    "element_file_ids_for_concept": sorted(element_ids)})
             mesh["candidate_matches"] = matches
             rows.append(mesh)
 
@@ -160,7 +173,13 @@ def main():
             "representation": c["representation"], "paired_fma": c.get("paired_fma"),
             "paired_representation": c.get("paired_representation"),
             "matching_obj_count": n,
-            "status": "candidate_obj_found_needs_visual_review" if n else "not_mapped_by_explicit_ids"
+            "element_file_ids": sorted(set().union(*[
+                concept_to_elements.get(c["fma"].upper(), set()),
+                concept_to_elements.get(c.get("paired_fma", "").upper(), set())
+            ])),
+            "status": "candidate_obj_found_needs_visual_review" if n else
+                      ("element_ids_resolved_archive_member_not_found" if concept_to_elements.get(c["fma"].upper()) else
+                       "not_mapped_by_explicit_ids")
         })
 
     report = {
@@ -174,6 +193,7 @@ def main():
         "candidate_count": len(candidates),
         "candidate_obj_found_count": sum(x["matching_obj_count"] > 0 for x in candidate_status),
         "warning": "Identifier matches are not anatomical verification. No left/right, depth, isolation, or clinical correctness is inferred.",
+        "element_map_supplied": bool(args.element_map),
         "candidates": candidate_status,
         "meshes": rows
     }
