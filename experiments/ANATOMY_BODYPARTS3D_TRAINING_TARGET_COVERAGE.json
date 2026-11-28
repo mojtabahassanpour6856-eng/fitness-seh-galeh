@@ -1,0 +1,1662 @@
+{
+  "source": {
+    "repository": "ashemag/human-atlas",
+    "ref": "main",
+    "manifestBlobSha": "0f81b5621479a0c0548f4683c316f33bd4d6545b",
+    "dataset": "BodyParts3D 4.0",
+    "license": "CC BY 4.0",
+    "reference": "adult male"
+  },
+  "caveat": "Metadata discovery only. No chunk bytes decoded, no meshes visually checked, and no MuscleMap mapping approved.",
+  "coverage": [
+    {
+      "fa": "سینه بزرگ",
+      "en": "pectoralis major",
+      "found": true,
+      "concepts": [
+        {
+          "id": "FMA34686",
+          "name": "zone of pectoralis major",
+          "elements": [
+            "FJ1446",
+            "FJ1446M",
+            "FJ1464",
+            "FJ1464M"
+          ]
+        },
+        {
+          "id": "FMA34687",
+          "name": "clavicular part of pectoralis major",
+          "elements": [
+            "FJ1447",
+            "FJ1447M"
+          ]
+        },
+        {
+          "id": "FMA34690",
+          "name": "clavicular part of right pectoralis major",
+          "elements": [
+            "FJ1447"
+          ]
+        },
+        {
+          "id": "FMA34691",
+          "name": "clavicular part of left pectoralis major",
+          "elements": [
+            "FJ1447M"
+          ]
+        },
+        {
+          "id": "FMA34696",
+          "name": "sternocostal part of pectoralis major",
+          "elements": [
+            "FJ1464",
+            "FJ1464M"
+          ]
+        },
+        {
+          "id": "FMA34699",
+          "name": "abdominal part of pectoralis major",
+          "elements": [
+            "FJ1446",
+            "FJ1446M"
+          ]
+        },
+        {
+          "id": "FMA45874",
+          "name": "abdominal part of right pectoralis major",
+          "elements": [
+            "FJ1446"
+          ]
+        },
+        {
+          "id": "FMA45875",
+          "name": "abdominal part of left pectoralis major",
+          "elements": [
+            "FJ1446M"
+          ]
+        },
+        {
+          "id": "FMA79979",
+          "name": "sternocostal part of right pectoralis major",
+          "elements": [
+            "FJ1464"
+          ]
+        },
+        {
+          "id": "FMA79980",
+          "name": "sternocostal part of left pectoralis major",
+          "elements": [
+            "FJ1464M"
+          ]
+        },
+        {
+          "id": "FMA13373",
+          "name": "right pectoralis major",
+          "elements": [
+            "FJ1446",
+            "FJ1464"
+          ]
+        },
+        {
+          "id": "FMA13374",
+          "name": "left pectoralis major",
+          "elements": [
+            "FJ1446M",
+            "FJ1464M"
+          ]
+        }
+      ],
+      "elements": [
+        {
+          "id": "FJ1446",
+          "name": "Abdominal part of right pectoralis major",
+          "system": "muscular",
+          "chunk": 1,
+          "vertices": 563,
+          "triangles": 726
+        },
+        {
+          "id": "FJ1446M",
+          "name": "Abdominal part of left pectoralis major",
+          "system": "muscular",
+          "chunk": 1,
+          "vertices": 564,
+          "triangles": 722
+        },
+        {
+          "id": "FJ1464",
+          "name": "Sternocostal part of right pectoralis major",
+          "system": "muscular",
+          "chunk": 3,
+          "vertices": 3278,
+          "triangles": 3480
+        },
+        {
+          "id": "FJ1464M",
+          "name": "Sternocostal part of left pectoralis major",
+          "system": "muscular",
+          "chunk": 3,
+          "vertices": 3271,
+          "triangles": 3490
+        },
+        {
+          "id": "FJ1447",
+          "name": "Clavicular part of right pectoralis major",
+          "system": "muscular",
+          "chunk": 1,
+          "vertices": 917,
+          "triangles": 998
+        },
+        {
+          "id": "FJ1447M",
+          "name": "Clavicular part of left pectoralis major",
+          "system": "muscular",
+          "chunk": 1,
+          "vertices": 922,
+          "triangles": 998
+        }
+      ],
+      "status": "candidate_geometry_metadata_only"
+    },
+    {
+      "fa": "سینه کوچک",
+      "en": "pectoralis minor",
+      "found": true,
+      "concepts": [
+        {
+          "id": "FMA13109",
+          "name": "pectoralis minor",
+          "elements": [
+            "FJ1456",
+            "FJ1456M"
+          ]
+        },
+        {
+          "id": "FMA13375",
+          "name": "right pectoralis minor",
+          "elements": [
+            "FJ1456"
+          ]
+        },
+        {
+          "id": "FMA13376",
+          "name": "left pectoralis minor",
+          "elements": [
+            "FJ1456M"
+          ]
+        }
+      ],
+      "elements": [
+        {
+          "id": "FJ1456",
+          "name": "Right pectoralis minor",
+          "system": "muscular",
+          "chunk": 3,
+          "vertices": 2726,
+          "triangles": 2612
+        },
+        {
+          "id": "FJ1456M",
+          "name": "Left pectoralis minor",
+          "system": "muscular",
+          "chunk": 3,
+          "vertices": 2729,
+          "triangles": 2590
+        }
+      ],
+      "status": "candidate_geometry_metadata_only"
+    },
+    {
+      "fa": "دلتوئید",
+      "en": "deltoid",
+      "found": true,
+      "concepts": [
+        {
+          "id": "FMA23067",
+          "name": "deltoid branch of thoraco-acromial artery",
+          "elements": [
+            "FJ2230",
+            "FJ2282"
+          ]
+        },
+        {
+          "id": "FMA23072",
+          "name": "deltoid branch of right thoraco-acromial artery",
+          "elements": [
+            "FJ2282"
+          ]
+        },
+        {
+          "id": "FMA23073",
+          "name": "deltoid branch of left thoraco-acromial artery",
+          "elements": [
+            "FJ2230"
+          ]
+        },
+        {
+          "id": "FMA34676",
+          "name": "zone of deltoid",
+          "elements": [
+            "FJ1467",
+            "FJ1467M",
+            "FJ1468",
+            "FJ1468M",
+            "FJ1513",
+            "FJ1513M"
+          ]
+        },
+        {
+          "id": "FMA34677",
+          "name": "clavicular part of deltoid",
+          "elements": [
+            "FJ1468",
+            "FJ1468M"
+          ]
+        },
+        {
+          "id": "FMA34678",
+          "name": "acromial part of deltoid",
+          "elements": [
+            "FJ1467",
+            "FJ1467M"
+          ]
+        },
+        {
+          "id": "FMA34679",
+          "name": "spinal part of deltoid",
+          "elements": [
+            "FJ1513",
+            "FJ1513M"
+          ]
+        },
+        {
+          "id": "FMA34680",
+          "name": "clavicular part of right deltoid",
+          "elements": [
+            "FJ1468"
+          ]
+        },
+        {
+          "id": "FMA34681",
+          "name": "clavicular part of left deltoid",
+          "elements": [
+            "FJ1468M"
+          ]
+        },
+        {
+          "id": "FMA34682",
+          "name": "acromial part of right deltoid",
+          "elements": [
+            "FJ1467"
+          ]
+        },
+        {
+          "id": "FMA34683",
+          "name": "acromial part of left deltoid",
+          "elements": [
+            "FJ1467M"
+          ]
+        },
+        {
+          "id": "FMA34684",
+          "name": "spinal part of right deltoid",
+          "elements": [
+            "FJ1513"
+          ]
+        },
+        {
+          "id": "FMA34685",
+          "name": "spinal part of left deltoid",
+          "elements": [
+            "FJ1513M"
+          ]
+        }
+      ],
+      "elements": [
+        {
+          "id": "FJ2230",
+          "name": "Deltoid branch of left thoraco-acromial artery",
+          "system": "arterial",
+          "chunk": 8,
+          "vertices": 151,
+          "triangles": 294
+        },
+        {
+          "id": "FJ2282",
+          "name": "Deltoid branch of right thoraco-acromial artery",
+          "system": "arterial",
+          "chunk": 8,
+          "vertices": 146,
+          "triangles": 286
+        },
+        {
+          "id": "FJ1467",
+          "name": "Acromial part of right deltoid",
+          "system": "muscular",
+          "chunk": 3,
+          "vertices": 545,
+          "triangles": 686
+        },
+        {
+          "id": "FJ1467M",
+          "name": "Acromial part of left deltoid",
+          "system": "muscular",
+          "chunk": 3,
+          "vertices": 544,
+          "triangles": 686
+        },
+        {
+          "id": "FJ1468",
+          "name": "Clavicular part of right deltoid",
+          "system": "muscular",
+          "chunk": 3,
+          "vertices": 2121,
+          "triangles": 1486
+        },
+        {
+          "id": "FJ1468M",
+          "name": "Clavicular part of left deltoid",
+          "system": "muscular",
+          "chunk": 3,
+          "vertices": 2143,
+          "triangles": 1500
+        },
+        {
+          "id": "FJ1513",
+          "name": "Spinal part of right deltoid",
+          "system": "muscular",
+          "chunk": 4,
+          "vertices": 1063,
+          "triangles": 1028
+        },
+        {
+          "id": "FJ1513M",
+          "name": "Spinal part of left deltoid",
+          "system": "muscular",
+          "chunk": 4,
+          "vertices": 1078,
+          "triangles": 1046
+        }
+      ],
+      "status": "candidate_geometry_metadata_only"
+    },
+    {
+      "fa": "دوسر بازویی",
+      "en": "biceps brachii",
+      "found": true,
+      "concepts": [
+        {
+          "id": "FMA37682",
+          "name": "short head of biceps brachii",
+          "elements": [
+            "FJ1512",
+            "FJ1512M"
+          ]
+        },
+        {
+          "id": "FMA37683",
+          "name": "long head of biceps brachii",
+          "elements": [
+            "FJ1478",
+            "FJ1478M"
+          ]
+        },
+        {
+          "id": "FMA37684",
+          "name": "short head of right biceps brachii",
+          "elements": [
+            "FJ1512"
+          ]
+        },
+        {
+          "id": "FMA37685",
+          "name": "short head of left biceps brachii",
+          "elements": [
+            "FJ1512M"
+          ]
+        },
+        {
+          "id": "FMA37686",
+          "name": "long head of right biceps brachii",
+          "elements": [
+            "FJ1478"
+          ]
+        },
+        {
+          "id": "FMA37687",
+          "name": "long head of left biceps brachii",
+          "elements": [
+            "FJ1478M"
+          ]
+        }
+      ],
+      "elements": [
+        {
+          "id": "FJ1512",
+          "name": "Short head of right biceps brachii",
+          "system": "muscular",
+          "chunk": 4,
+          "vertices": 1035,
+          "triangles": 804
+        },
+        {
+          "id": "FJ1512M",
+          "name": "Short head of left biceps brachii",
+          "system": "muscular",
+          "chunk": 4,
+          "vertices": 1032,
+          "triangles": 816
+        },
+        {
+          "id": "FJ1478",
+          "name": "Long head of right biceps brachii",
+          "system": "muscular",
+          "chunk": 3,
+          "vertices": 466,
+          "triangles": 492
+        },
+        {
+          "id": "FJ1478M",
+          "name": "Long head of left biceps brachii",
+          "system": "muscular",
+          "chunk": 3,
+          "vertices": 457,
+          "triangles": 492
+        }
+      ],
+      "status": "candidate_geometry_metadata_only"
+    },
+    {
+      "fa": "سه‌سر بازویی",
+      "en": "triceps brachii",
+      "found": true,
+      "concepts": [
+        {
+          "id": "FMA37692",
+          "name": "long head of triceps brachii",
+          "elements": [
+            "FJ1479",
+            "FJ1479M"
+          ]
+        },
+        {
+          "id": "FMA37693",
+          "name": "medial head of triceps brachii",
+          "elements": [
+            "FJ1480",
+            "FJ1480M"
+          ]
+        },
+        {
+          "id": "FMA37694",
+          "name": "lateral head of triceps brachii",
+          "elements": [
+            "FJ1477",
+            "FJ1477M"
+          ]
+        },
+        {
+          "id": "FMA37695",
+          "name": "medial head of right triceps brachii",
+          "elements": [
+            "FJ1480"
+          ]
+        },
+        {
+          "id": "FMA37696",
+          "name": "medial head of left triceps brachii",
+          "elements": [
+            "FJ1480M"
+          ]
+        },
+        {
+          "id": "FMA37697",
+          "name": "lateral head of right triceps brachii",
+          "elements": [
+            "FJ1477"
+          ]
+        },
+        {
+          "id": "FMA37698",
+          "name": "lateral head of left triceps brachii",
+          "elements": [
+            "FJ1477M"
+          ]
+        },
+        {
+          "id": "FMA37699",
+          "name": "long head of right triceps brachii",
+          "elements": [
+            "FJ1479"
+          ]
+        },
+        {
+          "id": "FMA37700",
+          "name": "long head of left triceps brachii",
+          "elements": [
+            "FJ1479M"
+          ]
+        }
+      ],
+      "elements": [
+        {
+          "id": "FJ1479",
+          "name": "Long head of right triceps brachii",
+          "system": "muscular",
+          "chunk": 3,
+          "vertices": 504,
+          "triangles": 560
+        },
+        {
+          "id": "FJ1479M",
+          "name": "Long head of left triceps brachii",
+          "system": "muscular",
+          "chunk": 3,
+          "vertices": 504,
+          "triangles": 562
+        },
+        {
+          "id": "FJ1480",
+          "name": "Medial head of right triceps brachii",
+          "system": "muscular",
+          "chunk": 3,
+          "vertices": 325,
+          "triangles": 372
+        },
+        {
+          "id": "FJ1480M",
+          "name": "Medial head of left triceps brachii",
+          "system": "muscular",
+          "chunk": 3,
+          "vertices": 325,
+          "triangles": 374
+        },
+        {
+          "id": "FJ1477",
+          "name": "Lateral head of right triceps brachii",
+          "system": "muscular",
+          "chunk": 3,
+          "vertices": 656,
+          "triangles": 838
+        },
+        {
+          "id": "FJ1477M",
+          "name": "Lateral head of left triceps brachii",
+          "system": "muscular",
+          "chunk": 3,
+          "vertices": 661,
+          "triangles": 830
+        }
+      ],
+      "status": "candidate_geometry_metadata_only"
+    },
+    {
+      "fa": "ذوزنقه‌ای",
+      "en": "trapezius",
+      "found": true,
+      "concepts": [
+        {
+          "id": "FMA32529",
+          "name": "zone of trapezius",
+          "elements": [
+            "FJ1554",
+            "FJ1554M"
+          ]
+        },
+        {
+          "id": "FMA32555",
+          "name": "ascending part of trapezius",
+          "elements": [
+            "FJ1520",
+            "FJ1520M"
+          ]
+        },
+        {
+          "id": "FMA32556",
+          "name": "transverse part of trapezius",
+          "elements": [
+            "FJ1554",
+            "FJ1554M"
+          ]
+        },
+        {
+          "id": "FMA32557",
+          "name": "descending part of trapezius",
+          "elements": [
+            "FJ1521",
+            "FJ1521M"
+          ]
+        },
+        {
+          "id": "FMA33581",
+          "name": "ascending part of right trapezius",
+          "elements": [
+            "FJ1520"
+          ]
+        },
+        {
+          "id": "FMA33583",
+          "name": "ascending part of left trapezius",
+          "elements": [
+            "FJ1520M"
+          ]
+        },
+        {
+          "id": "FMA33584",
+          "name": "transverse part of right trapezius",
+          "elements": [
+            "FJ1554"
+          ]
+        },
+        {
+          "id": "FMA33585",
+          "name": "transverse part of left trapezius",
+          "elements": [
+            "FJ1554M"
+          ]
+        },
+        {
+          "id": "FMA33586",
+          "name": "descending part of right trapezius",
+          "elements": [
+            "FJ1521"
+          ]
+        },
+        {
+          "id": "FMA33587",
+          "name": "descending part of left trapezius",
+          "elements": [
+            "FJ1521M"
+          ]
+        }
+      ],
+      "elements": [
+        {
+          "id": "FJ1554",
+          "name": "Transverse part of right trapezius",
+          "system": "muscular",
+          "chunk": 5,
+          "vertices": 1989,
+          "triangles": 1960
+        },
+        {
+          "id": "FJ1554M",
+          "name": "Transverse part of left trapezius",
+          "system": "muscular",
+          "chunk": 5,
+          "vertices": 1981,
+          "triangles": 1962
+        },
+        {
+          "id": "FJ1520",
+          "name": "Ascending part of right trapezius",
+          "system": "muscular",
+          "chunk": 4,
+          "vertices": 2787,
+          "triangles": 2654
+        },
+        {
+          "id": "FJ1520M",
+          "name": "Ascending part of left trapezius",
+          "system": "muscular",
+          "chunk": 4,
+          "vertices": 2752,
+          "triangles": 2640
+        },
+        {
+          "id": "FJ1521",
+          "name": "Descending part of right trapezius",
+          "system": "muscular",
+          "chunk": 4,
+          "vertices": 2394,
+          "triangles": 2618
+        },
+        {
+          "id": "FJ1521M",
+          "name": "Descending part of left trapezius",
+          "system": "muscular",
+          "chunk": 4,
+          "vertices": 2380,
+          "triangles": 2622
+        }
+      ],
+      "status": "candidate_geometry_metadata_only"
+    },
+    {
+      "fa": "لوزی بزرگ",
+      "en": "rhomboid major",
+      "found": true,
+      "concepts": [
+        {
+          "id": "FMA13379",
+          "name": "rhomboid major",
+          "elements": [
+            "FJ1536",
+            "FJ1536M"
+          ]
+        },
+        {
+          "id": "FMA13381",
+          "name": "right rhomboid major",
+          "elements": [
+            "FJ1536"
+          ]
+        },
+        {
+          "id": "FMA13382",
+          "name": "left rhomboid major",
+          "elements": [
+            "FJ1536M"
+          ]
+        }
+      ],
+      "elements": [
+        {
+          "id": "FJ1536",
+          "name": "Right rhomboid major",
+          "system": "muscular",
+          "chunk": 4,
+          "vertices": 1824,
+          "triangles": 1860
+        },
+        {
+          "id": "FJ1536M",
+          "name": "Left rhomboid major",
+          "system": "muscular",
+          "chunk": 4,
+          "vertices": 1806,
+          "triangles": 1852
+        }
+      ],
+      "status": "candidate_geometry_metadata_only"
+    },
+    {
+      "fa": "لوزی کوچک",
+      "en": "rhomboid minor",
+      "found": true,
+      "concepts": [
+        {
+          "id": "FMA13380",
+          "name": "rhomboid minor",
+          "elements": [
+            "FJ1537",
+            "FJ1537M"
+          ]
+        },
+        {
+          "id": "FMA13383",
+          "name": "right rhomboid minor",
+          "elements": [
+            "FJ1537"
+          ]
+        },
+        {
+          "id": "FMA13384",
+          "name": "left rhomboid minor",
+          "elements": [
+            "FJ1537M"
+          ]
+        }
+      ],
+      "elements": [
+        {
+          "id": "FJ1537",
+          "name": "Right rhomboid minor",
+          "system": "muscular",
+          "chunk": 4,
+          "vertices": 645,
+          "triangles": 746
+        },
+        {
+          "id": "FJ1537M",
+          "name": "Left rhomboid minor",
+          "system": "muscular",
+          "chunk": 4,
+          "vertices": 644,
+          "triangles": 742
+        }
+      ],
+      "status": "candidate_geometry_metadata_only"
+    },
+    {
+      "fa": "دندانه‌ای قدامی",
+      "en": "serratus anterior",
+      "found": true,
+      "concepts": [
+        {
+          "id": "FMA13397",
+          "name": "serratus anterior",
+          "elements": [
+            "FJ1459",
+            "FJ1459M"
+          ]
+        },
+        {
+          "id": "FMA13398",
+          "name": "right serratus anterior",
+          "elements": [
+            "FJ1459"
+          ]
+        },
+        {
+          "id": "FMA13399",
+          "name": "left serratus anterior",
+          "elements": [
+            "FJ1459M"
+          ]
+        }
+      ],
+      "elements": [
+        {
+          "id": "FJ1459",
+          "name": "Right serratus anterior",
+          "system": "muscular",
+          "chunk": 3,
+          "vertices": 7818,
+          "triangles": 10826
+        },
+        {
+          "id": "FJ1459M",
+          "name": "Left serratus anterior",
+          "system": "muscular",
+          "chunk": 3,
+          "vertices": 7810,
+          "triangles": 10826
+        }
+      ],
+      "status": "candidate_geometry_metadata_only"
+    },
+    {
+      "fa": "مایل خارجی شکم",
+      "en": "external oblique",
+      "found": true,
+      "concepts": [
+        {
+          "id": "FMA13335",
+          "name": "external oblique",
+          "elements": [
+            "FJ1452",
+            "FJ1452M"
+          ]
+        },
+        {
+          "id": "FMA13336",
+          "name": "right external oblique",
+          "elements": [
+            "FJ1452"
+          ]
+        },
+        {
+          "id": "FMA13337",
+          "name": "left external oblique",
+          "elements": [
+            "FJ1452M"
+          ]
+        }
+      ],
+      "elements": [
+        {
+          "id": "FJ1452",
+          "name": "Right external oblique",
+          "system": "muscular",
+          "chunk": 2,
+          "vertices": 17145,
+          "triangles": 24600
+        },
+        {
+          "id": "FJ1452M",
+          "name": "Left external oblique",
+          "system": "muscular",
+          "chunk": 2,
+          "vertices": 17116,
+          "triangles": 24600
+        }
+      ],
+      "status": "candidate_geometry_metadata_only"
+    },
+    {
+      "fa": "راست شکمی",
+      "en": "rectus abdominis",
+      "found": false,
+      "concepts": [],
+      "elements": [],
+      "status": "not_found_by_name"
+    },
+    {
+      "fa": "پشتی بزرگ",
+      "en": "latissimus dorsi",
+      "found": false,
+      "concepts": [],
+      "elements": [],
+      "status": "not_found_by_name"
+    },
+    {
+      "fa": "سرینی بزرگ",
+      "en": "gluteus maximus",
+      "found": true,
+      "concepts": [
+        {
+          "id": "FMA22314",
+          "name": "gluteus maximus",
+          "elements": [
+            "FJ1418",
+            "FJ1418M"
+          ]
+        },
+        {
+          "id": "FMA22328",
+          "name": "right gluteus maximus",
+          "elements": [
+            "FJ1418"
+          ]
+        },
+        {
+          "id": "FMA22329",
+          "name": "left gluteus maximus",
+          "elements": [
+            "FJ1418M"
+          ]
+        }
+      ],
+      "elements": [
+        {
+          "id": "FJ1418",
+          "name": "Right gluteus maximus",
+          "system": "muscular",
+          "chunk": 1,
+          "vertices": 1328,
+          "triangles": 1236
+        },
+        {
+          "id": "FJ1418M",
+          "name": "Left gluteus maximus",
+          "system": "muscular",
+          "chunk": 1,
+          "vertices": 1336,
+          "triangles": 1240
+        }
+      ],
+      "status": "candidate_geometry_metadata_only"
+    },
+    {
+      "fa": "سرینی میانی",
+      "en": "gluteus medius",
+      "found": true,
+      "concepts": [
+        {
+          "id": "FMA22315",
+          "name": "gluteus medius",
+          "elements": [
+            "FJ1419",
+            "FJ1419M"
+          ]
+        },
+        {
+          "id": "FMA22330",
+          "name": "right gluteus medius",
+          "elements": [
+            "FJ1419"
+          ]
+        },
+        {
+          "id": "FMA22331",
+          "name": "left gluteus medius",
+          "elements": [
+            "FJ1419M"
+          ]
+        }
+      ],
+      "elements": [
+        {
+          "id": "FJ1419",
+          "name": "Right gluteus medius",
+          "system": "muscular",
+          "chunk": 1,
+          "vertices": 1129,
+          "triangles": 1370
+        },
+        {
+          "id": "FJ1419M",
+          "name": "Left gluteus medius",
+          "system": "muscular",
+          "chunk": 1,
+          "vertices": 1126,
+          "triangles": 1378
+        }
+      ],
+      "status": "candidate_geometry_metadata_only"
+    },
+    {
+      "fa": "سرینی کوچک",
+      "en": "gluteus minimus",
+      "found": true,
+      "concepts": [
+        {
+          "id": "FMA22317",
+          "name": "gluteus minimus",
+          "elements": [
+            "FJ1420",
+            "FJ1420M"
+          ]
+        },
+        {
+          "id": "FMA22332",
+          "name": "right gluteus minimus",
+          "elements": [
+            "FJ1420"
+          ]
+        },
+        {
+          "id": "FMA22333",
+          "name": "left gluteus minimus",
+          "elements": [
+            "FJ1420M"
+          ]
+        }
+      ],
+      "elements": [
+        {
+          "id": "FJ1420",
+          "name": "Right gluteus minimus",
+          "system": "muscular",
+          "chunk": 1,
+          "vertices": 1346,
+          "triangles": 1432
+        },
+        {
+          "id": "FJ1420M",
+          "name": "Left gluteus minimus",
+          "system": "muscular",
+          "chunk": 1,
+          "vertices": 1350,
+          "triangles": 1436
+        }
+      ],
+      "status": "candidate_geometry_metadata_only"
+    },
+    {
+      "fa": "راست رانی",
+      "en": "rectus femoris",
+      "found": true,
+      "concepts": [
+        {
+          "id": "FMA22430",
+          "name": "rectus femoris",
+          "elements": [
+            "FJ1433",
+            "FJ1433M"
+          ]
+        },
+        {
+          "id": "FMA38928",
+          "name": "right rectus femoris",
+          "elements": [
+            "FJ1433"
+          ]
+        },
+        {
+          "id": "FMA38929",
+          "name": "left rectus femoris",
+          "elements": [
+            "FJ1433M"
+          ]
+        }
+      ],
+      "elements": [
+        {
+          "id": "FJ1433",
+          "name": "Right rectus femoris",
+          "system": "muscular",
+          "chunk": 1,
+          "vertices": 910,
+          "triangles": 1250
+        },
+        {
+          "id": "FJ1433M",
+          "name": "Left rectus femoris",
+          "system": "muscular",
+          "chunk": 1,
+          "vertices": 918,
+          "triangles": 1250
+        }
+      ],
+      "status": "candidate_geometry_metadata_only"
+    },
+    {
+      "fa": "پهن خارجی",
+      "en": "vastus lateralis",
+      "found": true,
+      "concepts": [
+        {
+          "id": "FMA22431",
+          "name": "vastus lateralis",
+          "elements": [
+            "FJ1442",
+            "FJ1442M"
+          ]
+        },
+        {
+          "id": "FMA38930",
+          "name": "right vastus lateralis",
+          "elements": [
+            "FJ1442"
+          ]
+        },
+        {
+          "id": "FMA38931",
+          "name": "left vastus lateralis",
+          "elements": [
+            "FJ1442M"
+          ]
+        }
+      ],
+      "elements": [
+        {
+          "id": "FJ1442",
+          "name": "Right vastus lateralis",
+          "system": "muscular",
+          "chunk": 1,
+          "vertices": 1091,
+          "triangles": 1470
+        },
+        {
+          "id": "FJ1442M",
+          "name": "Left vastus lateralis",
+          "system": "muscular",
+          "chunk": 1,
+          "vertices": 1080,
+          "triangles": 1470
+        }
+      ],
+      "status": "candidate_geometry_metadata_only"
+    },
+    {
+      "fa": "پهن میانی",
+      "en": "vastus medialis",
+      "found": true,
+      "concepts": [
+        {
+          "id": "FMA22432",
+          "name": "vastus medialis",
+          "elements": [
+            "FJ1443",
+            "FJ1443M"
+          ]
+        },
+        {
+          "id": "FMA38932",
+          "name": "right vastus medialis",
+          "elements": [
+            "FJ1443"
+          ]
+        },
+        {
+          "id": "FMA38933",
+          "name": "left vastus medialis",
+          "elements": [
+            "FJ1443M"
+          ]
+        }
+      ],
+      "elements": [
+        {
+          "id": "FJ1443",
+          "name": "Right vastus medialis",
+          "system": "muscular",
+          "chunk": 1,
+          "vertices": 784,
+          "triangles": 1000
+        },
+        {
+          "id": "FJ1443M",
+          "name": "Left vastus medialis",
+          "system": "muscular",
+          "chunk": 1,
+          "vertices": 776,
+          "triangles": 1000
+        }
+      ],
+      "status": "candidate_geometry_metadata_only"
+    },
+    {
+      "fa": "پهن میانی عمقی",
+      "en": "vastus intermedius",
+      "found": true,
+      "concepts": [
+        {
+          "id": "FMA22433",
+          "name": "vastus intermedius",
+          "elements": [
+            "FJ1441",
+            "FJ1441M"
+          ]
+        },
+        {
+          "id": "FMA38934",
+          "name": "right vastus intermedius",
+          "elements": [
+            "FJ1441"
+          ]
+        },
+        {
+          "id": "FMA38935",
+          "name": "left vastus intermedius",
+          "elements": [
+            "FJ1441M"
+          ]
+        }
+      ],
+      "elements": [
+        {
+          "id": "FJ1441",
+          "name": "Right vastus intermedius",
+          "system": "muscular",
+          "chunk": 1,
+          "vertices": 840,
+          "triangles": 936
+        },
+        {
+          "id": "FJ1441M",
+          "name": "Left vastus intermedius",
+          "system": "muscular",
+          "chunk": 1,
+          "vertices": 839,
+          "triangles": 936
+        }
+      ],
+      "status": "candidate_geometry_metadata_only"
+    },
+    {
+      "fa": "دوسر رانی",
+      "en": "biceps femoris",
+      "found": true,
+      "concepts": [
+        {
+          "id": "FMA45881",
+          "name": "head of biceps femoris",
+          "elements": [
+            "FJ1395",
+            "FJ1395M",
+            "FJ1444",
+            "FJ1444M"
+          ]
+        },
+        {
+          "id": "FMA45887",
+          "name": "long head of biceps femoris",
+          "elements": [
+            "FJ1395",
+            "FJ1395M"
+          ]
+        },
+        {
+          "id": "FMA45888",
+          "name": "long head of right biceps femoris",
+          "elements": [
+            "FJ1395"
+          ]
+        },
+        {
+          "id": "FMA45889",
+          "name": "long head of left biceps femoris",
+          "elements": [
+            "FJ1395M"
+          ]
+        },
+        {
+          "id": "FMA45890",
+          "name": "short head of biceps femoris",
+          "elements": [
+            "FJ1444",
+            "FJ1444M"
+          ]
+        },
+        {
+          "id": "FMA45891",
+          "name": "short head of right biceps femoris",
+          "elements": [
+            "FJ1444"
+          ]
+        },
+        {
+          "id": "FMA45892",
+          "name": "short head of left biceps femoris",
+          "elements": [
+            "FJ1444M"
+          ]
+        }
+      ],
+      "elements": [
+        {
+          "id": "FJ1395",
+          "name": "Long head of right biceps femoris",
+          "system": "muscular",
+          "chunk": 1,
+          "vertices": 718,
+          "triangles": 1124
+        },
+        {
+          "id": "FJ1395M",
+          "name": "Long head of left biceps femoris",
+          "system": "muscular",
+          "chunk": 1,
+          "vertices": 726,
+          "triangles": 1124
+        },
+        {
+          "id": "FJ1444",
+          "name": "Short head of right biceps femoris",
+          "system": "muscular",
+          "chunk": 1,
+          "vertices": 456,
+          "triangles": 492
+        },
+        {
+          "id": "FJ1444M",
+          "name": "Short head of left biceps femoris",
+          "system": "muscular",
+          "chunk": 1,
+          "vertices": 450,
+          "triangles": 480
+        }
+      ],
+      "status": "candidate_geometry_metadata_only"
+    },
+    {
+      "fa": "نیم‌وتری",
+      "en": "semitendinosus",
+      "found": true,
+      "concepts": [
+        {
+          "id": "FMA22357",
+          "name": "semitendinosus",
+          "elements": [
+            "FJ1436",
+            "FJ1436M"
+          ]
+        },
+        {
+          "id": "FMA22358",
+          "name": "right semitendinosus",
+          "elements": [
+            "FJ1436"
+          ]
+        },
+        {
+          "id": "FMA22359",
+          "name": "left semitendinosus",
+          "elements": [
+            "FJ1436M"
+          ]
+        }
+      ],
+      "elements": [
+        {
+          "id": "FJ1436",
+          "name": "Right semitendinosus",
+          "system": "muscular",
+          "chunk": 1,
+          "vertices": 638,
+          "triangles": 596
+        },
+        {
+          "id": "FJ1436M",
+          "name": "Left semitendinosus",
+          "system": "muscular",
+          "chunk": 1,
+          "vertices": 624,
+          "triangles": 596
+        }
+      ],
+      "status": "candidate_geometry_metadata_only"
+    },
+    {
+      "fa": "نیم‌غشایی",
+      "en": "semimembranosus",
+      "found": true,
+      "concepts": [
+        {
+          "id": "FMA22438",
+          "name": "semimembranosus",
+          "elements": [
+            "FJ1435",
+            "FJ1435M"
+          ]
+        },
+        {
+          "id": "FMA22448",
+          "name": "right semimembranosus",
+          "elements": [
+            "FJ1435"
+          ]
+        },
+        {
+          "id": "FMA22449",
+          "name": "left semimembranosus",
+          "elements": [
+            "FJ1435M"
+          ]
+        }
+      ],
+      "elements": [
+        {
+          "id": "FJ1435",
+          "name": "Right semimembranosus",
+          "system": "muscular",
+          "chunk": 1,
+          "vertices": 664,
+          "triangles": 1014
+        },
+        {
+          "id": "FJ1435M",
+          "name": "Left semimembranosus",
+          "system": "muscular",
+          "chunk": 1,
+          "vertices": 659,
+          "triangles": 1014
+        }
+      ],
+      "status": "candidate_geometry_metadata_only"
+    },
+    {
+      "fa": "دوقلو ساق",
+      "en": "gastrocnemius",
+      "found": true,
+      "concepts": [
+        {
+          "id": "FMA45950",
+          "name": "head of gastrocnemius",
+          "elements": [
+            "FJ1394",
+            "FJ1394M",
+            "FJ1397",
+            "FJ1397M"
+          ]
+        },
+        {
+          "id": "FMA45956",
+          "name": "medial head of gastrocnemius",
+          "elements": [
+            "FJ1397",
+            "FJ1397M"
+          ]
+        },
+        {
+          "id": "FMA45957",
+          "name": "medial head of right gastrocnemius",
+          "elements": [
+            "FJ1397"
+          ]
+        },
+        {
+          "id": "FMA45958",
+          "name": "medial head of left gastrocnemius",
+          "elements": [
+            "FJ1397M"
+          ]
+        },
+        {
+          "id": "FMA45959",
+          "name": "lateral head of gastrocnemius",
+          "elements": [
+            "FJ1394",
+            "FJ1394M"
+          ]
+        },
+        {
+          "id": "FMA45960",
+          "name": "lateral head of right gastrocnemius",
+          "elements": [
+            "FJ1394"
+          ]
+        },
+        {
+          "id": "FMA45961",
+          "name": "lateral head of left gastrocnemius",
+          "elements": [
+            "FJ1394M"
+          ]
+        }
+      ],
+      "elements": [
+        {
+          "id": "FJ1394",
+          "name": "Lateral head of right gastrocnemius",
+          "system": "muscular",
+          "chunk": 1,
+          "vertices": 482,
+          "triangles": 738
+        },
+        {
+          "id": "FJ1394M",
+          "name": "Lateral head of left gastrocnemius",
+          "system": "muscular",
+          "chunk": 1,
+          "vertices": 487,
+          "triangles": 748
+        },
+        {
+          "id": "FJ1397",
+          "name": "Medial head of right gastrocnemius",
+          "system": "muscular",
+          "chunk": 1,
+          "vertices": 647,
+          "triangles": 882
+        },
+        {
+          "id": "FJ1397M",
+          "name": "Medial head of left gastrocnemius",
+          "system": "muscular",
+          "chunk": 1,
+          "vertices": 644,
+          "triangles": 892
+        }
+      ],
+      "status": "candidate_geometry_metadata_only"
+    },
+    {
+      "fa": "نعلی",
+      "en": "soleus",
+      "found": true,
+      "concepts": [
+        {
+          "id": "FMA22542",
+          "name": "soleus",
+          "elements": [
+            "FJ1437",
+            "FJ1437M"
+          ]
+        },
+        {
+          "id": "FMA22558",
+          "name": "right soleus",
+          "elements": [
+            "FJ1437"
+          ]
+        },
+        {
+          "id": "FMA22559",
+          "name": "left soleus",
+          "elements": [
+            "FJ1437M"
+          ]
+        }
+      ],
+      "elements": [
+        {
+          "id": "FJ1437",
+          "name": "Right soleus",
+          "system": "muscular",
+          "chunk": 1,
+          "vertices": 792,
+          "triangles": 1004
+        },
+        {
+          "id": "FJ1437M",
+          "name": "Left soleus",
+          "system": "muscular",
+          "chunk": 1,
+          "vertices": 778,
+          "triangles": 976
+        }
+      ],
+      "status": "candidate_geometry_metadata_only"
+    },
+    {
+      "fa": "درشت‌نی قدامی",
+      "en": "tibialis anterior",
+      "found": true,
+      "concepts": [
+        {
+          "id": "FMA22532",
+          "name": "tibialis anterior",
+          "elements": [
+            "FJ1439",
+            "FJ1439M"
+          ]
+        },
+        {
+          "id": "FMA22544",
+          "name": "right tibialis anterior",
+          "elements": [
+            "FJ1439"
+          ]
+        },
+        {
+          "id": "FMA22545",
+          "name": "left tibialis anterior",
+          "elements": [
+            "FJ1439M"
+          ]
+        }
+      ],
+      "elements": [
+        {
+          "id": "FJ1439",
+          "name": "Right tibialis anterior",
+          "system": "skeletal",
+          "chunk": 1,
+          "vertices": 1116,
+          "triangles": 766
+        },
+        {
+          "id": "FJ1439M",
+          "name": "Left tibialis anterior",
+          "system": "skeletal",
+          "chunk": 1,
+          "vertices": 1113,
+          "triangles": 756
+        }
+      ],
+      "status": "candidate_geometry_metadata_only"
+    }
+  ],
+  "nextSteps": [
+    "Retrieve only needed binary chunks (chunks 1–5) from public upstream without user uploads.",
+    "Decode manifest offsets and validate byte bounds, finite positions, normals, and triangle indices.",
+    "Render one candidate at a time in isolated experiment preview.",
+    "Check orientation, side, silhouette, and overlaps against front/back MuscleMap.",
+    "Keep male source meshes male-only; obtain a separate validated female skeletal-muscle source."
+  ]
+}
