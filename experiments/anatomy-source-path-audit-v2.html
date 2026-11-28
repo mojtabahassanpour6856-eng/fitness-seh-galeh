@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ممیزی منبع و پیش‌نمایش زنده آناتومی | فیتنس سه‌قلعه</title>
+<style>
+:root{--bg:#f7f0df;--card:#fffdf7;--gold:#98752d;--line:#dfcca0;--ink:#302819;--muted:#776d5b;--red:#9f3e32;--green:#286d58}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.9 Tahoma,Arial,sans-serif}
+header{background:linear-gradient(110deg,#fffdf7,#efe2c1);border-bottom:1px solid var(--line);padding:22px}
+.wrap{max-width:1500px;margin:auto;padding:18px}h1{font-size:23px;color:#76591e;margin:0}h2{font-size:19px;color:#76591e;margin:0 0 12px}h3{font-size:15px;margin:0 0 8px}
+.sub{font-size:12px;color:var(--muted)}.card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:16px;margin-bottom:16px;box-shadow:0 4px 16px #6045150d}
+.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}.views iframe{width:100%;height:860px;border:0;border-radius:10px;background:#f7f0df}
+.viewtitle{font-weight:bold;padding:4px 0 8px}a{color:#76591e}table{width:100%;border-collapse:collapse;font-size:12px;background:#fff}td,th{border:1px solid #e5dac0;padding:7px;text-align:right;vertical-align:top}th{background:#f2e8d0}
+code{direction:ltr;unicode-bidi:embed;font:12px ui-monospace,monospace}.pill{display:inline-block;border-radius:20px;padding:1px 8px;background:#f2e5c8;color:#684c16;font-size:11px}
+.warn,.good{padding:12px;border-radius:9px}.warn{background:#fff0eb;border-right:4px solid var(--red)}.good{background:#edf6f0;border-right:4px solid var(--green)}
+ul{padding-right:20px;margin:8px 0}.links{display:flex;gap:14px;flex-wrap:wrap}
+@media(max-width:850px){.grid{grid-template-columns:1fr}.wrap{padding:10px}header{padding:15px}h1{font-size:19px}.views iframe{height:760px}}
+</style></head>
+<body>
+<header><div class="wrap"><h1>ممیزی هندسه چهارسر ران و ذوزنقه‌ای</h1><div class="sub">پیش‌نمایش زنده HTML · بررسی مستقیم فایل‌های منبع · شاخه آزمایشی anatomy-smart-rebuild</div></div></header>
+<main class="wrap">
+<section class="card">
+<h2>نتیجه تازه ممیزی منبع</h2>
+<div class="good"><b>اصلاح مهم نسبت به برداشت اولیه:</b> آرایه‌های چهار فایل منبع را مستقیماً خواندم و اندیس، شناسه، group، side و طول داده مسیرها را استخراج کردم. خروجی زیر بر اساس خود آرایه <code>MUSCLES</code> است، نه شماره‌گذاری تقریبی از تصویر.</div>
+<ul>
+<li>هر چهار فایل دارای <code>viewBox="0 0 1024 1536"</code> هستند.</li>
+<li>تمام مسیرهای بررسی‌شده دارای <code>side: "CENTER"</code> هستند؛ بنابراین مقدار side در این فایل‌ها سمت چپ/راست را تفکیک نمی‌کند، حتی اگر id شامل LEFT یا RIGHT باشد.</li>
+<li>داده مسیرها به صورت آرایه تخت است؛ parent SVG group برای هر مسیر در منبع TypeScript وجود ندارد.</li>
+<li>طول d فقط اندازه متن مسیر است و معیار وسعت یا دقت هندسی نیست.</li>
+</ul>
+</section>
+<section class="card views">
+<h2>پیش‌نمایش تعاملی چهار نمای اصلی</h2>
+<p class="sub">چهار قاب زیر نسخه زنده نمونه آناتومی را در صفحه نمایش می‌دهند. برای بازکردن هر نما به‌صورت مستقل، عنوان آن را انتخاب کن.</p>
+<div class="grid">
+<div><div class="viewtitle"><a target="_blank" rel="noopener" href="./anatomy-preview-capture.html?view=male-front">۱. آقا — جلو ↗</a></div><iframe loading="lazy" title="آقا جلو" src="./anatomy-preview-capture.html?view=male-front"></iframe></div>
+<div><div class="viewtitle"><a target="_blank" rel="noopener" href="./anatomy-preview-capture.html?view=male-back">۲. آقا — پشت ↗</a></div><iframe loading="lazy" title="آقا پشت" src="./anatomy-preview-capture.html?view=male-back"></iframe></div>
+<div><div class="viewtitle"><a target="_blank" rel="noopener" href="./anatomy-preview-capture.html?view=female-front">۳. خانم — جلو ↗</a></div><iframe loading="lazy" title="خانم جلو" src="./anatomy-preview-capture.html?view=female-front"></iframe></div>
+<div><div class="viewtitle"><a target="_blank" rel="noopener" href="./anatomy-preview-capture.html?view=female-back">۴. خانم — پشت ↗</a></div><iframe loading="lazy" title="خانم پشت" src="./anatomy-preview-capture.html?view=female-back"></iframe></div>
+</div>
+</section>
+<section class="card">
+<h2>چهارسر ران — مسیرهای ثبت‌شده در فایل اصلی</h2>
+<table><thead><tr><th>نما</th><th>اندیس</th><th>شناسه</th><th>group</th><th>side</th><th>طول d</th><th>برداشت فعلی</th></tr></thead><tbody>
+<tr><td>آقا جلو</td><td>19</td><td><code>QUADRICEPS_LEFT</code></td><td>QUADS</td><td>CENTER</td><td>1643</td><td>مسیر بزرگ ران</td></tr>
+<tr><td>آقا جلو</td><td>20</td><td><code>QUADRICEPS_RIGHT</code></td><td>QUADS</td><td>CENTER</td><td>1679</td><td>مسیر بزرگ ران</td></tr>
+<tr><td>آقا جلو</td><td>22</td><td>بدون id</td><td>QUADS</td><td>CENTER</td><td>757</td><td>مسیر دیستال؛ انتساب دقیق نامشخص</td></tr>
+<tr><td>آقا جلو</td><td>23</td><td>بدون id</td><td>QUADS</td><td>CENTER</td><td>787</td><td>مسیر دیستال؛ انتساب دقیق نامشخص</td></tr>
+<tr><td>خانم جلو</td><td>19</td><td><code>QUADRICEPS_LEFT</code></td><td>QUADS</td><td>CENTER</td><td>2540</td><td>مسیر بزرگ ران</td></tr>
+<tr><td>خانم جلو</td><td>23</td><td><code>QUADRICEPS_RIGHT</code></td><td>QUADS</td><td>CENTER</td><td>2642</td><td>مسیر بزرگ ران</td></tr>
+<tr><td>خانم جلو</td><td>26</td><td><code>QUADRICEPS_LEFT</code></td><td>QUADS</td><td>CENTER</td><td>1038</td><td>شناسه تکراری؛ مسیر دیستال</td></tr>
+<tr><td>خانم جلو</td><td>27</td><td><code>QUADRICEPS_RIGHT</code></td><td>QUADS</td><td>CENTER</td><td>998</td><td>شناسه تکراری؛ مسیر دیستال</td></tr>
+</tbody></table>
+<p class="warn">طبق منبع آناتومی، چهارسر شامل rectus femoris، vastus lateralis، vastus medialis و vastus intermedius است و تاندون مشترک آن به کشکک می‌رسد؛ رباط کشککی از کشکک به برجستگی درشت‌نی ادامه دارد. بنابراین صرف قرارگرفتن یک مسیر پایین زانو در گروه QUADS، برای نام‌گذاری آن به‌عنوان بخش چهارسر کافی نیست. فعلاً همه مسیرهای مشکوک مسدود می‌مانند.</p>
+<p class="sub">مرجع علمی: <a href="https://www.ncbi.nlm.nih.gov/books/NBK538501/">NCBI — Femoral Region</a> · <a href="https://www.ncbi.nlm.nih.gov/books/NBK482445/">NCBI — Thigh Muscles</a></p>
+</section>
+<section class="card">
+<h2>ذوزنقه‌ای — مسیرهای ثبت‌شده در هر چهار فایل</h2>
+<table><thead><tr><th>نما</th><th>اندیس</th><th>شناسه</th><th>group</th><th>side</th><th>طول d</th><th>برداشت فعلی</th></tr></thead><tbody>
+<tr><td>آقا جلو</td><td>0</td><td><code>TRAPEZIUS_LEFT</code></td><td>TRAPEZIUS</td><td>CENTER</td><td>325</td><td>قطعه ناحیه گردن/شانه در نمای جلو</td></tr>
+<tr><td>آقا جلو</td><td>1</td><td><code>TRAPEZIUS_RIGHT</code></td><td>TRAPEZIUS</td><td>CENTER</td><td>253</td><td>قطعه ناحیه گردن/شانه در نمای جلو</td></tr>
+<tr><td>آقا پشت</td><td>0</td><td><code>TRAPEZIUS_LEFT</code></td><td>TRAPEZIUS</td><td>CENTER</td><td>409</td><td>قطعه بالایی</td></tr>
+<tr><td>آقا پشت</td><td>1</td><td><code>TRAPEZIUS_RIGHT</code></td><td>TRAPEZIUS</td><td>CENTER</td><td>385</td><td>قطعه بالایی</td></tr>
+<tr><td>آقا پشت</td><td>11</td><td><code>TRAPEZIUS_LEFT</code></td><td>TRAPEZIUS</td><td>CENTER</td><td>2755</td><td>شناسه تکراری؛ قطعه گسترده‌تر پشت</td></tr>
+<tr><td>آقا پشت</td><td>12</td><td><code>TRAPEZIUS_RIGHT</code></td><td>TRAPEZIUS</td><td>CENTER</td><td>2633</td><td>شناسه تکراری؛ قطعه گسترده‌تر پشت</td></tr>
+<tr><td>خانم جلو</td><td>0</td><td><code>TRAPEZIUS_RIGHT</code></td><td>TRAPEZIUS</td><td>CENTER</td><td>1393</td><td>قطعه نمای جلو</td></tr>
+<tr><td>خانم جلو</td><td>1</td><td><code>TRAPEZIUS_LEFT</code></td><td>TRAPEZIUS</td><td>CENTER</td><td>1335</td><td>قطعه نمای جلو</td></tr>
+<tr><td>خانم پشت</td><td>0</td><td><code>TRAPEZIUS_RIGHT</code></td><td>TRAPEZIUS</td><td>CENTER</td><td>857</td><td>قطعه بالایی/میانی احتمالی</td></tr>
+<tr><td>خانم پشت</td><td>1</td><td><code>TRAPEZIUS_LEFT</code></td><td>TRAPEZIUS</td><td>CENTER</td><td>959</td><td>قطعه بالایی/میانی احتمالی</td></tr>
+<tr><td>خانم پشت</td><td>2</td><td><code>TRAPEZIUS_RIGHT</code></td><td>TRAPEZIUS</td><td>CENTER</td><td>1033</td><td>شناسه تکراری؛ قطعه دیگر</td></tr>
+<tr><td>خانم پشت</td><td>3</td><td><code>TRAPEZIUS_LEFT</code></td><td>TRAPEZIUS</td><td>CENTER</td><td>1225</td><td>شناسه تکراری؛ قطعه دیگر</td></tr>
+</tbody></table>
+<p class="warn">آناتومی مرجع ذوزنقه‌ای را به سه بخش عملکردی/جهتی فوقانی (descending)، میانی (transverse) و تحتانی (ascending) تقسیم می‌کند و گستره آن از ناحیه پس‌سری تا مهره‌های توراسیک پایین امتداد دارد. وجود چهار path در یک نما یا دو path در نمای دیگر، به‌تنهایی معادل این سه بخش نیست. تطبیق هر path با مرز واقعی عضله هنوز تأیید نشده است.</p>
+<p class="sub">مرجع علمی: <a href="https://www.ncbi.nlm.nih.gov/books/NBK518994/">NCBI — Trapezius</a> · <a href="https://www.ncbi.nlm.nih.gov/books/NBK537148/">NCBI — Arm Abductor Muscles</a></p>
+</section>
+<section class="card">
+<h2>تصمیم فنی و گام بعد</h2>
+<ul>
+<li>چهارسر و ذوزنقه‌ای در هر چهار نما تا پایان بازبینی هندسه از انتخاب در برنامه‌نویسی تمرین محافظت می‌شوند.</li>
+<li>شناسه‌های تکراری و فیلد side=CENTER باید در لایه تطبیق ما مدیریت شوند؛ نباید منبع اصلی را با حدس بازنویسی کنیم.</li>
+<li>مرحله بعد: تولید یک جدول ممیزی machine-readable با شناسه یکتای داخلی برای هر path و مقایسه بصری path-by-path با اطلس Z-Anatomy / MSK Map، با رعایت مجوز CC BY-SA 4.0 برای هر دارایی اقتباسی.</li>
+<li>اگر تطبیق هندسی قابل دفاع نباشد، این مسیرها جایگزین می‌شوند؛ تقسیم‌بندی ساختگی روی SVG فعلی انجام نمی‌شود.</li>
+</ul>
+<p class="sub">منابع اطلس: <a href="https://mskmap.com/credits/">MSK Map — Credits & Licences</a> · <a href="https://whatmuscle.com/licenses">WhatMuscle — Licences</a></p>
+<p class="sub">هیچ تغییری در main، Supabase، بانک حرکات یا اطلاعات شاگردان انجام نشده است.</p>
+</section>
+</main></body></html>
