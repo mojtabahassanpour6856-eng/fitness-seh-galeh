@@ -7841,15 +7841,20 @@ const oldWorkoutRenderer=window.renderWorkoutList;
  window.submitPaymentReceipt=async function(){
   if(!isTrainee()||!currentClient?.id)return alert("حساب شاگرد هنوز بارگذاری نشده است؛ یک بار صفحه را تازه‌سازی کنید و دوباره تلاش کنید.");
   const file=$("receiptFile")?.files?.[0],amount=Number($("receiptAmount")?.value||0),rawDate=$("receiptDate")?.value||"",date=isoDate(rawDate);
-  const submitBtn=$("submitPaymentReceiptBtn");if(submitBtn){submitBtn.disabled=true;submitBtn.textContent="⏳ در حال ارسال فیش…";}
+  // Validate first: invalid forms must never leave the submit button stuck in loading state.
   if(!file)return alert("لطفاً تصویر یا PDF فیش را انتخاب کنید.");
   if(file.size>5*1024*1024)return alert("حجم فایل باید کمتر از ۵ مگابایت باشد.");
   if(!["image/jpeg","image/png","image/webp","application/pdf"].includes(file.type))return alert("فقط JPG، PNG، WEBP یا PDF مجاز است.");
   if(!Number.isFinite(amount)||amount<=0)return alert("مبلغ واریزی را وارد کنید.");
   if(!date)return alert("تاریخ واریز شمسی معتبر وارد کنید.");
+  const submitBtn=$("submitPaymentReceiptBtn");if(submitBtn){submitBtn.disabled=true;submitBtn.textContent="⏳ در حال ارسال فیش…";}
   const traineeId=currentClient.id;let path=null;
   try{
-   const [session,uploadFile]=await Promise.all([__fitnessGetApiSession(),window.sehOptimizeUploadImage(file)]);const user=session?.user;if(!user)throw new Error("نشست حساب شاگرد معتبر نیست.");
+   const session=await __fitnessGetApiSession();const user=session?.user;if(!user)throw new Error("نشست حساب شاگرد معتبر نیست.");
+   // Payment receipts use the original validated file. Optional canvas/image transcoding
+   // is deliberately excluded from this critical path so a stalled WebView decoder
+   // or canvas.toBlob callback cannot block the upload indefinitely.
+   const uploadFile=file;
    const name=uploadFile.name.replace(/[^a-zA-Z0-9._-]/g,"_").slice(-80)||"receipt";
    path=user.id+"/"+traineeId+"/"+Date.now()+"_"+name;
    const {error:uploadError}=await AUTH_SUPABASE.storage.from("payment-receipts").upload(path,uploadFile,{upsert:false,contentType:uploadFile.type});
