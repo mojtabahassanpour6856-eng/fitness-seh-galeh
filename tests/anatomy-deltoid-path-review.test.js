@@ -16,7 +16,7 @@ assert.equal((review.match(/<section class="panel">/g) || []).length, 4,
 assert.equal((review.match(/<iframe\b/g) || []).length, 4,
   "deltoid review must embed exactly the four canonical views");
 assert.equal(buttons.length, 16, "all 16 deltoid paths must have a dedicated selector");
-assert.equal((review.match(/class="show-all"/g)||[]).length,4,
+assert.equal((review.match(/class="show-all(?: active)?"/g)||[]).length,4,
   "each canonical view must expose one simultaneous four-path comparison control");
 assert.match(review,/const selected=showAll\?buttons\.filter\(b=>b\.dataset\.key\)/,
   "show-all mode must highlight all four actual deltoid paths in the current view");
