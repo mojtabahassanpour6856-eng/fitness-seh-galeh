@@ -1,0 +1,391 @@
+{
+  "schema": "anatomy-candidate-registry-v1",
+  "generated_at": "2026-11-28",
+  "source": {
+    "dataset": "BodyParts3D",
+    "release": "4.0",
+    "provider": "Database Center for Life Science (DBCLS) / LSDB Archive",
+    "catalog": "https://dbarchive.biosciencedbc.jp/data/bodyparts3d/LATEST/isa_parts_list_e.txt",
+    "mesh_packages": [
+      "isa_BP3D_4.0_obj_99.zip",
+      "partof_BP3D_4.0_obj_99.zip"
+    ],
+    "license": "CC BY 4.0",
+    "attribution": "BodyParts3D, © The Database Center for Life Science licensed under CC Attribution 4.0 International",
+    "scope_note": "Catalog identifiers and English names only. Mesh bytes, topology, transforms, and anatomical correctness have not yet been inspected."
+  },
+  "global_rules": {
+    "production_integration": false,
+    "geometry_status_default": "candidate_catalog_only",
+    "no_generated_or_synthetic_geometry": true,
+    "preserve_musclemap_four_views": true,
+    "female_body_not_inferred_from_male": true,
+    "pair_left_right_only_after_mesh_validation": true,
+    "exercise_bank_mutation": false,
+    "trainee_data_mutation": false
+  },
+  "candidates": [
+    {
+      "region": "chest",
+      "name": "pectoralis_major_clavicular",
+      "display": "بخش ترقوه‌ای سینه‌ای بزرگ",
+      "layer": "superficial",
+      "fma": "FMA34690",
+      "representation": "BP5582",
+      "side": "right",
+      "paired_fma": "FMA34691",
+      "paired_representation": "BP9095"
+    },
+    {
+      "region": "chest",
+      "name": "pectoralis_major_sternocostal",
+      "display": "بخش جناغی‌دنده‌ای سینه‌ای بزرگ",
+      "layer": "superficial",
+      "fma": "FMA79979",
+      "representation": "BP5613",
+      "side": "right",
+      "paired_fma": "FMA79980",
+      "paired_representation": "BP8323"
+    },
+    {
+      "region": "chest",
+      "name": "pectoralis_major_abdominal",
+      "display": "بخش شکمی سینه‌ای بزرگ",
+      "layer": "superficial",
+      "fma": "FMA45874",
+      "representation": "BP5615",
+      "side": "right",
+      "paired_fma": "FMA45875",
+      "paired_representation": "BP7862"
+    },
+    {
+      "region": "shoulder",
+      "name": "deltoid_clavicular",
+      "display": "دلتوئید قدامی",
+      "layer": "superficial",
+      "fma": "FMA34680",
+      "representation": "BP7573",
+      "side": "right",
+      "paired_fma": "FMA34681",
+      "paired_representation": "BP8259"
+    },
+    {
+      "region": "shoulder",
+      "name": "deltoid_acromial",
+      "display": "دلتوئید میانی",
+      "layer": "superficial",
+      "fma": "FMA34682",
+      "representation": "BP7571",
+      "side": "right",
+      "paired_fma": "FMA34683",
+      "paired_representation": "BP9075"
+    },
+    {
+      "region": "shoulder",
+      "name": "deltoid_spinal",
+      "display": "دلتوئید خلفی",
+      "layer": "superficial",
+      "fma": "FMA34684",
+      "representation": "BP5607",
+      "side": "right",
+      "paired_fma": "FMA34685",
+      "paired_representation": "BP8151"
+    },
+    {
+      "region": "shoulder",
+      "name": "supraspinatus",
+      "display": "فوق‌خاری",
+      "layer": "deep",
+      "fma": "FMA32544",
+      "representation": "BP4791",
+      "side": "right",
+      "paired_fma": "FMA32545",
+      "paired_representation": "BP8376"
+    },
+    {
+      "region": "shoulder",
+      "name": "infraspinatus",
+      "display": "تحت‌خاری",
+      "layer": "deep",
+      "fma": "FMA32547",
+      "representation": "BP4797",
+      "side": "right",
+      "paired_fma": "FMA32548",
+      "paired_representation": "BP8965"
+    },
+    {
+      "region": "shoulder",
+      "name": "teres_major",
+      "display": "گرد بزرگ",
+      "layer": "deep",
+      "fma": "FMA32551",
+      "representation": "BP4789",
+      "side": "right",
+      "paired_fma": "FMA32552",
+      "paired_representation": "BP8287"
+    },
+    {
+      "region": "shoulder",
+      "name": "teres_minor",
+      "display": "گرد کوچک",
+      "layer": "deep",
+      "fma": "FMA32553",
+      "representation": "BP4793",
+      "side": "right",
+      "paired_fma": "FMA32554",
+      "paired_representation": "BP9197"
+    },
+    {
+      "region": "arm",
+      "name": "biceps_brachii_long_head",
+      "display": "سر بلند دوسر بازویی",
+      "layer": "superficial",
+      "fma": "FMA37686",
+      "representation": "BP5566",
+      "side": "right",
+      "paired_fma": "FMA37687",
+      "paired_representation": "BP8816"
+    },
+    {
+      "region": "arm",
+      "name": "biceps_brachii_short_head",
+      "display": "سر کوتاه دوسر بازویی",
+      "layer": "superficial",
+      "fma": "FMA37684",
+      "representation": "BP5558",
+      "side": "right",
+      "paired_fma": "FMA37685",
+      "paired_representation": "BP9153"
+    },
+    {
+      "region": "arm",
+      "name": "triceps_brachii_long_head",
+      "display": "سر بلند سه‌سر بازویی",
+      "layer": "superficial",
+      "fma": "FMA37699",
+      "representation": "BP5564",
+      "side": "right",
+      "paired_fma": "FMA37700",
+      "paired_representation": "BP8344"
+    },
+    {
+      "region": "arm",
+      "name": "triceps_brachii_lateral_head",
+      "display": "سر خارجی سه‌سر بازویی",
+      "layer": "superficial",
+      "fma": "FMA37697",
+      "representation": "BP5550",
+      "side": "right",
+      "paired_fma": "FMA37698",
+      "paired_representation": "BP8525"
+    },
+    {
+      "region": "arm",
+      "name": "triceps_brachii_medial_head",
+      "display": "سر داخلی سه‌سر بازویی",
+      "layer": "deep",
+      "fma": "FMA37695",
+      "representation": "BP5562",
+      "side": "right",
+      "paired_fma": "FMA37696",
+      "paired_representation": "BP8257"
+    },
+    {
+      "region": "arm",
+      "name": "brachialis",
+      "display": "براکیالیس",
+      "layer": "deep",
+      "fma": "FMA37668",
+      "representation": "BP4807",
+      "side": "right",
+      "paired_fma": "FMA37669",
+      "paired_representation": "BP8684"
+    },
+    {
+      "region": "back",
+      "name": "trapezius_ascending",
+      "display": "بخش صعودی ذوزنقه‌ای",
+      "layer": "superficial",
+      "fma": "FMA33581",
+      "representation": "BP5638",
+      "side": "right",
+      "paired_fma": "FMA33583",
+      "paired_representation": "BP8225"
+    },
+    {
+      "region": "back",
+      "name": "trapezius_transverse",
+      "display": "بخش عرضی ذوزنقه‌ای",
+      "layer": "superficial",
+      "fma": "FMA33584",
+      "representation": "BP5610",
+      "side": "right",
+      "paired_fma": "FMA33585",
+      "paired_representation": "BP8252"
+    },
+    {
+      "region": "back",
+      "name": "trapezius_descending",
+      "display": "بخش نزولی ذوزنقه‌ای",
+      "layer": "superficial",
+      "fma": "FMA33586",
+      "representation": "BP5636",
+      "side": "right",
+      "paired_fma": "FMA33587",
+      "paired_representation": "BP8267"
+    },
+    {
+      "region": "hip",
+      "name": "gluteus_maximus",
+      "display": "سرینی بزرگ",
+      "layer": "superficial",
+      "fma": "FMA22328",
+      "representation": "BP5065",
+      "side": "right",
+      "paired_fma": "FMA22329",
+      "paired_representation": "BP8401"
+    },
+    {
+      "region": "hip",
+      "name": "gluteus_medius",
+      "display": "سرینی میانی",
+      "layer": "intermediate",
+      "fma": "FMA22330",
+      "representation": "BP5063",
+      "side": "right",
+      "paired_fma": "FMA22331",
+      "paired_representation": "BP9213"
+    },
+    {
+      "region": "hip",
+      "name": "gluteus_minimus",
+      "display": "سرینی کوچک",
+      "layer": "deep",
+      "fma": "FMA22332",
+      "representation": "BP5083",
+      "side": "right",
+      "paired_fma": "FMA22333",
+      "paired_representation": "BP8623"
+    },
+    {
+      "region": "thigh",
+      "name": "rectus_femoris",
+      "display": "راست‌رانی",
+      "layer": "superficial",
+      "fma": "FMA38928",
+      "representation": "BP5598",
+      "side": "right",
+      "paired_fma": "FMA38929",
+      "paired_representation": "BP8094"
+    },
+    {
+      "region": "thigh",
+      "name": "vastus_lateralis",
+      "display": "پهن خارجی",
+      "layer": "superficial",
+      "fma": "FMA38930",
+      "representation": "BP5602",
+      "side": "right",
+      "paired_fma": "FMA38931",
+      "paired_representation": "BP8754"
+    },
+    {
+      "region": "thigh",
+      "name": "vastus_medialis",
+      "display": "پهن داخلی",
+      "layer": "superficial",
+      "fma": "FMA38932",
+      "representation": "BP5600",
+      "side": "right",
+      "paired_fma": "FMA38933",
+      "paired_representation": "BP9128"
+    },
+    {
+      "region": "thigh",
+      "name": "vastus_intermedius",
+      "display": "پهن میانی",
+      "layer": "deep",
+      "fma": "FMA38934",
+      "representation": "BP5604",
+      "side": "right",
+      "paired_fma": "FMA38935",
+      "paired_representation": "BP9207"
+    },
+    {
+      "region": "thigh",
+      "name": "semitendinosus",
+      "display": "نیم‌وتری",
+      "layer": "superficial",
+      "fma": "FMA22358",
+      "representation": "BP4991",
+      "side": "right",
+      "paired_fma": "FMA22359",
+      "paired_representation": "BP9066"
+    },
+    {
+      "region": "thigh",
+      "name": "semimembranosus",
+      "display": "نیم‌غشایی",
+      "layer": "intermediate",
+      "fma": "FMA22448",
+      "representation": "BP4989",
+      "side": "right",
+      "paired_fma": "FMA22449",
+      "paired_representation": "BP7829"
+    },
+    {
+      "region": "thigh",
+      "name": "adductor_longus",
+      "display": "نزدیک‌کننده بلند",
+      "layer": "superficial",
+      "fma": "FMA22456",
+      "representation": "BP4984",
+      "side": "right",
+      "paired_fma": "FMA22457",
+      "paired_representation": "BP8604"
+    },
+    {
+      "region": "leg",
+      "name": "gastrocnemius_medial_head",
+      "display": "سر داخلی دوقلو",
+      "layer": "superficial",
+      "fma": "FMA45957",
+      "representation": "BP5539",
+      "side": "right",
+      "paired_fma": "FMA45958",
+      "paired_representation": "BP9217"
+    },
+    {
+      "region": "leg",
+      "name": "gastrocnemius_lateral_head",
+      "display": "سر خارجی دوقلو",
+      "layer": "superficial",
+      "fma": "FMA45960",
+      "representation": "BP5541",
+      "side": "right",
+      "paired_fma": "FMA45961",
+      "paired_representation": "BP7939"
+    },
+    {
+      "region": "leg",
+      "name": "soleus",
+      "display": "نعلی",
+      "layer": "deep",
+      "fma": "FMA22558",
+      "representation": "BP4999",
+      "side": "right",
+      "paired_fma": "FMA22559",
+      "paired_representation": "BP8819"
+    }
+  ],
+  "acceptance_gates": [
+    "Download official BodyParts3D 4.0 package and record archive checksum and retrieval date.",
+    "Confirm every representation ID maps to an actual OBJ file in the selected package.",
+    "Parse OBJ and verify non-empty vertices/faces, finite coordinates, and mesh bounds.",
+    "Inspect orientation, units, left/right spatial position, and anatomical side labels.",
+    "Render each candidate independently and compare with trusted anatomy references.",
+    "Check intersections/overlaps and occlusion relationships before assigning superficial/intermediate/deep layer.",
+    "Measure triangles and compressed payload; set mobile performance budget before inclusion.",
+    "Keep all candidates out of production until all gates pass."
+  ]
+}
