@@ -160,3 +160,14 @@ New experiment artifacts:
 - `anatomy-expansion-stage-preview-v2.html`: includes the four-view MuscleMap gallery plus the separate muscle lab; no upstream assets are copied into production files.
 
 The lab is an experiment, not a verified geometry integration. It depends on browser access to `raw.githubusercontent.com` and jsDelivr (Three.js). A syntax check of the inline module passed, but live browser rendering, CORS availability on Iranian networks, and physical-device interaction have not yet been confirmed. Candidate meshes remain `candidate_geometry` until visual inspection confirms orientation, side, boundary, and anatomical plausibility. Do not use the male meshes on the female body views.
+
+
+## 2026-11-28 follow-up — whole-body context and female-source rejection
+
+The isolated browser lab now has an optional translucent BodyParts3D skin context mesh (`FJ2810`, source chunk 10). The selected muscle candidates remain separate red meshes. This provides a whole-body coordinate context for later front/back/lateral visual inspection; it is not yet an alignment to the project's four MuscleMap drawings. The lab checks the selected buffers' byte ranges, vertex indices and finite position values before rendering. The inline module passed a JavaScript syntax check. Live rendering and mobile/network testing remain unverified.
+
+A second candidate repository, `MervinR07/open-anatomy-3d`, was inspected. It provides male/female GLB models and a catalog of broad muscle groups. Its own `pipeline/f_build.mjs` explicitly explains that the female model is produced by warping the complete male BodyParts3D anatomy into a MakeHuman female body with thin-plate-spline deformation, because the HRA female source has almost no muscles. The catalog has broad groups such as chest, deltoid, upper-arm, quadriceps and gluteal regions rather than each source muscle as a separately selectable named structure.
+
+Decision: do not treat this package's female muscle meshes as independent or verified female anatomy. It may inform coarse grouping vocabulary only. No external model was imported. Full review is in `ANATOMY_OPEN_ANATOMY_3D_FEMALE_SOURCE_AUDIT.md`.
+
+The raw BodyParts3D route remains the current male geometry candidate. Female muscle geometry remains unresolved until an independently sourced and validated female skeletal-muscle dataset is found.
