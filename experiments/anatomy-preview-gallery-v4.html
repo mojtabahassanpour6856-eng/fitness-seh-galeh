@@ -1,0 +1,111 @@
+<!doctype html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#f7f0df">
+<title>آناتومی هوشمند | گالری چهار نمای فیتنس سه‌قلعه</title>
+<style>
+:root{--paper:#f7f0df;--card:#fffdf7;--gold:#98752d;--line:#ddc995;--ink:#302819;--muted:#756b58}
+*{box-sizing:border-box}
+body{margin:0;background:linear-gradient(180deg,#fbf8f0,var(--paper));color:var(--ink);font-family:Tahoma,Arial,sans-serif}
+header{position:sticky;top:0;z-index:5;padding:13px 18px;background:#fffdf7ed;border-bottom:1px solid var(--line);backdrop-filter:blur(8px)}
+.wrap{max-width:1450px;margin:auto}.brand{display:flex;justify-content:space-between;align-items:center;gap:12px}
+h1{font-size:clamp(18px,2.8vw,25px);color:var(--gold);margin:0}.subtitle{font-size:11px;color:var(--muted);margin-top:4px}
+.state{font-size:11px;background:#f5ecd8;border:1px solid var(--line);border-radius:999px;padding:7px 10px}
+main{max-width:1450px;margin:18px auto;padding:0 14px 30px}
+.intro{display:flex;justify-content:space-between;align-items:end;gap:14px;margin-bottom:12px}
+h2{font-size:17px;margin:0 0 4px}.intro p{font-size:12px;color:var(--muted);margin:0}
+.toolbar{display:flex;flex-wrap:wrap;gap:7px;margin:12px 0}
+button{font:inherit;cursor:pointer;touch-action:manipulation}
+.control{border:1px solid var(--line);border-radius:10px;background:#fffdf7;padding:8px 11px;font-size:12px;color:var(--ink)}
+.control[aria-pressed=true],.control.active{background:#efe2c1;border-color:var(--gold);font-weight:700}
+.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+figure{margin:0;overflow:hidden;background:var(--card);border:1px solid var(--line);border-radius:14px;box-shadow:0 5px 20px #604b1a12;min-width:0}
+figure.active{border:2px solid var(--gold);box-shadow:0 6px 22px #98752d22}
+figcaption{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:9px 11px;font-weight:700;border-bottom:1px solid var(--line);font-size:13px}
+figcaption small{font-weight:400;color:var(--muted);font-size:10px}
+.actions{display:flex;gap:5px}.mini{border:1px solid var(--line);border-radius:8px;background:#fff8e9;padding:5px 8px;font-size:10px;color:#654d1e}
+iframe{display:block;width:100%;height:900px;border:0;background:var(--paper)}
+.notice{margin-top:13px;padding:11px 13px;background:#fff8e9;border:1px solid var(--line);border-radius:11px;font-size:11px;line-height:1.9;color:#685b43}
+.notice strong{color:#62491b}
+footer{text-align:center;color:#93866d;font-size:10px;padding:16px}
+dialog{width:min(1100px,96vw);height:min(94vh,1000px);padding:0;border:1px solid var(--line);border-radius:15px;background:var(--card);box-shadow:0 20px 80px #21180555}
+dialog::backdrop{background:#241d12a8}.modal-head{height:48px;display:flex;align-items:center;justify-content:space-between;padding:7px 12px;border-bottom:1px solid var(--line);font-size:13px;font-weight:700}
+.modal-head button{border:1px solid var(--line);background:#fff8e9;border-radius:8px;padding:5px 10px}#modalFrame{height:calc(100% - 48px)}
+[hidden]{display:none!important}
+@media(max-width:760px){
+ header{padding:11px}.brand{align-items:flex-start}.state{max-width:110px;text-align:center;font-size:9px}
+ main{padding:0 9px 22px;margin-top:13px}.intro{display:block}.toolbar{gap:6px}.control{padding:8px 9px;font-size:11px}
+ .grid{grid-template-columns:1fr;gap:9px}iframe{height:760px}
+ body.single .grid{display:block}body.single figure:not(.active){display:none}
+ figcaption{padding:9px}.actions .mini{padding:5px 7px}
+ dialog{width:100vw;height:100dvh;max-height:100dvh;border-radius:0;border:0}
+}
+</style>
+</head>
+<body>
+<header><div class="wrap brand">
+ <div><h1>گالری چهار نمای آناتومی هوشمند · نسخه چهارم</h1><div class="subtitle">باشگاه فیتنس سه‌قلعه | نسخه آزمایشی مستقل · انتخاب دوطرفه عضلات</div></div>
+ <div class="state">فقط شاخه آزمایشی</div>
+</div></header>
+<main>
+ <section class="intro">
+  <div><h2>چهار نمای هماهنگ بدن</h2><p>در موبایل می‌توانی بین حالت چهار نما و تمرکز روی یک نما جابه‌جا شوی.</p></div>
+ </section>
+ <nav class="toolbar" aria-label="حالت نمایش">
+  <button class="control" id="allMode" aria-pressed="true">نمایش چهار نما</button>
+  <button class="control" id="singleMode" aria-pressed="false">تمرکز روی یک نما</button>
+  <button class="control" data-filter="all" aria-pressed="true">همه</button>
+  <button class="control" data-filter="male" aria-pressed="false">آقایان</button>
+  <button class="control" data-filter="female" aria-pressed="false">بانوان</button>
+ </nav>
+ <nav class="toolbar" id="navigator" aria-label="انتخاب نمای فعال">
+  <button class="control active" data-select="male-front" aria-pressed="true">آقا · جلو</button>
+  <button class="control" data-select="male-back" aria-pressed="false">آقا · پشت</button>
+  <button class="control" data-select="female-front" aria-pressed="false">خانم · جلو</button>
+  <button class="control" data-select="female-back" aria-pressed="false">خانم · پشت</button>
+  <button class="control" id="previous">قبلی ←</button>
+  <button class="control" id="next">بعدی →</button>
+ </nav>
+ <section class="grid" id="gallery">
+  <figure data-sex="male" data-view="male-front" class="active"><figcaption><span>۱. آقایان · نمای جلو <small>FRONT</small></span><span class="actions"><button class="mini" data-focus="male-front">انتخاب</button><button class="mini" data-open="male-front">بزرگ‌نمایی</button></span></figcaption><iframe title="نمای جلوی بدن آقا" loading="eager" src="./anatomy-preview-capture-v2.html?view=male-front"></iframe></figure>
+  <figure data-sex="male" data-view="male-back"><figcaption><span>۲. آقایان · نمای پشت <small>BACK</small></span><span class="actions"><button class="mini" data-focus="male-back">انتخاب</button><button class="mini" data-open="male-back">بزرگ‌نمایی</button></span></figcaption><iframe title="نمای پشت بدن آقا" loading="lazy" src="./anatomy-preview-capture-v2.html?view=male-back"></iframe></figure>
+  <figure data-sex="female" data-view="female-front"><figcaption><span>۳. بانوان · نمای جلو <small>FRONT</small></span><span class="actions"><button class="mini" data-focus="female-front">انتخاب</button><button class="mini" data-open="female-front">بزرگ‌نمایی</button></span></figcaption><iframe title="نمای جلوی بدن خانم" loading="lazy" src="./anatomy-preview-capture-v2.html?view=female-front"></iframe></figure>
+  <figure data-sex="female" data-view="female-back"><figcaption><span>۴. بانوان · نمای پشت <small>BACK</small></span><span class="actions"><button class="mini" data-focus="female-back">انتخاب</button><button class="mini" data-open="female-back">بزرگ‌نمایی</button></span></figcaption><iframe title="نمای پشت بدن خانم" loading="lazy" src="./anatomy-preview-capture-v2.html?view=female-back"></iframe></figure>
+ </section>
+ <aside class="notice"><strong>انتخاب دوطرفه:</strong> در عضلاتی که شناسه صریح چپ/راست دارند، لمس یک سمت قطعه متناظر سمت مقابل را نیز با همان نقش رنگی می‌کند. این تطبیق بر اساس شناسه و ترتیب قطعات در همان گروه انجام می‌شود؛ مسیرهای عضلانی موجود هنوز Mesh مستقل Z-Anatomy یا مرزبندی علمی تأییدشده محسوب نمی‌شوند. اتصال واقعی بانک حرکات نیز تا زمان تحویل امن داده از اپ میزبان، صرفاً یک نقطه اتصال آماده است و به داده‌های شاگردان یا Supabase دسترسی ندارد.</aside>
+</main>
+<footer>FITNESS SEH GALEH · SMART ANATOMY · EXPERIMENTAL PREVIEW V4</footer>
+<dialog id="viewer"><div class="modal-head"><span id="modalTitle">نمای بزرگ</span><button id="closeModal" type="button">بستن ✕</button></div><iframe id="modalFrame" title="نمای بزرگ آناتومی"></iframe></dialog>
+<script>
+const cards=[...document.querySelectorAll('#gallery figure')],filters=[...document.querySelectorAll('[data-filter]')],selectors=[...document.querySelectorAll('[data-select]')];
+const titles={'male-front':'آقایان · نمای جلو','male-back':'آقایان · نمای پشت','female-front':'بانوان · نمای جلو','female-back':'بانوان · نمای پشت'};
+let active='male-front',filter='all',single=false;
+function selectView(view){
+ if(!titles[view])return;active=view;
+ cards.forEach(card=>card.classList.toggle('active',card.dataset.view===view));
+ selectors.forEach(button=>{const on=button.dataset.select===view;button.classList.toggle('active',on);button.setAttribute('aria-pressed',String(on))});
+}
+function apply(){
+ cards.forEach(card=>{const sexVisible=filter==='all'||card.dataset.sex===filter;card.hidden=!sexVisible||(single&&card.dataset.view!==active)});
+ document.body.classList.toggle('single',single);
+ document.getElementById('allMode').setAttribute('aria-pressed',String(!single));
+ document.getElementById('singleMode').setAttribute('aria-pressed',String(single));
+}
+selectors.forEach(button=>button.addEventListener('click',()=>{selectView(button.dataset.select);apply()}));
+filters.forEach(button=>button.addEventListener('click',()=>{filter=button.dataset.filter;filters.forEach(x=>x.setAttribute('aria-pressed',String(x===button)));if(filter!=='all'&&active.startsWith(filter==='male'?'female':'male'))selectView(filter+'-front');apply()}));
+document.querySelectorAll('[data-focus]').forEach(button=>button.addEventListener('click',()=>{selectView(button.dataset.focus);single=true;apply()}));
+document.getElementById('allMode').addEventListener('click',()=>{single=false;apply()});
+document.getElementById('singleMode').addEventListener('click',()=>{single=true;apply()});
+function step(direction){const visible=cards.filter(c=>filter==='all'||c.dataset.sex===filter).map(c=>c.dataset.view);let i=visible.indexOf(active);i=(i+direction+visible.length)%visible.length;selectView(visible[i]);apply()}
+document.getElementById('previous').addEventListener('click',()=>step(-1));document.getElementById('next').addEventListener('click',()=>step(1));
+document.addEventListener('keydown',e=>{if(e.key==='ArrowLeft')step(1);if(e.key==='ArrowRight')step(-1)});
+const dialog=document.getElementById('viewer'),modalFrame=document.getElementById('modalFrame');
+document.querySelectorAll('[data-open]').forEach(button=>button.addEventListener('click',()=>{const view=button.dataset.open;selectView(view);document.getElementById('modalTitle').textContent=titles[view];modalFrame.src='./anatomy-preview-capture-v2.html?view='+encodeURIComponent(view);if(typeof dialog.showModal==='function')dialog.showModal();else window.open(modalFrame.src,'_blank')}));
+function close(){dialog.close();modalFrame.src='about:blank'}
+document.getElementById('closeModal').addEventListener('click',close);
+dialog.addEventListener('click',e=>{if(e.target===dialog)close()});
+apply();
+</script>
+</body></html>
