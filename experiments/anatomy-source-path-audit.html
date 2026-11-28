@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#f7f0df">
+<title>صفحه ممیزی منشأ مسیرهای چهارسر و ذوزنقه‌ای | فیتنس سه‌قلعه</title>
+<style>
+:root{--paper:#f7f0df;--card:#fffdf7;--gold:#98752d;--line:#ddc995;--ink:#302819;--muted:#756b58;--red:#a43b32;--green:#286d58}
+*{box-sizing:border-box}body{margin:0;background:var(--paper);color:var(--ink);font:14px/1.9 Tahoma,Arial,sans-serif}
+header{background:linear-gradient(110deg,#fffdf7,#efe2c1);border-bottom:1px solid var(--line);padding:22px}
+.wrap{max-width:1500px;margin:auto;padding:18px}
+h1{margin:0;color:#76591e;font-size:23px}h2{font-size:19px;color:#76591e;margin:0 0 12px}h3{font-size:15px;margin:0 0 8px}
+.sub{color:var(--muted);font-size:12px}
+.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:16px;box-shadow:0 4px 16px #6045150d;margin-bottom:16px}
+.views iframe{width:100%;height:900px;border:0;background:#f7f0df;border-radius:10px}
+.view-title{font-weight:bold;padding:6px 0 10px}
+table{width:100%;border-collapse:collapse;font-size:12px;background:white}
+th,td{border:1px solid #e6dcc3;padding:7px;text-align:right;vertical-align:top}
+th{background:#f2e8d0;color:#604719}
+.pill{display:inline-block;padding:2px 8px;border-radius:20px;background:#f5e5c7;color:#684c16;font-size:11px}
+.warn{border-right:4px solid var(--red);background:#fff0eb;padding:12px;border-radius:9px}
+.ok{border-right:4px solid var(--green);background:#edf6f0;padding:12px;border-radius:9px}
+a{color:#76591e;overflow-wrap:anywhere}
+code{direction:ltr;unicode-bidi:embed;font:12px ui-monospace,monospace}
+ul{padding-right:20px;margin:8px 0}
+@media(max-width:850px){.grid{grid-template-columns:1fr}.wrap{padding:10px}header{padding:16px}h1{font-size:19px}.views iframe{height:760px}}
+</style></head>
+<body>
+<header><div class="wrap"><h1>ممیزی منشأ هندسه چهارسر ران و ذوزنقه‌ای</h1><div class="sub">صفحه پیش‌نمایش تعاملی و گزارش فنی — شاخه آزمایشی، خارج از نسخه اصلی فیتنس سه‌قلعه</div></div></header>
+<main class="wrap">
+<section class="card">
+<h2>نتیجه اصلی بررسی منبع</h2>
+<div class="ok"><strong>نکته مهم:</strong> این بار فایل‌های TypeScript اصلی MuscleMap بررسی شدند، نه فقط نسخه کپی‌شده داخل HTML. هر چهار فایل منبع آرایه تخت <code>MUSCLES: MusclePath[]</code> دارند؛ در این ساختار برای مسیرها parent-group یا درخت تودرتوی SVG وجود ندارد. بنابراین «والد گروه» برای مسیرها قابل استخراج نیست؛ تنها metadata واقعی موجود، فیلدهای <code>group</code>، <code>id</code>، <code>side</code> و رشته <code>d</code> است.</div>
+<ul>
+<li>مسیرهای مشکوک چهارسر و ذوزنقه‌ای از خود فایل‌های اصلی منبع می‌آیند؛ خطا ناشی از تبدیل HTML یا استخراج‌گر ما نیست.</li>
+<li>مسیرهای چهارسر پایین‌تر آقا واقعاً در منبع با <code>group: "QUADS"</code> ثبت شده‌اند، اما شناسه ندارند.</li>
+<li>مسیرهای ذوزنقه‌ای تکراری در منبع نیز با <code>group: "TRAPEZIUS"</code> ثبت شده‌اند و شناسه‌های چپ/راست تکرار می‌شوند.</li>
+<li>این شواهد، قصد دسته‌بندی نویسنده منبع را نشان می‌دهد؛ صحت مرزبندی آناتومیک را ثابت نمی‌کند.</li>
+</ul>
+<p class="sub">منابع: <a href="https://github.com/Jsplice/MuscleMap/blob/main/packages/assets/src/male-front.ts">male-front.ts</a> · <a href="https://github.com/Jsplice/MuscleMap/blob/main/packages/assets/src/male-back.ts">male-back.ts</a> · <a href="https://github.com/Jsplice/MuscleMap/blob/main/packages/assets/src/female-front.ts">female-front.ts</a> · <a href="https://github.com/Jsplice/MuscleMap/blob/main/packages/assets/src/female-back.ts">female-back.ts</a></p>
+</section>
+<section class="card views">
+<h2>پیش‌نمایش زنده چهار نمای اصلی</h2>
+<p class="sub">هر قاب یک صفحه HTML مستقل را بارگذاری می‌کند؛ این پیش‌نمایش عکس ثابت نیست. برای مشاهده بزرگ‌تر می‌توانی روی نام هر نما بزنـی و آن را در صفحه جدا باز کنی.</p>
+<div class="grid">
+<div><div class="view-title"><a href="./anatomy-preview-capture.html?view=male-front" target="_blank" rel="noopener">۱. آقا — نمای جلو ↗</a></div><iframe loading="lazy" title="آقا نمای جلو" src="./anatomy-preview-capture.html?view=male-front"></iframe></div>
+<div><div class="view-title"><a href="./anatomy-preview-capture.html?view=male-back" target="_blank" rel="noopener">۲. آقا — نمای پشت ↗</a></div><iframe loading="lazy" title="آقا نمای پشت" src="./anatomy-preview-capture.html?view=male-back"></iframe></div>
+<div><div class="view-title"><a href="./anatomy-preview-capture.html?view=female-front" target="_blank" rel="noopener">۳. خانم — نمای جلو ↗</a></div><iframe loading="lazy" title="خانم نمای جلو" src="./anatomy-preview-capture.html?view=female-front"></iframe></div>
+<div><div class="view-title"><a href="./anatomy-preview-capture.html?view=female-back" target="_blank" rel="noopener">۴. خانم — نمای پشت ↗</a></div><iframe loading="lazy" title="خانم نمای پشت" src="./anatomy-preview-capture.html?view=female-back"></iframe></div>
+</div>
+</section>
+<section class="card">
+<h2>چهارسر ران — منشأ مسیرها</h2>
+<table><thead><tr><th>نما</th><th>اندیس مسیر</th><th>شناسه منبع</th><th>گروه ثبت‌شده در منبع</th><th>گستره تقریبی Y</th><th>یافته</th></tr></thead><tbody>
+<tr><td>آقا جلو</td><td>19، 20</td><td><code>QUADRICEPS_LEFT/RIGHT</code></td><td>QUADS</td><td>693–993</td><td>دو مسیر بزرگ ران</td></tr>
+<tr><td>آقا جلو</td><td>22، 23</td><td>ندارد</td><td>QUADS</td><td>969–1105</td><td>مسیرهای دیستال نزدیک زانو/ابتدای ساق؛ بدون شناسه</td></tr>
+<tr><td>خانم جلو</td><td>19، 23</td><td><code>QUADRICEPS_LEFT/RIGHT</code></td><td>QUADS</td><td>667–982</td><td>دو مسیر بزرگ ران</td></tr>
+<tr><td>خانم جلو</td><td>26، 27</td><td><code>QUADRICEPS_LEFT/RIGHT</code> (تکراری)</td><td>QUADS</td><td>961–1122</td><td>دو مسیر دیستال؛ شناسه‌ها تکرار شده‌اند</td></tr>
+</tbody></table>
+<p class="warn">تصمیم: انتساب این مسیرهای دیستال به چهارسر، تاندون، کشکک یا ساختار دیگر از روی داده فعلی قابل اثبات نیست. هیچ مسیر حذف یا جابه‌جا نمی‌شود و گروه QUADS مسدود می‌ماند.</p>
+</section>
+<section class="card">
+<h2>ذوزنقه‌ای — منشأ مسیرها</h2>
+<table><thead><tr><th>نما</th><th>اندیس مسیر</th><th>شناسه منبع</th><th>گروه ثبت‌شده</th><th>گستره تقریبی Y</th><th>یافته</th></tr></thead><tbody>
+<tr><td>آقا پشت</td><td>0، 1</td><td><code>TRAPEZIUS_LEFT/RIGHT</code></td><td>TRAPEZIUS</td><td>210–359</td><td>بخش بالایی گردن/شانه</td></tr>
+<tr><td>آقا پشت</td><td>11، 12</td><td><code>TRAPEZIUS_LEFT/RIGHT</code> (تکراری)</td><td>TRAPEZIUS</td><td>324–533</td><td>بخش گسترده‌تر پشت؛ شناسه‌ها تکرار شده‌اند</td></tr>
+<tr><td>خانم پشت</td><td>0 تا 3</td><td><code>TRAPEZIUS_RIGHT/LEFT</code> (دو بار)</td><td>TRAPEZIUS</td><td>227–513</td><td>چهار قطعه با الگوی اندیسی متفاوت از مدل آقا</td></tr>
+</tbody></table>
+<p class="warn">تصمیم: از روی ترتیب آرایه یا شناسه‌های تکراری، بخش‌های فوقانی/میانی/تحتانی و سمت چپ/راست را قطعی نمی‌کنیم. گروه TRAPEZIUS همچنان مسدود می‌ماند.</p>
+</section>
+<section class="card">
+<h2>چه چیزی ثابت شد و چه چیزی نه؟</h2>
+<ul>
+<li><span class="pill">ثابت شد</span> منشأ مسیرهای مشکوک، فایل‌های TypeScript اصلی MuscleMap است.</li>
+<li><span class="pill">ثابت شد</span> داده منبع ساختار آرایه‌ای تخت دارد؛ parent-group یا رابطه صریح قطعه‌ها ثبت نشده است.</li>
+<li><span class="pill">ثابت شد</span> گروه و شناسه‌های مسیرهای مسئله‌دار در خود منبع به همین شکل ثبت شده‌اند.</li>
+<li><span class="pill">ثابت نشد</span> مرز دقیق عضلات، اتصال قطعات، لایه عمقی یا نام‌گذاری علمی هر مسیر.</li>
+<li><span class="pill">انجام نشده</span> تأیید متخصص آناتومی یا فیزیولوژی ورزشی.</li>
+</ul>
+<p class="sub">تمام گروه‌های عضلانی در کاتالوگ همچنان وضعیت علمی <code>unreviewed</code> دارند. این صفحه فقط ممیزی منشأ و پیش‌نمایش فنی است.</p>
+</section>
+<section class="card">
+<h2>گام بعدی</h2>
+<p>مرحله بعدی باید به‌جای حدس زدن parent-group ناموجود، خود هندسه مسیرهای مشکوک را در مقیاس یکسان با اطلس معتبر مقایسه کند. در صورت نبود تطبیق قابل اتکا، باید هندسه جایگزین با منبع و مجوز روشن تهیه شود؛ نه اینکه مسیرهای فعلی با حدس تغییر نام داده شوند.</p>
+<p class="sub">هیچ تغییری در شاخه اصلی، بانک حرکات، Supabase یا اطلاعات شاگردان انجام نشده است.</p>
+</section>
+</main></body></html>
