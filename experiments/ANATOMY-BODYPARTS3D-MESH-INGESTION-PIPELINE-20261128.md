@@ -187,3 +187,14 @@ The upstream converter `scripts/convert-anatomy.py` was inspected directly. It c
 The browser lab was tightened to accept only parts whose manifest `system` is exactly `muscular`, excluding false positives from named arterial branches and non-muscle connective structures. A refreshed exact target inventory is in `ANATOMY_BODYPARTS3D_TRAINING_TARGET_COVERAGE.md/.json`.
 
 Important validation boundary: this is a source-code and manifest audit. Binary chunk retrieval, live browser rendering, visual orientation, and anatomical boundary validation have not been completed here. The preview must not be described as a confirmed live render.
+
+
+## 2026-11-28 update — inspection controls and validation boundary
+
+The standalone muscle lab now has two explicit framing controls:
+- `focusMuscle`: frames the selected muscular meshes, excluding the translucent skin shell.
+- `focusBody`: frames the full-body skin context when it is enabled, falling back to the selected meshes when skin is hidden.
+
+This avoids the earlier limitation where a full-body skin bounding box always controlled framing and could make a selected muscle too small to inspect closely.
+
+The inline module passed a JavaScript syntax check after the change. An attempt to retrieve the binary chunk through the raw GitHub and jsDelivr routes in this execution environment was blocked by the binary-fetch access layer. Therefore no claim is made that the chunk has been decoded or visually rendered in this audit. The browser-side viewer still performs runtime byte-length, offset, index and finite-position checks.
