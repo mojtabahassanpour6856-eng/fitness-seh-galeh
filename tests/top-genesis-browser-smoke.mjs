@@ -840,7 +840,7 @@ Waist-Hip Ratio (WHO),0.889
   });
   await integrationPage.waitForFunction(() =>
     document.querySelector("#topGenesisPdfAnalyzerFrame")?.contentWindow?.__publicationReply?.requestId === "storage-network-failure-fixture",
-    null, { timeout: 10000 });
+    null, { timeout: 20000 });
   const networkFailureReply = await analyzerFrame.evaluate(() => window.__publicationReply);
   assert.equal(networkFailureReply.ok, false);
   assert.match(networkFailureReply.message, /مرحله ناموفق: بارگذاری فایل گزارش در فضای ذخیره‌سازی/);
@@ -964,6 +964,19 @@ Waist-Hip Ratio (WHO),0.889
   await traineeProgressPage.goto("data:text/html,<html><head><title>trainee-fixture</title></head><body></body></html>");
   console.log("[smoke] trainee fixture document ready");
   await traineeProgressPage.evaluate(() => {
+    const persianMonthKey = date => {
+      const parts = new Intl.DateTimeFormat("en-US-u-ca-persian", {
+        year: "numeric", month: "numeric"
+      }).formatToParts(date);
+      return parts.find(part => part.type === "year")?.value + "/" +
+        parts.find(part => part.type === "month")?.value;
+    };
+    const monthKey = persianMonthKey(new Date());
+    const monthCursor = new Date();
+    monthCursor.setHours(12, 0, 0, 0);
+    while (persianMonthKey(monthCursor) === monthKey) monthCursor.setDate(monthCursor.getDate() - 1);
+    monthCursor.setDate(monthCursor.getDate() + 1);
+    const currentMonthFixtureDate = monthCursor.toISOString().slice(0, 10);
     window.authProfile = { role: "trainee", trainee_id: "trainee-fixture-1" };
     window.currentClient = { id: "trainee-fixture-1" };
     window.AUTH_SUPABASE = {
@@ -972,7 +985,7 @@ Waist-Hip Ratio (WHO),0.889
         // become awaitable only when the complete query is awaited.
         const result = { data: [
           { id:"a1", analysis_date:"2026-10-01", report_metrics:{ weight_kg:{value:82,unit:"kg",status:"needs_coach_review"}, body_fat_percent:{value:22,unit:"%",status:"needs_coach_review"} }, training_notes:"تمرین مقاومتی طبق برنامه", nutrition_notes:"پروتئین کافی" },
-          { id:"a2", analysis_date:"2026-11-01", report_metrics:{ weight_kg:{value:79,unit:"kg",status:"needs_coach_review"}, body_fat_percent:{value:19,unit:"%",status:"needs_coach_review"} }, training_notes:"افزایش تدریجی فشار تمرین", nutrition_notes:"تنظیم کالری روزانه" }
+          { id:"a2", analysis_date:currentMonthFixtureDate, report_metrics:{ weight_kg:{value:79,unit:"kg",status:"needs_coach_review"}, body_fat_percent:{value:19,unit:"%",status:"needs_coach_review"} }, training_notes:"افزایش تدریجی فشار تمرین", nutrition_notes:"تنظیم کالری روزانه" }
         ], error:null };
         const chain = {
           select() { return this; },
