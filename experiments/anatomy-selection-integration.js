@@ -24,14 +24,16 @@ function currentData(){return DATA[state.sex+'-'+state.view]}
 function currentPaths(){return currentData().muscles}
 function sideOf(id){if(typeof id!=='string')return null;if(id.endsWith('_LEFT'))return 'LEFT';if(id.endsWith('_RIGHT'))return 'RIGHT';return null}
 function pairFor(path){
- const groupPaths=currentPaths().map((p,i)=>({p,i})).filter(x=>x.p.group===path.group);
- const left=groupPaths.filter(x=>sideOf(x.p.id)==='LEFT');
- const right=groupPaths.filter(x=>sideOf(x.p.id)==='RIGHT');
- const idsValid=left.length===1&&right.length===1;
- const meta=catalog&&catalog.groups.find(g=>g.source_group_key===path.group);
- const allowed=meta&&meta.pairing_status==='reviewed';
- if(!idsValid||!allowed)return {ok:false,reason:!allowed?'این گروه هنوز از ممیزی هندسه عبور نکرده است.':'هندسه هر دو سمت یکتا و کامل نیست.',items:[]};
- return {ok:true,items:[left[0],right[0]]};
+ const paths=currentPaths();
+ const index=paths.indexOf(path);
+ if(index<0)return {ok:false,reason:'مسیر عضله در نمای فعلی پیدا نشد.',items:[]};
+ const oppositeKey=pairedKeyFor(path,{muscles:paths});
+ if(!oppositeKey)return {ok:false,reason:'برای این عضله جفت قرینه با شناسه متناظر پیدا نشد.',items:[]};
+ const oppositeIndex=paths.findIndex((p,i)=>keyFor(p,i)===oppositeKey);
+ if(oppositeIndex<0)return {ok:false,reason:'مسیر جفت قرینه در نمای فعلی پیدا نشد.',items:[]};
+ const opposite=paths[oppositeIndex];
+ if(opposite.group!==path.group)return {ok:false,reason:'جفت قرینه در گروه عضلانی متفاوت قرار دارد.',items:[]};
+ return {ok:true,items:[{p:path,i:index},{p:opposite,i:oppositeIndex}]};
 }
 function selectedPairs(){
  const paths=currentPaths(), groups=new Map();
