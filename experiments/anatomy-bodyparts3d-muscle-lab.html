@@ -55,6 +55,7 @@ a{color:#76591e}
 <div class="controls">
 <button id="front">نمای جلو</button><button id="back">نمای پشت</button>
 <button id="sideView" class="secondary">نمای جانبی</button><button id="reset" class="secondary">بازنشانی دوربین</button>
+<button id="focusMuscle" class="secondary">تمرکز روی عضله</button><button id="focusBody" class="secondary">نمای کل بدن</button>
 </div>
 <div id="status">در حال آماده‌سازی فهرست آناتومی…</div>
 <div id="legend"><span class="badge">قرمز: مش انتخاب‌شده</span><span class="badge">مدل مرجع مرد بالغ</span><span class="badge">فراداده نامزد؛ نیازمند بازبینی</span></div>
@@ -113,6 +114,16 @@ async function fetchChunk(index){
  cache.set(index,buffer);return buffer;
 }
 function clearMeshes(){for(const mesh of active){scene.remove(mesh);mesh.geometry.dispose();mesh.material.dispose()}active=[]}
+function frameSelection(mode='body'){
+ const objects=mode==='muscle'?active.filter(x=>x.name!=='Skin'):active.filter(x=>x.name==='Skin');
+ const chosen=objects.length?objects:active;
+ const box=new THREE.Box3();for(const mesh of chosen)box.expandByObject(mesh);
+ if(box.isEmpty())return;
+ const center=box.getCenter(new THREE.Vector3()),size=box.getSize(new THREE.Vector3());
+ const dist=Math.max(.32,size.length()*(mode==='muscle'?2.6:1.8));
+ camera.position.copy(center).add(new THREE.Vector3(.25,.15,1).normalize().multiplyScalar(dist));
+ controls.target.copy(center);controls.update();
+}
 function matchParts(key,side){
  const rx=patterns[key];if(!rx)return [];
  return atlas.parts.filter(p=>{
@@ -151,10 +162,7 @@ async function showTarget(){
     :new THREE.MeshStandardMaterial({color:'#c94b43',roughness:.62,metalness:.03,side:THREE.DoubleSide});
    const mesh=new THREE.Mesh(g,mat);mesh.name=p.name;mesh.renderOrder=isSkin?0:2;scene.add(mesh);active.push(mesh);
   }
-  const box=new THREE.Box3();
-  const frameObjects=$('showSkin').checked?active.filter(x=>x.name==='Skin'):active;
-  for(const mesh of frameObjects)box.expandByObject(mesh);
-  if(!box.isEmpty()){const center=box.getCenter(new THREE.Vector3());controls.target.copy(center);const size=box.getSize(new THREE.Vector3());const dist=Math.max(.45,size.length()*1.8);camera.position.copy(center).add(new THREE.Vector3(.25,.15,1).normalize().multiplyScalar(dist));controls.update();}
+  frameSelection('body');
   setStatus('بارگذاری شد: '+parts.length+' مش واقعی؛ '+chunkIds.length+' بخش داده.\nنام‌ها: '+parts.map(p=>p.name).join(' | ')+'\nوضعیت علمی: candidate_geometry — هنوز نیازمند بازبینی بصری سمت، مرز و جایگاه روی بدن است.');
  }catch(e){setStatus('خطا در بارگذاری: '+e.message+'\nممکن است دسترسی مرورگر به GitHub یا CDN محدود باشد. هیچ داده‌ای در اپ اصلی تغییر نکرده است.')}
 }
@@ -163,6 +171,8 @@ $('front').onclick=()=>{camera.position.set(0,.9,3);controls.target.set(0,.85,0)
 $('back').onclick=()=>{camera.position.set(0,.9,-3);controls.target.set(0,.85,0);controls.update()};
 $('sideView').onclick=()=>{camera.position.set(3,.9,0);controls.target.set(0,.85,0);controls.update()};
 $('reset').onclick=()=>{camera.position.set(.25,.9,2.7);controls.target.set(0,.82,0);controls.update()};
+$('focusMuscle').onclick=()=>frameSelection('muscle');
+$('focusBody').onclick=()=>frameSelection('body');
 init();
 fetch(BASE+'/models/atlas.json',{mode:'cors'}).then(r=>{if(!r.ok)throw new Error('HTTP '+r.status);return r.json()}).then(data=>{atlas=data;setStatus('فهرست آماده شد: '+atlas.parts.length+' مش و '+atlas.concepts.length+' مفهوم. گروه عضله را انتخاب کن.');showTarget()}).catch(e=>setStatus('فهرست منبع بارگذاری نشد: '+e.message+'\nاین صفحه به دسترسی به raw.githubusercontent.com و jsDelivr نیاز دارد.'));
 </script>
