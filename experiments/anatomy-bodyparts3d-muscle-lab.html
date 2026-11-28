@@ -51,6 +51,7 @@ a{color:#76591e}
 </select>
 <label for="side">سمت بدن</label>
 <select id="side"><option value="both">هر دو سمت</option><option value="right">راست</option><option value="left">چپ</option></select>
+<label style="display:flex;align-items:center;gap:8px;font-weight:normal;margin:4px 0 12px"><input id="showSkin" type="checkbox" checked style="width:auto;margin:0"> نمایش زمینه بدن به‌صورت نیمه‌شفاف</label>
 <div class="controls">
 <button id="front">نمای جلو</button><button id="back">نمای پشت</button>
 <button id="sideView" class="secondary">نمای جانبی</button><button id="reset" class="secondary">بازنشانی دوربین</button>
@@ -126,11 +127,13 @@ async function showTarget(){
  if(!atlas)return;
  clearMeshes();const key=$('target').value,side=$('side').value,parts=matchParts(key,side);
  if(!parts.length){setStatus('برای این عنوان در manifest مش مستقلی با این نام پیدا نشد. این مورد را فعلاً not_available نگه می‌داریم؛ هنوز مترادف‌ها و FMA بررسی نشده‌اند.');return}
- const chunkIds=[...new Set(parts.map(p=>p.chunk))];
+ const skinPart=$('showSkin').checked?atlas.parts.find(p=>p.id==='FJ2810'):null;
+ const renderParts=skinPart?[skinPart,...parts]:parts;
+ const chunkIds=[...new Set(renderParts.map(p=>p.chunk))];
  setStatus('نامزدها: '+parts.length+' مش مستقل؛ بخش‌های داده: '+chunkIds.join('، ')+'. در حال دریافت…');
  try{
   const buffers=new Map();for(const id of chunkIds)buffers.set(id,await fetchChunk(id));
-  for(const p of parts){
+  for(const p of renderParts){
    const b=buffers.get(p.chunk);
    if(p.positions+p.vertexCount*12>b.byteLength||p.normals+p.vertexCount*6>b.byteLength||p.indices+p.indexCount*4>b.byteLength)throw new Error('offsetهای مش '+p.id+' خارج از محدوده chunk هستند.');
    const position=new Float32Array(b,p.positions,p.vertexCount*3);
@@ -142,15 +145,20 @@ async function showTarget(){
    g.setAttribute('position',new THREE.BufferAttribute(position,3));
    g.setAttribute('normal',new THREE.BufferAttribute(normal,3,true));
    g.setIndex(new THREE.BufferAttribute(index,1));g.computeBoundingSphere();
-   const mat=new THREE.MeshStandardMaterial({color:'#c94b43',roughness:.62,metalness:.03,side:THREE.DoubleSide});
-   const mesh=new THREE.Mesh(g,mat);mesh.name=p.name;scene.add(mesh);active.push(mesh);
+   const isSkin=p.id==='FJ2810';
+   const mat=isSkin
+    ?new THREE.MeshStandardMaterial({color:'#b9aa91',roughness:.9,transparent:true,opacity:.13,depthWrite:false,side:THREE.DoubleSide})
+    :new THREE.MeshStandardMaterial({color:'#c94b43',roughness:.62,metalness:.03,side:THREE.DoubleSide});
+   const mesh=new THREE.Mesh(g,mat);mesh.name=p.name;mesh.renderOrder=isSkin?0:2;scene.add(mesh);active.push(mesh);
   }
-  const box=new THREE.Box3();for(const mesh of active)box.expandByObject(mesh);
+  const box=new THREE.Box3();
+  const frameObjects=$('showSkin').checked?active.filter(x=>x.name==='Skin'):active;
+  for(const mesh of frameObjects)box.expandByObject(mesh);
   if(!box.isEmpty()){const center=box.getCenter(new THREE.Vector3());controls.target.copy(center);const size=box.getSize(new THREE.Vector3());const dist=Math.max(.45,size.length()*1.8);camera.position.copy(center).add(new THREE.Vector3(.25,.15,1).normalize().multiplyScalar(dist));controls.update();}
   setStatus('بارگذاری شد: '+parts.length+' مش واقعی؛ '+chunkIds.length+' بخش داده.\nنام‌ها: '+parts.map(p=>p.name).join(' | ')+'\nوضعیت علمی: candidate_geometry — هنوز نیازمند بازبینی بصری سمت، مرز و جایگاه روی بدن است.');
  }catch(e){setStatus('خطا در بارگذاری: '+e.message+'\nممکن است دسترسی مرورگر به GitHub یا CDN محدود باشد. هیچ داده‌ای در اپ اصلی تغییر نکرده است.')}
 }
-$('target').addEventListener('change',showTarget);$('side').addEventListener('change',showTarget);
+$('target').addEventListener('change',showTarget);$('side').addEventListener('change',showTarget);$('showSkin').addEventListener('change',showTarget);
 $('front').onclick=()=>{camera.position.set(0,.9,3);controls.target.set(0,.85,0);controls.update()};
 $('back').onclick=()=>{camera.position.set(0,.9,-3);controls.target.set(0,.85,0);controls.update()};
 $('sideView').onclick=()=>{camera.position.set(3,.9,0);controls.target.set(0,.85,0);controls.update()};
