@@ -44,8 +44,8 @@ assert.match(review, /frame\.contentDocument\?\.getElementById\("anatomy"\)\?\.c
   "review page must resolve the prototype SVG through the capture page nested iframe");
 assert.match(review, /captureDoc\?\.getElementById\("anatomy"\)\?\.contentDocument/,
   "review readiness must validate the same nested prototype document used for highlighting");
-assert.match(review, /paths\.find\(p=>p\.dataset\.key===activeKey\)/,
-  "review page must resolve the selected stable key to exactly one rendered path");
+assert.match(review, /selected\.some\(key=>!paths\.some\(p=>p\.dataset\.key===key\)\)/,
+  "review page must resolve every selected stable key to exactly one rendered path");
 assert.match(review, /missing=buttons\.filter\(b=>!paths\.some\(p=>p\.dataset\.key===b\.dataset\.key\)\)/,
   "review page must reject missing path keys before declaring a panel ready");
 assert.match(review, /dataset\.reviewReady=String\(loaded\.length===4&&reviewPanels\.every\(p=>p\.dataset\.panelReady==="true"\)\)/,
