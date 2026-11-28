@@ -1,0 +1,317 @@
+{
+  "schema_version": "1.0.0",
+  "generated_at": "2026-11-28",
+  "purpose": "Machine-readable Persian and Latin search aliases for the 19 existing anatomy preview groups. Not connected to UI yet.",
+  "source_catalog": "experiments/ANATOMY-MUSCLE-CATALOG.json",
+  "rules": {
+    "aliases_are_search_only": true,
+    "aliases_do_not_create_geometry": true,
+    "aliases_do_not_split_groups": true,
+    "no_exercise_bank_mutation": true,
+    "unknown_or_unreviewed_geometry_must_not_be_presented_as_validated": true
+  },
+  "groups": [
+    {
+      "group_id": "trapezius",
+      "display_name_fa": "ذوزنقه‌ای (کول)",
+      "display_name_latin": "Trapezius",
+      "aliases_fa": [
+        "کول",
+        "کول پشت",
+        "تراپ",
+        "تراپزیوس",
+        "ذوزنقه‌ای"
+      ],
+      "aliases_latin": [
+        "trapezius",
+        "traps"
+      ]
+    },
+    {
+      "group_id": "chest",
+      "display_name_fa": "سینه بزرگ",
+      "display_name_latin": "Pectoralis major",
+      "aliases_fa": [
+        "سینه",
+        "عضلات سینه",
+        "پکتورال",
+        "بالاسینه",
+        "زیرسینه",
+        "سینه میانی"
+      ],
+      "aliases_latin": [
+        "pectoralis major",
+        "pecs",
+        "chest"
+      ]
+    },
+    {
+      "group_id": "shoulders_front",
+      "display_name_fa": "سرشانه قدامی",
+      "display_name_latin": "Anterior deltoid",
+      "aliases_fa": [
+        "سرشانه جلو",
+        "جلوی سرشانه",
+        "دلتوئید قدامی"
+      ],
+      "aliases_latin": [
+        "anterior deltoid",
+        "front delt"
+      ]
+    },
+    {
+      "group_id": "shoulders_side",
+      "display_name_fa": "سرشانه میانی",
+      "display_name_latin": "Lateral deltoid",
+      "aliases_fa": [
+        "سرشانه بغل",
+        "سرشانه جانبی",
+        "بغل سرشانه",
+        "دلتوئید میانی"
+      ],
+      "aliases_latin": [
+        "lateral deltoid",
+        "side delt",
+        "middle delt"
+      ]
+    },
+    {
+      "group_id": "shoulders_rear",
+      "display_name_fa": "سرشانه خلفی",
+      "display_name_latin": "Posterior deltoid",
+      "aliases_fa": [
+        "سرشانه پشت",
+        "پشت سرشانه",
+        "دلتوئید خلفی"
+      ],
+      "aliases_latin": [
+        "posterior deltoid",
+        "rear delt"
+      ]
+    },
+    {
+      "group_id": "biceps",
+      "display_name_fa": "دوسر بازویی (جلو بازو)",
+      "display_name_latin": "Biceps brachii",
+      "aliases_fa": [
+        "جلو بازو",
+        "بایسپس",
+        "دوسر بازویی"
+      ],
+      "aliases_latin": [
+        "biceps brachii",
+        "biceps"
+      ]
+    },
+    {
+      "group_id": "triceps",
+      "display_name_fa": "سه‌سر بازویی (پشت بازو)",
+      "display_name_latin": "Triceps brachii",
+      "aliases_fa": [
+        "پشت بازو",
+        "تری‌سپس",
+        "سه‌سر بازویی"
+      ],
+      "aliases_latin": [
+        "triceps brachii",
+        "triceps"
+      ]
+    },
+    {
+      "group_id": "forearms",
+      "display_name_fa": "گروه عضلات ساعد",
+      "display_name_latin": "Forearm muscle group",
+      "aliases_fa": [
+        "ساعد",
+        "جلو ساعد",
+        "پشت ساعد",
+        "مچ"
+      ],
+      "aliases_latin": [
+        "forearm",
+        "forearm flexors",
+        "forearm extensors"
+      ]
+    },
+    {
+      "group_id": "obliques",
+      "display_name_fa": "عضلات مایل شکم",
+      "display_name_latin": "Abdominal obliques",
+      "aliases_fa": [
+        "پهلو",
+        "عضلات پهلو",
+        "مورب شکمی",
+        "مایل شکمی"
+      ],
+      "aliases_latin": [
+        "abdominal obliques",
+        "external oblique",
+        "internal oblique"
+      ]
+    },
+    {
+      "group_id": "core",
+      "display_name_fa": "راست شکمی",
+      "display_name_latin": "Rectus abdominis",
+      "aliases_fa": [
+        "شکم",
+        "سیکس‌پک",
+        "عضله راست شکمی",
+        "core"
+      ],
+      "aliases_latin": [
+        "rectus abdominis",
+        "abs",
+        "six pack",
+        "core"
+      ]
+    },
+    {
+      "group_id": "abductors",
+      "display_name_fa": "گروه دورکننده‌های ران",
+      "display_name_latin": "Hip abductor muscle group",
+      "aliases_fa": [
+        "خارج ران",
+        "دورکننده ران",
+        "دورکننده لگن",
+        "ابداکتور"
+      ],
+      "aliases_latin": [
+        "hip abductors",
+        "hip abductor group"
+      ]
+    },
+    {
+      "group_id": "quads",
+      "display_name_fa": "گروه چهارسر ران",
+      "display_name_latin": "Quadriceps femoris",
+      "aliases_fa": [
+        "جلو ران",
+        "چهارسر",
+        "چهارسر ران",
+        "کوادریسپس"
+      ],
+      "aliases_latin": [
+        "quadriceps",
+        "quadriceps femoris",
+        "quads"
+      ]
+    },
+    {
+      "group_id": "calves",
+      "display_name_fa": "گروه عضلات ساق",
+      "display_name_latin": "Calf muscle group",
+      "aliases_fa": [
+        "ساق",
+        "ساق پا",
+        "پشت ساق",
+        "دوقلو ساق",
+        "نعلی"
+      ],
+      "aliases_latin": [
+        "calf",
+        "calves",
+        "gastrocnemius",
+        "soleus"
+      ]
+    },
+    {
+      "group_id": "adductors",
+      "display_name_fa": "گروه نزدیک‌کننده‌های ران",
+      "display_name_latin": "Hip adductor muscle group",
+      "aliases_fa": [
+        "داخل ران",
+        "نزدیک‌کننده ران",
+        "نزدیک‌کننده",
+        "اداکتور"
+      ],
+      "aliases_latin": [
+        "hip adductors",
+        "hip adductor group"
+      ]
+    },
+    {
+      "group_id": "rhomboids",
+      "display_name_fa": "عضلات لوزی‌شکل",
+      "display_name_latin": "Rhomboid muscles",
+      "aliases_fa": [
+        "لوزی",
+        "عضله لوزی",
+        "لوزی بزرگ",
+        "لوزی کوچک",
+        "رومبوئید"
+      ],
+      "aliases_latin": [
+        "rhomboids",
+        "rhomboid major",
+        "rhomboid minor"
+      ]
+    },
+    {
+      "group_id": "lats",
+      "display_name_fa": "پشتی بزرگ (زیر بغل)",
+      "display_name_latin": "Latissimus dorsi",
+      "aliases_fa": [
+        "زیربغل",
+        "زیر بغل",
+        "لت",
+        "پشتی بزرگ"
+      ],
+      "aliases_latin": [
+        "latissimus dorsi",
+        "lats",
+        "lat"
+      ]
+    },
+    {
+      "group_id": "back_lower",
+      "display_name_fa": "راست‌کننده‌های کمری ستون مهره‌ها",
+      "display_name_latin": "Lumbar erector spinae",
+      "aliases_fa": [
+        "پایین کمر",
+        "فیله کمر",
+        "فیله‌های کمری",
+        "راست‌کننده کمری"
+      ],
+      "aliases_latin": [
+        "lumbar erector spinae",
+        "erector spinae"
+      ]
+    },
+    {
+      "group_id": "glutes",
+      "display_name_fa": "گروه عضلات سرینی (باسن)",
+      "display_name_latin": "Gluteal muscle group",
+      "aliases_fa": [
+        "باسن",
+        "سرینی",
+        "گلوت",
+        "عضلات باسن"
+      ],
+      "aliases_latin": [
+        "glutes",
+        "gluteal muscles",
+        "gluteus maximus",
+        "gluteus medius",
+        "gluteus minimus"
+      ]
+    },
+    {
+      "group_id": "hamstrings",
+      "display_name_fa": "گروه همسترینگ (پشت ران)",
+      "display_name_latin": "Hamstring muscle group",
+      "aliases_fa": [
+        "پشت ران",
+        "همسترینگ",
+        "عضلات خلفی ران"
+      ],
+      "aliases_latin": [
+        "hamstrings",
+        "hamstring muscle group",
+        "biceps femoris",
+        "semitendinosus",
+        "semimembranosus"
+      ]
+    }
+  ]
+}
