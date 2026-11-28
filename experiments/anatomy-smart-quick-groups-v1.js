@@ -27,7 +27,8 @@ let message='';if(item.kind==='missing')message='برای این هدف، هند
 status.textContent=message;render();draw();}
 nav.querySelectorAll('[data-cat]').forEach(b=>b.addEventListener('click',()=>{activeCat=b.dataset.cat;nav.querySelectorAll('[data-cat]').forEach(x=>x.setAttribute('aria-pressed',String(x===b)));render()}));
 search.addEventListener('input',render);
-box.querySelectorAll('[data-qrole]').forEach(b=>b.addEventListener('click',()=>{role=b.dataset.qrole;box.querySelectorAll('[data-qrole]').forEach(x=>x.classList.toggle('active',x===b));if(activeKeys.length&&activeCombo===combo()){const m=selectedMap();activeKeys.forEach(k=>m[k]=role);draw();}}));\n['sex','view'].forEach(id=>document.getElementById(id).addEventListener('change',()=>{activeId=null;activeKeys=[];activeCombo=null;render();status.textContent='نمای بدن تغییر کرد؛ برای رنگ‌آمیزی در این نما یک هدف را دوباره انتخاب کن.';}));
+box.querySelectorAll('[data-qrole]').forEach(b=>b.addEventListener('click',()=>{role=b.dataset.qrole;box.querySelectorAll('[data-qrole]').forEach(x=>x.classList.toggle('active',x===b));if(activeKeys.length&&activeCombo===combo()){const m=selectedMap();activeKeys.forEach(k=>m[k]=role);draw();}}));
+['sex','view'].forEach(id=>document.getElementById(id).addEventListener('change',()=>{activeId=null;activeKeys=[];activeCombo=null;render();status.textContent='نمای بدن تغییر کرد؛ برای رنگ‌آمیزی در این نما یک هدف را دوباره انتخاب کن.';}));
 const originalDraw=draw;window.draw=function(){originalDraw();render()};
 fetch(catalogUrl).then(r=>{if(!r.ok)throw new Error('catalog HTTP '+r.status);return r.json()}).then(data=>{catalog=data;render();}).catch(()=>{status.textContent='کاتالوگ عضلات بارگذاری نشد؛ نقشه اصلی بدون تغییر باقی ماند.';});
 })();
