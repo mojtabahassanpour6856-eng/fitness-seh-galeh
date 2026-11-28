@@ -46,7 +46,7 @@ assert.match(review, /captureDoc\?\.getElementById\("anatomy"\)\?\.contentDocume
   "review readiness must validate the same nested prototype document used for highlighting");
 assert.match(review, /selected\.some\(key=>!paths\.some\(p=>p\.dataset\.key===key\)\)/,
   "review page must resolve every selected stable key to exactly one rendered path");
-assert.match(review, /missing=buttons\.filter\(b=>!paths\.some\(p=>p\.dataset\.key===b\.dataset\.key\)\)/,
+assert.match(review, /missing=buttons\.filter\(b=>b\.dataset\.key&&!paths\.some\(p=>p\.dataset\.key===b\.dataset\.key\)\)/,
   "review page must reject missing path keys before declaring a panel ready");
 assert.match(review, /dataset\.reviewReady=String\(loaded\.length===4&&reviewPanels\.every\(p=>p\.dataset\.panelReady==="true"\)\)/,
   "review readiness must require all four successfully loaded panels");
