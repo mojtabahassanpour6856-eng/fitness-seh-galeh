@@ -98,3 +98,45 @@
 - Human Atlas و توضیح pipeline: https://mostischmidbauer.github.io/human-atlas/
 - اسکریپت تبدیل: https://github.com/ashemag/human-atlas/blob/main/scripts/convert-anatomy.py
 - انتساب و مشخصات منبع: https://github.com/ashemag/human-atlas/blob/main/public/ATTRIBUTION.md
+
+
+## 9) کشف جدید: مسیر صحیح از FMA concept تا فایل OBJ
+
+در توضیحات رسمی README آرشیو LSDB یک نکته تعیین‌کننده روشن شد:
+- فایل `isa_parts_list_e.txt` رابطه concept ID (FMA) با representation ID (BP) و نام را ثبت می‌کند.
+- فایل `isa_element_parts.txt` برای ساختارهای COMPOUND، فهرست ELEMENTهای سازنده را با ستون سوم به نام `element file id` ارائه می‌کند.
+- خود ZIP شامل OBJهای ELEMENT است، نه لزوماً یک OBJ مستقل برای هر مفهوم COMPOUND.
+
+بنابراین زنجیره درست نگاشت برای نامزدهایی که COMPOUND هستند چنین است:
+
+`FMA concept → rows in isa_element_parts.txt → one or more ELEMENT FileIDs → OBJ member(s) in ZIP`
+
+این کشف باعث می‌شود یک عضله مرکب را اشتباهاً به یک فایل واحد نسبت ندهیم. ممکن است یک مفهوم به چند فایل ELEMENT تجزیه شود؛ این فایل‌ها باید به‌عنوان اجزای یک مفهوم ثبت شوند و پس از مشاهده هندسه تصمیم بگیریم آیا نمایش مستقل و انتخاب‌پذیر آن مفهوم قابل دفاع است یا خیر.
+
+## 10) ابزار ممیزی آرشیو در شاخه آزمایشی
+
+ابزار جدید:
+`experiments/tools/inspect_bodyparts3d_archive.py`
+
+کارکرد:
+- محاسبه SHA-256 آرشیو؛
+- شمارش فایل‌های OBJ؛
+- خواندن هندسه هر OBJ و استخراج تعداد رأس/وجه، bounds، نام object/group و ارجاعات رأس؛
+- خواندن نگاشت ELEMENT FileID از فایل رسمی `isa_element_parts.txt`؛
+- تطبیق محافظه‌کارانه شناسه‌ها و گزارش موارد پیدا‌نشده/چندفایلی؛
+- تولید گزارش JSON بدون تغییر در فایل خام.
+
+نمونه اجرا پس از دریافت آرشیو و metadata رسمی:
+
+```bash
+python experiments/tools/inspect_bodyparts3d_archive.py isa_BP3D_4.0_obj_99.zip --element-map isa_element_parts.txt --out bodyparts3d-audit-output
+```
+
+نکته مهم: وضعیت `candidate_obj_found_needs_visual_review` صرفاً یعنی فایل/فایل‌های مرتبط با شناسه پیدا شده‌اند و ساختار پایه OBJ قابل خواندن است؛ این وضعیت به معنی تأیید مرز عضله، سمت، عمق یا صحت تشریحی نیست.
+
+## 11) وضعیت اجرایی واقعی
+
+- مسیر نگاشت مفهومی تا ELEMENT FileID اکنون مستند و در ابزار ممیزی پیاده‌سازی شده است.
+- ابزار در شاخه آزمایشی ثبت شده؛ اما چون آرشیو باینری رسمی ۱۳۶ مگابایتی و فایل metadata هنوز در محیط اجرا موجود نیستند، هیچ OBJ واقعی از نامزدهای پروژه شمارش یا رندر نشده است.
+- پیش‌نمایش سه‌بعدی جدید تا زمان دریافت و بررسی هندسه واقعی ساخته نمی‌شود؛ ساخت پیش‌نمایش نمایشی با مش فرضی، نتیجه گمراه‌کننده خواهد بود.
+- محدوده همچنان فقط `experiments/` است و نسخه اصلی، MuscleMap، بانک حرکات و اطلاعات شاگردان دست‌نخورده‌اند.
