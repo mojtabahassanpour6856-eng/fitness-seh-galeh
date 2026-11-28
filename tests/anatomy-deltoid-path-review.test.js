@@ -16,6 +16,14 @@ assert.equal((review.match(/<section class="panel">/g) || []).length, 4,
 assert.equal((review.match(/<iframe\b/g) || []).length, 4,
   "deltoid review must embed exactly the four canonical views");
 assert.equal(buttons.length, 16, "all 16 deltoid paths must have a dedicated selector");
+assert.equal((review.match(/class="show-all"/g)||[]).length,4,
+  "each canonical view must expose one simultaneous four-path comparison control");
+assert.match(review,/const selected=showAll\?buttons\.filter\(b=>b\.dataset\.key\)/,
+  "show-all mode must highlight all four actual deltoid paths in the current view");
+assert.match(review,/const palette=\["#d94b45","#2879b9","#19836f","#a66a1d"\]/,
+  "simultaneous comparison must distinguish paths with separate colors");
+assert.match(review,/showAll\? "نمایش هم‌زمان چهار مسیر واقعی"/,
+  "status must disclose simultaneous comparison mode");
 assert.equal(new Set(buttons.map(b => b.key)).size, 16,
   "every deltoid selector must use a unique stable selection_key");
 assert.deepEqual([...new Set(buttons.map(b => b.view))].sort(), [...expectedViews].sort(),
