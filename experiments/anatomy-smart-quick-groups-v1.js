@@ -12,7 +12,7 @@ const groups=[
 ];
 const all=groups.flatMap(g=>g.items.map(x=>({id:x[0],label:x[1],map:x[2],kind:x[3],cat:g.cat})));
 const host=document.querySelector('main.wrap .layout');
-if(!host||!window.state||typeof selectedMap!=='function'||typeof draw!=='function')return;
+if(!host||typeof selectedMap!=='function'||typeof draw!=='function')return;
 const box=document.createElement('section');box.className='quick-groups';box.innerHTML='<div class="quick-head"><h2>انتخاب سریع عضلات</h2><span class="badge">۲۷ هدف تمرینی</span></div><p class="quick-sub">یک هدف را لمس کن تا ناحیه متناظرِ موجود در مدل رنگی شود. موارد تأکیدی، تفکیک هندسی مستقل محسوب نمی‌شوند.</p><div class="quick-role"><button type="button" data-qrole="primary" class="active">عضله اصلی</button><button type="button" data-qrole="secondary">عضله کمکی</button></div><input class="quick-search" type="search" placeholder="جست‌وجوی نام عضله…" aria-label="جست‌وجوی عضله"><nav class="quick-cats" aria-label="دسته‌بندی عضلات"></nav><div class="quick-grid"></div><div class="quick-status" role="status">برای شروع، یک گروه عضلانی را انتخاب کن.</div>';
 host.parentNode.insertBefore(box,host);
 const nav=box.querySelector('.quick-cats'),grid=box.querySelector('.quick-grid'),status=box.querySelector('.quick-status'),search=box.querySelector('.quick-search');
