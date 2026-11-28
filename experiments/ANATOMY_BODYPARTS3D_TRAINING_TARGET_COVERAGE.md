@@ -8,7 +8,7 @@ Source: `ashemag/human-atlas`, `public/models/atlas.json`, blob `0f81b5621479a0c
 |---|---|---|
 | سینه بزرگ (`pectoralis major`) | نامزد پیدا شد؛ 6 مش | zone of pectoralis major؛ clavicular part of pectoralis major؛ clavicular part of right pectoralis major |
 | سینه کوچک (`pectoralis minor`) | نامزد پیدا شد؛ 2 مش | pectoralis minor؛ right pectoralis minor؛ left pectoralis minor |
-| دلتوئید (`deltoid`) | نامزد پیدا شد؛ 8 مش | deltoid branch of thoraco-acromial artery؛ deltoid branch of right thoraco-acromial artery؛ deltoid branch of left thoraco-acromial artery |
+| دلتوئید (`deltoid`) | نامزد پیدا شد؛ 6 مش | zone of deltoid؛ clavicular part of deltoid؛ acromial part of deltoid |
 | دوسر بازویی (`biceps brachii`) | نامزد پیدا شد؛ 4 مش | short head of biceps brachii؛ long head of biceps brachii؛ short head of right biceps brachii |
 | سه‌سر بازویی (`triceps brachii`) | نامزد پیدا شد؛ 6 مش | long head of triceps brachii؛ medial head of triceps brachii؛ lateral head of triceps brachii |
 | ذوزنقه‌ای (`trapezius`) | نامزد پیدا شد؛ 6 مش | zone of trapezius؛ ascending part of trapezius؛ transverse part of trapezius |
@@ -16,8 +16,8 @@ Source: `ashemag/human-atlas`, `public/models/atlas.json`, blob `0f81b5621479a0c
 | لوزی کوچک (`rhomboid minor`) | نامزد پیدا شد؛ 2 مش | rhomboid minor؛ right rhomboid minor؛ left rhomboid minor |
 | دندانه‌ای قدامی (`serratus anterior`) | نامزد پیدا شد؛ 2 مش | serratus anterior؛ right serratus anterior؛ left serratus anterior |
 | مایل خارجی شکم (`external oblique`) | نامزد پیدا شد؛ 2 مش | external oblique؛ right external oblique؛ left external oblique |
-| راست شکمی (`rectus abdominis`) | با این نام پیدا نشد | نیازمند بررسی واژگان مترادف/شناسه FMA |
-| پشتی بزرگ (`latissimus dorsi`) | با این نام پیدا نشد | نیازمند بررسی واژگان مترادف/شناسه FMA |
+| راست شکمی (`rectus abdominis`) | با این نام پیدا نشد | نیازمند بررسی مترادف‌ها و شناسه‌های FMA |
+| پشتی بزرگ (`latissimus dorsi`) | با این نام پیدا نشد | نیازمند بررسی مترادف‌ها و شناسه‌های FMA |
 | سرینی بزرگ (`gluteus maximus`) | نامزد پیدا شد؛ 2 مش | gluteus maximus؛ right gluteus maximus؛ left gluteus maximus |
 | سرینی میانی (`gluteus medius`) | نامزد پیدا شد؛ 2 مش | gluteus medius؛ right gluteus medius؛ left gluteus medius |
 | سرینی کوچک (`gluteus minimus`) | نامزد پیدا شد؛ 2 مش | gluteus minimus؛ right gluteus minimus؛ left gluteus minimus |
@@ -33,13 +33,15 @@ Source: `ashemag/human-atlas`, `public/models/atlas.json`, blob `0f81b5621479a0c
 | درشت‌نی قدامی (`tibialis anterior`) | نامزد پیدا شد؛ 2 مش | tibialis anterior؛ right tibialis anterior؛ left tibialis anterior |
 
 ## نکات مهم
-- سینه بزرگ به چند قطعه ناحیه‌ای (clavicular، sternocostal، abdominal) تقسیم شده؛ برای مفهوم راست/چپ چند مش باید کنار هم قرار گیرند.
-- دلتوئید سه بخش دارد؛ سه‌سر بازویی سه سر و دوسر بازویی دو سر دارد. پس مفهوم تمرینی یک‌تکه لزوماً یک مش واحد نیست.
-- در این ممیزی، `latissimus dorsi` و `rectus abdominis` با جست‌وجوی نام در فهرست مفاهیم پیدا نشدند. این به معنی اثبات قطعی نبودن ساختار نیست؛ باید نام‌های مترادف و شناسه‌های FMA بررسی شوند.
-- هیچ موردی هنوز `verified_geometry` نیست. تمام موارد پیدا‌شده فعلاً فقط `candidate_geometry` در سطح فراداده‌اند.
+- در شمارش، عناصر شریانی/وریدی که صرفاً نامی مانند «شاخه دلتوئیدی» دارند از عضلات حذف شده‌اند.
+- سینه بزرگ به قطعات ناحیه‌ای clavicular، sternocostal و abdominal تقسیم شده؛ برای هر سمت چند مش باید کنار هم قرار گیرند.
+- دلتوئید سه بخش، سه‌سر بازویی سه سر و دوسر بازویی دو سر دارد؛ پس یک هدف تمرینی ممکن است چند مش مستقل داشته باشد.
+- `latissimus dorsi` و `rectus abdominis` با جست‌وجوی نام در فهرست مفاهیم پیدا نشدند. این اثبات قطعی نبودن ساختار نیست؛ باید مترادف‌ها و شناسه‌های FMA نیز بررسی شوند.
+- بعضی عضلات ممکن است در ستون `system` با برچسبی غیر از `muscular` آمده باشند؛ بنابراین این ستون به‌تنهایی معیار حذف عضله نیست.
+- هیچ موردی هنوز `verified_geometry` نیست. موارد پیدا‌شده فقط نامزدهای فراداده‌ای‌اند.
 - مدل منبع مردانه است و برای بدن زن استفاده نمی‌شود.
 
 ## مرحله بعدی فنی
-فهرست عناصر نامزد در فایل JSON همراه آمده است. شناسه chunk برای هر مش ثبت شده تا فقط chunkهای موردنیاز دریافت شوند. با این حال، تا وقتی بایت‌های chunk دریافت و با offsets موجود در manifest decode و در مرورگر نمایش داده نشوند، صحت هندسه تأییدشده محسوب نمی‌شود.
+فهرست عناصر نامزد در فایل JSON همراه آمده است. شناسه chunk برای هر مش ثبت شده تا فقط chunkهای موردنیاز دریافت شوند. تا وقتی بایت‌های chunk دریافت و با offsets موجود در manifest decode و در مرورگر نمایش داده نشوند، صحت هندسه تأییدشده محسوب نمی‌شود.
 
 انتساب منبع در هر بازتوزیع: **BodyParts3D, © The Database Center for Life Science licensed under CC Attribution 4.0 International.**
