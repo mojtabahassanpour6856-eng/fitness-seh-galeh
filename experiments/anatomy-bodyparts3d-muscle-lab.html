@@ -1,0 +1,157 @@
+<!doctype html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#f7f0df"><title>آزمایشگاه مش عضلات BodyParts3D | فیتنس سه‌قلعه</title>
+<style>
+:root{--paper:#f7f0df;--card:#fffdf7;--gold:#98752d;--line:#ddc995;--ink:#302819;--muted:#756b58;--red:#c94b43}
+*{box-sizing:border-box}body{margin:0;background:var(--paper);color:var(--ink);font-family:Tahoma,Arial,sans-serif}
+header{padding:16px;text-align:center;background:linear-gradient(115deg,#fffdf7,#efe2c1);border-bottom:1px solid var(--line)}
+h1{font-size:21px;color:#76591e;margin:0}header p{max-width:900px;margin:7px auto 0;font-size:12px;line-height:1.9;color:var(--muted)}
+main{max-width:1300px;margin:auto;padding:12px;display:grid;grid-template-columns:300px minmax(0,1fr);gap:12px}
+.panel{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:13px;min-width:0}
+label{display:block;font-size:12px;font-weight:bold;color:#76591e;margin:0 0 6px}
+select,button{font:inherit;border:1px solid var(--line);border-radius:8px;background:#fffdf7;color:var(--ink);padding:10px;width:100%;margin-bottom:10px}
+button{cursor:pointer;background:#8b6b2b;color:white;border:0}
+button.secondary{background:#eee4cd;color:#5b4519}
+.controls{display:grid;grid-template-columns:1fr 1fr;gap:7px}.controls button{margin:0}
+#stage{height:min(72vh,760px);min-height:430px;border:1px solid var(--line);border-radius:10px;background:linear-gradient(#fdfbf5,#e9e1d0);position:relative;overflow:hidden}
+#stage canvas{display:block;width:100%;height:100%}
+#status{font-size:12px;line-height:1.9;background:#fff8e9;border-right:3px solid var(--gold);padding:9px;border-radius:7px;min-height:55px;margin-top:8px;white-space:pre-wrap}
+#legend{font-size:11px;color:var(--muted);line-height:1.9;margin-top:8px}
+.badge{display:inline-block;padding:3px 7px;border-radius:6px;background:#f3e8ce;color:#6b501b;font-size:10px;margin:2px}
+h2{font-size:14px;color:#76591e;margin:0 0 10px}
+.note{font-size:11px;color:var(--muted);line-height:1.9;margin-top:10px}
+a{color:#76591e}
+@media(max-width:760px){main{grid-template-columns:1fr;padding:8px}#stage{height:58vh;min-height:390px}header{padding:13px}h1{font-size:18px}}
+</style>
+<script type="importmap">
+{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.159.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.159.0/examples/jsm/"}}
+</script>
+</head>
+<body>
+<header>
+<h1>آزمایشگاه مستقل مش‌های عضلانی | BodyParts3D 4.0</h1>
+<p>فقط برای ممیزی هندسه در شاخه آزمایشی فیتنس سه‌قلعه — مش‌های واقعی از داده عمومی؛ هنوز به انتخابگر MuscleMap متصل نشده‌اند.</p>
+</header>
+<main>
+<section class="panel">
+<h2>انتخاب هدف عضلانی</h2>
+<label for="target">گروه عضله</label>
+<select id="target">
+<option value="pectoralisMajor">سینه بزرگ</option><option value="pectoralisMinor">سینه کوچک</option>
+<option value="deltoid">دلتوئید (سه بخش)</option><option value="biceps">دوسر بازویی (دو سر)</option>
+<option value="triceps">سه‌سر بازویی (سه سر)</option><option value="trapezius">ذوزنقه‌ای</option>
+<option value="rhomboidMajor">لوزی بزرگ</option><option value="rhomboidMinor">لوزی کوچک</option>
+<option value="serratusAnterior">دندانه‌ای قدامی</option><option value="externalOblique">مایل خارجی شکم</option>
+<option value="glutes">سرینی (بزرگ، میانی، کوچک)</option><option value="quadriceps">چهارسر ران</option>
+<option value="hamstrings">همسترینگ</option><option value="calf">ساق (دوقلو و نعلی)</option>
+<option value="tibialisAnterior">درشت‌نی قدامی</option><option value="latissimus">پشتی بزرگ — در فهرست نامزدها پیدا نشد</option>
+<option value="rectusAbdominis">راست شکمی — در فهرست نامزدها پیدا نشد</option>
+</select>
+<label for="side">سمت بدن</label>
+<select id="side"><option value="both">هر دو سمت</option><option value="right">راست</option><option value="left">چپ</option></select>
+<div class="controls">
+<button id="front">نمای جلو</button><button id="back">نمای پشت</button>
+<button id="sideView" class="secondary">نمای جانبی</button><button id="reset" class="secondary">بازنشانی دوربین</button>
+</div>
+<div id="status">در حال آماده‌سازی فهرست آناتومی…</div>
+<div id="legend"><span class="badge">قرمز: مش انتخاب‌شده</span><span class="badge">مدل مرجع مرد بالغ</span><span class="badge">فراداده نامزد؛ نیازمند بازبینی</span></div>
+<div class="note">با لمس و کشیدن، مدل را بچرخان؛ با دو انگشت یا اسکرول بزرگ‌نمایی کن. این صفحه به مدل زنانه یا نسخه اصلی اپ متصل نیست.</div>
+</section>
+<section class="panel">
+<div id="stage" aria-label="نمایش سه‌بعدی مش عضله"></div>
+<p class="note">منبع: BodyParts3D 4.0 از مخزن Human Atlas؛ انتساب: BodyParts3D, © The Database Center for Life Science licensed under CC Attribution 4.0 International. داده آموزشی است و ابزار تشخیص پزشکی نیست.</p>
+</section>
+</main>
+<script type="module">
+import * as THREE from 'three';
+import {OrbitControls} from 'three/addons/controls/OrbitControls.js';
+const OWNER='ashemag/human-atlas',REV='1c38bf35c254a891200d3cedecfd57abebe83d8d';
+const BASE='https://raw.githubusercontent.com/'+OWNER+'/'+REV+'/public';
+const $=id=>document.getElementById(id),status=$('status');
+const patterns={
+ pectoralisMajor:/pectoralis major/i,pectoralisMinor:/pectoralis minor/i,deltoid:/deltoid/i,
+ biceps:/biceps brachii/i,triceps:/triceps brachii/i,trapezius:/trapezius/i,
+ rhomboidMajor:/rhomboid major/i,rhomboidMinor:/rhomboid minor/i,serratusAnterior:/serratus anterior/i,
+ externalOblique:/external oblique/i,glutes:/gluteus (maximus|medius|minimus)/i,
+ quadriceps:/(rectus femoris|vastus lateralis|vastus medialis|vastus intermedius)/i,
+ hamstrings:/(biceps femoris|semitendinosus|semimembranosus)/i,
+ calf:/(gastrocnemius|soleus)/i,tibialisAnterior:/tibialis anterior/i,
+ latissimus:/latissimus dorsi/i,rectusAbdominis:/rectus abdominis/i
+};
+let atlas=null,renderer,scene,camera,controls,cache=new Map(),active=[];
+const stage=$('stage');
+function setStatus(s){status.textContent=s}
+function init(){
+ scene=new THREE.Scene();scene.background=new THREE.Color('#eee8da');
+ camera=new THREE.PerspectiveCamera(38,1,.01,30);camera.position.set(.25,.9,2.7);
+ renderer=new THREE.WebGLRenderer({antialias:true,alpha:false});renderer.setPixelRatio(Math.min(devicePixelRatio,1.7));renderer.outputColorSpace=THREE.SRGBColorSpace;renderer.setSize(stage.clientWidth,stage.clientHeight);stage.appendChild(renderer.domElement);
+ controls=new OrbitControls(camera,renderer.domElement);controls.target.set(0,.82,0);controls.enableDamping=true;
+ scene.add(new THREE.HemisphereLight(0xffffff,0x9b9180,2));
+ const key=new THREE.DirectionalLight(0xffffff,2.3);key.position.set(-2,3,4);scene.add(key);
+ const fill=new THREE.DirectionalLight(0xffffff,1.2);fill.position.set(2,1,-3);scene.add(fill);
+ const floor=new THREE.GridHelper(1.5,15,0xc9b98f,0xe0d8c6);floor.position.y=-.01;scene.add(floor);
+ const resize=new ResizeObserver(()=>{camera.aspect=stage.clientWidth/stage.clientHeight;camera.updateProjectionMatrix();renderer.setSize(stage.clientWidth,stage.clientHeight)});resize.observe(stage);
+ const animate=()=>{requestAnimationFrame(animate);controls.update();renderer.render(scene,camera)};animate();
+}
+async function fetchChunk(index){
+ if(cache.has(index))return cache.get(index);
+ const chunk=atlas.chunks[index];if(!chunk)throw new Error('شناسه chunk در manifest وجود ندارد: '+index);
+ setStatus('دریافت هندسه سه‌بعدی؛ بخش '+(index+1)+' از '+atlas.chunks.length+'…');
+ let response,buffer;
+ if(chunk.gzip&&'DecompressionStream'in window){
+  response=await fetch(BASE+chunk.gzip,{mode:'cors'});if(!response.ok)throw new Error('دریافت chunk فشرده ناموفق بود: HTTP '+response.status);
+  buffer=await new Response(response.body.pipeThrough(new DecompressionStream('gzip'))).arrayBuffer();
+ }else{
+  response=await fetch(BASE+chunk.url,{mode:'cors'});if(!response.ok)throw new Error('دریافت chunk ناموفق بود: HTTP '+response.status);buffer=await response.arrayBuffer();
+ }
+ if(buffer.byteLength!==chunk.bytes)throw new Error('طول chunk با manifest تطابق ندارد؛ دریافت ناقص است.');
+ cache.set(index,buffer);return buffer;
+}
+function clearMeshes(){for(const mesh of active){scene.remove(mesh);mesh.geometry.dispose();mesh.material.dispose()}active=[]}
+function matchParts(key,side){
+ const rx=patterns[key];if(!rx)return [];
+ return atlas.parts.filter(p=>{
+  if(!rx.test(p.name)||/(artery|arterial|branch|vein)/i.test(p.name))return false;
+  const n=p.name.toLowerCase();
+  if(side==='right'&&!n.includes('right'))return false;
+  if(side==='left'&&!n.includes('left'))return false;
+  return true;
+ });
+}
+async function showTarget(){
+ if(!atlas)return;
+ clearMeshes();const key=$('target').value,side=$('side').value,parts=matchParts(key,side);
+ if(!parts.length){setStatus('برای این عنوان در manifest مش مستقلی با این نام پیدا نشد. این مورد را فعلاً not_available نگه می‌داریم؛ هنوز مترادف‌ها و FMA بررسی نشده‌اند.');return}
+ const chunkIds=[...new Set(parts.map(p=>p.chunk))];
+ setStatus('نامزدها: '+parts.length+' مش مستقل؛ بخش‌های داده: '+chunkIds.join('، ')+'. در حال دریافت…');
+ try{
+  const buffers=new Map();for(const id of chunkIds)buffers.set(id,await fetchChunk(id));
+  for(const p of parts){
+   const b=buffers.get(p.chunk);
+   const position=new Float32Array(b,p.positions,p.vertexCount*3);
+   const normal=new Int16Array(b,p.normals,p.vertexCount*3);
+   const index=new Uint32Array(b,p.indices,p.indexCount);
+   const g=new THREE.BufferGeometry();
+   g.setAttribute('position',new THREE.BufferAttribute(position,3));
+   g.setAttribute('normal',new THREE.BufferAttribute(normal,3,true));
+   g.setIndex(new THREE.BufferAttribute(index,1));g.computeBoundingSphere();
+   const mat=new THREE.MeshStandardMaterial({color:'#c94b43',roughness:.62,metalness:.03,side:THREE.DoubleSide});
+   const mesh=new THREE.Mesh(g,mat);mesh.name=p.name;scene.add(mesh);active.push(mesh);
+  }
+  const box=new THREE.Box3();for(const mesh of active)box.expandByObject(mesh);
+  if(!box.isEmpty()){const center=box.getCenter(new THREE.Vector3());controls.target.copy(center);const size=box.getSize(new THREE.Vector3());const dist=Math.max(.45,size.length()*1.8);camera.position.copy(center).add(new THREE.Vector3(.25,.15,1).normalize().multiplyScalar(dist));controls.update();}
+  setStatus('بارگذاری شد: '+parts.length+' مش واقعی؛ '+chunkIds.length+' بخش داده.\nنام‌ها: '+parts.map(p=>p.name).join(' | ')+'\nوضعیت علمی: candidate_geometry — هنوز نیازمند بازبینی بصری سمت، مرز و جایگاه روی بدن است.');
+ }catch(e){setStatus('خطا در بارگذاری: '+e.message+'\nممکن است دسترسی مرورگر به GitHub یا CDN محدود باشد. هیچ داده‌ای در اپ اصلی تغییر نکرده است.')}
+}
+$('target').addEventListener('change',showTarget);$('side').addEventListener('change',showTarget);
+$('front').onclick=()=>{camera.position.set(0,.9,3);controls.target.set(0,.85,0);controls.update()};
+$('back').onclick=()=>{camera.position.set(0,.9,-3);controls.target.set(0,.85,0);controls.update()};
+$('sideView').onclick=()=>{camera.position.set(3,.9,0);controls.target.set(0,.85,0);controls.update()};
+$('reset').onclick=()=>{camera.position.set(.25,.9,2.7);controls.target.set(0,.82,0);controls.update()};
+init();
+fetch(BASE+'/models/atlas.json',{mode:'cors'}).then(r=>{if(!r.ok)throw new Error('HTTP '+r.status);return r.json()}).then(data=>{atlas=data;setStatus('فهرست آماده شد: '+atlas.parts.length+' مش و '+atlas.concepts.length+' مفهوم. گروه عضله را انتخاب کن.');showTarget()}).catch(e=>setStatus('فهرست منبع بارگذاری نشد: '+e.message+'\nاین صفحه به دسترسی به raw.githubusercontent.com و jsDelivr نیاز دارد.'));
+</script>
+</body>
+</html>
