@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#f7f0df">
+<title>پیش‌نمایش توسعه آناتومی هوشمند | فیتنس سه‌قلعه</title>
+<style>
+:root{--paper:#f7f0df;--card:#fffdf7;--gold:#98752d;--line:#ddc995;--ink:#302819;--muted:#756b58}
+*{box-sizing:border-box}body{margin:0;background:var(--paper);color:var(--ink);font-family:Tahoma,Arial,sans-serif}
+header{padding:22px 16px;text-align:center;background:linear-gradient(115deg,#fffdf7,#efe2c1);border-bottom:1px solid var(--line)}
+h1{margin:0;color:#76591e;font-size:23px}header p{margin:8px auto 0;max-width:900px;line-height:1.9;font-size:13px;color:var(--muted)}
+main{max-width:1500px;margin:auto;padding:16px}.status{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin-bottom:14px}
+.card,.panel{background:var(--card);border:1px solid var(--line);border-radius:13px;padding:13px 15px;line-height:1.9}
+.card strong{display:block;color:#76591e;font-size:13px}.card span{font-size:12px;color:var(--muted)}
+.notice{margin-bottom:14px;border-right:4px solid var(--gold);background:#fff8e9;padding:11px 14px;border-radius:10px;font-size:12px;line-height:1.95}
+.panel{padding:0;overflow:hidden;margin-bottom:15px}.panel h2{margin:0;padding:13px 16px;color:#76591e;font-size:16px;border-bottom:1px solid var(--line)}
+.panel p{margin:0;padding:12px 16px;font-size:13px;line-height:1.95}
+iframe{display:block;width:100%;border:0;background:var(--paper)}
+.gallery-frame{height:calc(100vh - 90px);min-height:900px}
+.atlas-frame{height:780px;background:#111}
+.actions{display:flex;gap:10px;flex-wrap:wrap;padding:0 16px 15px}
+a.button{display:inline-block;background:#8b6b2b;color:white;text-decoration:none;padding:10px 15px;border-radius:9px;font-size:13px}
+a.secondary{background:#eee4cd;color:#5b4519}
+small{color:var(--muted);font-size:11px}
+footer{text-align:center;color:var(--muted);font-size:11px;padding:14px}
+@media(max-width:760px){header{padding:17px 12px}h1{font-size:19px}main{padding:9px}.status{grid-template-columns:1fr}.gallery-frame{height:6500px;min-height:6500px}.atlas-frame{height:680px}.card{padding:9px 11px}}
+</style>
+</head>
+<body>
+<header>
+<h1>آناتومی هوشمند | پیش‌نمایش توسعه</h1>
+<p>باشگاه فیتنس سه‌قلعه — حفظ گالری چهار نمای MuscleMap و بررسی مرجع هندسه سه‌بعدی مستقل</p>
+</header>
+<main>
+<section class="status">
+<div class="card"><strong>گالری چهار نما</strong><span>مرد جلو و پشت؛ زن جلو و پشت — مرجع فعلی حفظ شده است.</span></div>
+<div class="card"><strong>انتخاب سریع</strong><span>۲۷ هدف تمرینی در نسخه آزمایشی قبلی؛ بدون تغییر در این مرحله.</span></div>
+<div class="card"><strong>مرجع مش سه‌بعدی</strong><span>BodyParts3D 4.0 از طریق اطلس مستقل برای بررسی بصری در دسترس قرار گرفته است.</span></div>
+</section>
+<div class="notice"><strong>تفکیک مهم:</strong> اطلس سه‌بعدی پایین یک مرجع خارجی و مستقل است، نه ادغام‌شده با انتخابگر MuscleMap. این منبع بدن مرجع مرد بالغ دارد؛ نباید هندسه آن به بدن زن نسبت داده شود. اتصال عضلات به چهار نمای پروژه فقط پس از تطبیق شناسه، سمت، اجزای هندسی و بازبینی مرزها انجام خواهد شد.</div>
+<section class="panel">
+<h2>۱) گالری اصلی چهار نمای آناتومی</h2>
+<iframe class="gallery-frame" title="گالری چهار نمای آناتومی و انتخاب سریع" src="./anatomy-preview-gallery-quick-groups-v1.html"></iframe>
+</section>
+<section class="panel">
+<h2>۲) مرجع مستقل سه‌بعدی BodyParts3D 4.0</h2>
+<p>این اطلس خارجی امکان چرخاندن بدن، جست‌وجوی ساختارها، انتخاب مش‌های مستقل، جداسازی ساختار انتخاب‌شده و مشاهده اطلاعات آن را فراهم می‌کند. داده آن از BodyParts3D 4.0 رسمی با مجوز CC BY 4.0 معرفی شده است. در صورت مسدودشدن نمایش داخل صفحه، دکمه زیر اطلس را در پنجره جداگانه باز می‌کند.</p>
+<div class="actions">
+<a class="button" href="https://human-atlas-seven.vercel.app/" target="_blank" rel="noopener">باز کردن اطلس سه‌بعدی در پنجره جداگانه</a>
+<a class="button secondary" href="https://github.com/ashemag/human-atlas" target="_blank" rel="noopener">مشاهده منبع و مستندات اطلس</a>
+</div>
+<iframe class="atlas-frame" title="اطلس سه‌بعدی مستقل BodyParts3D" loading="lazy" src="https://human-atlas-seven.vercel.app/"></iframe>
+<p><small>اعتبار منبع: BodyParts3D, © The Database Center for Life Science — CC BY 4.0. اطلس مرجع آموزشی است و جایگزین ارزیابی تخصصی آناتومی نیست.</small></p>
+</section>
+<div class="notice"><strong>وضعیت فنی این مرحله:</strong> هنوز مش‌های خام نامزدهای پروژه در مخزن فیتنس سه‌قلعه استخراج و ممیزی نشده‌اند. این پیش‌نمایش عمداً مرجع خارجی را از رابط اختصاصی جدا نگه می‌دارد تا هندسه تأییدنشده به‌عنوان قابلیت نهایی نمایش داده نشود.</div>
+</main>
+<footer>نسخه آزمایشی مستقل — بدون تغییر در نسخه اصلی، MuscleMap یا داده شاگردان</footer>
+</body>
+</html>
