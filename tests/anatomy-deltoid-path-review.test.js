@@ -22,7 +22,7 @@ assert.match(review,/const selected=showAll\?buttons\.filter\(b=>b\.dataset\.key
   "show-all mode must highlight all four actual deltoid paths in the current view");
 assert.match(review,/const palette=\["#d94b45","#2879b9","#19836f","#a66a1d"\]/,
   "simultaneous comparison must distinguish paths with separate colors");
-assert.match(review,/showAll\? "نمایش هم‌زمان چهار مسیر واقعی"/,
+assert.match(review,/showAll\?"نمایش هم‌زمان چهار مسیر واقعی"/,
   "status must disclose simultaneous comparison mode");
 assert.equal(new Set(buttons.map(b => b.key)).size, 16,
   "every deltoid selector must use a unique stable selection_key");
