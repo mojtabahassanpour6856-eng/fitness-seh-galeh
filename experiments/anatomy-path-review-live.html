@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="fa" dir="rtl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>بازبینی زنده مسیرهای آناتومی | فیتنس سه‌قلعه</title>
+<style>
+:root{--paper:#f7f0df;--card:#fffdf7;--gold:#98752d;--line:#dfcca0;--ink:#302819;--muted:#776d5b;--red:#9f3e32;--green:#286d58}
+*{box-sizing:border-box}body{margin:0;background:var(--paper);color:var(--ink);font:14px/1.8 Tahoma,Arial,sans-serif}
+header{padding:18px;background:linear-gradient(110deg,#fffdf7,#efe2c1);border-bottom:1px solid var(--line)}.wrap{max-width:1500px;margin:auto;padding:14px}h1{margin:0;color:#76591e;font-size:22px}h2{font-size:17px;color:#76591e;margin:0 0 10px}
+.sub,.muted{color:var(--muted);font-size:12px}.warning{background:#fff0eb;border-right:4px solid var(--red);padding:10px;border-radius:9px;margin:12px 0}
+.layout{display:grid;grid-template-columns:minmax(300px,410px) minmax(0,1fr);gap:14px}.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px;min-width:0}
+.controls{display:flex;gap:8px;flex-wrap:wrap;margin:10px 0}select,input,button{font:inherit;border:1px solid var(--line);border-radius:8px;padding:8px;background:white;color:var(--ink)}button{cursor:pointer}button.active{background:#f1e2bf;border-color:var(--gold)}
+.list{max-height:66vh;overflow:auto;display:grid;gap:5px}.row{display:flex;align-items:center;justify-content:space-between;gap:8px;text-align:right;width:100%;font-size:12px}.row.selected{background:#f6e8cd;border-color:var(--gold)}.row small{direction:ltr;color:var(--muted);white-space:nowrap}
+svg{display:block;width:100%;height:min(72vh,850px);background:#fff;border:1px solid var(--line);border-radius:10px;touch-action:pan-y}
+.muscle{cursor:pointer;stroke:#5f5039;stroke-width:1.3;vector-effect:non-scaling-stroke;opacity:.78;transition:opacity .12s,filter .12s}.muscle.selected{fill:#d59a36!important;stroke:#56380c;stroke-width:2.8;opacity:1;filter:drop-shadow(0 0 2px #fff)}.outline{fill:none;stroke:#8f8067;stroke-width:2;vector-effect:non-scaling-stroke;pointer-events:none}
+.meta{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px;margin-top:10px}.cell{border:1px solid var(--line);background:white;border-radius:8px;padding:7px;min-width:0}.cell b{display:block;color:#80622f;font-size:11px}.cell span{direction:ltr;display:block;overflow-wrap:anywhere;font:11px monospace}
+.pill{display:inline-block;border-radius:20px;padding:1px 8px;background:#f2e5c8;color:#684c16;font-size:11px}.footer{font-size:11px;color:var(--muted);margin-top:12px}
+@media(max-width:850px){.layout{grid-template-columns:1fr}.list{max-height:38vh}svg{height:60vh}.wrap{padding:9px}h1{font-size:18px}}
+</style></head><body>
+<header><div class="wrap"><h1>بازبینی واقعی مسیرهای منبع آناتومی</h1><div class="sub">ابزار تعاملی مبتنی بر مسیرهای خام SVG · شاخه آزمایشی · بدون دست‌کاری داده‌های اصلی</div></div></header>
+<main class="wrap">
+<div class="warning"><b>وضعیت علمی: تأییدنشده.</b> این ابزار هندسه واقعی هر مسیر را از منبع نمایش می‌دهد و برای مقایسه دقیق‌تر ساخته شده است؛ رنگ، گروه، شناسه یا شکل ظاهری به‌تنهایی هویت آناتومیک را ثابت نمی‌کند. مسیرهای مشکوک فعلاً برای برنامه‌نویسی تمرین تأیید نشده‌اند.</div>
+<div class="layout">
+<section class="card">
+<h2>فهرست مسیرها</h2>
+<div class="controls">
+<label>مدل <select id="view"><option value="male-front">آقا — جلو</option><option value="male-back">آقا — پشت</option><option value="female-front">خانم — جلو</option><option value="female-back">خانم — پشت</option></select></label>
+<label>گروه <select id="group"><option value="">همه گروه‌ها</option></select></label>
+</div>
+<div class="controls"><input id="q" type="search" placeholder="جست‌وجوی گروه یا شناسه" style="flex:1;min-width:130px"><button id="clear">پاک‌کردن انتخاب</button><button id="export">خروجی مسیر انتخاب‌شده</button></div>
+<div id="list" class="list">در حال بارگذاری موجودی مسیرها…</div>
+<div id="meta" class="meta"></div>
+<p class="footer">شناسه داخلی از نام نما + گروه + اندیس آرایه ساخته شده است؛ شناسه اصلی منبع بدون تغییر نگهداری می‌شود.</p>
+</section>
+<section class="card">
+<h2 id="title">نمای بدن و مسیرهای قابل انتخاب</h2>
+<svg id="stage" viewBox="0 0 1024 1536" role="img" aria-label="هندسه مسیرهای عضلات از منبع"></svg>
+<p class="footer">برای انتخاب، روی هر مسیر در فهرست یا خود شکل بزن. مسیر انتخاب‌شده طلایی می‌شود و بقیه مسیرها کم‌رنگ می‌شوند. این نمایش برای ممیزی هندسه است، نه تأیید علمی نهایی.</p>
+</section></div>
+<section class="card" style="margin-top:14px"><h2>قواعد ممیزی</h2><ul>
+<li>تعداد مسیرها در چهار نما از آرایه منبع مستقیماً استخراج شده: ۲۸، ۳۰، ۲۸ و ۳۰ مسیر.</li>
+<li>هر path کلید داخلی یکتا دارد؛ شناسه‌های تکراری یا حذف‌شده در منبع به‌صورت هشدار علامت‌گذاری شده‌اند.</li>
+<li>فیلد <code>side=CENTER</code> به‌عنوان تعیین‌کننده سمت چپ/راست استفاده نمی‌شود.</li>
+<li>این موجودی شامل داده خام مسیر است؛ نام‌گذاری آناتومیک فقط پس از تطبیق با اطلس معتبر و بازبینی تخصصی انجام می‌شود.</li>
+<li>داده هندسی منبع از MuscleMap دریافت شده است. هرگونه استفاده از هندسه مشتق‌شده در محصول نهایی باید با مجوز و انتساب دقیق همان منبع سازگار باشد.</li>
+</ul><p class="muted">منبع هندسه: <a href="https://github.com/Jsplice/MuscleMap">Jsplice/MuscleMap</a> · راهنمای مجوز اطلس Z-Anatomy: <a href="https://github.com/Z-Anatomy/Models-of-human-anatomy/blob/master/License.txt">CC BY-SA 4.0</a> (فقط در صورت استفاده از داده‌های مشتق‌شده از Z-Anatomy).</p></section>
+</main>
+<script>
+const $=id=>document.getElementById(id);let data=null,selected=null,visible=[];
+const colors=['#e7cda0','#d8c7a7','#c8d9d1','#d6c8dc','#e3c2b8','#c4d3e4','#e4d9aa','#c9d7dc'];
+function esc(s){return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+function current(){return data.views[$('view').value]}
+function setMeta(p){$('meta').innerHTML=p?[
+['کلید یکتای داخلی',p.key],['اندیس آرایه',p.index],['گروه منبع',p.group],['شناسه اصلی',p.id||'ندارد'],['side اصلی',p.side],['طول متن d',p.d_length],['شناسه تکراری',p.duplicate_source_id?'بله':'خیر'],['شناسه مفقود',p.missing_source_id?'بله':'خیر']
+].map(([a,b])=>'<div class="cell"><b>'+esc(a)+'</b><span>'+esc(b)+'</span></div>').join(''):'<div class="cell" style="grid-column:1/-1">برای مشاهده مشخصات، یک مسیر را انتخاب کن.</div>'}
+function render(){if(!data)return;const v=$('view').value,all=current().paths,group=$('group').value,q=$('q').value.trim().toLowerCase();
+visible=all.filter(p=>(!group||p.group===group)&&(!q||((p.id||'').toLowerCase().includes(q)||p.group.toLowerCase().includes(q)||p.key.toLowerCase().includes(q))));
+$('list').innerHTML=visible.map(p=>'<button class="row '+(selected===p.key?'selected':'')+'" data-key="'+esc(p.key)+'"><span>'+esc(p.group)+' · '+esc(p.id||'بدون شناسه')+(p.duplicate_source_id?' ⚠ شناسه تکراری':'')+(p.missing_source_id?' ⚠ شناسه مفقود':'')+'</span><small>#'+p.index+'</small></button>').join('')||'<div class="muted">مسیری با این فیلتر پیدا نشد.</div>';
+$('list').querySelectorAll('[data-key]').forEach(b=>b.addEventListener('click',()=>choose(b.dataset.key)));
+$('title').textContent=({ 'male-front':'آقا — نمای جلو','male-back':'آقا — نمای پشت','female-front':'خانم — نمای جلو','female-back':'خانم — نمای پشت'})[v];
+const svg=$('stage');svg.replaceChildren();const ns='http://www.w3.org/2000/svg';
+for(const o of current().outline){const e=document.createElementNS(ns,'path');e.setAttribute('d',o.d);e.setAttribute('class','outline');svg.append(e);}
+all.forEach((p,i)=>{const e=document.createElementNS(ns,'path');e.setAttribute('d',p.d);e.setAttribute('class','muscle'+(selected===p.key?' selected':''));e.setAttribute('fill',colors[i%colors.length]);e.dataset.key=p.key;e.setAttribute('aria-label',p.group+' '+(p.id||p.key));e.addEventListener('click',()=>choose(p.key));svg.append(e);});
+if(selected&&!all.some(p=>p.key===selected))selected=null;setMeta(all.find(p=>p.key===selected)||null);
+}
+function choose(key){selected=key;render();}
+$('view').addEventListener('change',()=>{$('group').value='';selected=null;populateGroups();render()});
+$('group').addEventListener('change',render);$('q').addEventListener('input',render);
+$('clear').addEventListener('click',()=>{selected=null;render()});
+$('export').addEventListener('click',()=>{const p=current().paths.find(x=>x.key===selected);if(!p){alert('ابتدا یک مسیر انتخاب کن.');return;}const blob=new Blob([JSON.stringify({schema_version:1,source:data.source,view:$('view').value,record:p,warning_fa:'مشخصات هندسی است و تأیید آناتومیک نیست.'},null,2)],{type:'application/json'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=p.key.replaceAll(':','-')+'.json';a.click();URL.revokeObjectURL(a.href)});
+function populateGroups(){const groups=[...new Set(current().paths.map(p=>p.group))].sort();$('group').innerHTML='<option value="">همه گروه‌ها</option>'+groups.map(g=>'<option>'+esc(g)+'</option>').join('');}
+fetch('./anatomy-path-inventory-v1.json').then(r=>{if(!r.ok)throw Error('HTTP '+r.status);return r.json()}).then(d=>{data=d;populateGroups();render()}).catch(e=>{$('list').textContent='خطا در بارگذاری موجودی مسیرها: '+e.message;});
+</script></body></html>
