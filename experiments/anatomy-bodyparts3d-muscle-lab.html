@@ -132,9 +132,12 @@ async function showTarget(){
   const buffers=new Map();for(const id of chunkIds)buffers.set(id,await fetchChunk(id));
   for(const p of parts){
    const b=buffers.get(p.chunk);
+   if(p.positions+p.vertexCount*12>b.byteLength||p.normals+p.vertexCount*6>b.byteLength||p.indices+p.indexCount*4>b.byteLength)throw new Error('offsetهای مش '+p.id+' خارج از محدوده chunk هستند.');
    const position=new Float32Array(b,p.positions,p.vertexCount*3);
    const normal=new Int16Array(b,p.normals,p.vertexCount*3);
    const index=new Uint32Array(b,p.indices,p.indexCount);
+   for(let j=0;j<index.length;j++)if(index[j]>=p.vertexCount)throw new Error('اندیس رأس نامعتبر در مش '+p.id);
+   for(let j=0;j<position.length;j++)if(!Number.isFinite(position[j]))throw new Error('مختصات غیرمعتبر در مش '+p.id);
    const g=new THREE.BufferGeometry();
    g.setAttribute('position',new THREE.BufferAttribute(position,3));
    g.setAttribute('normal',new THREE.BufferAttribute(normal,3,true));
