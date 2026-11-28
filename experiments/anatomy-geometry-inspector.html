@@ -18,6 +18,7 @@ button{cursor:pointer}button.active{background:#f2e4c8;border-color:var(--gold)}
 .item.active{background:#f6e8cd;border-color:var(--gold)}
 .meta{font-size:12px;line-height:1.9;background:#fbf8f1;border-radius:8px;padding:10px;margin-top:10px;overflow-wrap:anywhere}
 .meta-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px;margin-top:8px}.meta-cell{background:#fff;border:1px solid var(--line);border-radius:7px;padding:6px;min-width:0}.meta-cell b{display:block;color:#80622f;font-size:11px}.meta-cell span{direction:ltr;display:block;overflow-wrap:anywhere;font-family:monospace;font-size:11px}.path-data{margin-top:9px}.path-data summary{cursor:pointer;color:#80622f}.path-data textarea{width:100%;min-height:100px;direction:ltr;text-align:left;font:11px/1.5 monospace;margin-top:6px;resize:vertical}
+.crop-wrap{margin-top:10px;border:1px solid var(--line);border-radius:9px;padding:8px;background:#fbf8f1}.crop-title{font-size:11px;color:#80622f;font-weight:bold;margin-bottom:6px}.path-crop{display:block;width:100%;height:230px;background:#fff;border-radius:6px}.crop-caption{font-size:10px;color:#817563;line-height:1.7;margin-top:5px}
 iframe{width:100%;height:min(90vh,1250px);border:0;border-radius:10px;background:#fff}
 .notice{font-size:12px;line-height:1.9;color:#766a57;margin-top:10px}
 @media(max-width:850px){main{grid-template-columns:1fr}.list{max-height:38vh}iframe{height:65vh}}
@@ -78,6 +79,14 @@ const keys=multiReview?reviewKeys:[activeKey,compareKey].filter(Boolean),colors=
 if(dim&&keys.length)for(const p of all)if(!keys.includes(p.dataset.key))p.style.opacity='.16';
 keys.forEach((key,i)=>{const p=all.find(x=>x.dataset.key===key);if(!p)return;p.style.opacity='1';p.style.stroke=colors[i%colors.length];p.style.strokeWidth='8';p.style.filter='drop-shadow(0 0 5px #fff)';});
 }
+function createPathCrop(target,bbox){
+const svg=doc().getElementById('bodySvg'),clone=svg.cloneNode(true),padX=Math.max(28,bbox.width*.72),padY=Math.max(35,bbox.height*.62);
+const x=Math.max(0,bbox.x-padX),y=Math.max(0,bbox.y-padY),width=Math.min(1024-x,bbox.width+padX*2),height=Math.min(1536-y,bbox.height+padY*2);
+clone.setAttribute('viewBox',[x,y,width,height].join(' '));clone.setAttribute('preserveAspectRatio','xMidYMid meet');clone.setAttribute('class','path-crop');
+const sourceNodes=[...svg.querySelectorAll('*')],cloneNodes=[...clone.querySelectorAll('*')];
+sourceNodes.forEach((node,index)=>{const copy=cloneNodes[index];if(!copy)return;const style=getComputedStyle(node);for(const prop of ['fill','stroke','stroke-width','stroke-linejoin','stroke-linecap','opacity']){const value=style.getPropertyValue(prop);if(value)copy.style.setProperty(prop,value);}if(node.classList.contains('muscle')){const chosen=node.dataset.key===target.dataset.key;copy.style.setProperty('opacity',chosen?'1':'.22');if(chosen){copy.style.setProperty('fill','#e0a13b');copy.style.setProperty('stroke','#573b12');copy.style.setProperty('stroke-width','5');}else{copy.style.setProperty('stroke','#8b806f');copy.style.setProperty('stroke-width','1.5');}}});
+return clone;
+}
 function pathCard(key,titleText){
 const all=paths(),target=all.find(p=>p.dataset.key===key);if(!target)return null;
 const index=all.indexOf(target),box=target.getBBox(),length=target.getTotalLength(),svg=doc().getElementById('bodySvg'),viewBox=svg.getAttribute('viewBox')||'نامشخص';
@@ -87,6 +96,11 @@ const grid=document.createElement('div');grid.className='meta-grid';
 const fields=[['مدل / نما',(sex.value==='male'?'آقا':'خانم')+' / '+(view.value==='front'?'جلو':'پشت')],['اندیس در نما',String(index)],['گروه',target.dataset.group||'نامشخص'],['شناسه قدیمی',target.dataset.id||'ندارد'],['کلید پایدار',key],['طول تقریبی مسیر',Number.isFinite(length)?length.toFixed(1)+' واحد':'نامشخص'],['محدوده X / Y',box.x.toFixed(1)+' / '+box.y.toFixed(1)],['عرض / ارتفاع',box.width.toFixed(1)+' / '+box.height.toFixed(1)],['رنگ پرکننده',getComputedStyle(target).fill],['قاب SVG',viewBox]];
 for(const [label,value] of fields){const cell=document.createElement('div'),b=document.createElement('b'),span=document.createElement('span');cell.className='meta-cell';b.textContent=label;span.textContent=value;cell.append(b,span);grid.append(cell);}
 card.append(grid);
+const cropWrap=document.createElement('div');cropWrap.className='crop-wrap';
+const cropTitle=document.createElement('div');cropTitle.className='crop-title';cropTitle.textContent='نمای نزدیک مسیر همراه با مرز عضلات مجاور';
+const crop=createPathCrop(target,box);cropWrap.append(cropTitle,crop);
+const cropCaption=document.createElement('div');cropCaption.className='crop-caption';cropCaption.textContent='مسیر انتخاب‌شده با رنگ طلایی مشخص است؛ مسیرهای مجاور کم‌رنگ باقی می‌مانند. این تصویر فقط برای مقایسه شکل و موقعیت است و صحت آناتومیک را تأیید نمی‌کند.';
+cropWrap.append(cropCaption);card.append(cropWrap);
 const details=document.createElement('details'),summary=document.createElement('summary'),area=document.createElement('textarea');details.className='path-data';summary.textContent='نمایش داده خام مسیر SVG (فقط خواندنی)';area.readOnly=true;area.spellcheck=false;area.value=target.getAttribute('d')||'';details.append(summary,area);card.append(details);
 return card;
 }
