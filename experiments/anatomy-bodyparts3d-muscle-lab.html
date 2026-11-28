@@ -116,7 +116,7 @@ function clearMeshes(){for(const mesh of active){scene.remove(mesh);mesh.geometr
 function matchParts(key,side){
  const rx=patterns[key];if(!rx)return [];
  return atlas.parts.filter(p=>{
-  if(!rx.test(p.name)||/(artery|arterial|branch|vein)/i.test(p.name))return false;
+  if(p.system!=='muscular'||!rx.test(p.name)||/(artery|arterial|branch|vein|ligament|tendon)/i.test(p.name))return false;
   const n=p.name.toLowerCase();
   if(side==='right'&&!n.includes('right'))return false;
   if(side==='left'&&!n.includes('left'))return false;
