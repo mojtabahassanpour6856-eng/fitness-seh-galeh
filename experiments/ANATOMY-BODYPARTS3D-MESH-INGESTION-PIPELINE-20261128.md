@@ -171,3 +171,19 @@ A second candidate repository, `MervinR07/open-anatomy-3d`, was inspected. It pr
 Decision: do not treat this package's female muscle meshes as independent or verified female anatomy. It may inform coarse grouping vocabulary only. No external model was imported. Full review is in `ANATOMY_OPEN_ANATOMY_3D_FEMALE_SOURCE_AUDIT.md`.
 
 The raw BodyParts3D route remains the current male geometry candidate. Female muscle geometry remains unresolved until an independently sourced and validated female skeletal-muscle dataset is found.
+
+
+## 2026-11-28 update — converter-level coordinate and buffer audit
+
+The upstream converter `scripts/convert-anatomy.py` was inspected directly. It confirms:
+- OBJ coordinates are converted from mm / Z-up to meters / Y-up using `[x*0.001, z*0.001 + 0.0781112, -y*0.001 - 0.1]`.
+- Normals are converted to the same axis convention and quantized to signed 16-bit values.
+- Triangle indices are stored as unsigned 32-bit integers.
+- Each positions, normals and indices array is aligned to a 4-byte boundary in the chunk.
+- The manifest's `chunk` field is zero-based and directly indexes `manifest.chunks`.
+- The public release has 15 binary chunks. Each chunk manifest entry includes the uncompressed byte length and a `.gz` URL; the browser lab uses that URL when possible and checks the resulting uncompressed byte length.
+- The source converter fan-triangulates polygon faces. The current lab consumes the manifest's resulting triangle indices without changing topology.
+
+The browser lab was tightened to accept only parts whose manifest `system` is exactly `muscular`, excluding false positives from named arterial branches and non-muscle connective structures. A refreshed exact target inventory is in `ANATOMY_BODYPARTS3D_TRAINING_TARGET_COVERAGE.md/.json`.
+
+Important validation boundary: this is a source-code and manifest audit. Binary chunk retrieval, live browser rendering, visual orientation, and anatomical boundary validation have not been completed here. The preview must not be described as a confirmed live render.
