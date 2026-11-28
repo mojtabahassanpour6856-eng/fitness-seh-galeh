@@ -7,12 +7,11 @@
     "license": "CC BY 4.0",
     "reference": "adult male"
   },
-  "caveat": "Metadata discovery only. No chunk bytes decoded, no meshes visually checked, and no MuscleMap mapping approved.",
+  "caveat": "Metadata discovery only. No chunk bytes decoded, no meshes visually checked, and no MuscleMap mapping approved. Non-muscle false positives (arterial/venous branches) are excluded by element name. Some muscle elements may carry a source viewer system tag other than 'muscular'.",
   "coverage": [
     {
       "fa": "سینه بزرگ",
       "en": "pectoralis major",
-      "found": true,
       "concepts": [
         {
           "id": "FMA34686",
@@ -157,12 +156,11 @@
           "triangles": 998
         }
       ],
-      "status": "candidate_geometry_metadata_only"
+      "found": true
     },
     {
       "fa": "سینه کوچک",
       "en": "pectoralis minor",
-      "found": true,
       "concepts": [
         {
           "id": "FMA13109",
@@ -205,35 +203,12 @@
           "triangles": 2590
         }
       ],
-      "status": "candidate_geometry_metadata_only"
+      "found": true
     },
     {
       "fa": "دلتوئید",
       "en": "deltoid",
-      "found": true,
       "concepts": [
-        {
-          "id": "FMA23067",
-          "name": "deltoid branch of thoraco-acromial artery",
-          "elements": [
-            "FJ2230",
-            "FJ2282"
-          ]
-        },
-        {
-          "id": "FMA23072",
-          "name": "deltoid branch of right thoraco-acromial artery",
-          "elements": [
-            "FJ2282"
-          ]
-        },
-        {
-          "id": "FMA23073",
-          "name": "deltoid branch of left thoraco-acromial artery",
-          "elements": [
-            "FJ2230"
-          ]
-        },
         {
           "id": "FMA34676",
           "name": "zone of deltoid",
@@ -315,22 +290,6 @@
       ],
       "elements": [
         {
-          "id": "FJ2230",
-          "name": "Deltoid branch of left thoraco-acromial artery",
-          "system": "arterial",
-          "chunk": 8,
-          "vertices": 151,
-          "triangles": 294
-        },
-        {
-          "id": "FJ2282",
-          "name": "Deltoid branch of right thoraco-acromial artery",
-          "system": "arterial",
-          "chunk": 8,
-          "vertices": 146,
-          "triangles": 286
-        },
-        {
           "id": "FJ1467",
           "name": "Acromial part of right deltoid",
           "system": "muscular",
@@ -379,12 +338,11 @@
           "triangles": 1046
         }
       ],
-      "status": "candidate_geometry_metadata_only"
+      "found": true
     },
     {
       "fa": "دوسر بازویی",
       "en": "biceps brachii",
-      "found": true,
       "concepts": [
         {
           "id": "FMA37682",
@@ -465,12 +423,11 @@
           "triangles": 492
         }
       ],
-      "status": "candidate_geometry_metadata_only"
+      "found": true
     },
     {
       "fa": "سه‌سر بازویی",
       "en": "triceps brachii",
-      "found": true,
       "concepts": [
         {
           "id": "FMA37692",
@@ -589,12 +546,11 @@
           "triangles": 830
         }
       ],
-      "status": "candidate_geometry_metadata_only"
+      "found": true
     },
     {
       "fa": "ذوزنقه‌ای",
       "en": "trapezius",
-      "found": true,
       "concepts": [
         {
           "id": "FMA32529",
@@ -721,12 +677,11 @@
           "triangles": 2622
         }
       ],
-      "status": "candidate_geometry_metadata_only"
+      "found": true
     },
     {
       "fa": "لوزی بزرگ",
       "en": "rhomboid major",
-      "found": true,
       "concepts": [
         {
           "id": "FMA13379",
@@ -769,12 +724,11 @@
           "triangles": 1852
         }
       ],
-      "status": "candidate_geometry_metadata_only"
+      "found": true
     },
     {
       "fa": "لوزی کوچک",
       "en": "rhomboid minor",
-      "found": true,
       "concepts": [
         {
           "id": "FMA13380",
@@ -817,12 +771,11 @@
           "triangles": 742
         }
       ],
-      "status": "candidate_geometry_metadata_only"
+      "found": true
     },
     {
       "fa": "دندانه‌ای قدامی",
       "en": "serratus anterior",
-      "found": true,
       "concepts": [
         {
           "id": "FMA13397",
@@ -865,12 +818,11 @@
           "triangles": 10826
         }
       ],
-      "status": "candidate_geometry_metadata_only"
+      "found": true
     },
     {
       "fa": "مایل خارجی شکم",
       "en": "external oblique",
-      "found": true,
       "concepts": [
         {
           "id": "FMA13335",
@@ -913,28 +865,25 @@
           "triangles": 24600
         }
       ],
-      "status": "candidate_geometry_metadata_only"
+      "found": true
     },
     {
       "fa": "راست شکمی",
       "en": "rectus abdominis",
-      "found": false,
       "concepts": [],
       "elements": [],
-      "status": "not_found_by_name"
+      "found": false
     },
     {
       "fa": "پشتی بزرگ",
       "en": "latissimus dorsi",
-      "found": false,
       "concepts": [],
       "elements": [],
-      "status": "not_found_by_name"
+      "found": false
     },
     {
       "fa": "سرینی بزرگ",
       "en": "gluteus maximus",
-      "found": true,
       "concepts": [
         {
           "id": "FMA22314",
@@ -977,12 +926,11 @@
           "triangles": 1240
         }
       ],
-      "status": "candidate_geometry_metadata_only"
+      "found": true
     },
     {
       "fa": "سرینی میانی",
       "en": "gluteus medius",
-      "found": true,
       "concepts": [
         {
           "id": "FMA22315",
@@ -1025,12 +973,11 @@
           "triangles": 1378
         }
       ],
-      "status": "candidate_geometry_metadata_only"
+      "found": true
     },
     {
       "fa": "سرینی کوچک",
       "en": "gluteus minimus",
-      "found": true,
       "concepts": [
         {
           "id": "FMA22317",
@@ -1073,12 +1020,11 @@
           "triangles": 1436
         }
       ],
-      "status": "candidate_geometry_metadata_only"
+      "found": true
     },
     {
       "fa": "راست رانی",
       "en": "rectus femoris",
-      "found": true,
       "concepts": [
         {
           "id": "FMA22430",
@@ -1121,12 +1067,11 @@
           "triangles": 1250
         }
       ],
-      "status": "candidate_geometry_metadata_only"
+      "found": true
     },
     {
       "fa": "پهن خارجی",
       "en": "vastus lateralis",
-      "found": true,
       "concepts": [
         {
           "id": "FMA22431",
@@ -1169,12 +1114,11 @@
           "triangles": 1470
         }
       ],
-      "status": "candidate_geometry_metadata_only"
+      "found": true
     },
     {
       "fa": "پهن میانی",
       "en": "vastus medialis",
-      "found": true,
       "concepts": [
         {
           "id": "FMA22432",
@@ -1217,12 +1161,11 @@
           "triangles": 1000
         }
       ],
-      "status": "candidate_geometry_metadata_only"
+      "found": true
     },
     {
       "fa": "پهن میانی عمقی",
       "en": "vastus intermedius",
-      "found": true,
       "concepts": [
         {
           "id": "FMA22433",
@@ -1265,12 +1208,11 @@
           "triangles": 936
         }
       ],
-      "status": "candidate_geometry_metadata_only"
+      "found": true
     },
     {
       "fa": "دوسر رانی",
       "en": "biceps femoris",
-      "found": true,
       "concepts": [
         {
           "id": "FMA45881",
@@ -1361,12 +1303,11 @@
           "triangles": 480
         }
       ],
-      "status": "candidate_geometry_metadata_only"
+      "found": true
     },
     {
       "fa": "نیم‌وتری",
       "en": "semitendinosus",
-      "found": true,
       "concepts": [
         {
           "id": "FMA22357",
@@ -1409,12 +1350,11 @@
           "triangles": 596
         }
       ],
-      "status": "candidate_geometry_metadata_only"
+      "found": true
     },
     {
       "fa": "نیم‌غشایی",
       "en": "semimembranosus",
-      "found": true,
       "concepts": [
         {
           "id": "FMA22438",
@@ -1457,12 +1397,11 @@
           "triangles": 1014
         }
       ],
-      "status": "candidate_geometry_metadata_only"
+      "found": true
     },
     {
       "fa": "دوقلو ساق",
       "en": "gastrocnemius",
-      "found": true,
       "concepts": [
         {
           "id": "FMA45950",
@@ -1553,12 +1492,11 @@
           "triangles": 892
         }
       ],
-      "status": "candidate_geometry_metadata_only"
+      "found": true
     },
     {
       "fa": "نعلی",
       "en": "soleus",
-      "found": true,
       "concepts": [
         {
           "id": "FMA22542",
@@ -1601,12 +1539,11 @@
           "triangles": 976
         }
       ],
-      "status": "candidate_geometry_metadata_only"
+      "found": true
     },
     {
       "fa": "درشت‌نی قدامی",
       "en": "tibialis anterior",
-      "found": true,
       "concepts": [
         {
           "id": "FMA22532",
@@ -1649,13 +1586,13 @@
           "triangles": 756
         }
       ],
-      "status": "candidate_geometry_metadata_only"
+      "found": true
     }
   ],
   "nextSteps": [
     "Retrieve only needed binary chunks (chunks 1–5) from public upstream without user uploads.",
     "Decode manifest offsets and validate byte bounds, finite positions, normals, and triangle indices.",
-    "Render one candidate at a time in isolated experiment preview.",
+    "Render selected candidates one at a time in isolated experiment preview.",
     "Check orientation, side, silhouette, and overlaps against front/back MuscleMap.",
     "Keep male source meshes male-only; obtain a separate validated female skeletal-muscle source."
   ]
